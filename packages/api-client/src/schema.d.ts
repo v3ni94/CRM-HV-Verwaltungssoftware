@@ -2946,6 +2946,131 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/letting/prospects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Interessenten je Einheit */
+        get: operations["list_prospects_api_v1_letting_prospects_get"];
+        put?: never;
+        /** Interessent erfassen */
+        post: operations["create_prospect_api_v1_letting_prospects_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/prospects/{prospect_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Interessent löschen */
+        delete: operations["delete_prospect_api_v1_letting_prospects__prospect_id__delete"];
+        options?: never;
+        head?: never;
+        /** Interessent ändern */
+        patch: operations["patch_prospect_api_v1_letting_prospects__prospect_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/letting/rent-increases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mieterhöhung anlegen und prüfen */
+        post: operations["create_rent_increase_api_v1_letting_rent_increases_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/rent-increases/{case_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mieterhöhungsfall */
+        get: operations["get_rent_increase_api_v1_letting_rent_increases__case_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/rent-increases/{case_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prozessschritt */
+        post: operations["rent_increase_action_api_v1_letting_rent_increases__case_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/units/{unit_id}/expose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exposé-Entwurf aus Stammdaten
+         * @description Draft only from master data; no personal data of former tenants, no invented text.
+         *     Energy certificate data are required for ads but not modelled yet (M26-03).
+         */
+        get: operations["expose_api_v1_letting_units__unit_id__expose_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/vacancies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Leerstandsliste (Mietobjekte) */
+        get: operations["vacancies_api_v1_letting_vacancies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/ingest": {
         parameters: {
             query?: never;
@@ -8933,6 +9058,37 @@ export interface components {
              */
             task_run_id: string;
         };
+        /** ProspectIn */
+        ProspectIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Delete After
+             * Format: date
+             */
+            delete_after: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Viewing At */
+            viewing_at?: string | null;
+        };
+        /** ProspectPatch */
+        ProspectPatch: {
+            /** Notes */
+            notes?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Viewing At */
+            viewing_at?: string | null;
+        };
         /** ReadingIn */
         ReadingIn: {
             /**
@@ -9031,6 +9187,42 @@ export interface components {
             valid_from?: string | null;
             /** Valid To */
             valid_to?: string | null;
+        };
+        /** RentIncreaseAction */
+        RentIncreaseAction: {
+            /** Action */
+            action: string;
+            /** Document Id */
+            document_id?: string | null;
+        };
+        /** RentIncreaseIn */
+        RentIncreaseIn: {
+            /** Basis */
+            basis: string;
+            /** Cap Limit Percent */
+            cap_limit_percent?: number | string | null;
+            /** Comparison Rent Per Sqm */
+            comparison_rent_per_sqm?: number | string | null;
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /** Earliest Effective Date */
+            earliest_effective_date?: string | null;
+            /**
+             * Effective Date
+             * Format: date
+             */
+            effective_date: string;
+            /** Reference Rent */
+            reference_rent?: number | string | null;
+            /** Source Document Id */
+            source_document_id?: string | null;
+            /** Source Note */
+            source_note?: string | null;
+            /** Target Rent */
+            target_rent: number | string;
         };
         /**
          * ReportType
@@ -16744,6 +16936,311 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SerialLetterOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_prospects_api_v1_letting_prospects_get: {
+        parameters: {
+            query: {
+                unit_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_prospect_api_v1_letting_prospects_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProspectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_prospect_api_v1_letting_prospects__prospect_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                prospect_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_prospect_api_v1_letting_prospects__prospect_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                prospect_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProspectPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_rent_increase_api_v1_letting_rent_increases_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RentIncreaseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_rent_increase_api_v1_letting_rent_increases__case_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rent_increase_action_api_v1_letting_rent_increases__case_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RentIncreaseAction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    expose_api_v1_letting_units__unit_id__expose_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    vacancies_api_v1_letting_vacancies_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */

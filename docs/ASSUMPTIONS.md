@@ -389,6 +389,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M25 |
 | Datum | 23.09.2026 |
 
+## A-036
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Die Übernahme einer Mieterhöhung beendet die bisherige Mietzeile am Vortag der Wirksamkeit und legt eine neue Zeile mit Grund Erhöhung und Zustimmungsnachweis an. Bestehen bereits künftige Mietzeilen, wird abgebrochen und manuell geprüft. Leerstand zählt ab dem Tag nach dem letzten Vertragsende, Einheiten ohne früheren Vertrag ohne Dauer. |
+| Begründung | M26 |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Vermietung |
+| Überprüfung spätestens bei Meilenstein | M26 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

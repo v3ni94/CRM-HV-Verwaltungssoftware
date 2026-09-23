@@ -12772,6 +12772,100 @@
         "title": "ProposalOut",
         "type": "object"
       },
+      "ProspectIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "delete_after": {
+            "format": "date",
+            "title": "Delete After",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          },
+          "viewing_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewing At"
+          }
+        },
+        "required": [
+          "unit_id",
+          "contact_id",
+          "delete_after"
+        ],
+        "title": "ProspectIn",
+        "type": "object"
+      },
+      "ProspectPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "pattern": "^(new|viewing|applied|accepted|rejected|withdrawn)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "viewing_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewing At"
+          }
+        },
+        "title": "ProspectPatch",
+        "type": "object"
+      },
       "ReadingIn": {
         "additionalProperties": false,
         "properties": {
@@ -13003,6 +13097,159 @@
           "id"
         ],
         "title": "RelationOut",
+        "type": "object"
+      },
+      "RentIncreaseAction": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "pattern": "^(approve|send|consent|reject|apply|cancel)$",
+            "title": "Action",
+            "type": "string"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "RentIncreaseAction",
+        "type": "object"
+      },
+      "RentIncreaseIn": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "pattern": "^(mietspiegel|comparison|modernization|index|graduated)$",
+            "title": "Basis",
+            "type": "string"
+          },
+          "cap_limit_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Limit Percent"
+          },
+          "comparison_rent_per_sqm": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparison Rent Per Sqm"
+          },
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "earliest_effective_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Effective Date"
+          },
+          "effective_date": {
+            "format": "date",
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "reference_rent": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Rent"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          },
+          "target_rent": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Target Rent"
+          }
+        },
+        "required": [
+          "contract_id",
+          "basis",
+          "target_rent",
+          "effective_date"
+        ],
+        "title": "RentIncreaseIn",
         "type": "object"
       },
       "ReportType": {
@@ -26648,6 +26895,428 @@
         "summary": "Serienbrief erzeugen",
         "tags": [
           "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/letting/prospects": {
+      "get": {
+        "operationId": "list_prospects_api_v1_letting_prospects_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Prospects Api V1 Letting Prospects Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Interessenten je Einheit",
+        "tags": [
+          "letting"
+        ]
+      },
+      "post": {
+        "operationId": "create_prospect_api_v1_letting_prospects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProspectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Prospect Api V1 Letting Prospects Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Interessent erfassen",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/prospects/{prospect_id}": {
+      "delete": {
+        "operationId": "delete_prospect_api_v1_letting_prospects__prospect_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "prospect_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Prospect Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Interessent löschen",
+        "tags": [
+          "letting"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_prospect_api_v1_letting_prospects__prospect_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "prospect_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Prospect Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProspectPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Prospect Api V1 Letting Prospects  Prospect Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Interessent ändern",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/rent-increases": {
+      "post": {
+        "operationId": "create_rent_increase_api_v1_letting_rent_increases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RentIncreaseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Rent Increase Api V1 Letting Rent Increases Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mieterhöhung anlegen und prüfen",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/rent-increases/{case_id}": {
+      "get": {
+        "operationId": "get_rent_increase_api_v1_letting_rent_increases__case_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Rent Increase Api V1 Letting Rent Increases  Case Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mieterhöhungsfall",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/rent-increases/{case_id}/actions": {
+      "post": {
+        "operationId": "rent_increase_action_api_v1_letting_rent_increases__case_id__actions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RentIncreaseAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Rent Increase Action Api V1 Letting Rent Increases  Case Id  Actions Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prozessschritt",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/units/{unit_id}/expose": {
+      "get": {
+        "description": "Draft only from master data; no personal data of former tenants, no invented text.\nEnergy certificate data are required for ads but not modelled yet (M26-03).",
+        "operationId": "expose_api_v1_letting_units__unit_id__expose_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Expose Api V1 Letting Units  Unit Id  Expose Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exposé-Entwurf aus Stammdaten",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/vacancies": {
+      "get": {
+        "operationId": "vacancies_api_v1_letting_vacancies_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Vacancies Api V1 Letting Vacancies Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Leerstandsliste (Mietobjekte)",
+        "tags": [
+          "letting"
         ]
       }
     },

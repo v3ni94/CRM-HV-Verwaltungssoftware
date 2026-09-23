@@ -33,6 +33,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.workspace.tasks",
             "mhvp.banking.tasks",
             "mhvp.accounting.tasks",
+            "mhvp.letting.tasks",
         ],
     )
     app.conf.update(
@@ -66,6 +67,11 @@ def create_celery(settings: Settings | None = None) -> Celery:
             },
             # Maintenance reminders as in-app notifications (M9); idempotent per unread item.
             # Bank retrieval 06:00 (8.2); connectors without contract report "not configured".
+            # Prospect records are deleted after their deletion date (M26).
+            "letting-purge-prospects": {
+                "task": "mhvp.letting.purge_prospects",
+                "schedule": crontab(hour=3, minute=30),
+            },
             "banking-sync-all": {
                 "task": "mhvp.banking.sync_all",
                 "schedule": crontab(hour=6, minute=0),
