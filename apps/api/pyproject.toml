@@ -87,6 +87,7 @@ filterwarnings = ["error::DeprecationWarning:mhvp.*"]
 [tool.coverage.run]
 branch = true
 source = ["mhvp"]
+concurrency = ["thread", "greenlet"]
 
 [tool.coverage.report]
 fail_under = 80

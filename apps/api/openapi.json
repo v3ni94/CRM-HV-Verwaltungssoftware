@@ -1,6 +1,18 @@
 {
   "components": {
     "schemas": {
+      "AcquisitionKind": {
+        "enum": [
+          "purchase",
+          "first_acquisition",
+          "inheritance",
+          "foreclosure",
+          "gift",
+          "other"
+        ],
+        "title": "AcquisitionKind",
+        "type": "string"
+      },
       "AddressIn": {
         "additionalProperties": false,
         "properties": {
@@ -1982,12 +1994,20 @@
             "type": "array"
           },
           "bank_accounts": {
-            "items": {
-              "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountIn"
-            },
-            "maxItems": 20,
-            "title": "Bank Accounts",
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountIn"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Beim Ändern: weglassen oder null lässt die Bankverbindungen unverändert",
+            "title": "Bank Accounts"
           },
           "blocked": {
             "default": false,
@@ -2573,6 +2593,582 @@
         "title": "ContactTypeCode",
         "type": "string"
       },
+      "ContractIn": {
+        "additionalProperties": false,
+        "properties": {
+          "acquisition_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AcquisitionKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allocation_loss_risk": {
+            "default": false,
+            "title": "Allocation Loss Risk",
+            "type": "boolean"
+          },
+          "benefit_burden_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benefit Burden Date"
+          },
+          "direct_debit": {
+            "default": false,
+            "title": "Direct Debit",
+            "type": "boolean"
+          },
+          "dunning_block": {
+            "default": false,
+            "title": "Dunning Block",
+            "type": "boolean"
+          },
+          "dunning_block_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dunning Block Reason"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ContractKind"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nur nötig, wenn der Vermieter nicht eindeutig ist",
+            "title": "Legal Entity Id"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "rent_increase_block_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Increase Block Until"
+          },
+          "sepa_mandate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sepa Mandate Id"
+          },
+          "sev_enabled": {
+            "default": false,
+            "title": "Sev Enabled",
+            "type": "boolean"
+          },
+          "sev_fee_debtor_party_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sev Fee Debtor Party Id"
+          },
+          "special_succession_liability": {
+            "default": false,
+            "title": "Special Succession Liability",
+            "type": "boolean"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "title_transfer_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title Transfer Date"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          },
+          "user_change_fee": {
+            "default": false,
+            "title": "User Change Fee",
+            "type": "boolean"
+          },
+          "vat_option": {
+            "$ref": "#/components/schemas/ContractVatOption",
+            "default": "none"
+          }
+        },
+        "required": [
+          "kind",
+          "unit_id",
+          "party_id",
+          "start_date"
+        ],
+        "title": "ContractIn",
+        "type": "object"
+      },
+      "ContractKind": {
+        "enum": [
+          "tenancy",
+          "ownership"
+        ],
+        "title": "ContractKind",
+        "type": "string"
+      },
+      "ContractOut": {
+        "properties": {
+          "acquisition_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AcquisitionKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allocation_loss_risk": {
+            "title": "Allocation Loss Risk",
+            "type": "boolean"
+          },
+          "benefit_burden_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benefit Burden Date"
+          },
+          "debtor_account": {
+            "$ref": "#/components/schemas/DebtorAccountOut"
+          },
+          "direct_debit": {
+            "title": "Direct Debit",
+            "type": "boolean"
+          },
+          "dunning_block": {
+            "title": "Dunning Block",
+            "type": "boolean"
+          },
+          "dunning_block_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dunning Block Reason"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ContractKind"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentOut"
+            },
+            "title": "Payments",
+            "type": "array"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "rent_increase_block_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Increase Block Until"
+          },
+          "schedules": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleOut"
+            },
+            "title": "Schedules",
+            "type": "array"
+          },
+          "sepa_mandate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sepa Mandate Id"
+          },
+          "sev_enabled": {
+            "title": "Sev Enabled",
+            "type": "boolean"
+          },
+          "sev_fee_debtor_party_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sev Fee Debtor Party Id"
+          },
+          "special_succession_liability": {
+            "title": "Special Succession Liability",
+            "type": "boolean"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "supersedes_contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Contract Id"
+          },
+          "termination_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termination Date"
+          },
+          "termination_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termination Reason"
+          },
+          "title_transfer_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title Transfer Date"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          },
+          "user_change_fee": {
+            "title": "User Change Fee",
+            "type": "boolean"
+          },
+          "vat_option": {
+            "$ref": "#/components/schemas/ContractVatOption"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "number",
+          "version",
+          "property_id",
+          "unit_id",
+          "party_id",
+          "legal_entity_id",
+          "debtor_account",
+          "start_date",
+          "end_date",
+          "termination_date",
+          "termination_reason",
+          "direct_debit",
+          "sepa_mandate_id",
+          "dunning_block",
+          "dunning_block_reason",
+          "rent_increase_block_until",
+          "user_change_fee",
+          "allocation_loss_risk",
+          "vat_option",
+          "sev_enabled",
+          "sev_fee_debtor_party_id",
+          "title_transfer_date",
+          "benefit_burden_date",
+          "acquisition_kind",
+          "special_succession_liability",
+          "notes",
+          "supersedes_contract_id"
+        ],
+        "title": "ContractOut",
+        "type": "object"
+      },
+      "ContractVatOption": {
+        "enum": [
+          "none",
+          "commercial_no_vat",
+          "commercial_full_vat",
+          "commercial_reduced_vat"
+        ],
+        "title": "ContractVatOption",
+        "type": "string"
+      },
+      "ContractVersionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation_loss_risk": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Loss Risk"
+          },
+          "direct_debit": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direct Debit"
+          },
+          "dunning_block": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dunning Block"
+          },
+          "dunning_block_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dunning Block Reason"
+          },
+          "effective_date": {
+            "format": "date",
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "rent_increase_block_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Increase Block Until"
+          },
+          "sepa_mandate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sepa Mandate Id"
+          },
+          "user_change_fee": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Change Fee"
+          },
+          "vat_option": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContractVatOption"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "effective_date"
+        ],
+        "title": "ContractVersionIn",
+        "type": "object"
+      },
       "CustomFieldIn": {
         "additionalProperties": false,
         "properties": {
@@ -2656,6 +3252,36 @@
         "title": "CustomFieldOut",
         "type": "object"
       },
+      "DebtorAccountOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "legal_entity_id",
+          "number",
+          "name"
+        ],
+        "title": "DebtorAccountOut",
+        "type": "object"
+      },
       "DeliveryOut": {
         "properties": {
           "attempts": {
@@ -2735,6 +3361,313 @@
         ],
         "title": "DeliveryOut",
         "type": "object"
+      },
+      "DepositIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount_due": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Amount Due"
+          },
+          "installments": {
+            "default": 1,
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Installments",
+            "type": "integer"
+          },
+          "interest_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interest Rule"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DepositKind"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "kind",
+          "amount_due",
+          "valid_from"
+        ],
+        "title": "DepositIn",
+        "type": "object"
+      },
+      "DepositKind": {
+        "enum": [
+          "cash",
+          "savings_book",
+          "insurance",
+          "guarantee",
+          "fixed_deposit",
+          "letter_of_comfort",
+          "other"
+        ],
+        "title": "DepositKind",
+        "type": "string"
+      },
+      "DepositMovementIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DepositMovementKind"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "date",
+          "amount",
+          "kind"
+        ],
+        "title": "DepositMovementIn",
+        "type": "object"
+      },
+      "DepositMovementKind": {
+        "enum": [
+          "payment",
+          "interest",
+          "payout",
+          "offset"
+        ],
+        "title": "DepositMovementKind",
+        "type": "string"
+      },
+      "DepositMovementOut": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+            "title": "Amount",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DepositMovementKind"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "review_required": {
+            "default": false,
+            "title": "Review Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "date",
+          "amount",
+          "kind",
+          "id"
+        ],
+        "title": "DepositMovementOut",
+        "type": "object"
+      },
+      "DepositOut": {
+        "properties": {
+          "amount_due": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount Due",
+            "type": "string"
+          },
+          "balance": {
+            "default": "0.00",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Balance",
+            "type": "string"
+          },
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "installments": {
+            "title": "Installments",
+            "type": "integer"
+          },
+          "interest_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interest Rule"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DepositKind"
+          },
+          "movements": {
+            "items": {
+              "$ref": "#/components/schemas/DepositMovementOut"
+            },
+            "title": "Movements",
+            "type": "array"
+          },
+          "outstanding": {
+            "default": "0.00",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Outstanding",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "received": {
+            "default": "0.00",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Received",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "id",
+          "contract_id",
+          "kind",
+          "amount_due",
+          "installments",
+          "valid_from",
+          "valid_to",
+          "property_bank_account_id",
+          "interest_rule",
+          "status"
+        ],
+        "title": "DepositOut",
+        "type": "object"
+      },
+      "DueDayRule": {
+        "enum": [
+          "day",
+          "workday",
+          "last_day",
+          "day_next_month"
+        ],
+        "title": "DueDayRule",
+        "type": "string"
       },
       "DuplicateCandidate": {
         "properties": {
@@ -3468,6 +4401,192 @@
         "title": "ManagementType",
         "type": "string"
       },
+      "MandateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_bank_account_id": {
+            "format": "uuid",
+            "title": "Contact Bank Account Id",
+            "type": "string"
+          },
+          "creditor_id": {
+            "title": "Creditor Id",
+            "type": "string"
+          },
+          "document_id": {
+            "description": "Nachweis des unterschriebenen Mandats (Pflicht)",
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/MandateSequence",
+            "default": "recurring"
+          },
+          "signed_at": {
+            "format": "date",
+            "title": "Signed At",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/MandateType",
+            "default": "core"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "required": [
+          "party_id",
+          "legal_entity_id",
+          "contact_bank_account_id",
+          "reference",
+          "creditor_id",
+          "signed_at",
+          "document_id"
+        ],
+        "title": "MandateIn",
+        "type": "object"
+      },
+      "MandateOut": {
+        "properties": {
+          "contact_bank_account_id": {
+            "format": "uuid",
+            "title": "Contact Bank Account Id",
+            "type": "string"
+          },
+          "creditor_id": {
+            "title": "Creditor Id",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "iban_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iban Masked"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/MandateSequence"
+          },
+          "signed_at": {
+            "format": "date",
+            "title": "Signed At",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MandateStatus"
+          },
+          "type": {
+            "$ref": "#/components/schemas/MandateType"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "required": [
+          "id",
+          "party_id",
+          "legal_entity_id",
+          "contact_bank_account_id",
+          "reference",
+          "creditor_id",
+          "signed_at",
+          "type",
+          "sequence",
+          "valid_until",
+          "status",
+          "document_id"
+        ],
+        "title": "MandateOut",
+        "type": "object"
+      },
+      "MandateSequence": {
+        "enum": [
+          "first",
+          "recurring",
+          "one_off"
+        ],
+        "title": "MandateSequence",
+        "type": "string"
+      },
+      "MandateStatus": {
+        "enum": [
+          "active",
+          "revoked",
+          "expired"
+        ],
+        "title": "MandateStatus",
+        "type": "string"
+      },
+      "MandateType": {
+        "enum": [
+          "core",
+          "b2b"
+        ],
+        "title": "MandateType",
+        "type": "string"
+      },
       "MeOut": {
         "properties": {
           "display_name": {
@@ -4042,6 +5161,97 @@
         "title": "NoteOut",
         "type": "object"
       },
+      "OccupancyRow": {
+        "properties": {
+          "owner_party": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Party"
+          },
+          "ownership_contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ownership Contract Id"
+          },
+          "tenancy_contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenancy Contract Id"
+          },
+          "tenant_party": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Party"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          },
+          "unit_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Label"
+          },
+          "unit_number": {
+            "title": "Unit Number",
+            "type": "string"
+          },
+          "unit_type": {
+            "title": "Unit Type",
+            "type": "string"
+          },
+          "vacant": {
+            "title": "Vacant",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "unit_id",
+          "unit_number",
+          "unit_label",
+          "unit_type",
+          "tenancy_contract_id",
+          "tenant_party",
+          "ownership_contract_id",
+          "owner_party",
+          "vacant"
+        ],
+        "title": "OccupancyRow",
+        "type": "object"
+      },
       "Occupant": {
         "enum": [
           "vacancy",
@@ -4192,6 +5402,53 @@
         "title": "OwnerOut",
         "type": "object"
       },
+      "OwnershipTransferIn": {
+        "additionalProperties": false,
+        "properties": {
+          "acquisition_kind": {
+            "$ref": "#/components/schemas/AcquisitionKind"
+          },
+          "benefit_burden_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benefit Burden Date"
+          },
+          "new_party_id": {
+            "format": "uuid",
+            "title": "New Party Id",
+            "type": "string"
+          },
+          "sev_enabled": {
+            "default": false,
+            "title": "Sev Enabled",
+            "type": "boolean"
+          },
+          "special_succession_liability": {
+            "default": false,
+            "title": "Special Succession Liability",
+            "type": "boolean"
+          },
+          "title_transfer_date": {
+            "format": "date",
+            "title": "Title Transfer Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_party_id",
+          "title_transfer_date",
+          "acquisition_kind"
+        ],
+        "title": "OwnershipTransferIn",
+        "type": "object"
+      },
       "PartyIn": {
         "additionalProperties": false,
         "properties": {
@@ -4331,6 +5588,188 @@
           "legal_representative"
         ],
         "title": "PartyRole",
+        "type": "string"
+      },
+      "PaymentIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "gross": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Gross"
+          },
+          "net": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Net"
+          },
+          "payment_type_code": {
+            "title": "Payment Type Code",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/PaymentReason",
+            "default": "initial"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "vat_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,21}0*$)\\d{0,12}\\.\\d{0,8}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Vat Percent"
+          }
+        },
+        "required": [
+          "payment_type_code",
+          "net",
+          "gross",
+          "valid_from"
+        ],
+        "title": "PaymentIn",
+        "type": "object"
+      },
+      "PaymentInterval": {
+        "enum": [
+          "monthly",
+          "quarterly",
+          "semiannual",
+          "annual"
+        ],
+        "title": "PaymentInterval",
+        "type": "string"
+      },
+      "PaymentOut": {
+        "properties": {
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "gross": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Gross",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "net": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Net",
+            "type": "string"
+          },
+          "payment_type_code": {
+            "title": "Payment Type Code",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/PaymentReason"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "vat_percent": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Vat Percent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contract_id",
+          "payment_type_code",
+          "net",
+          "vat_percent",
+          "gross",
+          "currency",
+          "valid_from",
+          "valid_to",
+          "reason"
+        ],
+        "title": "PaymentOut",
+        "type": "object"
+      },
+      "PaymentReason": {
+        "enum": [
+          "initial",
+          "index",
+          "graduated",
+          "increase",
+          "adjustment_from_statement",
+          "other"
+        ],
+        "title": "PaymentReason",
         "type": "string"
       },
       "PhoneIn": {
@@ -5806,6 +7245,95 @@
         "title": "RolePermissions",
         "type": "object"
       },
+      "ScheduleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "due_day": {
+            "default": 3,
+            "maximum": 31.0,
+            "minimum": 1.0,
+            "title": "Due Day",
+            "type": "integer"
+          },
+          "due_day_rule": {
+            "$ref": "#/components/schemas/DueDayRule",
+            "default": "day"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/PaymentInterval",
+            "default": "monthly"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from"
+        ],
+        "title": "ScheduleIn",
+        "type": "object"
+      },
+      "ScheduleOut": {
+        "properties": {
+          "due_day": {
+            "default": 3,
+            "maximum": 31.0,
+            "minimum": 1.0,
+            "title": "Due Day",
+            "type": "integer"
+          },
+          "due_day_rule": {
+            "$ref": "#/components/schemas/DueDayRule",
+            "default": "day"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/PaymentInterval",
+            "default": "monthly"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from",
+          "id"
+        ],
+        "title": "ScheduleOut",
+        "type": "object"
+      },
       "SearchHit": {
         "properties": {
           "entity_type": {
@@ -6024,6 +7552,45 @@
           }
         },
         "title": "TenantSettingsPatch",
+        "type": "object"
+      },
+      "TerminationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "termination_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Datum der Kündigungserklärung",
+            "title": "Termination Date"
+          },
+          "termination_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termination Reason"
+          }
+        },
+        "required": [
+          "end_date"
+        ],
+        "title": "TerminationIn",
         "type": "object"
       },
       "TokenResponse": {
@@ -8569,6 +10136,663 @@
         ]
       }
     },
+    "/api/v1/contracts": {
+      "get": {
+        "operationId": "list_contracts_api_v1_contracts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unit_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Unit Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "party_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Party Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ContractKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active_on",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active On"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ContractOut"
+                  },
+                  "title": "Response List Contracts Api V1 Contracts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verträge",
+        "tags": [
+          "Verträge"
+        ]
+      },
+      "post": {
+        "operationId": "create_contract_api_v1_contracts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vertrag anlegen",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/{contract_id}": {
+      "get": {
+        "operationId": "get_contract_api_v1_contracts__contract_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vertrag lesen",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/{contract_id}/deposits": {
+      "get": {
+        "operationId": "list_deposits_api_v1_contracts__contract_id__deposits_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DepositOut"
+                  },
+                  "title": "Response List Deposits Api V1 Contracts  Contract Id  Deposits Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kautionen",
+        "tags": [
+          "Verträge"
+        ]
+      },
+      "post": {
+        "operationId": "create_deposit_api_v1_contracts__contract_id__deposits_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepositIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kaution erfassen",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/{contract_id}/ownership-transfer": {
+      "post": {
+        "description": "Ends the current ownership the day before the title transfer (D16, D17).",
+        "operationId": "ownership_transfer_api_v1_contracts__contract_id__ownership_transfer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnershipTransferIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümerwechsel",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/{contract_id}/payments": {
+      "get": {
+        "operationId": "payment_history_api_v1_contracts__contract_id__payments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentOut"
+                  },
+                  "title": "Response Payment History Api V1 Contracts  Contract Id  Payments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zahlungshistorie",
+        "tags": [
+          "Verträge"
+        ]
+      },
+      "post": {
+        "operationId": "add_payment_api_v1_contracts__contract_id__payments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sollstellung erfassen",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/{contract_id}/schedules": {
+      "post": {
+        "operationId": "add_schedule_api_v1_contracts__contract_id__schedules_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zahlungsplan",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/{contract_id}/termination": {
+      "post": {
+        "operationId": "terminate_api_v1_contracts__contract_id__termination_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vertrag beenden",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/{contract_id}/versions": {
+      "get": {
+        "operationId": "contract_versions_api_v1_contracts__contract_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ContractOut"
+                  },
+                  "title": "Response Contract Versions Api V1 Contracts  Contract Id  Versions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vertragsversionen",
+        "tags": [
+          "Verträge"
+        ]
+      },
+      "post": {
+        "operationId": "new_version_api_v1_contracts__contract_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractVersionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neue Vertragsversion",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
     "/api/v1/custom-fields": {
       "get": {
         "operationId": "list_custom_fields_api_v1_custom_fields_get",
@@ -8630,6 +10854,60 @@
         "summary": "Zusatzfeld definieren",
         "tags": [
           "Objekte"
+        ]
+      }
+    },
+    "/api/v1/deposits/{deposit_id}/movements": {
+      "post": {
+        "description": "Records a movement; it becomes a posting only with the ledger (M10) behind G1.",
+        "operationId": "add_deposit_movement_api_v1_deposits__deposit_id__movements_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deposit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Deposit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepositMovementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kautionsbewegung",
+        "tags": [
+          "Verträge"
         ]
       }
     },
@@ -10286,6 +12564,63 @@
         ]
       }
     },
+    "/api/v1/properties/{property_id}/occupancy": {
+      "get": {
+        "operationId": "occupancy_api_v1_properties__property_id__occupancy_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OccupancyRow"
+                  },
+                  "title": "Response Occupancy Api V1 Properties  Property Id  Occupancy Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Belegungsliste",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
     "/api/v1/properties/{property_id}/owners": {
       "post": {
         "operationId": "add_owner_api_v1_properties__property_id__owners_post",
@@ -10662,6 +12997,158 @@
         "summary": "Globale Suche (Strg+K)",
         "tags": [
           "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/sepa-mandates": {
+      "get": {
+        "operationId": "list_mandates_api_v1_sepa_mandates_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "party_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Party Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/MandateStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MandateOut"
+                  },
+                  "title": "Response List Mandates Api V1 Sepa Mandates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SEPA-Mandate",
+        "tags": [
+          "Verträge"
+        ]
+      },
+      "post": {
+        "operationId": "create_mandate_api_v1_sepa_mandates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MandateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MandateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SEPA-Mandat erfassen",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/sepa-mandates/{mandate_id}/revoke": {
+      "post": {
+        "operationId": "revoke_mandate_api_v1_sepa_mandates__mandate_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mandate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mandate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MandateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SEPA-Mandat widerrufen",
+        "tags": [
+          "Verträge"
         ]
       }
     },

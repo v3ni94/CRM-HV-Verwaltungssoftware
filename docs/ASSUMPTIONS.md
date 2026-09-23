@@ -136,6 +136,39 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M9 (vor Produktivbetrieb) |
 | Datum | 23.09.2026 |
 
+## A-013
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Vertragsnummern sind sechsstellig mit führenden Nullen, fortlaufend je Mandant über alle Objekte; eine Vertragsversion behält die Nummer. Debitorenkonten erhalten je Rechtsträger fortlaufend Nummern ab 090000 bis 099999. |
+| Begründung | Abschnitt 6.3 nennt `number` ohne Format. Der Debitorenbereich 090000 bis 099999 und das Kontoformat stammen aus Abschnitt 7.2 und Anhang A.1; Debitor je Partei und Einheit aus 6.9.2 (E02). |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Verträge, später Buchhaltung (M10) |
+| Überprüfung spätestens bei Meilenstein | M10 |
+| Datum | 23.09.2026 |
+
+## A-014
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Ein SEPA-Firmenlastschriftmandat (B2B) wird nur erfasst, wenn alle Beteiligten der Vertragspartei als Unternehmen erfasst sind. Das Mandat braucht einen Nachweis (Dokument) und ein Konto eines Beteiligten. |
+| Begründung | Produktschutz: Das Firmenlastschriftverfahren ist nicht für Verbraucher gedacht; die genaue Abgrenzung ist keine hier geprüfte Rechtsquelle. Einzug bleibt bis G2 gesperrt. |
+| Kennzeichnung | Produktschutz, unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | SEPA-Mandate |
+| Überprüfung spätestens bei Meilenstein | M12 (vor G2) |
+| Datum | 23.09.2026 |
+
+## A-015
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Gläubiger eines Mietverhältnisses ist im Mietobjekt der zum Mietbeginn eingetragene Eigentümer, bei WEG mit SEV der Eigentümer der Einheit mit aktivem SEV-Eigentumsverhältnis; Gläubiger des Eigentumsverhältnisses ist die GdWE. Reine WEG-Objekte führen keine Mietverhältnisse (M5-03). |
+| Begründung | Abschnitt 6.9.1 und 6.9.11: Forderungen gehören dem richtigen Rechtsträger, die Verwaltung ist nicht automatisch Gläubiger. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Verträge, Debitoren |
+| Überprüfung spätestens bei Meilenstein | M10 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

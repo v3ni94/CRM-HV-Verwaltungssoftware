@@ -14,6 +14,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from mhvp.contacts.routers import router as contacts_router
+from mhvp.contracts.routers import router as contracts_router
 from mhvp.core import crypto, health
 from mhvp.core.auth import oidc
 from mhvp.core.auth.routers import router as auth_router
@@ -115,6 +116,7 @@ def create_app(
     app.include_router(tenant_router, prefix=API_PREFIX)
     app.include_router(contacts_router, prefix=API_PREFIX)
     app.include_router(properties_router, prefix=API_PREFIX)
+    app.include_router(contracts_router, prefix=API_PREFIX)
     app.add_middleware(CorrelationIdMiddleware)
     return app
 

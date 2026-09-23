@@ -112,7 +112,11 @@ class ContactIn(_Strict):
     phones: list[PhoneIn] = Field(default_factory=list, max_length=20)
     emails: list[EmailIn] = Field(default_factory=list, max_length=20)
     identifiers: list[IdentifierIn] = Field(default_factory=list, max_length=20)
-    bank_accounts: list[BankAccountIn] = Field(default_factory=list, max_length=20)
+    bank_accounts: list[BankAccountIn] | None = Field(
+        default=None,
+        max_length=20,
+        description="Beim Ändern: weglassen oder null lässt die Bankverbindungen unverändert",
+    )
     types: list[ContactTypeCode] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list, max_length=50)
 

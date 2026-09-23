@@ -41,7 +41,22 @@ PROPERTY_CONTACT_CATEGORIES: tuple[tuple[str, str], ...] = (
     ("emergency", "Notdienst"),
     ("utility", "Versorger"),
 )
+# Section 6.3 (contract_payment.payment_type_id) and annex A.3 (Zahlungsarten).
+PAYMENT_TYPES: tuple[tuple[str, str], ...] = (
+    ("rent", "Miete"),
+    ("operating_cost_advance", "Betriebskosten-Vorauszahlung"),
+    ("heating_cost_advance", "Heizkosten-Vorauszahlung"),
+    ("garage", "Garagenmiete"),
+    ("parking", "Stellplatzmiete"),
+    ("rent_reduction", "Mietminderung"),
+    ("hoa_fee", "Hausgeld"),
+    ("reserve", "Erhaltungsrücklage"),
+    ("special_levy", "Sonderumlage"),
+    ("other", "Sonstige"),
+)
+REDUCTION_PAYMENT_TYPES = frozenset({"rent_reduction"})
 CATALOGS: dict[str, tuple[tuple[str, str], ...]] = {
+    "payment_type": PAYMENT_TYPES,
     "meter_type": METER_TYPES,
     "provider_contract_type": PROVIDER_CONTRACT_TYPES,
     "property_contact_category": PROPERTY_CONTACT_CATEGORIES,

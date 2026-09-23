@@ -29,6 +29,7 @@ from mhvp.contacts.models import (
 from mhvp.contacts.validation import mask_iban, normalise_iban, normalise_phone
 from mhvp.core import crypto
 from mhvp.core.events import DomainEvent
+from mhvp.core.problems import ErrorCodes, ProblemError
 
 _CHILDREN = (
     ContactAddress,
@@ -49,7 +50,7 @@ def display_name(data: schemas.ContactIn) -> str:
     return f"{last}, {first}" if last and first else (last or first)
 
 
-def build_search_text(data: schemas.ContactIn) -> str:
+def build_search_text(data: schemas.ContactIn, iban_suffixes: list[str] | None = None) -> str:
     parts: list[str] = [
         data.first_name or "",
         data.last_name or "",
@@ -57,7 +58,11 @@ def build_search_text(data: schemas.ContactIn) -> str:
         *(e.email for e in data.emails),
         *(p.number for p in data.phones),
         *(p.number.lstrip("+") for p in data.phones),
-        *(b.iban[-4:] for b in data.bank_accounts),
+        *(
+            (iban_suffixes or [])
+            if data.bank_accounts is None
+            else [b.iban[-4:] for b in data.bank_accounts]
+        ),
         *(a.city or "" for a in data.addresses),
     ]
     return " ".join(p for p in parts if p).lower()
@@ -89,6 +94,10 @@ async def write_children(
     session: AsyncSession, tenant_id: uuid.UUID, contact_id: uuid.UUID, data: schemas.ContactIn
 ) -> None:
     for model in _CHILDREN:
+        if model is ContactBankAccount and data.bank_accounts is None:
+            continue  # omitted: bank accounts stay as they are (ids referenced by mandates)
+        if model is ContactBankAccount:
+            await _check_accounts_unreferenced(session, contact_id)
         await session.execute(delete(model).where(model.contact_id == contact_id))
     _single_primary(data.addresses)
     _single_primary(data.phones)
@@ -102,7 +111,7 @@ async def write_children(
         session.add(ContactEmail(**common, **email.model_dump()))
     for identifier in data.identifiers:
         session.add(ContactIdentifier(**common, **identifier.model_dump()))
-    for account in data.bank_accounts:
+    for account in data.bank_accounts or []:
         values = account.model_dump()
         session.add(
             ContactBankAccount(
@@ -119,14 +128,42 @@ async def write_children(
     await session.flush()
 
 
-def apply_fields(contact: Contact, data: schemas.ContactIn) -> None:
+async def _check_accounts_unreferenced(session: AsyncSession, contact_id: uuid.UUID) -> None:
+    from mhvp.contracts.models import SepaMandate  # local: contracts import contacts
+
+    used = await session.scalar(
+        select(SepaMandate.id)
+        .join(ContactBankAccount, ContactBankAccount.id == SepaMandate.contact_bank_account_id)
+        .where(ContactBankAccount.contact_id == contact_id)
+        .limit(1)
+    )
+    if used is not None:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail=(
+                "Eine Bankverbindung ist mit einem SEPA-Mandat verknüpft und kann nicht "
+                "ersetzt werden. Bankverbindungen beim Ändern weglassen."
+            ),
+        )
+
+
+async def iban_suffixes(session: AsyncSession, contact_id: uuid.UUID) -> list[str]:
+    rows = await session.scalars(
+        select(ContactBankAccount.iban_suffix).where(ContactBankAccount.contact_id == contact_id)
+    )
+    return list(rows.all())
+
+
+def apply_fields(
+    contact: Contact, data: schemas.ContactIn, suffixes: list[str] | None = None
+) -> None:
     fields = data.model_dump(
         exclude={"addresses", "phones", "emails", "identifiers", "bank_accounts", "types", "tags"}
     )
     for key, value in fields.items():
         setattr(contact, key, value)
     contact.display_name = display_name(data)
-    contact.search_text = build_search_text(data)
+    contact.search_text = build_search_text(data, suffixes)
 
 
 async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactOut | None:

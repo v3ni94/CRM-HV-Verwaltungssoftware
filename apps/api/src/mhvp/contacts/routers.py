@@ -177,7 +177,7 @@ async def replace_contact(
         if if_match is not None and if_match.strip('"') != str(contact.version):
             raise ProblemError(ErrorCodes.VERSION_CONFLICT)
         before = await services.load(session, contact_id)
-        services.apply_fields(contact, body)
+        services.apply_fields(contact, body, await services.iban_suffixes(session, contact_id))
         await services.write_children(session, principal.tenant_id, contact.id, body)
         contact.version += 1
         contact.updated_by = principal.user_id

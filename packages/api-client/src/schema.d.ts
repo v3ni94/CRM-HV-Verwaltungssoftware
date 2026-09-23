@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/allocation-key-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Muster Umlageschlüssel */
+        get: operations["list_templates_api_v1_allocation_key_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -168,6 +185,24 @@ export interface paths {
         put?: never;
         /** Mandant wechseln */
         post: operations["switch_tenant_api_v1_auth_switch_tenant_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogs/{catalog}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Katalog */
+        get: operations["list_catalog_api_v1_catalogs__catalog__get"];
+        put?: never;
+        /** Katalogeintrag anlegen */
+        post: operations["add_catalog_entry_api_v1_catalogs__catalog__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -332,6 +367,187 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verträge */
+        get: operations["list_contracts_api_v1_contracts_get"];
+        put?: never;
+        /** Vertrag anlegen */
+        post: operations["create_contract_api_v1_contracts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/{contract_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vertrag lesen */
+        get: operations["get_contract_api_v1_contracts__contract_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/{contract_id}/deposits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kautionen */
+        get: operations["list_deposits_api_v1_contracts__contract_id__deposits_get"];
+        put?: never;
+        /** Kaution erfassen */
+        post: operations["create_deposit_api_v1_contracts__contract_id__deposits_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/{contract_id}/ownership-transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eigentümerwechsel
+         * @description Ends the current ownership the day before the title transfer (D16, D17).
+         */
+        post: operations["ownership_transfer_api_v1_contracts__contract_id__ownership_transfer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/{contract_id}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zahlungshistorie */
+        get: operations["payment_history_api_v1_contracts__contract_id__payments_get"];
+        put?: never;
+        /** Sollstellung erfassen */
+        post: operations["add_payment_api_v1_contracts__contract_id__payments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/{contract_id}/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Zahlungsplan */
+        post: operations["add_schedule_api_v1_contracts__contract_id__schedules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/{contract_id}/termination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Vertrag beenden */
+        post: operations["terminate_api_v1_contracts__contract_id__termination_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/{contract_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vertragsversionen */
+        get: operations["contract_versions_api_v1_contracts__contract_id__versions_get"];
+        put?: never;
+        /** Neue Vertragsversion */
+        post: operations["new_version_api_v1_contracts__contract_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/custom-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zusatzfelder */
+        get: operations["list_custom_fields_api_v1_custom_fields_get"];
+        put?: never;
+        /** Zusatzfeld definieren */
+        post: operations["add_custom_field_api_v1_custom_fields_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deposits/{deposit_id}/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Kautionsbewegung
+         * @description Records a movement; it becomes a posting only with the ledger (M10) behind G1.
+         */
+        post: operations["add_deposit_movement_api_v1_deposits__deposit_id__movements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health/live": {
         parameters: {
             query?: never;
@@ -360,6 +576,24 @@ export interface paths {
         get: operations["ready_api_v1_health_ready_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meters/{meter_id}/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zählerstände */
+        get: operations["list_readings_api_v1_meters__meter_id__readings_get"];
+        put?: never;
+        /** Zählerstand erfassen */
+        post: operations["add_reading_api_v1_meters__meter_id__readings_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -555,6 +789,254 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Objekte */
+        get: operations["list_properties_api_v1_properties_get"];
+        put?: never;
+        /** Objekt anlegen */
+        post: operations["create_property_api_v1_properties_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Objekt lesen */
+        get: operations["get_property_api_v1_properties__property_id__get"];
+        /** Objekt ändern */
+        put: operations["update_property_api_v1_properties__property_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/allocation-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Umlageschlüssel */
+        get: operations["list_keys_api_v1_properties__property_id__allocation_keys_get"];
+        put?: never;
+        /** Umlageschlüssel anlegen */
+        post: operations["create_key_api_v1_properties__property_id__allocation_keys_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/bank-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bankkonten */
+        get: operations["list_accounts_api_v1_properties__property_id__bank_accounts_get"];
+        put?: never;
+        /** Bankkonto eines Rechtsträgers anlegen */
+        post: operations["add_account_api_v1_properties__property_id__bank_accounts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/buildings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gebäude */
+        get: operations["list_buildings_api_v1_properties__property_id__buildings_get"];
+        put?: never;
+        /** Gebäude anlegen */
+        post: operations["create_building_api_v1_properties__property_id__buildings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ansprechpartner */
+        get: operations["list_property_contacts_api_v1_properties__property_id__contacts_get"];
+        put?: never;
+        /** Ansprechpartner zuordnen */
+        post: operations["add_property_contact_api_v1_properties__property_id__contacts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/legal-entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rechtsträger des Objekts */
+        get: operations["list_entities_api_v1_properties__property_id__legal_entities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/maintenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Wartung und Prüfpflichten */
+        get: operations["list_maintenance_api_v1_properties__property_id__maintenance_get"];
+        put?: never;
+        /** Wartung anlegen */
+        post: operations["add_maintenance_api_v1_properties__property_id__maintenance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/meters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zähler */
+        get: operations["list_meters_api_v1_properties__property_id__meters_get"];
+        put?: never;
+        /** Zähler anlegen */
+        post: operations["add_meter_api_v1_properties__property_id__meters_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/occupancy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Belegungsliste */
+        get: operations["occupancy_api_v1_properties__property_id__occupancy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/owners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Objekteigentümer (Mietverwaltung) */
+        post: operations["add_owner_api_v1_properties__property_id__owners_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/service-providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dienstleisterverhältnisse */
+        get: operations["list_providers_api_v1_properties__property_id__service_providers_get"];
+        put?: never;
+        /** Dienstleisterverhältnis anlegen */
+        post: operations["add_provider_api_v1_properties__property_id__service_providers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Objektstatus ändern */
+        post: operations["change_status_api_v1_properties__property_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Einheiten, optional zum Stichtag */
+        get: operations["list_units_api_v1_properties__property_id__units_get"];
+        put?: never;
+        /** Einheit anlegen */
+        post: operations["create_unit_api_v1_properties__property_id__units_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/search": {
         parameters: {
             query?: never;
@@ -566,6 +1048,41 @@ export interface paths {
         get: operations["global_search_api_v1_search_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sepa-mandates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SEPA-Mandate */
+        get: operations["list_mandates_api_v1_sepa_mandates_get"];
+        put?: never;
+        /** SEPA-Mandat erfassen */
+        post: operations["create_mandate_api_v1_sepa_mandates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sepa-mandates/{mandate_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** SEPA-Mandat widerrufen */
+        post: operations["revoke_mandate_api_v1_sepa_mandates__mandate_id__revoke_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -869,10 +1386,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/units/{unit_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Einheit lesen, optional zum Stichtag */
+        get: operations["get_unit_api_v1_units__unit_id__get"];
+        /** Einheit ändern */
+        put: operations["update_unit_api_v1_units__unit_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/units/{unit_id}/allocation-values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Schlüsselwerte, Historie oder Stichtag */
+        get: operations["list_values_api_v1_units__unit_id__allocation_values_get"];
+        put?: never;
+        /** Schlüsselwert mit Zeitraum erfassen */
+        post: operations["add_value_api_v1_units__unit_id__allocation_values_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/units/{unit_id}/vat-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Umsatzsteueroption mit Zeitraum */
+        post: operations["add_vat_option_api_v1_units__unit_id__vat_options_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AcquisitionKind
+         * @enum {string}
+         */
+        AcquisitionKind: "purchase" | "first_acquisition" | "inheritance" | "foreclosure" | "gift" | "other";
         /** AddressIn */
         AddressIn: {
             /** Addition */
@@ -932,6 +1507,124 @@ export interface components {
             postal_code?: string | null;
             /** Street */
             street?: string | null;
+        };
+        /** AllocationKeyIn */
+        "AllocationKeyIn-Input": {
+            /** Code */
+            code: string;
+            /** Default Value */
+            default_value?: number | string | null;
+            kind: components["schemas"]["AllocationKind"];
+            /** Meter Type Code */
+            meter_type_code?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+            /** Unit Of Measure */
+            unit_of_measure: string;
+        };
+        /** AllocationKeyIn */
+        "AllocationKeyIn-Output": {
+            /** Code */
+            code: string;
+            /** Default Value */
+            default_value?: string | null;
+            kind: components["schemas"]["AllocationKind"];
+            /** Meter Type Code */
+            meter_type_code?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+            /** Unit Of Measure */
+            unit_of_measure: string;
+        };
+        /** AllocationKeyOut */
+        AllocationKeyOut: {
+            /** Code */
+            code: string;
+            /** Default Value */
+            default_value?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Template Derived */
+            is_template_derived: boolean;
+            kind: components["schemas"]["AllocationKind"];
+            /** Meter Type Code */
+            meter_type_code?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+            /** Unit Of Measure */
+            unit_of_measure: string;
+        };
+        /**
+         * AllocationKind
+         * @enum {string}
+         */
+        AllocationKind: "static" | "consumption" | "fixed_amount" | "fixed_share";
+        /** AllocationValueIn */
+        AllocationValueIn: {
+            /**
+             * Allocation Key Id
+             * Format: uuid
+             */
+            allocation_key_id: string;
+            /** @default manual */
+            source: components["schemas"]["ValueSource"];
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+            /** Value */
+            value: number | string;
+        };
+        /** AllocationValueOut */
+        AllocationValueOut: {
+            /**
+             * Allocation Key Id
+             * Format: uuid
+             */
+            allocation_key_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key Code */
+            key_code?: string | null;
+            source: components["schemas"]["ValueSource"];
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
+            /** Value */
+            value: string;
         };
         /** ApiKeyCreate */
         ApiKeyCreate: {
@@ -1015,51 +1708,11 @@ export interface components {
              */
             occurred_at: string;
         };
-        /** BankAccountIn */
-        BankAccountIn: {
-            /** Bank Name */
-            bank_name?: string | null;
-            /** Bic */
-            bic?: string | null;
-            /** Holder */
-            holder?: string | null;
-            /** Iban */
-            iban: string;
-            /** Label */
-            label?: string | null;
-            /**
-             * Valid From
-             * Format: date
-             */
-            valid_from: string;
-            /** Valid To */
-            valid_to?: string | null;
-        };
-        /** BankAccountOut */
-        BankAccountOut: {
-            /** Bank Name */
-            bank_name: string | null;
-            /** Bic */
-            bic: string | null;
-            /** Holder */
-            holder: string | null;
-            /** Iban Masked */
-            iban_masked: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Label */
-            label: string | null;
-            /**
-             * Valid From
-             * Format: date
-             */
-            valid_from: string;
-            /** Valid To */
-            valid_to: string | null;
-        };
+        /**
+         * BankAccountKind
+         * @enum {string}
+         */
+        BankAccountKind: "rent" | "hoa" | "reserve" | "deposit" | "hoa_fee" | "other";
         /** Body_token_api_v1_oidc_token_post */
         Body_token_api_v1_oidc_token_post: {
             /** Client Id */
@@ -1106,6 +1759,179 @@ export interface components {
              * Format: uuid
              */
             tenant_id: string;
+        };
+        /** BuildingIn */
+        BuildingIn: {
+            /** Building Type Code */
+            building_type_code?: string | null;
+            /** Built Area Sqm */
+            built_area_sqm?: number | string | null;
+            /** Cellar Rooms */
+            cellar_rooms?: number | null;
+            /** Construction Type Code */
+            construction_type_code?: string | null;
+            /** Construction Year */
+            construction_year?: number | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Elevator
+             * @default false
+             */
+            elevator: boolean;
+            /** Energy Certificate Type */
+            energy_certificate_type?: string | null;
+            /** Energy Certificate Valid Until */
+            energy_certificate_valid_until?: string | null;
+            /** Energy Certificate Value */
+            energy_certificate_value?: number | string | null;
+            /** Floors */
+            floors?: number | null;
+            /** Gross Floor Area Sqm */
+            gross_floor_area_sqm?: number | string | null;
+            /** Hallway Area Sqm */
+            hallway_area_sqm?: number | string | null;
+            /** Heated Area Sqm */
+            heated_area_sqm?: number | string | null;
+            /** Heritage Notes */
+            heritage_notes?: string | null;
+            /**
+             * Heritage Protection
+             * @default false
+             */
+            heritage_protection: boolean;
+            /** House Number */
+            house_number?: string | null;
+            /** Living Commercial Area Sqm */
+            living_commercial_area_sqm?: number | string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /** Renovation Level */
+            renovation_level?: string | null;
+            /** Roof Area Sqm */
+            roof_area_sqm?: number | string | null;
+            /** Sealed Area Sqm */
+            sealed_area_sqm?: number | string | null;
+            /** Street */
+            street?: string | null;
+            /** Total Area Sqm */
+            total_area_sqm?: number | string | null;
+            /** Window Area Sqm */
+            window_area_sqm?: number | string | null;
+            /** Windows */
+            windows?: number | null;
+        };
+        /** BuildingOut */
+        BuildingOut: {
+            /** Building Type Code */
+            building_type_code?: string | null;
+            /** Built Area Sqm */
+            built_area_sqm?: string | null;
+            /** Cellar Rooms */
+            cellar_rooms?: number | null;
+            /** Construction Type Code */
+            construction_type_code?: string | null;
+            /** Construction Year */
+            construction_year?: number | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Elevator
+             * @default false
+             */
+            elevator: boolean;
+            /** Energy Certificate Type */
+            energy_certificate_type?: string | null;
+            /** Energy Certificate Valid Until */
+            energy_certificate_valid_until?: string | null;
+            /** Energy Certificate Value */
+            energy_certificate_value?: string | null;
+            /** Floors */
+            floors?: number | null;
+            /** Gross Floor Area Sqm */
+            gross_floor_area_sqm?: string | null;
+            /** Hallway Area Sqm */
+            hallway_area_sqm?: string | null;
+            /** Heated Area Sqm */
+            heated_area_sqm?: string | null;
+            /** Heritage Notes */
+            heritage_notes?: string | null;
+            /**
+             * Heritage Protection
+             * @default false
+             */
+            heritage_protection: boolean;
+            /** House Number */
+            house_number?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Living Commercial Area Sqm */
+            living_commercial_area_sqm?: string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Renovation Level */
+            renovation_level?: string | null;
+            /** Roof Area Sqm */
+            roof_area_sqm?: string | null;
+            /** Sealed Area Sqm */
+            sealed_area_sqm?: string | null;
+            /** Street */
+            street?: string | null;
+            /** Total Area Sqm */
+            total_area_sqm?: string | null;
+            /** Window Area Sqm */
+            window_area_sqm?: string | null;
+            /** Windows */
+            windows?: number | null;
+        };
+        /** CatalogEntryIn */
+        CatalogEntryIn: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+        };
+        /** CatalogEntryOut */
+        CatalogEntryOut: {
+            /** Active */
+            active: boolean;
+            /** Catalog */
+            catalog: string;
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
         };
         /** CheckResult */
         CheckResult: {
@@ -1204,8 +2030,11 @@ export interface components {
         ContactIn: {
             /** Addresses */
             addresses?: components["schemas"]["AddressIn"][];
-            /** Bank Accounts */
-            bank_accounts?: components["schemas"]["BankAccountIn"][];
+            /**
+             * Bank Accounts
+             * @description Beim Ändern: weglassen oder null lässt die Bankverbindungen unverändert
+             */
+            bank_accounts?: components["schemas"]["mhvp__contacts__schemas__BankAccountIn"][] | null;
             /**
              * Blocked
              * @default false
@@ -1263,7 +2092,7 @@ export interface components {
             /** Addresses */
             addresses: components["schemas"]["AddressOut"][];
             /** Bank Accounts */
-            bank_accounts: components["schemas"]["BankAccountOut"][];
+            bank_accounts: components["schemas"]["mhvp__contacts__schemas__BankAccountOut"][];
             /** Blocked */
             blocked: boolean;
             /** Company Name */
@@ -1367,6 +2196,247 @@ export interface components {
          * @enum {string}
          */
         ContactTypeCode: "tenant" | "prospect" | "owner" | "service_provider" | "broker" | "manager" | "bank" | "board_member" | "authority" | "other";
+        /** ContractIn */
+        ContractIn: {
+            acquisition_kind?: components["schemas"]["AcquisitionKind"] | null;
+            /**
+             * Allocation Loss Risk
+             * @default false
+             */
+            allocation_loss_risk: boolean;
+            /** Benefit Burden Date */
+            benefit_burden_date?: string | null;
+            /**
+             * Direct Debit
+             * @default false
+             */
+            direct_debit: boolean;
+            /**
+             * Dunning Block
+             * @default false
+             */
+            dunning_block: boolean;
+            /** Dunning Block Reason */
+            dunning_block_reason?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            kind: components["schemas"]["ContractKind"];
+            /**
+             * Legal Entity Id
+             * @description Nur nötig, wenn der Vermieter nicht eindeutig ist
+             */
+            legal_entity_id?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Rent Increase Block Until */
+            rent_increase_block_until?: string | null;
+            /** Sepa Mandate Id */
+            sepa_mandate_id?: string | null;
+            /**
+             * Sev Enabled
+             * @default false
+             */
+            sev_enabled: boolean;
+            /** Sev Fee Debtor Party Id */
+            sev_fee_debtor_party_id?: string | null;
+            /**
+             * Special Succession Liability
+             * @default false
+             */
+            special_succession_liability: boolean;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Title Transfer Date */
+            title_transfer_date?: string | null;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /**
+             * User Change Fee
+             * @default false
+             */
+            user_change_fee: boolean;
+            /** @default none */
+            vat_option: components["schemas"]["ContractVatOption"];
+        };
+        /**
+         * ContractKind
+         * @enum {string}
+         */
+        ContractKind: "tenancy" | "ownership";
+        /** ContractOut */
+        ContractOut: {
+            acquisition_kind: components["schemas"]["AcquisitionKind"] | null;
+            /** Allocation Loss Risk */
+            allocation_loss_risk: boolean;
+            /** Benefit Burden Date */
+            benefit_burden_date: string | null;
+            debtor_account: components["schemas"]["DebtorAccountOut"];
+            /** Direct Debit */
+            direct_debit: boolean;
+            /** Dunning Block */
+            dunning_block: boolean;
+            /** Dunning Block Reason */
+            dunning_block_reason: string | null;
+            /** End Date */
+            end_date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["ContractKind"];
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: string;
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Payments */
+            payments?: components["schemas"]["PaymentOut"][];
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Rent Increase Block Until */
+            rent_increase_block_until: string | null;
+            /** Schedules */
+            schedules?: components["schemas"]["ScheduleOut"][];
+            /** Sepa Mandate Id */
+            sepa_mandate_id: string | null;
+            /** Sev Enabled */
+            sev_enabled: boolean;
+            /** Sev Fee Debtor Party Id */
+            sev_fee_debtor_party_id: string | null;
+            /** Special Succession Liability */
+            special_succession_liability: boolean;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Supersedes Contract Id */
+            supersedes_contract_id: string | null;
+            /** Termination Date */
+            termination_date: string | null;
+            /** Termination Reason */
+            termination_reason: string | null;
+            /** Title Transfer Date */
+            title_transfer_date: string | null;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** User Change Fee */
+            user_change_fee: boolean;
+            vat_option: components["schemas"]["ContractVatOption"];
+            /** Version */
+            version: number;
+        };
+        /**
+         * ContractVatOption
+         * @enum {string}
+         */
+        ContractVatOption: "none" | "commercial_no_vat" | "commercial_full_vat" | "commercial_reduced_vat";
+        /** ContractVersionIn */
+        ContractVersionIn: {
+            /** Allocation Loss Risk */
+            allocation_loss_risk?: boolean | null;
+            /** Direct Debit */
+            direct_debit?: boolean | null;
+            /** Dunning Block */
+            dunning_block?: boolean | null;
+            /** Dunning Block Reason */
+            dunning_block_reason?: string | null;
+            /**
+             * Effective Date
+             * Format: date
+             */
+            effective_date: string;
+            /** Notes */
+            notes?: string | null;
+            /** Rent Increase Block Until */
+            rent_increase_block_until?: string | null;
+            /** Sepa Mandate Id */
+            sepa_mandate_id?: string | null;
+            /** User Change Fee */
+            user_change_fee?: boolean | null;
+            vat_option?: components["schemas"]["ContractVatOption"] | null;
+        };
+        /** CustomFieldIn */
+        CustomFieldIn: {
+            /** Entity Type */
+            entity_type: string;
+            /** Field Type */
+            field_type: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+        };
+        /** CustomFieldOut */
+        CustomFieldOut: {
+            /** Entity Type */
+            entity_type: string;
+            /** Field Type */
+            field_type: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+        };
+        /** DebtorAccountOut */
+        DebtorAccountOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Name */
+            name: string;
+            /** Number */
+            number: string;
+        };
         /** DeliveryOut */
         DeliveryOut: {
             /** Attempts */
@@ -1392,6 +2462,127 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** DepositIn */
+        DepositIn: {
+            /** Amount Due */
+            amount_due: number | string;
+            /**
+             * Installments
+             * @default 1
+             */
+            installments: number;
+            /** Interest Rule */
+            interest_rule?: string | null;
+            kind: components["schemas"]["DepositKind"];
+            /** Property Bank Account Id */
+            property_bank_account_id?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /**
+         * DepositKind
+         * @enum {string}
+         */
+        DepositKind: "cash" | "savings_book" | "insurance" | "guarantee" | "fixed_deposit" | "letter_of_comfort" | "other";
+        /** DepositMovementIn */
+        DepositMovementIn: {
+            /** Amount */
+            amount: number | string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            kind: components["schemas"]["DepositMovementKind"];
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * DepositMovementKind
+         * @enum {string}
+         */
+        DepositMovementKind: "payment" | "interest" | "payout" | "offset";
+        /** DepositMovementOut */
+        DepositMovementOut: {
+            /** Amount */
+            amount: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["DepositMovementKind"];
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Review Required
+             * @default false
+             */
+            review_required: boolean;
+        };
+        /** DepositOut */
+        DepositOut: {
+            /** Amount Due */
+            amount_due: string;
+            /**
+             * Balance
+             * @default 0.00
+             */
+            balance: string;
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Installments */
+            installments: number;
+            /** Interest Rule */
+            interest_rule: string | null;
+            kind: components["schemas"]["DepositKind"];
+            /** Movements */
+            movements?: components["schemas"]["DepositMovementOut"][];
+            /**
+             * Outstanding
+             * @default 0.00
+             */
+            outstanding: string;
+            /** Property Bank Account Id */
+            property_bank_account_id: string | null;
+            /**
+             * Received
+             * @default 0.00
+             */
+            received: string;
+            /** Status */
+            status: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
+        };
+        /**
+         * DueDayRule
+         * @enum {string}
+         */
+        DueDayRule: "day" | "workday" | "last_day" | "day_next_month";
         /** DuplicateCandidate */
         DuplicateCandidate: {
             contact: components["schemas"]["ContactSummary"];
@@ -1563,6 +2754,24 @@ export interface components {
             /** Value */
             value: string;
         };
+        /**
+         * LegalEntityKind
+         * @enum {string}
+         */
+        LegalEntityKind: "hoa" | "rental_owner" | "sev_owner" | "manager";
+        /** LegalEntityOut */
+        LegalEntityOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["LegalEntityKind"];
+            /** Name */
+            name: string;
+            /** Party Id */
+            party_id: string | null;
+        };
         /** LiveReport */
         LiveReport: {
             /** Service */
@@ -1596,6 +2805,158 @@ export interface components {
              */
             status: string;
         };
+        /** MaintenanceIn */
+        MaintenanceIn: {
+            /** Due Date */
+            due_date?: string | null;
+            /** Interval Months */
+            interval_months?: number | null;
+            kind: components["schemas"]["MaintenanceKind"];
+            /** Provider Relation Id */
+            provider_relation_id?: string | null;
+            /** Remind Before */
+            remind_before?: string | null;
+            /** Title */
+            title: string;
+            /** Unit Id */
+            unit_id?: string | null;
+        };
+        /**
+         * MaintenanceKind
+         * @enum {string}
+         */
+        MaintenanceKind: "modernization" | "maintenance" | "inspection" | "warranty";
+        /** MaintenanceOut */
+        MaintenanceOut: {
+            /** Due Date */
+            due_date?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Interval Months */
+            interval_months?: number | null;
+            kind: components["schemas"]["MaintenanceKind"];
+            /** Provider Relation Id */
+            provider_relation_id?: string | null;
+            /** Remind Before */
+            remind_before?: string | null;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+            /** Unit Id */
+            unit_id?: string | null;
+        };
+        /**
+         * ManagementMode
+         * @enum {string}
+         */
+        ManagementMode: "own" | "third_party";
+        /**
+         * ManagementType
+         * @enum {string}
+         */
+        ManagementType: "rental" | "hoa" | "hoa_with_sev";
+        /** MandateIn */
+        MandateIn: {
+            /**
+             * Contact Bank Account Id
+             * Format: uuid
+             */
+            contact_bank_account_id: string;
+            /** Creditor Id */
+            creditor_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             * @description Nachweis des unterschriebenen Mandats (Pflicht)
+             */
+            document_id: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Reference */
+            reference: string;
+            /** @default recurring */
+            sequence: components["schemas"]["MandateSequence"];
+            /**
+             * Signed At
+             * Format: date
+             */
+            signed_at: string;
+            /** @default core */
+            type: components["schemas"]["MandateType"];
+            /** Valid Until */
+            valid_until?: string | null;
+        };
+        /** MandateOut */
+        MandateOut: {
+            /**
+             * Contact Bank Account Id
+             * Format: uuid
+             */
+            contact_bank_account_id: string;
+            /** Creditor Id */
+            creditor_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Iban Masked */
+            iban_masked?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Reference */
+            reference: string;
+            sequence: components["schemas"]["MandateSequence"];
+            /**
+             * Signed At
+             * Format: date
+             */
+            signed_at: string;
+            status: components["schemas"]["MandateStatus"];
+            type: components["schemas"]["MandateType"];
+            /** Valid Until */
+            valid_until: string | null;
+        };
+        /**
+         * MandateSequence
+         * @enum {string}
+         */
+        MandateSequence: "first" | "recurring" | "one_off";
+        /**
+         * MandateStatus
+         * @enum {string}
+         */
+        MandateStatus: "active" | "revoked" | "expired";
+        /**
+         * MandateType
+         * @enum {string}
+         */
+        MandateType: "core" | "b2b";
         /** MeOut */
         MeOut: {
             /** Display Name */
@@ -1650,6 +3011,82 @@ export interface components {
         MemberRoles: {
             /** Role Codes */
             role_codes: string[];
+        };
+        /**
+         * MeterConnection
+         * @enum {string}
+         */
+        MeterConnection: "main" | "sub";
+        /** MeterIn */
+        MeterIn: {
+            /** Calibration Due Date */
+            calibration_due_date?: string | null;
+            /** @default sub */
+            connection: components["schemas"]["MeterConnection"];
+            /** Location */
+            location?: string | null;
+            /** Malo Id */
+            malo_id?: string | null;
+            /** Meter Type Code */
+            meter_type_code: string;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Number */
+            number: string;
+            /**
+             * Remote Readable
+             * @default false
+             */
+            remote_readable: boolean;
+            /** Unit Id */
+            unit_id?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** MeterOut */
+        MeterOut: {
+            /** Calibration Due Date */
+            calibration_due_date?: string | null;
+            /** @default sub */
+            connection: components["schemas"]["MeterConnection"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Location */
+            location?: string | null;
+            /** Malo Id */
+            malo_id?: string | null;
+            /** Meter Type Code */
+            meter_type_code: string;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Number */
+            number: string;
+            /**
+             * Remote Readable
+             * @default false
+             */
+            remote_readable: boolean;
+            /** Unit Id */
+            unit_id?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
         };
         /** MfaSetup */
         MfaSetup: {
@@ -1708,6 +3145,35 @@ export interface components {
              */
             pinned: boolean;
         };
+        /** OccupancyRow */
+        OccupancyRow: {
+            /** Owner Party */
+            owner_party: string | null;
+            /** Ownership Contract Id */
+            ownership_contract_id: string | null;
+            /** Tenancy Contract Id */
+            tenancy_contract_id: string | null;
+            /** Tenant Party */
+            tenant_party: string | null;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Unit Label */
+            unit_label: string | null;
+            /** Unit Number */
+            unit_number: string;
+            /** Unit Type */
+            unit_type: string;
+            /** Vacant */
+            vacant: boolean;
+        };
+        /**
+         * Occupant
+         * @enum {string}
+         */
+        Occupant: "vacancy" | "contract";
         /** OidcTokenResponse */
         OidcTokenResponse: {
             /** Access Token */
@@ -1721,6 +3187,73 @@ export interface components {
              * @default Bearer
              */
             token_type: string;
+        };
+        /** OwnerIn */
+        OwnerIn: {
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Share Percent */
+            share_percent?: number | string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** OwnerOut */
+        OwnerOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Legal Entity Id */
+            legal_entity_id?: string | null;
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Share Percent */
+            share_percent: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
+        };
+        /** OwnershipTransferIn */
+        OwnershipTransferIn: {
+            acquisition_kind: components["schemas"]["AcquisitionKind"];
+            /** Benefit Burden Date */
+            benefit_burden_date?: string | null;
+            /**
+             * New Party Id
+             * Format: uuid
+             */
+            new_party_id: string;
+            /**
+             * Sev Enabled
+             * @default false
+             */
+            sev_enabled: boolean;
+            /**
+             * Special Succession Liability
+             * @default false
+             */
+            special_succession_liability: boolean;
+            /**
+             * Title Transfer Date
+             * Format: date
+             */
+            title_transfer_date: string;
         };
         /** PartyIn */
         PartyIn: {
@@ -1775,6 +3308,72 @@ export interface components {
          * @enum {string}
          */
         PartyRole: "primary" | "co_party" | "guarantor" | "legal_representative";
+        /** PaymentIn */
+        PaymentIn: {
+            /** Document Id */
+            document_id?: string | null;
+            /** Gross */
+            gross: number | string;
+            /** Net */
+            net: number | string;
+            /** Payment Type Code */
+            payment_type_code: string;
+            /** @default initial */
+            reason: components["schemas"]["PaymentReason"];
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+            /**
+             * Vat Percent
+             * @default 0
+             */
+            vat_percent: number | string;
+        };
+        /**
+         * PaymentInterval
+         * @enum {string}
+         */
+        PaymentInterval: "monthly" | "quarterly" | "semiannual" | "annual";
+        /** PaymentOut */
+        PaymentOut: {
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /** Currency */
+            currency: string;
+            /** Gross */
+            gross: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Net */
+            net: string;
+            /** Payment Type Code */
+            payment_type_code: string;
+            reason: components["schemas"]["PaymentReason"];
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
+            /** Vat Percent */
+            vat_percent: string;
+        };
+        /**
+         * PaymentReason
+         * @enum {string}
+         */
+        PaymentReason: "initial" | "index" | "graduated" | "increase" | "adjustment_from_statement" | "other";
         /** PhoneIn */
         PhoneIn: {
             /**
@@ -1810,6 +3409,372 @@ export interface components {
          * @enum {string}
          */
         PreferredChannel: "post" | "email" | "portal";
+        /** PropertyContactIn */
+        PropertyContactIn: {
+            /** Category Code */
+            category_code: string;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+            /** Visible In Portal For */
+            visible_in_portal_for?: string[];
+        };
+        /** PropertyContactOut */
+        PropertyContactOut: {
+            /** Category Code */
+            category_code: string;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+            /** Visible In Portal For */
+            visible_in_portal_for?: string[];
+        };
+        /** PropertyIn */
+        PropertyIn: {
+            /** Allocation Loss Risk Percent */
+            allocation_loss_risk_percent?: number | string | null;
+            /** Built Area Sqm */
+            built_area_sqm?: number | string | null;
+            /** City */
+            city?: string | null;
+            /**
+             * Country
+             * @default DE
+             */
+            country: string;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
+            /** Garden Notes */
+            garden_notes?: string | null;
+            /** Garden Use */
+            garden_use?: string | null;
+            /** House Number */
+            house_number?: string | null;
+            /** Land Registry District */
+            land_registry_district?: string | null;
+            /** Land Registry Sheet */
+            land_registry_sheet?: string | null;
+            /** Latitude */
+            latitude?: number | string | null;
+            /** Longitude */
+            longitude?: number | string | null;
+            /** Managed From */
+            managed_from?: string | null;
+            /** Managed To */
+            managed_to?: string | null;
+            /** @default third_party */
+            management_mode: components["schemas"]["ManagementMode"];
+            management_type: components["schemas"]["ManagementType"];
+            /** Manager User Id */
+            manager_user_id?: string | null;
+            /** Municipality Code */
+            municipality_code?: string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Number
+             * @description Objektnummer NNN
+             */
+            number: string;
+            /** Parcel */
+            parcel?: string | null;
+            /** Postal Code */
+            postal_code?: string | null;
+            /** Property Type Code */
+            property_type_code?: string | null;
+            /**
+             * Renovation Flag
+             * @default false
+             */
+            renovation_flag: boolean;
+            /** Renovation Notes */
+            renovation_notes?: string | null;
+            /** Sealed Area Sqm */
+            sealed_area_sqm?: number | string | null;
+            /** State */
+            state?: string | null;
+            /** Street */
+            street?: string | null;
+            /** Unbuilt Area Sqm */
+            unbuilt_area_sqm?: number | string | null;
+        };
+        /** PropertyOut */
+        PropertyOut: {
+            /** Allocation Loss Risk Percent */
+            allocation_loss_risk_percent?: string | null;
+            /** Built Area Sqm */
+            built_area_sqm?: string | null;
+            /** City */
+            city?: string | null;
+            /**
+             * Country
+             * @default DE
+             */
+            country: string;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
+            /** Garden Notes */
+            garden_notes?: string | null;
+            /** Garden Use */
+            garden_use?: string | null;
+            /** House Number */
+            house_number?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Land Registry District */
+            land_registry_district?: string | null;
+            /** Land Registry Sheet */
+            land_registry_sheet?: string | null;
+            /** Latitude */
+            latitude?: string | null;
+            /** Legal Entities */
+            legal_entities?: components["schemas"]["LegalEntityOut"][];
+            /** Longitude */
+            longitude?: string | null;
+            /** Managed From */
+            managed_from?: string | null;
+            /** Managed To */
+            managed_to?: string | null;
+            /** @default third_party */
+            management_mode: components["schemas"]["ManagementMode"];
+            management_type: components["schemas"]["ManagementType"];
+            /** Manager User Id */
+            manager_user_id?: string | null;
+            /** Municipality Code */
+            municipality_code?: string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Number
+             * @description Objektnummer NNN
+             */
+            number: string;
+            /** Parcel */
+            parcel?: string | null;
+            /** Postal Code */
+            postal_code?: string | null;
+            /** Property Type Code */
+            property_type_code?: string | null;
+            /**
+             * Renovation Flag
+             * @default false
+             */
+            renovation_flag: boolean;
+            /** Renovation Notes */
+            renovation_notes?: string | null;
+            /** Sealed Area Sqm */
+            sealed_area_sqm?: string | null;
+            /** State */
+            state?: string | null;
+            status: components["schemas"]["PropertyStatus"];
+            /** Street */
+            street?: string | null;
+            /** Unbuilt Area Sqm */
+            unbuilt_area_sqm?: string | null;
+            /** Version */
+            version: number;
+        };
+        /** PropertyPage */
+        PropertyPage: {
+            /** Items */
+            items: components["schemas"]["PropertySummary"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * PropertyStatus
+         * @enum {string}
+         */
+        PropertyStatus: "onboarding" | "active" | "terminated";
+        /** PropertySummary */
+        PropertySummary: {
+            /** City */
+            city: string | null;
+            /** House Number */
+            house_number: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            management_type: components["schemas"]["ManagementType"];
+            /** Name */
+            name: string;
+            /** Number */
+            number: string;
+            status: components["schemas"]["PropertyStatus"];
+            /** Street */
+            street: string | null;
+        };
+        /** ProviderIn */
+        ProviderIn: {
+            /** Categories */
+            categories?: string[];
+            /** Contact Bank Account Id */
+            contact_bank_account_id?: string | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Contract Type Code */
+            contract_type_code: string;
+            /**
+             * Create Default Bank Rule
+             * @default false
+             */
+            create_default_bank_rule: boolean;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
+            /** Notes */
+            notes?: string | null;
+            /** Notice Period */
+            notice_period?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** ProviderOut */
+        ProviderOut: {
+            /** Categories */
+            categories?: string[];
+            /** Contact Bank Account Id */
+            contact_bank_account_id?: string | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Contract Type Code */
+            contract_type_code: string;
+            /**
+             * Create Default Bank Rule
+             * @default false
+             */
+            create_default_bank_rule: boolean;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Notes */
+            notes?: string | null;
+            /** Notice Period */
+            notice_period?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** ReadingIn */
+        ReadingIn: {
+            /**
+             * Estimated
+             * @default false
+             */
+            estimated: boolean;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Read At
+             * Format: date
+             */
+            read_at: string;
+            /** @default manual */
+            source: components["schemas"]["ReadingSource"];
+            /** Value */
+            value: number | string;
+        };
+        /** ReadingOut */
+        ReadingOut: {
+            /**
+             * Estimated
+             * @default false
+             */
+            estimated: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Implausible
+             * @default false
+             */
+            implausible: boolean;
+            /**
+             * Meter Id
+             * Format: uuid
+             */
+            meter_id: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Read At
+             * Format: date
+             */
+            read_at: string;
+            /** @default manual */
+            source: components["schemas"]["ReadingSource"];
+            /** Value */
+            value: string;
+        };
+        /**
+         * ReadingSource
+         * @enum {string}
+         */
+        ReadingSource: "manual" | "portal" | "provider_import" | "ai";
         /** RefreshRequest */
         RefreshRequest: {
             /** Refresh Token */
@@ -1885,6 +3850,49 @@ export interface components {
             /** Permissions */
             permissions: string[];
         };
+        /** ScheduleIn */
+        ScheduleIn: {
+            /**
+             * Due Day
+             * @default 3
+             */
+            due_day: number;
+            /** @default day */
+            due_day_rule: components["schemas"]["DueDayRule"];
+            /** @default monthly */
+            interval: components["schemas"]["PaymentInterval"];
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** ScheduleOut */
+        ScheduleOut: {
+            /**
+             * Due Day
+             * @default 3
+             */
+            due_day: number;
+            /** @default day */
+            due_day_rule: components["schemas"]["DueDayRule"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** @default monthly */
+            interval: components["schemas"]["PaymentInterval"];
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
         /** SearchHit */
         SearchHit: {
             /** Entity Type */
@@ -1922,6 +3930,10 @@ export interface components {
             tenant_id: string | null;
             /** User Agent */
             user_agent: string | null;
+        };
+        /** StatusChange */
+        StatusChange: {
+            status: components["schemas"]["PropertyStatus"];
         };
         /** SwitchRequest */
         SwitchRequest: {
@@ -1966,6 +3978,21 @@ export interface components {
             branding?: components["schemas"]["Branding"] | null;
             company?: components["schemas"]["CompanyData"] | null;
         };
+        /** TerminationIn */
+        TerminationIn: {
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Termination Date
+             * @description Datum der Kündigungserklärung
+             */
+            termination_date?: string | null;
+            /** Termination Reason */
+            termination_reason?: string | null;
+        };
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -1984,6 +4011,128 @@ export interface components {
              */
             token_type: string;
         };
+        /** UnitIn */
+        UnitIn: {
+            /** Bathrooms */
+            bathrooms?: number | null;
+            /** Bedrooms */
+            bedrooms?: number | null;
+            /**
+             * Building Id
+             * Format: uuid
+             */
+            building_id: string;
+            /** Cellar Number */
+            cellar_number?: string | null;
+            /** City */
+            city?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
+            /** Features */
+            features?: string | null;
+            /** Floor */
+            floor?: string | null;
+            /** House Number */
+            house_number?: string | null;
+            /** Internal Name */
+            internal_name?: string | null;
+            /**
+             * Is Fictional
+             * @default false
+             */
+            is_fictional: boolean;
+            /** Label */
+            label?: string | null;
+            /** Last Modernization Year */
+            last_modernization_year?: number | null;
+            /** Living Area Sqm */
+            living_area_sqm?: number | string | null;
+            /** Location */
+            location?: string | null;
+            /** Number */
+            number: string;
+            /** Postal Code */
+            postal_code?: string | null;
+            /** Rooms */
+            rooms?: number | string | null;
+            /** Street */
+            street?: string | null;
+            /** Total Area Sqm */
+            total_area_sqm?: number | string | null;
+            unit_type: components["schemas"]["UnitType"];
+        };
+        /** UnitOut */
+        UnitOut: {
+            /** Allocation Values */
+            allocation_values?: components["schemas"]["AllocationValueOut"][];
+            /** Bathrooms */
+            bathrooms?: number | null;
+            /** Bedrooms */
+            bedrooms?: number | null;
+            /**
+             * Building Id
+             * Format: uuid
+             */
+            building_id: string;
+            /** Cellar Number */
+            cellar_number?: string | null;
+            /** City */
+            city?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
+            /** Features */
+            features?: string | null;
+            /** Floor */
+            floor?: string | null;
+            /** House Number */
+            house_number?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Internal Name */
+            internal_name?: string | null;
+            /**
+             * Is Fictional
+             * @default false
+             */
+            is_fictional: boolean;
+            /** Label */
+            label?: string | null;
+            /** Last Modernization Year */
+            last_modernization_year?: number | null;
+            /** Living Area Sqm */
+            living_area_sqm?: string | null;
+            /** Location */
+            location?: string | null;
+            /** Number */
+            number: string;
+            /** Postal Code */
+            postal_code?: string | null;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Rooms */
+            rooms?: string | null;
+            /** Street */
+            street?: string | null;
+            /** Total Area Sqm */
+            total_area_sqm?: string | null;
+            unit_type: components["schemas"]["UnitType"];
+            vat_option?: components["schemas"]["VatOption"] | null;
+        };
+        /**
+         * UnitType
+         * @enum {string}
+         */
+        UnitType: "apartment" | "commercial" | "office" | "parking" | "garage" | "storage" | "garden" | "other";
         /** UserCreate */
         UserCreate: {
             /** Display Name */
@@ -2029,6 +4178,28 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * ValueSource
+         * @enum {string}
+         */
+        ValueSource: "manual" | "contract" | "import" | "ai";
+        /**
+         * VatOption
+         * @enum {string}
+         */
+        VatOption: "none" | "commercial_no_vat" | "commercial_full_vat" | "commercial_reduced_vat";
+        /** VatOptionIn */
+        VatOptionIn: {
+            occupant: components["schemas"]["Occupant"];
+            option: components["schemas"]["VatOption"];
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
         };
         /** WebhookCreate */
         WebhookCreate: {
@@ -2083,6 +4254,51 @@ export interface components {
             /** Event Types */
             event_types?: string[] | null;
         };
+        /** BankAccountIn */
+        mhvp__contacts__schemas__BankAccountIn: {
+            /** Bank Name */
+            bank_name?: string | null;
+            /** Bic */
+            bic?: string | null;
+            /** Holder */
+            holder?: string | null;
+            /** Iban */
+            iban: string;
+            /** Label */
+            label?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** BankAccountOut */
+        mhvp__contacts__schemas__BankAccountOut: {
+            /** Bank Name */
+            bank_name: string | null;
+            /** Bic */
+            bic: string | null;
+            /** Holder */
+            holder: string | null;
+            /** Iban Masked */
+            iban_masked: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
+        };
         /** TenantOut */
         mhvp__core__auth__routers__TenantOut: {
             /**
@@ -2106,6 +4322,63 @@ export interface components {
             slug: string;
             /** Status */
             status: string;
+        };
+        /** BankAccountIn */
+        mhvp__properties__schemas__BankAccountIn: {
+            /** Bank Name */
+            bank_name?: string | null;
+            /** Bic */
+            bic?: string | null;
+            /** Holder */
+            holder: string;
+            /** Iban */
+            iban: string;
+            kind: components["schemas"]["BankAccountKind"];
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** BankAccountOut */
+        mhvp__properties__schemas__BankAccountOut: {
+            /** Bank Name */
+            bank_name: string | null;
+            /** Bic */
+            bic: string | null;
+            /** Holder */
+            holder: string;
+            /** Iban Masked */
+            iban_masked: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["BankAccountKind"];
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Segregated */
+            segregated: boolean;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
         };
     };
     responses: never;
@@ -2134,6 +4407,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    list_templates_api_v1_allocation_key_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationKeyIn-Output"][];
                 };
             };
         };
@@ -2390,6 +4683,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_catalog_api_v1_catalogs__catalog__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                catalog: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogEntryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_catalog_entry_api_v1_catalogs__catalog__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                catalog: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogEntryOut"];
                 };
             };
             /** @description Validation Error */
@@ -2867,6 +5226,496 @@ export interface operations {
             };
         };
     };
+    list_contracts_api_v1_contracts_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+                unit_id?: string | null;
+                party_id?: string | null;
+                kind?: components["schemas"]["ContractKind"] | null;
+                active_on?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_contract_api_v1_contracts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_contract_api_v1_contracts__contract_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deposits_api_v1_contracts__contract_id__deposits_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_deposit_api_v1_contracts__contract_id__deposits_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepositIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ownership_transfer_api_v1_contracts__contract_id__ownership_transfer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OwnershipTransferIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payment_history_api_v1_contracts__contract_id__payments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_payment_api_v1_contracts__contract_id__payments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_schedule_api_v1_contracts__contract_id__schedules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    terminate_api_v1_contracts__contract_id__termination_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TerminationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    contract_versions_api_v1_contracts__contract_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    new_version_api_v1_contracts__contract_id__versions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractVersionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_custom_fields_api_v1_custom_fields_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFieldOut"][];
+                };
+            };
+        };
+    };
+    add_custom_field_api_v1_custom_fields_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomFieldIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFieldOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_deposit_movement_api_v1_deposits__deposit_id__movements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deposit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepositMovementIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     live_api_v1_health_live_get: {
         parameters: {
             query?: never;
@@ -2912,6 +5761,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthReport"];
+                };
+            };
+        };
+    };
+    list_readings_api_v1_meters__meter_id__readings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meter_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_reading_api_v1_meters__meter_id__readings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meter_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3323,6 +6238,805 @@ export interface operations {
             };
         };
     };
+    list_properties_api_v1_properties_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                status?: components["schemas"]["PropertyStatus"] | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_property_api_v1_properties_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_property_api_v1_properties__property_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_property_api_v1_properties__property_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_keys_api_v1_properties__property_id__allocation_keys_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationKeyOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_key_api_v1_properties__property_id__allocation_keys_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocationKeyIn-Input"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationKeyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_accounts_api_v1_properties__property_id__bank_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__properties__schemas__BankAccountOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_account_api_v1_properties__property_id__bank_accounts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__properties__schemas__BankAccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__properties__schemas__BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_buildings_api_v1_properties__property_id__buildings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuildingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_building_api_v1_properties__property_id__buildings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuildingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuildingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_property_contacts_api_v1_properties__property_id__contacts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyContactOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_property_contact_api_v1_properties__property_id__contacts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyContactIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_entities_api_v1_properties__property_id__legal_entities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalEntityOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_maintenance_api_v1_properties__property_id__maintenance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_maintenance_api_v1_properties__property_id__maintenance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_meters_api_v1_properties__property_id__meters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeterOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_meter_api_v1_properties__property_id__meters_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeterIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeterOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    occupancy_api_v1_properties__property_id__occupancy_get: {
+        parameters: {
+            query?: {
+                as_of?: string;
+            };
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccupancyRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_owner_api_v1_properties__property_id__owners_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OwnerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_providers_api_v1_properties__property_id__service_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_provider_api_v1_properties__property_id__service_providers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_status_api_v1_properties__property_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_units_api_v1_properties__property_id__units_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_unit_api_v1_properties__property_id__units_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     global_search_api_v1_search_get: {
         parameters: {
             query: {
@@ -3342,6 +7056,102 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchHit"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_mandates_api_v1_sepa_mandates_get: {
+        parameters: {
+            query?: {
+                party_id?: string | null;
+                status?: components["schemas"]["MandateStatus"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MandateOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_mandate_api_v1_sepa_mandates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MandateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MandateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_mandate_api_v1_sepa_mandates__mandate_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mandate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MandateOut"];
                 };
             };
             /** @description Validation Error */
@@ -3967,6 +7777,177 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeliveryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_unit_api_v1_units__unit_id__get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_unit_api_v1_units__unit_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_values_api_v1_units__unit_id__allocation_values_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationValueOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_value_api_v1_units__unit_id__allocation_values_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocationValueIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationValueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_vat_option_api_v1_units__unit_id__vat_options_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VatOptionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOut"];
                 };
             };
             /** @description Validation Error */

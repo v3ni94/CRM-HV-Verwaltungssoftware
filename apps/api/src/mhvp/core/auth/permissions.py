@@ -15,6 +15,7 @@ from mhvp.platform.models import MembershipRole, Role, RolePermission
 ACTIONS: tuple[str, ...] = ("read", "create", "update", "delete", "approve", "export")
 RESOURCES: tuple[str, ...] = (
     "contacts",
+    "contracts",
     "properties",
     "tenant_settings",
     "members",
@@ -49,49 +50,38 @@ def _r(resource: str) -> frozenset[str]:
     return frozenset({f"{resource}:read"})
 
 
+_MASTER_RWD = (
+    _rw("contacts", delete=True) | _rw("properties", delete=True) | _rw("contracts", delete=True)
+)
+_MASTER_RW = _rw("contacts") | _rw("properties") | _rw("contracts")
+_MASTER_R = _r("contacts") | _r("properties") | _r("contracts")
+
 SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole("tenant_admin", "Mandantenadministrator", _ADMIN),
     SystemRole("administrator", "Administrator", _ADMIN),
-    SystemRole(
-        "standard",
-        "Standard",
-        _SETTINGS_R | _rw("contacts", delete=True) | _rw("properties", delete=True),
-    ),
+    SystemRole("standard", "Standard", _SETTINGS_R | _MASTER_RWD),
     SystemRole("read_only", "Nur Lesezugriff", READ_ALL),
-    SystemRole(
-        "read_only_master_data",
-        "Nur Lesezugriff Stammdaten",
-        _SETTINGS_R | _r("contacts") | _r("properties"),
-    ),
-    SystemRole(
-        "clerk_no_delete",
-        "Sachbearbeiter ohne Löschen",
-        _SETTINGS_R | _rw("contacts") | _rw("properties"),
-    ),
-    SystemRole(
-        "clerk_no_accounting",
-        "Sachbearbeiter ohne Buchhaltung",
-        _SETTINGS_R | _rw("contacts", delete=True) | _rw("properties", delete=True),
-    ),
+    SystemRole("read_only_master_data", "Nur Lesezugriff Stammdaten", _SETTINGS_R | _MASTER_R),
+    SystemRole("clerk_no_delete", "Sachbearbeiter ohne Löschen", _SETTINGS_R | _MASTER_RW),
+    SystemRole("clerk_no_accounting", "Sachbearbeiter ohne Buchhaltung", _SETTINGS_R | _MASTER_RWD),
     SystemRole(
         "accountant_no_banking",
         "Buchhalter ohne Onlinebanking",
-        _SETTINGS_R | _rw("contacts") | _r("properties"),
+        _SETTINGS_R | _rw("contacts") | _r("properties") | _r("contracts"),
     ),
     SystemRole(
         "accountant_banking",
         "Buchhalter mit Onlinebanking",
-        _SETTINGS_R | _rw("contacts") | _r("properties"),
+        _SETTINGS_R | _rw("contacts") | _r("properties") | _r("contracts"),
     ),
+    # Caretakers see objects, not contracts or personal data of residents (data minimisation).
     SystemRole("caretaker", "Hausmeister", _r("properties")),
     SystemRole(
         "technical_clerk",
         "Technischer Sachbearbeiter",
         _SETTINGS_R | _r("contacts") | _rw("properties"),
     ),
-    SystemRole(
-        "support", "Support", _SETTINGS_R | _r("contacts") | _r("properties") | {"audit:read"}
-    ),
+    SystemRole("support", "Support", _SETTINGS_R | _MASTER_R | {"audit:read"}),
     SystemRole("insurance_broker", "Versicherungsmakler", frozenset()),
     SystemRole("tax_advisor", "Steuerberater", _SETTINGS_R),
 )
