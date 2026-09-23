@@ -11,3 +11,7 @@ onlyBuiltDependencies:
 ignoredBuiltDependencies:
   - "@parcel/watcher"
   - "@swc/core"
+
+# Security overrides for transitive packages found by the image scan (Trivy, CI job images).
+overrides:
+  "postcss@<8.5.18": "^8.5.28"

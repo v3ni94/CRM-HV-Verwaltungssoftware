@@ -27,7 +27,11 @@ RUN pnpm --filter @mhvp/web-portal build
 
 FROM ${NODE_IMAGE} AS runtime
 # Apply Alpine security fixes (Trivy gate in CI).
-RUN apk upgrade --no-cache
+# npm, npx and corepack are not needed at runtime; their bundled packages carry CVEs.
+RUN apk upgrade --no-cache \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+       /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn* \
+       /usr/local/bin/yarn /usr/local/bin/yarnpkg
 ARG MHVP_APP_VERSION=0.0.0-dev
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 PORT=3001 MHVP_APP_VERSION=${MHVP_APP_VERSION}
