@@ -337,3 +337,165 @@ def test_meters_catalogs_custom_fields_and_permissions(client: TestClient, world
     )
     listed = client.get("/api/v1/properties", params={"q": "Rheinpromenade"}, headers=h).json()
     assert listed["total"] >= 5
+
+
+def test_remaining_property_endpoints(client: TestClient, world: World) -> None:
+    h = bearer(login(client, world, "m4admin"))
+    prop = client.post("/api/v1/properties", json=_prop("351", "rental"), headers=h).json()
+    pid = prop["id"]
+    got = client.get(f"/api/v1/properties/{pid}", headers=h)
+    updated = client.put(
+        f"/api/v1/properties/{pid}",
+        json=_prop("351", "rental") | {"notes": "Dach 2027"},
+        headers=h | {"If-Match": got.headers["etag"]},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["version"] == 2
+    assert (
+        client.put(
+            f"/api/v1/properties/{pid}",
+            json=_prop("351", "rental"),
+            headers=h | {"If-Match": '"1"'},
+        ).status_code
+        == 412
+    )
+    building = client.post(
+        f"/api/v1/properties/{pid}/buildings", json={"name": "Hinterhaus"}, headers=h
+    ).json()
+    assert [
+        b["name"] for b in client.get(f"/api/v1/properties/{pid}/buildings", headers=h).json()
+    ] == ["Hinterhaus"]
+    unit = client.post(
+        f"/api/v1/properties/{pid}/units",
+        json={"building_id": building["id"], "number": "G1", "unit_type": "garage"},
+        headers=h,
+    ).json()
+    changed = client.put(
+        f"/api/v1/units/{unit['id']}",
+        json={
+            "building_id": building["id"],
+            "number": "G1",
+            "unit_type": "parking",
+            "label": "Stellplatz 1",
+        },
+        headers=h,
+    )
+    assert changed.json()["unit_type"] == "parking"
+    vat = client.post(
+        f"/api/v1/units/{unit['id']}/vat-options",
+        json={"option": "commercial_full_vat", "occupant": "vacancy", "valid_from": "2026-01-01"},
+        headers=h,
+    )
+    assert vat.json()["vat_option"] == "commercial_full_vat"
+    assert (
+        client.post(
+            f"/api/v1/units/{unit['id']}/vat-options",
+            json={"option": "none", "occupant": "vacancy", "valid_from": "2026-06-01"},
+            headers=h,
+        ).status_code
+        == 409
+    )
+    key = client.post(
+        f"/api/v1/properties/{pid}/allocation-keys",
+        json={
+            "code": "AUFZ_A",
+            "name": "Aufzug Haus A",
+            "unit_of_measure": "MEA",
+            "kind": "static",
+        },
+        headers=h,
+    )
+    assert key.status_code == 201
+    assert (
+        client.post(
+            f"/api/v1/properties/{pid}/allocation-keys",
+            json={"code": "AUFZ_A", "name": "Doppelt", "unit_of_measure": "MEA", "kind": "static"},
+            headers=h,
+        ).status_code
+        == 409
+    )
+    person = client.post(
+        "/api/v1/contacts",
+        json={
+            "kind": "person",
+            "last_name": f"Hausmeister{RUN}",
+            "bank_accounts": [{"iban": "DE02120300000000202051", "valid_from": "2026-01-01"}],
+        },
+        headers=h,
+    ).json()
+    contact = client.post(
+        f"/api/v1/properties/{pid}/contacts",
+        json={
+            "contact_id": person["id"],
+            "category_code": "caretaker",
+            "valid_from": "2026-01-01",
+            "visible_in_portal_for": ["tenant"],
+        },
+        headers=h,
+    )
+    assert contact.status_code == 201
+    assert len(client.get(f"/api/v1/properties/{pid}/contacts", headers=h).json()) == 1
+    provider = client.post(
+        f"/api/v1/properties/{pid}/service-providers",
+        json={
+            "contact_id": person["id"],
+            "contract_type_code": "caretaker",
+            "valid_from": "2026-01-01",
+            "contact_bank_account_id": person["bank_accounts"][0]["id"],
+        },
+        headers=h,
+    )
+    assert provider.status_code == 201
+    other = client.post(
+        "/api/v1/contacts", json={"kind": "person", "last_name": f"Fremd{RUN}"}, headers=h
+    ).json()
+    wrong_account = client.post(
+        f"/api/v1/properties/{pid}/service-providers",
+        json={
+            "contact_id": other["id"],
+            "contract_type_code": "caretaker",
+            "valid_from": "2026-01-01",
+            "contact_bank_account_id": person["bank_accounts"][0]["id"],
+        },
+        headers=h,
+    )
+    assert wrong_account.status_code == 422
+    assert len(client.get(f"/api/v1/properties/{pid}/service-providers", headers=h).json()) == 1
+    item = client.post(
+        f"/api/v1/properties/{pid}/maintenance",
+        json={
+            "kind": "inspection",
+            "title": "Prüfung Rauchwarnmelder",
+            "due_date": "2027-03-01",
+            "remind_before": "1m",
+            "interval_months": 12,
+        },
+        headers=h,
+    )
+    assert item.status_code == 201
+    assert (
+        client.get(f"/api/v1/properties/{pid}/maintenance", headers=h).json()[0]["status"] == "open"
+    )
+    assert client.get(f"/api/v1/properties/{pid}/legal-entities", headers=h).json() == []
+    assert client.get(f"/api/v1/properties/{pid}/bank-accounts", headers=h).json() == []
+    assert len(client.get(f"/api/v1/properties/{pid}/meters", headers=h).json()) == 0
+    assert len(client.get("/api/v1/allocation-key-templates", headers=h).json()) == 21
+    assert (
+        client.post(
+            "/api/v1/catalogs/property_type",
+            json={"code": "mfh", "label": "Mehrfamilienhaus"},
+            headers=h,
+        ).status_code
+        == 201
+    )
+    assert (
+        client.post(
+            "/api/v1/properties", json=_prop("352") | {"property_type_code": "mfh"}, headers=h
+        ).status_code
+        == 201
+    )
+    assert any(
+        f["key"].startswith("baujahr_")
+        for f in client.get("/api/v1/custom-fields", headers=h).json()
+    )
+    assert client.get(f"/api/v1/properties/{pid}/units", headers=h).json()[0]["number"] == "G1"
