@@ -15,7 +15,8 @@
     "letting": "Letting",
     "bank": "Bank",
     "billing": "Statements",
-    "tickets": "Tickets"
+    "tickets": "Tickets",
+    "platform": "Platform"
   },
   "Hoa": {
     "title": "HOA management",
@@ -448,5 +449,17 @@
       "urgent": "urgent",
       "immediate": "immediate"
     }
+  },
+  "Platform": {
+    "title": "Platform",
+    "notice": "Read only view for platform administrators. Prices and licences are maintained via the API. Release gates are neither opened nor changed here; G5 evidence is kept manually.",
+    "forbidden": "Platform administrators only.",
+    "usage": "Usage",
+    "usageLine": "{units} units, {users} users, quota {unit_quota}",
+    "gates": "Release gates",
+    "open": "open",
+    "closed": "closed",
+    "g5": "G5 evidence",
+    "noData": "No data."
   }
 }

@@ -27,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Link href="/start" className="text-sm font-semibold">
           {tHome("productName")}
         </Link>
-        <nav aria-label={t("nav")} className="flex gap-3 text-sm">
+        <nav aria-label={t("nav")} className="flex flex-wrap gap-3 text-sm">
           <Link href="/start" className="hover:underline">
             {t("dashboard")}
           </Link>
@@ -73,6 +73,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Link href="/importe" className="hover:underline">
             {t("imports")}
           </Link>
+          {me?.is_platform_admin ? (
+            <Link href="/plattform" className="hover:underline">
+              {t("platform")}
+            </Link>
+          ) : null}
           {me?.permissions.includes("tenant_settings:update") ? (
             <Link href="/einstellungen/ki" className="hover:underline">
               {t("aiSettings")}

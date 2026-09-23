@@ -68,7 +68,8 @@
     "letting": "Vermietung",
     "bank": "Bank",
     "billing": "Abrechnung",
-    "tickets": "Tickets"
+    "tickets": "Tickets",
+    "platform": "Plattform"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -1095,5 +1096,17 @@
       "urgent": "dringend",
       "immediate": "sofort"
     }
+  },
+  "Platform": {
+    "title": "Plattform",
+    "notice": "Lesesicht für Plattformadministratoren. Preise und Lizenzen werden über die API gepflegt. Freigabestufen werden hier weder geöffnet noch geändert; G5-Nachweise sind manuell zu führen.",
+    "forbidden": "Nur für Plattformadministratoren.",
+    "usage": "Nutzung",
+    "usageLine": "{units} Einheiten, {users} Benutzer, Kontingent {unit_quota}",
+    "gates": "Freigabestufen",
+    "open": "offen",
+    "closed": "geschlossen",
+    "g5": "G5-Nachweise",
+    "noData": "Keine Daten."
   }
 }
