@@ -29,6 +29,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 
@@ -384,3 +385,276 @@ class OpenItemSettlement(IdMixin, TenantMixin, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
+
+
+class RunStatus(StrEnum):
+    PREVIEW = "preview"
+    POSTED = "posted"
+    REVERSED = "reversed"
+
+
+class ItemStatus(StrEnum):
+    READY = "ready"  # can be posted
+    MANUAL = "manual"  # needs a released rule (proration, interval, VAT)
+    BLOCKED = "blocked"  # configuration missing (ledger, account mapping)
+    POSTED = "posted"
+    REVERSED = "reversed"
+
+
+class PaymentTypeAccount(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Revenue account per payment type and ledger (7.2: revenue per payment type)."""
+
+    __tablename__ = "payment_type_account"
+    __table_args__ = (UniqueConstraint("tenant_id", "ledger_id", "payment_type_code"),)
+
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", ondelete="CASCADE")
+    payment_type_code: Mapped[str] = mapped_column(String(63), nullable=False)
+    account_id: Mapped[uuid.UUID] = _fk("ledger_account.id")
+
+
+class ReceivableRun(IdMixin, TimestampMixin, TenantMixin, Base):
+    __tablename__ = "receivable_run"
+
+    period_month: Mapped[date] = mapped_column(Date, nullable=False)
+    scope: Mapped[str] = mapped_column(String(16), nullable=False, default="all")
+    scope_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    status: Mapped[RunStatus] = mapped_column(
+        _enum(RunStatus, "receivable_run_status"), nullable=False, default=RunStatus.PREVIEW
+    )
+    preview_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    totals: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    posted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class ReceivableItem(IdMixin, TimestampMixin, TenantMixin, Base):
+    __tablename__ = "receivable_item"
+    __table_args__ = (
+        # Once per legal basis, period, debtor and component (7.3 Sollstellung, B08).
+        Index(
+            "uq_receivable_item_posted",
+            "tenant_id",
+            "contract_id",
+            "payment_type_code",
+            "period_month",
+            unique=True,
+            postgresql_where=text("status = 'posted'"),
+        ),
+    )
+
+    run_id: Mapped[uuid.UUID] = _fk("receivable_run.id", ondelete="CASCADE")
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id")
+    contract_payment_id: Mapped[uuid.UUID | None] = _fk("contract_payment.id", nullable=True)
+    ledger_id: Mapped[uuid.UUID | None] = _fk("ledger.id", nullable=True)
+    period_month: Mapped[date] = mapped_column(Date, nullable=False)
+    payment_type_code: Mapped[str] = mapped_column(String(63), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    vat_percent: Mapped[Decimal] = mapped_column(RATE, nullable=False, default=Decimal(0))
+    due_date: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[ItemStatus] = mapped_column(
+        _enum(ItemStatus, "receivable_item_status"), nullable=False
+    )
+    message: Mapped[str | None] = mapped_column(Text)
+    journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
+
+
+class AdminFeeSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Management fee per property (6.4, 6.9.11). Invoices are drafts until tax data is set."""
+
+    __tablename__ = "admin_fee_setting"
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
+    contract_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    invoice_debtor_party_id: Mapped[uuid.UUID | None] = _fk("party.id", nullable=True)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date | None] = mapped_column(Date)
+    interval: Mapped[str] = mapped_column(String(16), nullable=False, default="monthly")
+    vat_percent: Mapped[Decimal] = mapped_column(RATE, nullable=False, default=Decimal(0))
+    min_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    max_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    # net amount per unit and interval by unit type, e.g. {"apartment": "25.00"}
+    amounts_per_unit_type: Mapped[dict[str, str]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+
+
+class InvoiceKind(StrEnum):
+    INVOICE = "invoice"
+    PARTIAL = "partial"  # Abschlagsrechnung
+    FINAL = "final"  # Schlussrechnung
+    CREDIT_NOTE = "credit_note"
+    RECURRING = "recurring"  # Dauerrechnung
+
+
+class ReviewStatus(StrEnum):
+    OPEN = "open"
+    PARTIALLY_REVIEWED = "partially_reviewed"
+    QUERY = "query"
+    OBJECTED = "objected"
+    CLOSED_WITH_RESERVATION = "closed_with_reservation"
+    CLOSED_OK = "closed_ok"
+
+
+class PostingStatus(StrEnum):
+    UNPOSTED = "unposted"
+    POSTED = "posted"
+    REVERSED = "reversed"
+
+
+class Invoice(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Incoming invoice (6.4, 7.9.1). Review, posting and payment release are separate (6.9.9)."""
+
+    __tablename__ = "invoice"
+    __table_args__ = (
+        Index("ix_invoice_creditor_number", "tenant_id", "provider_contact_id", "number"),
+    )
+
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
+    creditor_account_id: Mapped[uuid.UUID | None] = _fk("ledger_account.id", nullable=True)
+    provider_contact_id: Mapped[uuid.UUID] = _fk("contact.id")
+    kind: Mapped[InvoiceKind] = mapped_column(_enum(InvoiceKind, "invoice_kind"), nullable=False)
+    number: Mapped[str] = mapped_column(String(100), nullable=False)
+    invoice_date: Mapped[date] = mapped_column(Date, nullable=False)
+    due_date: Mapped[date | None] = mapped_column(Date)
+    service_from: Mapped[date | None] = mapped_column(Date)
+    service_to: Mapped[date | None] = mapped_column(Date)
+    net: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    vat: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    gross: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    discount_percent: Mapped[Decimal | None] = mapped_column(RATE)
+    discount_until: Mapped[date | None] = mapped_column(Date)
+    payment_method: Mapped[str] = mapped_column(String(32), nullable=False, default="transfer")
+    payee_iban: Mapped[str | None] = mapped_column(EncryptedText())
+    payee_iban_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    iban_confirmed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    e_invoice_format: Mapped[str] = mapped_column(String(16), nullable=False, default="none")
+    order_reference: Mapped[str | None] = mapped_column(String(100))
+    # Final invoice: [{invoice_id, gross}] of deducted partial invoices (D12).
+    deductions: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    review_status: Mapped[ReviewStatus] = mapped_column(
+        _enum(ReviewStatus, "invoice_review_status"), nullable=False, default=ReviewStatus.OPEN
+    )
+    posting_status: Mapped[PostingStatus] = mapped_column(
+        _enum(PostingStatus, "invoice_posting_status"),
+        nullable=False,
+        default=PostingStatus.UNPOSTED,
+    )
+    released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    released_hash: Mapped[str | None] = mapped_column(String(64))
+    duplicate_of_id: Mapped[uuid.UUID | None] = _fk("invoice.id", nullable=True)
+    supersedes_id: Mapped[uuid.UUID | None] = _fk("invoice.id", nullable=True)
+    journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    findings: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+
+
+class InvoiceLine(IdMixin, TenantMixin, Base):
+    __tablename__ = "invoice_line"
+
+    invoice_id: Mapped[uuid.UUID] = _fk("invoice.id", ondelete="CASCADE")
+    account_id: Mapped[uuid.UUID] = _fk("ledger_account.id")
+    net: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    vat_percent: Mapped[Decimal] = mapped_column(RATE, nullable=False, default=Decimal(0))
+    vat: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal(0))
+    accrual_date: Mapped[date | None] = mapped_column(Date)
+    section_35a_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    unit_id: Mapped[uuid.UUID | None] = _fk("unit.id", nullable=True)
+    text: Mapped[str | None] = mapped_column(String(500))
+
+
+class InvoiceReview(IdMixin, TenantMixin, Base):
+    """PÜ05: person, time, reviewed version, scope, result and reason per review step."""
+
+    __tablename__ = "invoice_review"
+
+    invoice_id: Mapped[uuid.UUID] = _fk("invoice.id", ondelete="CASCADE")
+    step: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # completeness, factual, arithmetic_tax
+    invoice_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    result: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # ok, query, objected, reservation
+    scope: Mapped[str | None] = mapped_column(Text)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+
+
+class RecurringInvoicePlan(IdMixin, TimestampMixin, TenantMixin, Base):
+    __tablename__ = "recurring_invoice_plan"
+
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
+    provider_contact_id: Mapped[uuid.UUID] = _fk("contact.id")
+    account_id: Mapped[uuid.UUID] = _fk("ledger_account.id")
+    gross: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    interval_months: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date | None] = mapped_column(Date)
+    next_due: Mapped[date] = mapped_column(Date, nullable=False)
+    text: Mapped[str] = mapped_column(String(300), nullable=False)
+
+
+class DunningSettings(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Levels per tenant, optional override per property (6.4). Fees and interest stay zero
+    until the legal rules are released (V7); a configured value is no legal basis (0.1.3)."""
+
+    __tablename__ = "dunning_settings"
+    __table_args__ = (
+        Index(
+            "uq_dunning_settings_scope",
+            "tenant_id",
+            text("coalesce(property_id, '00000000-0000-0000-0000-000000000000'::uuid)"),
+            unique=True,
+        ),
+    )
+
+    property_id: Mapped[uuid.UUID | None] = _fk("property.id", nullable=True)
+    # [{level, min_days_overdue, text}]
+    levels: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    threshold_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+
+
+class DunningRun(IdMixin, TimestampMixin, TenantMixin, Base):
+    __tablename__ = "dunning_run"
+
+    run_date: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="preview")
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    totals: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+
+
+class DunningCase(IdMixin, TimestampMixin, TenantMixin, Base):
+    __tablename__ = "dunning_case"
+
+    run_id: Mapped[uuid.UUID] = _fk("dunning_run.id", ondelete="CASCADE")
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
+    contract_id: Mapped[uuid.UUID | None] = _fk("contract.id", nullable=True)
+    debtor_account_id: Mapped[uuid.UUID] = _fk("ledger_account.id")
+    level: Mapped[int] = mapped_column(Integer, nullable=False)
+    open_items: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    total: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    fee_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    interest_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    status: Mapped[str] = mapped_column(String(16), nullable=False)  # proposed, excluded, sent
+    reason: Mapped[str | None] = mapped_column(Text)
+    letter_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    delivery_channel: Mapped[str | None] = mapped_column(String(16))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ExportRun(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Export with period, format, checksum and file (6.4, 7.7)."""
+
+    __tablename__ = "export_run"
+
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
+    format: Mapped[str] = mapped_column(String(32), nullable=False)
+    period_from: Mapped[date] = mapped_column(Date, nullable=False)
+    period_to: Mapped[date] = mapped_column(Date, nullable=False)
+    rows: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)

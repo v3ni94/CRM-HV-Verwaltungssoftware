@@ -19,6 +19,7 @@ def test_queues_and_reliability_settings(settings: Settings) -> None:
         "documents-mirror",
         "workspace-reminders",
         "banking-sync-all",
+        "accounting-dunning-run",
     }
     assert conf.beat_schedule["webhooks-dispatch"]["task"] == "mhvp.core.webhooks.dispatch"
 

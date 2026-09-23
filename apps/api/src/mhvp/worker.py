@@ -32,6 +32,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.ai.jobs",
             "mhvp.workspace.tasks",
             "mhvp.banking.tasks",
+            "mhvp.accounting.tasks",
         ],
     )
     app.conf.update(
@@ -69,6 +70,11 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.banking.sync_all",
                 "schedule": crontab(hour=6, minute=0),
                 "options": {"queue": "io"},
+            },
+            # Dunning previews on the 5th (15.1); approval and sending stay manual.
+            "accounting-dunning-run": {
+                "task": "mhvp.accounting.dunning_run",
+                "schedule": crontab(day_of_month=5, hour=6, minute=0),
             },
             "workspace-reminders": {
                 "task": "mhvp.workspace.reminders",

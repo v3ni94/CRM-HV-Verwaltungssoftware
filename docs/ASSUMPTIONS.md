@@ -279,6 +279,72 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | G1 |
 | Datum | 23.09.2026 |
 
+## A-026
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Sollstellungslauf: Vorschau speichert einen Hash der Grundlagen; Buchen erstellt nur die bereiten Positionen und nur, wenn der Hash unverändert ist. Je Vertrag, Zahlungsart und Monat höchstens eine gebuchte Position (Datenbank-Eindeutigkeit). Buchungstag der Sollstellung ist der Fälligkeitstag. Negative Beträge (Mietminderung) werden nicht automatisch gebucht. |
+| Begründung | 7.3 Sollstellung, 7.5, B08. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Sollstellung |
+| Überprüfung spätestens bei Meilenstein | G1 |
+| Datum | 23.09.2026 |
+
+## A-027
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Rechnungen in Buchungskreisen ohne Umsatzsteueroption werden mit dem Bruttobetrag als Kosten gebucht. Schlussrechnungen buchen nur die verbleibende Wirkung nach Abzug gebuchter Abschläge desselben Ausstellers. Kreditorenkonten werden je Aussteller ab 070000 fortlaufend angelegt. Skonto wird erst bei Zahlung berücksichtigt; der offene Posten bleibt bis dahin in voller Höhe. |
+| Begründung | 7.2, 7.3 Eingangsrechnung und Abschlag/Schlussrechnung, D12. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Rechnungseingang |
+| Überprüfung spätestens bei Meilenstein | G1 |
+| Datum | 23.09.2026 |
+
+## A-028
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Zahlungsauftrag nur aus gebuchter, freigegebener Rechnung mit bestätigter IBAN, vom Konto desselben Rechtsträgers, nie vom Kautionskonto. Skonto wird bei Ausführung bis zum Skontodatum abgezogen und bei Ausführung gegen Konto 027000 gebucht. Ausführung gilt nur mit importiertem Bankumsatz als Nachweis; Teilbelastung gleicht teilweise aus; Rückgabe storniert die Zahlungsbuchung. |
+| Begründung | 7.5 Zahllauf, 6.9.9, D06; Konto 027000 aus Anhang A.1. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Zahllauf |
+| Überprüfung spätestens bei Meilenstein | G2 |
+| Datum | 23.09.2026 |
+
+## A-029
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Mahnvorschau: überfällige offene Forderungen je Personenkonto; nächste Stufe ist die zuletzt versandte Stufe plus eins, wenn die älteste Fälligkeit die Mindesttage erreicht. Ausgeschlossen mit Grund: fehlende Stufen, Mahnsperre, Betrag unter Mahngrenze, höchste Stufe erreicht, Buchungskreis nicht führend. Freigabe nur durch eine zweite Person und nur, wenn alle vorgeschlagenen Fälle im führenden System liegen. Der Job am 5. erzeugt nur Vorschauen. |
+| Begründung | 7.5 Mahnwesen, 6.9.10 D52, 13.1, 15.1. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Mahnwesen |
+| Überprüfung spätestens bei Meilenstein | G1 |
+| Datum | 23.09.2026 |
+
+## A-030
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Nutzerwechsel und Leerstand: Kosten mit Umlageschlüssel werden nach Schlüsselwert mal Tagen je Nutzungszeitraum verteilt; Leerstandszeiträume erhalten ihren Anteil, der beim Eigentümer bleibt. Heizkosten werden nicht tageweise verteilt, sondern nur aus externen Einzelbeträgen übernommen. Restcents nach dem Verfahren des größten Rests, bei Gleichstand nach Einheitennummer und Nutzerschlüssel. |
+| Begründung | A05, 6.9.8, D08. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Betriebskostenabrechnung |
+| Überprüfung spätestens bei Meilenstein | G3 |
+| Datum | 23.09.2026 |
+
+## A-031
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Tickets erhalten fortlaufende Nummern je Mandant, Routing und Checkliste aus der Vorlage der Kategorie, SLA aus der Vorlage oder sonst aus der Priorität. Aufträge durchlaufen Entwurf, Anfrage, Angebot, Freigabe, Termin, Ausführung, Rechnung, Abnahme; ein Angebot über dem Budget sperrt die Freigabe. Verknüpfte Rechnungen durchlaufen unverändert die Rechnungsprüfung (M14). |
+| Begründung | 6.6, 18 M19. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Tickets, Aufträge |
+| Überprüfung spätestens bei Meilenstein | M22 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

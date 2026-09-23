@@ -21,6 +21,7 @@ RESOURCES: tuple[str, ...] = (
     "documents",
     "properties",
     "tenant_settings",
+    "tickets",
     "members",
     "roles",
     "api_keys",
@@ -53,6 +54,8 @@ def _r(resource: str) -> frozenset[str]:
     return frozenset({f"{resource}:read"})
 
 
+_TICKETS = _rw("tickets", delete=True) | {"tickets:approve"}
+
 _MASTER_RWD = (
     _rw("contacts", delete=True)
     | _rw("properties", delete=True)
@@ -70,11 +73,17 @@ _ACC_APPROVE = _ACC_RW | {"accounting:approve", "accounting:export"}
 SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole("tenant_admin", "Mandantenadministrator", _ADMIN),
     SystemRole("administrator", "Administrator", _ADMIN),
-    SystemRole("standard", "Standard", _SETTINGS_R | _MASTER_RWD | _ACC_RW),
+    SystemRole("standard", "Standard", _SETTINGS_R | _MASTER_RWD | _ACC_RW | _TICKETS),
     SystemRole("read_only", "Nur Lesezugriff", READ_ALL),
     SystemRole("read_only_master_data", "Nur Lesezugriff Stammdaten", _SETTINGS_R | _MASTER_R),
-    SystemRole("clerk_no_delete", "Sachbearbeiter ohne Löschen", _SETTINGS_R | _MASTER_RW),
-    SystemRole("clerk_no_accounting", "Sachbearbeiter ohne Buchhaltung", _SETTINGS_R | _MASTER_RWD),
+    SystemRole(
+        "clerk_no_delete", "Sachbearbeiter ohne Löschen", _SETTINGS_R | _MASTER_RW | _rw("tickets")
+    ),
+    SystemRole(
+        "clerk_no_accounting",
+        "Sachbearbeiter ohne Buchhaltung",
+        _SETTINGS_R | _MASTER_RWD | _TICKETS,
+    ),
     SystemRole(
         "accountant_no_banking",
         "Buchhalter ohne Onlinebanking",
@@ -96,15 +105,17 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
         | _ACC_APPROVE,
     ),
     # Caretakers see objects, not contracts or personal data of residents (data minimisation).
-    SystemRole("caretaker", "Hausmeister", _r("properties")),
+    SystemRole("caretaker", "Hausmeister", _r("properties") | _rw("tickets")),
     SystemRole(
         "technical_clerk",
         "Technischer Sachbearbeiter",
-        _SETTINGS_R | _r("contacts") | _rw("properties") | _rw("documents"),
+        _SETTINGS_R | _r("contacts") | _rw("properties") | _rw("documents") | _TICKETS,
     ),
     SystemRole("support", "Support", _SETTINGS_R | _MASTER_R | {"audit:read"}),
     SystemRole("insurance_broker", "Versicherungsmakler", frozenset()),
-    SystemRole("tax_advisor", "Steuerberater", _SETTINGS_R | _r("accounting")),
+    SystemRole(
+        "tax_advisor", "Steuerberater", _SETTINGS_R | _r("accounting") | {"accounting:export"}
+    ),
 )
 
 # A platform administrator after an explicit, recorded tenant switch (section 5.1).

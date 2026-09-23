@@ -187,3 +187,71 @@ class BankRule(IdMixin, TimestampMixin, TenantMixin, Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     max_amount: Mapped[Decimal | None] = mapped_column(MONEY)
     test_evidence_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+
+
+class OrderStatus(StrEnum):
+    DRAFT = "draft"
+    APPROVED = "approved"
+    EXPORTED = "exported"
+    SUBMITTED = "submitted"
+    ACCEPTED_BY_BANK = "accepted_by_bank"
+    EXECUTED = "executed"
+    PARTIALLY_EXECUTED = "partially_executed"
+    REJECTED = "rejected"
+    RETURNED = "returned"
+    CANCELLED = "cancelled"
+
+
+class PaymentBatch(IdMixin, TimestampMixin, TenantMixin, Base):
+    """pain.001 file of approved transfers of one bank account; export requires G2."""
+
+    __tablename__ = "payment_batch"
+
+    property_bank_account_id: Mapped[uuid.UUID] = _fk("property_bank_account.id")
+    message_id: Mapped[str] = mapped_column(String(35), nullable=False, unique=True)
+    format: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="exported")
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    submitted_via: Mapped[str | None] = mapped_column(String(16))
+    bank_response: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+
+
+class PaymentOrder(IdMixin, TimestampMixin, TenantMixin, Base):
+    __tablename__ = "payment_order"
+
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
+    property_bank_account_id: Mapped[uuid.UUID] = _fk("property_bank_account.id")
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="transfer")
+    invoice_id: Mapped[uuid.UUID | None] = _fk("invoice.id", nullable=True)
+    open_item_id: Mapped[uuid.UUID | None] = _fk("open_item.id", nullable=True)
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    discount: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal(0))
+    counterpart_name: Mapped[str] = mapped_column(String(140), nullable=False)
+    counterpart_iban: Mapped[str] = mapped_column(EncryptedText(), nullable=False)
+    counterpart_iban_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(140), nullable=False)
+    end_to_end_id: Mapped[str] = mapped_column(String(35), nullable=False)
+    execution_date: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[OrderStatus] = mapped_column(
+        _enum(OrderStatus, "payment_order_status"), nullable=False, default=OrderStatus.DRAFT
+    )
+    executed_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    batch_id: Mapped[uuid.UUID | None] = _fk("payment_batch.id", nullable=True)
+    bank_transaction_id: Mapped[uuid.UUID | None] = _fk("bank_transaction.id", nullable=True)
+    journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
+
+
+class PaymentApproval(IdMixin, TenantMixin, Base):
+    """Approval bound to a snapshot of payment relevant fields (6.9.9)."""
+
+    __tablename__ = "payment_approval"
+
+    order_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("payment_order.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

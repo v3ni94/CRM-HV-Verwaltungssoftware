@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.accounting.models import EntrySource
-from mhvp.banking import camt, matching
+from mhvp.banking import camt, matching, payments
 from mhvp.banking import services as svc
 from mhvp.banking.models import (
     BankConnection,
@@ -21,6 +21,9 @@ from mhvp.banking.models import (
     BankTransaction,
     ConnectionStatus,
     Connector,
+    OrderStatus,
+    PaymentBatch,
+    PaymentOrder,
     RuleState,
     TransactionStatus,
 )
@@ -29,6 +32,7 @@ from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
+from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/banking", tags=["Bank"])
 READ = require_permission("accounting:read")
@@ -667,3 +671,268 @@ async def set_automation(
         )
         await session.flush()
         return {"enabled": body.enabled}
+
+
+# Payment runs (M15, 7.5, 6.9.9); export requires G2 ------------------------------------
+
+
+class OrderIn(_In):
+    invoice_id: uuid.UUID
+    property_bank_account_id: uuid.UUID
+    execution_date: date
+
+
+class OrderPatch(_In):
+    execution_date: date | None = None
+    purpose: str | None = Field(default=None, min_length=1, max_length=140)
+
+
+class BatchIn(_In):
+    order_ids: list[uuid.UUID] = Field(min_length=1, max_length=1000)
+
+
+class BankStatusIn(_In):
+    status: str = Field(pattern="^(submitted|accepted_by_bank|rejected|executed|returned)$")
+    reason: str | None = Field(default=None, max_length=2000)
+    bank_transaction_id: uuid.UUID | None = None
+    order_ids: list[uuid.UUID] | None = None
+
+
+class OrderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    invoice_id: uuid.UUID | None
+    property_bank_account_id: uuid.UUID
+    amount: Decimal
+    discount: Decimal
+    counterpart_name: str
+    counterpart_iban_suffix: str | None = None
+    purpose: str
+    end_to_end_id: str
+    execution_date: date
+    status: str
+    executed_amount: Decimal | None
+    batch_id: uuid.UUID | None
+    journal_entry_id: uuid.UUID | None
+    approvals: int = 0
+
+
+async def _order_out(session: Any, order: PaymentOrder) -> OrderOut:
+    out = OrderOut.model_validate(order)
+    out.counterpart_iban_suffix = order.counterpart_iban[-4:]
+    out.approvals = len(await payments.valid_approvals(session, order))
+    return out
+
+
+async def _order(session: Any, order_id: uuid.UUID) -> PaymentOrder:
+    order = await session.get(PaymentOrder, order_id, with_for_update=True)
+    if order is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    return order  # type: ignore[no-any-return]
+
+
+@router.post("/payment-orders", status_code=201, summary="Zahlungsauftrag aus Rechnung (Entwurf)")
+async def create_order(
+    body: OrderIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> OrderOut:
+    from mhvp.accounting.models import Invoice
+
+    async with tenant_tx(request, principal) as session:
+        invoice = await session.get(Invoice, body.invoice_id)
+        if invoice is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        order = await payments.order_from_invoice(
+            session,
+            invoice=invoice,
+            bank_account_id=body.property_bank_account_id,
+            execution_date=body.execution_date,
+            user_id=principal.user_id,
+        )
+        return await _order_out(session, order)
+
+
+@router.patch("/payment-orders/{order_id}", summary="Auftrag ändern (Freigaben entfallen)")
+async def patch_order(
+    order_id: uuid.UUID,
+    body: OrderPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> OrderOut:
+    async with tenant_tx(request, principal) as session:
+        order = await _order(session, order_id)
+        if order.status not in (OrderStatus.DRAFT, OrderStatus.APPROVED):
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Eingereichte Aufträge sind unveränderlich."
+            )
+        before = payments.snapshot(order)
+        for key, value in body.model_dump(exclude_none=True).items():
+            setattr(order, key, value)
+        if payments.snapshot(order) != before:
+            await payments.invalidate(session, order)
+        await session.flush()
+        return await _order_out(session, order)
+
+
+@router.post("/payment-orders/{order_id}/approve", summary="Freigabe (zwei verschiedene Personen)")
+async def approve_order(
+    order_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> OrderOut:
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Approvals need a person.")
+    async with tenant_tx(request, principal) as session:
+        order = await _order(session, order_id)
+        await payments.approve(session, order, principal.user_id, principal.is_platform_admin)
+        return await _order_out(session, order)
+
+
+@router.post("/payment-orders/{order_id}/cancel", summary="Auftrag verwerfen")
+async def cancel_order(
+    order_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> OrderOut:
+    async with tenant_tx(request, principal) as session:
+        order = await _order(session, order_id)
+        if order.status not in (OrderStatus.DRAFT, OrderStatus.APPROVED):
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Eingereichte Aufträge werden über die Bank storniert."
+            )
+        order.status = OrderStatus.CANCELLED
+        await payments.invalidate(session, order)
+        return await _order_out(session, order)
+
+
+@router.post("/payment-batches", status_code=201, summary="Zahlungsdatei erzeugen (G2)")
+async def create_batch(
+    body: BatchIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
+    from mhvp.properties.models import PropertyBankAccount
+
+    await ensure_release_gate_open(
+        ReleaseGate.G2, principal.tenant_id, request.app.state.release_gate_resolver
+    )
+    async with tenant_tx(request, principal) as session:
+        orders = [await _order(session, oid) for oid in sorted(set(body.order_ids))]
+        banks = {o.property_bank_account_id for o in orders}
+        if len(banks) != 1:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Eine Datei je Auftraggeberkonto.")
+        for o in orders:
+            if (
+                o.status is not OrderStatus.APPROVED
+                or len({a.user_id for a in await payments.valid_approvals(session, o)}) < 2
+            ):
+                raise ProblemError(
+                    ErrorCodes.GATE_FOUR_EYES, detail="Nur vollständig freigegebene Aufträge."
+                )
+        from mhvp.accounting.models import LeadingSystem, Ledger
+
+        for ledger_id in {o.ledger_id for o in orders}:
+            ledger = await session.get(Ledger, ledger_id)
+            if ledger is None or ledger.leading_system is not LeadingSystem.MHVP:
+                raise ProblemError(
+                    ErrorCodes.CONFLICT,
+                    detail="Zahlungsaufträge löst nur das führende System aus (13.1, 6.9.10).",
+                )
+        bank = await session.get(PropertyBankAccount, banks.pop())
+        if bank is None:  # pragma: no cover
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        batch = PaymentBatch(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            property_bank_account_id=bank.id,
+            message_id=f"MHVP{uuid.uuid4().hex[:24]}".upper(),
+            format=payments.PAIN_FORMAT,
+        )
+        session.add(batch)
+        await session.flush()
+        xml = payments.pain001(batch.message_id, bank.holder, bank.iban, orders)
+        for o in orders:
+            o.status, o.batch_id = OrderStatus.EXPORTED, batch.id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="payment_batch.exported",
+            entity_type="payment_batch",
+            entity_id=batch.id,
+            actor_user_id=principal.user_id,
+            payload={"orders": len(orders), "format": batch.format},
+        )
+        await session.flush()
+        return {
+            "id": batch.id,
+            "message_id": batch.message_id,
+            "format": batch.format,
+            "xml": xml.decode(),
+        }
+
+
+@router.post("/payment-batches/{batch_id}/bank-status", summary="Bankrückmeldung erfassen")
+async def bank_status(
+    batch_id: uuid.UUID,
+    body: BankStatusIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> list[OrderOut]:
+    """Export or submission alone never settles an invoice; only proven execution does (D06)."""
+    async with tenant_tx(request, principal) as session:
+        batch = await session.get(PaymentBatch, batch_id, with_for_update=True)
+        if batch is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        orders = (
+            await session.scalars(select(PaymentOrder).where(PaymentOrder.batch_id == batch.id))
+        ).all()
+        if body.order_ids:
+            orders = [o for o in orders if o.id in set(body.order_ids)]
+        batch.bank_response = [
+            *batch.bank_response,
+            {"status": body.status, "reason": body.reason, "at": datetime.now(UTC).isoformat()},
+        ]
+        for order in orders:
+            if body.status in ("submitted", "accepted_by_bank"):
+                if order.status in (OrderStatus.EXPORTED, OrderStatus.SUBMITTED):
+                    order.status = OrderStatus(body.status)
+            elif body.status == "rejected":
+                if order.status in (OrderStatus.EXECUTED, OrderStatus.PARTIALLY_EXECUTED):
+                    raise ProblemError(
+                        ErrorCodes.CONFLICT,
+                        detail="Ausgeführte Aufträge werden über die Rückgabe korrigiert.",
+                    )
+                order.status = OrderStatus.REJECTED
+            elif body.status == "executed":
+                if body.bank_transaction_id is None:
+                    raise ProblemError(
+                        ErrorCodes.VALIDATION, detail="Ausführung nur mit Bankumsatz als Nachweis."
+                    )
+                await payments.record_execution(
+                    session,
+                    order,
+                    bank_transaction_id=body.bank_transaction_id,
+                    user_id=principal.user_id,
+                )
+            elif body.status == "returned":
+                if order.status is OrderStatus.RETURNED:
+                    continue
+                if order.journal_entry_id is None:
+                    raise ProblemError(
+                        ErrorCodes.CONFLICT, detail="Nur ausgeführte Aufträge können zurückkommen."
+                    )
+                from mhvp.accounting import services as acc_svc
+                from mhvp.accounting.models import JournalEntry, Ledger
+
+                entry = await session.get(
+                    JournalEntry, order.journal_entry_id, with_for_update=True
+                )
+                ledger = await session.get(Ledger, order.ledger_id)
+                if entry is None or ledger is None:  # pragma: no cover
+                    raise ProblemError(ErrorCodes.CONFLICT)
+                await acc_svc.reverse(
+                    session,
+                    ledger,
+                    entry,
+                    user_id=principal.user_id,
+                    reason=body.reason or "Rückgabe durch die Bank",
+                    booking_date=local_today(),
+                )
+                order.status = OrderStatus.RETURNED
+        batch.status = body.status
+        await session.flush()
+        return [await _order_out(session, o) for o in orders]

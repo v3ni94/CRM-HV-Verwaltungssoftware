@@ -171,6 +171,7 @@ async def book_payment(
     user_id: uuid.UUID | None,
     source: EntrySource,
     text: str | None = None,
+    discount: Decimal = Decimal("0.00"),
 ) -> JournalEntry:
     """Post a bank transaction: bank against debtor(s) with explicit settlement, or against one
     counter account. Complete or not at all (B02); a booked transaction cannot be booked twice."""
@@ -207,9 +208,11 @@ async def book_payment(
         per_account[item.account_id] = per_account.get(item.account_id, Decimal("0.00")) + value
         plan.append({"open_item_id": item_id, "amount": value})
         total += value
-    if total > amount:
+    if total > amount + discount:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Zuordnung höher als der Zahlbetrag.")
-    rest = amount - total
+    if discount > 0 and counter_account_id is None:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Skonto braucht ein Gegenkonto.")
+    rest = amount + discount - total
     if rest > 0 and counter_account_id is None:
         if len(per_account) != 1:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Restbetrag braucht ein Gegenkonto.")
@@ -222,6 +225,15 @@ async def book_payment(
         lines.append(
             acc.LineIn(
                 account_id, Decimal("0") if incoming else value, value if incoming else Decimal("0")
+            )
+        )
+    if discount > 0 and counter_account_id is not None:
+        # Discount: personal account moved by more than the bank amount (7.3 Skonto).
+        lines.append(
+            acc.LineIn(
+                counter_account_id,
+                discount if incoming else Decimal("0"),
+                Decimal("0") if incoming else discount,
             )
         )
     if rest > 0:
