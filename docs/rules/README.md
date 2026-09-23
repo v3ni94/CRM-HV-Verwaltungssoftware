@@ -32,20 +32,20 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [B03](B03.md) | Korrektur statt Überschreiben | 7.1 | implemented, not accepted |
 | [B04](B04.md) | Eindeutige Nummern | 7.1 | implemented, not accepted |
 | B05 | Belegkette | 7.1 | specified, not implemented |
-| B06 | Präzision | 7.1 | specified, not implemented |
+| [B06](D08-rest-cents.md) | Präzision | 7.1 | implemented, not accepted (M17, D08 tested) |
 | [B07](B07.md) | Stichtagswahrheit | 7.1 | implemented, not accepted |
 | [B08](B08.md) | Keine doppelte wirtschaftliche Wirkung | 7.1 | implemented, not accepted |
 | [B09](B09.md) | Abstimmung | 7.1 | implemented, not accepted |
 | A01 | Ergebnisstand | 7.6 | specified, not implemented |
-| A02 | Betriebskosten Miete | 7.6 | specified, not implemented |
-| A03 | Schlüssel | 7.6 | specified, not implemented |
-| A04 | Vorauszahlungen und Fristen | 7.6 | specified, not implemented |
-| A05 | Nutzerwechsel, Leerstand, Heizkosten | 7.6 | specified, not implemented |
+| A02 | Betriebskosten Miete | 7.6 | implemented, not accepted (M17, `test_m17_operating_costs.py`) |
+| A03 | Schlüssel | 7.6 | implemented, not accepted (M17, time weighted keys) |
+| A04 | Vorauszahlungen und Fristen | 7.6 | implemented, not accepted (M17, advances and deadline orientation) |
+| A05 | Nutzerwechsel, Leerstand, Heizkosten | 7.6 | implemented, not accepted (M17, vacancy share to owner, heating external only) |
 | A06 | Eigentümerabrechnung Miete/SEV | 7.6 | specified, not implemented |
 | A07 | Bedienung | 7.6 | specified, not implemented |
 | W01 | Eigene Gemeinschaft | 7.8 | implemented (M24), ledger check |
 | W02 | Wirtschaftsplan | 7.8 | implemented (M24), behind G4 |
-| W03 | Kostenverteilung | 7.8 | specified, not implemented |
+| W03 | Kostenverteilung | 7.8 | implemented, not accepted (M24, `mhvp.hoa.calc.unit_weights`) |
 | W04 | Jahresabrechnung als nachvollziehbare Überleitung | 7.8 | specified, not implemented |
 | W05 | Abrechnungsspitze und Rückstände | 7.8 | implemented (M24), [W05](W05-hoa-result.md) |
 | W06 | Beschluss und Buchung | 7.8 | implemented (M24), [W06](W06-resolution.md) |
@@ -53,26 +53,26 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | W08 | Erhaltungsrücklagen | 7.8 | implemented (M24), D03 tested |
 | W09 | Sonderumlagen und Maßnahmen | 7.8 | specified, not implemented |
 | W10 | Darlehen, Versicherungen, größere Maßnahmen | 7.8 | specified, not implemented |
-| W11 | Vermögensbericht | 7.8 | specified, not implemented |
+| W11 | Vermögensbericht | 7.8 | partly implemented (M24 asset report); structure open, M24-02 |
 | W12 | Abrechnungspaket | 7.8 | specified, not implemented |
-| W13 | Beirat und Versammlung | 7.8 | specified, not implemented |
+| W13 | Beirat und Versammlung | 7.8 | implemented, not accepted (M25); majority rules open, M25-01 |
 | PÜ01 | Vollständigkeit | 7.9.1 | specified, not implemented |
 | PÜ02 | Sachliche Prüfung | 7.9.1 | specified, not implemented |
 | PÜ03 | Rechnerische/steuerliche Prüfung | 7.9.1 | specified, not implemented |
 | PÜ04 | Dubletten/Betrugsrisiko | 7.9.1 | specified, not implemented |
 | PÜ05 | Prüfentscheidungen | 7.9.1 | specified, not implemented |
-| PÜ06 | Prüfauftrag | 7.9.2 | specified, not implemented |
-| PÜ07 | Nachvollziehbare Navigation | 7.9.2 | specified, not implemented |
-| PÜ08 | Prüfen und nachfordern | 7.9.2 | specified, not implemented |
-| PÜ09 | Aussagekräftiger Abschlussbericht | 7.9.2 | specified, not implemented |
-| PÜ10 | Eigentümer | 7.9.3 | specified, not implemented |
-| PÜ11 | Mieter | 7.9.3 | specified, not implemented |
+| PÜ06 | Prüfauftrag | 7.9.2 | implemented, not accepted (M25, audit engagement) |
+| PÜ07 | Nachvollziehbare Navigation | 7.9.2 | partly implemented (M25, items link entries and documents) |
+| PÜ08 | Prüfen und nachfordern | 7.9.2 | implemented, not accepted (M25, note, question, answer, outdated on new version) |
+| PÜ09 | Aussagekräftiger Abschlussbericht | 7.9.2 | implemented, not accepted (M25, versioned report) |
+| PÜ10 | Eigentümer | 7.9.3 | implemented, not accepted (M21 access matrix) |
+| PÜ11 | Mieter | 7.9.3 | implemented, not accepted (M21 access matrix) |
 | PÜ12 | Praktischer Zugang | 7.9.3 | specified, not implemented |
-| PÜ13 | Protokoll ohne Rechtsfiktion | 7.9.3 | specified, not implemented |
-| H01 | Messdienst oder Eigenberechnung | 7.10 | specified, not implemented |
+| PÜ13 | Protokoll ohne Rechtsfiktion | 7.9.3 | partly implemented (M21, M23 logs); request log open, M25-04 |
+| H01 | Messdienst oder Eigenberechnung | 7.10 | implemented, not accepted (M17, external heating statement required) |
 | H02 | HeizkostenV | 7.10 | specified, not implemented |
 | H03 | Laufende Pflichten | 7.10 | specified, not implemented |
-| H04 | CO₂-Regeln mit Geltungsstand | 7.10 | specified, not implemented |
+| [H04](H04-co2.md) | CO₂-Regeln mit Geltungsstand | 7.10 | implemented, not accepted (M17, CO₂ split) |
 | H05 | Bereits veröffentlichte spätere Regeln | 7.10 | specified, not implemented |
 | H06 | § 35a | 7.10 | specified, not implemented |
 | S01 | Steuerlicher Kontext | 7.11 | specified, not implemented |
