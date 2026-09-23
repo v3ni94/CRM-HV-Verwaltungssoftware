@@ -26,6 +26,8 @@ COPY apps/web-crm apps/web-crm
 RUN pnpm --filter @mhvp/web-crm build
 
 FROM ${NODE_IMAGE} AS runtime
+# Apply Alpine security fixes (Trivy gate in CI).
+RUN apk upgrade --no-cache
 ARG MHVP_APP_VERSION=0.0.0-dev
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 PORT=3000 MHVP_APP_VERSION=${MHVP_APP_VERSION}
@@ -37,5 +39,3 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1
 CMD ["node", "apps/web-crm/server.js"]
-# Apply Alpine security fixes (Trivy gate in CI).
-RUN apk upgrade --no-cache
