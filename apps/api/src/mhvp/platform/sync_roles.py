@@ -15,6 +15,7 @@ from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.logging import configure_logging, get_logger
 from mhvp.platform.models import Tenant
 from mhvp.platform.services import ensure_system_roles
+from mhvp.properties.defaults import ensure_tenant_defaults
 
 
 async def run() -> int:
@@ -28,6 +29,7 @@ async def run() -> int:
         for tenant_id in tenant_ids:
             async with tenant_transaction(factory, tenant_id) as session:
                 await ensure_system_roles(session, tenant_id)
+                await ensure_tenant_defaults(session, tenant_id)
         get_logger("mhvp.sync_roles").info("system_roles_synced", tenants=len(tenant_ids))
         return 0
     finally:

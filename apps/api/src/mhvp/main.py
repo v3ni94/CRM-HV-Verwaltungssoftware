@@ -27,6 +27,7 @@ from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGateResolv
 from mhvp.core.storage import create_s3_client
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.routers import platform_router, tenant_router
+from mhvp.properties.routers import router as properties_router
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
@@ -113,6 +114,7 @@ def create_app(
     app.include_router(platform_router, prefix=API_PREFIX)
     app.include_router(tenant_router, prefix=API_PREFIX)
     app.include_router(contacts_router, prefix=API_PREFIX)
+    app.include_router(properties_router, prefix=API_PREFIX)
     app.add_middleware(CorrelationIdMiddleware)
     return app
 

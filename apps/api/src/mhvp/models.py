@@ -3,5 +3,6 @@
 from mhvp.contacts import models as contact_models
 from mhvp.core import events, webhooks
 from mhvp.platform import models as platform_models
+from mhvp.properties import models as property_models
 
-__all__ = ["contact_models", "events", "platform_models", "webhooks"]
+__all__ = ["contact_models", "events", "platform_models", "property_models", "webhooks"]

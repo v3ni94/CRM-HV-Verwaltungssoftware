@@ -183,6 +183,329 @@
         "title": "AddressOut",
         "type": "object"
       },
+      "AllocationKeyIn-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "pattern": "^[A-Z0-9_]{1,32}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "default_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AllocationKind"
+          },
+          "meter_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meter Type Code"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "unit_of_measure": {
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Unit Of Measure",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "unit_of_measure",
+          "kind"
+        ],
+        "title": "AllocationKeyIn",
+        "type": "object"
+      },
+      "AllocationKeyIn-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "pattern": "^[A-Z0-9_]{1,32}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "default_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AllocationKind"
+          },
+          "meter_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meter Type Code"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "unit_of_measure": {
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Unit Of Measure",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "unit_of_measure",
+          "kind"
+        ],
+        "title": "AllocationKeyIn",
+        "type": "object"
+      },
+      "AllocationKeyOut": {
+        "properties": {
+          "code": {
+            "pattern": "^[A-Z0-9_]{1,32}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "default_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_template_derived": {
+            "title": "Is Template Derived",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AllocationKind"
+          },
+          "meter_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meter Type Code"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "unit_of_measure": {
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Unit Of Measure",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "unit_of_measure",
+          "kind",
+          "id",
+          "is_template_derived"
+        ],
+        "title": "AllocationKeyOut",
+        "type": "object"
+      },
+      "AllocationKind": {
+        "enum": [
+          "static",
+          "consumption",
+          "fixed_amount",
+          "fixed_share"
+        ],
+        "title": "AllocationKind",
+        "type": "string"
+      },
+      "AllocationValueIn": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation_key_id": {
+            "format": "uuid",
+            "title": "Allocation Key Id",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ValueSource",
+            "default": "manual"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "valid_from",
+          "allocation_key_id",
+          "value"
+        ],
+        "title": "AllocationValueIn",
+        "type": "object"
+      },
+      "AllocationValueOut": {
+        "properties": {
+          "allocation_key_id": {
+            "format": "uuid",
+            "title": "Allocation Key Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Code"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ValueSource"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "unit_id",
+          "allocation_key_id",
+          "value",
+          "valid_from",
+          "valid_to",
+          "source"
+        ],
+        "title": "AllocationValueOut",
+        "type": "object"
+      },
       "ApiKeyCreate": {
         "properties": {
           "expires_at": {
@@ -430,172 +753,17 @@
         "title": "AuditOut",
         "type": "object"
       },
-      "BankAccountIn": {
-        "additionalProperties": false,
-        "properties": {
-          "bank_name": {
-            "anyOf": [
-              {
-                "maxLength": 200,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bank Name"
-          },
-          "bic": {
-            "anyOf": [
-              {
-                "pattern": "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bic"
-          },
-          "holder": {
-            "anyOf": [
-              {
-                "maxLength": 200,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Holder"
-          },
-          "iban": {
-            "maxLength": 50,
-            "title": "Iban",
-            "type": "string"
-          },
-          "label": {
-            "anyOf": [
-              {
-                "maxLength": 100,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label"
-          },
-          "valid_from": {
-            "format": "date",
-            "title": "Valid From",
-            "type": "string"
-          },
-          "valid_to": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Valid To"
-          }
-        },
-        "required": [
-          "iban",
-          "valid_from"
+      "BankAccountKind": {
+        "enum": [
+          "rent",
+          "hoa",
+          "reserve",
+          "deposit",
+          "hoa_fee",
+          "other"
         ],
-        "title": "BankAccountIn",
-        "type": "object"
-      },
-      "BankAccountOut": {
-        "properties": {
-          "bank_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bank Name"
-          },
-          "bic": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bic"
-          },
-          "holder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Holder"
-          },
-          "iban_masked": {
-            "title": "Iban Masked",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label"
-          },
-          "valid_from": {
-            "format": "date",
-            "title": "Valid From",
-            "type": "string"
-          },
-          "valid_to": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Valid To"
-          }
-        },
-        "required": [
-          "id",
-          "label",
-          "iban_masked",
-          "bic",
-          "bank_name",
-          "holder",
-          "valid_from",
-          "valid_to"
-        ],
-        "title": "BankAccountOut",
-        "type": "object"
+        "title": "BankAccountKind",
+        "type": "string"
       },
       "Body_token_api_v1_oidc_token_post": {
         "properties": {
@@ -770,6 +938,727 @@
           "branding"
         ],
         "title": "BrandingOut",
+        "type": "object"
+      },
+      "BuildingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "building_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Building Type Code"
+          },
+          "built_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Built Area Sqm"
+          },
+          "cellar_rooms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cellar Rooms"
+          },
+          "construction_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Construction Type Code"
+          },
+          "construction_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Construction Year"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
+          "elevator": {
+            "default": false,
+            "title": "Elevator",
+            "type": "boolean"
+          },
+          "energy_certificate_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Type"
+          },
+          "energy_certificate_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Valid Until"
+          },
+          "energy_certificate_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Value"
+          },
+          "floors": {
+            "anyOf": [
+              {
+                "maximum": 200.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floors"
+          },
+          "gross_floor_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gross Floor Area Sqm"
+          },
+          "hallway_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hallway Area Sqm"
+          },
+          "heated_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heated Area Sqm"
+          },
+          "heritage_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heritage Notes"
+          },
+          "heritage_protection": {
+            "default": false,
+            "title": "Heritage Protection",
+            "type": "boolean"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "living_commercial_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Living Commercial Area Sqm"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "renovation_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Renovation Level"
+          },
+          "roof_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roof Area Sqm"
+          },
+          "sealed_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sealed Area Sqm"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          },
+          "total_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Area Sqm"
+          },
+          "window_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Area Sqm"
+          },
+          "windows": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Windows"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "BuildingIn",
+        "type": "object"
+      },
+      "BuildingOut": {
+        "properties": {
+          "building_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Building Type Code"
+          },
+          "built_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Built Area Sqm"
+          },
+          "cellar_rooms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cellar Rooms"
+          },
+          "construction_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Construction Type Code"
+          },
+          "construction_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Construction Year"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
+          "elevator": {
+            "default": false,
+            "title": "Elevator",
+            "type": "boolean"
+          },
+          "energy_certificate_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Type"
+          },
+          "energy_certificate_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Valid Until"
+          },
+          "energy_certificate_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Value"
+          },
+          "floors": {
+            "anyOf": [
+              {
+                "maximum": 200.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floors"
+          },
+          "gross_floor_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gross Floor Area Sqm"
+          },
+          "hallway_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hallway Area Sqm"
+          },
+          "heated_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heated Area Sqm"
+          },
+          "heritage_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heritage Notes"
+          },
+          "heritage_protection": {
+            "default": false,
+            "title": "Heritage Protection",
+            "type": "boolean"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "living_commercial_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Living Commercial Area Sqm"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "renovation_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Renovation Level"
+          },
+          "roof_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roof Area Sqm"
+          },
+          "sealed_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sealed Area Sqm"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          },
+          "total_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Area Sqm"
+          },
+          "window_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Area Sqm"
+          },
+          "windows": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Windows"
+          }
+        },
+        "required": [
+          "name",
+          "id",
+          "property_id"
+        ],
+        "title": "BuildingOut",
+        "type": "object"
+      },
+      "CatalogEntryIn": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "pattern": "^[a-z0-9_]{1,63}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "CatalogEntryIn",
+        "type": "object"
+      },
+      "CatalogEntryOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "catalog": {
+            "title": "Catalog",
+            "type": "string"
+          },
+          "code": {
+            "pattern": "^[a-z0-9_]{1,63}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "id",
+          "catalog",
+          "active"
+        ],
+        "title": "CatalogEntryOut",
         "type": "object"
       },
       "CheckResult": {
@@ -1094,7 +1983,7 @@
           },
           "bank_accounts": {
             "items": {
-              "$ref": "#/components/schemas/BankAccountIn"
+              "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountIn"
             },
             "maxItems": 20,
             "title": "Bank Accounts",
@@ -1308,7 +2197,7 @@
           },
           "bank_accounts": {
             "items": {
-              "$ref": "#/components/schemas/BankAccountOut"
+              "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountOut"
             },
             "title": "Bank Accounts",
             "type": "array"
@@ -1683,6 +2572,89 @@
         ],
         "title": "ContactTypeCode",
         "type": "string"
+      },
+      "CustomFieldIn": {
+        "additionalProperties": false,
+        "properties": {
+          "entity_type": {
+            "pattern": "^(property|building|unit|service_provider_relation)$",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "field_type": {
+            "pattern": "^(text|number|date|bool)$",
+            "title": "Field Type",
+            "type": "string"
+          },
+          "key": {
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entity_type",
+          "key",
+          "label",
+          "field_type"
+        ],
+        "title": "CustomFieldIn",
+        "type": "object"
+      },
+      "CustomFieldOut": {
+        "properties": {
+          "entity_type": {
+            "pattern": "^(property|building|unit|service_provider_relation)$",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "field_type": {
+            "pattern": "^(text|number|date|bool)$",
+            "title": "Field Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entity_type",
+          "key",
+          "label",
+          "field_type",
+          "id"
+        ],
+        "title": "CustomFieldOut",
+        "type": "object"
       },
       "DeliveryOut": {
         "properties": {
@@ -2187,6 +3159,52 @@
         "title": "IdentifierOut",
         "type": "object"
       },
+      "LegalEntityKind": {
+        "enum": [
+          "hoa",
+          "rental_owner",
+          "sev_owner",
+          "manager"
+        ],
+        "title": "LegalEntityKind",
+        "type": "string"
+      },
+      "LegalEntityOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LegalEntityKind"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "party_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Party Id"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "party_id"
+        ],
+        "title": "LegalEntityOut",
+        "type": "object"
+      },
       "LiveReport": {
         "properties": {
           "service": {
@@ -2250,6 +3268,205 @@
         ],
         "title": "LoginStep",
         "type": "object"
+      },
+      "MaintenanceIn": {
+        "additionalProperties": false,
+        "properties": {
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "interval_months": {
+            "anyOf": [
+              {
+                "maximum": 240.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Months"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MaintenanceKind"
+          },
+          "provider_relation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Relation Id"
+          },
+          "remind_before": {
+            "anyOf": [
+              {
+                "pattern": "^(14d|1m|3m|6m)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remind Before"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Title",
+            "type": "string"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          }
+        },
+        "required": [
+          "kind",
+          "title"
+        ],
+        "title": "MaintenanceIn",
+        "type": "object"
+      },
+      "MaintenanceKind": {
+        "enum": [
+          "modernization",
+          "maintenance",
+          "inspection",
+          "warranty"
+        ],
+        "title": "MaintenanceKind",
+        "type": "string"
+      },
+      "MaintenanceOut": {
+        "properties": {
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "interval_months": {
+            "anyOf": [
+              {
+                "maximum": 240.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Months"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MaintenanceKind"
+          },
+          "provider_relation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Relation Id"
+          },
+          "remind_before": {
+            "anyOf": [
+              {
+                "pattern": "^(14d|1m|3m|6m)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remind Before"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Title",
+            "type": "string"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "id",
+          "status"
+        ],
+        "title": "MaintenanceOut",
+        "type": "object"
+      },
+      "ManagementMode": {
+        "enum": [
+          "own",
+          "third_party"
+        ],
+        "title": "ManagementMode",
+        "type": "string"
+      },
+      "ManagementType": {
+        "enum": [
+          "rental",
+          "hoa",
+          "hoa_with_sev"
+        ],
+        "title": "ManagementType",
+        "type": "string"
       },
       "MeOut": {
         "properties": {
@@ -2424,6 +3641,253 @@
         "title": "MemberRoles",
         "type": "object"
       },
+      "MeterConnection": {
+        "enum": [
+          "main",
+          "sub"
+        ],
+        "title": "MeterConnection",
+        "type": "string"
+      },
+      "MeterIn": {
+        "additionalProperties": false,
+        "properties": {
+          "calibration_due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Due Date"
+          },
+          "connection": {
+            "$ref": "#/components/schemas/MeterConnection",
+            "default": "sub"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "malo_id": {
+            "anyOf": [
+              {
+                "maxLength": 33,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Malo Id"
+          },
+          "meter_type_code": {
+            "title": "Meter Type Code",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Number",
+            "type": "string"
+          },
+          "remote_readable": {
+            "default": false,
+            "title": "Remote Readable",
+            "type": "boolean"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from",
+          "meter_type_code",
+          "number"
+        ],
+        "title": "MeterIn",
+        "type": "object"
+      },
+      "MeterOut": {
+        "properties": {
+          "calibration_due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Due Date"
+          },
+          "connection": {
+            "$ref": "#/components/schemas/MeterConnection",
+            "default": "sub"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "malo_id": {
+            "anyOf": [
+              {
+                "maxLength": 33,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Malo Id"
+          },
+          "meter_type_code": {
+            "title": "Meter Type Code",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Number",
+            "type": "string"
+          },
+          "remote_readable": {
+            "default": false,
+            "title": "Remote Readable",
+            "type": "boolean"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from",
+          "meter_type_code",
+          "number",
+          "id"
+        ],
+        "title": "MeterOut",
+        "type": "object"
+      },
       "MfaSetup": {
         "properties": {
           "otpauth_uri": {
@@ -2578,6 +4042,14 @@
         "title": "NoteOut",
         "type": "object"
       },
+      "Occupant": {
+        "enum": [
+          "vacancy",
+          "contract"
+        ],
+        "title": "Occupant",
+        "type": "string"
+      },
       "OidcTokenResponse": {
         "properties": {
           "access_token": {
@@ -2604,6 +4076,120 @@
           "expires_in"
         ],
         "title": "OidcTokenResponse",
+        "type": "object"
+      },
+      "OwnerIn": {
+        "additionalProperties": false,
+        "properties": {
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "share_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Percent"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from",
+          "party_id"
+        ],
+        "title": "OwnerIn",
+        "type": "object"
+      },
+      "OwnerOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "share_percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Percent"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "id",
+          "party_id",
+          "share_percent",
+          "valid_from",
+          "valid_to"
+        ],
+        "title": "OwnerOut",
         "type": "object"
       },
       "PartyIn": {
@@ -2817,6 +4403,1184 @@
           "portal"
         ],
         "title": "PreferredChannel",
+        "type": "string"
+      },
+      "PropertyContactIn": {
+        "additionalProperties": false,
+        "properties": {
+          "category_code": {
+            "title": "Category Code",
+            "type": "string"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "visible_in_portal_for": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Visible In Portal For",
+            "type": "array"
+          }
+        },
+        "required": [
+          "valid_from",
+          "contact_id",
+          "category_code"
+        ],
+        "title": "PropertyContactIn",
+        "type": "object"
+      },
+      "PropertyContactOut": {
+        "properties": {
+          "category_code": {
+            "title": "Category Code",
+            "type": "string"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "visible_in_portal_for": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Visible In Portal For",
+            "type": "array"
+          }
+        },
+        "required": [
+          "valid_from",
+          "contact_id",
+          "category_code",
+          "id"
+        ],
+        "title": "PropertyContactOut",
+        "type": "object"
+      },
+      "PropertyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation_loss_risk_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Loss Risk Percent"
+          },
+          "built_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Built Area Sqm"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country": {
+            "default": "DE",
+            "pattern": "^[A-Z]{2}$",
+            "title": "Country",
+            "type": "string"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
+          "garden_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Garden Notes"
+          },
+          "garden_use": {
+            "anyOf": [
+              {
+                "pattern": "^(none|yes|partial)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Garden Use"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "land_registry_district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Registry District"
+          },
+          "land_registry_sheet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Registry Sheet"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "maximum": 90.0,
+                "minimum": -90.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "maximum": 180.0,
+                "minimum": -180.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "managed_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed From"
+          },
+          "managed_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed To"
+          },
+          "management_mode": {
+            "$ref": "#/components/schemas/ManagementMode",
+            "default": "third_party"
+          },
+          "management_type": {
+            "$ref": "#/components/schemas/ManagementType"
+          },
+          "manager_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager User Id"
+          },
+          "municipality_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipality Code"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "description": "Objektnummer NNN",
+            "pattern": "^[0-9]{3}$",
+            "title": "Number",
+            "type": "string"
+          },
+          "parcel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcel"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "property_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Type Code"
+          },
+          "renovation_flag": {
+            "default": false,
+            "title": "Renovation Flag",
+            "type": "boolean"
+          },
+          "renovation_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Renovation Notes"
+          },
+          "sealed_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sealed Area Sqm"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          },
+          "unbuilt_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unbuilt Area Sqm"
+          }
+        },
+        "required": [
+          "number",
+          "name",
+          "management_type"
+        ],
+        "title": "PropertyIn",
+        "type": "object"
+      },
+      "PropertyOut": {
+        "properties": {
+          "allocation_loss_risk_percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Loss Risk Percent"
+          },
+          "built_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Built Area Sqm"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country": {
+            "default": "DE",
+            "pattern": "^[A-Z]{2}$",
+            "title": "Country",
+            "type": "string"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
+          "garden_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Garden Notes"
+          },
+          "garden_use": {
+            "anyOf": [
+              {
+                "pattern": "^(none|yes|partial)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Garden Use"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "land_registry_district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Registry District"
+          },
+          "land_registry_sheet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Registry Sheet"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "legal_entities": {
+            "items": {
+              "$ref": "#/components/schemas/LegalEntityOut"
+            },
+            "title": "Legal Entities",
+            "type": "array"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "managed_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed From"
+          },
+          "managed_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed To"
+          },
+          "management_mode": {
+            "$ref": "#/components/schemas/ManagementMode",
+            "default": "third_party"
+          },
+          "management_type": {
+            "$ref": "#/components/schemas/ManagementType"
+          },
+          "manager_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager User Id"
+          },
+          "municipality_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipality Code"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "description": "Objektnummer NNN",
+            "pattern": "^[0-9]{3}$",
+            "title": "Number",
+            "type": "string"
+          },
+          "parcel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcel"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "property_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Type Code"
+          },
+          "renovation_flag": {
+            "default": false,
+            "title": "Renovation Flag",
+            "type": "boolean"
+          },
+          "renovation_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Renovation Notes"
+          },
+          "sealed_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sealed Area Sqm"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PropertyStatus"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          },
+          "unbuilt_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unbuilt Area Sqm"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "number",
+          "name",
+          "management_type",
+          "id",
+          "status",
+          "version"
+        ],
+        "title": "PropertyOut",
+        "type": "object"
+      },
+      "PropertyPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PropertySummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "PropertyPage",
+        "type": "object"
+      },
+      "PropertyStatus": {
+        "enum": [
+          "onboarding",
+          "active",
+          "terminated"
+        ],
+        "title": "PropertyStatus",
+        "type": "string"
+      },
+      "PropertySummary": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "management_type": {
+            "$ref": "#/components/schemas/ManagementType"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PropertyStatus"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "name",
+          "management_type",
+          "status",
+          "city",
+          "street",
+          "house_number"
+        ],
+        "title": "PropertySummary",
+        "type": "object"
+      },
+      "ProviderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "contact_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Bank Account Id"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "contract_type_code": {
+            "title": "Contract Type Code",
+            "type": "string"
+          },
+          "create_default_bank_rule": {
+            "default": false,
+            "title": "Create Default Bank Rule",
+            "type": "boolean"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "notice_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Period"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from",
+          "contact_id",
+          "contract_type_code"
+        ],
+        "title": "ProviderIn",
+        "type": "object"
+      },
+      "ProviderOut": {
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "contact_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Bank Account Id"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "contract_type_code": {
+            "title": "Contract Type Code",
+            "type": "string"
+          },
+          "create_default_bank_rule": {
+            "default": false,
+            "title": "Create Default Bank Rule",
+            "type": "boolean"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "notice_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Period"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from",
+          "contact_id",
+          "contract_type_code",
+          "id"
+        ],
+        "title": "ProviderOut",
+        "type": "object"
+      },
+      "ReadingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "estimated": {
+            "default": false,
+            "title": "Estimated",
+            "type": "boolean"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "read_at": {
+            "format": "date",
+            "title": "Read At",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ReadingSource",
+            "default": "manual"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "read_at",
+          "value"
+        ],
+        "title": "ReadingIn",
+        "type": "object"
+      },
+      "ReadingOut": {
+        "properties": {
+          "estimated": {
+            "default": false,
+            "title": "Estimated",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "implausible": {
+            "default": false,
+            "title": "Implausible",
+            "type": "boolean"
+          },
+          "meter_id": {
+            "format": "uuid",
+            "title": "Meter Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "read_at": {
+            "format": "date",
+            "title": "Read At",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ReadingSource",
+            "default": "manual"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "read_at",
+          "value",
+          "id",
+          "meter_id"
+        ],
+        "title": "ReadingOut",
+        "type": "object"
+      },
+      "ReadingSource": {
+        "enum": [
+          "manual",
+          "portal",
+          "provider_import",
+          "ai"
+        ],
+        "title": "ReadingSource",
         "type": "string"
       },
       "RefreshRequest": {
@@ -3134,6 +5898,19 @@
         "title": "SessionOut",
         "type": "object"
       },
+      "StatusChange": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/PropertyStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "StatusChange",
+        "type": "object"
+      },
       "SwitchRequest": {
         "properties": {
           "reason": {
@@ -3305,6 +6082,502 @@
         "title": "TokenResponse",
         "type": "object"
       },
+      "UnitIn": {
+        "additionalProperties": false,
+        "properties": {
+          "bathrooms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bathrooms"
+          },
+          "bedrooms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bedrooms"
+          },
+          "building_id": {
+            "format": "uuid",
+            "title": "Building Id",
+            "type": "string"
+          },
+          "cellar_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cellar Number"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
+          "features": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Features"
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "internal_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Name"
+          },
+          "is_fictional": {
+            "default": false,
+            "title": "Is Fictional",
+            "type": "boolean"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "last_modernization_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Modernization Year"
+          },
+          "living_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Living Area Sqm"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "number": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Number",
+            "type": "string"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "rooms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,3}|(?=[\\d.]{1,5}0*$)\\d{0,3}\\.\\d{0,1}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rooms"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          },
+          "total_area_sqm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Area Sqm"
+          },
+          "unit_type": {
+            "$ref": "#/components/schemas/UnitType"
+          }
+        },
+        "required": [
+          "building_id",
+          "number",
+          "unit_type"
+        ],
+        "title": "UnitIn",
+        "type": "object"
+      },
+      "UnitOut": {
+        "properties": {
+          "allocation_values": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationValueOut"
+            },
+            "title": "Allocation Values",
+            "type": "array"
+          },
+          "bathrooms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bathrooms"
+          },
+          "bedrooms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bedrooms"
+          },
+          "building_id": {
+            "format": "uuid",
+            "title": "Building Id",
+            "type": "string"
+          },
+          "cellar_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cellar Number"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
+          "features": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Features"
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "internal_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Name"
+          },
+          "is_fictional": {
+            "default": false,
+            "title": "Is Fictional",
+            "type": "boolean"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "last_modernization_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Modernization Year"
+          },
+          "living_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Living Area Sqm"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "number": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Number",
+            "type": "string"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "rooms": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,3}|(?=[\\d.]{1,5}0*$)\\d{0,3}\\.\\d{0,1}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rooms"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          },
+          "total_area_sqm": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Area Sqm"
+          },
+          "unit_type": {
+            "$ref": "#/components/schemas/UnitType"
+          },
+          "vat_option": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VatOption"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "building_id",
+          "number",
+          "unit_type",
+          "id",
+          "property_id"
+        ],
+        "title": "UnitOut",
+        "type": "object"
+      },
+      "UnitType": {
+        "enum": [
+          "apartment",
+          "commercial",
+          "office",
+          "parking",
+          "garage",
+          "storage",
+          "garden",
+          "other"
+        ],
+        "title": "UnitType",
+        "type": "string"
+      },
       "UserCreate": {
         "properties": {
           "display_name": {
@@ -3410,6 +6683,61 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "ValueSource": {
+        "enum": [
+          "manual",
+          "contract",
+          "import",
+          "ai"
+        ],
+        "title": "ValueSource",
+        "type": "string"
+      },
+      "VatOption": {
+        "enum": [
+          "none",
+          "commercial_no_vat",
+          "commercial_full_vat",
+          "commercial_reduced_vat"
+        ],
+        "title": "VatOption",
+        "type": "string"
+      },
+      "VatOptionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "occupant": {
+            "$ref": "#/components/schemas/Occupant"
+          },
+          "option": {
+            "$ref": "#/components/schemas/VatOption"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from",
+          "option",
+          "occupant"
+        ],
+        "title": "VatOptionIn",
         "type": "object"
       },
       "WebhookCreate": {
@@ -3572,6 +6900,173 @@
         "title": "WebhookPatch",
         "type": "object"
       },
+      "mhvp__contacts__schemas__BankAccountIn": {
+        "additionalProperties": false,
+        "properties": {
+          "bank_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bic": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bic"
+          },
+          "holder": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holder"
+          },
+          "iban": {
+            "maxLength": 50,
+            "title": "Iban",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "iban",
+          "valid_from"
+        ],
+        "title": "BankAccountIn",
+        "type": "object"
+      },
+      "mhvp__contacts__schemas__BankAccountOut": {
+        "properties": {
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bic"
+          },
+          "holder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holder"
+          },
+          "iban_masked": {
+            "title": "Iban Masked",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "iban_masked",
+          "bic",
+          "bank_name",
+          "holder",
+          "valid_from",
+          "valid_to"
+        ],
+        "title": "BankAccountOut",
+        "type": "object"
+      },
       "mhvp__core__auth__routers__TenantOut": {
         "properties": {
           "id": {
@@ -3619,6 +7114,171 @@
         ],
         "title": "TenantOut",
         "type": "object"
+      },
+      "mhvp__properties__schemas__BankAccountIn": {
+        "additionalProperties": false,
+        "properties": {
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bic": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bic"
+          },
+          "holder": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Holder",
+            "type": "string"
+          },
+          "iban": {
+            "title": "Iban",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BankAccountKind"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from",
+          "legal_entity_id",
+          "kind",
+          "iban",
+          "holder"
+        ],
+        "title": "BankAccountIn",
+        "type": "object"
+      },
+      "mhvp__properties__schemas__BankAccountOut": {
+        "properties": {
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bic"
+          },
+          "holder": {
+            "title": "Holder",
+            "type": "string"
+          },
+          "iban_masked": {
+            "title": "Iban Masked",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BankAccountKind"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "segregated": {
+            "title": "Segregated",
+            "type": "boolean"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "id",
+          "legal_entity_id",
+          "kind",
+          "iban_masked",
+          "bic",
+          "bank_name",
+          "holder",
+          "segregated",
+          "valid_from",
+          "valid_to"
+        ],
+        "title": "BankAccountOut",
+        "type": "object"
       }
     }
   },
@@ -3649,6 +7309,31 @@
         "summary": "OIDC Discovery",
         "tags": [
           "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/allocation-key-templates": {
+      "get": {
+        "operationId": "list_templates_api_v1_allocation_key_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AllocationKeyIn-Output"
+                  },
+                  "title": "Response List Templates Api V1 Allocation Key Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Muster Umlageschlüssel",
+        "tags": [
+          "Objekte"
         ]
       }
     },
@@ -3970,6 +7655,102 @@
         "summary": "Mandant wechseln",
         "tags": [
           "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/catalogs/{catalog}": {
+      "get": {
+        "operationId": "list_catalog_api_v1_catalogs__catalog__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "catalog",
+            "required": true,
+            "schema": {
+              "title": "Catalog",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogEntryOut"
+                  },
+                  "title": "Response List Catalog Api V1 Catalogs  Catalog  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Katalog",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_catalog_entry_api_v1_catalogs__catalog__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "catalog",
+            "required": true,
+            "schema": {
+              "title": "Catalog",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogEntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogEntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Katalogeintrag anlegen",
+        "tags": [
+          "Objekte"
         ]
       }
     },
@@ -4788,6 +8569,70 @@
         ]
       }
     },
+    "/api/v1/custom-fields": {
+      "get": {
+        "operationId": "list_custom_fields_api_v1_custom_fields_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CustomFieldOut"
+                  },
+                  "title": "Response List Custom Fields Api V1 Custom Fields Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Zusatzfelder",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_custom_field_api_v1_custom_fields_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomFieldIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomFieldOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zusatzfeld definieren",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "live_api_v1_health_live_get",
@@ -4837,6 +8682,104 @@
         "summary": "Abhängigkeiten erreichbar (Readiness)",
         "tags": [
           "Betrieb"
+        ]
+      }
+    },
+    "/api/v1/meters/{meter_id}/readings": {
+      "get": {
+        "operationId": "list_readings_api_v1_meters__meter_id__readings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meter_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meter Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReadingOut"
+                  },
+                  "title": "Response List Readings Api V1 Meters  Meter Id  Readings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zählerstände",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_reading_api_v1_meters__meter_id__readings_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meter_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meter Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zählerstand erfassen",
+        "tags": [
+          "Objekte"
         ]
       }
     },
@@ -5467,6 +9410,1198 @@
         "summary": "Benutzer anlegen",
         "tags": [
           "Plattform"
+        ]
+      }
+    },
+    "/api/v1/properties": {
+      "get": {
+        "operationId": "list_properties_api_v1_properties_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PropertyStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objekte",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "create_property_api_v1_properties_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objekt anlegen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}": {
+      "get": {
+        "operationId": "get_property_api_v1_properties__property_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objekt lesen",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "put": {
+        "operationId": "update_property_api_v1_properties__property_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objekt ändern",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/allocation-keys": {
+      "get": {
+        "operationId": "list_keys_api_v1_properties__property_id__allocation_keys_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AllocationKeyOut"
+                  },
+                  "title": "Response List Keys Api V1 Properties  Property Id  Allocation Keys Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umlageschlüssel",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "create_key_api_v1_properties__property_id__allocation_keys_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationKeyIn-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllocationKeyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umlageschlüssel anlegen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/bank-accounts": {
+      "get": {
+        "operationId": "list_accounts_api_v1_properties__property_id__bank_accounts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/mhvp__properties__schemas__BankAccountOut"
+                  },
+                  "title": "Response List Accounts Api V1 Properties  Property Id  Bank Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankkonten",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_account_api_v1_properties__property_id__bank_accounts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__properties__schemas__BankAccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__properties__schemas__BankAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankkonto eines Rechtsträgers anlegen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/buildings": {
+      "get": {
+        "operationId": "list_buildings_api_v1_properties__property_id__buildings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BuildingOut"
+                  },
+                  "title": "Response List Buildings Api V1 Properties  Property Id  Buildings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gebäude",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "create_building_api_v1_properties__property_id__buildings_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gebäude anlegen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/contacts": {
+      "get": {
+        "operationId": "list_property_contacts_api_v1_properties__property_id__contacts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PropertyContactOut"
+                  },
+                  "title": "Response List Property Contacts Api V1 Properties  Property Id  Contacts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ansprechpartner",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_property_contact_api_v1_properties__property_id__contacts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyContactIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyContactOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ansprechpartner zuordnen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/legal-entities": {
+      "get": {
+        "operationId": "list_entities_api_v1_properties__property_id__legal_entities_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LegalEntityOut"
+                  },
+                  "title": "Response List Entities Api V1 Properties  Property Id  Legal Entities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rechtsträger des Objekts",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/maintenance": {
+      "get": {
+        "operationId": "list_maintenance_api_v1_properties__property_id__maintenance_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MaintenanceOut"
+                  },
+                  "title": "Response List Maintenance Api V1 Properties  Property Id  Maintenance Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wartung und Prüfpflichten",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_maintenance_api_v1_properties__property_id__maintenance_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wartung anlegen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/meters": {
+      "get": {
+        "operationId": "list_meters_api_v1_properties__property_id__meters_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MeterOut"
+                  },
+                  "title": "Response List Meters Api V1 Properties  Property Id  Meters Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zähler",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_meter_api_v1_properties__property_id__meters_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeterIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeterOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zähler anlegen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/owners": {
+      "post": {
+        "operationId": "add_owner_api_v1_properties__property_id__owners_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objekteigentümer (Mietverwaltung)",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/service-providers": {
+      "get": {
+        "operationId": "list_providers_api_v1_properties__property_id__service_providers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderOut"
+                  },
+                  "title": "Response List Providers Api V1 Properties  Property Id  Service Providers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dienstleisterverhältnisse",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_provider_api_v1_properties__property_id__service_providers_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dienstleisterverhältnis anlegen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/status": {
+      "post": {
+        "operationId": "change_status_api_v1_properties__property_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objektstatus ändern",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/units": {
+      "get": {
+        "operationId": "list_units_api_v1_properties__property_id__units_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UnitOut"
+                  },
+                  "title": "Response List Units Api V1 Properties  Property Id  Units Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einheiten, optional zum Stichtag",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "create_unit_api_v1_properties__property_id__units_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einheit anlegen",
+        "tags": [
+          "Objekte"
         ]
       }
     },
@@ -6438,6 +11573,285 @@
         "summary": "Zustellprotokoll",
         "tags": [
           "Mandant"
+        ]
+      }
+    },
+    "/api/v1/units/{unit_id}": {
+      "get": {
+        "operationId": "get_unit_api_v1_units__unit_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einheit lesen, optional zum Stichtag",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "put": {
+        "operationId": "update_unit_api_v1_units__unit_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einheit ändern",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/units/{unit_id}/allocation-values": {
+      "get": {
+        "operationId": "list_values_api_v1_units__unit_id__allocation_values_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AllocationValueOut"
+                  },
+                  "title": "Response List Values Api V1 Units  Unit Id  Allocation Values Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schlüsselwerte, Historie oder Stichtag",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_value_api_v1_units__unit_id__allocation_values_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationValueIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllocationValueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schlüsselwert mit Zeitraum erfassen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/units/{unit_id}/vat-options": {
+      "post": {
+        "operationId": "add_vat_option_api_v1_units__unit_id__vat_options_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VatOptionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umsatzsteueroption mit Zeitraum",
+        "tags": [
+          "Objekte"
         ]
       }
     }

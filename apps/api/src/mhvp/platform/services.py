@@ -24,6 +24,7 @@ from mhvp.platform.models import (
     User,
 )
 from mhvp.platform.schemas import Branding, CompanyData
+from mhvp.properties.defaults import ensure_tenant_defaults
 
 SEED_FILES = ("hausverwaltung-mueller.json", "timo-mueller.json")
 
@@ -105,6 +106,7 @@ async def provision_tenant(
                 )
             )
         await ensure_system_roles(session, tenant_id)
+        await ensure_tenant_defaults(session, tenant_id)
         if created:
             await emit(
                 session,
