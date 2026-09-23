@@ -737,6 +737,21 @@ async def _order(session: Any, order_id: uuid.UUID) -> PaymentOrder:
     return order  # type: ignore[no-any-return]
 
 
+@router.get("/payment-orders", summary="Zahlungsaufträge")
+async def list_orders(
+    request: Request,
+    status: OrderStatus | None = None,
+    limit: int = Query(default=200, ge=1, le=1000),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[OrderOut]:
+    async with tenant_tx(request, principal) as session:
+        query = select(PaymentOrder).order_by(PaymentOrder.execution_date.desc(), PaymentOrder.id)
+        if status is not None:
+            query = query.where(PaymentOrder.status == status)
+        rows = (await session.scalars(query.limit(limit))).all()
+        return [await _order_out(session, o) for o in rows]
+
+
 @router.post("/payment-orders", status_code=201, summary="Zahlungsauftrag aus Rechnung (Entwurf)")
 async def create_order(
     body: PaymentOrderIn, request: Request, principal: TenantPrincipal = Depends(CREATE)

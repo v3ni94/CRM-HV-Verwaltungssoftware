@@ -51,6 +51,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^banking\/imports$/ },
   { method: "GET", pattern: new RegExp(`^banking/transactions/${ID}/candidates$`) },
   { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(book|ignore)$`) },
+  // Payment orders (M15): approval and cancel only; the payment file needs G2.
+  { method: "POST", pattern: new RegExp(`^banking/payment-orders/${ID}/(approve|cancel)$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];

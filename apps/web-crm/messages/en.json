@@ -117,6 +117,32 @@
       "possible_duplicates": "possible duplicates",
       "transfers": "transfers",
       "statements": "statements"
-    }
+    },
+    "ordersLink": "Payment orders"
+  },
+  "Payments": {
+    "title": "Payment orders",
+    "notice": "Approval by two different people. Any change voids approvals. The payment file is only created with release gate G2; export or submission never counts as payment.",
+    "empty": "No payment orders.",
+    "execution": "Execution",
+    "payee": "Payee",
+    "purpose": "Purpose",
+    "amount": "Amount",
+    "status": "Status",
+    "actions": "Actions",
+    "approve": "Approve",
+    "cancel": "Cancel",
+    "confirmCancel": "Cancel payment order?",
+    "approvals": "{n} of 2 approvals",
+    "status_draft": "Draft",
+    "status_approved": "Approved",
+    "status_exported": "Exported",
+    "status_submitted": "Submitted",
+    "status_accepted_by_bank": "Accepted by bank",
+    "status_executed": "Executed",
+    "status_partially_executed": "Partially executed",
+    "status_rejected": "Rejected",
+    "status_returned": "Returned",
+    "status_cancelled": "Cancelled"
   }
 }

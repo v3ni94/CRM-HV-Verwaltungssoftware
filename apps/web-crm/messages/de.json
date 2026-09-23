@@ -763,6 +763,32 @@
       "possible_duplicates": "mögliche Dubletten",
       "transfers": "Umbuchungen",
       "statements": "Auszüge"
-    }
+    },
+    "ordersLink": "Zahlungsaufträge"
+  },
+  "Payments": {
+    "title": "Zahlungsaufträge",
+    "notice": "Freigabe durch zwei verschiedene Personen. Jede Änderung hebt Freigaben auf. Die Zahlungsdatei wird erst mit Freigabestufe G2 erzeugt; Export oder Einreichung gilt nie als Zahlung.",
+    "empty": "Keine Zahlungsaufträge.",
+    "execution": "Ausführung",
+    "payee": "Empfänger",
+    "purpose": "Verwendungszweck",
+    "amount": "Betrag",
+    "status": "Status",
+    "actions": "Aktionen",
+    "approve": "Freigeben",
+    "cancel": "Verwerfen",
+    "confirmCancel": "Zahlungsauftrag verwerfen?",
+    "approvals": "{n} von 2 Freigaben",
+    "status_draft": "Entwurf",
+    "status_approved": "freigegeben",
+    "status_exported": "exportiert",
+    "status_submitted": "eingereicht",
+    "status_accepted_by_bank": "von Bank angenommen",
+    "status_executed": "ausgeführt",
+    "status_partially_executed": "teilweise ausgeführt",
+    "status_rejected": "abgelehnt",
+    "status_returned": "zurückgegeben",
+    "status_cancelled": "verworfen"
   }
 }

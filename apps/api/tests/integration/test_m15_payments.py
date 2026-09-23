@@ -237,6 +237,9 @@ def test_payment_run(clients: tuple[TestClient, TestClient], world: World) -> No
     )
     assert patched["status"] == "draft"
     assert patched["approvals"] == 0
+    listed = _ok(client.get(f"{B}/payment-orders", params={"status": "draft"}, headers=h))
+    assert order["id"] in {o["id"] for o in listed}
+    assert all("counterpart_iban" not in o for o in listed)  # only the suffix leaves the API
     _ok(client.post(f"{B}/payment-orders/{order['id']}/approve", headers=h))
     _ok(client.post(f"{B}/payment-orders/{order['id']}/approve", headers=acc_user))
 

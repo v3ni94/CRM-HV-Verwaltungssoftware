@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 
 import { StatementImport } from "@/components/banking/StatementImport";
 import { TransactionMatcher } from "@/components/banking/TransactionMatcher";
@@ -21,6 +22,9 @@ export default async function BankPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">{t("title")}</h1>
       <p className={ui.notice}>{t("notice")}</p>
+      <Link href="/bank/zahlungen" className="text-sm font-medium hover:underline">
+        {t("ordersLink")}
+      </Link>
       <StatementImport />
       {!data ? (
         <p role="alert" className={ui.alert}>
