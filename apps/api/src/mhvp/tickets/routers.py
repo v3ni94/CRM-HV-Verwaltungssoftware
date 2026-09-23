@@ -86,7 +86,7 @@ class TeamIn(_In):
     member_user_ids: list[uuid.UUID] = Field(default_factory=list)
 
 
-class TemplateIn(_In):
+class TicketTemplateIn(_In):
     category: str = Field(min_length=1, max_length=100)
     title: str = Field(min_length=1, max_length=300)
     checklist: list[str] = Field(default_factory=list, max_length=50)
@@ -124,7 +124,7 @@ class CommentIn(_In):
     document_ids: list[uuid.UUID] = Field(default_factory=list)
 
 
-class OrderIn(_In):
+class WorkOrderIn(_In):
     ticket_id: uuid.UUID | None = None
     property_id: uuid.UUID
     provider_contact_id: uuid.UUID
@@ -224,7 +224,7 @@ async def create_team(
 
 @router.post("/ticket-templates", status_code=201, summary="Ticketvorlage mit Routing und SLA")
 async def create_template(
-    body: TemplateIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+    body: TicketTemplateIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         tpl = TicketTemplate(tenant_id=principal.tenant_id, **body.model_dump())
@@ -438,7 +438,7 @@ async def get_ticket(
 
 @router.post("/work-orders", status_code=201, summary="Auftrag anlegen")
 async def create_order(
-    body: OrderIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+    body: WorkOrderIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         order = WorkOrder(

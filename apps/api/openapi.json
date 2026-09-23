@@ -90,7 +90,7 @@
             "$ref": "#/components/schemas/AccountType"
           },
           "vat_option": {
-            "$ref": "#/components/schemas/mhvp__accounting__models__VatOption",
+            "$ref": "#/components/schemas/AccountVatOption",
             "default": "none"
           }
         },
@@ -183,7 +183,7 @@
             "title": "Unit Id"
           },
           "vat_option": {
-            "$ref": "#/components/schemas/mhvp__accounting__models__VatOption"
+            "$ref": "#/components/schemas/AccountVatOption"
           },
           "visible": {
             "title": "Visible",
@@ -276,6 +276,15 @@
           "expense"
         ],
         "title": "AccountType",
+        "type": "string"
+      },
+      "AccountVatOption": {
+        "enum": [
+          "none",
+          "full",
+          "reduced"
+        ],
+        "title": "AccountVatOption",
         "type": "string"
       },
       "AcquisitionKind": {
@@ -1200,6 +1209,30 @@
         ],
         "title": "BankAccountKind",
         "type": "string"
+      },
+      "BankBulkIn": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BulkItem"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "preview": {
+            "default": true,
+            "title": "Preview",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "BankBulkIn",
+        "type": "object"
       },
       "BankStatusIn": {
         "additionalProperties": false,
@@ -2253,6 +2286,74 @@
         "title": "BulkItem",
         "type": "object"
       },
+      "CalendarEntryIn": {
+        "additionalProperties": false,
+        "properties": {
+          "all_day": {
+            "default": true,
+            "title": "All Day",
+            "type": "boolean"
+          },
+          "ends_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends On"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "shared": {
+            "default": false,
+            "title": "Shared",
+            "type": "boolean"
+          },
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "starts_on"
+        ],
+        "title": "CalendarEntryIn",
+        "type": "object"
+      },
       "CalendarItem": {
         "properties": {
           "date": {
@@ -2527,6 +2628,62 @@
           "id"
         ],
         "title": "CategoryOut",
+        "type": "object"
+      },
+      "ChartTemplateOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "released": {
+            "title": "Released",
+            "type": "boolean"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "version",
+          "released",
+          "released_at",
+          "accounts"
+        ],
+        "title": "ChartTemplateOut",
         "type": "object"
       },
       "CheckResult": {
@@ -5448,6 +5605,28 @@
         "title": "DuplicateCandidate",
         "type": "object"
       },
+      "DuplicateReviewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "pattern": "^(keep|ignore)$",
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "title": "DuplicateReviewIn",
+        "type": "object"
+      },
       "EmailIn": {
         "additionalProperties": false,
         "properties": {
@@ -6854,6 +7033,174 @@
         "title": "InvoiceLineIn",
         "type": "object"
       },
+      "InvoiceReviewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          },
+          "result": {
+            "pattern": "^(ok|query|objected|reservation)$",
+            "title": "Result",
+            "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "step": {
+            "pattern": "^(completeness|factual|arithmetic_tax)$",
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "result",
+          "reason"
+        ],
+        "title": "InvoiceReviewIn",
+        "type": "object"
+      },
+      "JournalEntryIn": {
+        "additionalProperties": false,
+        "properties": {
+          "accrual_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accrual Date"
+          },
+          "booking_date": {
+            "format": "date",
+            "title": "Booking Date",
+            "type": "string"
+          },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EntryKind"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LineSchema"
+            },
+            "maxItems": 500,
+            "minItems": 2,
+            "title": "Lines",
+            "type": "array"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "settlements": {
+            "items": {
+              "$ref": "#/components/schemas/SettlementIn"
+            },
+            "maxItems": 500,
+            "title": "Settlements",
+            "type": "array"
+          },
+          "text": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "value_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Date"
+          }
+        },
+        "required": [
+          "booking_date",
+          "text",
+          "kind",
+          "lines"
+        ],
+        "title": "JournalEntryIn",
+        "type": "object"
+      },
       "LeadingIn": {
         "additionalProperties": false,
         "properties": {
@@ -7911,6 +8258,44 @@
         ],
         "title": "MandateType",
         "type": "string"
+      },
+      "MappingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "object"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "report_type": {
+            "$ref": "#/components/schemas/ReportType"
+          },
+          "value_maps": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Value Maps",
+            "type": "object"
+          }
+        },
+        "required": [
+          "report_type",
+          "name",
+          "columns"
+        ],
+        "title": "MappingIn",
+        "type": "object"
       },
       "MappingOut": {
         "properties": {
@@ -9606,6 +9991,33 @@
         "title": "PaymentInterval",
         "type": "string"
       },
+      "PaymentOrderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "execution_date": {
+            "format": "date",
+            "title": "Execution Date",
+            "type": "string"
+          },
+          "invoice_id": {
+            "format": "uuid",
+            "title": "Invoice Id",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "format": "uuid",
+            "title": "Property Bank Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice_id",
+          "property_bank_account_id",
+          "execution_date"
+        ],
+        "title": "PaymentOrderIn",
+        "type": "object"
+      },
       "PaymentOut": {
         "properties": {
           "contract_id": {
@@ -9688,6 +10100,28 @@
         ],
         "title": "PaymentReason",
         "type": "string"
+      },
+      "PaymentTypeMappingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "payment_type_code": {
+            "maxLength": 63,
+            "minLength": 1,
+            "title": "Payment Type Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_type_code",
+          "account_id"
+        ],
+        "title": "PaymentTypeMappingIn",
+        "type": "object"
       },
       "PhoneIn": {
         "additionalProperties": false,
@@ -11788,6 +12222,127 @@
         "title": "RunIn",
         "type": "object"
       },
+      "RunOut": {
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "cost_eur": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost Eur",
+            "type": "string"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiProvider"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "task": {
+            "$ref": "#/components/schemas/AiTask"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "task",
+          "status",
+          "provider",
+          "model",
+          "prompt_version",
+          "output",
+          "confidence",
+          "tokens_in",
+          "tokens_out",
+          "cost_eur",
+          "duration_ms",
+          "error"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
       "RunReverseIn": {
         "additionalProperties": false,
         "properties": {
@@ -12387,6 +12942,72 @@
         "title": "SwitchRequest",
         "type": "object"
       },
+      "SyncRunOut": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "status",
+          "counts",
+          "errors",
+          "property_bank_account_id",
+          "document_id"
+        ],
+        "title": "SyncRunOut",
+        "type": "object"
+      },
       "TeamIn": {
         "additionalProperties": false,
         "properties": {
@@ -12409,6 +13030,117 @@
           "name"
         ],
         "title": "TeamIn",
+        "type": "object"
+      },
+      "TemplateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "code": {
+            "pattern": "^[a-z0-9_]{2,63}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "subject",
+          "body"
+        ],
+        "title": "TemplateIn",
+        "type": "object"
+      },
+      "TemplateOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "body": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "code": {
+            "pattern": "^[a-z0-9_]{2,63}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Subject",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "subject",
+          "body",
+          "id",
+          "version",
+          "active"
+        ],
+        "title": "TemplateOut",
         "type": "object"
       },
       "TenantCreate": {
@@ -12760,6 +13492,78 @@
         ],
         "title": "TicketStatus",
         "type": "string"
+      },
+      "TicketTemplateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Category",
+            "type": "string"
+          },
+          "checklist": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Checklist",
+            "type": "array"
+          },
+          "default_assignee_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Assignee User Id"
+          },
+          "default_priority": {
+            "$ref": "#/components/schemas/Priority",
+            "default": "normal"
+          },
+          "default_team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Team Id"
+          },
+          "sla_hours": {
+            "anyOf": [
+              {
+                "maximum": 8760.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sla Hours"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "title"
+        ],
+        "title": "TicketTemplateIn",
+        "type": "object"
       },
       "TierModel": {
         "additionalProperties": false,
@@ -13544,7 +14348,7 @@
           "vat_option": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/mhvp__properties__models__VatOption"
+                "$ref": "#/components/schemas/VatOption"
               },
               {
                 "type": "null"
@@ -13760,6 +14564,16 @@
         "title": "VatMode",
         "type": "string"
       },
+      "VatOption": {
+        "enum": [
+          "none",
+          "commercial_no_vat",
+          "commercial_full_vat",
+          "commercial_reduced_vat"
+        ],
+        "title": "VatOption",
+        "type": "string"
+      },
       "VatOptionIn": {
         "additionalProperties": false,
         "properties": {
@@ -13767,7 +14581,7 @@
             "$ref": "#/components/schemas/Occupant"
           },
           "option": {
-            "$ref": "#/components/schemas/mhvp__properties__models__VatOption"
+            "$ref": "#/components/schemas/VatOption"
           },
           "valid_from": {
             "format": "date",
@@ -13955,259 +14769,104 @@
         "title": "WebhookPatch",
         "type": "object"
       },
-      "mhvp__accounting__models__VatOption": {
-        "enum": [
-          "none",
-          "full",
-          "reduced"
-        ],
-        "title": "VatOption",
-        "type": "string"
-      },
-      "mhvp__accounting__routers__MappingIn": {
+      "WorkOrderIn": {
         "additionalProperties": false,
         "properties": {
-          "account_id": {
-            "format": "uuid",
-            "title": "Account Id",
-            "type": "string"
+          "budget_limit": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Limit"
           },
-          "payment_type_code": {
-            "maxLength": 63,
-            "minLength": 1,
-            "title": "Payment Type Code",
-            "type": "string"
-          }
-        },
-        "required": [
-          "payment_type_code",
-          "account_id"
-        ],
-        "title": "MappingIn",
-        "type": "object"
-      },
-      "mhvp__accounting__routers__ReviewIn": {
-        "additionalProperties": false,
-        "properties": {
-          "reason": {
-            "maxLength": 4000,
+          "description": {
+            "maxLength": 20000,
             "minLength": 3,
-            "title": "Reason",
+            "title": "Description",
             "type": "string"
           },
-          "result": {
-            "pattern": "^(ok|query|objected|reservation)$",
-            "title": "Result",
-            "type": "string"
-          },
-          "scope": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scope"
-          },
-          "step": {
-            "pattern": "^(completeness|factual|arithmetic_tax)$",
-            "title": "Step",
-            "type": "string"
-          }
-        },
-        "required": [
-          "step",
-          "result",
-          "reason"
-        ],
-        "title": "ReviewIn",
-        "type": "object"
-      },
-      "mhvp__accounting__schemas__EntryIn": {
-        "additionalProperties": false,
-        "properties": {
-          "accrual_date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Accrual Date"
-          },
-          "booking_date": {
-            "format": "date",
-            "title": "Booking Date",
-            "type": "string"
-          },
-          "contract_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Contract Id"
-          },
-          "document_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Id"
-          },
-          "due_date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Due Date"
-          },
-          "idempotency_key": {
-            "anyOf": [
-              {
-                "maxLength": 200,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Idempotency Key"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/EntryKind"
-          },
-          "lines": {
-            "items": {
-              "$ref": "#/components/schemas/LineSchema"
-            },
-            "maxItems": 500,
-            "minItems": 2,
-            "title": "Lines",
-            "type": "array"
-          },
-          "reference": {
-            "anyOf": [
-              {
-                "maxLength": 100,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reference"
-          },
-          "settlements": {
-            "items": {
-              "$ref": "#/components/schemas/SettlementIn"
-            },
-            "maxItems": 500,
-            "title": "Settlements",
-            "type": "array"
-          },
-          "text": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Text",
-            "type": "string"
-          },
-          "value_date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Value Date"
-          }
-        },
-        "required": [
-          "booking_date",
-          "text",
-          "kind",
-          "lines"
-        ],
-        "title": "EntryIn",
-        "type": "object"
-      },
-      "mhvp__accounting__schemas__TemplateOut": {
-        "properties": {
-          "accounts": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Accounts",
-            "type": "array"
-          },
-          "code": {
-            "title": "Code",
-            "type": "string"
-          },
-          "id": {
+          "property_id": {
             "format": "uuid",
-            "title": "Id",
+            "title": "Property Id",
             "type": "string"
           },
-          "name": {
-            "title": "Name",
+          "provider_contact_id": {
+            "format": "uuid",
+            "title": "Provider Contact Id",
             "type": "string"
           },
-          "released": {
-            "title": "Released",
+          "requires_board_approval": {
+            "default": false,
+            "title": "Requires Board Approval",
             "type": "boolean"
           },
-          "released_at": {
+          "ticket_id": {
             "anyOf": [
               {
-                "format": "date-time",
+                "format": "uuid",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Released At"
-          },
-          "version": {
-            "title": "Version",
-            "type": "integer"
+            "title": "Ticket Id"
           }
         },
         "required": [
-          "id",
-          "code",
-          "name",
-          "version",
-          "released",
-          "released_at",
-          "accounts"
+          "property_id",
+          "provider_contact_id",
+          "description"
         ],
-        "title": "TemplateOut",
+        "title": "WorkOrderIn",
+        "type": "object"
+      },
+      "WorkspaceBulkIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "pattern": "^(contacts.add_tag|contacts.remove_tag|maintenance.done)$",
+            "title": "Action",
+            "type": "string"
+          },
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "maxLength": 63,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag"
+          }
+        },
+        "required": [
+          "action",
+          "ids"
+        ],
+        "title": "WorkspaceBulkIn",
         "type": "object"
       },
       "mhvp__ai__schemas__ProviderIn": {
@@ -14416,266 +15075,6 @@
         "title": "ProviderOut",
         "type": "object"
       },
-      "mhvp__ai__schemas__RunOut": {
-        "properties": {
-          "confidence": {
-            "anyOf": [
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confidence"
-          },
-          "cost_eur": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Cost Eur",
-            "type": "string"
-          },
-          "duration_ms": {
-            "title": "Duration Ms",
-            "type": "integer"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model"
-          },
-          "output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output"
-          },
-          "prompt_version": {
-            "title": "Prompt Version",
-            "type": "string"
-          },
-          "proposal_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Proposal Id"
-          },
-          "provider": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AiProvider"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "status": {
-            "$ref": "#/components/schemas/RunStatus"
-          },
-          "task": {
-            "$ref": "#/components/schemas/AiTask"
-          },
-          "tokens_in": {
-            "title": "Tokens In",
-            "type": "integer"
-          },
-          "tokens_out": {
-            "title": "Tokens Out",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "task",
-          "status",
-          "provider",
-          "model",
-          "prompt_version",
-          "output",
-          "confidence",
-          "tokens_in",
-          "tokens_out",
-          "cost_eur",
-          "duration_ms",
-          "error"
-        ],
-        "title": "RunOut",
-        "type": "object"
-      },
-      "mhvp__banking__routers__BulkIn": {
-        "additionalProperties": false,
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/BulkItem"
-            },
-            "maxItems": 1000,
-            "minItems": 1,
-            "title": "Items",
-            "type": "array"
-          },
-          "preview": {
-            "default": true,
-            "title": "Preview",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "items"
-        ],
-        "title": "BulkIn",
-        "type": "object"
-      },
-      "mhvp__banking__routers__OrderIn": {
-        "additionalProperties": false,
-        "properties": {
-          "execution_date": {
-            "format": "date",
-            "title": "Execution Date",
-            "type": "string"
-          },
-          "invoice_id": {
-            "format": "uuid",
-            "title": "Invoice Id",
-            "type": "string"
-          },
-          "property_bank_account_id": {
-            "format": "uuid",
-            "title": "Property Bank Account Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "invoice_id",
-          "property_bank_account_id",
-          "execution_date"
-        ],
-        "title": "OrderIn",
-        "type": "object"
-      },
-      "mhvp__banking__routers__ReviewIn": {
-        "additionalProperties": false,
-        "properties": {
-          "decision": {
-            "pattern": "^(keep|ignore)$",
-            "title": "Decision",
-            "type": "string"
-          },
-          "reason": {
-            "maxLength": 2000,
-            "minLength": 3,
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "required": [
-          "decision",
-          "reason"
-        ],
-        "title": "ReviewIn",
-        "type": "object"
-      },
-      "mhvp__banking__routers__RunOut": {
-        "properties": {
-          "counts": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "Counts",
-            "type": "object"
-          },
-          "document_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Id"
-          },
-          "errors": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Errors",
-            "type": "array"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "property_bank_account_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Property Bank Account Id"
-          },
-          "source": {
-            "title": "Source",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "source",
-          "status",
-          "counts",
-          "errors",
-          "property_bank_account_id",
-          "document_id"
-        ],
-        "title": "RunOut",
-        "type": "object"
-      },
       "mhvp__contacts__schemas__BankAccountIn": {
         "additionalProperties": false,
         "properties": {
@@ -14862,155 +15261,6 @@
         "title": "TenantOut",
         "type": "object"
       },
-      "mhvp__documents__schemas__TemplateIn": {
-        "additionalProperties": false,
-        "properties": {
-          "body": {
-            "maxLength": 100000,
-            "minLength": 1,
-            "title": "Body",
-            "type": "string"
-          },
-          "category_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category Id"
-          },
-          "code": {
-            "pattern": "^[a-z0-9_]{2,63}$",
-            "title": "Code",
-            "type": "string"
-          },
-          "name": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "subject": {
-            "maxLength": 2000,
-            "minLength": 1,
-            "title": "Subject",
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "name",
-          "subject",
-          "body"
-        ],
-        "title": "TemplateIn",
-        "type": "object"
-      },
-      "mhvp__documents__schemas__TemplateOut": {
-        "properties": {
-          "active": {
-            "title": "Active",
-            "type": "boolean"
-          },
-          "body": {
-            "maxLength": 100000,
-            "minLength": 1,
-            "title": "Body",
-            "type": "string"
-          },
-          "category_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category Id"
-          },
-          "code": {
-            "pattern": "^[a-z0-9_]{2,63}$",
-            "title": "Code",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "name": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "subject": {
-            "maxLength": 2000,
-            "minLength": 1,
-            "title": "Subject",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "code",
-          "name",
-          "subject",
-          "body",
-          "id",
-          "version",
-          "active"
-        ],
-        "title": "TemplateOut",
-        "type": "object"
-      },
-      "mhvp__imports__routers__MappingIn": {
-        "additionalProperties": false,
-        "properties": {
-          "columns": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "title": "Columns",
-            "type": "object"
-          },
-          "name": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "report_type": {
-            "$ref": "#/components/schemas/ReportType"
-          },
-          "value_maps": {
-            "additionalProperties": {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            },
-            "title": "Value Maps",
-            "type": "object"
-          }
-        },
-        "required": [
-          "report_type",
-          "name",
-          "columns"
-        ],
-        "title": "MappingIn",
-        "type": "object"
-      },
       "mhvp__platform__schemas__TenantOut": {
         "properties": {
           "id": {
@@ -15039,16 +15289,6 @@
         ],
         "title": "TenantOut",
         "type": "object"
-      },
-      "mhvp__properties__models__VatOption": {
-        "enum": [
-          "none",
-          "commercial_no_vat",
-          "commercial_full_vat",
-          "commercial_reduced_vat"
-        ],
-        "title": "VatOption",
-        "type": "string"
       },
       "mhvp__properties__schemas__BankAccountIn": {
         "additionalProperties": false,
@@ -15396,246 +15636,6 @@
           "id"
         ],
         "title": "ProviderOut",
-        "type": "object"
-      },
-      "mhvp__tickets__routers__OrderIn": {
-        "additionalProperties": false,
-        "properties": {
-          "budget_limit": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Budget Limit"
-          },
-          "description": {
-            "maxLength": 20000,
-            "minLength": 3,
-            "title": "Description",
-            "type": "string"
-          },
-          "property_id": {
-            "format": "uuid",
-            "title": "Property Id",
-            "type": "string"
-          },
-          "provider_contact_id": {
-            "format": "uuid",
-            "title": "Provider Contact Id",
-            "type": "string"
-          },
-          "requires_board_approval": {
-            "default": false,
-            "title": "Requires Board Approval",
-            "type": "boolean"
-          },
-          "ticket_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ticket Id"
-          }
-        },
-        "required": [
-          "property_id",
-          "provider_contact_id",
-          "description"
-        ],
-        "title": "OrderIn",
-        "type": "object"
-      },
-      "mhvp__tickets__routers__TemplateIn": {
-        "additionalProperties": false,
-        "properties": {
-          "category": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Category",
-            "type": "string"
-          },
-          "checklist": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 50,
-            "title": "Checklist",
-            "type": "array"
-          },
-          "default_assignee_user_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Default Assignee User Id"
-          },
-          "default_priority": {
-            "$ref": "#/components/schemas/Priority",
-            "default": "normal"
-          },
-          "default_team_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Default Team Id"
-          },
-          "sla_hours": {
-            "anyOf": [
-              {
-                "maximum": 8760.0,
-                "minimum": 1.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sla Hours"
-          },
-          "title": {
-            "maxLength": 300,
-            "minLength": 1,
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "category",
-          "title"
-        ],
-        "title": "TemplateIn",
-        "type": "object"
-      },
-      "mhvp__workspace__routers__BulkIn": {
-        "additionalProperties": false,
-        "properties": {
-          "action": {
-            "pattern": "^(contacts.add_tag|contacts.remove_tag|maintenance.done)$",
-            "title": "Action",
-            "type": "string"
-          },
-          "ids": {
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "maxItems": 500,
-            "minItems": 1,
-            "title": "Ids",
-            "type": "array"
-          },
-          "tag": {
-            "anyOf": [
-              {
-                "maxLength": 63,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tag"
-          }
-        },
-        "required": [
-          "action",
-          "ids"
-        ],
-        "title": "BulkIn",
-        "type": "object"
-      },
-      "mhvp__workspace__routers__EntryIn": {
-        "additionalProperties": false,
-        "properties": {
-          "all_day": {
-            "default": true,
-            "title": "All Day",
-            "type": "boolean"
-          },
-          "ends_on": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ends On"
-          },
-          "notes": {
-            "anyOf": [
-              {
-                "maxLength": 4000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notes"
-          },
-          "property_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Property Id"
-          },
-          "shared": {
-            "default": false,
-            "title": "Shared",
-            "type": "boolean"
-          },
-          "starts_on": {
-            "format": "date",
-            "title": "Starts On",
-            "type": "string"
-          },
-          "title": {
-            "maxLength": 300,
-            "minLength": 1,
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "title",
-          "starts_on"
-        ],
-        "title": "EntryIn",
         "type": "object"
       }
     }
@@ -16310,7 +16310,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__accounting__routers__ReviewIn"
+                "$ref": "#/components/schemas/InvoiceReviewIn"
               }
             }
           },
@@ -16944,7 +16944,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__accounting__schemas__EntryIn"
+                "$ref": "#/components/schemas/JournalEntryIn"
               }
             }
           },
@@ -17102,7 +17102,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__accounting__schemas__EntryIn"
+                "$ref": "#/components/schemas/JournalEntryIn"
               }
             }
           },
@@ -17676,7 +17676,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__accounting__routers__MappingIn"
+                "$ref": "#/components/schemas/PaymentTypeMappingIn"
               }
             }
           },
@@ -18253,7 +18253,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/mhvp__accounting__schemas__TemplateOut"
+                    "$ref": "#/components/schemas/ChartTemplateOut"
                   },
                   "title": "Response Templates Api V1 Accounting Templates Get",
                   "type": "array"
@@ -18277,7 +18277,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__accounting__schemas__TemplateOut"
+                  "$ref": "#/components/schemas/ChartTemplateOut"
                 }
               }
             },
@@ -18310,7 +18310,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__accounting__schemas__TemplateOut"
+                  "$ref": "#/components/schemas/ChartTemplateOut"
                 }
               }
             },
@@ -18516,7 +18516,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__ai__schemas__RunOut"
+                  "$ref": "#/components/schemas/RunOut"
                 }
               }
             },
@@ -18817,7 +18817,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__ai__schemas__RunOut"
+                  "$ref": "#/components/schemas/RunOut"
                 }
               }
             },
@@ -19330,7 +19330,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__banking__routers__BulkIn"
+                "$ref": "#/components/schemas/BankBulkIn"
               }
             }
           },
@@ -19448,7 +19448,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__banking__routers__RunOut"
+                  "$ref": "#/components/schemas/SyncRunOut"
                 }
               }
             },
@@ -19603,7 +19603,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__banking__routers__OrderIn"
+                "$ref": "#/components/schemas/PaymentOrderIn"
               }
             }
           },
@@ -20002,7 +20002,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/mhvp__banking__routers__RunOut"
+                    "$ref": "#/components/schemas/SyncRunOut"
                   },
                   "title": "Response Runs Api V1 Banking Runs Get",
                   "type": "array"
@@ -20274,7 +20274,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__banking__routers__ReviewIn"
+                "$ref": "#/components/schemas/DuplicateReviewIn"
               }
             }
           },
@@ -20372,7 +20372,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__banking__routers__ReviewIn"
+                "$ref": "#/components/schemas/DuplicateReviewIn"
               }
             }
           },
@@ -22241,7 +22241,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/mhvp__documents__schemas__TemplateOut"
+                    "$ref": "#/components/schemas/TemplateOut"
                   },
                   "title": "Response List Templates Api V1 Document Templates Get",
                   "type": "array"
@@ -22263,7 +22263,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__documents__schemas__TemplateIn"
+                "$ref": "#/components/schemas/TemplateIn"
               }
             }
           },
@@ -22274,7 +22274,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__documents__schemas__TemplateOut"
+                  "$ref": "#/components/schemas/TemplateOut"
                 }
               }
             },
@@ -23402,7 +23402,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__imports__routers__MappingIn"
+                "$ref": "#/components/schemas/MappingIn"
               }
             }
           },
@@ -27348,7 +27348,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__tickets__routers__TemplateIn"
+                "$ref": "#/components/schemas/TicketTemplateIn"
               }
             }
           },
@@ -27957,7 +27957,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__tickets__routers__OrderIn"
+                "$ref": "#/components/schemas/WorkOrderIn"
               }
             }
           },
@@ -28056,7 +28056,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__workspace__routers__BulkIn"
+                "$ref": "#/components/schemas/WorkspaceBulkIn"
               }
             }
           },
@@ -28154,7 +28154,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__workspace__routers__EntryIn"
+                "$ref": "#/components/schemas/CalendarEntryIn"
               }
             }
           },

@@ -58,7 +58,7 @@ class NotificationOut(BaseModel):
     created_at: datetime
 
 
-class EntryIn(_In):
+class CalendarEntryIn(_In):
     title: str = Field(min_length=1, max_length=300)
     starts_on: date
     ends_on: date | None = None
@@ -93,7 +93,7 @@ class FilterOut(BaseModel):
     params: dict[str, Any]
 
 
-class BulkIn(_In):
+class WorkspaceBulkIn(_In):
     action: str = Field(pattern="^(contacts.add_tag|contacts.remove_tag|maintenance.done)$")
     ids: list[uuid.UUID] = Field(min_length=1, max_length=MAX_BULK)
     tag: str | None = Field(default=None, min_length=1, max_length=63)
@@ -334,7 +334,7 @@ async def calendar(
 
 @router.post("/calendar", status_code=201, summary="Termin anlegen")
 async def create_entry(
-    body: EntryIn, request: Request, principal: TenantPrincipal = Depends(member)
+    body: CalendarEntryIn, request: Request, principal: TenantPrincipal = Depends(member)
 ) -> CalendarItem:
     if body.ends_on and body.ends_on < body.starts_on:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Ende liegt vor dem Beginn.")
@@ -430,7 +430,7 @@ async def delete_filter(
 
 @router.post("/bulk", summary="Massenaktion (Stammdaten, keine Geldwirkung)")
 async def bulk(
-    body: BulkIn, request: Request, principal: TenantPrincipal = Depends(member)
+    body: WorkspaceBulkIn, request: Request, principal: TenantPrincipal = Depends(member)
 ) -> dict[str, Any]:
     """All or nothing: unknown ids abort the whole action (rule 0.1.4 for bulk actions)."""
     from mhvp.contacts.models import Contact, ContactTag, ContactTagLink

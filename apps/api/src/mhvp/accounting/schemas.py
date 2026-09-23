@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from mhvp.accounting.models import (
     AccountCategory,
     AccountType,
+    AccountVatOption,
     AllocationCategory,
     EntryKind,
     EntrySource,
@@ -17,7 +18,6 @@ from mhvp.accounting.models import (
     LeadingSystem,
     StatementKind,
     VatMode,
-    VatOption,
 )
 
 Money = Decimal
@@ -27,7 +27,7 @@ class _In(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class TemplateOut(BaseModel):
+class ChartTemplateOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     code: str
@@ -65,7 +65,7 @@ class AccountIn(_In):
     name: str = Field(min_length=1, max_length=200)
     category: AccountCategory
     type: AccountType
-    vat_option: VatOption = VatOption.NONE
+    vat_option: AccountVatOption = AccountVatOption.NONE
     relevant_for_cash_report: bool = False
     allocation_category: AllocationCategory = AllocationCategory.NONE
     statement_kind: StatementKind = StatementKind.NONE
@@ -89,7 +89,7 @@ class AccountOut(BaseModel):
     name: str
     category: AccountCategory
     type: AccountType
-    vat_option: VatOption
+    vat_option: AccountVatOption
     relevant_for_cash_report: bool
     visible: bool
     active: bool
@@ -119,7 +119,7 @@ class SettlementIn(_In):
     amount: Money
 
 
-class EntryIn(_In):
+class JournalEntryIn(_In):
     booking_date: date
     value_date: date | None = None
     due_date: date | None = None

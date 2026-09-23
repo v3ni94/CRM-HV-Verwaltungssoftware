@@ -3808,7 +3808,7 @@ export interface components {
             statement_kind: components["schemas"]["StatementKind"];
             type: components["schemas"]["AccountType"];
             /** @default none */
-            vat_option: components["schemas"]["mhvp__accounting__models__VatOption"];
+            vat_option: components["schemas"]["AccountVatOption"];
         };
         /** AccountOut */
         AccountOut: {
@@ -3839,7 +3839,7 @@ export interface components {
             type: components["schemas"]["AccountType"];
             /** Unit Id */
             unit_id: string | null;
-            vat_option: components["schemas"]["mhvp__accounting__models__VatOption"];
+            vat_option: components["schemas"]["AccountVatOption"];
             /** Visible */
             visible: boolean;
         };
@@ -3859,6 +3859,11 @@ export interface components {
          * @enum {string}
          */
         AccountType: "asset" | "liability" | "income" | "expense";
+        /**
+         * AccountVatOption
+         * @enum {string}
+         */
+        AccountVatOption: "none" | "full" | "reduced";
         /**
          * AcquisitionKind
          * @enum {string}
@@ -4179,6 +4184,16 @@ export interface components {
          * @enum {string}
          */
         BankAccountKind: "rent" | "hoa" | "reserve" | "deposit" | "hoa_fee" | "other";
+        /** BankBulkIn */
+        BankBulkIn: {
+            /** Items */
+            items: components["schemas"]["BulkItem"][];
+            /**
+             * Preview
+             * @default true
+             */
+            preview: boolean;
+        };
         /** BankStatusIn */
         BankStatusIn: {
             /** Bank Transaction Id */
@@ -4421,6 +4436,32 @@ export interface components {
              */
             transaction_id: string;
         };
+        /** CalendarEntryIn */
+        CalendarEntryIn: {
+            /**
+             * All Day
+             * @default true
+             */
+            all_day: boolean;
+            /** Ends On */
+            ends_on?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Property Id */
+            property_id?: string | null;
+            /**
+             * Shared
+             * @default false
+             */
+            shared: boolean;
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            /** Title */
+            title: string;
+        };
         /** CalendarItem */
         CalendarItem: {
             /**
@@ -4519,6 +4560,28 @@ export interface components {
              * @default 0
              */
             sort_order: number;
+        };
+        /** ChartTemplateOut */
+        ChartTemplateOut: {
+            /** Accounts */
+            accounts: {
+                [key: string]: unknown;
+            }[];
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Released */
+            released: boolean;
+            /** Released At */
+            released_at: string | null;
+            /** Version */
+            version: number;
         };
         /** CheckResult */
         CheckResult: {
@@ -5478,6 +5541,13 @@ export interface components {
             /** Score */
             score: number;
         };
+        /** DuplicateReviewIn */
+        DuplicateReviewIn: {
+            /** Decision */
+            decision: string;
+            /** Reason */
+            reason: string;
+        };
         /** EmailIn */
         EmailIn: {
             /**
@@ -5957,6 +6027,46 @@ export interface components {
              */
             vat_percent: number | string;
         };
+        /** InvoiceReviewIn */
+        InvoiceReviewIn: {
+            /** Reason */
+            reason: string;
+            /** Result */
+            result: string;
+            /** Scope */
+            scope?: string | null;
+            /** Step */
+            step: string;
+        };
+        /** JournalEntryIn */
+        JournalEntryIn: {
+            /** Accrual Date */
+            accrual_date?: string | null;
+            /**
+             * Booking Date
+             * Format: date
+             */
+            booking_date: string;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
+            kind: components["schemas"]["EntryKind"];
+            /** Lines */
+            lines: components["schemas"]["LineSchema"][];
+            /** Reference */
+            reference?: string | null;
+            /** Settlements */
+            settlements?: components["schemas"]["SettlementIn"][];
+            /** Text */
+            text: string;
+            /** Value Date */
+            value_date?: string | null;
+        };
         /** LeadingIn */
         LeadingIn: {
             leading_system: components["schemas"]["LeadingSystem"];
@@ -6345,6 +6455,22 @@ export interface components {
          * @enum {string}
          */
         MandateType: "core" | "b2b";
+        /** MappingIn */
+        MappingIn: {
+            /** Columns */
+            columns: {
+                [key: string]: string;
+            };
+            /** Name */
+            name: string;
+            report_type: components["schemas"]["ReportType"];
+            /** Value Maps */
+            value_maps?: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+        };
         /** MappingOut */
         MappingOut: {
             /** Active */
@@ -6906,6 +7032,24 @@ export interface components {
          * @enum {string}
          */
         PaymentInterval: "monthly" | "quarterly" | "semiannual" | "annual";
+        /** PaymentOrderIn */
+        PaymentOrderIn: {
+            /**
+             * Execution Date
+             * Format: date
+             */
+            execution_date: string;
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            /**
+             * Property Bank Account Id
+             * Format: uuid
+             */
+            property_bank_account_id: string;
+        };
         /** PaymentOut */
         PaymentOut: {
             /**
@@ -6942,6 +7086,16 @@ export interface components {
          * @enum {string}
          */
         PaymentReason: "initial" | "index" | "graduated" | "increase" | "adjustment_from_statement" | "other";
+        /** PaymentTypeMappingIn */
+        PaymentTypeMappingIn: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Payment Type Code */
+            payment_type_code: string;
+        };
         /** PhoneIn */
         PhoneIn: {
             /**
@@ -7609,6 +7763,39 @@ export interface components {
             /** Scope Id */
             scope_id?: string | null;
         };
+        /** RunOut */
+        RunOut: {
+            /** Confidence */
+            confidence: string | null;
+            /** Cost Eur */
+            cost_eur: string;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Error */
+            error: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Model */
+            model: string | null;
+            /** Output */
+            output: {
+                [key: string]: unknown;
+            } | null;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            provider: components["schemas"]["AiProvider"] | null;
+            status: components["schemas"]["RunStatus"];
+            task: components["schemas"]["AiTask"];
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+        };
         /** RunReverseIn */
         RunReverseIn: {
             /** Booking Date */
@@ -7846,12 +8033,69 @@ export interface components {
              */
             tenant_id: string;
         };
+        /** SyncRunOut */
+        SyncRunOut: {
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Document Id */
+            document_id: string | null;
+            /** Errors */
+            errors: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Property Bank Account Id */
+            property_bank_account_id: string | null;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+        };
         /** TeamIn */
         TeamIn: {
             /** Member User Ids */
             member_user_ids?: string[];
             /** Name */
             name: string;
+        };
+        /** TemplateIn */
+        TemplateIn: {
+            /** Body */
+            body: string;
+            /** Category Id */
+            category_id?: string | null;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Subject */
+            subject: string;
+        };
+        /** TemplateOut */
+        TemplateOut: {
+            /** Active */
+            active: boolean;
+            /** Body */
+            body: string;
+            /** Category Id */
+            category_id?: string | null;
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Subject */
+            subject: string;
+            /** Version */
+            version: number;
         };
         /** TenantCreate */
         TenantCreate: {
@@ -7948,6 +8192,23 @@ export interface components {
          * @enum {string}
          */
         TicketStatus: "new" | "in_progress" | "waiting" | "done" | "closed" | "rejected";
+        /** TicketTemplateIn */
+        TicketTemplateIn: {
+            /** Category */
+            category: string;
+            /** Checklist */
+            checklist?: string[];
+            /** Default Assignee User Id */
+            default_assignee_user_id?: string | null;
+            /** @default normal */
+            default_priority: components["schemas"]["Priority"];
+            /** Default Team Id */
+            default_team_id?: string | null;
+            /** Sla Hours */
+            sla_hours?: number | null;
+            /** Title */
+            title: string;
+        };
         /** TierModel */
         TierModel: {
             /** Input Eur Per Mtok */
@@ -8151,7 +8412,7 @@ export interface components {
             /** Total Area Sqm */
             total_area_sqm?: string | null;
             unit_type: components["schemas"]["UnitType"];
-            vat_option?: components["schemas"]["mhvp__properties__models__VatOption"] | null;
+            vat_option?: components["schemas"]["VatOption"] | null;
         };
         /**
          * UnitType
@@ -8239,10 +8500,15 @@ export interface components {
          * @enum {string}
          */
         VatMode: "none" | "option";
+        /**
+         * VatOption
+         * @enum {string}
+         */
+        VatOption: "none" | "commercial_no_vat" | "commercial_full_vat" | "commercial_reduced_vat";
         /** VatOptionIn */
         VatOptionIn: {
             occupant: components["schemas"]["Occupant"];
-            option: components["schemas"]["mhvp__properties__models__VatOption"];
+            option: components["schemas"]["VatOption"];
             /**
              * Valid From
              * Format: date
@@ -8304,82 +8570,38 @@ export interface components {
             /** Event Types */
             event_types?: string[] | null;
         };
-        /**
-         * VatOption
-         * @enum {string}
-         */
-        mhvp__accounting__models__VatOption: "none" | "full" | "reduced";
-        /** MappingIn */
-        mhvp__accounting__routers__MappingIn: {
+        /** WorkOrderIn */
+        WorkOrderIn: {
+            /** Budget Limit */
+            budget_limit?: number | string | null;
+            /** Description */
+            description: string;
             /**
-             * Account Id
+             * Property Id
              * Format: uuid
              */
-            account_id: string;
-            /** Payment Type Code */
-            payment_type_code: string;
-        };
-        /** ReviewIn */
-        mhvp__accounting__routers__ReviewIn: {
-            /** Reason */
-            reason: string;
-            /** Result */
-            result: string;
-            /** Scope */
-            scope?: string | null;
-            /** Step */
-            step: string;
-        };
-        /** EntryIn */
-        mhvp__accounting__schemas__EntryIn: {
-            /** Accrual Date */
-            accrual_date?: string | null;
+            property_id: string;
             /**
-             * Booking Date
-             * Format: date
-             */
-            booking_date: string;
-            /** Contract Id */
-            contract_id?: string | null;
-            /** Document Id */
-            document_id?: string | null;
-            /** Due Date */
-            due_date?: string | null;
-            /** Idempotency Key */
-            idempotency_key?: string | null;
-            kind: components["schemas"]["EntryKind"];
-            /** Lines */
-            lines: components["schemas"]["LineSchema"][];
-            /** Reference */
-            reference?: string | null;
-            /** Settlements */
-            settlements?: components["schemas"]["SettlementIn"][];
-            /** Text */
-            text: string;
-            /** Value Date */
-            value_date?: string | null;
-        };
-        /** TemplateOut */
-        mhvp__accounting__schemas__TemplateOut: {
-            /** Accounts */
-            accounts: {
-                [key: string]: unknown;
-            }[];
-            /** Code */
-            code: string;
-            /**
-             * Id
+             * Provider Contact Id
              * Format: uuid
              */
-            id: string;
-            /** Name */
-            name: string;
-            /** Released */
-            released: boolean;
-            /** Released At */
-            released_at: string | null;
-            /** Version */
-            version: number;
+            provider_contact_id: string;
+            /**
+             * Requires Board Approval
+             * @default false
+             */
+            requires_board_approval: boolean;
+            /** Ticket Id */
+            ticket_id?: string | null;
+        };
+        /** WorkspaceBulkIn */
+        WorkspaceBulkIn: {
+            /** Action */
+            action: string;
+            /** Ids */
+            ids: string[];
+            /** Tag */
+            tag?: string | null;
         };
         /** ProviderIn */
         mhvp__ai__schemas__ProviderIn: {
@@ -8448,96 +8670,6 @@ export interface components {
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
         };
-        /** RunOut */
-        mhvp__ai__schemas__RunOut: {
-            /** Confidence */
-            confidence: string | null;
-            /** Cost Eur */
-            cost_eur: string;
-            /** Duration Ms */
-            duration_ms: number;
-            /** Error */
-            error: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Model */
-            model: string | null;
-            /** Output */
-            output: {
-                [key: string]: unknown;
-            } | null;
-            /** Prompt Version */
-            prompt_version: string;
-            /** Proposal Id */
-            proposal_id?: string | null;
-            provider: components["schemas"]["AiProvider"] | null;
-            status: components["schemas"]["RunStatus"];
-            task: components["schemas"]["AiTask"];
-            /** Tokens In */
-            tokens_in: number;
-            /** Tokens Out */
-            tokens_out: number;
-        };
-        /** BulkIn */
-        mhvp__banking__routers__BulkIn: {
-            /** Items */
-            items: components["schemas"]["BulkItem"][];
-            /**
-             * Preview
-             * @default true
-             */
-            preview: boolean;
-        };
-        /** OrderIn */
-        mhvp__banking__routers__OrderIn: {
-            /**
-             * Execution Date
-             * Format: date
-             */
-            execution_date: string;
-            /**
-             * Invoice Id
-             * Format: uuid
-             */
-            invoice_id: string;
-            /**
-             * Property Bank Account Id
-             * Format: uuid
-             */
-            property_bank_account_id: string;
-        };
-        /** ReviewIn */
-        mhvp__banking__routers__ReviewIn: {
-            /** Decision */
-            decision: string;
-            /** Reason */
-            reason: string;
-        };
-        /** RunOut */
-        mhvp__banking__routers__RunOut: {
-            /** Counts */
-            counts: {
-                [key: string]: number;
-            };
-            /** Document Id */
-            document_id: string | null;
-            /** Errors */
-            errors: string[];
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Property Bank Account Id */
-            property_bank_account_id: string | null;
-            /** Source */
-            source: string;
-            /** Status */
-            status: string;
-        };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
             /** Bank Name */
@@ -8593,57 +8725,6 @@ export interface components {
             /** Name */
             name: string;
         };
-        /** TemplateIn */
-        mhvp__documents__schemas__TemplateIn: {
-            /** Body */
-            body: string;
-            /** Category Id */
-            category_id?: string | null;
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
-            /** Subject */
-            subject: string;
-        };
-        /** TemplateOut */
-        mhvp__documents__schemas__TemplateOut: {
-            /** Active */
-            active: boolean;
-            /** Body */
-            body: string;
-            /** Category Id */
-            category_id?: string | null;
-            /** Code */
-            code: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Name */
-            name: string;
-            /** Subject */
-            subject: string;
-            /** Version */
-            version: number;
-        };
-        /** MappingIn */
-        mhvp__imports__routers__MappingIn: {
-            /** Columns */
-            columns: {
-                [key: string]: string;
-            };
-            /** Name */
-            name: string;
-            report_type: components["schemas"]["ReportType"];
-            /** Value Maps */
-            value_maps?: {
-                [key: string]: {
-                    [key: string]: string;
-                };
-            };
-        };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
             /**
@@ -8658,11 +8739,6 @@ export interface components {
             /** Status */
             status: string;
         };
-        /**
-         * VatOption
-         * @enum {string}
-         */
-        mhvp__properties__models__VatOption: "none" | "commercial_no_vat" | "commercial_full_vat" | "commercial_reduced_vat";
         /** BankAccountIn */
         mhvp__properties__schemas__BankAccountIn: {
             /** Bank Name */
@@ -8792,82 +8868,6 @@ export interface components {
             valid_from: string;
             /** Valid To */
             valid_to?: string | null;
-        };
-        /** OrderIn */
-        mhvp__tickets__routers__OrderIn: {
-            /** Budget Limit */
-            budget_limit?: number | string | null;
-            /** Description */
-            description: string;
-            /**
-             * Property Id
-             * Format: uuid
-             */
-            property_id: string;
-            /**
-             * Provider Contact Id
-             * Format: uuid
-             */
-            provider_contact_id: string;
-            /**
-             * Requires Board Approval
-             * @default false
-             */
-            requires_board_approval: boolean;
-            /** Ticket Id */
-            ticket_id?: string | null;
-        };
-        /** TemplateIn */
-        mhvp__tickets__routers__TemplateIn: {
-            /** Category */
-            category: string;
-            /** Checklist */
-            checklist?: string[];
-            /** Default Assignee User Id */
-            default_assignee_user_id?: string | null;
-            /** @default normal */
-            default_priority: components["schemas"]["Priority"];
-            /** Default Team Id */
-            default_team_id?: string | null;
-            /** Sla Hours */
-            sla_hours?: number | null;
-            /** Title */
-            title: string;
-        };
-        /** BulkIn */
-        mhvp__workspace__routers__BulkIn: {
-            /** Action */
-            action: string;
-            /** Ids */
-            ids: string[];
-            /** Tag */
-            tag?: string | null;
-        };
-        /** EntryIn */
-        mhvp__workspace__routers__EntryIn: {
-            /**
-             * All Day
-             * @default true
-             */
-            all_day: boolean;
-            /** Ends On */
-            ends_on?: string | null;
-            /** Notes */
-            notes?: string | null;
-            /** Property Id */
-            property_id?: string | null;
-            /**
-             * Shared
-             * @default false
-             */
-            shared: boolean;
-            /**
-             * Starts On
-             * Format: date
-             */
-            starts_on: string;
-            /** Title */
-            title: string;
         };
     };
     responses: never;
@@ -9355,7 +9355,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__accounting__routers__ReviewIn"];
+                "application/json": components["schemas"]["InvoiceReviewIn"];
             };
         };
         responses: {
@@ -9726,7 +9726,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__accounting__schemas__EntryIn"];
+                "application/json": components["schemas"]["JournalEntryIn"];
             };
         };
         responses: {
@@ -9794,7 +9794,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__accounting__schemas__EntryIn"];
+                "application/json": components["schemas"]["JournalEntryIn"];
             };
         };
         responses: {
@@ -10169,7 +10169,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__accounting__routers__MappingIn"];
+                "application/json": components["schemas"]["PaymentTypeMappingIn"];
             };
         };
         responses: {
@@ -10557,7 +10557,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__accounting__schemas__TemplateOut"][];
+                    "application/json": components["schemas"]["ChartTemplateOut"][];
                 };
             };
         };
@@ -10577,7 +10577,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__accounting__schemas__TemplateOut"];
+                    "application/json": components["schemas"]["ChartTemplateOut"];
                 };
             };
         };
@@ -10599,7 +10599,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__accounting__schemas__TemplateOut"];
+                    "application/json": components["schemas"]["ChartTemplateOut"];
                 };
             };
             /** @description Validation Error */
@@ -10730,7 +10730,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__ai__schemas__RunOut"];
+                    "application/json": components["schemas"]["RunOut"];
                 };
             };
             /** @description Validation Error */
@@ -10944,7 +10944,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__ai__schemas__RunOut"];
+                    "application/json": components["schemas"]["RunOut"];
                 };
             };
             /** @description Validation Error */
@@ -11362,7 +11362,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__banking__routers__BulkIn"];
+                "application/json": components["schemas"]["BankBulkIn"];
             };
         };
         responses: {
@@ -11460,7 +11460,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__banking__routers__RunOut"];
+                    "application/json": components["schemas"]["SyncRunOut"];
                 };
             };
             /** @description Validation Error */
@@ -11575,7 +11575,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__banking__routers__OrderIn"];
+                "application/json": components["schemas"]["PaymentOrderIn"];
             };
         };
         responses: {
@@ -11863,7 +11863,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__banking__routers__RunOut"][];
+                    "application/json": components["schemas"]["SyncRunOut"][];
                 };
             };
             /** @description Validation Error */
@@ -11994,7 +11994,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__banking__routers__ReviewIn"];
+                "application/json": components["schemas"]["DuplicateReviewIn"];
             };
         };
         responses: {
@@ -12060,7 +12060,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__banking__routers__ReviewIn"];
+                "application/json": components["schemas"]["DuplicateReviewIn"];
             };
         };
         responses: {
@@ -13227,7 +13227,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__documents__schemas__TemplateOut"][];
+                    "application/json": components["schemas"]["TemplateOut"][];
                 };
             };
         };
@@ -13241,7 +13241,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__documents__schemas__TemplateIn"];
+                "application/json": components["schemas"]["TemplateIn"];
             };
         };
         responses: {
@@ -13251,7 +13251,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__documents__schemas__TemplateOut"];
+                    "application/json": components["schemas"]["TemplateOut"];
                 };
             };
             /** @description Validation Error */
@@ -13990,7 +13990,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__imports__routers__MappingIn"];
+                "application/json": components["schemas"]["MappingIn"];
             };
         };
         responses: {
@@ -16657,7 +16657,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__tickets__routers__TemplateIn"];
+                "application/json": components["schemas"]["TicketTemplateIn"];
             };
         };
         responses: {
@@ -17041,7 +17041,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__tickets__routers__OrderIn"];
+                "application/json": components["schemas"]["WorkOrderIn"];
             };
         };
         responses: {
@@ -17113,7 +17113,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__workspace__routers__BulkIn"];
+                "application/json": components["schemas"]["WorkspaceBulkIn"];
             };
         };
         responses: {
@@ -17180,7 +17180,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__workspace__routers__EntryIn"];
+                "application/json": components["schemas"]["CalendarEntryIn"];
             };
         };
         responses: {

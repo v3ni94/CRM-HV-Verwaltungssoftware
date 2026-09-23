@@ -69,7 +69,7 @@ class AccountType(StrEnum):
     EXPENSE = "expense"
 
 
-class VatOption(StrEnum):
+class AccountVatOption(StrEnum):
     NONE = "none"
     FULL = "full"
     REDUCED = "reduced"
@@ -207,8 +207,8 @@ class LedgerAccount(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(AccountCategory, "account_category"), nullable=False
     )
     type: Mapped[AccountType] = mapped_column(_enum(AccountType, "account_type"), nullable=False)
-    vat_option: Mapped[VatOption] = mapped_column(
-        _enum(VatOption, "account_vat_option"), nullable=False, default=VatOption.NONE
+    vat_option: Mapped[AccountVatOption] = mapped_column(
+        _enum(AccountVatOption, "account_vat_option"), nullable=False, default=AccountVatOption.NONE
     )
     deductible_vat_rule: Mapped[DeductibleVatRule] = mapped_column(
         _enum(DeductibleVatRule, "deductible_vat_rule"),

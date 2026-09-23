@@ -69,7 +69,7 @@ class ImportIn(_In):
     document_id: uuid.UUID
 
 
-class RunOut(BaseModel):
+class SyncRunOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     source: str
@@ -101,7 +101,7 @@ class TransactionOut(BaseModel):
     journal_entry_id: uuid.UUID | None
 
 
-class ReviewIn(_In):
+class DuplicateReviewIn(_In):
     decision: str = Field(pattern="^(keep|ignore)$")
     reason: str = Field(min_length=3, max_length=2000)
 
@@ -151,7 +151,7 @@ async def list_connections(
 @router.post("/imports", status_code=201, summary="Kontoauszug (CAMT.053) importieren")
 async def import_statement(
     body: ImportIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
-) -> RunOut:
+) -> SyncRunOut:
     async with tenant_tx(request, principal) as session:
         document = await session.get(Document, body.document_id)
         if document is None:
@@ -182,7 +182,7 @@ async def import_statement(
             actor_user_id=principal.user_id,
             payload=run.counts,
         )
-        return RunOut.model_validate(run)
+        return SyncRunOut.model_validate(run)
 
 
 @router.get("/runs", summary="Sync-Protokoll")
@@ -190,12 +190,12 @@ async def runs(
     request: Request,
     limit: int = Query(default=50, ge=1, le=200),
     principal: TenantPrincipal = Depends(READ),
-) -> list[RunOut]:
+) -> list[SyncRunOut]:
     async with tenant_tx(request, principal) as session:
         rows = await session.scalars(
             select(BankSyncRun).order_by(BankSyncRun.created_at.desc()).limit(limit)
         )
-        return [RunOut.model_validate(r) for r in rows.all()]
+        return [SyncRunOut.model_validate(r) for r in rows.all()]
 
 
 @router.get("/transactions", summary="Bankumsätze")
@@ -229,7 +229,10 @@ async def transactions(
 
 @router.post("/transactions/{tx_id}/review", summary="Möglichen Doppelumsatz klären")
 async def review(
-    tx_id: uuid.UUID, body: ReviewIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+    tx_id: uuid.UUID,
+    body: DuplicateReviewIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
 ) -> TransactionOut:
     """A possible duplicate is kept as real payment or ignored; never deleted (B08, D05)."""
     async with tenant_tx(request, principal) as session:
@@ -281,7 +284,7 @@ class BulkItem(BookIn):
     transaction_id: uuid.UUID
 
 
-class BulkIn(_In):
+class BankBulkIn(_In):
     items: list[BulkItem] = Field(min_length=1, max_length=1000)
     preview: bool = True
 
@@ -380,7 +383,10 @@ async def book(
 
 @router.post("/transactions/{tx_id}/ignore", summary="Umsatz ignorieren (mit Begründung)")
 async def ignore(
-    tx_id: uuid.UUID, body: ReviewIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+    tx_id: uuid.UUID,
+    body: DuplicateReviewIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
 ) -> TransactionOut:
     async with tenant_tx(request, principal) as session:
         row = await _tx(session, tx_id)
@@ -406,7 +412,7 @@ async def ignore(
     "/bulk-confirm", summary="Massenbestätigung mit Vorschau (je Umsatz ganz oder gar nicht)"
 )
 async def bulk_confirm(
-    body: BulkIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+    body: BankBulkIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         rows = []
@@ -676,7 +682,7 @@ async def set_automation(
 # Payment runs (M15, 7.5, 6.9.9); export requires G2 ------------------------------------
 
 
-class OrderIn(_In):
+class PaymentOrderIn(_In):
     invoice_id: uuid.UUID
     property_bank_account_id: uuid.UUID
     execution_date: date
@@ -733,7 +739,7 @@ async def _order(session: Any, order_id: uuid.UUID) -> PaymentOrder:
 
 @router.post("/payment-orders", status_code=201, summary="Zahlungsauftrag aus Rechnung (Entwurf)")
 async def create_order(
-    body: OrderIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+    body: PaymentOrderIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> OrderOut:
     from mhvp.accounting.models import Invoice
 

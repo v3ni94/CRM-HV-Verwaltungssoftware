@@ -47,15 +47,15 @@ from mhvp.accounting.schemas import (
     AccountIn,
     AccountOut,
     AccountPatch,
-    EntryIn,
+    ChartTemplateOut,
     EntryOut,
+    JournalEntryIn,
     LeadingIn,
     LedgerIn,
     LedgerOut,
     LineOut,
     LockIn,
     ReverseIn,
-    TemplateOut,
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
@@ -107,7 +107,7 @@ async def _out(session: Any, entry: JournalEntry) -> EntryOut:
     return out
 
 
-def _lines(body: EntryIn) -> list[svc.LineIn]:
+def _lines(body: JournalEntryIn) -> list[svc.LineIn]:
     return [
         svc.LineIn(
             account_id=line.account_id,
@@ -130,20 +130,22 @@ def _lines(body: EntryIn) -> list[svc.LineIn]:
 @router.get("/templates", summary="Kontenrahmen-Vorlagen")
 async def templates(
     request: Request, principal: TenantPrincipal = Depends(READ)
-) -> list[TemplateOut]:
+) -> list[ChartTemplateOut]:
     async with tenant_tx(request, principal) as session:
         rows = await session.scalars(
             select(ChartTemplate).order_by(ChartTemplate.code, ChartTemplate.version)
         )
-        return [TemplateOut.model_validate(t) for t in rows.all()]
+        return [ChartTemplateOut.model_validate(t) for t in rows.all()]
 
 
 @router.post("/templates/default", status_code=201, summary="Entwurf nach Anhang A.1 anlegen")
 async def create_default_template(
     request: Request, principal: TenantPrincipal = Depends(CREATE)
-) -> TemplateOut:
+) -> ChartTemplateOut:
     async with tenant_tx(request, principal) as session:
-        return TemplateOut.model_validate(await svc.default_template(session, principal.tenant_id))
+        return ChartTemplateOut.model_validate(
+            await svc.default_template(session, principal.tenant_id)
+        )
 
 
 @router.post(
@@ -151,7 +153,7 @@ async def create_default_template(
 )
 async def release_template(
     template_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
-) -> TemplateOut:
+) -> ChartTemplateOut:
     async with tenant_tx(request, principal) as session:
         template = await _get(session, ChartTemplate, template_id)
         if not template.released:
@@ -167,7 +169,7 @@ async def release_template(
                 payload={"code": template.code, "version": template.version},
             )
             await session.flush()
-        return TemplateOut.model_validate(template)
+        return ChartTemplateOut.model_validate(template)
 
 
 # Ledgers ------------------------------------------------------------------------------
@@ -388,7 +390,7 @@ async def delete_account(
 @router.post("/ledgers/{ledger_id}/entries", status_code=201, summary="Buchungssatz als Entwurf")
 async def create_entry(
     ledger_id: uuid.UUID,
-    body: EntryIn,
+    body: JournalEntryIn,
     request: Request,
     principal: TenantPrincipal = Depends(CREATE),
 ) -> EntryOut:
@@ -424,7 +426,7 @@ async def create_entry(
 async def update_entry(
     ledger_id: uuid.UUID,
     entry_id: uuid.UUID,
-    body: EntryIn,
+    body: JournalEntryIn,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> EntryOut:
@@ -645,7 +647,7 @@ async def checks(
 # Receivable runs and management fee (M13, 7.5) ----------------------------------------
 
 
-class MappingIn(BaseModel):
+class PaymentTypeMappingIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     payment_type_code: str = Field(min_length=1, max_length=63)
     account_id: uuid.UUID
@@ -715,7 +717,7 @@ async def _items(session: AsyncSession, run_id: uuid.UUID) -> list[ReceivableIte
 @router.put("/ledgers/{ledger_id}/payment-type-accounts", summary="Erlöskonto je Zahlungsart")
 async def set_mapping(
     ledger_id: uuid.UUID,
-    body: MappingIn,
+    body: PaymentTypeMappingIn,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
@@ -884,7 +886,7 @@ class InvoiceIn(BaseModel):
     lines: list[InvoiceLineIn] = Field(min_length=1, max_length=200)
 
 
-class ReviewIn(BaseModel):
+class InvoiceReviewIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     step: str = Field(pattern="^(completeness|factual|arithmetic_tax)$")
     result: str = Field(pattern="^(ok|query|objected|reservation)$")
@@ -1044,7 +1046,7 @@ async def list_invoices(
 )
 async def review_invoice(
     invoice_id: uuid.UUID,
-    body: ReviewIn,
+    body: InvoiceReviewIn,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
