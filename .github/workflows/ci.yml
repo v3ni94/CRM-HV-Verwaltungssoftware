@@ -233,6 +233,8 @@ jobs:
           MHVP_IMAGE_TAG: ci
           TRAEFIK_NETWORK: proxy
           TRAEFIK_CERTRESOLVER: letsencrypt
+          MHVP_JWT_PRIVATE_KEY: dummy
+          MHVP_MASTER_KEY: dummy
         run: |
           rm -f .env infra/.env
           docker compose -p mhvp -f infra/compose.yaml -f infra/compose.prod.yaml config -q
