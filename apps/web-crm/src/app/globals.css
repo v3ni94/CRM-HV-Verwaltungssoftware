@@ -9,6 +9,11 @@
   --color-muted: var(--mhvp-color-muted);
   --color-border: var(--mhvp-color-border);
   --color-accent: var(--mhvp-color-accent);
+  --color-accent-fg: var(--mhvp-color-accent-fg);
+  --color-success-bg: var(--mhvp-color-success-bg);
+  --color-success-fg: var(--mhvp-color-success-fg);
+  --color-danger-bg: var(--mhvp-color-danger-bg);
+  --color-danger-fg: var(--mhvp-color-danger-fg);
   --font-sans: var(--mhvp-font-sans);
 }
 

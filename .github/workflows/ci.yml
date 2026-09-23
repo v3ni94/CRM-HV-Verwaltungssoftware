@@ -141,6 +141,76 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  e2e-backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.1-pg16
+        env:
+          POSTGRES_PASSWORD: ci-postgres-pw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      MHVP_ENV: test
+      MHVP_DATABASE_URL: postgresql+psycopg://mhvp_app:ci-app-pw@localhost:5432/mhvp
+      MHVP_MIGRATION_DATABASE_URL: postgresql+psycopg://mhvp_migrator:ci-migrator-pw@localhost:5432/mhvp
+      MHVP_REDIS_URL: redis://localhost:6379/0
+      MHVP_CELERY_BROKER_URL: redis://localhost:6379/1
+      MHVP_CELERY_RESULT_BACKEND: redis://localhost:6379/2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Ensure psql
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client)
+      - name: Bootstrap database roles (ADR 0002)
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: ${{ env.CI_POSTGRES_PASSWORD }}
+          MHVP_DB_MIGRATOR_PASSWORD: ${{ env.CI_MIGRATOR_PASSWORD }}
+          MHVP_DB_APP_PASSWORD: ${{ env.CI_APP_PASSWORD }}
+        run: sh infra/postgres/bootstrap.sh
+      - name: Install API
+        working-directory: apps/api
+        run: uv sync --locked
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @mhvp/web-crm exec playwright install --with-deps chromium
+      - name: E2E against the API
+        run: bash scripts/e2e-backend.sh
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report-backend
+          path: |
+            apps/web-crm/playwright-report
+            apps/web-crm/test-results
+            apps/web-crm/playwright-report-api.log
+          retention-days: 7
+          if-no-files-found: ignore
+
   compose:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
