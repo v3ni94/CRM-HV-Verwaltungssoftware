@@ -27694,6 +27694,59 @@
       }
     },
     "/api/v1/letting/rent-increases": {
+      "get": {
+        "operationId": "list_rent_increases_api_v1_letting_rent_increases_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "contract_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contract Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Rent Increases Api V1 Letting Rent Increases Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mieterhöhungsfälle",
+        "tags": [
+          "letting"
+        ]
+      },
       "post": {
         "operationId": "create_rent_increase_api_v1_letting_rent_increases_post",
         "requestBody": {

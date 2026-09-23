@@ -227,6 +227,8 @@ def test_rent_increase_vacancy_prospects(
     )
     applied = _ok(client.post(act, json={"action": "apply"}, headers=h))
     assert applied["status"] == "applied"
+    cases = _ok(client.get(f"{L}/rent-increases", params={"contract_id": contract}, headers=h))
+    assert {c["status"] for c in cases} == {"applied", "draft"}
     pays = sorted(
         (
             p

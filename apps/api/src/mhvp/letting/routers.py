@@ -169,6 +169,19 @@ async def create_rent_increase(
         return _case_out(case)
 
 
+@router.get("/rent-increases", summary="Mieterhöhungsfälle")
+async def list_rent_increases(
+    request: Request,
+    contract_id: uuid.UUID | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        query = select(RentIncreaseCase).order_by(RentIncreaseCase.created_at.desc())
+        if contract_id is not None:
+            query = query.where(RentIncreaseCase.contract_id == contract_id)
+        return [_case_out(c) for c in (await session.scalars(query.limit(200))).all()]
+
+
 @router.get("/rent-increases/{case_id}", summary="Mieterhöhungsfall")
 async def get_rent_increase(
     case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)

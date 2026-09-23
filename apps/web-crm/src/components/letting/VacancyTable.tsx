@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { formatDate, formatDecimal } from "@/lib/format";
@@ -31,7 +32,11 @@ export function VacancyTable({ rows }: { rows: VacancyRow[] }) {
         {rows.map((v) => (
           <tr key={v.unit_id} className="border-b border-border">
             <td className="py-1.5 pr-3">{v.property_number}</td>
-            <td className="py-1.5 pr-3">{v.unit_number}</td>
+            <td className="py-1.5 pr-3">
+              <Link href={`/vermietung/einheit/${v.unit_id}`} className="hover:underline">
+                {v.unit_number}
+              </Link>
+            </td>
             <td className="py-1.5 pr-3 tabular-nums">
               {v.living_area_sqm ? `${formatDecimal(v.living_area_sqm, 2)} m²` : t("unknown")}
             </td>

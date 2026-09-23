@@ -68,6 +68,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/votes$`) },
   { method: "GET", pattern: new RegExp(`^hoa/agenda/${ID}/tally$`) },
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/announce$`) },
+  // Letting (M26): rent increase process (sending needs G3, checked by the API), prospects.
+  { method: "POST", pattern: /^letting\/(rent-increases|prospects)$/ },
+  { method: "POST", pattern: new RegExp(`^letting/rent-increases/${ID}/actions$`) },
+  { method: "PATCH", pattern: new RegExp(`^letting/prospects/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^letting/prospects/${ID}$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];

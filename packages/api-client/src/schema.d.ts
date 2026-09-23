@@ -3082,7 +3082,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Mieterhöhungsfälle */
+        get: operations["list_rent_increases_api_v1_letting_rent_increases_get"];
         put?: never;
         /** Mieterhöhung anlegen und prüfen */
         post: operations["create_rent_increase_api_v1_letting_rent_increases_post"];
@@ -17615,6 +17616,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_rent_increases_api_v1_letting_rent_increases_get: {
+        parameters: {
+            query?: {
+                contract_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */

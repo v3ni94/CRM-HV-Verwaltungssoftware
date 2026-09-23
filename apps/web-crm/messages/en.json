@@ -53,7 +53,8 @@
     "area": "Living area",
     "since": "Vacant since",
     "days": "Days",
-    "unknown": "unknown"
+    "unknown": "unknown",
+    "vacancies": "Vacancies"
   },
   "Receivables": {
     "title": "Receivables",
@@ -326,6 +327,92 @@
       "yes": "Yes",
       "no": "No",
       "abstain": "Abst."
+    }
+  },
+  "RentIncrease": {
+    "title": "Rent increases",
+    "case": "Rent increase case",
+    "createCheck": "Create and check arithmetically",
+    "current": "Current rent",
+    "increase": "Increase",
+    "capMax": "Maximum by entered cap",
+    "comparison": "Entered comparison rent",
+    "noFlags": "No arithmetic flags.",
+    "reviewDoc": "Documented legal review of the letter",
+    "consentDoc": "Evidence of consent",
+    "docRequired": "Please choose the evidence first.",
+    "fields": {
+      "contract_id": "Tenancy",
+      "basis": "Basis",
+      "target_rent": "Target rent net",
+      "effective_date": "Effective from",
+      "reference_rent": "Reference rent (cap)",
+      "cap_limit_percent": "Cap in %",
+      "comparison_rent_per_sqm": "Comparison rent per m²",
+      "source_note": "Source of values"
+    },
+    "basis": {
+      "mietspiegel": "Rent index table",
+      "comparison": "Comparable flats",
+      "modernization": "Modernisation",
+      "index": "Index",
+      "graduated": "Graduated"
+    },
+    "actions": {
+      "approve": "Approve (second person)",
+      "send": "Record sending",
+      "consent": "Record consent",
+      "reject": "Record rejection",
+      "apply": "Apply to rent history",
+      "cancel": "Cancel"
+    },
+    "status": {
+      "draft": "Draft",
+      "approved": "Approved",
+      "sent": "Sent",
+      "consented": "Consented",
+      "rejected": "Rejected",
+      "applied": "Applied",
+      "cancelled": "Cancelled"
+    }
+  },
+  "Prospects": {
+    "title": "Prospects",
+    "expose": "Exposé draft",
+    "missing": "Missing",
+    "none": "not given",
+    "status": "Status",
+    "deleteAfter": "delete after {date}",
+    "delete": "Delete",
+    "confirmDelete": "Delete prospect data now?",
+    "searchContact": "Search contact",
+    "search": "Search",
+    "contact": "Contact",
+    "choose": "please choose",
+    "deleteAfterLabel": "Delete after",
+    "add": "Add prospect",
+    "fields": {
+      "title": "Title",
+      "street": "Street",
+      "house_number": "No.",
+      "postal_code": "Postcode",
+      "city": "City",
+      "unit_type": "Type",
+      "rooms": "Rooms",
+      "living_area_sqm": "Living area",
+      "floor": "Floor",
+      "features": "Features",
+      "last_modernization_year": "Last modernisation",
+      "energy_certificate": "Energy certificate",
+      "asking_rent": "Asking rent"
+    },
+    "statuses": {
+      "new": "new",
+      "viewing": "viewing",
+      "applied": "applied",
+      "accepted": "accepted",
+      "rejected": "rejected",
+      "withdrawn": "withdrawn"
     }
   }
 }

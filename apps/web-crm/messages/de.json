@@ -700,7 +700,8 @@
     "area": "Wohnfläche",
     "since": "Leer seit",
     "days": "Tage",
-    "unknown": "unbekannt"
+    "unknown": "unbekannt",
+    "vacancies": "Leerstand"
   },
   "Receivables": {
     "title": "Sollstellungen",
@@ -973,6 +974,92 @@
       "yes": "Ja",
       "no": "Nein",
       "abstain": "Enth."
+    }
+  },
+  "RentIncrease": {
+    "title": "Mieterhöhungen",
+    "case": "Mieterhöhungsfall",
+    "createCheck": "Anlegen und rechnerisch prüfen",
+    "current": "Aktuelle Miete",
+    "increase": "Erhöhung",
+    "capMax": "Obergrenze laut erfasster Kappung",
+    "comparison": "Erfasste Vergleichsmiete",
+    "noFlags": "Keine rechnerischen Hinweise.",
+    "reviewDoc": "Dokumentierte rechtliche Prüfung des Schreibens",
+    "consentDoc": "Nachweis der Zustimmung",
+    "docRequired": "Bitte zuerst den Nachweis auswählen.",
+    "fields": {
+      "contract_id": "Mietvertrag",
+      "basis": "Grundlage",
+      "target_rent": "Zielmiete netto",
+      "effective_date": "Wirksam ab",
+      "reference_rent": "Ausgangsmiete (Kappung)",
+      "cap_limit_percent": "Kappungsgrenze in %",
+      "comparison_rent_per_sqm": "Vergleichsmiete je m²",
+      "source_note": "Quelle der Werte"
+    },
+    "basis": {
+      "mietspiegel": "Mietspiegel",
+      "comparison": "Vergleichswohnungen",
+      "modernization": "Modernisierung",
+      "index": "Index",
+      "graduated": "Staffel"
+    },
+    "actions": {
+      "approve": "Freigeben (zweite Person)",
+      "send": "Versand erfassen",
+      "consent": "Zustimmung erfassen",
+      "reject": "Ablehnung erfassen",
+      "apply": "In Miethistorie übernehmen",
+      "cancel": "Verwerfen"
+    },
+    "status": {
+      "draft": "Entwurf",
+      "approved": "freigegeben",
+      "sent": "versandt",
+      "consented": "zugestimmt",
+      "rejected": "abgelehnt",
+      "applied": "übernommen",
+      "cancelled": "verworfen"
+    }
+  },
+  "Prospects": {
+    "title": "Interessenten",
+    "expose": "Exposé-Entwurf",
+    "missing": "Fehlt",
+    "none": "keine Angabe",
+    "status": "Status",
+    "deleteAfter": "löschen nach {date}",
+    "delete": "Löschen",
+    "confirmDelete": "Interessentendaten jetzt löschen?",
+    "searchContact": "Kontakt suchen",
+    "search": "Suchen",
+    "contact": "Kontakt",
+    "choose": "bitte wählen",
+    "deleteAfterLabel": "Löschen nach",
+    "add": "Interessent erfassen",
+    "fields": {
+      "title": "Titel",
+      "street": "Straße",
+      "house_number": "Hausnummer",
+      "postal_code": "PLZ",
+      "city": "Ort",
+      "unit_type": "Art",
+      "rooms": "Zimmer",
+      "living_area_sqm": "Wohnfläche",
+      "floor": "Etage",
+      "features": "Ausstattung",
+      "last_modernization_year": "Letzte Modernisierung",
+      "energy_certificate": "Energieausweis",
+      "asking_rent": "Angebotsmiete"
+    },
+    "statuses": {
+      "new": "neu",
+      "viewing": "Besichtigung",
+      "applied": "beworben",
+      "accepted": "zugesagt",
+      "rejected": "abgesagt",
+      "withdrawn": "zurückgezogen"
     }
   }
 }
