@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { MeetingPanel } from "@/components/hoa/HoaForms";
+import { MemberVoting } from "@/components/hoa/MemberVoting";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -11,9 +12,11 @@ export const dynamic = "force-dynamic";
 export default async function MeetingPage({ params }: { params: Promise<{ meetingId: string }> }) {
   const { meetingId } = await params;
   const t = await getTranslations("HoaWork");
-  const { data, error, response } = await serverApi().GET("/api/v1/hoa/meetings/{meeting_id}", {
-    params: { path: { meeting_id: meetingId } },
-  });
+  const api = serverApi();
+  const [{ data, error, response }, members] = await Promise.all([
+    api.GET("/api/v1/hoa/meetings/{meeting_id}", { params: { path: { meeting_id: meetingId } } }),
+    api.GET("/api/v1/hoa/meetings/{meeting_id}/members", { params: { path: { meeting_id: meetingId } } }),
+  ]);
   redirectIfUnauthenticated(response);
   if (!data) return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
   return (
@@ -27,6 +30,12 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
         {t("represented", { n: Number(data.represented ?? 0), proxies: Number(data.proxies ?? 0) })}
       </p>
       <p className={ui.notice}>{t("meetingNotice")}</p>
+      <MemberVoting
+        meetingId={meetingId}
+        status={String(data.status)}
+        members={(members.data ?? []) as never}
+        agenda={(data.agenda ?? []) as never}
+      />
       <MeetingPanel id={meetingId} status={String(data.status)} agenda={(data.agenda ?? []) as never} />
     </div>
   );

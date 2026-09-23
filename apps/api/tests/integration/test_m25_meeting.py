@@ -224,6 +224,13 @@ def test_meeting_votes_circular_audit(client: TestClient, world: World) -> None:
     detail = _ok(client.get(f"{H}/meetings/{mid_mea}", headers=h))
     assert (detail["represented"], detail["proxies"]) == (3, 1)
     assert detail["agenda"][0]["resolution"]["status"] == "positive"
+    members = _ok(client.get(f"{H}/meetings/{mid_mea}/members", headers=h))
+    assert [(m["unit_number"], m["present"], m["proxy"]) for m in members] == [
+        ("01", True, False),
+        ("02", True, False),
+        ("03", False, True),
+    ]
+    assert members[2]["votes"] == {detail["agenda"][0]["id"]: "no"}
     assert (
         client.post(
             f"{H}/agenda/{item_id}/announce", json=wrong | {"outcome": "positive"}, headers=h

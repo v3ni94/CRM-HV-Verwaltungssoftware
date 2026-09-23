@@ -309,6 +309,23 @@
       "due": "Due",
       "posted": "Posted",
       "locked": "Locked"
+    },
+    "attendance": "Attendance and votes",
+    "owner": "Owner",
+    "presence": "Presence",
+    "byProxy": "by proxy",
+    "present": "present",
+    "absent": "absent",
+    "markPresent": "present",
+    "choice": {
+      "yes": "Yes",
+      "no": "No",
+      "abstain": "Abstain"
+    },
+    "choiceShort": {
+      "yes": "Yes",
+      "no": "No",
+      "abstain": "Abst."
     }
   }
 }

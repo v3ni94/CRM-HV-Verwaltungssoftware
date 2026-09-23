@@ -25871,6 +25871,55 @@
         ]
       }
     },
+    "/api/v1/hoa/meetings/{meeting_id}/members": {
+      "get": {
+        "description": "Ownership contracts on the meeting day with attendance and votes per agenda item.",
+        "operationId": "meeting_members_api_v1_hoa_meetings__meeting_id__members_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Meeting Members Api V1 Hoa Meetings  Meeting Id  Members Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stimmberechtigte mit Anwesenheit und Stimmen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/plans": {
       "get": {
         "operationId": "list_plans_api_v1_hoa_plans_get",

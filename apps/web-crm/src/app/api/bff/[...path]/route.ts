@@ -64,7 +64,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^hoa\/(plans|statements|meetings|resolutions)$/ },
   { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/(items|calculate|transition|apply)$`) },
   { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(costs|calculate|transition|post|new-version)$`) },
-  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/votes$`) },
   { method: "GET", pattern: new RegExp(`^hoa/agenda/${ID}/tally$`) },
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/announce$`) },
   // Upload only (multipart); document reads stay outside the allowlist.

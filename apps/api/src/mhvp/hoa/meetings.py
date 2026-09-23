@@ -745,3 +745,54 @@ async def get_meeting(
             "represented": sum(1 for a in attendance if a.present or a.proxy_contact_id),
             "proxies": sum(1 for a in attendance if a.proxy_contact_id),
         }
+
+
+@router.get(
+    "/meetings/{meeting_id}/members", summary="Stimmberechtigte mit Anwesenheit und Stimmen"
+)
+async def meeting_members(
+    meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    """Ownership contracts on the meeting day with attendance and votes per agenda item."""
+    from mhvp.contacts.models import Party
+    from mhvp.properties.models import Unit
+
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        prop = await _hoa_property(session, meeting.legal_entity_id)
+        members = await _members(session, prop, meeting.scheduled_at.date())
+        attendance = {
+            a.contract_id: a
+            for a in (
+                await session.scalars(select(Attendance).where(Attendance.meeting_id == meeting.id))
+            ).all()
+        }
+        items = [
+            i.id
+            for i in (
+                await session.scalars(select(AgendaItem).where(AgendaItem.meeting_id == meeting.id))
+            ).all()
+        ]
+        votes: dict[uuid.UUID, dict[str, str]] = {}
+        if items:
+            for v in (
+                await session.scalars(select(Vote).where(Vote.agenda_item_id.in_(items)))
+            ).all():
+                votes.setdefault(v.contract_id, {})[str(v.agenda_item_id)] = v.choice
+        out = []
+        for c in members:
+            unit = await session.get(Unit, c.unit_id)
+            party = await session.get(Party, c.party_id)
+            att = attendance.get(c.id)
+            out.append(
+                {
+                    "contract_id": c.id,
+                    "unit_number": unit.number if unit else None,
+                    "party_id": c.party_id,
+                    "party_name": party.name if party else None,
+                    "present": bool(att and att.present),
+                    "proxy": bool(att and att.proxy_contact_id),
+                    "votes": votes.get(c.id, {}),
+                }
+            )
+        return out

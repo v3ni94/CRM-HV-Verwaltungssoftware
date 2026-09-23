@@ -956,6 +956,23 @@
       "due": "fällig",
       "posted": "gebucht",
       "locked": "gesperrt"
+    },
+    "attendance": "Anwesenheit und Stimmen",
+    "owner": "Eigentümer",
+    "presence": "Anwesenheit",
+    "byProxy": "per Vollmacht",
+    "present": "anwesend",
+    "absent": "nicht anwesend",
+    "markPresent": "anwesend",
+    "choice": {
+      "yes": "Ja",
+      "no": "Nein",
+      "abstain": "Enthaltung"
+    },
+    "choiceShort": {
+      "yes": "Ja",
+      "no": "Nein",
+      "abstain": "Enth."
     }
   }
 }
