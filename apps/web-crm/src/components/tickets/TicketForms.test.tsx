@@ -14,7 +14,7 @@ describe("Tickets", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("creates a ticket and opens it", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({ id: ID }, 201));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: ID }, 201));
     renderIntl(<TicketCreate />);
     await userEvent.type(screen.getByLabelText("Titel"), "Heizung defekt");
     await userEvent.selectOptions(screen.getByLabelText("Priorität"), "urgent");
@@ -24,7 +24,7 @@ describe("Tickets", () => {
   });
 
   it("changes status and adds an external comment", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({}));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({}));
     renderIntl(<TicketEdit id={ID} status="new" priority="normal" />);
     await userEvent.selectOptions(screen.getByLabelText("Status"), "in_progress");
     await userEvent.type(screen.getByLabelText("Kommentar"), "Techniker beauftragt");

@@ -27,7 +27,7 @@ describe("LoginForm", () => {
   });
 
   it("posts to the BFF and continues to the TOTP setup", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ status: "mfa_setup_required" }));
+    fetchMock.mockImplementation(async () => jsonResponse({ status: "mfa_setup_required" }));
     renderIntl(<LoginForm next="/kontakte/neu" />);
     await userEvent.type(screen.getByLabelText("E-Mail"), "admin@example.org");
     await userEvent.type(screen.getByLabelText("Passwort"), "geheim");
@@ -40,7 +40,7 @@ describe("LoginForm", () => {
   });
 
   it("shows the German problem title of the API", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ title: "Anmeldung fehlgeschlagen", status: 401 }, 401));
+    fetchMock.mockImplementation(async () => jsonResponse({ title: "Anmeldung fehlgeschlagen", status: 401 }, 401));
     renderIntl(<LoginForm />);
     await userEvent.type(screen.getByLabelText("E-Mail"), "admin@example.org");
     await userEvent.type(screen.getByLabelText("Passwort"), "falsch");

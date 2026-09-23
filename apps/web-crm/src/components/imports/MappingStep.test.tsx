@@ -40,7 +40,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("MappingStep", () => {
   it("marks required fields and blocks saving until they are assigned", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(rows));
+    fetchMock.mockImplementation(async () => jsonResponse(rows));
     const onMapping = vi.fn();
     renderIntl(<MappingStep source={source} fields={fields} mappings={[]} onMapping={onMapping} />);
     expect(screen.getAllByText("(Pflichtfeld)")).toHaveLength(2);
@@ -82,7 +82,7 @@ describe("MappingStep", () => {
   });
 
   it("offers existing template versions of the same report type", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(rows));
+    fetchMock.mockImplementation(async () => jsonResponse(rows));
     const tpl: ImportMapping = {
       id: "m7",
       report_type: "units",

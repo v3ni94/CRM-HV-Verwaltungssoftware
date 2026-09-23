@@ -14,7 +14,7 @@ describe("RentIncreaseCreate", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("sends entered values with decimal points and opens the case", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({ id: ID }, 201));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: ID }, 201));
     renderIntl(<RentIncreaseCreate contracts={[{ id: "c1", label: "MV-1" }]} />);
     await userEvent.type(screen.getByLabelText("Zielmiete netto"), "690,00");
     await userEvent.type(screen.getByLabelText("Wirksam ab"), "2026-12-01");

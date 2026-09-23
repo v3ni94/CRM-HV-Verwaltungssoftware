@@ -14,7 +14,7 @@ describe("StatementWorkbench", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("adds a cost item only with a basis and a valid amount", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({}, 201));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({}, 201));
     renderIntl(<StatementWorkbench id={ID} status="draft" keys={KEYS} />);
     const add = screen.getByText("Position hinzufügen");
     await userEvent.type(screen.getByLabelText("Bezeichnung"), "Hausmeister");

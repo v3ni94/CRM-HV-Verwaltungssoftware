@@ -13,7 +13,7 @@ describe("MemberVoting", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("lets represented owners vote once and shows cast votes", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({ id: "v" }, 201));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: "v" }, 201));
     renderIntl(
       <MemberVoting
         meetingId="m"

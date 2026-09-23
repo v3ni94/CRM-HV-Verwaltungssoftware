@@ -27,7 +27,7 @@ describe("OrderActions", () => {
   });
 
   it("cancels only after confirmation", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({}));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({}));
     vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
     renderIntl(<OrderActions id="0192abcd-0000-7000-8000-000000000009" status="approved" />);
     await userEvent.click(screen.getByText("Verwerfen"));

@@ -50,7 +50,7 @@ describe("RunProgress", () => {
   });
 
   it("shows the blocked reason", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ ...base, status: "blocked", error: "Monatsbudget ausgeschöpft" })));
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => jsonResponse({ ...base, status: "blocked", error: "Monatsbudget ausgeschöpft" })));
     renderIntl(<RunProgress run={base} />);
     await act(async () => vi.advanceTimersByTimeAsync(2000));
     expect(screen.getByRole("alert")).toHaveTextContent("Auftrag gesperrt");
