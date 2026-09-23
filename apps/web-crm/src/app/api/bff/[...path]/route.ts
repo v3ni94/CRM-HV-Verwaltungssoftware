@@ -43,6 +43,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^imports\/immoware24\/(mappings|files)$/ },
   { method: "GET", pattern: new RegExp(`^imports/immoware24/files/${ID}(/rows|/reconciliation)?$`) },
   { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/(validate|test-run|apply)$`) },
+  // Receivable runs (M13): preview and posting; postings stay non leading until G1.
+  { method: "POST", pattern: /^accounting\/receivable-runs$/ },
+  { method: "GET", pattern: new RegExp(`^accounting/receivable-runs/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/receivable-runs/${ID}/post$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];

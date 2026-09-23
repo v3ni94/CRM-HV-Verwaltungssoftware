@@ -657,7 +657,8 @@
     "entryStatus": {
       "draft": "Entwurf",
       "posted": "gebucht"
-    }
+    },
+    "receivablesLink": "Sollstellungen"
   },
   "Hoa": {
     "title": "WEG-Verwaltung",
@@ -697,5 +698,35 @@
     "since": "Leer seit",
     "days": "Tage",
     "unknown": "unbekannt"
+  },
+  "Receivables": {
+    "title": "Sollstellungen",
+    "notice": "Erst Vorschau, dann Buchen. Zeitanteilige Beträge und abweichende Intervalle bleiben manuell. Buchungen sind bis zur Freigabestufe G1 nicht die führende Buchhaltung.",
+    "month": "Monat",
+    "preview": "Vorschau erstellen",
+    "post": "{count} Sollstellungen buchen ({amount})",
+    "confirmPost": "Sollstellungen jetzt buchen? Gebuchte Sollstellungen werden nur per Storno korrigiert.",
+    "paymentType": "Zahlungsart",
+    "amount": "Betrag",
+    "due": "Fällig",
+    "status": "Status",
+    "message": "Hinweis",
+    "account": "Konto",
+    "remaining": "Offen",
+    "total": "Summe offen",
+    "noOpenItems": "Keine offenen Posten.",
+    "openItems": "Offene Posten zum {date}",
+    "itemStatus": {
+      "ready": "bereit",
+      "manual": "manuell",
+      "blocked": "blockiert",
+      "posted": "gebucht",
+      "reversed": "storniert"
+    },
+    "runStatus": {
+      "preview": "Vorschau",
+      "posted": "gebucht",
+      "reversed": "storniert"
+    }
   }
 }

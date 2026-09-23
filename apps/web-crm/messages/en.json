@@ -52,5 +52,35 @@
     "since": "Vacant since",
     "days": "Days",
     "unknown": "unknown"
+  },
+  "Receivables": {
+    "title": "Receivables",
+    "notice": "Preview first, then post. Prorated amounts and other intervals stay manual. Postings are not the leading bookkeeping until release gate G1.",
+    "month": "Month",
+    "preview": "Create preview",
+    "post": "Post {count} receivables ({amount})",
+    "confirmPost": "Post receivables now? Posted receivables are only corrected by reversal.",
+    "paymentType": "Payment type",
+    "amount": "Amount",
+    "due": "Due",
+    "status": "Status",
+    "message": "Note",
+    "account": "Account",
+    "remaining": "Open",
+    "total": "Total open",
+    "noOpenItems": "No open items.",
+    "openItems": "Open items at {date}",
+    "itemStatus": {
+      "ready": "ready",
+      "manual": "manual",
+      "blocked": "blocked",
+      "posted": "posted",
+      "reversed": "reversed"
+    },
+    "runStatus": {
+      "preview": "Preview",
+      "posted": "Posted",
+      "reversed": "Reversed"
+    }
   }
 }

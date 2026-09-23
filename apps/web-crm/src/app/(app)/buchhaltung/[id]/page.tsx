@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -10,13 +11,18 @@ export const dynamic = "force-dynamic";
 type TrialRow = { account_id: string; number: string; name: string; debit: string; credit: string; balance: string };
 
 export default async function LedgerPage({ params }: { params: Promise<{ id: string }> }) {
-  const [t, { id }] = await Promise.all([getTranslations("Accounting"), params]);
+  const [t, tr, { id }] = await Promise.all([
+    getTranslations("Accounting"),
+    getTranslations("Receivables"),
+    params,
+  ]);
   const today = new Date().toISOString().slice(0, 10);
   const api = serverApi();
-  const [ledger, journal, trial] = await Promise.all([
+  const [ledger, journal, trial, open] = await Promise.all([
     api.GET("/api/v1/accounting/ledgers/{ledger_id}", { params: { path: { ledger_id: id } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/entries", { params: { path: { ledger_id: id }, query: { limit: 100 } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/trial-balance", { params: { path: { ledger_id: id }, query: { as_of: today } } }),
+    api.GET("/api/v1/accounting/ledgers/{ledger_id}/open-items", { params: { path: { ledger_id: id }, query: { as_of: today } } }),
   ]);
   redirectIfUnauthenticated(ledger.response);
   if (!ledger.data) {
@@ -61,6 +67,10 @@ export default async function LedgerPage({ params }: { params: Promise<{ id: str
             ))}
           </tbody>
         </table>
+      </section>
+      <section className="flex flex-col gap-2">
+        <h2 className="font-medium">{tr("openItems", { date: formatDate(today) })}</h2>
+        <OpenItemsTable rows={(open.data ?? []) as OpenItem[]} />
       </section>
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">{t("journal")}</h2>

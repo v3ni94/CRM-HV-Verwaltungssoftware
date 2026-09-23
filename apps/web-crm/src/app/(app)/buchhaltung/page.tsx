@@ -16,6 +16,9 @@ export default async function LedgersPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">{t("title")}</h1>
       <p className={ui.notice}>{t("parallelNotice")}</p>
+      <Link href="/buchhaltung/sollstellungen" className="text-sm font-medium hover:underline">
+        {t("receivablesLink")}
+      </Link>
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}
