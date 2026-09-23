@@ -1317,6 +1317,40 @@ async def dunning_preview(
         return _dunning_out(run, cases)
 
 
+@router.get("/dunning-runs", summary="Mahnläufe (neueste zuerst)")
+async def dunning_runs(
+    request: Request,
+    limit: int = Query(default=20, ge=1, le=200),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        runs = (
+            await session.scalars(
+                select(DunningRun)
+                .order_by(DunningRun.run_date.desc(), DunningRun.created_at.desc())
+                .limit(limit)
+            )
+        ).all()
+        return [
+            {"id": r.id, "run_date": r.run_date, "status": r.status, "totals": r.totals}
+            for r in runs
+        ]
+
+
+@router.get("/dunning-runs/{run_id}", summary="Mahnlauf")
+async def dunning_run(
+    run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        run = await session.get(DunningRun, run_id)
+        if run is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        cases = list(
+            (await session.scalars(select(DunningCase).where(DunningCase.run_id == run.id))).all()
+        )
+        return _dunning_out(run, cases)
+
+
 @router.post(
     "/dunning-runs/{run_id}/approve", summary="Mahnlauf freigeben (zweite Person, führendes System)"
 )

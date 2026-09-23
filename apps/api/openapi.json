@@ -17646,6 +17646,54 @@
       }
     },
     "/api/v1/accounting/dunning-runs": {
+      "get": {
+        "operationId": "dunning_runs_api_v1_accounting_dunning_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Dunning Runs Api V1 Accounting Dunning Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mahnläufe (neueste zuerst)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
       "post": {
         "operationId": "dunning_preview_api_v1_accounting_dunning_runs_post",
         "requestBody": {
@@ -17683,6 +17731,51 @@
           }
         },
         "summary": "Mahnlauf: Vorschau",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/dunning-runs/{run_id}": {
+      "get": {
+        "operationId": "dunning_run_api_v1_accounting_dunning_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dunning Run Api V1 Accounting Dunning Runs  Run Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mahnlauf",
         "tags": [
           "Buchhaltung"
         ]

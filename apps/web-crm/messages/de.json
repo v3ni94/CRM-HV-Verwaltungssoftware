@@ -659,7 +659,8 @@
       "draft": "Entwurf",
       "posted": "gebucht"
     },
-    "receivablesLink": "Sollstellungen"
+    "receivablesLink": "Sollstellungen",
+    "dunningLink": "Mahnwesen"
   },
   "Hoa": {
     "title": "WEG-Verwaltung",
@@ -790,5 +791,30 @@
     "status_rejected": "abgelehnt",
     "status_returned": "zurückgegeben",
     "status_cancelled": "verworfen"
+  },
+  "Dunning": {
+    "title": "Mahnwesen",
+    "notice": "Mahnläufe sind zunächst Vorschau. Freigeben muss eine zweite Person. Gemahnt wird nur im führenden System; solange Immoware24 führend ist, sind alle Fälle ausgeschlossen.",
+    "runDate": "Stichtag",
+    "createPreview": "Vorschau erstellen",
+    "runs": "Letzte Mahnläufe",
+    "empty": "Noch keine Mahnläufe.",
+    "run": "Mahnlauf zum {date}",
+    "feesLocked": "Mahngebühren und Verzugszinsen sind bis zur Klärung von V7 gesperrt und werden nicht berechnet.",
+    "approve": "Mahnlauf freigeben",
+    "confirmApprove": "Mahnlauf jetzt freigeben? Die Freigabe ist nicht rücknehmbar.",
+    "level": "Stufe",
+    "total": "Betrag",
+    "status": "Status",
+    "reason": "Begründung",
+    "runStatus": {
+      "preview": "Vorschau",
+      "approved": "freigegeben"
+    },
+    "caseStatus": {
+      "proposed": "vorgeschlagen",
+      "excluded": "ausgeschlossen",
+      "sent": "versandt"
+    }
   }
 }

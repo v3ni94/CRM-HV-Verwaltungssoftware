@@ -144,5 +144,30 @@
     "status_rejected": "Rejected",
     "status_returned": "Returned",
     "status_cancelled": "Cancelled"
+  },
+  "Dunning": {
+    "title": "Dunning",
+    "notice": "Dunning runs start as preview. A second person must approve. Only the leading system may dun; while Immoware24 leads, all cases are excluded.",
+    "runDate": "Cut-off date",
+    "createPreview": "Create preview",
+    "runs": "Recent runs",
+    "empty": "No dunning runs yet.",
+    "run": "Dunning run at {date}",
+    "feesLocked": "Dunning fees and default interest are locked until V7 is decided and are not computed.",
+    "approve": "Approve run",
+    "confirmApprove": "Approve this dunning run now? Approval cannot be undone.",
+    "level": "Level",
+    "total": "Amount",
+    "status": "Status",
+    "reason": "Reason",
+    "runStatus": {
+      "preview": "Preview",
+      "approved": "Approved"
+    },
+    "caseStatus": {
+      "proposed": "proposed",
+      "excluded": "excluded",
+      "sent": "sent"
+    }
   }
 }

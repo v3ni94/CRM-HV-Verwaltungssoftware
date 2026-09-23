@@ -173,6 +173,10 @@ def test_dunning_preview_and_locks(
     assert client.post(f"{A}/dunning-runs/{lead['id']}/approve", headers=h).status_code == 403
     approved = _ok(client.post(f"{A}/dunning-runs/{lead['id']}/approve", headers=acc_user))
     assert approved["status"] == "approved"
+    listed = _ok(client.get(f"{A}/dunning-runs", headers=acc_user))
+    assert lead["id"] in {r["id"] for r in listed}
+    again = _ok(client.get(f"{A}/dunning-runs/{lead['id']}", headers=acc_user))
+    assert (again["status"], len(again["cases"])) == ("approved", 3)
     assert (
         client.post(f"{A}/dunning-runs/{lead['id']}/approve", headers=acc_user).status_code == 409
     )

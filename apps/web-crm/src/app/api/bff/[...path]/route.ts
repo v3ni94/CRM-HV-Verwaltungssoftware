@@ -53,6 +53,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(book|ignore)$`) },
   // Payment orders (M15): approval and cancel only; the payment file needs G2.
   { method: "POST", pattern: new RegExp(`^banking/payment-orders/${ID}/(approve|cancel)$`) },
+  // Dunning (M16): preview and approval by a second person; fees and interest stay locked (V7).
+  { method: "POST", pattern: /^accounting\/dunning-runs$/ },
+  { method: "POST", pattern: new RegExp(`^accounting/dunning-runs/${ID}/approve$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];

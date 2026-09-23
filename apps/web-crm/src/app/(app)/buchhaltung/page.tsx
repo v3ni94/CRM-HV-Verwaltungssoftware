@@ -19,6 +19,9 @@ export default async function LedgersPage() {
       <Link href="/buchhaltung/sollstellungen" className="text-sm font-medium hover:underline">
         {t("receivablesLink")}
       </Link>
+      <Link href="/buchhaltung/mahnwesen" className="text-sm font-medium hover:underline">
+        {t("dunningLink")}
+      </Link>
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}
