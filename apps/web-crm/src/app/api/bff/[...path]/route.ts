@@ -47,6 +47,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^accounting\/receivable-runs$/ },
   { method: "GET", pattern: new RegExp(`^accounting/receivable-runs/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^accounting/receivable-runs/${ID}/post$`) },
+  // Bank (M11, M12): statement import, proposals, confirmed booking, ignore with reason.
+  { method: "POST", pattern: /^banking\/imports$/ },
+  { method: "GET", pattern: new RegExp(`^banking/transactions/${ID}/candidates$`) },
+  { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(book|ignore)$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];

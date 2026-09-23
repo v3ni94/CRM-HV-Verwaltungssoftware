@@ -12,7 +12,8 @@
   },
   "Shell": {
     "hoa": "HOA",
-    "letting": "Letting"
+    "letting": "Letting",
+    "bank": "Bank"
   },
   "Hoa": {
     "title": "HOA management",
@@ -81,6 +82,41 @@
       "preview": "Preview",
       "posted": "Posted",
       "reversed": "Reversed"
+    }
+  },
+  "Bank": {
+    "title": "Bank",
+    "notice": "Matches are proposals. An IBAN alone does not prove the debtor. Booking only after confirmation; not the leading bookkeeping until release gate G1.",
+    "statementFile": "Bank statement (CAMT.053)",
+    "import": "Import",
+    "empty": "No bank transactions yet.",
+    "date": "Booking date",
+    "counterpart": "Counterpart",
+    "purpose": "Purpose",
+    "amount": "Amount",
+    "status": "Status",
+    "action": "Match",
+    "proposals": "Proposals",
+    "ignore": "Ignore",
+    "ignoreReason": "Reason for ignoring (at least 3 characters):",
+    "noCandidates": "No matching open item.",
+    "unambiguous": "unambiguous",
+    "book": "Match and book",
+    "confirmBook": "Match payment of {amount} to this open item and book?",
+    "txStatus": {
+      "new": "new",
+      "needs_review": "review (duplicate?)",
+      "proposed": "proposed",
+      "booked": "booked",
+      "ignored": "ignored",
+      "split": "split"
+    },
+    "counts": {
+      "new": "new",
+      "duplicates": "already present",
+      "possible_duplicates": "possible duplicates",
+      "transfers": "transfers",
+      "statements": "statements"
     }
   }
 }

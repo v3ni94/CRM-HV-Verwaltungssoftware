@@ -65,7 +65,8 @@
     },
     "accounting": "Buchhaltung",
     "hoa": "WEG",
-    "letting": "Vermietung"
+    "letting": "Vermietung",
+    "bank": "Bank"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -727,6 +728,41 @@
       "preview": "Vorschau",
       "posted": "gebucht",
       "reversed": "storniert"
+    }
+  },
+  "Bank": {
+    "title": "Bank",
+    "notice": "Zuordnungen sind Vorschläge. Die IBAN allein beweist keinen Schuldner. Gebucht wird nur nach Bestätigung; bis zur Freigabestufe G1 nicht in der führenden Buchhaltung.",
+    "statementFile": "Kontoauszug (CAMT.053)",
+    "import": "Importieren",
+    "empty": "Noch keine Bankumsätze.",
+    "date": "Buchungstag",
+    "counterpart": "Gegenpartei",
+    "purpose": "Verwendungszweck",
+    "amount": "Betrag",
+    "status": "Status",
+    "action": "Zuordnung",
+    "proposals": "Vorschläge",
+    "ignore": "Ignorieren",
+    "ignoreReason": "Begründung für das Ignorieren (mindestens 3 Zeichen):",
+    "noCandidates": "Kein passender offener Posten.",
+    "unambiguous": "eindeutig",
+    "book": "Zuordnen und buchen",
+    "confirmBook": "Zahlung über {amount} diesem offenen Posten zuordnen und buchen?",
+    "txStatus": {
+      "new": "neu",
+      "needs_review": "prüfen (Dublette?)",
+      "proposed": "vorgeschlagen",
+      "booked": "gebucht",
+      "ignored": "ignoriert",
+      "split": "aufgeteilt"
+    },
+    "counts": {
+      "new": "neu",
+      "duplicates": "bereits vorhanden",
+      "possible_duplicates": "mögliche Dubletten",
+      "transfers": "Umbuchungen",
+      "statements": "Auszüge"
     }
   }
 }
