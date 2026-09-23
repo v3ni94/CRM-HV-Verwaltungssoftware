@@ -17,7 +17,6 @@ from mhvp.accounting.routers import router as accounting_router
 from mhvp.ai.routers import router as ai_router
 from mhvp.banking.routers import router as banking_router
 from mhvp.billing.routers import router as billing_router
-from mhvp.hoa.routers import router as hoa_router
 from mhvp.communication.dispatch import router as dispatch_router
 from mhvp.communication.routers import router as mail_router
 from mhvp.contacts.routers import router as contacts_router
@@ -34,6 +33,8 @@ from mhvp.core.problems import install_problem_handlers
 from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGateResolver
 from mhvp.core.storage import create_s3_client
 from mhvp.documents.routers import router as documents_router
+from mhvp.hoa.meetings import router as hoa_meetings_router
+from mhvp.hoa.routers import router as hoa_router
 from mhvp.imports.routers import router as imports_router
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.routers import platform_router, tenant_router
@@ -140,6 +141,7 @@ def create_app(
     app.include_router(banking_router, prefix=API_PREFIX)
     app.include_router(billing_router, prefix=API_PREFIX)
     app.include_router(hoa_router, prefix=API_PREFIX)
+    app.include_router(hoa_meetings_router, prefix=API_PREFIX)
     app.include_router(tickets_router, prefix=API_PREFIX)
     app.include_router(mail_router, prefix=API_PREFIX)
     app.include_router(dispatch_router, prefix=API_PREFIX)

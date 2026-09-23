@@ -624,6 +624,9 @@ async def new_version(
         )
         session.add(new)
         await session.flush()
+        from mhvp.hoa.meetings import outdate_audit_items
+
+        await outdate_audit_items(session, old.id)
         for item in (
             await session.scalars(select(HoaCostItem).where(HoaCostItem.statement_id == old.id))
         ).all():

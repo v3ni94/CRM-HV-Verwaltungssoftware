@@ -350,7 +350,35 @@ def test_hoa_statement_d01_d03(clients: tuple[TestClient, TestClient], world: Wo
     for i in open_:
         by_contract.setdefault(i["contract_id"], []).append(i["remaining"])
     assert sorted(by_contract[c1["id"]]) == ["1500.00", "200.00", "300.00"]  # not a new 500,00
+    auditor = _party(client, h, "Beirat")[1]["id"]
+    audit = _ok(
+        client.post(
+            f"{H}/audits",
+            json={
+                "legal_entity_id": hoa,
+                "statement_id": sid,
+                "period_from": "2025-01-01",
+                "period_to": "2025-12-31",
+                "purpose": "Prüfung Jahresabrechnung 2025",
+                "auditor_contact_ids": [auditor],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    assert audit["snapshot_hash"] == calc["snapshot_hash"]
+    assert audit["population"]["entries"] == 6  # 3 receivables + 3 payments 2025, not 2026 results
+    aitem = _ok(
+        client.post(
+            f"{H}/audits/{audit['id']}/items",
+            json={"journal_entry_id": posted["posted_entry_ids"][0], "amount": "200.00"},
+            headers=h,
+        ),
+        201,
+    )
     v2 = _ok(client.post(f"{H}/statements/{sid}/new-version", headers=h), 201)
+    stale = client.patch(f"{H}/audit-items/{aitem['id']}", json={"status": "checked"}, headers=h)
+    assert stale.status_code == 409  # new version outdates the audit item (6.9.12)
     assert v2["version"] == 2
     assert v2["resolution_id"] is None  # resolution stays with the resolved version
 

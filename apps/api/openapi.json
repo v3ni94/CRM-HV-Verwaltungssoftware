@@ -510,6 +510,64 @@
         "title": "AddressOut",
         "type": "object"
       },
+      "AgendaIn": {
+        "additionalProperties": false,
+        "properties": {
+          "majority": {
+            "default": "simple",
+            "pattern": "^(simple|qualified|unanimous)$",
+            "title": "Majority",
+            "type": "string"
+          },
+          "proposal": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "subject_type": {
+            "anyOf": [
+              {
+                "pattern": "^(economic_plan|hoa_statement|special_levy|other)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Type"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "AgendaIn",
+        "type": "object"
+      },
       "AiProvider": {
         "enum": [
           "anthropic",
@@ -869,6 +927,40 @@
         "title": "AllocationValueOut",
         "type": "object"
       },
+      "AnnounceIn": {
+        "additionalProperties": false,
+        "properties": {
+          "majority_basis": {
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Majority Basis",
+            "type": "string"
+          },
+          "outcome": {
+            "pattern": "^(positive|negative)$",
+            "title": "Outcome",
+            "type": "string"
+          },
+          "snapshot_hash": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Hash"
+          }
+        },
+        "required": [
+          "outcome",
+          "majority_basis"
+        ],
+        "title": "AnnounceIn",
+        "type": "object"
+      },
       "ApiKeyCreate": {
         "properties": {
           "expires_at": {
@@ -1084,6 +1176,156 @@
         "title": "ApplyIn",
         "type": "object"
       },
+      "AttendanceIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "online": {
+            "default": false,
+            "title": "Online",
+            "type": "boolean"
+          },
+          "present": {
+            "default": false,
+            "title": "Present",
+            "type": "boolean"
+          },
+          "proxy_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Contact Id"
+          },
+          "proxy_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Document Id"
+          }
+        },
+        "required": [
+          "contract_id"
+        ],
+        "title": "AttendanceIn",
+        "type": "object"
+      },
+      "AuditItemIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "journal_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Journal Entry Id"
+          }
+        },
+        "title": "AuditItemIn",
+        "type": "object"
+      },
+      "AuditItemPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "pattern": "^(open|checked|query|objection)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "AuditItemPatch",
+        "type": "object"
+      },
       "AuditOut": {
         "properties": {
           "actor_user_id": {
@@ -1145,6 +1387,37 @@
           "occurred_at"
         ],
         "title": "AuditOut",
+        "type": "object"
+      },
+      "AuditReportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "findings": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Findings"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          }
+        },
+        "title": "AuditReportIn",
         "type": "object"
       },
       "AutomationIn": {
@@ -2735,6 +3008,64 @@
         ],
         "title": "CheckStatus",
         "type": "string"
+      },
+      "CircularIn": {
+        "additionalProperties": false,
+        "properties": {
+          "consents": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Consents",
+            "type": "object"
+          },
+          "decided_on": {
+            "format": "date",
+            "title": "Decided On",
+            "type": "string"
+          },
+          "evidence_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Document Id"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Subject",
+            "type": "string"
+          },
+          "wording": {
+            "maxLength": 20000,
+            "minLength": 3,
+            "title": "Wording",
+            "type": "string"
+          }
+        },
+        "required": [
+          "legal_entity_id",
+          "subject",
+          "wording",
+          "decided_on",
+          "consents"
+        ],
+        "title": "CircularIn",
+        "type": "object"
       },
       "Co2In": {
         "additionalProperties": false,
@@ -5739,6 +6070,75 @@
         "title": "EmailOut",
         "type": "object"
       },
+      "EngagementIn": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "auditor_contact_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Auditor Contact Ids",
+            "type": "array"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "period_from": {
+            "format": "date",
+            "title": "Period From",
+            "type": "string"
+          },
+          "period_to": {
+            "format": "date",
+            "title": "Period To",
+            "type": "string"
+          },
+          "purpose": {
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Purpose",
+            "type": "string"
+          },
+          "sampling": {
+            "default": "sample",
+            "pattern": "^(sample|full)$",
+            "title": "Sampling",
+            "type": "string"
+          },
+          "statement_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement Id"
+          }
+        },
+        "required": [
+          "legal_entity_id",
+          "period_from",
+          "period_to",
+          "purpose",
+          "auditor_contact_ids"
+        ],
+        "title": "EngagementIn",
+        "type": "object"
+      },
       "EntryKind": {
         "enum": [
           "receivable",
@@ -7157,6 +7557,33 @@
         ],
         "title": "ImportStatus",
         "type": "string"
+      },
+      "InviteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "invited_at": {
+            "format": "date",
+            "title": "Invited At",
+            "type": "string"
+          },
+          "urgency_reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency Reason"
+          }
+        },
+        "required": [
+          "invited_at"
+        ],
+        "title": "InviteIn",
+        "type": "object"
       },
       "InvoiceIn": {
         "additionalProperties": false,
@@ -9088,6 +9515,81 @@
           "platform_access_reason"
         ],
         "title": "MeOut",
+        "type": "object"
+      },
+      "MeetingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "default": "ordinary",
+            "pattern": "^(ordinary|extraordinary)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "mode": {
+            "default": "presence",
+            "pattern": "^(presence|hybrid|virtual)$",
+            "title": "Mode",
+            "type": "string"
+          },
+          "scheduled_at": {
+            "format": "date-time",
+            "title": "Scheduled At",
+            "type": "string"
+          },
+          "virtual_basis_resolution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Basis Resolution Id"
+          },
+          "voting_principle": {
+            "default": "head",
+            "pattern": "^(head|mea|unit)$",
+            "title": "Voting Principle",
+            "type": "string"
+          },
+          "voting_principle_basis": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voting Principle Basis"
+          }
+        },
+        "required": [
+          "legal_entity_id",
+          "scheduled_at"
+        ],
+        "title": "MeetingIn",
         "type": "object"
       },
       "MemberCreate": {
@@ -15579,6 +16081,32 @@
           "occupant"
         ],
         "title": "VatOptionIn",
+        "type": "object"
+      },
+      "VoteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "choice": {
+            "pattern": "^(yes|no|abstain)$",
+            "title": "Choice",
+            "type": "string"
+          },
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "excluded": {
+            "default": false,
+            "title": "Excluded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "contract_id",
+          "choice"
+        ],
+        "title": "VoteIn",
         "type": "object"
       },
       "WebhookCreate": {
@@ -24092,6 +24620,621 @@
         "summary": "Abhängigkeiten erreichbar (Readiness)",
         "tags": [
           "Betrieb"
+        ]
+      }
+    },
+    "/api/v1/hoa/agenda/{item_id}/announce": {
+      "post": {
+        "operationId": "announce_api_v1_hoa_agenda__item_id__announce_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnounceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Announce Api V1 Hoa Agenda  Item Id  Announce Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ergebnis verkünden",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/agenda/{item_id}/tally": {
+      "get": {
+        "operationId": "tally_api_v1_hoa_agenda__item_id__tally_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Tally Api V1 Hoa Agenda  Item Id  Tally Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auszählung (Vorschlag, keine Verkündung)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/agenda/{item_id}/votes": {
+      "post": {
+        "operationId": "cast_vote_api_v1_hoa_agenda__item_id__votes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Cast Vote Api V1 Hoa Agenda  Item Id  Votes Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stimme erfassen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/audit-items/{item_id}": {
+      "patch": {
+        "operationId": "patch_audit_item_api_v1_hoa_audit_items__item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditItemPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Audit Item Api V1 Hoa Audit Items  Item Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vermerk, Rückfrage, Antwort (PÜ08)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/audits": {
+      "post": {
+        "operationId": "create_audit_api_v1_hoa_audits_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EngagementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Audit Api V1 Hoa Audits Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüfauftrag (PÜ06)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/audits/{audit_id}/items": {
+      "post": {
+        "operationId": "add_audit_item_api_v1_hoa_audits__audit_id__items_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "audit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Audit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditItemIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Audit Item Api V1 Hoa Audits  Audit Id  Items Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüfposition (PÜ07)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/audits/{audit_id}/reports": {
+      "post": {
+        "operationId": "create_report_api_v1_hoa_audits__audit_id__reports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "audit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Audit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditReportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Report Api V1 Hoa Audits  Audit Id  Reports Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüfbericht (PÜ09)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/circular-resolutions": {
+      "post": {
+        "description": "Positive only if every owner agreed in text form (§ 23 Abs. 3 WEG); a lower majority\nneeds a prior resolution and is not implemented (open question M25-02).",
+        "operationId": "circular_api_v1_hoa_circular_resolutions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CircularIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Circular Api V1 Hoa Circular Resolutions Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umlaufbeschluss (Textform)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/meetings": {
+      "post": {
+        "operationId": "create_meeting_api_v1_hoa_meetings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Meeting Api V1 Hoa Meetings Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümerversammlung anlegen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/meetings/{meeting_id}/agenda": {
+      "post": {
+        "operationId": "add_agenda_api_v1_hoa_meetings__meeting_id__agenda_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Agenda Api V1 Hoa Meetings  Meeting Id  Agenda Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tagesordnungspunkt",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/meetings/{meeting_id}/attendance": {
+      "post": {
+        "operationId": "attendance_api_v1_hoa_meetings__meeting_id__attendance_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Attendance Api V1 Hoa Meetings  Meeting Id  Attendance Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anwesenheit/Vollmacht",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/meetings/{meeting_id}/invite": {
+      "post": {
+        "operationId": "invite_api_v1_hoa_meetings__meeting_id__invite_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Invite Api V1 Hoa Meetings  Meeting Id  Invite Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einladung erfassen (Fristprüfung)",
+        "tags": [
+          "hoa"
         ]
       }
     },

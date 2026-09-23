@@ -1,0 +1,690 @@
+"""Owners' meeting, circular resolution and board audit (M25, R05, R03, PÜ06 to PÜ09).
+
+The system counts and proposes; the chair announces the result. Only a simple majority of
+yes over no votes (abstentions not counted) is computed; qualified and unanimous majorities
+are flagged for a manual check with a documented basis (open question M25-01). Rules of the
+individual community (Teilungserklärung, Vereinbarungen) are not known to the system."""
+
+import uuid
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
+from typing import Any
+
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.events import emit
+from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.hoa.models import (
+    AgendaItem,
+    Attendance,
+    AuditEngagement,
+    AuditItem,
+    AuditReport,
+    HoaStatement,
+    Meeting,
+    Resolution,
+    Vote,
+)
+
+router = APIRouter(prefix="/hoa", tags=["hoa"])
+READ = require_permission("accounting:read")
+CREATE = require_permission("accounting:create")
+APPROVE = require_permission("accounting:approve")
+ZERO = Decimal("0")
+INVITATION_WEEKS = 3  # § 24 Abs. 4 WEG (R05); urgency exception is a manual decision
+
+
+class MeetingBaseIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class MeetingIn(MeetingBaseIn):
+    legal_entity_id: uuid.UUID
+    kind: str = Field(default="ordinary", pattern="^(ordinary|extraordinary)$")
+    mode: str = Field(default="presence", pattern="^(presence|hybrid|virtual)$")
+    scheduled_at: datetime
+    location: str | None = Field(default=None, max_length=300)
+    voting_principle: str = Field(default="head", pattern="^(head|mea|unit)$")
+    voting_principle_basis: str | None = Field(default=None, max_length=4000)
+    virtual_basis_resolution_id: uuid.UUID | None = None
+
+
+class AgendaIn(MeetingBaseIn):
+    title: str = Field(min_length=3, max_length=300)
+    proposal: str | None = Field(default=None, max_length=20000)
+    majority: str = Field(default="simple", pattern="^(simple|qualified|unanimous)$")
+    subject_type: str | None = Field(
+        default=None, pattern="^(economic_plan|hoa_statement|special_levy|other)$"
+    )
+    subject_id: uuid.UUID | None = None
+
+
+class InviteIn(MeetingBaseIn):
+    invited_at: date
+    urgency_reason: str | None = Field(default=None, max_length=2000)
+
+
+class AttendanceIn(MeetingBaseIn):
+    contract_id: uuid.UUID
+    present: bool = False
+    online: bool = False
+    proxy_contact_id: uuid.UUID | None = None
+    proxy_document_id: uuid.UUID | None = None
+
+
+class VoteIn(MeetingBaseIn):
+    contract_id: uuid.UUID
+    choice: str = Field(pattern="^(yes|no|abstain)$")
+    excluded: bool = False
+
+
+class AnnounceIn(MeetingBaseIn):
+    outcome: str = Field(pattern="^(positive|negative)$")
+    majority_basis: str = Field(min_length=3, max_length=4000)
+    snapshot_hash: str | None = Field(default=None, max_length=64)
+
+
+class CircularIn(MeetingBaseIn):
+    legal_entity_id: uuid.UUID
+    subject: str = Field(min_length=3, max_length=2000)
+    wording: str = Field(min_length=3, max_length=20000)
+    decided_on: date
+    consents: dict[uuid.UUID, str]  # ownership contract -> yes, no, abstain (text form)
+    evidence_document_id: uuid.UUID | None = None
+
+
+class EngagementIn(MeetingBaseIn):
+    legal_entity_id: uuid.UUID
+    statement_id: uuid.UUID | None = None
+    period_from: date
+    period_to: date
+    purpose: str = Field(min_length=3, max_length=4000)
+    auditor_contact_ids: list[uuid.UUID] = Field(min_length=1)
+    sampling: str = Field(default="sample", pattern="^(sample|full)$")
+    accounts: list[str] = Field(default_factory=list)
+
+
+class AuditItemIn(MeetingBaseIn):
+    journal_entry_id: uuid.UUID | None = None
+    document_id: uuid.UUID | None = None
+    amount: Decimal | None = None
+
+
+class AuditItemPatch(MeetingBaseIn):
+    status: str | None = Field(default=None, pattern="^(open|checked|query|objection)$")
+    note: str | None = Field(default=None, max_length=4000)
+    question: str | None = Field(default=None, max_length=4000)
+    answer: str | None = Field(default=None, max_length=4000)
+
+
+class AuditReportIn(MeetingBaseIn):
+    findings: str | None = Field(default=None, max_length=20000)
+    recommendation: str | None = Field(default=None, max_length=4000)
+
+
+async def _get(session: AsyncSession, model: Any, obj_id: uuid.UUID) -> Any:
+    row = await session.get(model, obj_id)
+    if row is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    return row
+
+
+async def _hoa_property(session: AsyncSession, legal_entity_id: uuid.UUID) -> uuid.UUID:
+    from mhvp.properties.models import LegalEntity, LegalEntityKind
+
+    entity = await _get(session, LegalEntity, legal_entity_id)
+    if entity.kind is not LegalEntityKind.HOA or entity.property_id is None:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Nur für eine GdWE (W01).")
+    return entity.property_id  # type: ignore[no-any-return]
+
+
+async def _members(session: AsyncSession, property_id: uuid.UUID, day: date) -> list[Any]:
+    """Ownership contracts of the community on a day (one per unit)."""
+    from mhvp.contracts.models import Contract, ContractKind
+    from mhvp.properties.models import Unit
+
+    return list(
+        (
+            await session.scalars(
+                select(Contract)
+                .join(Unit, Unit.id == Contract.unit_id)
+                .where(
+                    Unit.property_id == property_id,
+                    Contract.kind == ContractKind.OWNERSHIP,
+                    Contract.start_date <= day,
+                    or_(Contract.end_date.is_(None), Contract.end_date >= day),
+                )
+                .order_by(Unit.number)
+            )
+        ).all()
+    )
+
+
+async def _weight(
+    session: AsyncSession, principle: str, contract: Any, property_id: uuid.UUID, day: date
+) -> Decimal:
+    if principle != "mea":
+        return Decimal(1)
+    from mhvp.properties.models import AllocationKey, UnitAllocationValue
+
+    value = await session.scalar(
+        select(UnitAllocationValue.value)
+        .join(AllocationKey, AllocationKey.id == UnitAllocationValue.allocation_key_id)
+        .where(
+            AllocationKey.property_id == property_id,
+            AllocationKey.code == "MEA",
+            UnitAllocationValue.unit_id == contract.unit_id,
+            UnitAllocationValue.valid_from <= day,
+            or_(UnitAllocationValue.valid_to.is_(None), UnitAllocationValue.valid_to >= day),
+        )
+    )
+    if value is None:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Miteigentumsanteil fehlt für Einheit.")
+    return Decimal(value)
+
+
+# Meetings --------------------------------------------------------------------------------
+
+
+def _meeting_out(m: Meeting) -> dict[str, Any]:
+    return {
+        "id": m.id,
+        "legal_entity_id": m.legal_entity_id,
+        "kind": m.kind,
+        "mode": m.mode,
+        "scheduled_at": m.scheduled_at,
+        "location": m.location,
+        "invited_at": m.invited_at,
+        "voting_principle": m.voting_principle,
+        "status": m.status,
+    }
+
+
+@router.post("/meetings", status_code=201, summary="Eigentümerversammlung anlegen")
+async def create_meeting(
+    body: MeetingIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        await _hoa_property(session, body.legal_entity_id)
+        if body.mode == "virtual":
+            basis = (
+                await session.get(Resolution, body.virtual_basis_resolution_id)
+                if body.virtual_basis_resolution_id
+                else None
+            )
+            if basis is None or basis.status not in {"positive", "final", "legally_binding"}:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Virtuelle Versammlung nur mit Beschlussgrundlage (R05).",
+                )
+        if body.voting_principle != "head" and not body.voting_principle_basis:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Abweichendes Stimmprinzip nur mit dokumentierter Grundlage.",
+            )
+        row = Meeting(
+            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
+        )
+        session.add(row)
+        await session.flush()
+        return _meeting_out(row)
+
+
+@router.post("/meetings/{meeting_id}/agenda", status_code=201, summary="Tagesordnungspunkt")
+async def add_agenda(
+    meeting_id: uuid.UUID,
+    body: AgendaIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        if meeting.status != "planned":
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Tagesordnung nach Einladung nicht mehr änderbar."
+            )
+        count = len(
+            (
+                await session.scalars(
+                    select(AgendaItem.id).where(AgendaItem.meeting_id == meeting.id)
+                )
+            ).all()
+        )
+        row = AgendaItem(
+            tenant_id=principal.tenant_id,
+            meeting_id=meeting.id,
+            position=count + 1,
+            **body.model_dump(),
+        )
+        session.add(row)
+        await session.flush()
+        return {"id": row.id, "position": row.position, "majority": row.majority}
+
+
+@router.post("/meetings/{meeting_id}/invite", summary="Einladung erfassen (Fristprüfung)")
+async def invite(
+    meeting_id: uuid.UUID,
+    body: InviteIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        if meeting.status != "planned":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Bereits eingeladen.")
+        items = (
+            await session.scalars(select(AgendaItem.id).where(AgendaItem.meeting_id == meeting.id))
+        ).all()
+        if not items:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Tagesordnung fehlt.")
+        earliest = body.invited_at + timedelta(weeks=INVITATION_WEEKS)
+        short = meeting.scheduled_at.date() < earliest
+        if short and not body.urgency_reason:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=(
+                    f"Einladungsfrist unterschritten (orientierend frühestens {earliest:%d.%m.%Y},"
+                    " zu verifizieren). Kürzere Frist nur mit dokumentierter Dringlichkeit."
+                ),
+            )
+        meeting.invited_at = body.invited_at
+        meeting.status = "invited"
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="meeting.invited",
+            entity_type="owners_meeting",
+            entity_id=meeting.id,
+            actor_user_id=principal.user_id,
+            payload={"short_notice": short, "urgency_reason": body.urgency_reason},
+        )
+        await session.flush()
+        return _meeting_out(meeting) | {"short_notice": short}
+
+
+@router.post("/meetings/{meeting_id}/attendance", status_code=201, summary="Anwesenheit/Vollmacht")
+async def attendance(
+    meeting_id: uuid.UUID,
+    body: AttendanceIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        if meeting.status not in ("invited", "held"):
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Versammlung nicht eröffnet.")
+        prop = await _hoa_property(session, meeting.legal_entity_id)
+        members = {c.id for c in await _members(session, prop, meeting.scheduled_at.date())}
+        if body.contract_id not in members:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Kein Eigentümer zum Termin.")
+        if body.proxy_contact_id and not body.proxy_document_id:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Vollmacht nur mit Nachweis in Textform (R05)."
+            )
+        if body.online and meeting.mode == "presence":
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Online-Teilnahme hier nicht vorgesehen.",
+            )
+        row = await session.scalar(
+            select(Attendance).where(
+                Attendance.meeting_id == meeting.id, Attendance.contract_id == body.contract_id
+            )
+        )
+        if row is None:
+            row = Attendance(
+                tenant_id=principal.tenant_id, meeting_id=meeting.id, **body.model_dump()
+            )
+            session.add(row)
+        else:
+            for key, value in body.model_dump().items():
+                setattr(row, key, value)
+        meeting.status = "held"
+        await session.flush()
+        return {"id": row.id, "represented": row.present or bool(row.proxy_contact_id)}
+
+
+@router.post("/agenda/{item_id}/votes", status_code=201, summary="Stimme erfassen")
+async def cast_vote(
+    item_id: uuid.UUID, body: VoteIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        item = await _get(session, AgendaItem, item_id)
+        meeting = await _get(session, Meeting, item.meeting_id)
+        att = await session.scalar(
+            select(Attendance).where(
+                Attendance.meeting_id == meeting.id, Attendance.contract_id == body.contract_id
+            )
+        )
+        if att is None or not (att.present or att.proxy_contact_id):
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Nicht anwesend oder vertreten.")
+        if await session.scalar(
+            select(Resolution.id).where(
+                Resolution.subject_type == "agenda_item", Resolution.subject_id == item.id
+            )
+        ):
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Ergebnis bereits verkündet.")
+        existing = await session.scalar(
+            select(Vote).where(Vote.agenda_item_id == item.id, Vote.contract_id == body.contract_id)
+        )
+        if existing is not None:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Stimme bereits erfasst.")
+        row = Vote(tenant_id=principal.tenant_id, agenda_item_id=item.id, **body.model_dump())
+        session.add(row)
+        await session.flush()
+        return {"id": row.id}
+
+
+async def _tally(session: AsyncSession, item: AgendaItem, meeting: Meeting) -> dict[str, Any]:
+    from mhvp.contracts.models import Contract
+
+    prop = await _hoa_property(session, meeting.legal_entity_id)
+    day = meeting.scheduled_at.date()
+    votes = (await session.scalars(select(Vote).where(Vote.agenda_item_id == item.id))).all()
+    sums = {"yes": ZERO, "no": ZERO, "abstain": ZERO}
+    seen_heads: dict[uuid.UUID, str] = {}
+    excluded = 0
+    for v in votes:
+        if v.excluded:
+            excluded += 1
+            continue
+        contract = await _get(session, Contract, v.contract_id)
+        if meeting.voting_principle == "head":
+            # one vote per owner person regardless of the number of units (§ 25 Abs. 2 WEG)
+            if contract.party_id in seen_heads:
+                if seen_heads[contract.party_id] != v.choice:
+                    raise ProblemError(
+                        ErrorCodes.CONFLICT, detail="Uneinheitliche Stimmabgabe eines Eigentümers."
+                    )
+                continue
+            seen_heads[contract.party_id] = v.choice
+        sums[v.choice] += await _weight(session, meeting.voting_principle, contract, prop, day)
+    proposal: str | None = None
+    if item.majority == "simple":
+        proposal = "positive" if sums["yes"] > sums["no"] else "negative"
+    return {
+        "principle": meeting.voting_principle,
+        "yes": f"{sums['yes'].normalize():f}",
+        "no": f"{sums['no'].normalize():f}",
+        "abstain": f"{sums['abstain'].normalize():f}",
+        "excluded": excluded,
+        "majority": item.majority,
+        "proposal": proposal,
+        "manual_check": item.majority != "simple",
+    }
+
+
+@router.get("/agenda/{item_id}/tally", summary="Auszählung (Vorschlag, keine Verkündung)")
+async def tally(
+    item_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        item = await _get(session, AgendaItem, item_id)
+        return await _tally(session, item, await _get(session, Meeting, item.meeting_id))
+
+
+@router.post("/agenda/{item_id}/announce", status_code=201, summary="Ergebnis verkünden")
+async def announce(
+    item_id: uuid.UUID,
+    body: AnnounceIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    from sqlalchemy import func
+
+    async with tenant_tx(request, principal) as session:
+        item = await _get(session, AgendaItem, item_id)
+        meeting = await _get(session, Meeting, item.meeting_id)
+        result = await _tally(session, item, meeting)
+        if result["proposal"] and result["proposal"] != body.outcome:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Verkündung weicht von der Auszählung ab."
+            )
+        if await session.scalar(
+            select(Resolution.id).where(
+                Resolution.subject_type == "agenda_item", Resolution.subject_id == item.id
+            )
+        ):
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Ergebnis bereits verkündet.")
+        number = int(
+            await session.scalar(
+                select(func.coalesce(func.max(Resolution.number), 0)).where(
+                    Resolution.legal_entity_id == meeting.legal_entity_id
+                )
+            )
+            or 0
+        )
+        row = Resolution(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            legal_entity_id=meeting.legal_entity_id,
+            number=number + 1,
+            decided_on=meeting.scheduled_at.date(),
+            subject=item.title,
+            wording=item.proposal or item.title,
+            status=body.outcome,
+            kind="meeting",
+            snapshot_hash=body.snapshot_hash,
+            subject_type="agenda_item",
+            subject_id=item.id,
+            majority_basis=body.majority_basis,
+            votes=result,
+        )
+        session.add(row)
+        await session.flush()
+        return {"id": row.id, "number": row.number, "status": row.status, "votes": result}
+
+
+@router.post("/circular-resolutions", status_code=201, summary="Umlaufbeschluss (Textform)")
+async def circular(
+    body: CircularIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    """Positive only if every owner agreed in text form (§ 23 Abs. 3 WEG); a lower majority
+    needs a prior resolution and is not implemented (open question M25-02)."""
+    from sqlalchemy import func
+
+    async with tenant_tx(request, principal) as session:
+        prop = await _hoa_property(session, body.legal_entity_id)
+        members = {c.id for c in await _members(session, prop, body.decided_on)}
+        unknown = set(body.consents) - members
+        if unknown:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Zustimmung von Nichteigentümern.")
+        missing = members - set(body.consents)
+        positive = not missing and all(c == "yes" for c in body.consents.values())
+        if body.evidence_document_id is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Nachweis der Textform fehlt.")
+        number = int(
+            await session.scalar(
+                select(func.coalesce(func.max(Resolution.number), 0)).where(
+                    Resolution.legal_entity_id == body.legal_entity_id
+                )
+            )
+            or 0
+        )
+        row = Resolution(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            legal_entity_id=body.legal_entity_id,
+            number=number + 1,
+            decided_on=body.decided_on,
+            subject=body.subject,
+            wording=body.wording,
+            status="positive" if positive else "negative",
+            kind="circular",
+            majority_basis="Allstimmigkeit in Textform (§ 23 Abs. 3 WEG)",
+            votes={
+                "consents": {str(k): v for k, v in body.consents.items()},
+                "missing": sorted(str(m) for m in missing),
+                "evidence_document_id": str(body.evidence_document_id),
+            },
+        )
+        session.add(row)
+        await session.flush()
+        return {"id": row.id, "number": row.number, "status": row.status, "missing": len(missing)}
+
+
+# Board audit -----------------------------------------------------------------------------
+
+
+@router.post("/audits", status_code=201, summary="Prüfauftrag (PÜ06)")
+async def create_audit(
+    body: EngagementIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    from mhvp.accounting.models import EntryStatus, JournalEntry, Ledger
+
+    async with tenant_tx(request, principal) as session:
+        await _hoa_property(session, body.legal_entity_id)
+        if body.period_to < body.period_from:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Zeitraum ungültig.")
+        snapshot_hash = None
+        if body.statement_id:
+            st = await _get(session, HoaStatement, body.statement_id)
+            if st.snapshot_hash is None:
+                raise ProblemError(ErrorCodes.CONFLICT, detail="Abrechnung nicht berechnet.")
+            snapshot_hash = st.snapshot_hash
+        entries = (
+            await session.scalars(
+                select(JournalEntry)
+                .join(Ledger, Ledger.id == JournalEntry.ledger_id)
+                .where(
+                    Ledger.legal_entity_id == body.legal_entity_id,
+                    JournalEntry.status == EntryStatus.POSTED,
+                    JournalEntry.booking_date.between(body.period_from, body.period_to),
+                )
+            )
+        ).all()
+        population = {
+            "entries": len(entries),
+            "as_of": datetime.now(UTC).isoformat(),
+            "accounts": body.accounts,
+        }
+        data = body.model_dump(exclude={"accounts", "auditor_contact_ids"})
+        row = AuditEngagement(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            snapshot_hash=snapshot_hash,
+            population=population,
+            auditor_contact_ids=[str(a) for a in body.auditor_contact_ids],
+            **data,
+        )
+        session.add(row)
+        await session.flush()
+        return {"id": row.id, "population": population, "snapshot_hash": snapshot_hash}
+
+
+def _item_out(i: AuditItem) -> dict[str, Any]:
+    return {
+        "id": i.id,
+        "journal_entry_id": i.journal_entry_id,
+        "document_id": i.document_id,
+        "amount": i.amount,
+        "status": i.status,
+        "note": i.note,
+        "question": i.question,
+        "answer": i.answer,
+        "version": i.version,
+    }
+
+
+@router.post("/audits/{audit_id}/items", status_code=201, summary="Prüfposition (PÜ07)")
+async def add_audit_item(
+    audit_id: uuid.UUID,
+    body: AuditItemIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        eng = await _get(session, AuditEngagement, audit_id)
+        if not body.journal_entry_id and not body.document_id:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Buchung oder Beleg angeben.")
+        row = AuditItem(tenant_id=principal.tenant_id, engagement_id=eng.id, **body.model_dump())
+        session.add(row)
+        await session.flush()
+        return _item_out(row)
+
+
+@router.patch("/audit-items/{item_id}", summary="Vermerk, Rückfrage, Antwort (PÜ08)")
+async def patch_audit_item(
+    item_id: uuid.UUID,
+    body: AuditItemPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, AuditItem, item_id)
+        if row.status == "outdated":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Position zu alter Version.")
+        for key, value in body.model_dump(exclude_none=True).items():
+            setattr(row, key, value)
+        row.version += 1
+        await session.flush()
+        return _item_out(row)
+
+
+@router.post("/audits/{audit_id}/reports", status_code=201, summary="Prüfbericht (PÜ09)")
+async def create_report(
+    audit_id: uuid.UUID,
+    body: AuditReportIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    from sqlalchemy import func
+
+    async with tenant_tx(request, principal) as session:
+        eng = await _get(session, AuditEngagement, audit_id)
+        items = (
+            await session.scalars(select(AuditItem).where(AuditItem.engagement_id == eng.id))
+        ).all()
+        checked = [i for i in items if i.status == "checked"]
+        version = int(
+            await session.scalar(
+                select(func.coalesce(func.max(AuditReport.version), 0)).where(
+                    AuditReport.engagement_id == eng.id
+                )
+            )
+            or 0
+        )
+        content = {
+            "sampling": eng.sampling,
+            "population_entries": eng.population.get("entries"),
+            "snapshot_hash": eng.snapshot_hash,
+            "selected": len(items),
+            "checked_count": len(checked),
+            "checked_value": str(sum((i.amount or ZERO for i in checked), ZERO)),
+            "open": [str(i.id) for i in items if i.status in ("open", "query")],
+            "objections": [str(i.id) for i in items if i.status == "objection"],
+            "outdated": [str(i.id) for i in items if i.status == "outdated"],
+            "scope_note": (
+                "Vollprüfung der Population"
+                if eng.sampling == "full"
+                else "Stichprobe: geprüft sind nur die ausgewählten Positionen,"
+                " nicht die gesamte Abrechnung (PÜ09)."
+            ),
+            "findings": body.findings,
+            "recommendation": body.recommendation,
+            "date": datetime.now(UTC).date().isoformat(),
+        }
+        row = AuditReport(
+            tenant_id=principal.tenant_id,
+            engagement_id=eng.id,
+            version=version + 1,
+            content=content,
+            created_by=principal.user_id,
+        )
+        session.add(row)
+        await session.flush()
+        return {"id": row.id, "version": row.version, "content": content}
+
+
+async def outdate_audit_items(session: AsyncSession, statement_id: uuid.UUID) -> None:
+    """A new statement version marks audit items of the old version outdated (6.9.12)."""
+    engagements = select(AuditEngagement.id).where(AuditEngagement.statement_id == statement_id)
+    await session.execute(
+        update(AuditItem)
+        .where(AuditItem.engagement_id.in_(engagements), AuditItem.status != "outdated")
+        .values(status="outdated")
+    )

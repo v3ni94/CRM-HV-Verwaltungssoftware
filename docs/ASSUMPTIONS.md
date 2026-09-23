@@ -378,6 +378,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M24 |
 | Datum | 23.09.2026 |
 
+## A-035
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Beim Kopfprinzip zählt jede Eigentümerpartei eine Stimme, auch bei mehreren Einheiten; uneinheitliche Stimmabgabe derselben Partei wird abgelehnt. Die Auszählung ist ein Vorschlag, maßgeblich ist die Verkündung durch die Versammlungsleitung, die bei einfacher Mehrheit nicht von der Auszählung abweichen darf. |
+| Begründung | M25, R05 |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | WEG-Versammlung |
+| Überprüfung spätestens bei Meilenstein | M25 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

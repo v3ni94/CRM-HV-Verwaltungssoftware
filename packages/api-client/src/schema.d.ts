@@ -2220,6 +2220,214 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/agenda/{item_id}/announce": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ergebnis verkünden */
+        post: operations["announce_api_v1_hoa_agenda__item_id__announce_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/agenda/{item_id}/tally": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Auszählung (Vorschlag, keine Verkündung) */
+        get: operations["tally_api_v1_hoa_agenda__item_id__tally_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/agenda/{item_id}/votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stimme erfassen */
+        post: operations["cast_vote_api_v1_hoa_agenda__item_id__votes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/audit-items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Vermerk, Rückfrage, Antwort (PÜ08) */
+        patch: operations["patch_audit_item_api_v1_hoa_audit_items__item_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/hoa/audits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prüfauftrag (PÜ06) */
+        post: operations["create_audit_api_v1_hoa_audits_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/audits/{audit_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prüfposition (PÜ07) */
+        post: operations["add_audit_item_api_v1_hoa_audits__audit_id__items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/audits/{audit_id}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prüfbericht (PÜ09) */
+        post: operations["create_report_api_v1_hoa_audits__audit_id__reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/circular-resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Umlaufbeschluss (Textform)
+         * @description Positive only if every owner agreed in text form (§ 23 Abs. 3 WEG); a lower majority
+         *     needs a prior resolution and is not implemented (open question M25-02).
+         */
+        post: operations["circular_api_v1_hoa_circular_resolutions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/meetings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Eigentümerversammlung anlegen */
+        post: operations["create_meeting_api_v1_hoa_meetings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/meetings/{meeting_id}/agenda": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tagesordnungspunkt */
+        post: operations["add_agenda_api_v1_hoa_meetings__meeting_id__agenda_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/meetings/{meeting_id}/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Anwesenheit/Vollmacht */
+        post: operations["attendance_api_v1_hoa_meetings__meeting_id__attendance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/meetings/{meeting_id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Einladung erfassen (Fristprüfung) */
+        post: operations["invite_api_v1_hoa_meetings__meeting_id__invite_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/plans": {
         parameters: {
             query?: never;
@@ -4731,6 +4939,22 @@ export interface components {
             /** Street */
             street?: string | null;
         };
+        /** AgendaIn */
+        AgendaIn: {
+            /**
+             * Majority
+             * @default simple
+             */
+            majority: string;
+            /** Proposal */
+            proposal?: string | null;
+            /** Subject Id */
+            subject_id?: string | null;
+            /** Subject Type */
+            subject_type?: string | null;
+            /** Title */
+            title: string;
+        };
         /**
          * AiProvider
          * @enum {string}
@@ -4864,6 +5088,15 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** AnnounceIn */
+        AnnounceIn: {
+            /** Majority Basis */
+            majority_basis: string;
+            /** Outcome */
+            outcome: string;
+            /** Snapshot Hash */
+            snapshot_hash?: string | null;
+        };
         /** ApiKeyCreate */
         ApiKeyCreate: {
             /** Expires At */
@@ -4924,6 +5157,48 @@ export interface components {
             contacts?: components["schemas"]["ContactChoice"][] | null;
             property?: components["schemas"]["PropertyChoice"] | null;
         };
+        /** AttendanceIn */
+        AttendanceIn: {
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /**
+             * Online
+             * @default false
+             */
+            online: boolean;
+            /**
+             * Present
+             * @default false
+             */
+            present: boolean;
+            /** Proxy Contact Id */
+            proxy_contact_id?: string | null;
+            /** Proxy Document Id */
+            proxy_document_id?: string | null;
+        };
+        /** AuditItemIn */
+        AuditItemIn: {
+            /** Amount */
+            amount?: number | string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Journal Entry Id */
+            journal_entry_id?: string | null;
+        };
+        /** AuditItemPatch */
+        AuditItemPatch: {
+            /** Answer */
+            answer?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Question */
+            question?: string | null;
+            /** Status */
+            status?: string | null;
+        };
         /** AuditOut */
         AuditOut: {
             /** Actor User Id */
@@ -4951,6 +5226,13 @@ export interface components {
              * Format: date-time
              */
             occurred_at: string;
+        };
+        /** AuditReportIn */
+        AuditReportIn: {
+            /** Findings */
+            findings?: string | null;
+            /** Recommendation */
+            recommendation?: string | null;
         };
         /** AutomationIn */
         AutomationIn: {
@@ -5393,6 +5675,29 @@ export interface components {
          * @enum {string}
          */
         CheckStatus: "ok" | "fail";
+        /** CircularIn */
+        CircularIn: {
+            /** Consents */
+            consents: {
+                [key: string]: string;
+            };
+            /**
+             * Decided On
+             * Format: date
+             */
+            decided_on: string;
+            /** Evidence Document Id */
+            evidence_document_id?: string | null;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Subject */
+            subject: string;
+            /** Wording */
+            wording: string;
+        };
         /** Co2In */
         Co2In: {
             /** Costs */
@@ -6399,6 +6704,37 @@ export interface components {
             /** Label */
             label: string;
         };
+        /** EngagementIn */
+        EngagementIn: {
+            /** Accounts */
+            accounts?: string[];
+            /** Auditor Contact Ids */
+            auditor_contact_ids: string[];
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /**
+             * Period From
+             * Format: date
+             */
+            period_from: string;
+            /**
+             * Period To
+             * Format: date
+             */
+            period_to: string;
+            /** Purpose */
+            purpose: string;
+            /**
+             * Sampling
+             * @default sample
+             */
+            sampling: string;
+            /** Statement Id */
+            statement_id?: string | null;
+        };
         /**
          * EntryKind
          * @enum {string}
@@ -6879,6 +7215,16 @@ export interface components {
          * @enum {string}
          */
         ImportStatus: "applied" | "undone" | "partially_undone";
+        /** InviteIn */
+        InviteIn: {
+            /**
+             * Invited At
+             * Format: date
+             */
+            invited_at: string;
+            /** Urgency Reason */
+            urgency_reason?: string | null;
+        };
         /** InvoiceIn */
         InvoiceIn: {
             /** Deductions */
@@ -7509,6 +7855,40 @@ export interface components {
             tenant_id: string | null;
             /** User Id */
             user_id: string | null;
+        };
+        /** MeetingIn */
+        MeetingIn: {
+            /**
+             * Kind
+             * @default ordinary
+             */
+            kind: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Location */
+            location?: string | null;
+            /**
+             * Mode
+             * @default presence
+             */
+            mode: string;
+            /**
+             * Scheduled At
+             * Format: date-time
+             */
+            scheduled_at: string;
+            /** Virtual Basis Resolution Id */
+            virtual_basis_resolution_id?: string | null;
+            /**
+             * Voting Principle
+             * @default head
+             */
+            voting_principle: string;
+            /** Voting Principle Basis */
+            voting_principle_basis?: string | null;
         };
         /** MemberCreate */
         MemberCreate: {
@@ -9619,6 +9999,21 @@ export interface components {
             valid_from: string;
             /** Valid To */
             valid_to?: string | null;
+        };
+        /** VoteIn */
+        VoteIn: {
+            /** Choice */
+            choice: string;
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /**
+             * Excluded
+             * @default false
+             */
+            excluded: boolean;
         };
         /** WebhookCreate */
         WebhookCreate: {
@@ -14916,6 +15311,440 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthReport"];
+                };
+            };
+        };
+    };
+    announce_api_v1_hoa_agenda__item_id__announce_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnounceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tally_api_v1_hoa_agenda__item_id__tally_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cast_vote_api_v1_hoa_agenda__item_id__votes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_audit_item_api_v1_hoa_audit_items__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuditItemPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_audit_api_v1_hoa_audits_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EngagementIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_audit_item_api_v1_hoa_audits__audit_id__items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                audit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuditItemIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_report_api_v1_hoa_audits__audit_id__reports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                audit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuditReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    circular_api_v1_hoa_circular_resolutions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CircularIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_meeting_api_v1_hoa_meetings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_agenda_api_v1_hoa_meetings__meeting_id__agenda_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgendaIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attendance_api_v1_hoa_meetings__meeting_id__attendance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invite_api_v1_hoa_meetings__meeting_id__invite_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
