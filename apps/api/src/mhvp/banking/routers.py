@@ -740,14 +740,16 @@ async def _order(session: Any, order_id: uuid.UUID) -> PaymentOrder:
 @router.get("/payment-orders", summary="Zahlungsaufträge")
 async def list_orders(
     request: Request,
-    status: OrderStatus | None = None,
+    status: str | None = Query(
+        default=None, pattern="^(" + "|".join(s.value for s in OrderStatus) + ")$"
+    ),
     limit: int = Query(default=200, ge=1, le=1000),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[OrderOut]:
     async with tenant_tx(request, principal) as session:
         query = select(PaymentOrder).order_by(PaymentOrder.execution_date.desc(), PaymentOrder.id)
         if status is not None:
-            query = query.where(PaymentOrder.status == status)
+            query = query.where(PaymentOrder.status == OrderStatus(status))
         rows = (await session.scalars(query.limit(limit))).all()
         return [await _order_out(session, o) for o in rows]
 

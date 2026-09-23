@@ -8545,6 +8545,11 @@ export interface components {
             /** Purpose */
             purpose?: string | null;
         };
+        /**
+         * OrderStatus
+         * @enum {string}
+         */
+        OrderStatus: "draft" | "requested" | "quoted" | "approved" | "scheduled" | "in_progress" | "done" | "invoiced" | "accepted" | "rejected" | "cancelled";
         /** OrderStep */
         OrderStep: {
             /** Completion Report */
@@ -8565,7 +8570,7 @@ export interface components {
             rating_comment?: string | null;
             /** Scheduled At */
             scheduled_at?: string | null;
-            status: components["schemas"]["mhvp__tickets__models__OrderStatus"];
+            status: components["schemas"]["OrderStatus"];
         };
         /** OwnerIn */
         OwnerIn: {
@@ -10567,11 +10572,6 @@ export interface components {
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
         };
-        /**
-         * OrderStatus
-         * @enum {string}
-         */
-        mhvp__banking__models__OrderStatus: "draft" | "approved" | "exported" | "submitted" | "accepted_by_bank" | "executed" | "partially_executed" | "rejected" | "returned" | "cancelled";
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
             /** Bank Name */
@@ -10771,11 +10771,6 @@ export interface components {
             /** Valid To */
             valid_to?: string | null;
         };
-        /**
-         * OrderStatus
-         * @enum {string}
-         */
-        mhvp__tickets__models__OrderStatus: "draft" | "requested" | "quoted" | "approved" | "scheduled" | "in_progress" | "done" | "invoiced" | "accepted" | "rejected" | "cancelled";
     };
     responses: never;
     parameters: never;
@@ -13542,7 +13537,7 @@ export interface operations {
     list_orders_api_v1_banking_payment_orders_get: {
         parameters: {
             query?: {
-                status?: components["schemas"]["mhvp__banking__models__OrderStatus"] | null;
+                status?: string | null;
                 limit?: number;
             };
             header?: never;

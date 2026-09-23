@@ -10657,6 +10657,23 @@
         "title": "OrderPatch",
         "type": "object"
       },
+      "OrderStatus": {
+        "enum": [
+          "draft",
+          "requested",
+          "quoted",
+          "approved",
+          "scheduled",
+          "in_progress",
+          "done",
+          "invoiced",
+          "accepted",
+          "rejected",
+          "cancelled"
+        ],
+        "title": "OrderStatus",
+        "type": "string"
+      },
       "OrderStep": {
         "additionalProperties": false,
         "properties": {
@@ -10777,7 +10794,7 @@
             "title": "Scheduled At"
           },
           "status": {
-            "$ref": "#/components/schemas/mhvp__tickets__models__OrderStatus"
+            "$ref": "#/components/schemas/OrderStatus"
           }
         },
         "required": [
@@ -16928,22 +16945,6 @@
         "title": "ProviderOut",
         "type": "object"
       },
-      "mhvp__banking__models__OrderStatus": {
-        "enum": [
-          "draft",
-          "approved",
-          "exported",
-          "submitted",
-          "accepted_by_bank",
-          "executed",
-          "partially_executed",
-          "rejected",
-          "returned",
-          "cancelled"
-        ],
-        "title": "OrderStatus",
-        "type": "string"
-      },
       "mhvp__contacts__schemas__BankAccountIn": {
         "additionalProperties": false,
         "properties": {
@@ -17506,23 +17507,6 @@
         ],
         "title": "ProviderOut",
         "type": "object"
-      },
-      "mhvp__tickets__models__OrderStatus": {
-        "enum": [
-          "draft",
-          "requested",
-          "quoted",
-          "approved",
-          "scheduled",
-          "in_progress",
-          "done",
-          "invoiced",
-          "accepted",
-          "rejected",
-          "cancelled"
-        ],
-        "title": "OrderStatus",
-        "type": "string"
       }
     }
   },
@@ -21586,7 +21570,8 @@
             "schema": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/mhvp__banking__models__OrderStatus"
+                  "pattern": "^(draft|approved|exported|submitted|accepted_by_bank|executed|partially_executed|rejected|returned|cancelled)$",
+                  "type": "string"
                 },
                 {
                   "type": "null"
