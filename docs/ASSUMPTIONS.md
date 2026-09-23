@@ -85,8 +85,8 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 
 | Feld | Inhalt |
 | --- | --- |
-| Annahme | Zeitstempel werden in UTC gespeichert (`TIMESTAMPTZ`); die fachliche Zeitzone ist Europe/Berlin. |
-| Begründung | Abschnitt 4.1 legt UTC fest; die fachliche Zeitzone ergibt sich aus dem Standort der Mandanten. Fristberechnungen folgen erst mit freigegebenen Regeln. |
+| Annahme | Zeitstempel werden in UTC gespeichert (`TIMESTAMPTZ`); die Oberfläche zeigt Zeitstempel in der Zeitzone Europe/Berlin an. Die Zeitzone für fachliche Fristberechnung ist nicht angenommen, sondern offen (M1-09). |
+| Begründung | Abschnitt 4.1 legt UTC fest; die Anzeige betrifft nur die Darstellung. Fristberechnungen folgen erst mit freigegebenen Regeln. |
 | Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
 | Betroffene Bereiche | api, worker (Celery in UTC), Oberfläche |
 | Überprüfung spätestens bei Meilenstein | M2 |
@@ -108,7 +108,7 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Feld | Inhalt |
 | --- | --- |
 | Annahme | SeaweedFS 4.47 dient nur als S3-kompatibler Objektspeicher für Entwicklung und CI, bis M1-01 entschieden ist. |
-| Begründung | MinIO-Images sind auf Docker Hub nicht mehr verfügbar (ADR 0005). Die Anwendung nutzt nur die S3-API. |
+| Begründung | MinIO-Images sind auf Docker Hub nicht mehr verfügbar (laut ADR 0005, Prüfstand 23.09.2026). Die Anwendung nutzt nur die S3-API. |
 | Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
 | Betroffene Bereiche | `infra/compose*.yaml`, `MHVP_S3_*` |
 | Überprüfung spätestens bei Meilenstein | M6 |
@@ -135,5 +135,5 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Restcentverteilung über D08 hinaus | betrifft Geld; nur der Produktstandard aus 6.9.8 und D08 ist vorgegeben | M10 |
 | Verzugszinsen, Mahngebühren, Mahnstufen | V7 offen | M16 |
 | Aufbewahrungsfristen und Löschregeln | V17 offen, E05 | M6, M18 |
-| Fachliche Fristberechnung (Feiertage, Zugang) | betrifft gesetzliche Fristen | jeweiliger Fachmeilenstein |
+| Fachliche Fristberechnung (Zeitzone, Feiertage, Zugang) | betrifft gesetzliche Fristen; offen als M1-09 | jeweiliger Fachmeilenstein |
 | Kontenrahmen | V8 offen | M10 |

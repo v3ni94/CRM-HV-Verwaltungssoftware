@@ -2,7 +2,7 @@
 
 **Status:** Testanforderungen, keine ausgeführten Softwaretests.
 
-Quelle: `docs/MASTER-PROMPT.md`, Anhang D (Version 2.0 Final, Stand 23.09.2026). Die Spalten „Eingabe und ausdrückliche Annahmen“, „Erwartetes Ergebnis / verbotener Fehler“, „Zu prüfender Fall“ und „Mindestkriterium“ sind wörtlich übernommen. Ergänzt sind Meilenstein, Freigabestufe, Konfliktbezug und Status. Die Zuordnung ist aus Abschnitt 18 und Anhang E abgeleitet (Entscheidung der Projektleitung vom 23.09.2026). Bei Abweichungen zwischen dieser Datei und dem Master-Prompt gilt der Master-Prompt.
+Quelle: `docs/MASTER-PROMPT.md`, Anhang D (Version 2.0 Final, Stand 23.09.2026). Die Spalten „Eingabe und ausdrückliche Annahmen“, „Erwartetes Ergebnis / verbotener Fehler“, „Zu prüfender Fall“ und „Mindestkriterium“ sind wörtlich übernommen. Ergänzt sind Meilenstein, Freigabestufe, Konfliktbezug und Status. Die Zuordnung ist aus Abschnitt 18 und Anhang E abgeleitet: Zuordnung vom Coding-Agenten abgeleitet, Bestätigung durch Betreiber offen (Stand 23.09.2026). Bei Abweichungen zwischen dieser Datei und dem Master-Prompt gilt der Master-Prompt.
 
 Wortlaut der Statuszeile aus Anhang D: Zahlen sind bewusst einfache, eigenständig nachrechenbare Modellfälle. Genannte fachliche Annahmen sind Bestandteil des Falls; sie ersetzen nicht die Prüfung realer Vertrags-/Beschlussunterlagen. Fach-/Rechtsverantwortliche bestätigen die Umsetzung und Sonderfälle vor Produktivfreigabe. Technische Testdateien, Frameworks und Schemaabbildung bestimmt Claude im bestehenden Stack.
 

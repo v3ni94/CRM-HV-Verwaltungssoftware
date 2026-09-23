@@ -13,6 +13,8 @@ product of Müller Holding AG (master prompt section 1.2).
 - Milestone **M1 Fundament** in progress (`docs/plans/M1.md`).
 - Release gates G1 to G5 are closed for every tenant. The platform is **not** for productive
   bookkeeping, payments or legally relevant statements.
+- Observability (Grafana, Prometheus, Loki), deploy/backup/EBICS/incident runbooks and seed
+  helpers follow in M9 and later milestones.
 - Open questions: `docs/OPEN_QUESTIONS.md`; assumptions: `docs/ASSUMPTIONS.md`.
 
 ## Quick start (Docker)

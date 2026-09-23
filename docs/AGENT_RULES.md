@@ -30,9 +30,11 @@ sections selectively (rule 15); do not paraphrase the spec loosely, cite section
 
 1. Development is released, money is not: productive bookkeeping, real payments, legally
    relevant statements and third party tenants stay locked until G1 to G5 (per tenant flags,
-   default off). Read existing code first and document deviations before changing it.
-2. Keep the phase order of section 18. The 6.9 schema decisions belong to the phase 1 schema;
-   no other fields "auf Vorrat".
+   default off). Set up the repo per section 17 and work the milestones of section 18 in
+   order. Read existing code first and document deviations before changing it.
+2. Keep the phase order of section 18. The early WEG check is no mandate to pull phase 4
+   forward. The 6.9 schema decisions belong to the phase 1 schema so that the phase 4 WEG
+   logic does not fail on an unsuitable core model; no other fields "auf Vorrat".
 3. Uncertainty is no legal basis: never invent legal rules, interest, allocations, tax
    treatment or bank formats. Missing facts go to `docs/OPEN_QUESTIONS.md`; uncritical
    assumptions, labelled, to `docs/ASSUMPTIONS.md`. Risks to money, receivables, data
@@ -40,12 +42,16 @@ sections selectively (rule 15); do not paraphrase the spec loosely, cite section
    configurable value or disclaimer does not replace a valid rule.
 4. API first: every function is offered via the documented API. Gate and lock rules also
    apply to jobs, imports, bulk actions and integrations.
-5. Tenant and legal entity separation (see section 8 below).
+5. Tenant and legal entity separation: the existing technical tenant separation stays
+   unchanged; in addition receivables, balances, bank funds, reserves and deposits must be
+   assigned to the correct legal entity (see section 8 below).
 6. AI delivers proposals only; confidence is neither proof nor approval. No autonomous AI
-   postings by default; automation only via released deterministic rules (7.4). AI never
+   postings by default. Automatic postings remain a product goal, but only via explicitly
+   activated, functionally released and deterministically verifiable rules (7.4). AI never
    alone approves new payees, IBAN changes, WEG resolutions, fees or tax classification.
-7. Posted records stay traceable: drafts differ from postings; after posting, corrections
-   only by reversal and new posting. "Undo" of imports or AI never bypasses this or
+7. Posted records stay traceable: drafts differ from postings; after posting, financial
+   content is neither overwritten nor deleted; corrections only by reversal and, where
+   needed, new posting. "Undo" of imports or AI never bypasses this or
    retention holds.
 8. Independent expected results: domain tests use predefined, recomputable results. Annex D
    cases are requirements, not passed tests. Comparison with Immoware24 is an extra check.
@@ -57,14 +63,16 @@ sections selectively (rule 15); do not paraphrase the spec loosely, cite section
 11. Documentation duties (section 10 below).
 12. Per task: plan first, small traceable implementation, actually run tests, docs and result
     report. No unrequested large refactorings. Conventional Commits.
-13. Security: no secrets in code, no productive data export to AI without verified
-    authorization and data processing agreement. "EU endpoint", `AVV=true`, a role or a hash
+13. Security: no secrets in code; no production data export to AI without verified
+    authorization and verified data processing. Existing technical security requirements
+    remain. "EU endpoint", `AVV=true`, a role or a hash
     alone are no complete proof.
 14. Done means: technical definition of done met, acceptance cases passed, required legal/tax
     decisions documented, relevant locks tested, original documents linked, no unresolved
     critical points for the released scope. A screen or a green test run alone is not enough.
 15. Work economically: targeted search, no repeated full text dumps, no needless agent loops.
-    Economy never removes document checks, security checks or required tests.
+    Simple tasks go to low cost models or deterministic tools; demanding models are used for
+    domain logic, architecture and error analysis. Economy never removes document checks, security checks or required tests.
 
 ## 5. Requirement types (section 0.2)
 
@@ -72,6 +80,11 @@ Rechtsgrundlage (norm from the source register, within its scope), Fachliche Ums
 (required function derived from the process), Produktschutz (stricter internal standard, never
 claimed as legal duty), Offene Entscheidung (name owner and affected gate, never mark as
 done by an assumption).
+
+Neither the master prompt nor a review by two AI systems is a legal certification or an audit
+of the actual software operation. The expert legal, tax and security review required before
+productive use is a project release standard, not a claim that every WEG must have its annual
+statement certified by an auditor (end of 0.2).
 
 ## 6. Precedence (section 0.3)
 
@@ -115,11 +128,15 @@ checks.
 
 ## 11. Per task workflow
 
-1. Plan in `docs/plans/<milestone>.md`: files, migrations, tests.
-2. Implement in small commits (Conventional Commits).
-3. Run tests; report tests not executed explicitly.
-4. Update docs (module README, ADR, OPEN_QUESTIONS, ASSUMPTIONS, OpenAPI).
-5. Result report: what was done, test results, open points.
+Rule 0.1.12 and section 17:
+
+1. Read the issue or task; plan in `docs/plans/<milestone>.md` with files, migrations, tests.
+2. Feature branch; implement in small commits (Conventional Commits).
+3. Run tests; report tests not executed explicitly. Check the OpenAPI diff.
+4. Update docs (README, module README, ADR, OPEN_QUESTIONS, ASSUMPTIONS).
+5. Pull request with summary and open points; CI green; merge.
+6. Deploy to staging; acceptance by the operator against the acceptance criteria.
+7. Result report: what was done, test results, open points.
 
 ## 12. Commands (Makefile)
 
@@ -127,7 +144,7 @@ checks.
 | --- | --- |
 | `make dev` | start the dev stack (Docker Compose, `.env`) |
 | `make down` | stop the dev stack |
-| `make migrate` | `alembic upgrade head` in the api container (or locally with `LOCAL=1`) |
+| `make migrate` | `alembic upgrade head` in the migrate container (or locally with `LOCAL=1`) |
 | `make test` | `make test-api` and `make test-web` |
 | `make test-api` | `cd apps/api && uv run pytest` |
 | `make test-web` | web and package tests via pnpm |

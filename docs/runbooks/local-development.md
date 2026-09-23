@@ -24,7 +24,7 @@ Hostnames (`*.localhost` resolves locally without DNS):
 | `http://api.localhost/api/v1/health/ready` | api readiness (database, database_role, migrations, redis, object_storage) |
 | `http://api.localhost/api/v1/docs` | OpenAPI UI |
 
-`make down` stops the stack. `make migrate` runs Alembic in the api container.
+`make down` stops the stack. `make migrate` runs Alembic in the migrate container.
 
 Known limitation: in the Claude Code cloud environment Docker Hub downloads are blocked
 (OPEN_QUESTIONS M1-07), so `make dev` could not be run end to end there.
@@ -76,7 +76,9 @@ with uv, Node 22 with pnpm 10. An S3 compatible store is needed only for the
    uv run celery -A mhvp.worker worker -Q default,io,ocr,ai,bank,mail,beat
    ```
 
-4. Web apps: `pnpm install` at the root, then the dev script of each app (see the app README).
+4. Web apps: `pnpm install` at the root, then `pnpm --filter @mhvp/web-crm dev` (port 3000) and
+   `pnpm --filter @mhvp/web-portal dev` (port 3001); see `apps/web-crm/README.md` and
+   `apps/web-portal/README.md`.
 
 ## 3. Tests
 
@@ -99,3 +101,8 @@ MHVP_REQUIRE_INTEGRATION=1 make test-api
 
 Edit `docs/AGENT_RULES.md`, then `make agent-docs`. `python3 scripts/sync_agent_docs.py --check`
 fails if `CLAUDE.md` or `AGENTS.md` is stale.
+
+## 5. Not yet available
+
+Observability (Grafana, Prometheus, Loki), the deploy, backup, EBICS and incident runbooks and
+the seed helpers follow in M9 and later milestones (sections 17 and 18).

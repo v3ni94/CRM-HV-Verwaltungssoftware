@@ -18,7 +18,9 @@ with updates only after a compatibility test.
    Exception pending the operator: object storage (ADR 0005).
 2. Version pinning policy (E16):
    - Every dependency is resolved into a committed lockfile: `apps/api/uv.lock` (uv) and
-     `pnpm-lock.yaml` (pnpm workspaces). Direct dependencies use exact versions.
+     `pnpm-lock.yaml` (pnpm workspaces). Python direct dependencies are declared with bounded
+     ranges in `apps/api/pyproject.toml`; exact versions exist only in `uv.lock`. CI installs
+     with `uv sync --locked`, so a lockfile that does not match `pyproject.toml` fails the run.
    - Container images are referenced by explicit tag; each tag below was verified to exist on
      2026-09-23 via registry manifest lookup.
    - GitHub Actions are pinned to full commit SHAs (resolved with `git ls-remote`), with the
@@ -35,6 +37,7 @@ with updates only after a compatibility test.
    | Object storage (dev/CI, see ADR 0005) | `chrislusf/seaweedfs:4.47` |
    | Python base | `python:3.12.11-slim-bookworm` |
    | Node base | `node:22.22-alpine` |
+   | uv (copied into the Python images) | `ghcr.io/astral-sh/uv:0.8.17` |
 
 4. Tooling: Python 3.12 with uv, Node 22 with pnpm 10 (`packageManager` in `package.json`).
 5. psycopg 3 is the single PostgreSQL driver: async for the API, sync for the Celery worker

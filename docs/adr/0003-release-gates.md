@@ -16,7 +16,10 @@ bulk actions and integrations.
    closed.
 2. No environment variable, setting or global switch can open a gate.
 3. Guards: a FastAPI dependency (`require_release_gate`) for endpoints and a job guard
-   (`ensure_release_gate_open`) for imports, bulk actions, Celery jobs and integrations.
+   for imports, bulk actions, Celery jobs and integrations: `ensure_release_gate_open`, and
+   the decorator `release_gated(gate)` for synchronous jobs. The decorated job takes a
+   `tenant_id` keyword argument and asks the module level `job_release_gate_resolver`, whose
+   default keeps every gate closed.
    A closed gate yields problem `MHVP-GATE-0001` with HTTP 403 (ADR 0004).
 4. M1 ships only the fail closed resolver: every gate is closed for every tenant, and a
    missing tenant context is treated as closed.

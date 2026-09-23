@@ -32,16 +32,21 @@ per path.
    opened by the tenant session helper.
 4. Roles (created by the idempotent `infra/postgres/sql/bootstrap.sql`, the only step run as
    superuser):
-   - `mhvp_app`: runtime role of api and worker; owns nothing; cannot assume the migrator.
+   - `mhvp_app`: runtime role of api and worker; owns nothing and is not a member of any
+     role (the bootstrap revokes all memberships), so it cannot assume the migrator.
    - `mhvp_migrator`: owns the schema and all tables; runs Alembic.
    - Both are NOSUPERUSER, NOBYPASSRLS, NOCREATEROLE, NOCREATEDB, NOINHERIT. The bootstrap
-     re-asserts these attributes on every run.
+     re-asserts these attributes on every explicit run (`make db-bootstrap`, CI); in Docker
+     Compose it runs only at first initialisation of the data volume.
 5. Because of FORCE RLS even the owner is bound. Cross tenant data migrations therefore
    iterate per tenant and set the context for each.
 6. Runtime enforcement: readiness check `database_role` fails if the runtime role is
-   superuser, has BYPASSRLS or owns tables.
+   superuser, has BYPASSRLS, owns tables, functions or types, or is a member of any role.
+   Engines are created with `hide_parameters`, and unhandled database exceptions are logged
+   only with exception type and SQLSTATE, so bound values (tenant data) never reach logs.
 7. CI guard test: every table with a `tenant_id` column must have RLS enabled, forced and the
-   restrictive `tenant_isolation` policy.
+   restrictive `tenant_isolation` policy; the policy must apply to role PUBLIC and use exactly
+   the expression `(tenant_id = app_current_tenant_id())`.
 8. Least privilege around migrations: migration 0001 revokes INSERT, UPDATE, DELETE and
    TRUNCATE on `alembic_version` from the runtime role; the readiness check `migrations`
    compares the database revision with the Alembic head. The `vector` extension is created
