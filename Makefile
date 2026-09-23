@@ -60,8 +60,8 @@ else
 	$(COMPOSE_DEV) run --rm api python -m mhvp.platform.seed
 endif
 
-ai-eval: ## AI evaluation (available from M7)
-	@echo "make ai-eval: available from M7" >&2; exit 2
+ai-eval: ## Offline AI evaluation with recorded answers (no live calls)
+	cd apps/api && uv run python -m mhvp.ai.evaluate tests/ai_eval
 
 deploy: ## Deploy to the server (available from M9)
 	@echo "make deploy: available from M9" >&2; exit 2

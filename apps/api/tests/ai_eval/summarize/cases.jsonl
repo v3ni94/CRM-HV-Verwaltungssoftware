@@ -1,0 +1,20 @@
+{"id": "sum-00", "input": "Protokoll 0 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 0.", "open_points": []}, "expected": {"open_points": 0}}
+{"id": "sum-01", "input": "Protokoll 1 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 1.", "open_points": ["Frist 2 prüfen"]}, "expected": {"open_points": 1}}
+{"id": "sum-02", "input": "Protokoll 2 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 2.", "open_points": ["Frist 3 prüfen", "Frist 3 prüfen"]}, "expected": {"open_points": 2}}
+{"id": "sum-03", "input": "Protokoll 3 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 3.", "open_points": []}, "expected": {"open_points": 0}}
+{"id": "sum-04", "input": "Protokoll 4 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 4.", "open_points": ["Frist 5 prüfen"]}, "expected": {"open_points": 1}}
+{"id": "sum-05", "input": "Protokoll 5 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 5.", "open_points": ["Frist 6 prüfen", "Frist 6 prüfen"]}, "expected": {"open_points": 2}}
+{"id": "sum-06", "input": "Protokoll 6 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 6.", "open_points": []}, "expected": {"open_points": 0}}
+{"id": "sum-07", "input": "Protokoll 7 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 7.", "open_points": ["Frist 8 prüfen"]}, "expected": {"open_points": 1}}
+{"id": "sum-08", "input": "Protokoll 8 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 8.", "open_points": ["Frist 9 prüfen", "Frist 9 prüfen"]}, "expected": {"open_points": 2}}
+{"id": "sum-09", "input": "Protokoll 9 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 9.", "open_points": []}, "expected": {"open_points": 0}}
+{"id": "sum-10", "input": "Protokoll 10 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 10.", "open_points": ["Frist 11 prüfen"]}, "expected": {"open_points": 1}}
+{"id": "sum-11", "input": "Protokoll 11 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 11.", "open_points": ["Frist 12 prüfen", "Frist 12 prüfen"]}, "expected": {"open_points": 2}}
+{"id": "sum-12", "input": "Protokoll 12 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 12.", "open_points": []}, "expected": {"open_points": 0}}
+{"id": "sum-13", "input": "Protokoll 13 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 13.", "open_points": ["Frist 14 prüfen"]}, "expected": {"open_points": 1}}
+{"id": "sum-14", "input": "Protokoll 14 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 14.", "open_points": ["Frist 15 prüfen", "Frist 15 prüfen"]}, "expected": {"open_points": 2}}
+{"id": "sum-15", "input": "Protokoll 15 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 15.", "open_points": []}, "expected": {"open_points": 0}}
+{"id": "sum-16", "input": "Protokoll 16 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 16.", "open_points": ["Frist 17 prüfen"]}, "expected": {"open_points": 1}}
+{"id": "sum-17", "input": "Protokoll 17 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 17.", "open_points": ["Frist 18 prüfen", "Frist 18 prüfen"]}, "expected": {"open_points": 2}}
+{"id": "sum-18", "input": "Protokoll 18 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 18.", "open_points": []}, "expected": {"open_points": 0}}
+{"id": "sum-19", "input": "Protokoll 19 (synthetisch)", "recorded_output": {"summary": "Zusammenfassung 19.", "open_points": ["Frist 20 prüfen"]}, "expected": {"open_points": 1}}

@@ -195,6 +195,29 @@
         "title": "AddressOut",
         "type": "object"
       },
+      "AiProvider": {
+        "enum": [
+          "anthropic",
+          "openai"
+        ],
+        "title": "AiProvider",
+        "type": "string"
+      },
+      "AiTask": {
+        "enum": [
+          "extract_contacts",
+          "extract_property",
+          "classify_email",
+          "propose_posting",
+          "extract_invoice",
+          "draft_reply",
+          "check_statement",
+          "answer_question",
+          "summarize"
+        ],
+        "title": "AiTask",
+        "type": "string"
+      },
       "AllocationKeyIn-Input": {
         "additionalProperties": false,
         "properties": {
@@ -700,6 +723,37 @@
           "revoked_at"
         ],
         "title": "ApiKeyOut",
+        "type": "object"
+      },
+      "ApplyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contacts": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ContactChoice"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contacts"
+          },
+          "property": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropertyChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "ApplyIn",
         "type": "object"
       },
       "AuditOut": {
@@ -2208,6 +2262,57 @@
         "title": "ConsentOut",
         "type": "object"
       },
+      "ContactChoice": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "default": "create",
+            "enum": [
+              "create",
+              "link",
+              "skip"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "geänderte Angaben (ContactIn)",
+            "title": "Contact"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "bei link: vorhandener Kontakt",
+            "title": "Contact Id"
+          },
+          "index": {
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index"
+        ],
+        "title": "ContactChoice",
+        "type": "object"
+      },
       "ContactIn": {
         "additionalProperties": false,
         "properties": {
@@ -3395,6 +3500,92 @@
         "title": "ContractVersionIn",
         "type": "object"
       },
+      "ConversationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "context_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Id"
+          },
+          "context_type": {
+            "default": "global",
+            "enum": [
+              "global",
+              "property",
+              "contact"
+            ],
+            "title": "Context Type",
+            "type": "string"
+          },
+          "title": {
+            "default": "Assistent",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "ConversationIn",
+        "type": "object"
+      },
+      "ConversationOut": {
+        "properties": {
+          "context_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Id"
+          },
+          "context_type": {
+            "title": "Context Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageOut"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "context_type",
+          "context_id",
+          "title",
+          "created_at"
+        ],
+        "title": "ConversationOut",
+        "type": "object"
+      },
       "CustomFieldIn": {
         "additionalProperties": false,
         "properties": {
@@ -3507,6 +3698,16 @@
         ],
         "title": "DebtorAccountOut",
         "type": "object"
+      },
+      "Decision": {
+        "enum": [
+          "pending",
+          "accepted",
+          "modified",
+          "rejected"
+        ],
+        "title": "Decision",
+        "type": "string"
       },
       "DeliveryOut": {
         "properties": {
@@ -4730,6 +4931,111 @@
         "title": "IdentifierOut",
         "type": "object"
       },
+      "ImportItemOut": {
+        "properties": {
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "kept_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kept Reason"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "undone": {
+            "title": "Undone",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sequence",
+          "entity_type",
+          "entity_id",
+          "undone",
+          "kept_reason"
+        ],
+        "title": "ImportItemOut",
+        "type": "object"
+      },
+      "ImportOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ImportItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ImportStatus"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "undone_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Undone At"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "status",
+          "summary",
+          "created_at",
+          "undone_at"
+        ],
+        "title": "ImportOut",
+        "type": "object"
+      },
+      "ImportStatus": {
+        "enum": [
+          "applied",
+          "undone",
+          "partially_undone"
+        ],
+        "title": "ImportStatus",
+        "type": "string"
+      },
       "LegalEntityKind": {
         "enum": [
           "hoa",
@@ -5558,6 +5864,107 @@
           "role_codes"
         ],
         "title": "MemberRoles",
+        "type": "object"
+      },
+      "MessageIn": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "document_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Document Ids",
+            "type": "array"
+          },
+          "task": {
+            "enum": [
+              "extract_contacts",
+              "extract_property",
+              "answer_question",
+              "summarize"
+            ],
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content",
+          "task"
+        ],
+        "title": "MessageIn",
+        "type": "object"
+      },
+      "MessageOut": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "document_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Document Ids",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "task_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Run Id"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "content",
+          "document_ids",
+          "task_run_id",
+          "proposal_id",
+          "created_at"
+        ],
+        "title": "MessageOut",
         "type": "object"
       },
       "MeterConnection": {
@@ -6699,6 +7106,78 @@
         "title": "PreferredChannel",
         "type": "string"
       },
+      "PropertyChoice": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "description": "Gültig ab für Miteigentumsanteile",
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "management_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "rental",
+                  "hoa",
+                  "hoa_with_sev"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Management Type"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "vat_percent_by_payment_type": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "bestätigter Steuersatz je Zahlungsart",
+            "title": "Vat Percent By Payment Type",
+            "type": "object"
+          }
+        },
+        "required": [
+          "as_of"
+        ],
+        "title": "PropertyChoice",
+        "type": "object"
+      },
       "PropertyContactIn": {
         "additionalProperties": false,
         "properties": {
@@ -7578,17 +8057,9 @@
         "title": "PropertySummary",
         "type": "object"
       },
-      "ProviderIn": {
-        "additionalProperties": false,
+      "ProposalOut": {
         "properties": {
-          "categories": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Categories",
-            "type": "array"
-          },
-          "contact_bank_account_id": {
+          "context_id": {
             "anyOf": [
               {
                 "format": "uuid",
@@ -7598,85 +8069,21 @@
                 "type": "null"
               }
             ],
-            "title": "Contact Bank Account Id"
+            "title": "Context Id"
           },
-          "contact_id": {
-            "format": "uuid",
-            "title": "Contact Id",
-            "type": "string"
-          },
-          "contract_type_code": {
-            "title": "Contract Type Code",
-            "type": "string"
-          },
-          "create_default_bank_rule": {
-            "default": false,
-            "title": "Create Default Bank Rule",
-            "type": "boolean"
-          },
-          "custom_fields": {
-            "additionalProperties": true,
-            "title": "Custom Fields",
-            "type": "object"
-          },
-          "notes": {
+          "decided_at": {
             "anyOf": [
               {
+                "format": "date-time",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Notes"
+            "title": "Decided At"
           },
-          "notice_period": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notice Period"
-          },
-          "valid_from": {
-            "format": "date",
-            "title": "Valid From",
-            "type": "string"
-          },
-          "valid_to": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Valid To"
-          }
-        },
-        "required": [
-          "valid_from",
-          "contact_id",
-          "contract_type_code"
-        ],
-        "title": "ProviderIn",
-        "type": "object"
-      },
-      "ProviderOut": {
-        "properties": {
-          "categories": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Categories",
-            "type": "array"
-          },
-          "contact_bank_account_id": {
+          "decided_by": {
             "anyOf": [
               {
                 "format": "uuid",
@@ -7686,79 +8093,55 @@
                 "type": "null"
               }
             ],
-            "title": "Contact Bank Account Id"
+            "title": "Decided By"
           },
-          "contact_id": {
-            "format": "uuid",
-            "title": "Contact Id",
+          "decision": {
+            "$ref": "#/components/schemas/Decision"
+          },
+          "entity_type": {
+            "title": "Entity Type",
             "type": "string"
-          },
-          "contract_type_code": {
-            "title": "Contract Type Code",
-            "type": "string"
-          },
-          "create_default_bank_rule": {
-            "default": false,
-            "title": "Create Default Bank Rule",
-            "type": "boolean"
-          },
-          "custom_fields": {
-            "additionalProperties": true,
-            "title": "Custom Fields",
-            "type": "object"
           },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
           },
-          "notes": {
+          "import_run_id": {
             "anyOf": [
               {
+                "format": "uuid",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Notes"
+            "title": "Import Run Id"
           },
-          "notice_period": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notice Period"
+          "proposed": {
+            "additionalProperties": true,
+            "title": "Proposed",
+            "type": "object"
           },
-          "valid_from": {
-            "format": "date",
-            "title": "Valid From",
+          "task_run_id": {
+            "format": "uuid",
+            "title": "Task Run Id",
             "type": "string"
-          },
-          "valid_to": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Valid To"
           }
         },
         "required": [
-          "valid_from",
-          "contact_id",
-          "contract_type_code",
-          "id"
+          "id",
+          "task_run_id",
+          "entity_type",
+          "context_id",
+          "proposed",
+          "decision",
+          "decided_by",
+          "decided_at",
+          "import_run_id"
         ],
-        "title": "ProviderOut",
+        "title": "ProposalOut",
         "type": "object"
       },
       "ReadingIn": {
@@ -8244,6 +8627,138 @@
         ],
         "title": "RolePermissions",
         "type": "object"
+      },
+      "RunOut": {
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "cost_eur": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost Eur",
+            "type": "string"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiProvider"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "task": {
+            "$ref": "#/components/schemas/AiTask"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "task",
+          "status",
+          "provider",
+          "model",
+          "prompt_version",
+          "output",
+          "confidence",
+          "tokens_in",
+          "tokens_out",
+          "cost_eur",
+          "duration_ms",
+          "error"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
+      "RunStatus": {
+        "enum": [
+          "queued",
+          "running",
+          "succeeded",
+          "failed",
+          "blocked"
+        ],
+        "title": "RunStatus",
+        "type": "string"
       },
       "ScheduleIn": {
         "additionalProperties": false,
@@ -8815,6 +9330,50 @@
         "title": "TextStatus",
         "type": "string"
       },
+      "TierModel": {
+        "additionalProperties": false,
+        "properties": {
+          "input_eur_per_mtok": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,21}0*$)\\d{0,12}\\.\\d{0,8}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Input Eur Per Mtok"
+          },
+          "model": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "output_eur_per_mtok": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,21}0*$)\\d{0,12}\\.\\d{0,8}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Output Eur Per Mtok"
+          }
+        },
+        "required": [
+          "model",
+          "input_eur_per_mtok",
+          "output_eur_per_mtok"
+        ],
+        "title": "TierModel",
+        "type": "object"
+      },
       "TokenResponse": {
         "properties": {
           "access_token": {
@@ -9367,6 +9926,50 @@
         "title": "UnitType",
         "type": "string"
       },
+      "UsageOut": {
+        "properties": {
+          "blocked": {
+            "title": "Blocked",
+            "type": "boolean"
+          },
+          "budget_eur": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Budget Eur",
+            "type": "string"
+          },
+          "by_task": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "By Task",
+            "type": "object"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "spent_eur": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Spent Eur",
+            "type": "string"
+          },
+          "warning": {
+            "title": "Warning",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "month",
+          "spent_eur",
+          "budget_eur",
+          "warning",
+          "blocked",
+          "by_task"
+        ],
+        "title": "UsageOut",
+        "type": "object"
+      },
       "UserCreate": {
         "properties": {
           "display_name": {
@@ -9687,6 +10290,212 @@
           }
         },
         "title": "WebhookPatch",
+        "type": "object"
+      },
+      "mhvp__ai__schemas__ProviderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "nur schreibbar",
+            "title": "Api Key"
+          },
+          "data_processing_agreement_signed": {
+            "default": false,
+            "title": "Data Processing Agreement Signed",
+            "type": "boolean"
+          },
+          "dpa_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dpa Document Id"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "endpoint_region": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint Region"
+          },
+          "models": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TierModel"
+            },
+            "propertyNames": {
+              "enum": [
+                "small",
+                "large",
+                "embedding"
+              ]
+            },
+            "title": "Models",
+            "type": "object"
+          },
+          "monthly_budget_eur": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Monthly Budget Eur"
+          },
+          "task_tiers": {
+            "additionalProperties": {
+              "enum": [
+                "small",
+                "large"
+              ],
+              "type": "string"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/AiTask"
+            },
+            "title": "Task Tiers",
+            "type": "object"
+          },
+          "training_opt_out_confirmed": {
+            "default": false,
+            "title": "Training Opt Out Confirmed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "monthly_budget_eur"
+        ],
+        "title": "ProviderIn",
+        "type": "object"
+      },
+      "mhvp__ai__schemas__ProviderOut": {
+        "properties": {
+          "data_processing_agreement_signed": {
+            "title": "Data Processing Agreement Signed",
+            "type": "boolean"
+          },
+          "dpa_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dpa Document Id"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "endpoint_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint Region"
+          },
+          "has_api_key": {
+            "title": "Has Api Key",
+            "type": "boolean"
+          },
+          "models": {
+            "additionalProperties": true,
+            "title": "Models",
+            "type": "object"
+          },
+          "monthly_budget_eur": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Budget Eur",
+            "type": "string"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/AiProvider"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          },
+          "released_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released By"
+          },
+          "task_tiers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Task Tiers",
+            "type": "object"
+          },
+          "training_opt_out_confirmed": {
+            "title": "Training Opt Out Confirmed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "provider",
+          "has_api_key",
+          "models",
+          "task_tiers",
+          "monthly_budget_eur",
+          "data_processing_agreement_signed",
+          "dpa_document_id",
+          "training_opt_out_confirmed",
+          "endpoint_region",
+          "enabled",
+          "released_at",
+          "released_by"
+        ],
+        "title": "ProviderOut",
         "type": "object"
       },
       "mhvp__contacts__schemas__BankAccountIn": {
@@ -10068,6 +10877,189 @@
         ],
         "title": "BankAccountOut",
         "type": "object"
+      },
+      "mhvp__properties__schemas__ProviderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "contact_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Bank Account Id"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "contract_type_code": {
+            "title": "Contract Type Code",
+            "type": "string"
+          },
+          "create_default_bank_rule": {
+            "default": false,
+            "title": "Create Default Bank Rule",
+            "type": "boolean"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "notice_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Period"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from",
+          "contact_id",
+          "contract_type_code"
+        ],
+        "title": "ProviderIn",
+        "type": "object"
+      },
+      "mhvp__properties__schemas__ProviderOut": {
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "contact_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Bank Account Id"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "contract_type_code": {
+            "title": "Contract Type Code",
+            "type": "string"
+          },
+          "create_default_bank_rule": {
+            "default": false,
+            "title": "Create Default Bank Rule",
+            "type": "boolean"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "notice_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Period"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "valid_from",
+          "contact_id",
+          "contract_type_code",
+          "id"
+        ],
+        "title": "ProviderOut",
+        "type": "object"
       }
     }
   },
@@ -10098,6 +11090,534 @@
         "summary": "OIDC Discovery",
         "tags": [
           "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/ai/conversations": {
+      "get": {
+        "operationId": "list_conversations_api_v1_ai_conversations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "context_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Context Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "context_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Context Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationOut"
+                  },
+                  "title": "Response List Conversations Api V1 Ai Conversations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chats",
+        "tags": [
+          "KI-Assistent"
+        ]
+      },
+      "post": {
+        "operationId": "create_conversation_api_v1_ai_conversations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chat beginnen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/conversations/{conversation_id}": {
+      "get": {
+        "operationId": "get_conversation_api_v1_ai_conversations__conversation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chat lesen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/conversations/{conversation_id}/messages": {
+      "post": {
+        "description": "Queues the task; the answer arrives as a new chat message when the run is done.",
+        "operationId": "send_message_api_v1_ai_conversations__conversation_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nachricht senden",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/proposals/{proposal_id}": {
+      "get": {
+        "operationId": "get_proposal_api_v1_ai_proposals__proposal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlag lesen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/proposals/{proposal_id}/apply": {
+      "post": {
+        "description": "Creates everything in one transaction; nothing is created before this confirmation.",
+        "operationId": "apply_proposal_api_v1_ai_proposals__proposal_id__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlag übernehmen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/proposals/{proposal_id}/reject": {
+      "post": {
+        "operationId": "reject_proposal_api_v1_ai_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlag verwerfen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/providers": {
+      "get": {
+        "operationId": "list_providers_api_v1_ai_providers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/mhvp__ai__schemas__ProviderOut"
+                  },
+                  "title": "Response List Providers Api V1 Ai Providers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "KI-Anbieter",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/providers/{provider}": {
+      "put": {
+        "description": "Every change withdraws the release: the second person must confirm again.",
+        "operationId": "put_provider_api_v1_ai_providers__provider__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/AiProvider"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__ai__schemas__ProviderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__ai__schemas__ProviderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Anbieter einrichten",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/providers/{provider}/release": {
+      "post": {
+        "operationId": "release_provider_api_v1_ai_providers__provider__release_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/AiProvider"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__ai__schemas__ProviderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Anbieter freigeben (Vier-Augen)",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_api_v1_ai_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Lauf lesen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/usage": {
+      "get": {
+        "operationId": "usage_api_v1_ai_usage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "KI-Kosten im laufenden Monat",
+        "tags": [
+          "KI-Assistent"
         ]
       }
     },
@@ -12975,6 +14495,118 @@
         ]
       }
     },
+    "/api/v1/imports": {
+      "get": {
+        "operationId": "list_imports_api_v1_imports_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImportOut"
+                  },
+                  "title": "Response List Imports Api V1 Imports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Importläufe",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/imports/{import_id}": {
+      "get": {
+        "operationId": "get_import_api_v1_imports__import_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importlauf lesen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/imports/{import_id}/undo": {
+      "post": {
+        "description": "Removes what is not bound by later data; kept items carry the reason (10.1 step 5).",
+        "operationId": "undo_import_api_v1_imports__import_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import zurücknehmen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
     "/api/v1/letters": {
       "post": {
         "description": "Generated letters are filed and linked automatically (11.3); nothing is sent.",
@@ -14828,7 +16460,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/ProviderOut"
+                    "$ref": "#/components/schemas/mhvp__properties__schemas__ProviderOut"
                   },
                   "title": "Response List Providers Api V1 Properties  Property Id  Service Providers Get",
                   "type": "array"
@@ -14871,7 +16503,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ProviderIn"
+                "$ref": "#/components/schemas/mhvp__properties__schemas__ProviderIn"
               }
             }
           },
@@ -14882,7 +16514,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProviderOut"
+                  "$ref": "#/components/schemas/mhvp__properties__schemas__ProviderOut"
                 }
               }
             },

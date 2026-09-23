@@ -21,6 +21,203 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chats */
+        get: operations["list_conversations_api_v1_ai_conversations_get"];
+        put?: never;
+        /** Chat beginnen */
+        post: operations["create_conversation_api_v1_ai_conversations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chat lesen */
+        get: operations["get_conversation_api_v1_ai_conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/conversations/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Nachricht senden
+         * @description Queues the task; the answer arrives as a new chat message when the run is done.
+         */
+        post: operations["send_message_api_v1_ai_conversations__conversation_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/proposals/{proposal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vorschlag lesen */
+        get: operations["get_proposal_api_v1_ai_proposals__proposal_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/proposals/{proposal_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vorschlag übernehmen
+         * @description Creates everything in one transaction; nothing is created before this confirmation.
+         */
+        post: operations["apply_proposal_api_v1_ai_proposals__proposal_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/proposals/{proposal_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Vorschlag verwerfen */
+        post: operations["reject_proposal_api_v1_ai_proposals__proposal_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KI-Anbieter */
+        get: operations["list_providers_api_v1_ai_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/providers/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * KI-Anbieter einrichten
+         * @description Every change withdraws the release: the second person must confirm again.
+         */
+        put: operations["put_provider_api_v1_ai_providers__provider__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/providers/{provider}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** KI-Anbieter freigeben (Vier-Augen) */
+        post: operations["release_provider_api_v1_ai_providers__provider__release_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KI-Lauf lesen */
+        get: operations["get_run_api_v1_ai_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KI-Kosten im laufenden Monat */
+        get: operations["usage_api_v1_ai_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/allocation-key-templates": {
         parameters: {
             query?: never;
@@ -775,6 +972,60 @@ export interface paths {
         get: operations["ready_api_v1_health_ready_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Importläufe */
+        get: operations["list_imports_api_v1_imports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/{import_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Importlauf lesen */
+        get: operations["get_import_api_v1_imports__import_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/{import_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import zurücknehmen
+         * @description Removes what is not bound by later data; kept items carry the reason (10.1 step 5).
+         */
+        post: operations["undo_import_api_v1_imports__import_id__undo_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1802,6 +2053,16 @@ export interface components {
             /** Street */
             street?: string | null;
         };
+        /**
+         * AiProvider
+         * @enum {string}
+         */
+        AiProvider: "anthropic" | "openai";
+        /**
+         * AiTask
+         * @enum {string}
+         */
+        AiTask: "extract_contacts" | "extract_property" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize";
         /** AllocationKeyIn */
         "AllocationKeyIn-Input": {
             /** Code */
@@ -1973,6 +2234,12 @@ export interface components {
             revoked_at: string | null;
             /** Scopes */
             scopes: string[];
+        };
+        /** ApplyIn */
+        ApplyIn: {
+            /** Contacts */
+            contacts?: components["schemas"]["ContactChoice"][] | null;
+            property?: components["schemas"]["PropertyChoice"] | null;
         };
         /** AuditOut */
         AuditOut: {
@@ -2389,6 +2656,29 @@ export interface components {
             /** Source */
             source: string;
         };
+        /** ContactChoice */
+        ContactChoice: {
+            /**
+             * Action
+             * @default create
+             * @enum {string}
+             */
+            action: "create" | "link" | "skip";
+            /**
+             * Contact
+             * @description geänderte Angaben (ContactIn)
+             */
+            contact?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Contact Id
+             * @description bei link: vorhandener Kontakt
+             */
+            contact_id?: string | null;
+            /** Index */
+            index: number;
+        };
         /** ContactIn */
         ContactIn: {
             /** Addresses */
@@ -2746,6 +3036,43 @@ export interface components {
             user_change_fee?: boolean | null;
             vat_option?: components["schemas"]["ContractVatOption"] | null;
         };
+        /** ConversationIn */
+        ConversationIn: {
+            /** Context Id */
+            context_id?: string | null;
+            /**
+             * Context Type
+             * @default global
+             * @enum {string}
+             */
+            context_type: "global" | "property" | "contact";
+            /**
+             * Title
+             * @default Assistent
+             */
+            title: string;
+        };
+        /** ConversationOut */
+        ConversationOut: {
+            /** Context Id */
+            context_id: string | null;
+            /** Context Type */
+            context_type: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Messages */
+            messages?: components["schemas"]["MessageOut"][];
+            /** Title */
+            title: string;
+        };
         /** CustomFieldIn */
         CustomFieldIn: {
             /** Entity Type */
@@ -2800,6 +3127,11 @@ export interface components {
             /** Number */
             number: string;
         };
+        /**
+         * Decision
+         * @enum {string}
+         */
+        Decision: "pending" | "accepted" | "modified" | "rejected";
         /** DeliveryOut */
         DeliveryOut: {
             /** Attempts */
@@ -3249,6 +3581,51 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** ImportItemOut */
+        ImportItemOut: {
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Entity Type */
+            entity_type: string;
+            /** Kept Reason */
+            kept_reason: string | null;
+            /** Sequence */
+            sequence: number;
+            /** Undone */
+            undone: boolean;
+        };
+        /** ImportOut */
+        ImportOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Items */
+            items?: components["schemas"]["ImportItemOut"][];
+            /** Source */
+            source: string;
+            status: components["schemas"]["ImportStatus"];
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+            /** Undone At */
+            undone_at: string | null;
+        };
+        /**
+         * ImportStatus
+         * @enum {string}
+         */
+        ImportStatus: "applied" | "undone" | "partially_undone";
         /**
          * LegalEntityKind
          * @enum {string}
@@ -3574,6 +3951,41 @@ export interface components {
         MemberRoles: {
             /** Role Codes */
             role_codes: string[];
+        };
+        /** MessageIn */
+        MessageIn: {
+            /** Content */
+            content: string;
+            /** Document Ids */
+            document_ids?: string[];
+            /**
+             * Task
+             * @enum {string}
+             */
+            task: "extract_contacts" | "extract_property" | "answer_question" | "summarize";
+        };
+        /** MessageOut */
+        MessageOut: {
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Document Ids */
+            document_ids: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Proposal Id */
+            proposal_id: string | null;
+            /** Role */
+            role: string;
+            /** Task Run Id */
+            task_run_id: string | null;
         };
         /**
          * MeterConnection
@@ -3988,6 +4400,28 @@ export interface components {
          * @enum {string}
          */
         PreferredChannel: "post" | "email" | "portal";
+        /** PropertyChoice */
+        PropertyChoice: {
+            /**
+             * As Of
+             * Format: date
+             * @description Gültig ab für Miteigentumsanteile
+             */
+            as_of: string;
+            /** Management Type */
+            management_type?: ("rental" | "hoa" | "hoa_with_sev") | null;
+            /** Name */
+            name?: string | null;
+            /** Number */
+            number?: string | null;
+            /**
+             * Vat Percent By Payment Type
+             * @description bestätigter Steuersatz je Zahlungsart
+             */
+            vat_percent_by_payment_type?: {
+                [key: string]: number | string;
+            };
+        };
         /** PropertyContactIn */
         PropertyContactIn: {
             /** Category Code */
@@ -4223,78 +4657,33 @@ export interface components {
             /** Street */
             street: string | null;
         };
-        /** ProviderIn */
-        ProviderIn: {
-            /** Categories */
-            categories?: string[];
-            /** Contact Bank Account Id */
-            contact_bank_account_id?: string | null;
-            /**
-             * Contact Id
-             * Format: uuid
-             */
-            contact_id: string;
-            /** Contract Type Code */
-            contract_type_code: string;
-            /**
-             * Create Default Bank Rule
-             * @default false
-             */
-            create_default_bank_rule: boolean;
-            /** Custom Fields */
-            custom_fields?: {
-                [key: string]: unknown;
-            };
-            /** Notes */
-            notes?: string | null;
-            /** Notice Period */
-            notice_period?: string | null;
-            /**
-             * Valid From
-             * Format: date
-             */
-            valid_from: string;
-            /** Valid To */
-            valid_to?: string | null;
-        };
-        /** ProviderOut */
-        ProviderOut: {
-            /** Categories */
-            categories?: string[];
-            /** Contact Bank Account Id */
-            contact_bank_account_id?: string | null;
-            /**
-             * Contact Id
-             * Format: uuid
-             */
-            contact_id: string;
-            /** Contract Type Code */
-            contract_type_code: string;
-            /**
-             * Create Default Bank Rule
-             * @default false
-             */
-            create_default_bank_rule: boolean;
-            /** Custom Fields */
-            custom_fields?: {
-                [key: string]: unknown;
-            };
+        /** ProposalOut */
+        ProposalOut: {
+            /** Context Id */
+            context_id: string | null;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            decision: components["schemas"]["Decision"];
+            /** Entity Type */
+            entity_type: string;
             /**
              * Id
              * Format: uuid
              */
             id: string;
-            /** Notes */
-            notes?: string | null;
-            /** Notice Period */
-            notice_period?: string | null;
+            /** Import Run Id */
+            import_run_id: string | null;
+            /** Proposed */
+            proposed: {
+                [key: string]: unknown;
+            };
             /**
-             * Valid From
-             * Format: date
+             * Task Run Id
+             * Format: uuid
              */
-            valid_from: string;
-            /** Valid To */
-            valid_to?: string | null;
+            task_run_id: string;
         };
         /** ReadingIn */
         ReadingIn: {
@@ -4475,6 +4864,44 @@ export interface components {
             /** Permissions */
             permissions: string[];
         };
+        /** RunOut */
+        RunOut: {
+            /** Confidence */
+            confidence: string | null;
+            /** Cost Eur */
+            cost_eur: string;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Error */
+            error: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Model */
+            model: string | null;
+            /** Output */
+            output: {
+                [key: string]: unknown;
+            } | null;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            provider: components["schemas"]["AiProvider"] | null;
+            status: components["schemas"]["RunStatus"];
+            task: components["schemas"]["AiTask"];
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+        };
+        /**
+         * RunStatus
+         * @enum {string}
+         */
+        RunStatus: "queued" | "running" | "succeeded" | "failed" | "blocked";
         /** ScheduleIn */
         ScheduleIn: {
             /**
@@ -4690,6 +5117,15 @@ export interface components {
          * @enum {string}
          */
         TextStatus: "extracted" | "pending" | "none";
+        /** TierModel */
+        TierModel: {
+            /** Input Eur Per Mtok */
+            input_eur_per_mtok: number | string;
+            /** Model */
+            model: string;
+            /** Output Eur Per Mtok */
+            output_eur_per_mtok: number | string;
+        };
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -4830,6 +5266,23 @@ export interface components {
          * @enum {string}
          */
         UnitType: "apartment" | "commercial" | "office" | "parking" | "garage" | "storage" | "garden" | "other";
+        /** UsageOut */
+        UsageOut: {
+            /** Blocked */
+            blocked: boolean;
+            /** Budget Eur */
+            budget_eur: string;
+            /** By Task */
+            by_task: {
+                [key: string]: string;
+            };
+            /** Month */
+            month: string;
+            /** Spent Eur */
+            spent_eur: string;
+            /** Warning */
+            warning: boolean;
+        };
         /** UserCreate */
         UserCreate: {
             /** Display Name */
@@ -4950,6 +5403,73 @@ export interface components {
             active?: boolean | null;
             /** Event Types */
             event_types?: string[] | null;
+        };
+        /** ProviderIn */
+        mhvp__ai__schemas__ProviderIn: {
+            /**
+             * Api Key
+             * @description nur schreibbar
+             */
+            api_key?: string | null;
+            /**
+             * Data Processing Agreement Signed
+             * @default false
+             */
+            data_processing_agreement_signed: boolean;
+            /** Dpa Document Id */
+            dpa_document_id?: string | null;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /** Endpoint Region */
+            endpoint_region?: string | null;
+            /** Models */
+            models?: {
+                [key: string]: components["schemas"]["TierModel"];
+            };
+            /** Monthly Budget Eur */
+            monthly_budget_eur: number | string;
+            /** Task Tiers */
+            task_tiers?: {
+                [key: string]: "small" | "large";
+            };
+            /**
+             * Training Opt Out Confirmed
+             * @default false
+             */
+            training_opt_out_confirmed: boolean;
+        };
+        /** ProviderOut */
+        mhvp__ai__schemas__ProviderOut: {
+            /** Data Processing Agreement Signed */
+            data_processing_agreement_signed: boolean;
+            /** Dpa Document Id */
+            dpa_document_id: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Endpoint Region */
+            endpoint_region: string | null;
+            /** Has Api Key */
+            has_api_key: boolean;
+            /** Models */
+            models: {
+                [key: string]: unknown;
+            };
+            /** Monthly Budget Eur */
+            monthly_budget_eur: string;
+            provider: components["schemas"]["AiProvider"];
+            /** Released At */
+            released_at: string | null;
+            /** Released By */
+            released_by: string | null;
+            /** Task Tiers */
+            task_tiers: {
+                [key: string]: string;
+            };
+            /** Training Opt Out Confirmed */
+            training_opt_out_confirmed: boolean;
         };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
@@ -5077,6 +5597,79 @@ export interface components {
             /** Valid To */
             valid_to: string | null;
         };
+        /** ProviderIn */
+        mhvp__properties__schemas__ProviderIn: {
+            /** Categories */
+            categories?: string[];
+            /** Contact Bank Account Id */
+            contact_bank_account_id?: string | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Contract Type Code */
+            contract_type_code: string;
+            /**
+             * Create Default Bank Rule
+             * @default false
+             */
+            create_default_bank_rule: boolean;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
+            /** Notes */
+            notes?: string | null;
+            /** Notice Period */
+            notice_period?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** ProviderOut */
+        mhvp__properties__schemas__ProviderOut: {
+            /** Categories */
+            categories?: string[];
+            /** Contact Bank Account Id */
+            contact_bank_account_id?: string | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Contract Type Code */
+            contract_type_code: string;
+            /**
+             * Create Default Bank Rule
+             * @default false
+             */
+            create_default_bank_rule: boolean;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Notes */
+            notes?: string | null;
+            /** Notice Period */
+            notice_period?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -5104,6 +5697,371 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    list_conversations_api_v1_ai_conversations_get: {
+        parameters: {
+            query?: {
+                context_type?: string | null;
+                context_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_conversation_api_v1_ai_conversations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_conversation_api_v1_ai_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_message_api_v1_ai_conversations__conversation_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_proposal_api_v1_ai_proposals__proposal_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_proposal_api_v1_ai_proposals__proposal_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_proposal_api_v1_ai_proposals__proposal_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_providers_api_v1_ai_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__ai__schemas__ProviderOut"][];
+                };
+            };
+        };
+    };
+    put_provider_api_v1_ai_providers__provider__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["AiProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__ai__schemas__ProviderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__ai__schemas__ProviderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    release_provider_api_v1_ai_providers__provider__release_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["AiProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__ai__schemas__ProviderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_api_v1_ai_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    usage_api_v1_ai_usage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageOut"];
                 };
             };
         };
@@ -6986,6 +7944,88 @@ export interface operations {
             };
         };
     };
+    list_imports_api_v1_imports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportOut"][];
+                };
+            };
+        };
+    };
+    get_import_api_v1_imports__import_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_import_api_v1_imports__import_id__undo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_letter_api_v1_letters_post: {
         parameters: {
             query?: never;
@@ -8205,7 +9245,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProviderOut"][];
+                    "application/json": components["schemas"]["mhvp__properties__schemas__ProviderOut"][];
                 };
             };
             /** @description Validation Error */
@@ -8230,7 +9270,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ProviderIn"];
+                "application/json": components["schemas"]["mhvp__properties__schemas__ProviderIn"];
             };
         };
         responses: {
@@ -8240,7 +9280,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProviderOut"];
+                    "application/json": components["schemas"]["mhvp__properties__schemas__ProviderOut"];
                 };
             };
             /** @description Validation Error */

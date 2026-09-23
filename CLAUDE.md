@@ -160,7 +160,8 @@ Rule 0.1.12 and section 17:
 | `make db-bootstrap` | run `infra/postgres/bootstrap.sh` against `PGHOST` |
 | `make agent-docs` | regenerate `CLAUDE.md` and `AGENTS.md` from this file |
 | `make seed` | tenants HVM and Timo Müller from `mhvp/tenant/seeds` (optional first admin via `MHVP_SEED_ADMIN_*`) |
-| `make ai-eval`, `make deploy`, `make backup-verify` | not yet available (M7/M9), exit 2 |
+| `make ai-eval` | offline AI evaluation with recorded answers (`tests/ai_eval`) |
+| `make deploy`, `make backup-verify` | not yet available (M9), exit 2 |
 
 ## 13. Repository map
 

@@ -64,7 +64,7 @@ def configure_logging(settings: Settings) -> None:
     access.disabled = True
 
     # HTTP client libraries log full URLs including query strings at INFO level.
-    for name in ("httpx", "httpcore", "botocore", "urllib3"):
+    for name in ("httpx", "httpx2", "httpcore", "httpcore2", "anthropic", "botocore", "urllib3"):
         logging.getLogger(name).setLevel(max(logging.WARNING, root.level))
 
 

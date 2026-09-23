@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     s3_secret_access_key: SecretStr | None = None
     s3_bucket: str = "mhvp"
     # Upload limit per document (A-016); larger files go through import runs later.
+    # Run AI tasks inside the request instead of the worker (development and tests only).
+    ai_inline: bool = False
     document_max_bytes: int = Field(default=50 * 1024 * 1024, gt=0, le=1024 * 1024 * 1024)
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
@@ -84,6 +86,8 @@ class Settings(BaseSettings):
             )
         if self.webhook_allow_private_targets:
             raise ValueError("MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS must be false in staging and prod")
+        if self.ai_inline:
+            raise ValueError("MHVP_AI_INLINE must be false in staging and prod")
         for name, value in self.__dict__.items():
             if isinstance(value, SecretStr) and PLACEHOLDER_SECRET in value.get_secret_value():
                 raise ValueError(f"MHVP_{name.upper()} still contains the .env.example placeholder")

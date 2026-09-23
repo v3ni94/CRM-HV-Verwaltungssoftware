@@ -14,6 +14,7 @@ from mhvp.platform.models import MembershipRole, Role, RolePermission
 
 ACTIONS: tuple[str, ...] = ("read", "create", "update", "delete", "approve", "export")
 RESOURCES: tuple[str, ...] = (
+    "ai",
     "contacts",
     "contracts",
     "documents",
@@ -56,8 +57,9 @@ _MASTER_RWD = (
     | _rw("properties", delete=True)
     | _rw("contracts", delete=True)
     | _rw("documents", delete=True)
+    | _rw("ai", delete=True)
 )
-_MASTER_RW = _rw("contacts") | _rw("properties") | _rw("contracts") | _rw("documents")
+_MASTER_RW = _rw("contacts") | _rw("properties") | _rw("contracts") | _rw("documents") | _rw("ai")
 _MASTER_R = _r("contacts") | _r("properties") | _r("contracts") | _r("documents")
 
 SYSTEM_ROLES: tuple[SystemRole, ...] = (

@@ -24,7 +24,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
         "mhvp",
         broker=settings.celery_broker_url.get_secret_value(),
         backend=backend.get_secret_value() if backend else None,
-        include=["mhvp.core.tasks", "mhvp.core.webhook_tasks", "mhvp.documents.tasks"],
+        include=[
+            "mhvp.core.tasks",
+            "mhvp.core.webhook_tasks",
+            "mhvp.documents.tasks",
+            "mhvp.ai.jobs",
+        ],
     )
     app.conf.update(
         task_queues=[Queue(name) for name in QUEUES],
