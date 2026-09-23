@@ -25573,6 +25573,52 @@
       }
     },
     "/api/v1/hoa/meetings": {
+      "get": {
+        "operationId": "list_meetings_api_v1_hoa_meetings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "legal_entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Legal Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Meetings Api V1 Hoa Meetings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Versammlungen einer GdWE",
+        "tags": [
+          "hoa"
+        ]
+      },
       "post": {
         "operationId": "create_meeting_api_v1_hoa_meetings_post",
         "requestBody": {
@@ -25610,6 +25656,51 @@
           }
         },
         "summary": "Eigentümerversammlung anlegen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/meetings/{meeting_id}": {
+      "get": {
+        "operationId": "get_meeting_api_v1_hoa_meetings__meeting_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Meeting Api V1 Hoa Meetings  Meeting Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Versammlung mit Tagesordnung und Anwesenheit",
         "tags": [
           "hoa"
         ]
@@ -25781,6 +25872,52 @@
       }
     },
     "/api/v1/hoa/plans": {
+      "get": {
+        "operationId": "list_plans_api_v1_hoa_plans_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Plans Api V1 Hoa Plans Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wirtschaftspläne eines Buchungskreises",
+        "tags": [
+          "WEG"
+        ]
+      },
       "post": {
         "operationId": "create_plan_api_v1_hoa_plans_post",
         "requestBody": {
@@ -25818,6 +25955,51 @@
           }
         },
         "summary": "Wirtschaftsplan (Entwurf)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/plans/{plan_id}": {
+      "get": {
+        "operationId": "get_plan_api_v1_hoa_plans__plan_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Plan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Plan Api V1 Hoa Plans  Plan Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wirtschaftsplan mit Positionen",
         "tags": [
           "WEG"
         ]
@@ -26169,6 +26351,52 @@
       }
     },
     "/api/v1/hoa/statements": {
+      "get": {
+        "operationId": "list_hoa_statements_api_v1_hoa_statements_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Hoa Statements Api V1 Hoa Statements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hausgeldabrechnungen eines Buchungskreises",
+        "tags": [
+          "WEG"
+        ]
+      },
       "post": {
         "operationId": "create_statement_api_v1_hoa_statements_post",
         "requestBody": {
@@ -26206,6 +26434,51 @@
           }
         },
         "summary": "Hausgeldabrechnung (Entwurf)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/statements/{statement_id}": {
+      "get": {
+        "operationId": "get_hoa_statement_api_v1_hoa_statements__statement_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Hoa Statement Api V1 Hoa Statements  Statement Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hausgeldabrechnung mit Kostenpositionen",
         "tags": [
           "WEG"
         ]

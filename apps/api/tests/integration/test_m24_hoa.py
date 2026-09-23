@@ -413,4 +413,11 @@ def test_hoa_statement_d01_d03(clients: tuple[TestClient, TestClient], world: Wo
     assert pu["02"]["annual"] == {"hoa_fee": "2500.00", "reserve": "545.45"}
     assert pu["02"]["monthly"]["hoa_fee"] == "208.33"
     assert pu["02"]["rounding_difference"]["hoa_fee"] == "0.04"
+    assert plan["id"] in {
+        x["id"] for x in _ok(client.get(f"{H}/plans", params={"ledger_id": ledger}, headers=h))
+    }
+    assert len(_ok(client.get(f"{H}/plans/{plan['id']}", headers=h))["items"]) == 2
+    sts = _ok(client.get(f"{H}/statements", params={"ledger_id": ledger}, headers=h))
+    assert {sid, v2["id"]} <= {x["id"] for x in sts}
+    assert len(_ok(client.get(f"{H}/statements/{v2['id']}", headers=h))["cost_items"]) == 1
     assert client.post(f"{H}/plans/{plan['id']}/apply", headers=h).status_code == 409

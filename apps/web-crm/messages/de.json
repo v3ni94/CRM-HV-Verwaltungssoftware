@@ -857,5 +857,105 @@
       "posted": "gebucht",
       "locked": "gesperrt"
     }
+  },
+  "HoaWork": {
+    "noLedger": "Für die Gemeinschaft ist noch kein Buchungskreis angelegt.",
+    "plans": "Wirtschaftspläne",
+    "statements": "Hausgeldabrechnungen",
+    "meetings": "Versammlungen",
+    "year": "Jahr",
+    "scheduledAt": "Termin",
+    "create": {
+      "plan": "Plan anlegen",
+      "statement": "Abrechnung anlegen",
+      "meeting": "Versammlung anlegen"
+    },
+    "label": "Bezeichnung",
+    "amount": "Betrag",
+    "key": "Schlüssel",
+    "component": "Komponente",
+    "components": {
+      "hoa_fee": "Hausgeld",
+      "reserve": "Erhaltungsrücklage"
+    },
+    "basis": "Grundlage",
+    "addItem": "Position hinzufügen",
+    "calculate": "Berechnen",
+    "approveInternal": "Intern freigeben (zweite Person)",
+    "decidedOn": "Beschlussdatum",
+    "recordResolution": "Beschluss zu diesem Stand erfassen",
+    "resolutionSubject": {
+      "plan": "Wirtschaftsplan",
+      "statement": "Jahresabrechnung"
+    },
+    "resolutionWording": {
+      "plan": "Der Wirtschaftsplan wird in der vorliegenden Fassung beschlossen.",
+      "statement": "Die Abrechnungsspitzen und Anpassungen werden in der vorliegenden Fassung beschlossen."
+    },
+    "apply": "Vorschüsse übernehmen",
+    "confirmApply": "Beschlossene Vorschüsse als Vertragszahlungen übernehmen?",
+    "issue": "Ausgeben",
+    "due": "Fällig stellen",
+    "post": "Ergebnis buchen",
+    "confirmPost": "Abrechnungsergebnis jetzt buchen? Korrektur nur per Storno.",
+    "newVersion": "Neue Version",
+    "plan": "Wirtschaftsplan",
+    "statement": "Hausgeldabrechnung",
+    "unit": "Einheit",
+    "annualFee": "Hausgeld jährlich",
+    "monthlyFee": "Hausgeld monatlich",
+    "annualReserve": "Rücklage jährlich",
+    "monthlyReserve": "Rücklage monatlich",
+    "statementNotice": "Abrechnungsspitze gegen beschlossene Vorschüsse. Rückstände bleiben eigene Forderungen; der Gesamtbetrag ist nur Information. Ausgabe und Buchung erst mit Freigabestufe G4.",
+    "costShare": "Kostenanteil",
+    "advancesResolved": "Vorschüsse Soll",
+    "result": "Spitze / Anpassung",
+    "arrears": "Rückstand",
+    "information": "Information",
+    "reserveLine": "Rücklage: Anfang {opening} + eingegangen {paid} − Entnahmen {withdrawals} + Zinsen {interest} = {closing}; offene Beiträge {open} (nicht verfügbar)",
+    "meeting": "Versammlung",
+    "meetingNotice": "Die Auszählung ist ein Vorschlag. Maßgeblich ist die Verkündung. Qualifizierte Mehrheiten werden nicht automatisch ausgewertet.",
+    "represented": "{n} vertreten, davon {proxies} per Vollmacht",
+    "invitedOn": "eingeladen am {date}",
+    "principle": {
+      "head": "Kopfprinzip",
+      "mea": "Miteigentumsanteile",
+      "unit": "Objektprinzip"
+    },
+    "meetingStatus": {
+      "planned": "geplant",
+      "invited": "eingeladen",
+      "held": "eröffnet",
+      "closed": "geschlossen"
+    },
+    "announced": "Beschluss Nr. {number}: {status}",
+    "tally": "Auszählen",
+    "votes": "Ja {yes} · Nein {no} · Enthaltung {abstain}",
+    "manualCheck": "Mehrheit manuell prüfen",
+    "announce": "Verkünden: {outcome}",
+    "confirmAnnounce": "Ergebnis verkünden und in die Beschluss-Sammlung übernehmen?",
+    "majorityBasis": "Mehrheitsgrundlage",
+    "simpleMajority": "Einfache Mehrheit der abgegebenen Stimmen",
+    "resolutionStatus": {
+      "positive": "angenommen",
+      "negative": "abgelehnt"
+    },
+    "agendaTitle": "Tagesordnungspunkt",
+    "proposal": "Beschlussvorschlag",
+    "addAgenda": "TOP hinzufügen",
+    "invitedAt": "Einladung versandt am",
+    "urgency": "Dringlichkeit (nur bei verkürzter Frist)",
+    "invite": "Einladung erfassen",
+    "status": {
+      "draft": "Entwurf",
+      "calculated": "berechnet",
+      "internally_approved": "intern freigegeben",
+      "board_reviewed": "Beirat geprüft",
+      "resolved": "beschlossen",
+      "issued": "ausgegeben",
+      "due": "fällig",
+      "posted": "gebucht",
+      "locked": "gesperrt"
+    }
   }
 }

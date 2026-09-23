@@ -643,3 +643,80 @@ async def new_version(
             )
         await session.flush()
         return _st_out(new)
+
+
+# Read endpoints for the CRM screens -------------------------------------------------------
+
+
+@router.get("/plans", summary="Wirtschaftspläne eines Buchungskreises")
+async def list_plans(
+    ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(
+            select(EconomicPlan)
+            .where(EconomicPlan.ledger_id == ledger_id)
+            .order_by(EconomicPlan.year.desc(), EconomicPlan.version.desc())
+        )
+        return [_plan_out(p) | {"snapshot": None} for p in rows.all()]
+
+
+@router.get("/plans/{plan_id}", summary="Wirtschaftsplan mit Positionen")
+async def get_plan(
+    plan_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        plan = await session.get(EconomicPlan, plan_id)
+        if plan is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        items = (await session.scalars(select(PlanItem).where(PlanItem.plan_id == plan.id))).all()
+        return _plan_out(plan) | {
+            "items": [
+                {
+                    "id": i.id,
+                    "label": i.label,
+                    "component": i.component,
+                    "amount": i.amount,
+                    "allocation_key_id": i.allocation_key_id,
+                }
+                for i in items
+            ]
+        }
+
+
+@router.get("/statements", summary="Hausgeldabrechnungen eines Buchungskreises")
+async def list_hoa_statements(
+    ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(
+            select(HoaStatement)
+            .where(HoaStatement.ledger_id == ledger_id)
+            .order_by(HoaStatement.year.desc(), HoaStatement.version.desc())
+        )
+        return [_st_out(s) | {"snapshot": None} for s in rows.all()]
+
+
+@router.get("/statements/{statement_id}", summary="Hausgeldabrechnung mit Kostenpositionen")
+async def get_hoa_statement(
+    statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(HoaStatement, statement_id)
+        if st is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        items = (
+            await session.scalars(select(HoaCostItem).where(HoaCostItem.statement_id == st.id))
+        ).all()
+        return _st_out(st) | {
+            "cost_items": [
+                {
+                    "id": i.id,
+                    "label": i.label,
+                    "amount": i.amount,
+                    "basis": i.basis,
+                    "allocation_key_id": i.allocation_key_id,
+                }
+                for i in items
+            ]
+        }

@@ -210,5 +210,105 @@
       "posted": "Posted",
       "locked": "Locked"
     }
+  },
+  "HoaWork": {
+    "noLedger": "No ledger exists for this community yet.",
+    "plans": "Economic plans",
+    "statements": "HOA statements",
+    "meetings": "Meetings",
+    "year": "Year",
+    "scheduledAt": "Date",
+    "create": {
+      "plan": "Create plan",
+      "statement": "Create statement",
+      "meeting": "Create meeting"
+    },
+    "label": "Label",
+    "amount": "Amount",
+    "key": "Key",
+    "component": "Component",
+    "components": {
+      "hoa_fee": "HOA fee",
+      "reserve": "Reserve"
+    },
+    "basis": "Basis",
+    "addItem": "Add item",
+    "calculate": "Calculate",
+    "approveInternal": "Approve internally (second person)",
+    "decidedOn": "Resolution date",
+    "recordResolution": "Record resolution for this version",
+    "resolutionSubject": {
+      "plan": "Economic plan",
+      "statement": "Annual statement"
+    },
+    "resolutionWording": {
+      "plan": "The economic plan is resolved as presented.",
+      "statement": "The settlement amounts are resolved as presented."
+    },
+    "apply": "Apply advances",
+    "confirmApply": "Apply resolved advances as contract payments?",
+    "issue": "Issue",
+    "due": "Set due",
+    "post": "Post result",
+    "confirmPost": "Post the result now? Corrections only by reversal.",
+    "newVersion": "New version",
+    "plan": "Economic plan",
+    "statement": "HOA statement",
+    "unit": "Unit",
+    "annualFee": "Fee per year",
+    "monthlyFee": "Fee per month",
+    "annualReserve": "Reserve per year",
+    "monthlyReserve": "Reserve per month",
+    "statementNotice": "Result against resolved advances. Arrears stay separate claims; the total is information only. Issuing and posting need release gate G4.",
+    "costShare": "Cost share",
+    "advancesResolved": "Advances due",
+    "result": "Result",
+    "arrears": "Arrears",
+    "information": "Information",
+    "reserveLine": "Reserve: opening {opening} + received {paid} − withdrawals {withdrawals} + interest {interest} = {closing}; open contributions {open} (not available)",
+    "meeting": "Meeting",
+    "meetingNotice": "The tally is a proposal. The announcement is authoritative. Qualified majorities are not evaluated automatically.",
+    "represented": "{n} represented, {proxies} by proxy",
+    "invitedOn": "invited on {date}",
+    "principle": {
+      "head": "Head principle",
+      "mea": "Ownership shares",
+      "unit": "Unit principle"
+    },
+    "meetingStatus": {
+      "planned": "planned",
+      "invited": "invited",
+      "held": "opened",
+      "closed": "closed"
+    },
+    "announced": "Resolution no. {number}: {status}",
+    "tally": "Tally",
+    "votes": "Yes {yes} · No {no} · Abstain {abstain}",
+    "manualCheck": "check majority manually",
+    "announce": "Announce: {outcome}",
+    "confirmAnnounce": "Announce the result and add it to the resolution collection?",
+    "majorityBasis": "Majority basis",
+    "simpleMajority": "Simple majority of votes cast",
+    "resolutionStatus": {
+      "positive": "passed",
+      "negative": "rejected"
+    },
+    "agendaTitle": "Agenda item",
+    "proposal": "Proposal",
+    "addAgenda": "Add item",
+    "invitedAt": "Invitation sent on",
+    "urgency": "Urgency (only for shorter notice)",
+    "invite": "Record invitation",
+    "status": {
+      "draft": "Draft",
+      "calculated": "Calculated",
+      "internally_approved": "Internally approved",
+      "board_reviewed": "Board reviewed",
+      "resolved": "Resolved",
+      "issued": "Issued",
+      "due": "Due",
+      "posted": "Posted",
+      "locked": "Locked"
+    }
   }
 }

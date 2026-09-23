@@ -59,6 +59,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Operating cost statements (M17): drafting and status steps; issuing needs G3 (API).
   { method: "POST", pattern: /^statements$/ },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/(cost-items|calculate|transition|new-version)$`) },
+  // HOA (M24, M25): drafts, calculation, resolution bound to the snapshot, meeting steps.
+  // Issuing, due and posting of statements need G4 (checked by the API).
+  { method: "POST", pattern: /^hoa\/(plans|statements|meetings|resolutions)$/ },
+  { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/(items|calculate|transition|apply)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(costs|calculate|transition|post|new-version)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite)$`) },
+  { method: "GET", pattern: new RegExp(`^hoa/agenda/${ID}/tally$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/announce$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];

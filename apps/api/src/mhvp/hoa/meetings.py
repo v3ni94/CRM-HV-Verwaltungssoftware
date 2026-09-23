@@ -688,3 +688,60 @@ async def outdate_audit_items(session: AsyncSession, statement_id: uuid.UUID) ->
         .where(AuditItem.engagement_id.in_(engagements), AuditItem.status != "outdated")
         .values(status="outdated")
     )
+
+
+@router.get("/meetings", summary="Versammlungen einer GdWE")
+async def list_meetings(
+    legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(
+            select(Meeting)
+            .where(Meeting.legal_entity_id == legal_entity_id)
+            .order_by(Meeting.scheduled_at.desc())
+        )
+        return [_meeting_out(m) for m in rows.all()]
+
+
+@router.get("/meetings/{meeting_id}", summary="Versammlung mit Tagesordnung und Anwesenheit")
+async def get_meeting(
+    meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        items = (
+            await session.scalars(
+                select(AgendaItem)
+                .where(AgendaItem.meeting_id == meeting.id)
+                .order_by(AgendaItem.position)
+            )
+        ).all()
+        attendance = (
+            await session.scalars(select(Attendance).where(Attendance.meeting_id == meeting.id))
+        ).all()
+        announced = {
+            r.subject_id: {"id": r.id, "number": r.number, "status": r.status}
+            for r in (
+                await session.scalars(
+                    select(Resolution).where(
+                        Resolution.subject_type == "agenda_item",
+                        Resolution.subject_id.in_([i.id for i in items] or [uuid.uuid4()]),
+                    )
+                )
+            ).all()
+        }
+        return _meeting_out(meeting) | {
+            "agenda": [
+                {
+                    "id": i.id,
+                    "position": i.position,
+                    "title": i.title,
+                    "proposal": i.proposal,
+                    "majority": i.majority,
+                    "resolution": announced.get(i.id),
+                }
+                for i in items
+            ],
+            "represented": sum(1 for a in attendance if a.present or a.proxy_contact_id),
+            "proxies": sum(1 for a in attendance if a.proxy_contact_id),
+        }
