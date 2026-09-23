@@ -174,6 +174,164 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/consents/{consent_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Einwilligung widerrufen */
+        post: operations["revoke_consent_api_v1_consents__consent_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kontakte suchen und auflisten */
+        get: operations["list_contacts_api_v1_contacts_get"];
+        put?: never;
+        /** Kontakt anlegen */
+        post: operations["create_contact_api_v1_contacts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dublettenvorschläge für neue Angaben */
+        get: operations["duplicates_api_v1_contacts_duplicates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kontakt lesen */
+        get: operations["get_contact_api_v1_contacts__contact_id__get"];
+        /** Kontakt ändern (vollständig) */
+        put: operations["replace_contact_api_v1_contacts__contact_id__put"];
+        post?: never;
+        /** Kontakt löschen (weich) */
+        delete: operations["delete_contact_api_v1_contacts__contact_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Einwilligungen */
+        get: operations["list_consents_api_v1_contacts__contact_id__consents_get"];
+        put?: never;
+        /** Einwilligung erfassen */
+        post: operations["add_consent_api_v1_contacts__contact_id__consents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dublettenvorschläge zu einem Kontakt */
+        get: operations["contact_duplicates_api_v1_contacts__contact_id__duplicates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** DSGVO-Auskunft (Entwurf zur Prüfung) */
+        get: operations["export_contact_api_v1_contacts__contact_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notizen */
+        get: operations["list_notes_api_v1_contacts__contact_id__notes_get"];
+        put?: never;
+        /** Notiz anlegen */
+        post: operations["add_note_api_v1_contacts__contact_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Beziehung anlegen */
+        post: operations["add_relation_api_v1_contacts__contact_id__relations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health/live": {
         parameters: {
             query?: never;
@@ -276,6 +434,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/parties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Parteien eines Kontakts */
+        get: operations["list_parties_api_v1_parties_get"];
+        put?: never;
+        /** Vertragspartei anlegen */
+        post: operations["create_party_api_v1_parties_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/parties/{party_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vertragspartei lesen */
+        get: operations["get_party_api_v1_parties__party_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/tenants": {
         parameters: {
             query?: never;
@@ -356,6 +549,23 @@ export interface paths {
         put?: never;
         /** Benutzer anlegen */
         post: operations["create_platform_user_api_v1_platform_users_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Globale Suche (Strg+K) */
+        get: operations["global_search_api_v1_search_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -663,6 +873,66 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AddressIn */
+        AddressIn: {
+            /** Addition */
+            addition?: string | null;
+            /** City */
+            city?: string | null;
+            /**
+             * Country
+             * @default DE
+             */
+            country: string;
+            /** House Number */
+            house_number?: string | null;
+            /**
+             * Is Primary
+             * @default false
+             */
+            is_primary: boolean;
+            /** @default postal */
+            label: components["schemas"]["AddressLabel"];
+            /** Postal Code */
+            postal_code?: string | null;
+            /** Street */
+            street?: string | null;
+        };
+        /**
+         * AddressLabel
+         * @enum {string}
+         */
+        AddressLabel: "postal" | "private" | "work" | "public";
+        /** AddressOut */
+        AddressOut: {
+            /** Addition */
+            addition?: string | null;
+            /** City */
+            city?: string | null;
+            /**
+             * Country
+             * @default DE
+             */
+            country: string;
+            /** House Number */
+            house_number?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Is Primary
+             * @default false
+             */
+            is_primary: boolean;
+            /** @default postal */
+            label: components["schemas"]["AddressLabel"];
+            /** Postal Code */
+            postal_code?: string | null;
+            /** Street */
+            street?: string | null;
+        };
         /** ApiKeyCreate */
         ApiKeyCreate: {
             /** Expires At */
@@ -744,6 +1014,51 @@ export interface components {
              * Format: date-time
              */
             occurred_at: string;
+        };
+        /** BankAccountIn */
+        BankAccountIn: {
+            /** Bank Name */
+            bank_name?: string | null;
+            /** Bic */
+            bic?: string | null;
+            /** Holder */
+            holder?: string | null;
+            /** Iban */
+            iban: string;
+            /** Label */
+            label?: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** BankAccountOut */
+        BankAccountOut: {
+            /** Bank Name */
+            bank_name: string | null;
+            /** Bic */
+            bic: string | null;
+            /** Holder */
+            holder: string | null;
+            /** Iban Masked */
+            iban_masked: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
         };
         /** Body_token_api_v1_oidc_token_post */
         Body_token_api_v1_oidc_token_post: {
@@ -842,6 +1157,216 @@ export interface components {
             /** Website */
             website?: string | null;
         };
+        /**
+         * Completeness
+         * @enum {string}
+         */
+        Completeness: "complete" | "incomplete";
+        /** ConsentIn */
+        ConsentIn: {
+            /** Document Id */
+            document_id?: string | null;
+            /**
+             * Granted At
+             * Format: date-time
+             */
+            granted_at: string;
+            kind: components["schemas"]["ConsentKind"];
+            /** Source */
+            source: string;
+        };
+        /**
+         * ConsentKind
+         * @enum {string}
+         */
+        ConsentKind: "data_sharing" | "portal_terms" | "email_delivery" | "marketing";
+        /** ConsentOut */
+        ConsentOut: {
+            /** Document Id */
+            document_id?: string | null;
+            /**
+             * Granted At
+             * Format: date-time
+             */
+            granted_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["ConsentKind"];
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Source */
+            source: string;
+        };
+        /** ContactIn */
+        ContactIn: {
+            /** Addresses */
+            addresses?: components["schemas"]["AddressIn"][];
+            /** Bank Accounts */
+            bank_accounts?: components["schemas"]["BankAccountIn"][];
+            /**
+             * Blocked
+             * @default false
+             */
+            blocked: boolean;
+            /** Company Name */
+            company_name?: string | null;
+            /** @default complete */
+            completeness: components["schemas"]["Completeness"];
+            /** Date Of Birth */
+            date_of_birth?: string | null;
+            /** Emails */
+            emails?: components["schemas"]["EmailIn"][];
+            /** External Ids */
+            external_ids?: {
+                [key: string]: string;
+            };
+            /** First Name */
+            first_name?: string | null;
+            /** Identifiers */
+            identifiers?: components["schemas"]["IdentifierIn"][];
+            kind: components["schemas"]["ContactKind"];
+            /**
+             * Language
+             * @default de
+             */
+            language: string;
+            /** Last Name */
+            last_name?: string | null;
+            /** Legal Form */
+            legal_form?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Phones */
+            phones?: components["schemas"]["PhoneIn"][];
+            /** Position */
+            position?: string | null;
+            preferred_channel?: components["schemas"]["PreferredChannel"] | null;
+            /** Salutation */
+            salutation?: string | null;
+            /** Tags */
+            tags?: string[];
+            /** Title */
+            title?: string | null;
+            /** Types */
+            types?: components["schemas"]["ContactTypeCode"][];
+        };
+        /**
+         * ContactKind
+         * @enum {string}
+         */
+        ContactKind: "person" | "company";
+        /** ContactOut */
+        ContactOut: {
+            /** Addresses */
+            addresses: components["schemas"]["AddressOut"][];
+            /** Bank Accounts */
+            bank_accounts: components["schemas"]["BankAccountOut"][];
+            /** Blocked */
+            blocked: boolean;
+            /** Company Name */
+            company_name: string | null;
+            completeness: components["schemas"]["Completeness"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Date Of Birth */
+            date_of_birth: string | null;
+            /** Deleted At */
+            deleted_at: string | null;
+            /** Display Name */
+            display_name: string;
+            /** Emails */
+            emails: components["schemas"]["EmailOut"][];
+            /** External Ids */
+            external_ids: {
+                [key: string]: string;
+            };
+            /** First Name */
+            first_name: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Identifiers */
+            identifiers: components["schemas"]["IdentifierOut"][];
+            kind: components["schemas"]["ContactKind"];
+            /** Language */
+            language: string;
+            /** Last Name */
+            last_name: string | null;
+            /** Legal Form */
+            legal_form: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Phones */
+            phones: components["schemas"]["PhoneOut"][];
+            /** Position */
+            position: string | null;
+            preferred_channel: components["schemas"]["PreferredChannel"] | null;
+            /** Salutation */
+            salutation: string | null;
+            /** Tags */
+            tags: string[];
+            /** Title */
+            title: string | null;
+            /** Types */
+            types: components["schemas"]["ContactTypeCode"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /** ContactPage */
+        ContactPage: {
+            /** Items */
+            items: components["schemas"]["ContactSummary"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** ContactSummary */
+        ContactSummary: {
+            /** Blocked */
+            blocked: boolean;
+            /** City */
+            city: string | null;
+            completeness: components["schemas"]["Completeness"];
+            /** Deleted */
+            deleted: boolean;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["ContactKind"];
+            /** Primary Email */
+            primary_email: string | null;
+            /** Primary Phone */
+            primary_phone: string | null;
+            /** Tags */
+            tags: string[];
+            /** Types */
+            types: components["schemas"]["ContactTypeCode"][];
+        };
+        /**
+         * ContactTypeCode
+         * @enum {string}
+         */
+        ContactTypeCode: "tenant" | "prospect" | "owner" | "service_provider" | "broker" | "manager" | "bank" | "board_member" | "authority" | "other";
         /** DeliveryOut */
         DeliveryOut: {
             /** Attempts */
@@ -866,6 +1391,53 @@ export interface components {
             next_attempt_at: string | null;
             /** Status */
             status: string;
+        };
+        /** DuplicateCandidate */
+        DuplicateCandidate: {
+            contact: components["schemas"]["ContactSummary"];
+            /** Reasons */
+            reasons: string[];
+            /** Score */
+            score: number;
+        };
+        /** EmailIn */
+        EmailIn: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Is Portal Login
+             * @default false
+             */
+            is_portal_login: boolean;
+            /**
+             * Is Primary
+             * @default false
+             */
+            is_primary: boolean;
+            /**
+             * Label
+             * @default work
+             */
+            label: string;
+        };
+        /** EmailOut */
+        EmailOut: {
+            /** Email */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Portal Login */
+            is_portal_login: boolean;
+            /** Is Primary */
+            is_primary: boolean;
+            /** Label */
+            label: string;
         };
         /** EventOut */
         EventOut: {
@@ -968,6 +1540,28 @@ export interface components {
             status: components["schemas"]["CheckStatus"];
             /** Version */
             version: string;
+        };
+        /** IdentifierIn */
+        IdentifierIn: {
+            kind: components["schemas"]["IdentifierKind"];
+            /** Value */
+            value: string;
+        };
+        /**
+         * IdentifierKind
+         * @enum {string}
+         */
+        IdentifierKind: "tax_number" | "vat_id" | "sepa_creditor_id" | "registry_number" | "customer_number";
+        /** IdentifierOut */
+        IdentifierOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["IdentifierKind"];
+            /** Value */
+            value: string;
         };
         /** LiveReport */
         LiveReport: {
@@ -1078,6 +1672,42 @@ export interface components {
             /** Tenant Id */
             tenant_id?: string | null;
         };
+        /** NoteIn */
+        NoteIn: {
+            /** Body */
+            body: string;
+            /** Category */
+            category?: string | null;
+            /**
+             * Pinned
+             * @default false
+             */
+            pinned: boolean;
+        };
+        /** NoteOut */
+        NoteOut: {
+            /** Body */
+            body: string;
+            /** Category */
+            category?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Pinned
+             * @default false
+             */
+            pinned: boolean;
+        };
         /** OidcTokenResponse */
         OidcTokenResponse: {
             /** Access Token */
@@ -1092,10 +1722,134 @@ export interface components {
              */
             token_type: string;
         };
+        /** PartyIn */
+        PartyIn: {
+            /** Members */
+            members: components["schemas"]["PartyMemberIn"][];
+            /**
+             * Name
+             * @description Leer: wird generiert
+             */
+            name?: string | null;
+        };
+        /** PartyMemberIn */
+        PartyMemberIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** @default primary */
+            role: components["schemas"]["PartyRole"];
+            /** Share Percent */
+            share_percent?: number | string | null;
+        };
+        /** PartyMemberOut */
+        PartyMemberOut: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Display Name */
+            display_name: string;
+            /** @default primary */
+            role: components["schemas"]["PartyRole"];
+            /** Share Percent */
+            share_percent?: string | null;
+        };
+        /** PartyOut */
+        PartyOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Members */
+            members: components["schemas"]["PartyMemberOut"][];
+            /** Name */
+            name: string;
+        };
+        /**
+         * PartyRole
+         * @enum {string}
+         */
+        PartyRole: "primary" | "co_party" | "guarantor" | "legal_representative";
+        /** PhoneIn */
+        PhoneIn: {
+            /**
+             * Is Primary
+             * @default false
+             */
+            is_primary: boolean;
+            /** @default work */
+            label: components["schemas"]["PhoneLabel"];
+            /** Number */
+            number: string;
+        };
+        /**
+         * PhoneLabel
+         * @enum {string}
+         */
+        PhoneLabel: "work" | "mobile" | "private" | "fax" | "other";
+        /** PhoneOut */
+        PhoneOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Primary */
+            is_primary: boolean;
+            label: components["schemas"]["PhoneLabel"];
+            /** Number */
+            number: string;
+        };
+        /**
+         * PreferredChannel
+         * @enum {string}
+         */
+        PreferredChannel: "post" | "email" | "portal";
         /** RefreshRequest */
         RefreshRequest: {
             /** Refresh Token */
             refresh_token: string;
+        };
+        /** RelationIn */
+        RelationIn: {
+            kind: components["schemas"]["RelationKind"];
+            /**
+             * Related Contact Id
+             * Format: uuid
+             */
+            related_contact_id: string;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /**
+         * RelationKind
+         * @enum {string}
+         */
+        RelationKind: "spouse" | "representative" | "heir" | "guarantor" | "employee_of" | "authorized_person";
+        /** RelationOut */
+        RelationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["RelationKind"];
+            /**
+             * Related Contact Id
+             * Format: uuid
+             */
+            related_contact_id: string;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
         };
         /** RoleCreate */
         RoleCreate: {
@@ -1130,6 +1884,22 @@ export interface components {
         RolePermissions: {
             /** Permissions */
             permissions: string[];
+        };
+        /** SearchHit */
+        SearchHit: {
+            /** Entity Type */
+            entity_type: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Score */
+            score: number;
+            /** Subtitle */
+            subtitle: string | null;
+            /** Title */
+            title: string;
         };
         /** SessionOut */
         SessionOut: {
@@ -1633,6 +2403,470 @@ export interface operations {
             };
         };
     };
+    revoke_consent_api_v1_consents__consent_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                consent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_contacts_api_v1_contacts_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                kind?: string | null;
+                tag?: string | null;
+                include_deleted?: boolean;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_contact_api_v1_contacts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    duplicates_api_v1_contacts_duplicates_get: {
+        parameters: {
+            query?: {
+                first_name?: string | null;
+                last_name?: string | null;
+                company_name?: string | null;
+                email?: string | null;
+                phone?: string | null;
+                iban?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateCandidate"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_contact_api_v1_contacts__contact_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_contact_api_v1_contacts__contact_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_contact_api_v1_contacts__contact_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_consents_api_v1_contacts__contact_id__consents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_consent_api_v1_contacts__contact_id__consents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    contact_duplicates_api_v1_contacts__contact_id__duplicates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateCandidate"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_contact_api_v1_contacts__contact_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notes_api_v1_contacts__contact_id__notes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_note_api_v1_contacts__contact_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_relation_api_v1_contacts__contact_id__relations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RelationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     live_api_v1_health_live_get: {
         parameters: {
             query?: never;
@@ -1795,6 +3029,101 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    list_parties_api_v1_parties_get: {
+        parameters: {
+            query: {
+                contact_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartyOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_party_api_v1_parties_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_party_api_v1_parties__party_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1981,6 +3310,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    global_search_api_v1_search_get: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchHit"][];
                 };
             };
             /** @description Validation Error */

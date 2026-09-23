@@ -14,6 +14,7 @@ from mhvp.platform.models import MembershipRole, Role, RolePermission
 
 ACTIONS: tuple[str, ...] = ("read", "create", "update", "delete", "approve", "export")
 RESOURCES: tuple[str, ...] = (
+    "contacts",
     "tenant_settings",
     "members",
     "roles",
@@ -35,37 +36,30 @@ class SystemRole:
 
 # Annex A.4 role templates. Domain permissions are added per milestone (M3 contacts, ...).
 _ADMIN = ALL_PERMISSIONS - {"release_gates:approve"}
+_SETTINGS_R = frozenset({"tenant_settings:read"})
+_CONTACTS_R = frozenset({"contacts:read"})
+_CONTACTS_RW = _CONTACTS_R | {"contacts:create", "contacts:update"}
+_CONTACTS_RWD = _CONTACTS_RW | {"contacts:delete"}
+
 SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole("tenant_admin", "Mandantenadministrator", _ADMIN),
     SystemRole("administrator", "Administrator", _ADMIN),
-    SystemRole("standard", "Standard", frozenset({"tenant_settings:read"})),
+    SystemRole("standard", "Standard", _SETTINGS_R | _CONTACTS_RWD),
     SystemRole("read_only", "Nur Lesezugriff", READ_ALL),
+    SystemRole("read_only_master_data", "Nur Lesezugriff Stammdaten", _SETTINGS_R | _CONTACTS_R),
+    SystemRole("clerk_no_delete", "Sachbearbeiter ohne Löschen", _SETTINGS_R | _CONTACTS_RW),
     SystemRole(
-        "read_only_master_data", "Nur Lesezugriff Stammdaten", frozenset({"tenant_settings:read"})
+        "clerk_no_accounting", "Sachbearbeiter ohne Buchhaltung", _SETTINGS_R | _CONTACTS_RWD
     ),
     SystemRole(
-        "clerk_no_delete", "Sachbearbeiter ohne Löschen", frozenset({"tenant_settings:read"})
+        "accountant_no_banking", "Buchhalter ohne Onlinebanking", _SETTINGS_R | _CONTACTS_RW
     ),
-    SystemRole(
-        "clerk_no_accounting",
-        "Sachbearbeiter ohne Buchhaltung",
-        frozenset({"tenant_settings:read"}),
-    ),
-    SystemRole(
-        "accountant_no_banking",
-        "Buchhalter ohne Onlinebanking",
-        frozenset({"tenant_settings:read"}),
-    ),
-    SystemRole(
-        "accountant_banking", "Buchhalter mit Onlinebanking", frozenset({"tenant_settings:read"})
-    ),
+    SystemRole("accountant_banking", "Buchhalter mit Onlinebanking", _SETTINGS_R | _CONTACTS_RW),
     SystemRole("caretaker", "Hausmeister", frozenset()),
-    SystemRole(
-        "technical_clerk", "Technischer Sachbearbeiter", frozenset({"tenant_settings:read"})
-    ),
-    SystemRole("support", "Support", frozenset({"tenant_settings:read", "audit:read"})),
+    SystemRole("technical_clerk", "Technischer Sachbearbeiter", _SETTINGS_R | _CONTACTS_R),
+    SystemRole("support", "Support", _SETTINGS_R | _CONTACTS_R | {"audit:read"}),
     SystemRole("insurance_broker", "Versicherungsmakler", frozenset()),
-    SystemRole("tax_advisor", "Steuerberater", frozenset({"tenant_settings:read"})),
+    SystemRole("tax_advisor", "Steuerberater", _SETTINGS_R),
 )
 
 # A platform administrator after an explicit, recorded tenant switch (section 5.1).

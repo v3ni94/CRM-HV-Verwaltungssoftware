@@ -9,6 +9,8 @@ Format: ``b"v1" | len(scope) (1 byte) | scope | nonce (12) | ciphertext+tag``.
 """
 
 import base64
+import hashlib
+import hmac
 import os
 from contextvars import ContextVar
 from functools import lru_cache
@@ -76,6 +78,13 @@ def _key(scope: str) -> bytes:
     if master is None:
         raise CryptoError("field encryption is not configured (MHVP_MASTER_KEY)")
     return _derive(master, scope)
+
+
+def fingerprint(value: str, scope: str | None = None) -> str:
+    """Keyed hash (HMAC-SHA256) for exact matching of encrypted values within one scope."""
+    scope = scope or current_scope()
+    key = _key(f"{scope}:fingerprint")
+    return hmac.new(key, value.encode(), hashlib.sha256).hexdigest()
 
 
 def encrypt(plaintext: str, scope: str | None = None) -> bytes:

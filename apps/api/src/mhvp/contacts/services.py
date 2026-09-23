@@ -1,0 +1,461 @@
+"""Contact services: create/replace with children, search text, duplicates, export."""
+
+import re
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
+from sqlalchemy import Select, delete, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from mhvp.contacts import schemas
+from mhvp.contacts.models import (
+    Consent,
+    Contact,
+    ContactAddress,
+    ContactBankAccount,
+    ContactEmail,
+    ContactIdentifier,
+    ContactKind,
+    ContactNote,
+    ContactPhone,
+    ContactRelation,
+    ContactTag,
+    ContactTagLink,
+    ContactType,
+    Party,
+    PartyMember,
+)
+from mhvp.contacts.validation import mask_iban, normalise_iban, normalise_phone
+from mhvp.core import crypto
+from mhvp.core.events import DomainEvent
+
+_CHILDREN = (
+    ContactAddress,
+    ContactPhone,
+    ContactEmail,
+    ContactIdentifier,
+    ContactBankAccount,
+    ContactType,
+    ContactTagLink,
+)
+
+
+def display_name(data: schemas.ContactIn) -> str:
+    if data.kind is ContactKind.COMPANY:
+        return (data.company_name or "").strip()
+    last = (data.last_name or "").strip()
+    first = " ".join(p for p in (data.title, data.first_name) if p).strip()
+    return f"{last}, {first}" if last and first else (last or first)
+
+
+def build_search_text(data: schemas.ContactIn) -> str:
+    parts: list[str] = [
+        data.first_name or "",
+        data.last_name or "",
+        data.company_name or "",
+        *(e.email for e in data.emails),
+        *(p.number for p in data.phones),
+        *(p.number.lstrip("+") for p in data.phones),
+        *(b.iban[-4:] for b in data.bank_accounts),
+        *(a.city or "" for a in data.addresses),
+    ]
+    return " ".join(p for p in parts if p).lower()
+
+
+async def _tag_ids(
+    session: AsyncSession, tenant_id: uuid.UUID, names: list[str]
+) -> list[uuid.UUID]:
+    ids = []
+    for raw in sorted({n.strip() for n in names if n.strip()}):
+        tag = await session.scalar(select(ContactTag).where(ContactTag.name == raw))
+        if tag is None:
+            tag = ContactTag(tenant_id=tenant_id, name=raw[:63])
+            session.add(tag)
+            await session.flush()
+        ids.append(tag.id)
+    return ids
+
+
+def _single_primary(items: list[Any]) -> None:
+    primaries = [i for i in items if i.is_primary]
+    if not primaries and items:
+        items[0].is_primary = True
+    for extra in primaries[1:]:
+        extra.is_primary = False
+
+
+async def write_children(
+    session: AsyncSession, tenant_id: uuid.UUID, contact_id: uuid.UUID, data: schemas.ContactIn
+) -> None:
+    for model in _CHILDREN:
+        await session.execute(delete(model).where(model.contact_id == contact_id))
+    _single_primary(data.addresses)
+    _single_primary(data.phones)
+    _single_primary(data.emails)
+    common = {"tenant_id": tenant_id, "contact_id": contact_id}
+    for address in data.addresses:
+        session.add(ContactAddress(**common, **address.model_dump()))
+    for phone in data.phones:
+        session.add(ContactPhone(**common, **phone.model_dump()))
+    for email in data.emails:
+        session.add(ContactEmail(**common, **email.model_dump()))
+    for identifier in data.identifiers:
+        session.add(ContactIdentifier(**common, **identifier.model_dump()))
+    for account in data.bank_accounts:
+        values = account.model_dump()
+        session.add(
+            ContactBankAccount(
+                **common,
+                **values,
+                iban_suffix=account.iban[-4:],
+                iban_fingerprint=crypto.fingerprint(account.iban),
+            )
+        )
+    for type_code in sorted(set(data.types)):
+        session.add(ContactType(**common, type=type_code, source="manual"))
+    for tag_id in await _tag_ids(session, tenant_id, data.tags):
+        session.add(ContactTagLink(**common, tag_id=tag_id))
+    await session.flush()
+
+
+def apply_fields(contact: Contact, data: schemas.ContactIn) -> None:
+    fields = data.model_dump(
+        exclude={"addresses", "phones", "emails", "identifiers", "bank_accounts", "types", "tags"}
+    )
+    for key, value in fields.items():
+        setattr(contact, key, value)
+    contact.display_name = display_name(data)
+    contact.search_text = build_search_text(data)
+
+
+async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactOut | None:
+    contact = await session.get(Contact, contact_id)
+    if contact is None:
+        return None
+    await session.flush()
+    await session.refresh(contact)  # server side updated_at, version after writes
+
+    async def rows(model: Any) -> list[Any]:
+        return list(
+            (await session.scalars(select(model).where(model.contact_id == contact_id))).all()
+        )
+
+    tags = list(
+        (
+            await session.scalars(
+                select(ContactTag.name)
+                .join(ContactTagLink, ContactTagLink.tag_id == ContactTag.id)
+                .where(ContactTagLink.contact_id == contact_id)
+                .order_by(ContactTag.name)
+            )
+        ).all()
+    )
+    return schemas.ContactOut(
+        id=contact.id,
+        kind=contact.kind,
+        display_name=contact.display_name,
+        salutation=contact.salutation,
+        title=contact.title,
+        first_name=contact.first_name,
+        last_name=contact.last_name,
+        company_name=contact.company_name,
+        legal_form=contact.legal_form,
+        position=contact.position,
+        date_of_birth=contact.date_of_birth,
+        language=contact.language,
+        notes=contact.notes,
+        preferred_channel=contact.preferred_channel,
+        blocked=contact.blocked,
+        external_ids=contact.external_ids,
+        completeness=contact.completeness,
+        addresses=[
+            schemas.AddressOut.model_validate(a, from_attributes=True)
+            for a in await rows(ContactAddress)
+        ],
+        phones=[
+            schemas.PhoneOut.model_validate(p, from_attributes=True)
+            for p in await rows(ContactPhone)
+        ],
+        emails=[
+            schemas.EmailOut.model_validate(e, from_attributes=True)
+            for e in await rows(ContactEmail)
+        ],
+        identifiers=[
+            schemas.IdentifierOut.model_validate(i, from_attributes=True)
+            for i in await rows(ContactIdentifier)
+        ],
+        bank_accounts=[
+            schemas.BankAccountOut(
+                id=b.id,
+                label=b.label,
+                iban_masked=mask_iban(b.iban),
+                bic=b.bic,
+                bank_name=b.bank_name,
+                holder=b.holder,
+                valid_from=b.valid_from,
+                valid_to=b.valid_to,
+            )
+            for b in await rows(ContactBankAccount)
+        ],
+        types=sorted(t.type for t in await rows(ContactType)),
+        tags=tags,
+        version=contact.version,
+        created_at=contact.created_at,
+        updated_at=contact.updated_at,
+        deleted_at=contact.deleted_at,
+    )
+
+
+async def summaries(session: AsyncSession, contacts: list[Contact]) -> list[schemas.ContactSummary]:
+    ids = [c.id for c in contacts]
+    if not ids:
+        return []
+    emails = {
+        r.contact_id: r.email
+        for r in (
+            await session.execute(
+                select(ContactEmail.contact_id, ContactEmail.email).where(
+                    ContactEmail.contact_id.in_(ids), ContactEmail.is_primary.is_(True)
+                )
+            )
+        ).all()
+    }
+    phones = {
+        r.contact_id: r.number
+        for r in (
+            await session.execute(
+                select(ContactPhone.contact_id, ContactPhone.number).where(
+                    ContactPhone.contact_id.in_(ids), ContactPhone.is_primary.is_(True)
+                )
+            )
+        ).all()
+    }
+    cities = {
+        r.contact_id: r.city
+        for r in (
+            await session.execute(
+                select(ContactAddress.contact_id, ContactAddress.city).where(
+                    ContactAddress.contact_id.in_(ids), ContactAddress.is_primary.is_(True)
+                )
+            )
+        ).all()
+    }
+    tags: dict[uuid.UUID, list[str]] = {}
+    for r in (
+        await session.execute(
+            select(ContactTagLink.contact_id, ContactTag.name)
+            .join(ContactTag, ContactTag.id == ContactTagLink.tag_id)
+            .where(ContactTagLink.contact_id.in_(ids))
+        )
+    ).all():
+        tags.setdefault(r.contact_id, []).append(r.name)
+    types: dict[uuid.UUID, list[Any]] = {}
+    for t in (
+        await session.execute(
+            select(ContactType.contact_id, ContactType.type).where(ContactType.contact_id.in_(ids))
+        )
+    ).all():
+        types.setdefault(t.contact_id, []).append(t.type)
+    return [
+        schemas.ContactSummary(
+            id=c.id,
+            kind=c.kind,
+            display_name=c.display_name,
+            primary_email=emails.get(c.id),
+            primary_phone=phones.get(c.id),
+            city=cities.get(c.id),
+            completeness=c.completeness,
+            blocked=c.blocked,
+            tags=sorted(tags.get(c.id, [])),
+            types=sorted(types.get(c.id, [])),
+            deleted=c.deleted_at is not None,
+        )
+        for c in contacts
+    ]
+
+
+def tsquery(text: str) -> str | None:
+    terms = re.findall(r"\w+", text.lower())[:8]
+    return " & ".join(f"{t}:*" for t in terms) if terms else None
+
+
+def search_filter(query: Select[Any], q: str) -> Select[Any]:
+    ts = tsquery(q)
+    like = f"%{q.strip().lower()}%"
+    conditions = [Contact.search_text.like(like)]
+    if ts:
+        conditions.append(Contact.search_vector.op("@@")(func.to_tsquery("simple", ts)))
+    return query.where(or_(*conditions))
+
+
+async def find_duplicates(
+    session: AsyncSession,
+    probe: schemas.DuplicateQuery,
+    *,
+    exclude_id: uuid.UUID | None = None,
+    limit: int = 10,
+) -> list[tuple[Contact, float, list[str]]]:
+    scores: dict[uuid.UUID, tuple[float, list[str]]] = {}
+
+    def add(contact_id: uuid.UUID, score: float, reason: str) -> None:
+        current, reasons = scores.get(contact_id, (0.0, []))
+        scores[contact_id] = (max(current, score), [*reasons, reason])
+
+    if probe.email:
+        for (cid,) in (
+            await session.execute(
+                select(ContactEmail.contact_id).where(ContactEmail.email == probe.email.lower())
+            )
+        ).all():
+            add(cid, 0.95, "gleiche E-Mail-Adresse")
+    if probe.phone:
+        try:
+            number = normalise_phone(probe.phone)
+        except ValueError:
+            number = None
+        if number:
+            for (cid,) in (
+                await session.execute(
+                    select(ContactPhone.contact_id).where(ContactPhone.number == number)
+                )
+            ).all():
+                add(cid, 0.9, "gleiche Telefonnummer")
+    if probe.iban:
+        try:
+            print_ = crypto.fingerprint(normalise_iban(probe.iban))
+        except ValueError:
+            print_ = None
+        if print_:
+            for (cid,) in (
+                await session.execute(
+                    select(ContactBankAccount.contact_id).where(
+                        ContactBankAccount.iban_fingerprint == print_
+                    )
+                )
+            ).all():
+                add(cid, 0.95, "gleiche IBAN")
+    name = (
+        " ".join(p for p in (probe.last_name, probe.first_name, probe.company_name) if p)
+        .strip()
+        .lower()
+    )
+    if len(name) >= 3:
+        similarity = func.similarity(func.lower(Contact.search_text), name)
+        rows = (
+            await session.execute(
+                select(Contact.id, similarity.label("s"))
+                .where(similarity > 0.3)
+                .order_by(similarity.desc())
+                .limit(limit)
+            )
+        ).all()
+        for row in rows:
+            add(row.id, min(0.85, float(row.s) + 0.2), "ähnlicher Name")
+    if exclude_id:
+        scores.pop(exclude_id, None)
+    if not scores:
+        return []
+    contacts = (
+        await session.scalars(
+            select(Contact).where(Contact.id.in_(scores), Contact.deleted_at.is_(None))
+        )
+    ).all()
+    ranked = sorted(
+        ((c, *scores[c.id]) for c in contacts), key=lambda item: (-item[1], item[0].display_name)
+    )
+    return ranked[:limit]
+
+
+async def export(session: AsyncSession, contact_id: uuid.UUID) -> dict[str, Any] | None:
+    """Data subject access export (section 16, S06). Marked for review before release."""
+    contact = await load(session, contact_id)
+    if contact is None:
+        return None
+    accounts = (
+        await session.scalars(
+            select(ContactBankAccount).where(ContactBankAccount.contact_id == contact_id)
+        )
+    ).all()
+    notes = (
+        await session.scalars(select(ContactNote).where(ContactNote.contact_id == contact_id))
+    ).all()
+    consents = (
+        await session.scalars(select(Consent).where(Consent.contact_id == contact_id))
+    ).all()
+    relations = (
+        await session.scalars(
+            select(ContactRelation).where(ContactRelation.contact_id == contact_id)
+        )
+    ).all()
+    parties = (
+        await session.execute(
+            select(Party.id, Party.name, PartyMember.role)
+            .join(PartyMember, PartyMember.party_id == Party.id)
+            .where(PartyMember.contact_id == contact_id)
+        )
+    ).all()
+    events = (
+        await session.scalars(
+            select(DomainEvent)
+            .where(DomainEvent.entity_id == contact_id)
+            .order_by(DomainEvent.occurred_at)
+        )
+    ).all()
+    data = contact.model_dump(mode="json", exclude={"bank_accounts"})
+    data["bank_accounts"] = [
+        {
+            "iban": a.iban,
+            "bic": a.bic,
+            "bank_name": a.bank_name,
+            "holder": a.holder,
+            "valid_from": a.valid_from.isoformat(),
+            "valid_to": a.valid_to.isoformat() if a.valid_to else None,
+        }
+        for a in accounts
+    ]
+    return {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "review_required": True,
+        "review_note": (
+            "Vor Herausgabe prüfen: Notizen und Beziehungen können Angaben Dritter enthalten "
+            "(Art. 15 Abs. 4 DSGVO); Mitparteien werden nur mit Parteiname "
+            "und eigener Rolle genannt."
+        ),
+        "contact": data,
+        "notes": [
+            {"category": n.category, "body": n.body, "created_at": n.created_at.isoformat()}
+            for n in notes
+        ],
+        "consents": [
+            {
+                "kind": c.kind.value,
+                "granted_at": c.granted_at.isoformat(),
+                "revoked_at": c.revoked_at.isoformat() if c.revoked_at else None,
+                "source": c.source,
+            }
+            for c in consents
+        ],
+        "relations": [
+            {"kind": r.kind.value, "related_contact_id": str(r.related_contact_id)}
+            for r in relations
+        ],
+        "parties": [
+            {"party_id": str(p.id), "name": p.name, "own_role": p.role.value} for p in parties
+        ],
+        "processing_log": [
+            {"type": e.type, "occurred_at": e.occurred_at.isoformat()} for e in events
+        ],
+    }
+
+
+def party_name(members: list[tuple[Contact, schemas.PartyMemberIn]]) -> str:
+    persons = [c for c, _ in members if c.kind is ContactKind.PERSON]
+    if len(members) == 1:
+        return members[0][0].display_name
+    last_names = {c.last_name for c in persons if c.last_name}
+    if len(persons) == len(members) == 2 and len(last_names) == 1:
+        first = [c.first_name or "" for c in persons]
+        # Neutral wording: a shared last name does not prove a marriage.
+        return f"{first[0]} und {first[1]} {last_names.pop()}".replace("  ", " ").strip()
+    return " und ".join(c.display_name for c, _ in members)

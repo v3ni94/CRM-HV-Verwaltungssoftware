@@ -111,7 +111,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp
-    command: ["sh", "-c", "alembic upgrade head && python -m mhvp.core.storage_bootstrap"]
+    command: ["sh", "-c", "alembic upgrade head && python -m mhvp.core.storage_bootstrap && python -m mhvp.platform.sync_roles"]
     environment:
       <<: *app-env
       MHVP_MIGRATION_DATABASE_URL: ${MHVP_MIGRATION_DATABASE_URL:-postgresql+psycopg://mhvp_migrator:${MHVP_DB_MIGRATOR_PASSWORD:?MHVP_DB_MIGRATOR_PASSWORD must be set}@postgres:5432/${MHVP_DB_NAME:-mhvp}}

@@ -7,6 +7,7 @@ from alembic import context
 from sqlalchemy import Connection, create_engine, pool
 
 import mhvp.models  # noqa: F401  (registers all mapped tables on Base.metadata)
+from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
 
 config = context.config
@@ -23,6 +24,13 @@ def _database_url() -> str:
     return str(url)
 
 
+def _render_item(type_: str, obj: object, autogen_context: object) -> str | bool:
+    # Encrypted columns are plain bytea in the database (ADR 0006).
+    if type_ == "type" and isinstance(obj, EncryptedText):
+        return "sa.LargeBinary()"
+    return False
+
+
 def _configure(connection: Connection) -> None:
     context.configure(
         connection=connection,
@@ -30,6 +38,7 @@ def _configure(connection: Connection) -> None:
         compare_type=True,
         compare_server_default=True,
         transaction_per_migration=True,
+        render_item=_render_item,
     )
 
 
