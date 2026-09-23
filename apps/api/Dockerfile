@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 # MHVP API, worker, beat and migrate image. Build context: apps/api.
 
-FROM ghcr.io/astral-sh/uv:0.8.17 AS uv
+FROM ghcr.io/astral-sh/uv:0.12.18 AS uv
 
-FROM python:3.12.11-slim-bookworm AS build
+FROM python:3.14.7-slim-bookworm AS build
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -17,7 +17,7 @@ COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-FROM python:3.12.11-slim-bookworm AS runtime
+FROM python:3.14.7-slim-bookworm AS runtime
 ARG MHVP_APP_VERSION=0.1.0
 ENV PATH=/app/.venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
