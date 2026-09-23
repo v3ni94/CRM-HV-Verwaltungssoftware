@@ -2,7 +2,7 @@
 const serverFetch = vi.fn();
 vi.mock("@/lib/api-server", () => ({ serverFetch: (...args: unknown[]) => serverFetch(...args) }));
 
-import { DELETE, GET, POST, PUT } from "./route";
+import { DELETE, GET, PATCH, POST, PUT } from "./route";
 
 const ctx = (path: string) => ({ params: Promise.resolve({ path: path.split("/") }) });
 const ID = "01920000-0000-7000-8000-00000000000a";
@@ -67,14 +67,35 @@ describe("BFF proxy", () => {
     ["POST", `imports/immoware24/files/${ID}/validate`],
     ["POST", `imports/immoware24/files/${ID}/test-run`],
     ["POST", `imports/immoware24/files/${ID}/apply`],
-  ])("forwards the AI operation %s %s", async (method, path) => {
+    ["POST", "accounting/receivable-runs"],
+    ["POST", `accounting/receivable-runs/${ID}/post`],
+    ["POST", "accounting/dunning-runs"],
+    ["POST", `accounting/dunning-runs/${ID}/approve`],
+    ["POST", "banking/imports"],
+    ["GET", `banking/transactions/${ID}/candidates`],
+    ["POST", `banking/transactions/${ID}/book`],
+    ["POST", `banking/transactions/${ID}/ignore`],
+    ["POST", `banking/payment-orders/${ID}/approve`],
+    ["POST", "statements"],
+    ["POST", `statements/${ID}/calculate`],
+    ["POST", `hoa/statements/${ID}/post`],
+    ["POST", `hoa/meetings/${ID}/attendance`],
+    ["POST", `hoa/agenda/${ID}/votes`],
+    ["GET", `hoa/agenda/${ID}/tally`],
+    ["POST", `letting/rent-increases/${ID}/actions`],
+    ["PATCH", `letting/prospects/${ID}`],
+    ["DELETE", `letting/prospects/${ID}`],
+    ["POST", "tickets"],
+    ["PATCH", `tickets/${ID}`],
+    ["POST", `tickets/${ID}/comments`],
+  ])("forwards the operation %s %s", async (method, path) => {
     serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {
       method,
       headers: { host: "crm.localhost", origin: "http://crm.localhost" },
       ...(method === "GET" ? {} : { body: "{}" }),
     });
-    const handler = { GET, POST, PUT, DELETE }[method as "GET" | "POST" | "PUT" | "DELETE"];
+    const handler = { GET, POST, PUT, PATCH, DELETE }[method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE"];
     expect((await handler(req, ctx(path))).status).toBe(200);
     expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
   });
@@ -91,12 +112,20 @@ describe("BFF proxy", () => {
     ["GET", "imports/immoware24/files"],
     ["GET", "imports/immoware24/files/not-a-uuid/rows"],
     ["POST", "imports/immoware24/fields"],
+    ["POST", "banking/payment-batches"],
+    ["PUT", "accounting/dunning-settings"],
+    ["POST", `banking/rules/${ID}/activate`],
+    ["POST", "banking/auto-post"],
+    ["POST", "banking/automation"],
+    ["POST", "platform/licenses"],
+    ["POST", `accounting/receivable-runs/${ID}/reverse`],
+    ["PATCH", `hoa/resolutions/${ID}`],
   ])("keeps %s %s outside the allowlist", async (method, path) => {
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {
       method,
       headers: { host: "crm.localhost", origin: "http://crm.localhost" },
     });
-    const handler = { GET, POST, PUT, DELETE }[method as "GET" | "POST" | "PUT" | "DELETE"];
+    const handler = { GET, POST, PUT, PATCH, DELETE }[method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE"];
     expect((await handler(req, ctx(path))).status).toBe(404);
     expect(serverFetch).not.toHaveBeenCalled();
   });

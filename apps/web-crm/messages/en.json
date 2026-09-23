@@ -14,7 +14,8 @@
     "hoa": "HOA",
     "letting": "Letting",
     "bank": "Bank",
-    "billing": "Statements"
+    "billing": "Statements",
+    "tickets": "Tickets"
   },
   "Hoa": {
     "title": "HOA management",
@@ -413,6 +414,39 @@
       "accepted": "accepted",
       "rejected": "rejected",
       "withdrawn": "withdrawn"
+    }
+  },
+  "Tickets": {
+    "title": "Tickets",
+    "empty": "No tickets.",
+    "number": "No.",
+    "titleField": "Title",
+    "description": "Description",
+    "priority": "Priority",
+    "status": "Status",
+    "sla": "Due (SLA)",
+    "breached": "breached",
+    "create": "Create ticket",
+    "comment": "Comment",
+    "internal": "internal",
+    "external": "visible to participants",
+    "addComment": "Save comment",
+    "comments": "Comments",
+    "history": "History",
+    "statuses": {
+      "new": "new",
+      "in_progress": "in progress",
+      "waiting": "waiting",
+      "done": "done",
+      "closed": "closed",
+      "rejected": "rejected"
+    },
+    "priorities": {
+      "low": "low",
+      "normal": "normal",
+      "high": "high",
+      "urgent": "urgent",
+      "immediate": "immediate"
     }
   }
 }

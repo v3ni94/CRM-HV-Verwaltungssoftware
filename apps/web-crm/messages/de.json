@@ -67,7 +67,8 @@
     "hoa": "WEG",
     "letting": "Vermietung",
     "bank": "Bank",
-    "billing": "Abrechnung"
+    "billing": "Abrechnung",
+    "tickets": "Tickets"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -1060,6 +1061,39 @@
       "accepted": "zugesagt",
       "rejected": "abgesagt",
       "withdrawn": "zurückgezogen"
+    }
+  },
+  "Tickets": {
+    "title": "Tickets",
+    "empty": "Keine Tickets.",
+    "number": "Nr.",
+    "titleField": "Titel",
+    "description": "Beschreibung",
+    "priority": "Priorität",
+    "status": "Status",
+    "sla": "Frist (SLA)",
+    "breached": "überschritten",
+    "create": "Ticket anlegen",
+    "comment": "Kommentar",
+    "internal": "intern",
+    "external": "für Beteiligte sichtbar",
+    "addComment": "Kommentar speichern",
+    "comments": "Kommentare",
+    "history": "Verlauf",
+    "statuses": {
+      "new": "neu",
+      "in_progress": "in Bearbeitung",
+      "waiting": "wartet",
+      "done": "erledigt",
+      "closed": "geschlossen",
+      "rejected": "abgelehnt"
+    },
+    "priorities": {
+      "low": "niedrig",
+      "normal": "normal",
+      "high": "hoch",
+      "urgent": "dringend",
+      "immediate": "sofort"
     }
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Backend-for-frontend proxy for the CRM screens (contacts, AI assistant, imports, AI settings). Only the listed API operations are
+ * Backend-for-frontend proxy for the CRM screens (contacts, AI, imports, accounting, bank, HOA, letting, tickets). Only the listed API operations are
  * reachable; the bearer token is added server side from the httpOnly cookie. Mutating methods
  * require a same-origin Origin header (CSRF, together with SameSite=Strict cookies).
  */
@@ -73,6 +73,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^letting/rent-increases/${ID}/actions$`) },
   { method: "PATCH", pattern: new RegExp(`^letting/prospects/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^letting/prospects/${ID}$`) },
+  // Tickets (M19).
+  { method: "POST", pattern: /^tickets$/ },
+  { method: "PATCH", pattern: new RegExp(`^tickets/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/comments$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];
@@ -109,7 +113,7 @@ async function proxy(request: Request, context: Context): Promise<Response> {
     if (body.byteLength > MAX_UPLOAD_BYTES) return problemJson(413, "Datei zu groß");
     // The boundary parameter must be kept, so the original header is forwarded unchanged.
     headers.set("content-type", type);
-  } else if (method === "POST" || method === "PUT") {
+  } else if (method === "POST" || method === "PUT" || method === "PATCH") {
     body = await request.text();
     headers.set("content-type", "application/json");
   }
@@ -136,4 +140,5 @@ async function proxy(request: Request, context: Context): Promise<Response> {
 export const GET = proxy;
 export const POST = proxy;
 export const PUT = proxy;
+export const PATCH = proxy;
 export const DELETE = proxy;

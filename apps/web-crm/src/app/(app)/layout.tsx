@@ -62,6 +62,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               {t("letting")}
             </Link>
           ) : null}
+          {me?.permissions.includes("tickets:read") ? (
+            <Link href="/tickets" className="hover:underline">
+              {t("tickets")}
+            </Link>
+          ) : null}
           <Link href="/assistent" className="hover:underline">
             {t("assistant")}
           </Link>
