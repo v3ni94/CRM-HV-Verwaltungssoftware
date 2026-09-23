@@ -400,6 +400,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M26 |
 | Datum | 23.09.2026 |
 
+## A-037
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Nutzungszähler: Einheiten sind alle nicht fiktiven Einheiten des Mandanten, Benutzer die aktiven Mitgliedschaften, KI-Kosten die Summe des Monats, Speicher der Dokumentbestand zum Zählzeitpunkt. Lizenz und Nutzungszähler sind Plattformtabellen ohne RLS und nur für Plattformadministratoren erreichbar. |
+| Begründung | M27, 5.3, 6.8 |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Plattform |
+| Überprüfung spätestens bei Meilenstein | M27 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

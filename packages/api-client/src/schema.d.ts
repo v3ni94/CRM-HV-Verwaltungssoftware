@@ -3328,6 +3328,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/licenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lizenzen eines Mandanten */
+        get: operations["list_licenses_api_v1_platform_licenses_get"];
+        put?: never;
+        /** Lizenz anlegen */
+        post: operations["create_license_api_v1_platform_licenses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/ops/metrics": {
         parameters: {
             query?: never;
@@ -3339,6 +3357,24 @@ export interface paths {
         get: operations["metrics_api_v1_platform_ops_metrics_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/price-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preisliste */
+        get: operations["price_list_api_v1_platform_price_list_get"];
+        put?: never;
+        /** Preis je Modul und Einheit erfassen */
+        post: operations["add_price_api_v1_platform_price_list_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3380,6 +3416,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/tenants/{tenant_id}/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Onboarding- und G5-Status
+         * @description Checklist from counts and flags; the G5 evidence items are manual and stay open until
+         *     the operator documents them (M27-02). A gate is only reported, never changed.
+         */
+        get: operations["readiness_api_v1_platform_tenants__tenant_id__readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/tenants/{tenant_id}/release-gates/requests/{request_id}/approve": {
         parameters: {
             query?: never;
@@ -3408,6 +3465,23 @@ export interface paths {
         put?: never;
         /** Freigabeantrag ablehnen */
         post: operations["reject_gate_api_v1_platform_tenants__tenant_id__release_gates_requests__request_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/tenants/{tenant_id}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Nutzung zählen (Monat) */
+        post: operations["usage_api_v1_platform_tenants__tenant_id__usage_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7588,6 +7662,27 @@ export interface components {
             /** Unit Id */
             unit_id?: string | null;
         };
+        /** LicenseIn */
+        LicenseIn: {
+            /** Module */
+            module: string;
+            /** Price Per Unit */
+            price_per_unit?: number | string | null;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Unit Quota */
+            unit_quota: number;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid Until */
+            valid_until?: string | null;
+        };
         /** LineOut */
         LineOut: {
             /**
@@ -8768,6 +8863,20 @@ export interface components {
          * @enum {string}
          */
         PreferredChannel: "post" | "email" | "portal";
+        /** PriceIn */
+        PriceIn: {
+            /** Module */
+            module: string;
+            /** Note */
+            note?: string | null;
+            /** Price Per Unit */
+            price_per_unit: number | string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+        };
         /**
          * Priority
          * @enum {string}
@@ -10094,6 +10203,14 @@ export interface components {
          * @enum {string}
          */
         UnitType: "apartment" | "commercial" | "office" | "parking" | "garage" | "storage" | "garden" | "other";
+        /** UsageIn */
+        UsageIn: {
+            /**
+             * Month
+             * Format: date
+             */
+            month: string;
+        };
         /** UsageOut */
         UsageOut: {
             /** Blocked */
@@ -17810,6 +17927,74 @@ export interface operations {
             };
         };
     };
+    list_licenses_api_v1_platform_licenses_get: {
+        parameters: {
+            query: {
+                tenant_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_license_api_v1_platform_licenses_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LicenseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     metrics_api_v1_platform_ops_metrics_get: {
         parameters: {
             query?: {
@@ -17828,6 +18013,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    price_list_api_v1_platform_price_list_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    add_price_api_v1_platform_price_list_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -17931,6 +18173,41 @@ export interface operations {
             };
         };
     };
+    readiness_api_v1_platform_tenants__tenant_id__readiness_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     approve_gate_api_v1_platform_tenants__tenant_id__release_gates_requests__request_id__approve_post: {
         parameters: {
             query?: never;
@@ -17990,6 +18267,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GateRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    usage_api_v1_platform_tenants__tenant_id__usage_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

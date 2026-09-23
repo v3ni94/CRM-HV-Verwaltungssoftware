@@ -8397,6 +8397,67 @@
         "title": "LetterIn",
         "type": "object"
       },
+      "LicenseIn": {
+        "additionalProperties": false,
+        "properties": {
+          "module": {
+            "pattern": "^(core|rental|hoa|accounting|banking|portal|ai)$",
+            "title": "Module",
+            "type": "string"
+          },
+          "price_per_unit": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Per Unit"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "unit_quota": {
+            "minimum": 0.0,
+            "title": "Unit Quota",
+            "type": "integer"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "module",
+          "unit_quota",
+          "valid_from"
+        ],
+        "title": "LicenseIn",
+        "type": "object"
+      },
       "LineOut": {
         "properties": {
           "account_id": {
@@ -11722,6 +11783,53 @@
         ],
         "title": "PreferredChannel",
         "type": "string"
+      },
+      "PriceIn": {
+        "additionalProperties": false,
+        "properties": {
+          "module": {
+            "pattern": "^(core|rental|hoa|accounting|banking|portal|ai)$",
+            "title": "Module",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "price_per_unit": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Price Per Unit"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          }
+        },
+        "required": [
+          "module",
+          "price_per_unit",
+          "valid_from"
+        ],
+        "title": "PriceIn",
+        "type": "object"
       },
       "Priority": {
         "enum": [
@@ -16100,6 +16208,21 @@
         ],
         "title": "UnitType",
         "type": "string"
+      },
+      "UsageIn": {
+        "additionalProperties": false,
+        "properties": {
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month"
+        ],
+        "title": "UsageIn",
+        "type": "object"
       },
       "UsageOut": {
         "properties": {
@@ -28173,6 +28296,95 @@
         ]
       }
     },
+    "/api/v1/platform/licenses": {
+      "get": {
+        "operationId": "list_licenses_api_v1_platform_licenses_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Licenses Api V1 Platform Licenses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lizenzen eines Mandanten",
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "operationId": "create_license_api_v1_platform_licenses_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create License Api V1 Platform Licenses Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lizenz anlegen",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
     "/api/v1/platform/ops/metrics": {
       "get": {
         "operationId": "metrics_api_v1_platform_ops_metrics_get",
@@ -28211,6 +28423,73 @@
         "summary": "Betriebskennzahlen je Job (JSON oder Prometheus)",
         "tags": [
           "Betrieb"
+        ]
+      }
+    },
+    "/api/v1/platform/price-list": {
+      "get": {
+        "operationId": "price_list_api_v1_platform_price_list_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Price List Api V1 Platform Price List Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Preisliste",
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "operationId": "add_price_api_v1_platform_price_list_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Price Api V1 Platform Price List Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preis je Modul und Einheit erfassen",
+        "tags": [
+          "platform"
         ]
       }
     },
@@ -28333,6 +28612,69 @@
         "summary": "Mitglied hinzufügen",
         "tags": [
           "Plattform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenant_id}/readiness": {
+      "get": {
+        "description": "Checklist from counts and flags; the G5 evidence items are manual and stay open until\nthe operator documents them (M27-02). A gate is only reported, never changed.",
+        "operationId": "readiness_api_v1_platform_tenants__tenant_id__readiness_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Readiness Api V1 Platform Tenants  Tenant Id  Readiness Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Onboarding- und G5-Status",
+        "tags": [
+          "platform"
         ]
       }
     },
@@ -28459,6 +28801,61 @@
         "summary": "Freigabeantrag ablehnen",
         "tags": [
           "Plattform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenant_id}/usage": {
+      "post": {
+        "operationId": "usage_api_v1_platform_tenants__tenant_id__usage_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Usage Api V1 Platform Tenants  Tenant Id  Usage Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nutzung zählen (Monat)",
+        "tags": [
+          "platform"
         ]
       }
     },

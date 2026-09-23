@@ -12,6 +12,7 @@ from mhvp.documents import models as document_models
 from mhvp.hoa import models as hoa_models
 from mhvp.imports import models as import_models
 from mhvp.letting import models as letting_models
+from mhvp.platform import licensing as licensing_models
 from mhvp.platform import models as platform_models
 from mhvp.portal import models as portal_models
 from mhvp.properties import models as property_models
@@ -31,6 +32,7 @@ __all__ = [
     "hoa_models",
     "import_models",
     "letting_models",
+    "licensing_models",
     "numbering",
     "platform_models",
     "portal_models",

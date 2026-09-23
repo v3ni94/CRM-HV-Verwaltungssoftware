@@ -50,9 +50,17 @@ _UNISOLATED = text(
 
 
 # Platform tables carrying a tenant reference without RLS (section 5.3, ADR 0006): they are
-# read before a tenant context exists (login, host resolution, token rotation).
+# read before a tenant context exists (login, host resolution, token rotation). Licence and
+# usage counters are platform administration data (5.3, M27).
 PLATFORM_TABLES = frozenset(
-    {"tenant_domain", "membership", "refresh_token", "oidc_authorization_code"}
+    {
+        "tenant_domain",
+        "membership",
+        "refresh_token",
+        "oidc_authorization_code",
+        "license",
+        "usage_counter",
+    }
 )
 
 
