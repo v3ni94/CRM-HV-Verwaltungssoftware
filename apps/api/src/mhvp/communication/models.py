@@ -65,3 +65,28 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=list
     )
     reply_due: Mapped[date | None] = mapped_column(Date)
+
+
+class Dispatch(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Delivery of a document to a recipient per channel with evidence (M23)."""
+
+    __tablename__ = "dispatch"
+    __table_args__ = (Index("ix_dispatch_contact", "tenant_id", "contact_id"),)
+
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document.id"), nullable=False
+    )
+    contact_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("contact.id"), nullable=False
+    )
+    channel: Mapped[str] = mapped_column(String(16), nullable=False)  # post, email, portal
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="prepared"
+    )  # prepared, sent, delivered, failed
+    message_id: Mapped[uuid.UUID | None] = _fk("message.id")
+    batch: Mapped[str | None] = mapped_column(String(64))
+    evidence_kind: Mapped[str | None] = mapped_column(String(32))
+    evidence_ref: Mapped[str | None] = mapped_column(String(200))
+    evidence_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

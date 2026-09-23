@@ -17,6 +17,7 @@ from mhvp.accounting.routers import router as accounting_router
 from mhvp.ai.routers import router as ai_router
 from mhvp.banking.routers import router as banking_router
 from mhvp.billing.routers import router as billing_router
+from mhvp.communication.dispatch import router as dispatch_router
 from mhvp.communication.routers import router as mail_router
 from mhvp.contacts.routers import router as contacts_router
 from mhvp.contracts.routers import router as contracts_router
@@ -139,6 +140,7 @@ def create_app(
     app.include_router(billing_router, prefix=API_PREFIX)
     app.include_router(tickets_router, prefix=API_PREFIX)
     app.include_router(mail_router, prefix=API_PREFIX)
+    app.include_router(dispatch_router, prefix=API_PREFIX)
     app.include_router(portal_router, prefix=API_PREFIX)
     app.include_router(portal_admin_router, prefix=API_PREFIX)
     app.add_middleware(CorrelationIdMiddleware)

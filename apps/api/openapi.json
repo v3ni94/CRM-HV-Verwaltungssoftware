@@ -5125,6 +5125,39 @@
         "title": "DepositOut",
         "type": "object"
       },
+      "DispatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "pattern": "^(post|email|portal)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "contact_id"
+        ],
+        "title": "DispatchIn",
+        "type": "object"
+      },
       "DmsConnectionIn": {
         "additionalProperties": false,
         "properties": {
@@ -6067,6 +6100,69 @@
           "correlation_id"
         ],
         "title": "EventOut",
+        "type": "object"
+      },
+      "EvidenceIn": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Document Id"
+          },
+          "evidence_kind": {
+            "anyOf": [
+              {
+                "pattern": "^(registered_mail|courier|hand_delivery|email_log|portal_read|other)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Kind"
+          },
+          "evidence_ref": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Ref"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "status": {
+            "pattern": "^(sent|delivered|failed)$",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "EvidenceIn",
         "type": "object"
       },
       "FeeIn": {
@@ -13021,6 +13117,25 @@
           "score"
         ],
         "title": "SearchHit",
+        "type": "object"
+      },
+      "SerialDispatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DispatchIn"
+            },
+            "maxItems": 2000,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SerialDispatchIn",
         "type": "object"
       },
       "SerialLetterIn": {
@@ -21677,6 +21792,54 @@
         ]
       }
     },
+    "/api/v1/contacts/{contact_id}/history": {
+      "get": {
+        "operationId": "history_api_v1_contacts__contact_id__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response History Api V1 Contacts  Contact Id  History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kommunikationshistorie des Kontakts",
+        "tags": [
+          "Kommunikation"
+        ]
+      }
+    },
     "/api/v1/contacts/{contact_id}/notes": {
       "get": {
         "operationId": "list_notes_api_v1_contacts__contact_id__notes_get",
@@ -22600,6 +22763,147 @@
         "summary": "Kautionsbewegung",
         "tags": [
           "Verträge"
+        ]
+      }
+    },
+    "/api/v1/dispatches": {
+      "post": {
+        "operationId": "create_api_v1_dispatches_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DispatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Api V1 Dispatches Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zustellung vorbereiten",
+        "tags": [
+          "Kommunikation"
+        ]
+      }
+    },
+    "/api/v1/dispatches/serial": {
+      "post": {
+        "operationId": "serial_api_v1_dispatches_serial_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SerialDispatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Serial Api V1 Dispatches Serial Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Serienversand je Zustellweg",
+        "tags": [
+          "Kommunikation"
+        ]
+      }
+    },
+    "/api/v1/dispatches/{dispatch_id}/evidence": {
+      "post": {
+        "operationId": "evidence_api_v1_dispatches__dispatch_id__evidence_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dispatch_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dispatch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Evidence Api V1 Dispatches  Dispatch Id  Evidence Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Versand oder Zugang mit Nachweis erfassen",
+        "tags": [
+          "Kommunikation"
         ]
       }
     },
@@ -29981,6 +30285,25 @@
         "summary": "Termin anlegen",
         "tags": [
           "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/calendar.ics": {
+      "get": {
+        "operationId": "calendar_ics_api_v1_workspace_calendar_ics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Kalender als ICS (eigene, geteilte Termine, Fristen)",
+        "tags": [
+          "Kommunikation"
         ]
       }
     },

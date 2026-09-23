@@ -356,6 +356,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | G5 |
 | Datum | 23.09.2026 |
 
+## A-033
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Zustellweg: ausdrücklich gewählter Weg, sonst bevorzugter Kanal des Kontakts, sonst Post. Zugang gilt nur mit Nachweisart und Referenz oder Beleg als erfasst. Im Portal-Posteingang erscheinen nur per Portal zugestellte Dokumente und eigene Uploads, nicht jedes mit dem Kontakt verknüpfte Dokument. |
+| Begründung | M23, 11.3. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Kommunikation, Portal |
+| Überprüfung spätestens bei Meilenstein | M27 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

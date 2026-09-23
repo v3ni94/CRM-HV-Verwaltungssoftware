@@ -101,27 +101,43 @@ async def visible_documents(
     scopes: dict[tuple[str, uuid.UUID], set[str]] = {}
     for g in active:
         scopes.setdefault((g.scope_type, g.scope_id), set()).add(g.role)
-    if not scopes:
-        return []
     links = (
-        await session.execute(
-            select(
-                DocumentLink.document_id, DocumentLink.entity_type, DocumentLink.entity_id
-            ).where(
-                or_(
-                    *[
-                        (DocumentLink.entity_type == t) & (DocumentLink.entity_id == i)
-                        for t, i in scopes
-                    ]
+        []
+        if not scopes
+        else (
+            await session.execute(
+                select(
+                    DocumentLink.document_id, DocumentLink.entity_type, DocumentLink.entity_id
+                ).where(
+                    or_(
+                        *[
+                            (DocumentLink.entity_type == t) & (DocumentLink.entity_id == i)
+                            for t, i in scopes
+                        ]
+                    )
                 )
             )
-        )
-    ).all()
+        ).all()
+    )
     allowed: set[uuid.UUID] = set()
     for document_id, entity_type, entity_id in links:
         document = await session.get(Document, document_id)
         if document is not None and scopes[(entity_type, entity_id)] & set(document.visibility):
             allowed.add(document_id)
+    # Portal inbox (M23): documents dispatched to this contact via the portal and own uploads;
+    # other documents merely linked to the contact stay internal.
+    from mhvp.communication.models import Dispatch
+
+    allowed |= set(
+        await session.scalars(
+            select(Dispatch.document_id).where(
+                Dispatch.contact_id == account.contact_id, Dispatch.channel == "portal"
+            )
+        )
+    )
+    allowed |= set(
+        await session.scalars(select(Document.id).where(Document.created_by == account.user_id))
+    )
     if not allowed:
         return []
     query = select(Document).where(Document.id.in_(allowed)).order_by(Document.created_at.desc())

@@ -1703,6 +1703,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contacts/{contact_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kommunikationshistorie des Kontakts */
+        get: operations["history_api_v1_contacts__contact_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts/{contact_id}/notes": {
         parameters: {
             query?: never;
@@ -1913,6 +1930,57 @@ export interface paths {
          * @description Records a movement; it becomes a posting only with the ledger (M10) behind G1.
          */
         post: operations["add_deposit_movement_api_v1_deposits__deposit_id__movements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Zustellung vorbereiten */
+        post: operations["create_api_v1_dispatches_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatches/serial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Serienversand je Zustellweg */
+        post: operations["serial_api_v1_dispatches_serial_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatches/{dispatch_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Versand oder Zugang mit Nachweis erfassen */
+        post: operations["evidence_api_v1_dispatches__dispatch_id__evidence_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4124,6 +4192,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspace/calendar.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kalender als ICS (eigene, geteilte Termine, Fristen) */
+        get: operations["calendar_ics_api_v1_workspace_calendar_ics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspace/calendar/{entry_id}": {
         parameters: {
             query?: never;
@@ -5861,6 +5946,21 @@ export interface components {
             /** Valid To */
             valid_to: string | null;
         };
+        /** DispatchIn */
+        DispatchIn: {
+            /** Channel */
+            channel?: string | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+        };
         /** DmsConnectionIn */
         DmsConnectionIn: {
             /** Base Url */
@@ -6172,6 +6272,19 @@ export interface components {
             };
             /** Type */
             type: string;
+        };
+        /** EvidenceIn */
+        EvidenceIn: {
+            /** Evidence Document Id */
+            evidence_document_id?: string | null;
+            /** Evidence Kind */
+            evidence_kind?: string | null;
+            /** Evidence Ref */
+            evidence_ref?: string | null;
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Status */
+            status: string;
         };
         /** FeeIn */
         FeeIn: {
@@ -8504,6 +8617,11 @@ export interface components {
             subtitle: string | null;
             /** Title */
             title: string;
+        };
+        /** SerialDispatchIn */
+        SerialDispatchIn: {
+            /** Items */
+            items: components["schemas"]["DispatchIn"][];
         };
         /** SerialLetterIn */
         SerialLetterIn: {
@@ -13151,6 +13269,39 @@ export interface operations {
             };
         };
     };
+    history_api_v1_contacts__contact_id__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_notes_api_v1_contacts__contact_id__notes_get: {
         parameters: {
             query?: never;
@@ -13729,6 +13880,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DepositOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_api_v1_dispatches_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    serial_api_v1_dispatches_serial_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SerialDispatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evidence_api_v1_dispatches__dispatch_id__evidence_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dispatch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -18777,6 +19035,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calendar_ics_api_v1_workspace_calendar_ics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
