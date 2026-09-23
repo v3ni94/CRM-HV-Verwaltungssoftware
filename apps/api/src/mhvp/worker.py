@@ -24,7 +24,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
         "mhvp",
         broker=settings.celery_broker_url.get_secret_value(),
         backend=backend.get_secret_value() if backend else None,
-        include=["mhvp.core.tasks", "mhvp.core.webhook_tasks"],
+        include=["mhvp.core.tasks", "mhvp.core.webhook_tasks", "mhvp.documents.tasks"],
     )
     app.conf.update(
         task_queues=[Queue(name) for name in QUEUES],
@@ -46,6 +46,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
             # Webhook delivery is not a money flow; its retries follow section 12.
             "webhooks-dispatch": {
                 "task": "mhvp.core.webhooks.dispatch",
+                "schedule": 60.0,
+                "options": {"queue": "io"},
+            },
+            # Mirror copies to Paperless/Drive; only tenants with an enabled connection (11.1).
+            "documents-mirror": {
+                "task": "mhvp.documents.mirror",
                 "schedule": 60.0,
                 "options": {"queue": "io"},
             },

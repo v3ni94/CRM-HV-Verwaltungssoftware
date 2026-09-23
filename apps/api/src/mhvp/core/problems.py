@@ -96,6 +96,24 @@ class ErrorCodes:
     GATE_STATE = ErrorCode(
         "MHVP-GATE-0003", 409, "Freigabeantrag nicht im passenden Zustand", "Invalid state."
     )
+    RETENTION_LOCKED = ErrorCode(
+        "MHVP-DOC-0001",
+        409,
+        "Dokument ist aufbewahrungspflichtig oder gesperrt",
+        "Deletion needs a released retention profile, an expired period and no hold (6.9.5).",
+    )
+    PLACEHOLDER = ErrorCode(
+        "MHVP-DOC-0002", 422, "Platzhalter nicht auflösbar", "Template placeholder error."
+    )
+    UPLOAD_REJECTED = ErrorCode(
+        "MHVP-DOC-0003", 422, "Datei nicht zulässig", "File type, content or size not accepted."
+    )
+    LETTERHEAD_INCOMPLETE = ErrorCode(
+        "MHVP-DOC-0004",
+        422,
+        "Briefbogen unvollständig",
+        "Mandatory company data of the tenant is missing (tenant settings).",
+    )
     RELEASE_GATE_CLOSED = ErrorCode(
         "MHVP-GATE-0001",
         403,

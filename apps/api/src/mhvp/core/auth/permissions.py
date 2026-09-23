@@ -16,6 +16,7 @@ ACTIONS: tuple[str, ...] = ("read", "create", "update", "delete", "approve", "ex
 RESOURCES: tuple[str, ...] = (
     "contacts",
     "contracts",
+    "documents",
     "properties",
     "tenant_settings",
     "members",
@@ -51,10 +52,13 @@ def _r(resource: str) -> frozenset[str]:
 
 
 _MASTER_RWD = (
-    _rw("contacts", delete=True) | _rw("properties", delete=True) | _rw("contracts", delete=True)
+    _rw("contacts", delete=True)
+    | _rw("properties", delete=True)
+    | _rw("contracts", delete=True)
+    | _rw("documents", delete=True)
 )
-_MASTER_RW = _rw("contacts") | _rw("properties") | _rw("contracts")
-_MASTER_R = _r("contacts") | _r("properties") | _r("contracts")
+_MASTER_RW = _rw("contacts") | _rw("properties") | _rw("contracts") | _rw("documents")
+_MASTER_R = _r("contacts") | _r("properties") | _r("contracts") | _r("documents")
 
 SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole("tenant_admin", "Mandantenadministrator", _ADMIN),
@@ -67,19 +71,19 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole(
         "accountant_no_banking",
         "Buchhalter ohne Onlinebanking",
-        _SETTINGS_R | _rw("contacts") | _r("properties") | _r("contracts"),
+        _SETTINGS_R | _rw("contacts") | _r("properties") | _r("contracts") | _rw("documents"),
     ),
     SystemRole(
         "accountant_banking",
         "Buchhalter mit Onlinebanking",
-        _SETTINGS_R | _rw("contacts") | _r("properties") | _r("contracts"),
+        _SETTINGS_R | _rw("contacts") | _r("properties") | _r("contracts") | _rw("documents"),
     ),
     # Caretakers see objects, not contracts or personal data of residents (data minimisation).
     SystemRole("caretaker", "Hausmeister", _r("properties")),
     SystemRole(
         "technical_clerk",
         "Technischer Sachbearbeiter",
-        _SETTINGS_R | _r("contacts") | _rw("properties"),
+        _SETTINGS_R | _r("contacts") | _rw("properties") | _rw("documents"),
     ),
     SystemRole("support", "Support", _SETTINGS_R | _MASTER_R | {"audit:read"}),
     SystemRole("insurance_broker", "Versicherungsmakler", frozenset()),

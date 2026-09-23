@@ -169,6 +169,39 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M10 |
 | Datum | 23.09.2026 |
 
+## A-016
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Uploads bis 50 MB je Datei (`MHVP_DOCUMENT_MAX_BYTES`), zulässige Typen: PDF, JPEG, PNG, TIFF, HEIC, Text, CSV, XML, E-Mail, Office-Formate, ZIP. Der Inhalt muss zum angegebenen Typ passen (Signaturprüfung). Originale werden unverändert gespeichert; ein Duplikat (gleicher SHA-256) wird angezeigt, nicht abgewiesen. |
+| Begründung | Abschnitt 6.7 und 11 nennen keine Grenzwerte. Unverändertes Original folgt aus 11.3 und D43. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Dokumente |
+| Überprüfung spätestens bei Meilenstein | M11 (Belegeingang) |
+| Datum | 23.09.2026 |
+
+## A-017
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Standardkategorien je Mandant sind die Dokumenttypen aus 11.4 zuzüglich Legitimationsunterlage. Zuordnung zu den Drive-Unterordnern: Rechnung und Abrechnung zu 03_Buchhaltung, Vertrag, Protokoll, Versicherung und Teilungserklärung zu 02_Stammakte, Legitimationsunterlage zu 01, übrige zu 06_Sonstiges. Mieter- und Eigentümerakte (04, 05) werden noch nicht automatisch gewählt. |
+| Begründung | 11.2 legt die Ordnerstruktur fest, nicht die Zuordnung der Kategorien. |
+| Kennzeichnung | unkritisch, je Mandant änderbar |
+| Betroffene Bereiche | Dokumente, Drive-Spiegel |
+| Überprüfung spätestens bei Meilenstein | M11 |
+| Datum | 23.09.2026 |
+
+## A-018
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Briefe nach DIN 5008 Form B mit Briefbogen aus den Mandanteneinstellungen: Farbband (`letter_band`) oder Akzentlinie, Falz- und Lochmarken, Absenderzeile, Anschriftfeld, Infoblock, Fußzeile mit Firmen- und Registerangaben. Unterschriftsbilder werden nicht eingesetzt. Die Anrede wird nur aus erfasster Anrede und Nachname gebildet, sonst „Sehr geehrte Damen und Herren,". Das Briefdatum richtet sich nach Europe/Berlin. |
+| Begründung | Briefbogen je Mandant laut M6 (Abschnitt 18); Kennlinie der HVM aus dem Skill hvm-ci; Pflichtangaben kommen aus den Firmendaten (V14). Kein Erraten von Geschlecht oder Titeln. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb; Versand erst mit M13 |
+| Betroffene Bereiche | Briefe, Serienbriefe |
+| Überprüfung spätestens bei Meilenstein | M13 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

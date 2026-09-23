@@ -129,4 +129,7 @@ async def ensure_tenant_defaults(session: AsyncSession, tenant_id: uuid.UUID) ->
                     sort_order=order,
                 )
             )
+    from mhvp.documents.defaults import ensure_document_defaults
+
+    await ensure_document_defaults(session, tenant_id)
     await session.flush()

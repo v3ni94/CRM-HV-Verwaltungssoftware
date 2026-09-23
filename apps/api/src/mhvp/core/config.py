@@ -57,6 +57,8 @@ class Settings(BaseSettings):
     s3_access_key_id: SecretStr | None = None
     s3_secret_access_key: SecretStr | None = None
     s3_bucket: str = "mhvp"
+    # Upload limit per document (A-016); larger files go through import runs later.
+    document_max_bytes: int = Field(default=50 * 1024 * 1024, gt=0, le=1024 * 1024 * 1024)
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 

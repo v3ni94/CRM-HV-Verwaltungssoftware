@@ -30,8 +30,18 @@ class CompanyData(BaseModel):
     website: str | None = None
 
 
-class Branding(BaseModel):
+class BandSegment(BaseModel):
+    """Segment of the letterhead colour band as share of the page width (M6)."""
+
     model_config = ConfigDict(extra="forbid")
+
+    color: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
+    from_: float = Field(alias="from", ge=0, le=1)
+    to: float = Field(ge=0, le=1)
+
+
+class Branding(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     primary_color: str | None = None
     secondary_color: str | None = None
@@ -42,6 +52,7 @@ class Branding(BaseModel):
     font_family: str | None = None
     logo_light_document_id: uuid.UUID | None = None
     logo_dark_document_id: uuid.UUID | None = None
+    letter_band: list[BandSegment] | None = Field(default=None, max_length=8)
 
     @field_validator(
         "primary_color",

@@ -1,7 +1,9 @@
 {
   "slug": "hausverwaltung-mueller",
   "name": "Hausverwaltung Müller GmbH",
-  "domains": ["portal.muellerhv.de"],
+  "domains": [
+    "portal.muellerhv.de"
+  ],
   "company": {
     "name": "Hausverwaltung Müller GmbH",
     "legal_form": "GmbH",
@@ -11,7 +13,9 @@
     "country": "DE",
     "register_court": "Amtsgericht Düsseldorf",
     "register_number": "HRB 104762",
-    "management": ["Timo Müller"],
+    "management": [
+      "Timo Müller"
+    ],
     "management_title": "Geschäftsführer",
     "vat_id": null,
     "phone": null,
@@ -27,11 +31,34 @@
     "surface_color": "#ECECEC",
     "font_family": "system-ui, Helvetica Neue, Arial, sans-serif",
     "logo_light_document_id": null,
-    "logo_dark_document_id": null
+    "logo_dark_document_id": null,
+    "letter_band": [
+      {
+        "color": "#87888A",
+        "from": 0,
+        "to": 0.4
+      },
+      {
+        "color": "#9C9D9F",
+        "from": 0.4,
+        "to": 0.6
+      },
+      {
+        "color": "#E6A83C",
+        "from": 0.6,
+        "to": 0.675
+      },
+      {
+        "color": "#D7D8DA",
+        "from": 0.675,
+        "to": 1
+      }
+    ]
   },
   "sources": {
     "company": "Skill hvm-ci, Abschnitt 1 (verbindliche Firmendaten)",
     "branding": "Skill hvm-ci, Abschnitte 2 und 3 (CI-Farben, Typografie HTML/Web)",
-    "TODO": "USt-IdNr., Telefon, E-Mail nicht im Skill hinterlegt, nicht erfunden; Logo wird mit M6 als Dokument hochgeladen; Freigabe der Werte offen (V14)"
+    "TODO": "USt-IdNr., Telefon, E-Mail nicht im Skill hinterlegt, nicht erfunden; Logo wird mit M6 als Dokument hochgeladen; Freigabe der Werte offen (V14)",
+    "letter_band": "Skill hvm-ci, Abschnitt 5 (HVM-Kennlinie, Segmente in Anteilen der Seitenbreite)"
   }
 }

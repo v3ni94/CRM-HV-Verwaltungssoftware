@@ -100,7 +100,9 @@ async def provision_tenant(
                     company=CompanyData.model_validate(company or {"name": name}).model_dump(
                         mode="json"
                     ),
-                    branding=Branding.model_validate(branding or {}).model_dump(mode="json"),
+                    branding=Branding.model_validate(branding or {}).model_dump(
+                        mode="json", by_alias=True
+                    ),
                     sources=sources or {},
                     created_by=actor_user_id,
                 )

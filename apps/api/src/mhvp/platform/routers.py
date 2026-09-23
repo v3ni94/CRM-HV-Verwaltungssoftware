@@ -259,7 +259,7 @@ async def patch_settings(
         if body.company is not None:
             row.company = body.company.model_dump(mode="json")
         if body.branding is not None:
-            row.branding = body.branding.model_dump(mode="json")
+            row.branding = body.branding.model_dump(mode="json", by_alias=True)
         after = {"company": row.company, "branding": row.branding}
         changes = diff(before, after)
         if changes:
