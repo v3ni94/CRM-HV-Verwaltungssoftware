@@ -43,14 +43,14 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | A05 | Nutzerwechsel, Leerstand, Heizkosten | 7.6 | specified, not implemented |
 | A06 | Eigentümerabrechnung Miete/SEV | 7.6 | specified, not implemented |
 | A07 | Bedienung | 7.6 | specified, not implemented |
-| W01 | Eigene Gemeinschaft | 7.8 | specified, not implemented |
-| W02 | Wirtschaftsplan | 7.8 | specified, not implemented |
+| W01 | Eigene Gemeinschaft | 7.8 | implemented (M24), ledger check |
+| W02 | Wirtschaftsplan | 7.8 | implemented (M24), behind G4 |
 | W03 | Kostenverteilung | 7.8 | specified, not implemented |
 | W04 | Jahresabrechnung als nachvollziehbare Überleitung | 7.8 | specified, not implemented |
-| W05 | Abrechnungsspitze und Rückstände | 7.8 | specified, not implemented |
-| W06 | Beschluss und Buchung | 7.8 | specified, not implemented |
-| W07 | Eigentümerwechsel | 7.8 | specified, not implemented |
-| W08 | Erhaltungsrücklagen | 7.8 | specified, not implemented |
+| W05 | Abrechnungsspitze und Rückstände | 7.8 | implemented (M24), [W05](W05-hoa-result.md) |
+| W06 | Beschluss und Buchung | 7.8 | implemented (M24), [W06](W06-resolution.md) |
+| W07 | Eigentümerwechsel | 7.8 | open, M24-01 |
+| W08 | Erhaltungsrücklagen | 7.8 | implemented (M24), D03 tested |
 | W09 | Sonderumlagen und Maßnahmen | 7.8 | specified, not implemented |
 | W10 | Darlehen, Versicherungen, größere Maßnahmen | 7.8 | specified, not implemented |
 | W11 | Vermögensbericht | 7.8 | specified, not implemented |

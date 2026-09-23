@@ -367,6 +367,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M27 |
 | Datum | 23.09.2026 |
 
+## A-034
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Im Test wird der beschlossene Jahresvorschuss als eine Monatssollstellung gebucht. Die Berechnung summiert alle gebuchten Sollstellungen des Jahres je Einheit und Komponente; die Stückelung ändert das Ergebnis nicht. |
+| Begründung | M24, D01 bis D03 |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | WEG |
+| Überprüfung spätestens bei Meilenstein | M24 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:
