@@ -4658,6 +4658,52 @@
         "title": "EventOut",
         "type": "object"
       },
+      "FieldOut": {
+        "properties": {
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "required",
+          "choices",
+          "label"
+        ],
+        "title": "FieldOut",
+        "type": "object"
+      },
+      "FileStatus": {
+        "enum": [
+          "uploaded",
+          "mapped",
+          "validated",
+          "applied"
+        ],
+        "title": "FileStatus",
+        "type": "string"
+      },
       "GateDecision": {
         "properties": {
           "comment": {
@@ -5692,6 +5738,96 @@
         ],
         "title": "MandateType",
         "type": "string"
+      },
+      "MappingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "object"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "report_type": {
+            "$ref": "#/components/schemas/ReportType"
+          },
+          "value_maps": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Value Maps",
+            "type": "object"
+          }
+        },
+        "required": [
+          "report_type",
+          "name",
+          "columns"
+        ],
+        "title": "MappingIn",
+        "type": "object"
+      },
+      "MappingOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "columns": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "report_type": {
+            "$ref": "#/components/schemas/ReportType"
+          },
+          "value_maps": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Value Maps",
+            "type": "object"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "report_type",
+          "name",
+          "version",
+          "columns",
+          "value_maps",
+          "active"
+        ],
+        "title": "MappingOut",
+        "type": "object"
       },
       "MeOut": {
         "properties": {
@@ -8377,6 +8513,20 @@
         "title": "RelationOut",
         "type": "object"
       },
+      "ReportType": {
+        "enum": [
+          "properties",
+          "units",
+          "contacts",
+          "tenancies",
+          "ownerships",
+          "payments",
+          "journal",
+          "bank_transactions"
+        ],
+        "title": "ReportType",
+        "type": "string"
+      },
       "RetentionProfileIn": {
         "additionalProperties": false,
         "properties": {
@@ -8627,6 +8777,88 @@
         ],
         "title": "RolePermissions",
         "type": "object"
+      },
+      "RowOut": {
+        "properties": {
+          "entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "entity_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Type"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "raw": {
+            "additionalProperties": true,
+            "title": "Raw",
+            "type": "object"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RowStatus"
+          },
+          "values": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Values"
+          }
+        },
+        "required": [
+          "row_number",
+          "raw",
+          "values",
+          "status",
+          "errors",
+          "entity_type",
+          "entity_id"
+        ],
+        "title": "RowOut",
+        "type": "object"
+      },
+      "RowStatus": {
+        "enum": [
+          "pending",
+          "valid",
+          "invalid",
+          "unchanged",
+          "conflict",
+          "created",
+          "staged_only"
+        ],
+        "title": "RowStatus",
+        "type": "string"
       },
       "RunOut": {
         "properties": {
@@ -9032,6 +9264,134 @@
           "last_used_at"
         ],
         "title": "SessionOut",
+        "type": "object"
+      },
+      "SourceIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "header_row": {
+            "default": 1,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Header Row",
+            "type": "integer"
+          },
+          "report_type": {
+            "$ref": "#/components/schemas/ReportType"
+          },
+          "sheet": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheet"
+          }
+        },
+        "required": [
+          "document_id",
+          "report_type"
+        ],
+        "title": "SourceIn",
+        "type": "object"
+      },
+      "SourceOut": {
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "header_row": {
+            "title": "Header Row",
+            "type": "integer"
+          },
+          "headers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Headers",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "import_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Import Run Id"
+          },
+          "mapping_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mapping Id"
+          },
+          "report": {
+            "additionalProperties": true,
+            "title": "Report",
+            "type": "object"
+          },
+          "report_type": {
+            "$ref": "#/components/schemas/ReportType"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "sheet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheet"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FileStatus"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "report_type",
+          "sheet",
+          "header_row",
+          "headers",
+          "row_count",
+          "mapping_id",
+          "status",
+          "import_run_id",
+          "report"
+        ],
+        "title": "SourceOut",
         "type": "object"
       },
       "StatusChange": {
@@ -10035,6 +10395,21 @@
           "totp_enabled"
         ],
         "title": "UserOut",
+        "type": "object"
+      },
+      "ValidateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "mapping_id": {
+            "format": "uuid",
+            "title": "Mapping Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mapping_id"
+        ],
+        "title": "ValidateIn",
         "type": "object"
       },
       "ValidationError": {
@@ -14517,6 +14892,509 @@
         "summary": "Importläufe",
         "tags": [
           "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/fields": {
+      "get": {
+        "operationId": "fields_api_v1_imports_immoware24_fields_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "$ref": "#/components/schemas/FieldOut"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response Fields Api V1 Imports Immoware24 Fields Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Zielfelder je Report",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/files": {
+      "post": {
+        "operationId": "create_source_api_v1_imports_immoware24_files_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exportdatei einlesen (Staging)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/files/{source_id}": {
+      "get": {
+        "operationId": "get_source_api_v1_imports_immoware24_files__source_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stand der Datei",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/files/{source_id}/apply": {
+      "post": {
+        "description": "All valid rows in one transaction, recorded as import run (undo: /imports/{id}/undo).",
+        "operationId": "apply_api_v1_imports_immoware24_files__source_id__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übernehmen",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/files/{source_id}/reconciliation": {
+      "get": {
+        "operationId": "reconciliation_api_v1_imports_immoware24_files__source_id__reconciliation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reconciliation Api V1 Imports Immoware24 Files  Source Id  Reconciliation Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abgleichbericht",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/files/{source_id}/rows": {
+      "get": {
+        "operationId": "rows_api_v1_imports_immoware24_files__source_id__rows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RowStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RowOut"
+                  },
+                  "title": "Response Rows Api V1 Imports Immoware24 Files  Source Id  Rows Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zeilen mit Status (Validierungsbericht)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/files/{source_id}/test-run": {
+      "post": {
+        "operationId": "dry_run_api_v1_imports_immoware24_files__source_id__test_run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dry Run Api V1 Imports Immoware24 Files  Source Id  Test Run Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Testlauf (nichts wird gespeichert)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/files/{source_id}/validate": {
+      "post": {
+        "operationId": "validate_api_v1_imports_immoware24_files__source_id__validate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuordnen und prüfen",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/mappings": {
+      "get": {
+        "operationId": "list_mappings_api_v1_imports_immoware24_mappings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "report_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ReportType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Report Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MappingOut"
+                  },
+                  "title": "Response List Mappings Api V1 Imports Immoware24 Mappings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mapping-Vorlagen",
+        "tags": [
+          "Import Immoware24"
+        ]
+      },
+      "post": {
+        "operationId": "create_mapping_api_v1_imports_immoware24_mappings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mapping-Vorlage speichern (neue Version)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/overview": {
+      "get": {
+        "description": "Platform totals to compare with the Immoware24 figures (acceptance M8).",
+        "operationId": "overview_api_v1_imports_immoware24_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Overview Api V1 Imports Immoware24 Overview Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Übersicht Bestand",
+        "tags": [
+          "Import Immoware24"
         ]
       }
     },

@@ -995,6 +995,183 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/imports/immoware24/fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zielfelder je Report */
+        get: operations["fields_api_v1_imports_immoware24_fields_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Exportdatei einlesen (Staging) */
+        post: operations["create_source_api_v1_imports_immoware24_files_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/files/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stand der Datei */
+        get: operations["get_source_api_v1_imports_immoware24_files__source_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/files/{source_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Übernehmen
+         * @description All valid rows in one transaction, recorded as import run (undo: /imports/{id}/undo).
+         */
+        post: operations["apply_api_v1_imports_immoware24_files__source_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/files/{source_id}/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abgleichbericht */
+        get: operations["reconciliation_api_v1_imports_immoware24_files__source_id__reconciliation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/files/{source_id}/rows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zeilen mit Status (Validierungsbericht) */
+        get: operations["rows_api_v1_imports_immoware24_files__source_id__rows_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/files/{source_id}/test-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Testlauf (nichts wird gespeichert) */
+        post: operations["dry_run_api_v1_imports_immoware24_files__source_id__test_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/files/{source_id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Zuordnen und prüfen */
+        post: operations["validate_api_v1_imports_immoware24_files__source_id__validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mapping-Vorlagen */
+        get: operations["list_mappings_api_v1_imports_immoware24_mappings_get"];
+        put?: never;
+        /** Mapping-Vorlage speichern (neue Version) */
+        post: operations["create_mapping_api_v1_imports_immoware24_mappings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Übersicht Bestand
+         * @description Platform totals to compare with the Immoware24 figures (acceptance M8).
+         */
+        get: operations["overview_api_v1_imports_immoware24_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/imports/{import_id}": {
         parameters: {
             query?: never;
@@ -3479,6 +3656,24 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** FieldOut */
+        FieldOut: {
+            /** Choices */
+            choices: string[];
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Required */
+            required: boolean;
+        };
+        /**
+         * FileStatus
+         * @enum {string}
+         */
+        FileStatus: "uploaded" | "mapped" | "validated" | "applied";
         /** GateDecision */
         GateDecision: {
             /** Comment */
@@ -3897,6 +4092,47 @@ export interface components {
          * @enum {string}
          */
         MandateType: "core" | "b2b";
+        /** MappingIn */
+        MappingIn: {
+            /** Columns */
+            columns: {
+                [key: string]: string;
+            };
+            /** Name */
+            name: string;
+            report_type: components["schemas"]["ReportType"];
+            /** Value Maps */
+            value_maps?: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+        };
+        /** MappingOut */
+        MappingOut: {
+            /** Active */
+            active: boolean;
+            /** Columns */
+            columns: {
+                [key: string]: string;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            report_type: components["schemas"]["ReportType"];
+            /** Value Maps */
+            value_maps: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /** Version */
+            version: number;
+        };
         /** MeOut */
         MeOut: {
             /** Display Name */
@@ -4784,6 +5020,11 @@ export interface components {
             /** Valid To */
             valid_to?: string | null;
         };
+        /**
+         * ReportType
+         * @enum {string}
+         */
+        ReportType: "properties" | "units" | "contacts" | "tenancies" | "ownerships" | "payments" | "journal" | "bank_transactions";
         /** RetentionProfileIn */
         RetentionProfileIn: {
             /** Document Class */
@@ -4864,6 +5105,31 @@ export interface components {
             /** Permissions */
             permissions: string[];
         };
+        /** RowOut */
+        RowOut: {
+            /** Entity Id */
+            entity_id: string | null;
+            /** Entity Type */
+            entity_type: string | null;
+            /** Errors */
+            errors: string[];
+            /** Raw */
+            raw: {
+                [key: string]: unknown;
+            };
+            /** Row Number */
+            row_number: number;
+            status: components["schemas"]["RowStatus"];
+            /** Values */
+            values: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * RowStatus
+         * @enum {string}
+         */
+        RowStatus: "pending" | "valid" | "invalid" | "unchanged" | "conflict" | "created" | "staged_only";
         /** RunOut */
         RunOut: {
             /** Confidence */
@@ -5009,6 +5275,53 @@ export interface components {
             tenant_id: string | null;
             /** User Agent */
             user_agent: string | null;
+        };
+        /** SourceIn */
+        SourceIn: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /**
+             * Header Row
+             * @default 1
+             */
+            header_row: number;
+            report_type: components["schemas"]["ReportType"];
+            /** Sheet */
+            sheet?: string | null;
+        };
+        /** SourceOut */
+        SourceOut: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Header Row */
+            header_row: number;
+            /** Headers */
+            headers: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Import Run Id */
+            import_run_id: string | null;
+            /** Mapping Id */
+            mapping_id: string | null;
+            /** Report */
+            report: {
+                [key: string]: unknown;
+            };
+            report_type: components["schemas"]["ReportType"];
+            /** Row Count */
+            row_count: number;
+            /** Sheet */
+            sheet: string | null;
+            status: components["schemas"]["FileStatus"];
         };
         /** StatusChange */
         StatusChange: {
@@ -5315,6 +5628,14 @@ export interface components {
             is_platform_admin: boolean;
             /** Totp Enabled */
             totp_enabled: boolean;
+        };
+        /** ValidateIn */
+        ValidateIn: {
+            /**
+             * Mapping Id
+             * Format: uuid
+             */
+            mapping_id: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -7960,6 +8281,345 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportOut"][];
+                };
+            };
+        };
+    };
+    fields_api_v1_imports_immoware24_fields_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: components["schemas"]["FieldOut"][];
+                    };
+                };
+            };
+        };
+    };
+    create_source_api_v1_imports_immoware24_files_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_source_api_v1_imports_immoware24_files__source_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_api_v1_imports_immoware24_files__source_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reconciliation_api_v1_imports_immoware24_files__source_id__reconciliation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rows_api_v1_imports_immoware24_files__source_id__rows_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["RowStatus"] | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RowOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dry_run_api_v1_imports_immoware24_files__source_id__test_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_api_v1_imports_immoware24_files__source_id__validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_mappings_api_v1_imports_immoware24_mappings_get: {
+        parameters: {
+            query?: {
+                report_type?: components["schemas"]["ReportType"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MappingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_mapping_api_v1_imports_immoware24_mappings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MappingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MappingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_api_v1_imports_immoware24_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
                 };
             };
         };

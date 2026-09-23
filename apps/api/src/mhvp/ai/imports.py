@@ -231,6 +231,19 @@ async def _referenced(session: AsyncSession, entity_type: str, entity_id: uuid.U
     )
     if linked:
         return "mit Dokumenten verknüpft"
+    if entity_type == "contract_payment":
+        payment = await session.get(ContractPayment, entity_id)
+        if payment is not None and await session.scalar(
+            select(ContractPayment.id)
+            .where(
+                ContractPayment.contract_id == payment.contract_id,
+                ContractPayment.payment_type_code == payment.payment_type_code,
+                ContractPayment.valid_from > payment.valid_from,
+            )
+            .limit(1)
+        ):
+            return "spätere Zahlung derselben Art vorhanden"
+        return None
     if entity_type == "contract":
         contract = await session.get(Contract, entity_id)
         if contract is None:
@@ -306,6 +319,24 @@ async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID)
             await session.execute(
                 delete(DebtorAccountReservation).where(DebtorAccountReservation.id == account_id)
             )
+        return
+    if entity_type == "contract_payment":
+        payment = await session.get(ContractPayment, entity_id)
+        if payment is not None:
+            # Reopen the payment this one had closed on import (valid_to = day before).
+            from datetime import timedelta
+
+            previous = await session.scalar(
+                select(ContractPayment).where(
+                    ContractPayment.contract_id == payment.contract_id,
+                    ContractPayment.payment_type_code == payment.payment_type_code,
+                    ContractPayment.valid_to == payment.valid_from - timedelta(days=1),
+                )
+            )
+            if previous is not None:
+                previous.valid_to = None
+            await session.delete(payment)
+            await session.flush()
         return
     if entity_type == "contact":
         contact = await session.get(Contact, entity_id)
