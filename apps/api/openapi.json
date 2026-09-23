@@ -1402,6 +1402,20 @@
         "title": "Body_upload_api_v1_documents_post",
         "type": "object"
       },
+      "Body_upload_api_v1_portal_uploads_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_api_v1_portal_uploads_post",
+        "type": "object"
+      },
       "BookIn": {
         "additionalProperties": false,
         "properties": {
@@ -7874,6 +7888,200 @@
         "title": "LoginStep",
         "type": "object"
       },
+      "MailAppointmentIn": {
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "title"
+        ],
+        "title": "MailAppointmentIn",
+        "type": "object"
+      },
+      "MailAssignIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "pattern": "^(new|assigned|done)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "MailAssignIn",
+        "type": "object"
+      },
+      "MailIngestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "mailbox_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mailbox Id"
+          }
+        },
+        "required": [
+          "document_id"
+        ],
+        "title": "MailIngestIn",
+        "type": "object"
+      },
+      "MailboxIn": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Address",
+            "type": "string"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "imap_host": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imap Host"
+          },
+          "imap_port": {
+            "anyOf": [
+              {
+                "maximum": 65535.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imap Port"
+          },
+          "kind": {
+            "default": "imap",
+            "pattern": "^(imap|gmail)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "secret": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret"
+          },
+          "smtp_host": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Host"
+          },
+          "smtp_port": {
+            "anyOf": [
+              {
+                "maximum": 65535.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Port"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "address"
+        ],
+        "title": "MailboxIn",
+        "type": "object"
+      },
       "MaintenanceIn": {
         "additionalProperties": false,
         "properties": {
@@ -10257,6 +10465,309 @@
           "text"
         ],
         "title": "PlanIn",
+        "type": "object"
+      },
+      "PortalAcceptIn": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "PortalAcceptIn",
+        "type": "object"
+      },
+      "PortalAppointmentIn": {
+        "additionalProperties": false,
+        "properties": {
+          "scheduled_at": {
+            "format": "date-time",
+            "title": "Scheduled At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scheduled_at"
+        ],
+        "title": "PortalAppointmentIn",
+        "type": "object"
+      },
+      "PortalChangeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "pattern": "^(address|phone|email|bank_account)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind",
+          "payload"
+        ],
+        "title": "PortalChangeIn",
+        "type": "object"
+      },
+      "PortalCommentIn": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "PortalCommentIn",
+        "type": "object"
+      },
+      "PortalCompleteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "photo_document_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Photo Document Ids",
+            "type": "array"
+          },
+          "report": {
+            "maxLength": 20000,
+            "minLength": 3,
+            "title": "Report",
+            "type": "string"
+          }
+        },
+        "required": [
+          "report"
+        ],
+        "title": "PortalCompleteIn",
+        "type": "object"
+      },
+      "PortalDecideIn": {
+        "additionalProperties": false,
+        "properties": {
+          "accept": {
+            "title": "Accept",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "accept"
+        ],
+        "title": "PortalDecideIn",
+        "type": "object"
+      },
+      "PortalInviteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id",
+          "email",
+          "display_name"
+        ],
+        "title": "PortalInviteIn",
+        "type": "object"
+      },
+      "PortalInvoiceSubmitIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "gross": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Gross"
+          },
+          "invoice_date": {
+            "format": "date",
+            "title": "Invoice Date",
+            "type": "string"
+          },
+          "number": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "invoice_date",
+          "gross",
+          "document_id"
+        ],
+        "title": "PortalInvoiceSubmitIn",
+        "type": "object"
+      },
+      "PortalMeterIn": {
+        "additionalProperties": false,
+        "properties": {
+          "meter_id": {
+            "format": "uuid",
+            "title": "Meter Id",
+            "type": "string"
+          },
+          "read_at": {
+            "format": "date",
+            "title": "Read At",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "meter_id",
+          "value",
+          "read_at"
+        ],
+        "title": "PortalMeterIn",
+        "type": "object"
+      },
+      "PortalQuoteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "title": "PortalQuoteIn",
+        "type": "object"
+      },
+      "PortalTicketIn": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "maxLength": 20000,
+            "minLength": 3,
+            "title": "Description",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          }
+        },
+        "required": [
+          "title",
+          "description"
+        ],
+        "title": "PortalTicketIn",
         "type": "object"
       },
       "PreferredChannel": {
@@ -23670,6 +24181,420 @@
         ]
       }
     },
+    "/api/v1/mail/ingest": {
+      "post": {
+        "operationId": "ingest_api_v1_mail_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailIngestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ingest Api V1 Mail Ingest Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "E-Mail (.eml) aufnehmen und zuordnen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/mailboxes": {
+      "post": {
+        "operationId": "create_mailbox_api_v1_mail_mailboxes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailboxIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Mailbox Api V1 Mail Mailboxes Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Postfach einrichten (Zugangsdaten verschlüsselt)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages": {
+      "get": {
+        "operationId": "messages_api_v1_mail_messages_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contact Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Messages Api V1 Mail Messages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorgangsliste",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}": {
+      "patch": {
+        "operationId": "assign_api_v1_mail_messages__message_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailAssignIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Assign Api V1 Mail Messages  Message Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuordnen oder erledigen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/appointment": {
+      "post": {
+        "operationId": "take_appointment_api_v1_mail_messages__message_id__appointment_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailAppointmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Take Appointment Api V1 Mail Messages  Message Id  Appointment Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Erkannten Termin in den Kalender übernehmen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/reply-draft": {
+      "post": {
+        "operationId": "reply_draft_api_v1_mail_messages__message_id__reply_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reply Draft Api V1 Mail Messages  Message Id  Reply Draft Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Antwortentwurf (Vorlage, keine KI)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/send": {
+      "post": {
+        "operationId": "send_api_v1_mail_messages__message_id__send_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Send Api V1 Mail Messages  Message Id  Send Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entwurf senden (nur mit eingerichtetem Postfach)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/ticket": {
+      "post": {
+        "operationId": "to_ticket_api_v1_mail_messages__message_id__ticket_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response To Ticket Api V1 Mail Messages  Message Id  Ticket Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ticket aus E-Mail",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/meters/{meter_id}/readings": {
       "get": {
         "operationId": "list_readings_api_v1_meters__meter_id__readings_get",
@@ -24436,6 +25361,877 @@
         "summary": "Benutzer anlegen",
         "tags": [
           "Plattform"
+        ]
+      }
+    },
+    "/api/v1/portal-admin/accounts": {
+      "post": {
+        "operationId": "invite_api_v1_portal_admin_accounts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalInviteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Invite Api V1 Portal Admin Accounts Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalzugang einladen",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      }
+    },
+    "/api/v1/portal-admin/accounts/{account_id}/sync-grants": {
+      "post": {
+        "operationId": "resync_api_v1_portal_admin_accounts__account_id__sync_grants_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Resync Api V1 Portal Admin Accounts  Account Id  Sync Grants Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zugriffsrechte neu ableiten",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      }
+    },
+    "/api/v1/portal-admin/change-requests": {
+      "get": {
+        "operationId": "change_requests_api_v1_portal_admin_change_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Change Requests Api V1 Portal Admin Change Requests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Vorschläge aus dem Portal",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      }
+    },
+    "/api/v1/portal-admin/change-requests/{request_id}/decide": {
+      "post": {
+        "operationId": "decide_api_v1_portal_admin_change_requests__request_id__decide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalDecideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Decide Api V1 Portal Admin Change Requests  Request Id  Decide Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlag annehmen oder ablehnen",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      }
+    },
+    "/api/v1/portal/account": {
+      "get": {
+        "operationId": "statement_api_v1_portal_account_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Statement Api V1 Portal Account Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Kontoauszug: offene Posten der eigenen Verträge",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/change-requests": {
+      "post": {
+        "operationId": "propose_api_v1_portal_change_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Propose Api V1 Portal Change Requests Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Änderung der Stammdaten oder Bankverbindung vorschlagen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/documents": {
+      "get": {
+        "operationId": "documents_api_v1_portal_documents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Documents Api V1 Portal Documents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Freigegebene Dokumente",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/documents/{document_id}/download": {
+      "get": {
+        "operationId": "download_api_v1_portal_documents__document_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dokument herunterladen (gleiche Prüfung)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/invitations/accept": {
+      "post": {
+        "operationId": "accept_api_v1_portal_invitations_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalAcceptIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Accept Api V1 Portal Invitations Accept Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einladung annehmen und Passwort setzen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me": {
+      "get": {
+        "operationId": "me_api_v1_portal_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Api V1 Portal Me Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigene Rollen und Verträge",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/meter-readings": {
+      "post": {
+        "operationId": "meter_reading_api_v1_portal_meter_readings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalMeterIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Meter Reading Api V1 Portal Meter Readings Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zählerstand melden (Vorschlag)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/tickets": {
+      "get": {
+        "operationId": "tickets_api_v1_portal_tickets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Tickets Api V1 Portal Tickets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigene Meldungen mit Verlauf",
+        "tags": [
+          "Portal"
+        ]
+      },
+      "post": {
+        "operationId": "create_ticket_api_v1_portal_tickets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalTicketIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Ticket Api V1 Portal Tickets Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schadensmeldung",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/tickets/{ticket_id}/comments": {
+      "post": {
+        "operationId": "comment_api_v1_portal_tickets__ticket_id__comments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalCommentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Comment Api V1 Portal Tickets  Ticket Id  Comments Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kommentar zur eigenen Meldung",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/uploads": {
+      "post": {
+        "operationId": "upload_api_v1_portal_uploads_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_api_v1_portal_uploads_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Upload Api V1 Portal Uploads Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Datei hochladen (Foto, Angebot, Rechnung)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/work-orders": {
+      "get": {
+        "operationId": "work_orders_api_v1_portal_work_orders_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Work Orders Api V1 Portal Work Orders Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigene Aufträge (Dienstleister)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/work-orders/{order_id}/appointment": {
+      "post": {
+        "operationId": "appointment_api_v1_portal_work_orders__order_id__appointment_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalAppointmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Appointment Api V1 Portal Work Orders  Order Id  Appointment Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Termin festlegen (nach Freigabe)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/work-orders/{order_id}/complete": {
+      "post": {
+        "operationId": "complete_api_v1_portal_work_orders__order_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalCompleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Complete Api V1 Portal Work Orders  Order Id  Complete Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ausführung dokumentieren",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/work-orders/{order_id}/decline": {
+      "post": {
+        "operationId": "decline_api_v1_portal_work_orders__order_id__decline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Decline Api V1 Portal Work Orders  Order Id  Decline Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auftrag ablehnen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/work-orders/{order_id}/invoice": {
+      "post": {
+        "operationId": "submit_invoice_api_v1_portal_work_orders__order_id__invoice_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalInvoiceSubmitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Submit Invoice Api V1 Portal Work Orders  Order Id  Invoice Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rechnung einreichen (zur Prüfung)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/work-orders/{order_id}/quote": {
+      "post": {
+        "operationId": "quote_api_v1_portal_work_orders__order_id__quote_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalQuoteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Quote Api V1 Portal Work Orders  Order Id  Quote Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Angebot abgeben",
+        "tags": [
+          "Portal"
         ]
       }
     },

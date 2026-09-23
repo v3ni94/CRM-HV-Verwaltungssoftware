@@ -1,0 +1,67 @@
+"""Mailboxes and messages (6.6, M20). Credentials are encrypted and never returned."""
+
+import uuid
+from datetime import date, datetime
+from typing import Any
+
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column
+
+from mhvp.core.crypto import EncryptedText
+from mhvp.core.db.base import Base
+from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
+
+
+def _fk(target: str) -> Any:
+    return mapped_column(UUID(as_uuid=True), ForeignKey(target), nullable=True)
+
+
+class Mailbox(IdMixin, TimestampMixin, TenantMixin, Base):
+    __tablename__ = "mailbox"
+
+    address: Mapped[str] = mapped_column(String(320), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="imap")  # imap, gmail
+    imap_host: Mapped[str | None] = mapped_column(String(255))
+    imap_port: Mapped[int | None] = mapped_column(Integer)
+    smtp_host: Mapped[str | None] = mapped_column(String(255))
+    smtp_port: Mapped[int | None] = mapped_column(Integer)
+    username: Mapped[str | None] = mapped_column(String(320))
+    secret: Mapped[str | None] = mapped_column(EncryptedText())
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    last_uid: Mapped[int | None] = mapped_column(Integer)
+
+
+class Message(IdMixin, TimestampMixin, TenantMixin, Base):
+    __tablename__ = "message"
+    __table_args__ = (Index("ix_message_header_id", "tenant_id", "header_message_id"),)
+
+    channel: Mapped[str] = mapped_column(String(16), nullable=False, default="email")
+    direction: Mapped[str] = mapped_column(String(8), nullable=False)  # in, out
+    mailbox_id: Mapped[uuid.UUID | None] = _fk("mailbox.id")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="new"
+    )  # new, assigned, done, draft, sent
+    from_address: Mapped[str | None] = mapped_column(String(320))
+    to_addresses: Mapped[list[str]] = mapped_column(
+        ARRAY(String(320)), nullable=False, default=list
+    )
+    subject: Mapped[str | None] = mapped_column(String(998))
+    body: Mapped[str | None] = mapped_column(Text)
+    header_message_id: Mapped[str | None] = mapped_column(String(998))
+    in_reply_to: Mapped[str | None] = mapped_column(String(998))
+    thread_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    contact_id: Mapped[uuid.UUID | None] = _fk("contact.id")
+    property_id: Mapped[uuid.UUID | None] = _fk("property.id")
+    ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id")
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id")
+    attachment_document_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(UUID(as_uuid=True)), nullable=False, default=list
+    )
+    classification: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    appointment_suggestions: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    reply_due: Mapped[date | None] = mapped_column(Date)

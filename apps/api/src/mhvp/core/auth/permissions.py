@@ -22,6 +22,7 @@ RESOURCES: tuple[str, ...] = (
     "properties",
     "tenant_settings",
     "tickets",
+    "communication",
     "members",
     "roles",
     "api_keys",
@@ -54,7 +55,7 @@ def _r(resource: str) -> frozenset[str]:
     return frozenset({f"{resource}:read"})
 
 
-_TICKETS = _rw("tickets", delete=True) | {"tickets:approve"}
+_TICKETS = _rw("tickets", delete=True) | {"tickets:approve"} | _rw("communication")
 
 _MASTER_RWD = (
     _rw("contacts", delete=True)
@@ -77,7 +78,9 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole("read_only", "Nur Lesezugriff", READ_ALL),
     SystemRole("read_only_master_data", "Nur Lesezugriff Stammdaten", _SETTINGS_R | _MASTER_R),
     SystemRole(
-        "clerk_no_delete", "Sachbearbeiter ohne Löschen", _SETTINGS_R | _MASTER_RW | _rw("tickets")
+        "clerk_no_delete",
+        "Sachbearbeiter ohne Löschen",
+        _SETTINGS_R | _MASTER_RW | _rw("tickets") | _rw("communication"),
     ),
     SystemRole(
         "clerk_no_accounting",
@@ -113,6 +116,8 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
     ),
     SystemRole("support", "Support", _SETTINGS_R | _MASTER_R | {"audit:read"}),
     SystemRole("insurance_broker", "Versicherungsmakler", frozenset()),
+    # Portal users (M21, M22): no CRM rights; portal endpoints check the access matrix.
+    SystemRole("portal_user", "Portalzugang", frozenset()),
     SystemRole(
         "tax_advisor", "Steuerberater", _SETTINGS_R | _r("accounting") | {"accounting:export"}
     ),

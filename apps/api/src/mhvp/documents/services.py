@@ -27,7 +27,7 @@ from mhvp.documents.models import (
 )
 from mhvp.documents.text import ALLOWED_MIME_TYPES, extract, sniff_matches
 from mhvp.platform.models import TenantSettings
-from mhvp.properties.models import Building, Property, Unit
+from mhvp.properties.models import Building, LegalEntity, Property, Unit
 
 # Entities a document may be linked to, with the model used to verify existence (RLS applies).
 LINKABLE: dict[str, Any] = {
@@ -36,6 +36,8 @@ LINKABLE: dict[str, Any] = {
     "building": Building,
     "unit": Unit,
     "contract": Contract,
+    # GdWE and other legal entities: administrative documents of the community (§ 18 Abs. 4 WEG).
+    "legal_entity": LegalEntity,
 }
 VISIBILITY = frozenset({"tenant", "owner", "provider", "board"})
 

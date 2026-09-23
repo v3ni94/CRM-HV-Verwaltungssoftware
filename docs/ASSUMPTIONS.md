@@ -345,6 +345,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M22 |
 | Datum | 23.09.2026 |
 
+## A-032
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Portalnutzer sind Benutzer mit der Rolle portal_user ohne CRM-Rechte. Zugriffsrechte werden aus Verträgen abgeleitet (Vertrag und Einheit für die Vertragspartei; Rechtsträger der GdWE für Eigentümer) und gelten im Vertragszeitraum. Dokumente sind sichtbar, wenn sie mit einem berechtigten Bereich verknüpft und für die Rolle der Berechtigung freigegeben sind. Dienstleister sehen Aufträge, bei denen sie Auftragnehmer sind. |
+| Begründung | 6.9.6, 14. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Portal |
+| Überprüfung spätestens bei Meilenstein | G5 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:
