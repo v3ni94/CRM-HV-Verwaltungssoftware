@@ -31,6 +31,11 @@ updates:
     groups:
       compose-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: pgvector/pgvector
+        versions: [">=0.9", "*-pg17", "*-pg18"]
+      - dependency-name: redis
+        versions: [">=8"]
 
   - package-ecosystem: docker
     directories:
@@ -42,3 +47,10 @@ updates:
     groups:
       docker-minor-patch:
         update-types: [minor, patch]
+    # Language runtimes are fixed by MASTER-PROMPT 4.1/4.2 (Python 3.12, Node 22);
+    # a runtime change needs an ADR, not a bot update. Postgres 16 and Redis 7 likewise.
+    ignore:
+      - dependency-name: python
+        versions: [">=3.13"]
+      - dependency-name: node
+        versions: [">=23"]

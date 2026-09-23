@@ -37,3 +37,5 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD wget -q -O /dev/null http://127.0.0.1:3001/api/health || exit 1
 CMD ["node", "apps/web-portal/server.js"]
+# Apply Alpine security fixes (Trivy gate in CI).
+RUN apk upgrade --no-cache

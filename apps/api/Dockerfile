@@ -23,6 +23,9 @@ ENV PATH=/app/.venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     MHVP_APP_VERSION=${MHVP_APP_VERSION}
+# Apply Debian security fixes (Trivy gate in CI).
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 10001 mhvp \
     && useradd --system --uid 10001 --gid mhvp --no-create-home --home-dir /app mhvp
 WORKDIR /app
