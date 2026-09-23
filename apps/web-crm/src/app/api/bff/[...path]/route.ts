@@ -34,6 +34,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^imports$/ },
   { method: "GET", pattern: new RegExp(`^imports/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^imports/${ID}/undo$`) },
+  // Immoware24 import assistant (M8, 13.1).
+  { method: "GET", pattern: /^imports\/immoware24\/(fields|mappings|overview)$/ },
+  { method: "POST", pattern: /^imports\/immoware24\/(mappings|files)$/ },
+  { method: "GET", pattern: new RegExp(`^imports/immoware24/files/${ID}(/rows|/reconciliation)?$`) },
+  { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/(validate|test-run|apply)$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];

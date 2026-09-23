@@ -19,6 +19,11 @@ export default async function ImportsPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">{t("title")}</h1>
       <p className="text-sm text-muted">{t("intro")}</p>
+      <p>
+        <Link href="/importe/immoware24" className="text-sm font-medium hover:underline">
+          {t("immoware24Link")}
+        </Link>
+      </p>
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}

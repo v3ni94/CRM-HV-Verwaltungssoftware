@@ -56,6 +56,17 @@ describe("BFF proxy", () => {
     ["GET", "imports"],
     ["GET", `imports/${ID}`],
     ["POST", `imports/${ID}/undo`],
+    ["GET", "imports/immoware24/fields"],
+    ["GET", "imports/immoware24/mappings"],
+    ["POST", "imports/immoware24/mappings"],
+    ["GET", "imports/immoware24/overview"],
+    ["POST", "imports/immoware24/files"],
+    ["GET", `imports/immoware24/files/${ID}`],
+    ["GET", `imports/immoware24/files/${ID}/rows`],
+    ["GET", `imports/immoware24/files/${ID}/reconciliation`],
+    ["POST", `imports/immoware24/files/${ID}/validate`],
+    ["POST", `imports/immoware24/files/${ID}/test-run`],
+    ["POST", `imports/immoware24/files/${ID}/apply`],
   ])("forwards the AI operation %s %s", async (method, path) => {
     serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {
@@ -74,6 +85,12 @@ describe("BFF proxy", () => {
     ["GET", "documents"],
     ["GET", `documents/${ID}/content`],
     ["DELETE", `imports/${ID}`],
+    ["GET", `imports/immoware24/files/${ID}/apply`],
+    ["POST", `imports/immoware24/files/${ID}/rows`],
+    ["DELETE", `imports/immoware24/files/${ID}`],
+    ["GET", "imports/immoware24/files"],
+    ["GET", "imports/immoware24/files/not-a-uuid/rows"],
+    ["POST", "imports/immoware24/fields"],
   ])("keeps %s %s outside the allowlist", async (method, path) => {
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {
       method,
@@ -82,6 +99,14 @@ describe("BFF proxy", () => {
     const handler = { GET, POST, PUT, DELETE }[method as "GET" | "POST" | "PUT" | "DELETE"];
     expect((await handler(req, ctx(path))).status).toBe(404);
     expect(serverFetch).not.toHaveBeenCalled();
+  });
+
+  it("forwards the status filter of the Immoware24 rows query", async () => {
+    serverFetch.mockResolvedValue(new Response("[]", { status: 200, headers: { "content-type": "application/json" } }));
+    const path = `imports/immoware24/files/${ID}/rows`;
+    const res = await GET(new Request(`http://crm.localhost/api/bff/${path}?status=invalid&limit=50`), ctx(path));
+    expect(res.status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}?status=invalid&limit=50`);
   });
 
   it("forwards document uploads as multipart with the original boundary", async () => {
