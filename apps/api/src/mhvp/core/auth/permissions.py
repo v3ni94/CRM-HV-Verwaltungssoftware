@@ -14,6 +14,7 @@ from mhvp.platform.models import MembershipRole, Role, RolePermission
 
 ACTIONS: tuple[str, ...] = ("read", "create", "update", "delete", "approve", "export")
 RESOURCES: tuple[str, ...] = (
+    "accounting",
     "ai",
     "contacts",
     "contracts",
@@ -62,10 +63,14 @@ _MASTER_RWD = (
 _MASTER_RW = _rw("contacts") | _rw("properties") | _rw("contracts") | _rw("documents") | _rw("ai")
 _MASTER_R = _r("contacts") | _r("properties") | _r("contracts") | _r("documents")
 
+# Accounting (M10): postings in non-leading ledgers; approve = Festschreibung, opening balances.
+_ACC_RW = _rw("accounting")
+_ACC_APPROVE = _ACC_RW | {"accounting:approve", "accounting:export"}
+
 SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole("tenant_admin", "Mandantenadministrator", _ADMIN),
     SystemRole("administrator", "Administrator", _ADMIN),
-    SystemRole("standard", "Standard", _SETTINGS_R | _MASTER_RWD),
+    SystemRole("standard", "Standard", _SETTINGS_R | _MASTER_RWD | _ACC_RW),
     SystemRole("read_only", "Nur Lesezugriff", READ_ALL),
     SystemRole("read_only_master_data", "Nur Lesezugriff Stammdaten", _SETTINGS_R | _MASTER_R),
     SystemRole("clerk_no_delete", "Sachbearbeiter ohne Löschen", _SETTINGS_R | _MASTER_RW),
@@ -73,12 +78,22 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole(
         "accountant_no_banking",
         "Buchhalter ohne Onlinebanking",
-        _SETTINGS_R | _rw("contacts") | _r("properties") | _r("contracts") | _rw("documents"),
+        _SETTINGS_R
+        | _rw("contacts")
+        | _r("properties")
+        | _r("contracts")
+        | _rw("documents")
+        | _ACC_APPROVE,
     ),
     SystemRole(
         "accountant_banking",
         "Buchhalter mit Onlinebanking",
-        _SETTINGS_R | _rw("contacts") | _r("properties") | _r("contracts") | _rw("documents"),
+        _SETTINGS_R
+        | _rw("contacts")
+        | _r("properties")
+        | _r("contracts")
+        | _rw("documents")
+        | _ACC_APPROVE,
     ),
     # Caretakers see objects, not contracts or personal data of residents (data minimisation).
     SystemRole("caretaker", "Hausmeister", _r("properties")),
@@ -89,7 +104,7 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
     ),
     SystemRole("support", "Support", _SETTINGS_R | _MASTER_R | {"audit:read"}),
     SystemRole("insurance_broker", "Versicherungsmakler", frozenset()),
-    SystemRole("tax_advisor", "Steuerberater", _SETTINGS_R),
+    SystemRole("tax_advisor", "Steuerberater", _SETTINGS_R | _r("accounting")),
 )
 
 # A platform administrator after an explicit, recorded tenant switch (section 5.1).

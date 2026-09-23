@@ -21,6 +21,335 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounting/ledgers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Buchungskreise */
+        get: operations["list_ledgers_api_v1_accounting_ledgers_get"];
+        put?: never;
+        /** Buchungskreis je Rechtsträger anlegen */
+        post: operations["create_ledger_api_v1_accounting_ledgers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Buchungskreis */
+        get: operations["get_ledger_api_v1_accounting_ledgers__ledger_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Konten */
+        get: operations["accounts_api_v1_accounting_ledgers__ledger_id__accounts_get"];
+        put?: never;
+        /** Konto ergänzen */
+        post: operations["create_account_api_v1_accounting_ledgers__ledger_id__accounts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/accounts/{account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Konto ohne Buchungen löschen */
+        delete: operations["delete_account_api_v1_accounting_ledgers__ledger_id__accounts__account_id__delete"];
+        options?: never;
+        head?: never;
+        /** Konto ändern oder deaktivieren */
+        patch: operations["patch_account_api_v1_accounting_ledgers__ledger_id__accounts__account_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/accounts/{account_id}/sheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kontenblatt */
+        get: operations["account_sheet_api_v1_accounting_ledgers__ledger_id__accounts__account_id__sheet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Konsistenzprüfung B02, B07, B09 */
+        get: operations["checks_api_v1_accounting_ledgers__ledger_id__checks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Journal */
+        get: operations["journal_api_v1_accounting_ledgers__ledger_id__entries_get"];
+        put?: never;
+        /** Buchungssatz als Entwurf */
+        post: operations["create_entry_api_v1_accounting_ledgers__ledger_id__entries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/entries/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Buchungssatz */
+        get: operations["get_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__get"];
+        /** Entwurf ersetzen */
+        put: operations["update_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__put"];
+        post?: never;
+        /** Entwurf löschen */
+        delete: operations["delete_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/entries/{entry_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Anfangsbestand prüfen (zweite Person) */
+        post: operations["approve_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/entries/{entry_id}/post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Buchen (festgeschriebene Nummer) */
+        post: operations["post_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__post_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/entries/{entry_id}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stornieren */
+        post: operations["reverse_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__reverse_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/leading": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Führendes System festlegen (G1) */
+        post: operations["set_leading_api_v1_accounting_ledgers__ledger_id__leading_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Festschreiben bis Datum */
+        post: operations["lock_api_v1_accounting_ledgers__ledger_id__lock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/open-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Offene Posten zum Stichtag */
+        get: operations["open_items_api_v1_accounting_ledgers__ledger_id__open_items_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/sync-debtors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Debitorenkonten aus Verträgen übernehmen */
+        post: operations["sync_debtors_api_v1_accounting_ledgers__ledger_id__sync_debtors_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/ledgers/{ledger_id}/trial-balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saldenliste zum Stichtag */
+        get: operations["trial_balance_api_v1_accounting_ledgers__ledger_id__trial_balance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kontenrahmen-Vorlagen */
+        get: operations["templates_api_v1_accounting_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/templates/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Entwurf nach Anhang A.1 anlegen */
+        post: operations["create_default_template_api_v1_accounting_templates_default_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/templates/{template_id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Vorlage freigeben (Betreiberentscheidung V8) */
+        post: operations["release_template_api_v1_accounting_templates__template_id__release_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/conversations": {
         parameters: {
             query?: never;
@@ -2344,6 +2673,91 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AccountCategory
+         * @enum {string}
+         */
+        AccountCategory: "bank" | "cash" | "reserve" | "loan" | "technical" | "revenue" | "cost" | "debtor" | "creditor" | "transit" | "tax" | "opening_balance";
+        /** AccountIn */
+        AccountIn: {
+            /** @default none */
+            allocation_category: components["schemas"]["AllocationCategory"];
+            /** Booking Texts */
+            booking_texts?: string[];
+            category: components["schemas"]["AccountCategory"];
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Name */
+            name: string;
+            /** Number */
+            number: string;
+            /** Property Bank Account Id */
+            property_bank_account_id?: string | null;
+            /**
+             * Relevant For Cash Report
+             * @default false
+             */
+            relevant_for_cash_report: boolean;
+            /**
+             * Section 35A Eligible
+             * @default false
+             */
+            section_35a_eligible: boolean;
+            /** @default none */
+            statement_kind: components["schemas"]["StatementKind"];
+            type: components["schemas"]["AccountType"];
+            /** @default none */
+            vat_option: components["schemas"]["mhvp__accounting__models__VatOption"];
+        };
+        /** AccountOut */
+        AccountOut: {
+            /** Active */
+            active: boolean;
+            allocation_category: components["schemas"]["AllocationCategory"];
+            category: components["schemas"]["AccountCategory"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is System */
+            is_system: boolean;
+            /** Name */
+            name: string;
+            /** Number */
+            number: string;
+            /** Party Id */
+            party_id: string | null;
+            /** Property Bank Account Id */
+            property_bank_account_id: string | null;
+            /** Relevant For Cash Report */
+            relevant_for_cash_report: boolean;
+            /** Section 35A Eligible */
+            section_35a_eligible: boolean;
+            statement_kind: components["schemas"]["StatementKind"];
+            type: components["schemas"]["AccountType"];
+            /** Unit Id */
+            unit_id: string | null;
+            vat_option: components["schemas"]["mhvp__accounting__models__VatOption"];
+            /** Visible */
+            visible: boolean;
+        };
+        /** AccountPatch */
+        AccountPatch: {
+            /** Active */
+            active?: boolean | null;
+            /** Booking Texts */
+            booking_texts?: string[] | null;
+            /** Name */
+            name?: string | null;
+            /** Visible */
+            visible?: boolean | null;
+        };
+        /**
+         * AccountType
+         * @enum {string}
+         */
+        AccountType: "asset" | "liability" | "income" | "expense";
+        /**
          * AcquisitionKind
          * @enum {string}
          */
@@ -2418,6 +2832,11 @@ export interface components {
          * @enum {string}
          */
         AiTask: "extract_contacts" | "extract_property" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize";
+        /**
+         * AllocationCategory
+         * @enum {string}
+         */
+        AllocationCategory: "allocable_heating" | "allocable_water" | "allocable_other" | "non_allocable_heating" | "non_allocable_water" | "non_allocable_other" | "none";
         /** AllocationKeyIn */
         "AllocationKeyIn-Input": {
             /** Code */
@@ -3841,32 +4260,83 @@ export interface components {
             /** Label */
             label: string;
         };
-        /** EntryIn */
-        EntryIn: {
+        /**
+         * EntryKind
+         * @enum {string}
+         */
+        EntryKind: "receivable" | "invoice" | "custom" | "bank_transfer" | "cost_transfer" | "opening_balance" | "debtor_payment" | "creditor_payment" | "reversal" | "statement_result" | "dunning_fee" | "interest";
+        /** EntryOut */
+        EntryOut: {
+            /** Accrual Date */
+            accrual_date: string | null;
+            /** Approved By */
+            approved_by: string | null;
             /**
-             * All Day
-             * @default true
-             */
-            all_day: boolean;
-            /** Ends On */
-            ends_on?: string | null;
-            /** Notes */
-            notes?: string | null;
-            /** Property Id */
-            property_id?: string | null;
-            /**
-             * Shared
-             * @default false
-             */
-            shared: boolean;
-            /**
-             * Starts On
+             * Booking Date
              * Format: date
              */
-            starts_on: string;
-            /** Title */
-            title: string;
+            booking_date: string;
+            /** Contract Id */
+            contract_id: string | null;
+            /** Created By */
+            created_by: string | null;
+            /** Document Id */
+            document_id: string | null;
+            /** Due Date */
+            due_date: string | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["EntryKind"];
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /**
+             * Lines
+             * @default []
+             */
+            lines: components["schemas"]["LineOut"][];
+            /** Number */
+            number: number | null;
+            /** Posted At */
+            posted_at: string | null;
+            /** Posted By */
+            posted_by: string | null;
+            /** Reference */
+            reference: string | null;
+            /** Reversal Reason */
+            reversal_reason: string | null;
+            /** Reversed By Id */
+            reversed_by_id: string | null;
+            /** Reverses Id */
+            reverses_id: string | null;
+            /** Settlement Plan */
+            settlement_plan: {
+                [key: string]: unknown;
+            }[];
+            source: components["schemas"]["EntrySource"];
+            status: components["schemas"]["EntryStatus"];
+            /** Text */
+            text: string;
+            /** Value Date */
+            value_date: string | null;
         };
+        /**
+         * EntrySource
+         * @enum {string}
+         */
+        EntrySource: "manual" | "auto_receivable" | "bank_import" | "ai" | "statement" | "migration";
+        /**
+         * EntryStatus
+         * @enum {string}
+         */
+        EntryStatus: "draft" | "posted";
         /** EventOut */
         EventOut: {
             /** Actor User Id */
@@ -4100,6 +4570,61 @@ export interface components {
          * @enum {string}
          */
         ImportStatus: "applied" | "undone" | "partially_undone";
+        /** LeadingIn */
+        LeadingIn: {
+            leading_system: components["schemas"]["LeadingSystem"];
+        };
+        /**
+         * LeadingSystem
+         * @enum {string}
+         */
+        LeadingSystem: "immoware24" | "mhvp";
+        /** LedgerIn */
+        LedgerIn: {
+            /**
+             * Fiscal Year Start Month
+             * @default 1
+             */
+            fiscal_year_start_month: number;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Migration Cutoff */
+            migration_cutoff?: string | null;
+            /** Template Id */
+            template_id?: string | null;
+        };
+        /** LedgerOut */
+        LedgerOut: {
+            /** Fiscal Year Start Month */
+            fiscal_year_start_month: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            leading_system: components["schemas"]["LeadingSystem"];
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Locked Until */
+            locked_until: string | null;
+            /** Migration Cutoff */
+            migration_cutoff: string | null;
+            /** Name */
+            name: string;
+            /** Property Id */
+            property_id: string | null;
+            /** Template Id */
+            template_id: string | null;
+            /** Template Version */
+            template_version: number | null;
+            vat_mode: components["schemas"]["VatMode"];
+        };
         /**
          * LegalEntityKind
          * @enum {string}
@@ -4153,6 +4678,60 @@ export interface components {
             /** Unit Id */
             unit_id?: string | null;
         };
+        /** LineOut */
+        LineOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Credit */
+            credit: string;
+            /** Debit */
+            debit: string;
+            /** Line No */
+            line_no: number;
+            /** Net Amount */
+            net_amount: string | null;
+            /** Text */
+            text: string | null;
+            /** Unit Id */
+            unit_id: string | null;
+            /** Vat Amount */
+            vat_amount: string | null;
+            /** Vat Percent */
+            vat_percent: string | null;
+        };
+        /** LineSchema */
+        LineSchema: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Cost Center */
+            cost_center?: string | null;
+            /**
+             * Credit
+             * @default 0
+             */
+            credit: number | string;
+            /**
+             * Debit
+             * @default 0
+             */
+            debit: number | string;
+            /** Net Amount */
+            net_amount?: number | string | null;
+            /** Text */
+            text?: string | null;
+            /** Unit Id */
+            unit_id?: string | null;
+            /** Vat Amount */
+            vat_amount?: number | string | null;
+            /** Vat Percent */
+            vat_percent?: number | string | null;
+        };
         /** LinkIn */
         LinkIn: {
             /**
@@ -4198,6 +4777,14 @@ export interface components {
             status: "ok";
             /** Version */
             version: string;
+        };
+        /** LockIn */
+        LockIn: {
+            /**
+             * Until
+             * Format: date
+             */
+            until: string;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -5375,6 +5962,13 @@ export interface components {
          * @enum {string}
          */
         RetentionStart: "end_of_year_created" | "end_of_year_last_entry" | "contract_end" | "statement_issued";
+        /** ReverseIn */
+        ReverseIn: {
+            /** Booking Date */
+            booking_date?: string | null;
+            /** Reason */
+            reason: string;
+        };
         /** RoleCreate */
         RoleCreate: {
             /** Code */
@@ -5580,6 +6174,16 @@ export interface components {
             /** User Agent */
             user_agent: string | null;
         };
+        /** SettlementIn */
+        SettlementIn: {
+            /** Amount */
+            amount: number | string;
+            /**
+             * Open Item Id
+             * Format: uuid
+             */
+            open_item_id: string;
+        };
         /** SourceIn */
         SourceIn: {
             /**
@@ -5627,6 +6231,11 @@ export interface components {
             sheet: string | null;
             status: components["schemas"]["FileStatus"];
         };
+        /**
+         * StatementKind
+         * @enum {string}
+         */
+        StatementKind: "hoa_fee" | "reserve" | "operating_costs" | "none";
         /** StatusChange */
         StatusChange: {
             status: components["schemas"]["PropertyStatus"];
@@ -5661,28 +6270,6 @@ export interface components {
             name: string;
             /** Subject */
             subject: string;
-        };
-        /** TemplateOut */
-        TemplateOut: {
-            /** Active */
-            active: boolean;
-            /** Body */
-            body: string;
-            /** Category Id */
-            category_id?: string | null;
-            /** Code */
-            code: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Name */
-            name: string;
-            /** Subject */
-            subject: string;
-            /** Version */
-            version: number;
         };
         /** TenantCreate */
         TenantCreate: {
@@ -5876,7 +6463,7 @@ export interface components {
             /** Total Area Sqm */
             total_area_sqm?: string | null;
             unit_type: components["schemas"]["UnitType"];
-            vat_option?: components["schemas"]["VatOption"] | null;
+            vat_option?: components["schemas"]["mhvp__properties__models__VatOption"] | null;
         };
         /**
          * UnitType
@@ -5960,14 +6547,14 @@ export interface components {
          */
         ValueSource: "manual" | "contract" | "import" | "ai";
         /**
-         * VatOption
+         * VatMode
          * @enum {string}
          */
-        VatOption: "none" | "commercial_no_vat" | "commercial_full_vat" | "commercial_reduced_vat";
+        VatMode: "none" | "option";
         /** VatOptionIn */
         VatOptionIn: {
             occupant: components["schemas"]["Occupant"];
-            option: components["schemas"]["VatOption"];
+            option: components["schemas"]["mhvp__properties__models__VatOption"];
             /**
              * Valid From
              * Format: date
@@ -6028,6 +6615,62 @@ export interface components {
             active?: boolean | null;
             /** Event Types */
             event_types?: string[] | null;
+        };
+        /**
+         * VatOption
+         * @enum {string}
+         */
+        mhvp__accounting__models__VatOption: "none" | "full" | "reduced";
+        /** EntryIn */
+        mhvp__accounting__schemas__EntryIn: {
+            /** Accrual Date */
+            accrual_date?: string | null;
+            /**
+             * Booking Date
+             * Format: date
+             */
+            booking_date: string;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
+            kind: components["schemas"]["EntryKind"];
+            /** Lines */
+            lines: components["schemas"]["LineSchema"][];
+            /** Reference */
+            reference?: string | null;
+            /** Settlements */
+            settlements?: components["schemas"]["SettlementIn"][];
+            /** Text */
+            text: string;
+            /** Value Date */
+            value_date?: string | null;
+        };
+        /** TemplateOut */
+        mhvp__accounting__schemas__TemplateOut: {
+            /** Accounts */
+            accounts: {
+                [key: string]: unknown;
+            }[];
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Released */
+            released: boolean;
+            /** Released At */
+            released_at: string | null;
+            /** Version */
+            version: number;
         };
         /** ProviderIn */
         mhvp__ai__schemas__ProviderIn: {
@@ -6151,6 +6794,28 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** TemplateOut */
+        mhvp__documents__schemas__TemplateOut: {
+            /** Active */
+            active: boolean;
+            /** Body */
+            body: string;
+            /** Category Id */
+            category_id?: string | null;
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Subject */
+            subject: string;
+            /** Version */
+            version: number;
+        };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
             /**
@@ -6165,6 +6830,11 @@ export interface components {
             /** Status */
             status: string;
         };
+        /**
+         * VatOption
+         * @enum {string}
+         */
+        mhvp__properties__models__VatOption: "none" | "commercial_no_vat" | "commercial_full_vat" | "commercial_reduced_vat";
         /** BankAccountIn */
         mhvp__properties__schemas__BankAccountIn: {
             /** Bank Name */
@@ -6295,6 +6965,32 @@ export interface components {
             /** Valid To */
             valid_to?: string | null;
         };
+        /** EntryIn */
+        mhvp__workspace__routers__EntryIn: {
+            /**
+             * All Day
+             * @default true
+             */
+            all_day: boolean;
+            /** Ends On */
+            ends_on?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Property Id */
+            property_id?: string | null;
+            /**
+             * Shared
+             * @default false
+             */
+            shared: boolean;
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            /** Title */
+            title: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -6322,6 +7018,821 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    list_ledgers_api_v1_accounting_ledgers_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_ledger_api_v1_accounting_ledgers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LedgerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ledger_api_v1_accounting_ledgers__ledger_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accounts_api_v1_accounting_ledgers__ledger_id__accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_account_api_v1_accounting_ledgers__ledger_id__accounts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_account_api_v1_accounting_ledgers__ledger_id__accounts__account_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_account_api_v1_accounting_ledgers__ledger_id__accounts__account_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    account_sheet_api_v1_accounting_ledgers__ledger_id__accounts__account_id__sheet_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: never;
+            path: {
+                ledger_id: string;
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    checks_api_v1_accounting_ledgers__ledger_id__checks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    journal_api_v1_accounting_ledgers__ledger_id__entries_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["EntryStatus"] | null;
+                start?: string | null;
+                end?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_entry_api_v1_accounting_ledgers__ledger_id__entries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__accounting__schemas__EntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__accounting__schemas__EntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__post_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reverse_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__reverse_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReverseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_leading_api_v1_accounting_ledgers__ledger_id__leading_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lock_api_v1_accounting_ledgers__ledger_id__lock_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LockIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_items_api_v1_accounting_ledgers__ledger_id__open_items_get: {
+        parameters: {
+            query: {
+                as_of: string;
+                account_id?: string | null;
+            };
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_debtors_api_v1_accounting_ledgers__ledger_id__sync_debtors_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trial_balance_api_v1_accounting_ledgers__ledger_id__trial_balance_get: {
+        parameters: {
+            query: {
+                as_of: string;
+                start?: string | null;
+            };
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    templates_api_v1_accounting_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__accounting__schemas__TemplateOut"][];
+                };
+            };
+        };
+    };
+    create_default_template_api_v1_accounting_templates_default_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__accounting__schemas__TemplateOut"];
+                };
+            };
+        };
+    };
+    release_template_api_v1_accounting_templates__template_id__release_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__accounting__schemas__TemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -8119,7 +9630,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TemplateOut"][];
+                    "application/json": components["schemas"]["mhvp__documents__schemas__TemplateOut"][];
                 };
             };
         };
@@ -8143,7 +9654,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TemplateOut"];
+                    "application/json": components["schemas"]["mhvp__documents__schemas__TemplateOut"];
                 };
             };
             /** @description Validation Error */
@@ -11476,7 +12987,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["EntryIn"];
+                "application/json": components["schemas"]["mhvp__workspace__routers__EntryIn"];
             };
         };
         responses: {

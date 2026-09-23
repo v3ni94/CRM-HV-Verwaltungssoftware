@@ -1,5 +1,6 @@
 """Import point for all mapped models, used by Alembic autogenerate."""
 
+from mhvp.accounting import models as accounting_models
 from mhvp.ai import models as ai_models
 from mhvp.contacts import models as contact_models
 from mhvp.contracts import models as contract_models
@@ -11,6 +12,7 @@ from mhvp.properties import models as property_models
 from mhvp.workspace import models as workspace_models
 
 __all__ = [
+    "accounting_models",
     "ai_models",
     "contact_models",
     "contract_models",

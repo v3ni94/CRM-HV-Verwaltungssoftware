@@ -114,6 +114,30 @@ class ErrorCodes:
         "Briefbogen unvollständig",
         "Mandatory company data of the tenant is missing (tenant settings).",
     )
+    ACC_UNBALANCED = ErrorCode(
+        "MHVP-ACC-0001",
+        422,
+        "Buchungssatz nicht ausgeglichen",
+        "A journal entry needs at least two lines and equal debit and credit sums (B02).",
+    )
+    ACC_PERIOD_LOCKED = ErrorCode(
+        "MHVP-ACC-0002",
+        409,
+        "Zeitraum festgeschrieben",
+        "The booking date lies in a locked period of the ledger (B03).",
+    )
+    ACC_POSTED_IMMUTABLE = ErrorCode(
+        "MHVP-ACC-0003",
+        409,
+        "Gebuchter Satz unveränderlich",
+        "Posted entries are corrected by reversal only (B03).",
+    )
+    ACC_WRONG_ENTITY = ErrorCode(
+        "MHVP-ACC-0004",
+        422,
+        "Falscher Rechtsträger",
+        "Accounts, open items or bank accounts belong to another ledger (B01).",
+    )
     RELEASE_GATE_CLOSED = ErrorCode(
         "MHVP-GATE-0001",
         403,

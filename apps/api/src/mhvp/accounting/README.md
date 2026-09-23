@@ -1,10 +1,12 @@
 # mhvp.accounting
 
-Legal entity ledgers, accounts, journal, open items, receivable runs, dunning, payment runs, exports.
+Ledger per legal entity, accounts, journal, open items (MASTER-PROMPT 6.4, 6.9, 7.1 to 7.3).
 
-* Milestone: M10 (schema parts from M4/M5) (docs/MASTER-PROMPT.md section 18).
-* Specification: docs/MASTER-PROMPT.md section 6.4, 6.9, 7.1 to 7.7.
-* Status: not implemented. Package reserved by the repository layout of section 17.
-
-Layout once implemented: `models.py`, `schemas.py`, `services.py`, `routers.py`, tests under
-`apps/api/tests/accounting/`. Register models in `mhvp/models.py` for Alembic autogenerate.
+* `models.py`: chart template, ledger, ledger_account, journal_entry/line, number counter,
+  open_item, open_item_settlement. Migration 0010 adds immutability and balance triggers.
+* `services.py`: drafts, posting (gapless numbers, ADR 0007), reversal, locking, reports,
+  consistency checks.
+* `routers.py`: `/api/v1/accounting/...`.
+* Gate: declaring the platform as leading system requires G1. Until then ledgers run in
+  parallel to Immoware24 and are not the leading bookkeeping.
+* Rules: `docs/rules/B01.md` to `B09.md`. Plan: `docs/plans/M10.md`.

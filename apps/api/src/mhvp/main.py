@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from mhvp.accounting.routers import router as accounting_router
 from mhvp.ai.routers import router as ai_router
 from mhvp.contacts.routers import router as contacts_router
 from mhvp.contracts.routers import router as contracts_router
@@ -127,6 +128,7 @@ def create_app(
     app.include_router(ai_router, prefix=API_PREFIX)
     app.include_router(workspace_router, prefix=API_PREFIX)
     app.include_router(ops_router, prefix=API_PREFIX)
+    app.include_router(accounting_router, prefix=API_PREFIX)
     app.add_middleware(CorrelationIdMiddleware)
     return app
 

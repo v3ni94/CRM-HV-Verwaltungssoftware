@@ -62,7 +62,8 @@
       "unit": "Einheit",
       "contract": "Vertrag",
       "document": "Dokument"
-    }
+    },
+    "accounting": "Buchhaltung"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -627,5 +628,33 @@
     "bulkNone": "Keine Zeilen markiert.",
     "bulkDone": "{changed} geändert.",
     "select": "Auswählen"
+  },
+  "Accounting": {
+    "title": "Buchhaltung",
+    "parallelNotice": "Parallelbetrieb: Führend ist weiterhin Immoware24. Buchungen in der Plattform sind nicht die führende Buchhaltung, solange die Freigabestufe G1 nicht erteilt ist.",
+    "empty": "Noch kein Buchungskreis angelegt.",
+    "ledger": "Buchungskreis",
+    "leading": "Führendes System",
+    "lockedUntil": "Festgeschrieben bis",
+    "notLocked": "nicht festgeschrieben",
+    "system": {
+      "immoware24": "Immoware24",
+      "mhvp": "Plattform"
+    },
+    "trialBalance": "Saldenliste zum {date}",
+    "account": "Konto",
+    "debit": "Soll",
+    "credit": "Haben",
+    "balance": "Saldo",
+    "journal": "Journal",
+    "number": "Nr.",
+    "date": "Buchungstag",
+    "text": "Text",
+    "status": "Status",
+    "reversed": "storniert",
+    "entryStatus": {
+      "draft": "Entwurf",
+      "posted": "gebucht"
+    }
   }
 }

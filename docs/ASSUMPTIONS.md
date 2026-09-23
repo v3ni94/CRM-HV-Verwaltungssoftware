@@ -246,6 +246,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M19 |
 | Datum | 23.09.2026 |
 
+## A-023
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Kontenrahmen-Entwurf nach Anhang A.1: Kategorie und Typ je Konto aus den Nummernbereichen in 7.2 abgeleitet (zum Beispiel 001400 Überzahlungen aus Vorjahren als technisches Passivkonto, 009000 Anfangsbestand als Passivkonto, 026000 Vorsteuerrückerstattungen als Steuerertrag). Konten mit dem Zusatz WEG oder Rücklage nur für GdWE-Buchungskreise. Geschäftsjahr wird mit dem Kalenderjahr seines Beginns bezeichnet. |
+| Begründung | V8 offen; Vorlage bleibt bis zur Freigabe als Entwurf gekennzeichnet. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Buchhaltung |
+| Überprüfung spätestens bei Meilenstein | G1 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

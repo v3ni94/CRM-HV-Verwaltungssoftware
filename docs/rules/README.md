@@ -27,15 +27,15 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 
 | ID | Title | Master prompt section | Status |
 | --- | --- | --- | --- |
-| B01 | Richtiger Rechtsträger | 7.1 | specified, not implemented |
-| B02 | Entwurf und Buchung | 7.1 | specified, not implemented |
-| B03 | Korrektur statt Überschreiben | 7.1 | specified, not implemented |
-| B04 | Eindeutige Nummern | 7.1 | specified, not implemented |
+| [B01](B01.md) | Richtiger Rechtsträger | 7.1 | implemented, not accepted |
+| [B02](B02.md) | Entwurf und Buchung | 7.1 | implemented, not accepted |
+| [B03](B03.md) | Korrektur statt Überschreiben | 7.1 | implemented, not accepted |
+| [B04](B04.md) | Eindeutige Nummern | 7.1 | implemented, not accepted |
 | B05 | Belegkette | 7.1 | specified, not implemented |
 | B06 | Präzision | 7.1 | specified, not implemented |
-| B07 | Stichtagswahrheit | 7.1 | specified, not implemented |
-| B08 | Keine doppelte wirtschaftliche Wirkung | 7.1 | specified, not implemented |
-| B09 | Abstimmung | 7.1 | specified, not implemented |
+| [B07](B07.md) | Stichtagswahrheit | 7.1 | implemented, not accepted |
+| [B08](B08.md) | Keine doppelte wirtschaftliche Wirkung | 7.1 | implemented, not accepted |
+| [B09](B09.md) | Abstimmung | 7.1 | implemented, not accepted |
 | A01 | Ergebnisstand | 7.6 | specified, not implemented |
 | A02 | Betriebskosten Miete | 7.6 | specified, not implemented |
 | A03 | Schlüssel | 7.6 | specified, not implemented |

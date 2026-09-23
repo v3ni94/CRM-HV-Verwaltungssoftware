@@ -1,6 +1,283 @@
 {
   "components": {
     "schemas": {
+      "AccountCategory": {
+        "enum": [
+          "bank",
+          "cash",
+          "reserve",
+          "loan",
+          "technical",
+          "revenue",
+          "cost",
+          "debtor",
+          "creditor",
+          "transit",
+          "tax",
+          "opening_balance"
+        ],
+        "title": "AccountCategory",
+        "type": "string"
+      },
+      "AccountIn": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation_category": {
+            "$ref": "#/components/schemas/AllocationCategory",
+            "default": "none"
+          },
+          "booking_texts": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Booking Texts",
+            "type": "array"
+          },
+          "category": {
+            "$ref": "#/components/schemas/AccountCategory"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "pattern": "^[0-9]{6}$",
+            "title": "Number",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "relevant_for_cash_report": {
+            "default": false,
+            "title": "Relevant For Cash Report",
+            "type": "boolean"
+          },
+          "section_35a_eligible": {
+            "default": false,
+            "title": "Section 35A Eligible",
+            "type": "boolean"
+          },
+          "statement_kind": {
+            "$ref": "#/components/schemas/StatementKind",
+            "default": "none"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AccountType"
+          },
+          "vat_option": {
+            "$ref": "#/components/schemas/mhvp__accounting__models__VatOption",
+            "default": "none"
+          }
+        },
+        "required": [
+          "number",
+          "name",
+          "category",
+          "type"
+        ],
+        "title": "AccountIn",
+        "type": "object"
+      },
+      "AccountOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "allocation_category": {
+            "$ref": "#/components/schemas/AllocationCategory"
+          },
+          "category": {
+            "$ref": "#/components/schemas/AccountCategory"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_system": {
+            "title": "Is System",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "party_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Party Id"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "relevant_for_cash_report": {
+            "title": "Relevant For Cash Report",
+            "type": "boolean"
+          },
+          "section_35a_eligible": {
+            "title": "Section 35A Eligible",
+            "type": "boolean"
+          },
+          "statement_kind": {
+            "$ref": "#/components/schemas/StatementKind"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AccountType"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "vat_option": {
+            "$ref": "#/components/schemas/mhvp__accounting__models__VatOption"
+          },
+          "visible": {
+            "title": "Visible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "name",
+          "category",
+          "type",
+          "vat_option",
+          "relevant_for_cash_report",
+          "visible",
+          "active",
+          "allocation_category",
+          "statement_kind",
+          "section_35a_eligible",
+          "party_id",
+          "unit_id",
+          "property_bank_account_id",
+          "is_system"
+        ],
+        "title": "AccountOut",
+        "type": "object"
+      },
+      "AccountPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "booking_texts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Texts"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "visible": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visible"
+          }
+        },
+        "title": "AccountPatch",
+        "type": "object"
+      },
+      "AccountType": {
+        "enum": [
+          "asset",
+          "liability",
+          "income",
+          "expense"
+        ],
+        "title": "AccountType",
+        "type": "string"
+      },
       "AcquisitionKind": {
         "enum": [
           "purchase",
@@ -216,6 +493,19 @@
           "summarize"
         ],
         "title": "AiTask",
+        "type": "string"
+      },
+      "AllocationCategory": {
+        "enum": [
+          "allocable_heating",
+          "allocable_water",
+          "allocable_other",
+          "non_allocable_heating",
+          "non_allocable_water",
+          "non_allocable_other",
+          "none"
+        ],
+        "title": "AllocationCategory",
         "type": "string"
       },
       "AllocationKeyIn-Input": {
@@ -4699,15 +4989,27 @@
         "title": "EmailOut",
         "type": "object"
       },
-      "EntryIn": {
-        "additionalProperties": false,
+      "EntryKind": {
+        "enum": [
+          "receivable",
+          "invoice",
+          "custom",
+          "bank_transfer",
+          "cost_transfer",
+          "opening_balance",
+          "debtor_payment",
+          "creditor_payment",
+          "reversal",
+          "statement_result",
+          "dunning_fee",
+          "interest"
+        ],
+        "title": "EntryKind",
+        "type": "string"
+      },
+      "EntryOut": {
         "properties": {
-          "all_day": {
-            "default": true,
-            "title": "All Day",
-            "type": "boolean"
-          },
-          "ends_on": {
+          "accrual_date": {
             "anyOf": [
               {
                 "format": "date",
@@ -4717,21 +5019,9 @@
                 "type": "null"
               }
             ],
-            "title": "Ends On"
+            "title": "Accrual Date"
           },
-          "notes": {
-            "anyOf": [
-              {
-                "maxLength": 4000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notes"
-          },
-          "property_id": {
+          "approved_by": {
             "anyOf": [
               {
                 "format": "uuid",
@@ -4741,31 +5031,252 @@
                 "type": "null"
               }
             ],
-            "title": "Property Id"
+            "title": "Approved By"
           },
-          "shared": {
-            "default": false,
-            "title": "Shared",
-            "type": "boolean"
-          },
-          "starts_on": {
+          "booking_date": {
             "format": "date",
-            "title": "Starts On",
+            "title": "Booking Date",
             "type": "string"
           },
-          "title": {
-            "maxLength": 300,
-            "minLength": 1,
-            "title": "Title",
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
             "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EntryKind"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "lines": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted At"
+          },
+          "posted_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted By"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "reversal_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reversal Reason"
+          },
+          "reversed_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reversed By Id"
+          },
+          "reverses_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reverses Id"
+          },
+          "settlement_plan": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Settlement Plan",
+            "type": "array"
+          },
+          "source": {
+            "$ref": "#/components/schemas/EntrySource"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EntryStatus"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "value_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Date"
           }
         },
         "required": [
-          "title",
-          "starts_on"
+          "id",
+          "ledger_id",
+          "status",
+          "fiscal_year",
+          "number",
+          "booking_date",
+          "value_date",
+          "due_date",
+          "accrual_date",
+          "text",
+          "kind",
+          "reference",
+          "document_id",
+          "contract_id",
+          "reverses_id",
+          "reversed_by_id",
+          "reversal_reason",
+          "source",
+          "settlement_plan",
+          "posted_at",
+          "posted_by",
+          "approved_by",
+          "created_by"
         ],
-        "title": "EntryIn",
+        "title": "EntryOut",
         "type": "object"
+      },
+      "EntrySource": {
+        "enum": [
+          "manual",
+          "auto_receivable",
+          "bank_import",
+          "ai",
+          "statement",
+          "migration"
+        ],
+        "title": "EntrySource",
+        "type": "string"
+      },
+      "EntryStatus": {
+        "enum": [
+          "draft",
+          "posted"
+        ],
+        "title": "EntryStatus",
+        "type": "string"
       },
       "EventOut": {
         "properties": {
@@ -5357,6 +5868,175 @@
         "title": "ImportStatus",
         "type": "string"
       },
+      "LeadingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "leading_system": {
+            "$ref": "#/components/schemas/LeadingSystem"
+          }
+        },
+        "required": [
+          "leading_system"
+        ],
+        "title": "LeadingIn",
+        "type": "object"
+      },
+      "LeadingSystem": {
+        "enum": [
+          "immoware24",
+          "mhvp"
+        ],
+        "title": "LeadingSystem",
+        "type": "string"
+      },
+      "LedgerIn": {
+        "additionalProperties": false,
+        "properties": {
+          "fiscal_year_start_month": {
+            "default": 1,
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Fiscal Year Start Month",
+            "type": "integer"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "migration_cutoff": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migration Cutoff"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          }
+        },
+        "required": [
+          "legal_entity_id"
+        ],
+        "title": "LedgerIn",
+        "type": "object"
+      },
+      "LedgerOut": {
+        "properties": {
+          "fiscal_year_start_month": {
+            "title": "Fiscal Year Start Month",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "leading_system": {
+            "$ref": "#/components/schemas/LeadingSystem"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "locked_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked Until"
+          },
+          "migration_cutoff": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migration Cutoff"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "template_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Version"
+          },
+          "vat_mode": {
+            "$ref": "#/components/schemas/VatMode"
+          }
+        },
+        "required": [
+          "id",
+          "legal_entity_id",
+          "property_id",
+          "name",
+          "fiscal_year_start_month",
+          "vat_mode",
+          "locked_until",
+          "template_id",
+          "template_version",
+          "leading_system",
+          "migration_cutoff"
+        ],
+        "title": "LedgerOut",
+        "type": "object"
+      },
       "LegalEntityKind": {
         "enum": [
           "hoa",
@@ -5501,6 +6181,223 @@
         "title": "LetterIn",
         "type": "object"
       },
+      "LineOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "credit": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Credit",
+            "type": "string"
+          },
+          "debit": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Debit",
+            "type": "string"
+          },
+          "line_no": {
+            "title": "Line No",
+            "type": "integer"
+          },
+          "net_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Amount"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "vat_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Amount"
+          },
+          "vat_percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Percent"
+          }
+        },
+        "required": [
+          "line_no",
+          "account_id",
+          "debit",
+          "credit",
+          "text",
+          "vat_percent",
+          "vat_amount",
+          "net_amount",
+          "unit_id"
+        ],
+        "title": "LineOut",
+        "type": "object"
+      },
+      "LineSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "cost_center": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Center"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Debit"
+          },
+          "net_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Amount"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "vat_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Amount"
+          },
+          "vat_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Percent"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "title": "LineSchema",
+        "type": "object"
+      },
       "LinkIn": {
         "additionalProperties": false,
         "properties": {
@@ -5587,6 +6484,21 @@
           "version"
         ],
         "title": "LiveReport",
+        "type": "object"
+      },
+      "LockIn": {
+        "additionalProperties": false,
+        "properties": {
+          "until": {
+            "format": "date",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "until"
+        ],
+        "title": "LockIn",
         "type": "object"
       },
       "LoginRequest": {
@@ -9027,6 +9939,34 @@
         "title": "RetentionStart",
         "type": "string"
       },
+      "ReverseIn": {
+        "additionalProperties": false,
+        "properties": {
+          "booking_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Date"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReverseIn",
+        "type": "object"
+      },
       "RoleCreate": {
         "properties": {
           "code": {
@@ -9621,6 +10561,34 @@
         "title": "SessionOut",
         "type": "object"
       },
+      "SettlementIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "open_item_id": {
+            "format": "uuid",
+            "title": "Open Item Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open_item_id",
+          "amount"
+        ],
+        "title": "SettlementIn",
+        "type": "object"
+      },
       "SourceIn": {
         "additionalProperties": false,
         "properties": {
@@ -9749,6 +10717,16 @@
         "title": "SourceOut",
         "type": "object"
       },
+      "StatementKind": {
+        "enum": [
+          "hoa_fee",
+          "reserve",
+          "operating_costs",
+          "none"
+        ],
+        "title": "StatementKind",
+        "type": "string"
+      },
       "StatusChange": {
         "additionalProperties": false,
         "properties": {
@@ -9844,69 +10822,6 @@
           "body"
         ],
         "title": "TemplateIn",
-        "type": "object"
-      },
-      "TemplateOut": {
-        "properties": {
-          "active": {
-            "title": "Active",
-            "type": "boolean"
-          },
-          "body": {
-            "maxLength": 100000,
-            "minLength": 1,
-            "title": "Body",
-            "type": "string"
-          },
-          "category_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category Id"
-          },
-          "code": {
-            "pattern": "^[a-z0-9_]{2,63}$",
-            "title": "Code",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "name": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "subject": {
-            "maxLength": 2000,
-            "minLength": 1,
-            "title": "Subject",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "code",
-          "name",
-          "subject",
-          "body",
-          "id",
-          "version",
-          "active"
-        ],
-        "title": "TemplateOut",
         "type": "object"
       },
       "TenantCreate": {
@@ -10609,7 +11524,7 @@
           "vat_option": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/VatOption"
+                "$ref": "#/components/schemas/mhvp__properties__models__VatOption"
               },
               {
                 "type": "null"
@@ -10817,14 +11732,12 @@
         "title": "ValueSource",
         "type": "string"
       },
-      "VatOption": {
+      "VatMode": {
         "enum": [
           "none",
-          "commercial_no_vat",
-          "commercial_full_vat",
-          "commercial_reduced_vat"
+          "option"
         ],
-        "title": "VatOption",
+        "title": "VatMode",
         "type": "string"
       },
       "VatOptionIn": {
@@ -10834,7 +11747,7 @@
             "$ref": "#/components/schemas/Occupant"
           },
           "option": {
-            "$ref": "#/components/schemas/VatOption"
+            "$ref": "#/components/schemas/mhvp__properties__models__VatOption"
           },
           "valid_from": {
             "format": "date",
@@ -11020,6 +11933,199 @@
           }
         },
         "title": "WebhookPatch",
+        "type": "object"
+      },
+      "mhvp__accounting__models__VatOption": {
+        "enum": [
+          "none",
+          "full",
+          "reduced"
+        ],
+        "title": "VatOption",
+        "type": "string"
+      },
+      "mhvp__accounting__schemas__EntryIn": {
+        "additionalProperties": false,
+        "properties": {
+          "accrual_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accrual Date"
+          },
+          "booking_date": {
+            "format": "date",
+            "title": "Booking Date",
+            "type": "string"
+          },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EntryKind"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LineSchema"
+            },
+            "maxItems": 500,
+            "minItems": 2,
+            "title": "Lines",
+            "type": "array"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "settlements": {
+            "items": {
+              "$ref": "#/components/schemas/SettlementIn"
+            },
+            "maxItems": 500,
+            "title": "Settlements",
+            "type": "array"
+          },
+          "text": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "value_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Date"
+          }
+        },
+        "required": [
+          "booking_date",
+          "text",
+          "kind",
+          "lines"
+        ],
+        "title": "EntryIn",
+        "type": "object"
+      },
+      "mhvp__accounting__schemas__TemplateOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "released": {
+            "title": "Released",
+            "type": "boolean"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "version",
+          "released",
+          "released_at",
+          "accounts"
+        ],
+        "title": "TemplateOut",
         "type": "object"
       },
       "mhvp__ai__schemas__ProviderIn": {
@@ -11414,6 +12520,69 @@
         "title": "TenantOut",
         "type": "object"
       },
+      "mhvp__documents__schemas__TemplateOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "body": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "code": {
+            "pattern": "^[a-z0-9_]{2,63}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Subject",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "subject",
+          "body",
+          "id",
+          "version",
+          "active"
+        ],
+        "title": "TemplateOut",
+        "type": "object"
+      },
       "mhvp__platform__schemas__TenantOut": {
         "properties": {
           "id": {
@@ -11442,6 +12611,16 @@
         ],
         "title": "TenantOut",
         "type": "object"
+      },
+      "mhvp__properties__models__VatOption": {
+        "enum": [
+          "none",
+          "commercial_no_vat",
+          "commercial_full_vat",
+          "commercial_reduced_vat"
+        ],
+        "title": "VatOption",
+        "type": "string"
       },
       "mhvp__properties__schemas__BankAccountIn": {
         "additionalProperties": false,
@@ -11790,6 +12969,74 @@
         ],
         "title": "ProviderOut",
         "type": "object"
+      },
+      "mhvp__workspace__routers__EntryIn": {
+        "additionalProperties": false,
+        "properties": {
+          "all_day": {
+            "default": true,
+            "title": "All Day",
+            "type": "boolean"
+          },
+          "ends_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends On"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "shared": {
+            "default": false,
+            "title": "Shared",
+            "type": "boolean"
+          },
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "starts_on"
+        ],
+        "title": "EntryIn",
+        "type": "object"
       }
     }
   },
@@ -11820,6 +13067,1356 @@
         "summary": "OIDC Discovery",
         "tags": [
           "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers": {
+      "get": {
+        "operationId": "list_ledgers_api_v1_accounting_ledgers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LedgerOut"
+                  },
+                  "title": "Response List Ledgers Api V1 Accounting Ledgers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Buchungskreise",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "operationId": "create_ledger_api_v1_accounting_ledgers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Buchungskreis je Rechtsträger anlegen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}": {
+      "get": {
+        "operationId": "get_ledger_api_v1_accounting_ledgers__ledger_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Buchungskreis",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/accounts": {
+      "get": {
+        "operationId": "accounts_api_v1_accounting_ledgers__ledger_id__accounts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccountOut"
+                  },
+                  "title": "Response Accounts Api V1 Accounting Ledgers  Ledger Id  Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Konten",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "operationId": "create_account_api_v1_accounting_ledgers__ledger_id__accounts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Konto ergänzen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/accounts/{account_id}": {
+      "delete": {
+        "operationId": "delete_account_api_v1_accounting_ledgers__ledger_id__accounts__account_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Konto ohne Buchungen löschen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_account_api_v1_accounting_ledgers__ledger_id__accounts__account_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Konto ändern oder deaktivieren",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/accounts/{account_id}/sheet": {
+      "get": {
+        "operationId": "account_sheet_api_v1_accounting_ledgers__ledger_id__accounts__account_id__sheet_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Account Sheet Api V1 Accounting Ledgers  Ledger Id  Accounts  Account Id  Sheet Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kontenblatt",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/checks": {
+      "get": {
+        "operationId": "checks_api_v1_accounting_ledgers__ledger_id__checks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Checks Api V1 Accounting Ledgers  Ledger Id  Checks Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Konsistenzprüfung B02, B07, B09",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/entries": {
+      "get": {
+        "operationId": "journal_api_v1_accounting_ledgers__ledger_id__entries_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EntryStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EntryOut"
+                  },
+                  "title": "Response Journal Api V1 Accounting Ledgers  Ledger Id  Entries Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Journal",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "operationId": "create_entry_api_v1_accounting_ledgers__ledger_id__entries_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__accounting__schemas__EntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Buchungssatz als Entwurf",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/entries/{entry_id}": {
+      "delete": {
+        "operationId": "delete_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entwurf löschen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "get": {
+        "operationId": "get_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Buchungssatz",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "put": {
+        "operationId": "update_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__accounting__schemas__EntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entwurf ersetzen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/entries/{entry_id}/approve": {
+      "post": {
+        "operationId": "approve_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anfangsbestand prüfen (zweite Person)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/entries/{entry_id}/post": {
+      "post": {
+        "operationId": "post_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__post_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Buchen (festgeschriebene Nummer)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/entries/{entry_id}/reverse": {
+      "post": {
+        "operationId": "reverse_entry_api_v1_accounting_ledgers__ledger_id__entries__entry_id__reverse_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReverseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stornieren",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/leading": {
+      "post": {
+        "operationId": "set_leading_api_v1_accounting_ledgers__ledger_id__leading_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Führendes System festlegen (G1)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/lock": {
+      "post": {
+        "operationId": "lock_api_v1_accounting_ledgers__ledger_id__lock_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LockIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Lock Api V1 Accounting Ledgers  Ledger Id  Lock Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Festschreiben bis Datum",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/open-items": {
+      "get": {
+        "operationId": "open_items_api_v1_accounting_ledgers__ledger_id__open_items_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Open Items Api V1 Accounting Ledgers  Ledger Id  Open Items Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Offene Posten zum Stichtag",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/sync-debtors": {
+      "post": {
+        "operationId": "sync_debtors_api_v1_accounting_ledgers__ledger_id__sync_debtors_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Sync Debtors Api V1 Accounting Ledgers  Ledger Id  Sync Debtors Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Debitorenkonten aus Verträgen übernehmen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/trial-balance": {
+      "get": {
+        "operationId": "trial_balance_api_v1_accounting_ledgers__ledger_id__trial_balance_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Trial Balance Api V1 Accounting Ledgers  Ledger Id  Trial Balance Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Saldenliste zum Stichtag",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/templates": {
+      "get": {
+        "operationId": "templates_api_v1_accounting_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/mhvp__accounting__schemas__TemplateOut"
+                  },
+                  "title": "Response Templates Api V1 Accounting Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Kontenrahmen-Vorlagen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/templates/default": {
+      "post": {
+        "operationId": "create_default_template_api_v1_accounting_templates_default_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__accounting__schemas__TemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Entwurf nach Anhang A.1 anlegen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/templates/{template_id}/release": {
+      "post": {
+        "operationId": "release_template_api_v1_accounting_templates__template_id__release_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__accounting__schemas__TemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorlage freigeben (Betreiberentscheidung V8)",
+        "tags": [
+          "Buchhaltung"
         ]
       }
     },
@@ -14532,7 +17129,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/TemplateOut"
+                    "$ref": "#/components/schemas/mhvp__documents__schemas__TemplateOut"
                   },
                   "title": "Response List Templates Api V1 Document Templates Get",
                   "type": "array"
@@ -14565,7 +17162,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TemplateOut"
+                  "$ref": "#/components/schemas/mhvp__documents__schemas__TemplateOut"
                 }
               }
             },
@@ -19595,7 +22192,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EntryIn"
+                "$ref": "#/components/schemas/mhvp__workspace__routers__EntryIn"
               }
             }
           },
