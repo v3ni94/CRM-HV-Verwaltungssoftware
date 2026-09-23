@@ -13,7 +13,8 @@
   "Shell": {
     "hoa": "HOA",
     "letting": "Letting",
-    "bank": "Bank"
+    "bank": "Bank",
+    "billing": "Statements"
   },
   "Hoa": {
     "title": "HOA management",
@@ -168,6 +169,46 @@
       "proposed": "proposed",
       "excluded": "excluded",
       "sent": "sent"
+    }
+  },
+  "Billing": {
+    "title": "Operating cost statement",
+    "notice": "Cost items only with a basis. Heating costs come from the metering statement. Internal approval by a second person; issuing to tenants is locked until release gate G3.",
+    "empty": "No statements yet.",
+    "ledger": "Ledger",
+    "from": "From",
+    "to": "To",
+    "create": "Create statement",
+    "statement": "Statement",
+    "deadline": "Deadline orientation {date} (to be verified)",
+    "items": "Cost items",
+    "label": "Label",
+    "amount": "Amount",
+    "key": "Allocation key",
+    "basis": "Basis",
+    "addItem": "Add item",
+    "calculate": "Calculate",
+    "approveInternal": "Approve internally",
+    "deliveredAt": "Delivered to tenant",
+    "issue": "Issue",
+    "newVersion": "New version",
+    "results": "Result per unit",
+    "unit": "Unit",
+    "costs": "Costs",
+    "advancesDue": "Advances due",
+    "advancesPaid": "Advances paid",
+    "balance": "Result",
+    "vacancyShare": "Vacancy share owner: {amount}",
+    "status": {
+      "draft": "Draft",
+      "calculated": "Calculated",
+      "internally_approved": "Internally approved",
+      "board_reviewed": "Board reviewed",
+      "resolved": "Resolved",
+      "issued": "Issued",
+      "due": "Due",
+      "posted": "Posted",
+      "locked": "Locked"
     }
   }
 }

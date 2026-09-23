@@ -56,6 +56,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Dunning (M16): preview and approval by a second person; fees and interest stay locked (V7).
   { method: "POST", pattern: /^accounting\/dunning-runs$/ },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-runs/${ID}/approve$`) },
+  // Operating cost statements (M17): drafting and status steps; issuing needs G3 (API).
+  { method: "POST", pattern: /^statements$/ },
+  { method: "POST", pattern: new RegExp(`^statements/${ID}/(cost-items|calculate|transition|new-version)$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];

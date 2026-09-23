@@ -66,7 +66,8 @@
     "accounting": "Buchhaltung",
     "hoa": "WEG",
     "letting": "Vermietung",
-    "bank": "Bank"
+    "bank": "Bank",
+    "billing": "Abrechnung"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -815,6 +816,46 @@
       "proposed": "vorgeschlagen",
       "excluded": "ausgeschlossen",
       "sent": "versandt"
+    }
+  },
+  "Billing": {
+    "title": "Betriebskostenabrechnung",
+    "notice": "Kostenpositionen nur mit Grundlage. Heizkosten kommen aus der Messdienstabrechnung. Interne Freigabe durch eine zweite Person; die Ausgabe an Mieter ist bis zur Freigabestufe G3 gesperrt.",
+    "empty": "Noch keine Abrechnungen.",
+    "ledger": "Buchungskreis",
+    "from": "Von",
+    "to": "Bis",
+    "create": "Abrechnung anlegen",
+    "statement": "Abrechnung",
+    "deadline": "Abrechnungsfrist orientierend bis {date} (zu verifizieren)",
+    "items": "Kostenpositionen",
+    "label": "Bezeichnung",
+    "amount": "Betrag",
+    "key": "Umlageschlüssel",
+    "basis": "Grundlage",
+    "addItem": "Position hinzufügen",
+    "calculate": "Berechnen",
+    "approveInternal": "Intern freigeben",
+    "deliveredAt": "Zugang beim Mieter",
+    "issue": "Ausgeben",
+    "newVersion": "Neue Version",
+    "results": "Ergebnis je Einheit",
+    "unit": "Einheit",
+    "costs": "Kosten",
+    "advancesDue": "Vorauszahlungen Soll",
+    "advancesPaid": "Vorauszahlungen gezahlt",
+    "balance": "Ergebnis",
+    "vacancyShare": "Leerstandsanteil Eigentümer: {amount}",
+    "status": {
+      "draft": "Entwurf",
+      "calculated": "berechnet",
+      "internally_approved": "intern freigegeben",
+      "board_reviewed": "Beirat geprüft",
+      "resolved": "beschlossen",
+      "issued": "ausgegeben",
+      "due": "fällig",
+      "posted": "gebucht",
+      "locked": "gesperrt"
     }
   }
 }

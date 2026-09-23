@@ -4210,7 +4210,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Betriebskostenabrechnungen */
+        get: operations["list_statements_api_v1_statements_get"];
         put?: never;
         /** Betriebskostenabrechnung anlegen (Entwurf) */
         post: operations["create_api_v1_statements_post"];
@@ -20131,6 +20132,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MandateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_statements_api_v1_statements_get: {
+        parameters: {
+            query?: {
+                ledger_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */

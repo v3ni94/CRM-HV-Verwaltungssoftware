@@ -289,7 +289,52 @@ async def get(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        return await _out(session, await _statement(session, statement_id))
+        st = await _statement(session, statement_id)
+        items = (
+            await session.scalars(
+                select(StatementCostItem)
+                .where(StatementCostItem.statement_id == st.id)
+                .order_by(StatementCostItem.created_at)
+            )
+        ).all()
+        return await _out(session, st) | {
+            "cost_items": [
+                {
+                    "id": i.id,
+                    "label": i.label,
+                    "amount": i.amount,
+                    "basis": i.basis,
+                    "heating": i.heating,
+                    "allocation_key_id": i.allocation_key_id,
+                }
+                for i in items
+            ]
+        }
+
+
+@router.get("", summary="Betriebskostenabrechnungen")
+async def list_statements(
+    request: Request,
+    ledger_id: uuid.UUID | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        query = select(Statement).order_by(Statement.period_to.desc(), Statement.version.desc())
+        if ledger_id is not None:
+            query = query.where(Statement.ledger_id == ledger_id)
+        rows = (await session.scalars(query.limit(200))).all()
+        return [
+            {
+                "id": r.id,
+                "ledger_id": r.ledger_id,
+                "property_id": r.property_id,
+                "period_from": r.period_from,
+                "period_to": r.period_to,
+                "status": r.status.value,
+                "version": r.version,
+            }
+            for r in rows
+        ]
 
 
 @router.post("/co2-split", summary="CO₂-Kostenaufteilung Wohngebäude (Stufentabelle)")

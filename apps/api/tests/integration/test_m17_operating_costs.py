@@ -355,6 +355,10 @@ def test_operating_cost_statement(clients: tuple[TestClient, TestClient], world:
     assert by["02"]["costs"] == "347.95"
     assert by["03"]["costs"] == "1300.00"
     assert snap["vacancy_owner_share"] == "252.05"
+    listed = _ok(client.get(S, params={"ledger_id": ledger}, headers=h))
+    assert st["id"] in {x["id"] for x in listed}
+    detail = _ok(client.get(f"{S}/{st['id']}", headers=h))
+    assert [i["label"] for i in detail["cost_items"]] == ["Hausmeister", "Heizung"]
     assert Decimal(by["01"]["costs"]) + Decimal(by["02"]["costs"]) + Decimal(
         by["03"]["costs"]
     ) + Decimal(snap["vacancy_owner_share"]) == Decimal("2600.00")
