@@ -257,6 +257,28 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | G1 |
 | Datum | 23.09.2026 |
 
+## A-024
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Bankumsatz-Identität: Bankreferenz ist AcctSvcrRef, ersatzweise NtryRef oder TxId aus CAMT. Umsätze ohne jede Referenz mit gleichem Inhalt kommen in die Prüfung und werden nie verworfen. Interne Umbuchung wird verknüpft, wenn die Gegen-IBAN ein eigenes Konto desselben Rechtsträgers ist, der Betrag entgegengesetzt gleich ist und die Buchungstage höchstens 5 Tage auseinanderliegen. Vorgemerkte Umsätze (Status nicht BOOK) werden nicht übernommen. |
+| Begründung | 6.9.7, D04, D05; Zeitfenster als Produktstandard, nur Verknüpfung ohne Buchung. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Bank |
+| Überprüfung spätestens bei Meilenstein | M12 |
+| Datum | 23.09.2026 |
+
+## A-025
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Automatische Buchung nur, wenn Mandant freigeschaltet, eine aktive Regel (von einer zweiten Person freigegeben, mit Betragsgrenze und Testnachweis) passt und genau ein Kandidat mit mehr als IBAN- und Betragsindiz den offenen Posten vollständig ausgleicht. Teil-, Sammel- und Überzahlungen, Fremdzahler und Umbuchungen bleiben manuell. Überzahlungen verbleiben als Guthaben auf dem Personenkonto. |
+| Begründung | 7.4 Nr. 2 und 4, 6.9.4, D07. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Bank, Buchhaltung |
+| Überprüfung spätestens bei Meilenstein | G1 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

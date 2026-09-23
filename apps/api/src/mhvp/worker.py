@@ -9,6 +9,7 @@ from functools import lru_cache
 from typing import Any
 
 from celery import Celery, signals
+from celery.schedules import crontab
 from kombu import Queue
 
 from mhvp.core.config import Settings, get_settings
@@ -30,6 +31,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.documents.tasks",
             "mhvp.ai.jobs",
             "mhvp.workspace.tasks",
+            "mhvp.banking.tasks",
         ],
     )
     app.conf.update(
@@ -62,6 +64,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "options": {"queue": "io"},
             },
             # Maintenance reminders as in-app notifications (M9); idempotent per unread item.
+            # Bank retrieval 06:00 (8.2); connectors without contract report "not configured".
+            "banking-sync-all": {
+                "task": "mhvp.banking.sync_all",
+                "schedule": crontab(hour=6, minute=0),
+                "options": {"queue": "io"},
+            },
             "workspace-reminders": {
                 "task": "mhvp.workspace.reminders",
                 "schedule": 3600.0,

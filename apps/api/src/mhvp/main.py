@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from mhvp.accounting.routers import router as accounting_router
 from mhvp.ai.routers import router as ai_router
+from mhvp.banking.routers import router as banking_router
 from mhvp.contacts.routers import router as contacts_router
 from mhvp.contracts.routers import router as contracts_router
 from mhvp.core import crypto, health
@@ -129,6 +130,7 @@ def create_app(
     app.include_router(workspace_router, prefix=API_PREFIX)
     app.include_router(ops_router, prefix=API_PREFIX)
     app.include_router(accounting_router, prefix=API_PREFIX)
+    app.include_router(banking_router, prefix=API_PREFIX)
     app.add_middleware(CorrelationIdMiddleware)
     return app
 

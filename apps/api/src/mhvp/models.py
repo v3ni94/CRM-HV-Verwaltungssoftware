@@ -2,6 +2,7 @@
 
 from mhvp.accounting import models as accounting_models
 from mhvp.ai import models as ai_models
+from mhvp.banking import models as banking_models
 from mhvp.contacts import models as contact_models
 from mhvp.contracts import models as contract_models
 from mhvp.core import events, numbering, webhooks
@@ -14,6 +15,7 @@ from mhvp.workspace import models as workspace_models
 __all__ = [
     "accounting_models",
     "ai_models",
+    "banking_models",
     "contact_models",
     "contract_models",
     "document_models",

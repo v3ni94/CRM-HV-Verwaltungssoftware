@@ -717,6 +717,324 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/accounts/{bank_account_id}/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bankabstimmung (B09) */
+        get: operations["reconciliation_api_v1_banking_accounts__bank_account_id__reconciliation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/auto-post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Automatik über aktive Regeln (nur bei Freischaltung je Mandant) */
+        post: operations["run_auto_post_api_v1_banking_auto_post_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/automation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Automatik je Mandant ein- oder ausschalten (Standard aus) */
+        put: operations["set_automation_api_v1_banking_automation_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/bulk-confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Massenbestätigung mit Vorschau (je Umsatz ganz oder gar nicht) */
+        post: operations["bulk_confirm_api_v1_banking_bulk_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bankverbindungen (ohne Zugangsdaten) */
+        get: operations["list_connections_api_v1_banking_connections_get"];
+        put?: never;
+        /** Bankverbindung anlegen */
+        post: operations["create_connection_api_v1_banking_connections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kontoauszug (CAMT.053) importieren */
+        post: operations["import_statement_api_v1_banking_imports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/matching/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Abdeckung und Fehlerquote der Automatik getrennt
+         * @description Coverage = automatically booked / incoming; error rate = automatic bookings later reversed
+         *     / automatic bookings. Operational figures, no proof of safety (7.4).
+         */
+        get: operations["metrics_api_v1_banking_matching_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bankregeln */
+        get: operations["list_rules_api_v1_banking_rules_get"];
+        put?: never;
+        /** Bankregel vorschlagen (Zustand proposed) */
+        post: operations["create_rule_api_v1_banking_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/rules/{rule_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aktivieren mit Betragsgrenze und Testnachweis */
+        post: operations["activate_rule_api_v1_banking_rules__rule_id__activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/rules/{rule_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fachlich freigeben (zweite Person) */
+        post: operations["approve_rule_api_v1_banking_rules__rule_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/rules/{rule_id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Regel abschalten */
+        post: operations["disable_rule_api_v1_banking_rules__rule_id__disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sync-Protokoll */
+        get: operations["runs_api_v1_banking_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bankumsätze */
+        get: operations["transactions_api_v1_banking_transactions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions/{tx_id}/book": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Umsatz buchen (bestätigt) */
+        post: operations["book_api_v1_banking_transactions__tx_id__book_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions/{tx_id}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zuordnungsvorschläge mit Begründung */
+        get: operations["tx_candidates_api_v1_banking_transactions__tx_id__candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions/{tx_id}/ignore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Umsatz ignorieren (mit Begründung) */
+        post: operations["ignore_api_v1_banking_transactions__tx_id__ignore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions/{tx_id}/learn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Regelvorschlag aus bestätigter Buchung
+         * @description Learning only from a confirmed result (7.4.6); the rule starts as proposed.
+         */
+        post: operations["learn_api_v1_banking_transactions__tx_id__learn_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions/{tx_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Möglichen Doppelumsatz klären
+         * @description A possible duplicate is kept as real payment or ignored; never deleted (B08, D05).
+         */
+        post: operations["review_api_v1_banking_transactions__tx_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalogs/{catalog}": {
         parameters: {
             query?: never;
@@ -2762,6 +3080,16 @@ export interface components {
          * @enum {string}
          */
         AcquisitionKind: "purchase" | "first_acquisition" | "inheritance" | "foreclosure" | "gift" | "other";
+        /** ActivateIn */
+        ActivateIn: {
+            /** Max Amount */
+            max_amount: number | string;
+            /**
+             * Test Evidence Document Id
+             * Format: uuid
+             */
+            test_evidence_document_id: string;
+        };
         /** AddressIn */
         AddressIn: {
             /** Addition */
@@ -3043,6 +3371,13 @@ export interface components {
              */
             occurred_at: string;
         };
+        /** AutomationIn */
+        AutomationIn: {
+            /** Enabled */
+            enabled: boolean;
+            /** Reason */
+            reason: string;
+        };
         /**
          * BandSegment
          * @description Segment of the letterhead colour band as share of the page width (M6).
@@ -3088,6 +3423,15 @@ export interface components {
             links?: string | null;
             /** Title */
             title?: string | null;
+        };
+        /** BookIn */
+        BookIn: {
+            /** Counter Account Id */
+            counter_account_id?: string | null;
+            /** Settlements */
+            settlements?: components["schemas"]["SettleIn"][];
+            /** Text */
+            text?: string | null;
         };
         /** Branding */
         Branding: {
@@ -3263,14 +3607,19 @@ export interface components {
             /** Windows */
             windows?: number | null;
         };
-        /** BulkIn */
-        BulkIn: {
-            /** Action */
-            action: string;
-            /** Ids */
-            ids: string[];
-            /** Tag */
-            tag?: string | null;
+        /** BulkItem */
+        BulkItem: {
+            /** Counter Account Id */
+            counter_account_id?: string | null;
+            /** Settlements */
+            settlements?: components["schemas"]["SettleIn"][];
+            /** Text */
+            text?: string | null;
+            /**
+             * Transaction Id
+             * Format: uuid
+             */
+            transaction_id: string;
         };
         /** CalendarItem */
         CalendarItem: {
@@ -3426,6 +3775,51 @@ export interface components {
          * @enum {string}
          */
         Completeness: "complete" | "incomplete";
+        /** ConnectionIn */
+        ConnectionIn: {
+            /** Bank Name */
+            bank_name: string;
+            /** Bic */
+            bic?: string | null;
+            connector: components["schemas"]["Connector"];
+            /** Consent Valid Until */
+            consent_valid_until?: string | null;
+            /** Credentials */
+            credentials?: string | null;
+        };
+        /** ConnectionOut */
+        ConnectionOut: {
+            /** Bank Name */
+            bank_name: string;
+            /** Bic */
+            bic: string | null;
+            connector: components["schemas"]["Connector"];
+            /** Consent Valid Until */
+            consent_valid_until: string | null;
+            /** Error Message */
+            error_message: string | null;
+            /**
+             * Has Credentials
+             * @default false
+             */
+            has_credentials: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            status: components["schemas"]["ConnectionStatus"];
+        };
+        /**
+         * ConnectionStatus
+         * @enum {string}
+         */
+        ConnectionStatus: "not_configured" | "active" | "error" | "consent_expired" | "disabled";
+        /**
+         * Connector
+         * @enum {string}
+         */
+        Connector: "ebics" | "aggregator_finapi" | "aggregator_gocardless" | "fints" | "file_import";
         /** ConsentIn */
         ConsentIn: {
             /** Document Id */
@@ -4524,6 +4918,14 @@ export interface components {
             kind: components["schemas"]["IdentifierKind"];
             /** Value */
             value: string;
+        };
+        /** ImportIn */
+        ImportIn: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
         };
         /** ImportItemOut */
         ImportItemOut: {
@@ -5969,6 +6371,13 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** ReviewIn */
+        ReviewIn: {
+            /** Decision */
+            decision: string;
+            /** Reason */
+            reason: string;
+        };
         /** RoleCreate */
         RoleCreate: {
             /** Code */
@@ -6028,38 +6437,77 @@ export interface components {
          * @enum {string}
          */
         RowStatus: "pending" | "valid" | "invalid" | "unchanged" | "conflict" | "created" | "staged_only";
-        /** RunOut */
-        RunOut: {
-            /** Confidence */
-            confidence: string | null;
-            /** Cost Eur */
-            cost_eur: string;
-            /** Duration Ms */
-            duration_ms: number;
-            /** Error */
-            error: string | null;
+        /** RuleIn */
+        RuleIn: {
+            /** Account Id */
+            account_id?: string | null;
+            /** Amount Max */
+            amount_max?: number | string | null;
+            /** Amount Min */
+            amount_min?: number | string | null;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Counterpart Iban */
+            counterpart_iban?: string | null;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Name */
+            name: string;
+            /** Name Contains */
+            name_contains?: string | null;
+            /**
+             * Priority
+             * @default 100
+             */
+            priority: number;
+            /** Property Id */
+            property_id?: string | null;
+            /** Purpose Regex */
+            purpose_regex?: string | null;
+        };
+        /** RuleOut */
+        RuleOut: {
+            /** Action */
+            action: {
+                [key: string]: unknown;
+            };
+            /** Approval State */
+            approval_state: string;
+            /** Approved By */
+            approved_by: string | null;
+            /** Created By */
+            created_by: string | null;
+            /** Hit Count */
+            hit_count: number;
             /**
              * Id
              * Format: uuid
              */
             id: string;
-            /** Model */
-            model: string | null;
-            /** Output */
-            output: {
+            /** Learned From Ai */
+            learned_from_ai: boolean;
+            /** Learned From Transaction Id */
+            learned_from_transaction_id: string | null;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Match */
+            match: {
                 [key: string]: unknown;
-            } | null;
-            /** Prompt Version */
-            prompt_version: string;
-            /** Proposal Id */
-            proposal_id?: string | null;
-            provider: components["schemas"]["AiProvider"] | null;
-            status: components["schemas"]["RunStatus"];
-            task: components["schemas"]["AiTask"];
-            /** Tokens In */
-            tokens_in: number;
-            /** Tokens Out */
-            tokens_out: number;
+            };
+            /** Max Amount */
+            max_amount: string | null;
+            /** Name */
+            name: string;
+            /** Priority */
+            priority: number;
+            /** Test Evidence Document Id */
+            test_evidence_document_id: string | null;
         };
         /**
          * RunStatus
@@ -6173,6 +6621,16 @@ export interface components {
             tenant_id: string | null;
             /** User Agent */
             user_agent: string | null;
+        };
+        /** SettleIn */
+        SettleIn: {
+            /** Amount */
+            amount: number | string;
+            /**
+             * Open Item Id
+             * Format: uuid
+             */
+            open_item_id: string;
         };
         /** SettlementIn */
         SettlementIn: {
@@ -6348,6 +6806,59 @@ export interface components {
              */
             token_type: string;
         };
+        /** TransactionOut */
+        TransactionOut: {
+            /** Amount */
+            amount: string;
+            /** Bank Reference */
+            bank_reference: string | null;
+            /**
+             * Booking Date
+             * Format: date
+             */
+            booking_date: string;
+            /** Counterpart Iban Suffix */
+            counterpart_iban_suffix?: string | null;
+            /** Counterpart Name */
+            counterpart_name: string | null;
+            /** Currency */
+            currency: string;
+            /** End To End Id */
+            end_to_end_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Journal Entry Id */
+            journal_entry_id: string | null;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Mandate Reference */
+            mandate_reference: string | null;
+            /** Possible Duplicate Of Id */
+            possible_duplicate_of_id: string | null;
+            /**
+             * Property Bank Account Id
+             * Format: uuid
+             */
+            property_bank_account_id: string;
+            /** Purpose */
+            purpose: string | null;
+            status: components["schemas"]["TransactionStatus"];
+            /** Transfer Pair Id */
+            transfer_pair_id: string | null;
+            /** Value Date */
+            value_date: string | null;
+        };
+        /**
+         * TransactionStatus
+         * @enum {string}
+         */
+        TransactionStatus: "new" | "needs_review" | "proposed" | "booked" | "ignored" | "split";
         /** UnitIn */
         UnitIn: {
             /** Bathrooms */
@@ -6739,6 +7250,71 @@ export interface components {
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
         };
+        /** RunOut */
+        mhvp__ai__schemas__RunOut: {
+            /** Confidence */
+            confidence: string | null;
+            /** Cost Eur */
+            cost_eur: string;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Error */
+            error: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Model */
+            model: string | null;
+            /** Output */
+            output: {
+                [key: string]: unknown;
+            } | null;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            provider: components["schemas"]["AiProvider"] | null;
+            status: components["schemas"]["RunStatus"];
+            task: components["schemas"]["AiTask"];
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+        };
+        /** BulkIn */
+        mhvp__banking__routers__BulkIn: {
+            /** Items */
+            items: components["schemas"]["BulkItem"][];
+            /**
+             * Preview
+             * @default true
+             */
+            preview: boolean;
+        };
+        /** RunOut */
+        mhvp__banking__routers__RunOut: {
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Document Id */
+            document_id: string | null;
+            /** Errors */
+            errors: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Property Bank Account Id */
+            property_bank_account_id: string | null;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+        };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
             /** Bank Name */
@@ -6964,6 +7540,15 @@ export interface components {
             valid_from: string;
             /** Valid To */
             valid_to?: string | null;
+        };
+        /** BulkIn */
+        mhvp__workspace__routers__BulkIn: {
+            /** Action */
+            action: string;
+            /** Ids */
+            ids: string[];
+            /** Tag */
+            tag?: string | null;
         };
         /** EntryIn */
         mhvp__workspace__routers__EntryIn: {
@@ -7954,7 +8539,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunOut"];
+                    "application/json": components["schemas"]["mhvp__ai__schemas__RunOut"];
                 };
             };
             /** @description Validation Error */
@@ -8168,7 +8753,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunOut"];
+                    "application/json": components["schemas"]["mhvp__ai__schemas__RunOut"];
                 };
             };
             /** @description Validation Error */
@@ -8474,6 +9059,627 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reconciliation_api_v1_banking_accounts__bank_account_id__reconciliation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bank_account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_auto_post_api_v1_banking_auto_post_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    set_automation_api_v1_banking_automation_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutomationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_confirm_api_v1_banking_bulk_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__banking__routers__BulkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_connections_api_v1_banking_connections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionOut"][];
+                };
+            };
+        };
+    };
+    create_connection_api_v1_banking_connections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_statement_api_v1_banking_imports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__banking__routers__RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    metrics_api_v1_banking_matching_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_rules_api_v1_banking_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"][];
+                };
+            };
+        };
+    };
+    create_rule_api_v1_banking_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_rule_api_v1_banking_rules__rule_id__activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_rule_api_v1_banking_rules__rule_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disable_rule_api_v1_banking_rules__rule_id__disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    runs_api_v1_banking_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__banking__routers__RunOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transactions_api_v1_banking_transactions_get: {
+        parameters: {
+            query?: {
+                bank_account_id?: string | null;
+                status?: components["schemas"]["TransactionStatus"] | null;
+                start?: string | null;
+                end?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    book_api_v1_banking_transactions__tx_id__book_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tx_candidates_api_v1_banking_transactions__tx_id__candidates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ignore_api_v1_banking_transactions__tx_id__ignore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    learn_api_v1_banking_transactions__tx_id__learn_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_api_v1_banking_transactions__tx_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionOut"];
                 };
             };
             /** @description Validation Error */
@@ -12920,7 +14126,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BulkIn"];
+                "application/json": components["schemas"]["mhvp__workspace__routers__BulkIn"];
             };
         };
         responses: {

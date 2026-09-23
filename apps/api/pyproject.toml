@@ -11,6 +11,7 @@ dependencies = [
     "boto3>=1.43.100,<2",
     "celery[redis]>=5.6.3,<6",
     "cryptography>=50,<51",
+    "defusedxml>=0.7,<0.8",
     "email-validator>=2.2,<3",
     "fastapi>=0.141.1,<1",
     "httpx>=0.28.1,<1",

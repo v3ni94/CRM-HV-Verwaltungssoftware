@@ -290,6 +290,35 @@
         "title": "AcquisitionKind",
         "type": "string"
       },
+      "ActivateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "max_amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Max Amount"
+          },
+          "test_evidence_document_id": {
+            "format": "uuid",
+            "title": "Test Evidence Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "max_amount",
+          "test_evidence_document_id"
+        ],
+        "title": "ActivateIn",
+        "type": "object"
+      },
       "AddressIn": {
         "additionalProperties": false,
         "properties": {
@@ -1109,6 +1138,27 @@
         "title": "AuditOut",
         "type": "object"
       },
+      "AutomationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "reason"
+        ],
+        "title": "AutomationIn",
+        "type": "object"
+      },
       "BandSegment": {
         "additionalProperties": false,
         "description": "Segment of the letterhead colour band as share of the page width (M6).",
@@ -1243,6 +1293,45 @@
           "file"
         ],
         "title": "Body_upload_api_v1_documents_post",
+        "type": "object"
+      },
+      "BookIn": {
+        "additionalProperties": false,
+        "properties": {
+          "counter_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counter Account Id"
+          },
+          "settlements": {
+            "items": {
+              "$ref": "#/components/schemas/SettleIn"
+            },
+            "maxItems": 100,
+            "title": "Settlements",
+            "type": "array"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "BookIn",
         "type": "object"
       },
       "Branding": {
@@ -2043,43 +2132,51 @@
         "title": "BuildingOut",
         "type": "object"
       },
-      "BulkIn": {
+      "BulkItem": {
         "additionalProperties": false,
         "properties": {
-          "action": {
-            "pattern": "^(contacts.add_tag|contacts.remove_tag|maintenance.done)$",
-            "title": "Action",
-            "type": "string"
-          },
-          "ids": {
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "maxItems": 500,
-            "minItems": 1,
-            "title": "Ids",
-            "type": "array"
-          },
-          "tag": {
+          "counter_account_id": {
             "anyOf": [
               {
-                "maxLength": 63,
-                "minLength": 1,
+                "format": "uuid",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Tag"
+            "title": "Counter Account Id"
+          },
+          "settlements": {
+            "items": {
+              "$ref": "#/components/schemas/SettleIn"
+            },
+            "maxItems": 100,
+            "title": "Settlements",
+            "type": "array"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "transaction_id": {
+            "format": "uuid",
+            "title": "Transaction Id",
+            "type": "string"
           }
         },
         "required": [
-          "action",
-          "ids"
+          "transaction_id"
         ],
-        "title": "BulkIn",
+        "title": "BulkItem",
         "type": "object"
       },
       "CalendarItem": {
@@ -2560,6 +2657,153 @@
           "incomplete"
         ],
         "title": "Completeness",
+        "type": "string"
+      },
+      "ConnectionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "bank_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Bank Name",
+            "type": "string"
+          },
+          "bic": {
+            "anyOf": [
+              {
+                "maxLength": 11,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bic"
+          },
+          "connector": {
+            "$ref": "#/components/schemas/Connector"
+          },
+          "consent_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Valid Until"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials"
+          }
+        },
+        "required": [
+          "connector",
+          "bank_name"
+        ],
+        "title": "ConnectionIn",
+        "type": "object"
+      },
+      "ConnectionOut": {
+        "properties": {
+          "bank_name": {
+            "title": "Bank Name",
+            "type": "string"
+          },
+          "bic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bic"
+          },
+          "connector": {
+            "$ref": "#/components/schemas/Connector"
+          },
+          "consent_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Valid Until"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "has_credentials": {
+            "default": false,
+            "title": "Has Credentials",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ConnectionStatus"
+          }
+        },
+        "required": [
+          "id",
+          "connector",
+          "bank_name",
+          "bic",
+          "consent_valid_until",
+          "status",
+          "error_message"
+        ],
+        "title": "ConnectionOut",
+        "type": "object"
+      },
+      "ConnectionStatus": {
+        "enum": [
+          "not_configured",
+          "active",
+          "error",
+          "consent_expired",
+          "disabled"
+        ],
+        "title": "ConnectionStatus",
+        "type": "string"
+      },
+      "Connector": {
+        "enum": [
+          "ebics",
+          "aggregator_finapi",
+          "aggregator_gocardless",
+          "fints",
+          "file_import"
+        ],
+        "title": "Connector",
         "type": "string"
       },
       "ConsentIn": {
@@ -5761,6 +6005,21 @@
           "id"
         ],
         "title": "IdentifierOut",
+        "type": "object"
+      },
+      "ImportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id"
+        ],
+        "title": "ImportIn",
         "type": "object"
       },
       "ImportItemOut": {
@@ -9967,6 +10226,28 @@
         "title": "ReverseIn",
         "type": "object"
       },
+      "ReviewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "pattern": "^(keep|ignore)$",
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "title": "ReviewIn",
+        "type": "object"
+      },
       "RoleCreate": {
         "properties": {
           "code": {
@@ -10155,73 +10436,10 @@
         "title": "RowStatus",
         "type": "string"
       },
-      "RunOut": {
+      "RuleIn": {
+        "additionalProperties": false,
         "properties": {
-          "confidence": {
-            "anyOf": [
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confidence"
-          },
-          "cost_eur": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Cost Eur",
-            "type": "string"
-          },
-          "duration_ms": {
-            "title": "Duration Ms",
-            "type": "integer"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model"
-          },
-          "output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output"
-          },
-          "prompt_version": {
-            "title": "Prompt Version",
-            "type": "string"
-          },
-          "proposal_id": {
+          "account_id": {
             "anyOf": [
               {
                 "format": "uuid",
@@ -10231,49 +10449,243 @@
                 "type": "null"
               }
             ],
-            "title": "Proposal Id"
+            "title": "Account Id"
           },
-          "provider": {
+          "amount_max": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/AiProvider"
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Amount Max"
           },
-          "status": {
-            "$ref": "#/components/schemas/RunStatus"
+          "amount_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Min"
           },
-          "task": {
-            "$ref": "#/components/schemas/AiTask"
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
           },
-          "tokens_in": {
-            "title": "Tokens In",
+          "counterpart_iban": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterpart Iban"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "name_contains": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name Contains"
+          },
+          "priority": {
+            "default": 100,
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Priority",
             "type": "integer"
           },
-          "tokens_out": {
-            "title": "Tokens Out",
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "purpose_regex": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose Regex"
+          }
+        },
+        "required": [
+          "name",
+          "legal_entity_id"
+        ],
+        "title": "RuleIn",
+        "type": "object"
+      },
+      "RuleOut": {
+        "properties": {
+          "action": {
+            "additionalProperties": true,
+            "title": "Action",
+            "type": "object"
+          },
+          "approval_state": {
+            "title": "Approval State",
+            "type": "string"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "hit_count": {
+            "title": "Hit Count",
             "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "learned_from_ai": {
+            "title": "Learned From Ai",
+            "type": "boolean"
+          },
+          "learned_from_transaction_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learned From Transaction Id"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "match": {
+            "additionalProperties": true,
+            "title": "Match",
+            "type": "object"
+          },
+          "max_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Amount"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          },
+          "test_evidence_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Evidence Document Id"
           }
         },
         "required": [
           "id",
-          "task",
-          "status",
-          "provider",
-          "model",
-          "prompt_version",
-          "output",
-          "confidence",
-          "tokens_in",
-          "tokens_out",
-          "cost_eur",
-          "duration_ms",
-          "error"
+          "name",
+          "legal_entity_id",
+          "match",
+          "action",
+          "priority",
+          "hit_count",
+          "learned_from_ai",
+          "learned_from_transaction_id",
+          "approval_state",
+          "approved_by",
+          "max_amount",
+          "test_evidence_document_id",
+          "created_by"
         ],
-        "title": "RunOut",
+        "title": "RuleOut",
         "type": "object"
       },
       "RunStatus": {
@@ -10559,6 +10971,35 @@
           "last_used_at"
         ],
         "title": "SessionOut",
+        "type": "object"
+      },
+      "SettleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "open_item_id": {
+            "format": "uuid",
+            "title": "Open Item Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open_item_id",
+          "amount"
+        ],
+        "title": "SettleIn",
         "type": "object"
       },
       "SettlementIn": {
@@ -11059,6 +11500,188 @@
         ],
         "title": "TokenResponse",
         "type": "object"
+      },
+      "TransactionOut": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "bank_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Reference"
+          },
+          "booking_date": {
+            "format": "date",
+            "title": "Booking Date",
+            "type": "string"
+          },
+          "counterpart_iban_suffix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterpart Iban Suffix"
+          },
+          "counterpart_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterpart Name"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "end_to_end_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End To End Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "journal_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Journal Entry Id"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "mandate_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Reference"
+          },
+          "possible_duplicate_of_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Possible Duplicate Of Id"
+          },
+          "property_bank_account_id": {
+            "format": "uuid",
+            "title": "Property Bank Account Id",
+            "type": "string"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "transfer_pair_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transfer Pair Id"
+          },
+          "value_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Date"
+          }
+        },
+        "required": [
+          "id",
+          "property_bank_account_id",
+          "legal_entity_id",
+          "bank_reference",
+          "booking_date",
+          "value_date",
+          "amount",
+          "currency",
+          "counterpart_name",
+          "purpose",
+          "end_to_end_id",
+          "mandate_reference",
+          "status",
+          "possible_duplicate_of_id",
+          "transfer_pair_id",
+          "journal_entry_id"
+        ],
+        "title": "TransactionOut",
+        "type": "object"
+      },
+      "TransactionStatus": {
+        "enum": [
+          "new",
+          "needs_review",
+          "proposed",
+          "booked",
+          "ignored",
+          "split"
+        ],
+        "title": "TransactionStatus",
+        "type": "string"
       },
       "UnitIn": {
         "additionalProperties": false,
@@ -12334,6 +12957,217 @@
         "title": "ProviderOut",
         "type": "object"
       },
+      "mhvp__ai__schemas__RunOut": {
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "cost_eur": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost Eur",
+            "type": "string"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiProvider"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "task": {
+            "$ref": "#/components/schemas/AiTask"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "task",
+          "status",
+          "provider",
+          "model",
+          "prompt_version",
+          "output",
+          "confidence",
+          "tokens_in",
+          "tokens_out",
+          "cost_eur",
+          "duration_ms",
+          "error"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
+      "mhvp__banking__routers__BulkIn": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BulkItem"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "preview": {
+            "default": true,
+            "title": "Preview",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "BulkIn",
+        "type": "object"
+      },
+      "mhvp__banking__routers__RunOut": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "status",
+          "counts",
+          "errors",
+          "property_bank_account_id",
+          "document_id"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
       "mhvp__contacts__schemas__BankAccountIn": {
         "additionalProperties": false,
         "properties": {
@@ -12968,6 +13802,45 @@
           "id"
         ],
         "title": "ProviderOut",
+        "type": "object"
+      },
+      "mhvp__workspace__routers__BulkIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "pattern": "^(contacts.add_tag|contacts.remove_tag|maintenance.done)$",
+            "title": "Action",
+            "type": "string"
+          },
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "maxLength": 63,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag"
+          }
+        },
+        "required": [
+          "action",
+          "ids"
+        ],
+        "title": "BulkIn",
         "type": "object"
       },
       "mhvp__workspace__routers__EntryIn": {
@@ -14603,7 +15476,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunOut"
+                  "$ref": "#/components/schemas/mhvp__ai__schemas__RunOut"
                 }
               }
             },
@@ -14904,7 +15777,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunOut"
+                  "$ref": "#/components/schemas/mhvp__ai__schemas__RunOut"
                 }
               }
             },
@@ -15291,6 +16164,924 @@
         "summary": "Mandant wechseln",
         "tags": [
           "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/banking/accounts/{bank_account_id}/reconciliation": {
+      "get": {
+        "operationId": "reconciliation_api_v1_banking_accounts__bank_account_id__reconciliation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Bank Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Reconciliation Api V1 Banking Accounts  Bank Account Id  Reconciliation Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankabstimmung (B09)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/auto-post": {
+      "post": {
+        "operationId": "run_auto_post_api_v1_banking_auto_post_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Auto Post Api V1 Banking Auto Post Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Automatik über aktive Regeln (nur bei Freischaltung je Mandant)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/automation": {
+      "put": {
+        "operationId": "set_automation_api_v1_banking_automation_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Set Automation Api V1 Banking Automation Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Automatik je Mandant ein- oder ausschalten (Standard aus)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/bulk-confirm": {
+      "post": {
+        "operationId": "bulk_confirm_api_v1_banking_bulk_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__banking__routers__BulkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Bulk Confirm Api V1 Banking Bulk Confirm Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Massenbestätigung mit Vorschau (je Umsatz ganz oder gar nicht)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/connections": {
+      "get": {
+        "operationId": "list_connections_api_v1_banking_connections_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConnectionOut"
+                  },
+                  "title": "Response List Connections Api V1 Banking Connections Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Bankverbindungen (ohne Zugangsdaten)",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "post": {
+        "operationId": "create_connection_api_v1_banking_connections_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankverbindung anlegen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/imports": {
+      "post": {
+        "operationId": "import_statement_api_v1_banking_imports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__banking__routers__RunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kontoauszug (CAMT.053) importieren",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/matching/metrics": {
+      "get": {
+        "description": "Coverage = automatically booked / incoming; error rate = automatic bookings later reversed\n/ automatic bookings. Operational figures, no proof of safety (7.4).",
+        "operationId": "metrics_api_v1_banking_matching_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Metrics Api V1 Banking Matching Metrics Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Abdeckung und Fehlerquote der Automatik getrennt",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/rules": {
+      "get": {
+        "operationId": "list_rules_api_v1_banking_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RuleOut"
+                  },
+                  "title": "Response List Rules Api V1 Banking Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Bankregeln",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "post": {
+        "operationId": "create_rule_api_v1_banking_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankregel vorschlagen (Zustand proposed)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/rules/{rule_id}/activate": {
+      "post": {
+        "operationId": "activate_rule_api_v1_banking_rules__rule_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Aktivieren mit Betragsgrenze und Testnachweis",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/rules/{rule_id}/approve": {
+      "post": {
+        "operationId": "approve_rule_api_v1_banking_rules__rule_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fachlich freigeben (zweite Person)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/rules/{rule_id}/disable": {
+      "post": {
+        "operationId": "disable_rule_api_v1_banking_rules__rule_id__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regel abschalten",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/runs": {
+      "get": {
+        "operationId": "runs_api_v1_banking_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/mhvp__banking__routers__RunOut"
+                  },
+                  "title": "Response Runs Api V1 Banking Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync-Protokoll",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions": {
+      "get": {
+        "operationId": "transactions_api_v1_banking_transactions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "bank_account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bank Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TransactionStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TransactionOut"
+                  },
+                  "title": "Response Transactions Api V1 Banking Transactions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankumsätze",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{tx_id}/book": {
+      "post": {
+        "operationId": "book_api_v1_banking_transactions__tx_id__book_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Book Api V1 Banking Transactions  Tx Id  Book Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umsatz buchen (bestätigt)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{tx_id}/candidates": {
+      "get": {
+        "operationId": "tx_candidates_api_v1_banking_transactions__tx_id__candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Tx Candidates Api V1 Banking Transactions  Tx Id  Candidates Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuordnungsvorschläge mit Begründung",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{tx_id}/ignore": {
+      "post": {
+        "operationId": "ignore_api_v1_banking_transactions__tx_id__ignore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umsatz ignorieren (mit Begründung)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{tx_id}/learn": {
+      "post": {
+        "description": "Learning only from a confirmed result (7.4.6); the rule starts as proposed.",
+        "operationId": "learn_api_v1_banking_transactions__tx_id__learn_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regelvorschlag aus bestätigter Buchung",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{tx_id}/review": {
+      "post": {
+        "description": "A possible duplicate is kept as real payment or ignored; never deleted (B08, D05).",
+        "operationId": "review_api_v1_banking_transactions__tx_id__review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Möglichen Doppelumsatz klären",
+        "tags": [
+          "Bank"
         ]
       }
     },
@@ -22094,7 +23885,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BulkIn"
+                "$ref": "#/components/schemas/mhvp__workspace__routers__BulkIn"
               }
             }
           },
