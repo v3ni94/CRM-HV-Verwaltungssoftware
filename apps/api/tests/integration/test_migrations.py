@@ -2,6 +2,7 @@
 
 import pytest
 from alembic import command
+from alembic.script import ScriptDirectory
 from sqlalchemy import Engine, text
 
 from tests.integration.conftest import Database, alembic_config
@@ -13,13 +14,14 @@ _FUNCTION_EXISTS = text("SELECT count(*) FROM pg_proc WHERE proname = 'app_curre
 
 def test_downgrade_and_upgrade_round_trip(database: Database, migrator_engine: Engine) -> None:
     config = alembic_config(database.migrator_url)
+    head = ScriptDirectory.from_config(config).get_current_head()
     command.downgrade(config, "base")
     with migrator_engine.connect() as conn:
         assert conn.execute(_FUNCTION_EXISTS).scalar_one() == 0
     command.upgrade(config, "head")
     with migrator_engine.connect() as conn:
         assert conn.execute(_FUNCTION_EXISTS).scalar_one() == 1
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001"
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == head
 
 
 def test_no_autogenerate_drift(database: Database) -> None:

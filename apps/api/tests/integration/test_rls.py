@@ -49,8 +49,21 @@ _UNISOLATED = text(
 )
 
 
+# Platform tables carrying a tenant reference without RLS (section 5.3, ADR 0006): they are
+# read before a tenant context exists (login, host resolution, token rotation).
+PLATFORM_TABLES = frozenset(
+    {"tenant_domain", "membership", "refresh_token", "oidc_authorization_code"}
+)
+
+
 def unisolated_tenant_tables(conn: Connection) -> list[str]:
-    return list(conn.execute(_UNISOLATED).scalars())
+    return [t for t in conn.execute(_UNISOLATED).scalars() if t not in PLATFORM_TABLES]
+
+
+def test_platform_allowlist_is_exact(database: Database, migrator_engine: Engine) -> None:
+    with migrator_engine.connect() as conn:
+        found = set(conn.execute(_UNISOLATED).scalars())
+    assert found == PLATFORM_TABLES
 
 
 def _insert(conn: Connection, tenant: uuid.UUID, label: str) -> None:

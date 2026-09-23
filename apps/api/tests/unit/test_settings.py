@@ -52,6 +52,8 @@ def test_placeholder_secrets_refused_in_prod() -> None:
         "s3_endpoint_url": "http://objectstore:8333",
         "s3_access_key_id": SecretStr("key"),
         "s3_secret_access_key": SecretStr("secret"),
+        "master_key": SecretStr("a2V5"),
+        "jwt_private_key": SecretStr("pem"),
     }
     with pytest.raises(ValidationError, match="MHVP_DATABASE_URL still contains"):
         make_settings(
@@ -63,3 +65,21 @@ def test_placeholder_secrets_refused_in_prod() -> None:
     assert prod.env is Environment.PROD
     dev = make_settings(database_url=SecretStr("postgresql+psycopg://a:change-me@db/x"))
     assert dev.env is Environment.TEST
+
+
+def test_prod_requires_keys_and_no_private_webhooks() -> None:
+    storage = {
+        "s3_endpoint_url": "http://objectstore:8333",
+        "s3_access_key_id": SecretStr("key"),
+        "s3_secret_access_key": SecretStr("secret"),
+    }
+    with pytest.raises(ValidationError, match="MHVP_MASTER_KEY"):
+        make_settings(env=Environment.PROD, **storage)
+    with pytest.raises(ValidationError, match="PRIVATE_TARGETS"):
+        make_settings(
+            env=Environment.PROD,
+            master_key=SecretStr("a2V5"),
+            jwt_private_key=SecretStr("pem"),
+            webhook_allow_private_targets=True,
+            **storage,
+        )

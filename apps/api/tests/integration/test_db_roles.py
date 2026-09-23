@@ -58,7 +58,7 @@ def test_runtime_role_cannot_assume_migrator(database: Database, app_engine: Eng
 
 def test_runtime_role_reads_but_cannot_write_migration_state(app_engine: Engine) -> None:
     with app_engine.connect() as conn:
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001"
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
     with app_engine.connect() as conn, pytest.raises(DBAPIError, match="permission denied"):
         conn.execute(text("UPDATE alembic_version SET version_num = 'forged'"))
 

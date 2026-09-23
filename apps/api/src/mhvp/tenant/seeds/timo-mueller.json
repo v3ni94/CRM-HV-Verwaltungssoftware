@@ -1,0 +1,37 @@
+{
+  "slug": "timo-mueller",
+  "name": "Timo Müller",
+  "domains": ["portal.mueller-holding.ag"],
+  "company": {
+    "name": "Timo Müller",
+    "legal_form": "Einzelunternehmen (Inhaber Timo Müller)",
+    "street": "c/o Müller Holding AG, Rheinpromenade 13",
+    "postal_code": "40789",
+    "city": "Monheim am Rhein",
+    "country": "DE",
+    "register_court": null,
+    "register_number": null,
+    "management": ["Timo Müller"],
+    "management_title": "Inhaber",
+    "vat_id": null,
+    "phone": null,
+    "email": null,
+    "website": null
+  },
+  "branding": {
+    "primary_color": "#1A1A1A",
+    "secondary_color": "#55565A",
+    "accent_color": "#E6A83C",
+    "text_color": "#1A1A1A",
+    "muted_color": "#6B6C70",
+    "surface_color": "#D7D8DA",
+    "font_family": "Calibri, Segoe UI, Helvetica, Arial, sans-serif",
+    "logo_light_document_id": null,
+    "logo_dark_document_id": null
+  },
+  "sources": {
+    "company": "Skill ci-timo-mueller-einzelunternehmen, Abschnitt 2 (Stammdaten)",
+    "branding": "Skill ci-timo-mueller-einzelunternehmen, Abschnitte 3 und 4 (Farben, Schrift E-Mail und Web); kein Logo vorgesehen",
+    "TODO": "Keine Registerangaben (Eintragung offen laut Skill); Telefon, E-Mail, USt-IdNr. nicht hinterlegt; Eignung der c/o-Anschrift für Impressum und Rechnungen prüfen; Freigabe der Werte offen (V14)"
+  }
+}

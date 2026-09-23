@@ -13,6 +13,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from mhvp.core import crypto
+
 TENANT_SETTING = "app.tenant_id"
 _BIND_TENANT = text("SELECT set_config('app.tenant_id', :tenant_id, true)")
 
@@ -23,6 +25,23 @@ async def tenant_transaction(
 ) -> AsyncIterator[AsyncSession]:
     if not isinstance(tenant_id, UUID):
         raise TypeError("tenant_id must be a UUID")
-    async with session_factory() as session, session.begin():
-        await session.execute(_BIND_TENANT, {"tenant_id": str(tenant_id)})
-        yield session
+    token = crypto.set_scope(str(tenant_id))
+    try:
+        async with session_factory() as session, session.begin():
+            await session.execute(_BIND_TENANT, {"tenant_id": str(tenant_id)})
+            yield session
+    finally:
+        crypto.reset_scope(token)
+
+
+@asynccontextmanager
+async def platform_transaction(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[AsyncSession]:
+    """Transaction without tenant context: only platform tables are visible (RLS)."""
+    token = crypto.set_scope(crypto.PLATFORM_SCOPE)
+    try:
+        async with session_factory() as session, session.begin():
+            yield session
+    finally:
+        crypto.reset_scope(token)

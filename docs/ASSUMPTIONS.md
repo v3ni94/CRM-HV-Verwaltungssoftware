@@ -125,6 +125,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M9 |
 | Datum | 23.09.2026 |
 
+## A-012
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Passwortregel: Länge 12 bis 128 Zeichen, keine Zusammensetzungsregeln, keine Leerzeichen am Anfang oder Ende; Kontosperre nach 10 Fehlversuchen für 15 Minuten. |
+| Begründung | Abschnitt 3.4 verlangt Passwortregeln nach BSI-Empfehlung und eine Kontosperre, nennt aber keine Werte. Konkrete Zahlen sind hier nicht aus einer geprüften Quelle übernommen. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb; Bestätigung offen (M2-01) |
+| Betroffene Bereiche | Anmeldung |
+| Überprüfung spätestens bei Meilenstein | M9 (vor Produktivbetrieb) |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

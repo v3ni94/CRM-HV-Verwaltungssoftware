@@ -22,6 +22,10 @@ x-app-env: &app-env
   MHVP_S3_ACCESS_KEY_ID: ${MHVP_S3_ACCESS_KEY_ID:?MHVP_S3_ACCESS_KEY_ID must be set}
   MHVP_S3_SECRET_ACCESS_KEY: ${MHVP_S3_SECRET_ACCESS_KEY:?MHVP_S3_SECRET_ACCESS_KEY must be set}
   MHVP_S3_BUCKET: ${MHVP_S3_BUCKET:-mhvp}
+  MHVP_MASTER_KEY: ${MHVP_MASTER_KEY:?MHVP_MASTER_KEY must be set (python -m mhvp.core.auth.keys)}
+  MHVP_JWT_PRIVATE_KEY: ${MHVP_JWT_PRIVATE_KEY:?MHVP_JWT_PRIVATE_KEY must be set}
+  MHVP_JWT_ISSUER: ${MHVP_JWT_ISSUER:-http://api.localhost}
+  MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS: ${MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS:-false}
   # uvicorn trusts X-Forwarded-* only from these addresses (set to the Traefik network).
   FORWARDED_ALLOW_IPS: ${MHVP_FORWARDED_ALLOW_IPS:-127.0.0.1}
 

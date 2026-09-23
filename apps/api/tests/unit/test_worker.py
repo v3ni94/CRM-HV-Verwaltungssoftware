@@ -14,7 +14,8 @@ def test_queues_and_reliability_settings(settings: Settings) -> None:
     assert conf.worker_prefetch_multiplier == 1
     assert conf.enable_utc is True
     assert conf.accept_content == ["json"]
-    assert conf.beat_schedule == {}
+    assert set(conf.beat_schedule) == {"webhooks-dispatch"}
+    assert conf.beat_schedule["webhooks-dispatch"]["task"] == "mhvp.core.webhooks.dispatch"
 
 
 def test_ping_task(settings: Settings) -> None:

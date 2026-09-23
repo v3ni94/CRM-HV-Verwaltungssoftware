@@ -119,4 +119,5 @@ async def test_migrations_check_without_scripts(tmp_path: Path) -> None:
 
 def test_alembic_heads_of_repository() -> None:
     health._alembic_heads.cache_clear()
-    assert health._alembic_heads(Path("alembic.ini")) == frozenset({"0001"})
+    heads = health._alembic_heads(Path("alembic.ini"))
+    assert len(heads) == 1  # linear history

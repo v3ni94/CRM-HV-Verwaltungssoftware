@@ -60,12 +60,28 @@ class Settings(BaseSettings):
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 
+    # Envelope encryption (3.5): base64 encoded 32 byte master key, never stored in the DB.
+    master_key: SecretStr | None = None
+    # ES256 private key (PEM) for access tokens and OIDC id tokens.
+    jwt_private_key: SecretStr | None = None
+    jwt_issuer: str = "http://api.localhost"
+    access_token_ttl_seconds: int = Field(default=900, gt=0, le=3600)
+    refresh_token_ttl_days: int = Field(default=30, gt=0, le=90)
+    # Webhook targets on private networks are only allowed for local development and tests.
+    webhook_allow_private_targets: bool = False
+
     @model_validator(mode="after")
     def _guard_shared_environments(self) -> "Settings":
         if self.env not in (Environment.STAGING, Environment.PROD):
             return self
         if not self.s3_configured:
             raise ValueError("MHVP_S3_* settings are required in staging and prod")
+        if self.master_key is None or self.jwt_private_key is None:
+            raise ValueError(
+                "MHVP_MASTER_KEY and MHVP_JWT_PRIVATE_KEY are required in staging and prod"
+            )
+        if self.webhook_allow_private_targets:
+            raise ValueError("MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS must be false in staging and prod")
         for name, value in self.__dict__.items():
             if isinstance(value, SecretStr) and PLACEHOLDER_SECRET in value.get_secret_value():
                 raise ValueError(f"MHVP_{name.upper()} still contains the .env.example placeholder")

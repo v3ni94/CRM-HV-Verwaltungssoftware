@@ -1,0 +1,251 @@
+"""API schemas for platform and tenant administration."""
+
+import re
+import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+_HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+class CompanyData(BaseModel):
+    """Company master data and mandatory business letter details (5.2). Unknown: None."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = None
+    legal_form: str | None = None
+    street: str | None = None
+    postal_code: str | None = None
+    city: str | None = None
+    country: str | None = "DE"
+    register_court: str | None = None
+    register_number: str | None = None
+    management: list[str] = Field(default_factory=list)
+    management_title: str | None = None
+    vat_id: str | None = None
+    phone: str | None = None
+    email: EmailStr | None = None
+    website: str | None = None
+
+
+class Branding(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    primary_color: str | None = None
+    secondary_color: str | None = None
+    accent_color: str | None = None
+    text_color: str | None = None
+    muted_color: str | None = None
+    surface_color: str | None = None
+    font_family: str | None = None
+    logo_light_document_id: uuid.UUID | None = None
+    logo_dark_document_id: uuid.UUID | None = None
+
+    @field_validator(
+        "primary_color",
+        "secondary_color",
+        "accent_color",
+        "text_color",
+        "muted_color",
+        "surface_color",
+    )
+    @classmethod
+    def _hex(cls, value: str | None) -> str | None:
+        if value is not None and not _HEX.fullmatch(value):
+            raise ValueError("colour must be #RRGGBB")
+        return value.upper() if value else value
+
+
+class TenantSettingsOut(BaseModel):
+    tenant_id: uuid.UUID
+    company: CompanyData
+    branding: Branding
+    sources: dict[str, str]
+    auto_posting_enabled: bool
+    version: int
+
+
+class TenantSettingsPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company: CompanyData | None = None
+    branding: Branding | None = None
+
+
+class BrandingOut(BaseModel):
+    tenant_id: uuid.UUID
+    name: str
+    branding: Branding
+
+
+class TenantCreate(BaseModel):
+    slug: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,62}$")
+    name: str = Field(min_length=2, max_length=200)
+
+
+class TenantOut(BaseModel):
+    id: uuid.UUID
+    slug: str
+    name: str
+    status: str
+
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    display_name: str = Field(min_length=2, max_length=200)
+    password: str = Field(min_length=1, max_length=256)
+    is_platform_admin: bool = False
+
+
+class UserOut(BaseModel):
+    id: uuid.UUID
+    email: str
+    display_name: str
+    is_platform_admin: bool
+    totp_enabled: bool
+
+
+class MemberCreate(BaseModel):
+    user_id: uuid.UUID
+    role_codes: list[str] = Field(min_length=1)
+
+
+class MemberOut(BaseModel):
+    membership_id: uuid.UUID
+    user_id: uuid.UUID
+    email: str
+    display_name: str
+    status: str
+    roles: list[str]
+
+
+class MemberRoles(BaseModel):
+    role_codes: list[str]
+
+
+class RoleCreate(BaseModel):
+    code: str = Field(pattern=r"^[a-z][a-z0-9_]{1,62}$")
+    name: str = Field(min_length=2, max_length=200)
+    parent_role_id: uuid.UUID | None = None
+    permissions: list[str] = Field(default_factory=list)
+
+
+class RoleOut(BaseModel):
+    id: uuid.UUID
+    code: str
+    name: str
+    is_system: bool
+    parent_role_id: uuid.UUID | None
+    permissions: list[str]
+
+
+class RolePermissions(BaseModel):
+    permissions: list[str]
+
+
+class ApiKeyCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+    scopes: list[str] = Field(min_length=1)
+    expires_at: datetime | None = None
+
+
+class ApiKeyOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    prefix: str
+    scopes: list[str]
+    expires_at: datetime | None
+    last_used_at: datetime | None
+    revoked_at: datetime | None
+
+
+class ApiKeyCreated(ApiKeyOut):
+    key: str = Field(description="Wird nur einmal angezeigt")
+
+
+class WebhookCreate(BaseModel):
+    url: str = Field(max_length=2000)
+    event_types: list[str] = Field(min_length=1)
+    description: str | None = Field(default=None, max_length=200)
+
+
+class WebhookPatch(BaseModel):
+    active: bool | None = None
+    event_types: list[str] | None = None
+
+
+class WebhookOut(BaseModel):
+    id: uuid.UUID
+    url: str
+    event_types: list[str]
+    active: bool
+    description: str | None
+
+
+class WebhookCreated(WebhookOut):
+    secret: str = Field(description="Signaturschlüssel, wird nur einmal angezeigt")
+
+
+class DeliveryOut(BaseModel):
+    id: uuid.UUID
+    event_id: uuid.UUID
+    status: str
+    attempts: int
+    next_attempt_at: datetime | None
+    last_status_code: int | None
+    last_error: str | None
+    delivered_at: datetime | None
+
+
+class EventOut(BaseModel):
+    id: uuid.UUID
+    type: str
+    entity_type: str
+    entity_id: uuid.UUID | None
+    payload: dict[str, object]
+    actor_user_id: uuid.UUID | None
+    occurred_at: datetime
+    correlation_id: str | None
+
+
+class AuditOut(BaseModel):
+    id: uuid.UUID
+    event_id: uuid.UUID
+    entity_type: str
+    entity_id: uuid.UUID | None
+    changes: dict[str, object]
+    actor_user_id: uuid.UUID | None
+    occurred_at: datetime
+
+
+class GateRequestCreate(BaseModel):
+    gate: str = Field(pattern=r"^G[1-5]$")
+    scope: str = Field(
+        min_length=10, max_length=2000, description="Freigegebener Funktionsumfang und Objektgruppe"
+    )
+    evidence: str = Field(min_length=5, max_length=2000, description="Verweis auf Prüfnachweis")
+
+
+class GateDecision(BaseModel):
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class GateRequestOut(BaseModel):
+    id: uuid.UUID
+    gate: str
+    scope: str
+    evidence: str
+    status: str
+    requested_by: uuid.UUID
+    decided_by: uuid.UUID | None
+    decided_at: datetime | None
+    decision_comment: str | None
+
+
+class GateStateOut(BaseModel):
+    gate: str
+    label: str
+    open: bool
+    scopes: list[str]

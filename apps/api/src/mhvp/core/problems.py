@@ -45,6 +45,57 @@ class ErrorCodes:
     HTTP_ERROR = ErrorCode(
         "MHVP-CORE-0005", 400, "Anfrage nicht verarbeitbar", "Generic HTTP error."
     )
+    NOT_AUTHENTICATED = ErrorCode(
+        "MHVP-AUTH-0001", 401, "Anmeldung erforderlich", "Missing or invalid credentials."
+    )
+    INVALID_CREDENTIALS = ErrorCode(
+        "MHVP-AUTH-0002", 401, "Anmeldung fehlgeschlagen", "E-mail, password or code invalid."
+    )
+    FORBIDDEN = ErrorCode(
+        "MHVP-AUTH-0003", 403, "Keine Berechtigung", "Permission missing for this action."
+    )
+    ACCOUNT_LOCKED = ErrorCode(
+        "MHVP-AUTH-0004", 423, "Konto vorübergehend gesperrt", "Too many failed logins."
+    )
+    TENANT_MISMATCH = ErrorCode(
+        "MHVP-AUTH-0005", 403, "Mandant passt nicht zur Adresse", "Host and token tenant differ."
+    )
+    PASSWORD_POLICY = ErrorCode(
+        "MHVP-AUTH-0006", 422, "Passwort erfüllt die Vorgaben nicht", "Password policy violated."
+    )
+    REFRESH_INVALID = ErrorCode(
+        "MHVP-AUTH-0007", 401, "Sitzung abgelaufen", "Refresh token invalid, expired or reused."
+    )
+    AUTH_NOT_CONFIGURED = ErrorCode(
+        "MHVP-AUTH-0008", 503, "Anmeldung nicht verfügbar", "Signing or encryption key missing."
+    )
+    TENANT_SELECTION = ErrorCode(
+        "MHVP-AUTH-0009", 409, "Mandant auswählen", "Several memberships, tenant_id required."
+    )
+    OIDC_INVALID = ErrorCode(
+        "MHVP-AUTH-0010", 400, "Anmeldeanfrage ungültig", "OIDC request invalid (RFC 6749)."
+    )
+    RESOURCE_NOT_FOUND = ErrorCode(
+        "MHVP-PLAT-0001", 404, "Datensatz nicht gefunden", "Entity not found in this tenant."
+    )
+    CONFLICT = ErrorCode(
+        "MHVP-PLAT-0002", 409, "Datensatz existiert bereits", "Unique constraint violated."
+    )
+    VERSION_CONFLICT = ErrorCode(
+        "MHVP-PLAT-0003", 412, "Datensatz wurde zwischenzeitlich geändert", "If-Match mismatch."
+    )
+    WEBHOOK_TARGET = ErrorCode(
+        "MHVP-HOOK-0001", 422, "Webhook-Ziel nicht zulässig", "Unsafe or invalid webhook URL."
+    )
+    GATE_FOUR_EYES = ErrorCode(
+        "MHVP-GATE-0002",
+        403,
+        "Freigabe durch eine zweite Person erforderlich",
+        "Requester and approver must be different persons.",
+    )
+    GATE_STATE = ErrorCode(
+        "MHVP-GATE-0003", 409, "Freigabeantrag nicht im passenden Zustand", "Invalid state."
+    )
     RELEASE_GATE_CLOSED = ErrorCode(
         "MHVP-GATE-0001",
         403,

@@ -6,13 +6,19 @@ requires-python = ">=3.12,<3.13"
 # Exact versions are pinned in uv.lock (ADR 0001, E16). Ranges here only bound majors.
 dependencies = [
     "alembic>=1.20.0,<2",
+    "argon2-cffi>=23,<26",
     "boto3>=1.43.100,<2",
     "celery[redis]>=5.6.3,<6",
+    "cryptography>=43,<50",
+    "email-validator>=2.2,<3",
     "fastapi>=0.141.1,<1",
     "httpx>=0.28.1,<1",
     "psycopg[binary]>=3.3.6,<4",
     "pydantic>=2.13.5,<3",
     "pydantic-settings>=2.15.0,<3",
+    "pyjwt[crypto]>=2.9,<3",
+    "pyotp>=2.9,<3",
+    "python-multipart>=0.0.20,<1",
     "redis>=6.4.0,<7",
     "sqlalchemy>=2.0.54,<2.1",
     "structlog>=26.1.0,<27",
@@ -44,11 +50,16 @@ src = ["src", "tests"]
 select = ["E", "W", "F", "I", "B", "UP", "S", "N", "C4", "SIM", "RUF", "ASYNC", "DTZ", "T20", "PT"]
 ignore = []
 
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Header", "fastapi.Query", "fastapi.Form", "mhvp.core.auth.principal.require_permission"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106"]
 # Integration tests build DDL/queries from module constants (probe table names).
-"tests/integration/**" = ["S101", "S105", "S106", "S608"]
+"tests/integration/**" = ["S101", "S105", "S106", "S608", "E501"]
 "alembic/**" = ["N999"]
+# "Bearer" is a token type, not a credential.
+"src/mhvp/core/auth/*.py" = ["S105"]
 
 [tool.mypy]
 python_version = "3.12"

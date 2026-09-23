@@ -53,8 +53,12 @@ db-bootstrap: ## Run infra/postgres/bootstrap.sh against PGHOST (native dev/CI)
 agent-docs: ## Regenerate CLAUDE.md and AGENTS.md from docs/AGENT_RULES.md
 	python3 scripts/sync_agent_docs.py
 
-seed: ## Seed data (available from M2)
-	@echo "make seed: available from M2" >&2; exit 2
+seed: ## Seed tenants HVM and Timo Müller from CI seeds (LOCAL=1: native)
+ifeq ($(LOCAL),1)
+	cd apps/api && uv run python -m mhvp.platform.seed
+else
+	$(COMPOSE_DEV) run --rm api python -m mhvp.platform.seed
+endif
 
 ai-eval: ## AI evaluation (available from M7)
 	@echo "make ai-eval: available from M7" >&2; exit 2

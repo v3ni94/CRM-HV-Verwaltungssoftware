@@ -24,7 +24,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
         "mhvp",
         broker=settings.celery_broker_url.get_secret_value(),
         backend=backend.get_secret_value() if backend else None,
-        include=["mhvp.core.tasks"],
+        include=["mhvp.core.tasks", "mhvp.core.webhook_tasks"],
     )
     app.conf.update(
         task_queues=[Queue(name) for name in QUEUES],
@@ -42,7 +42,14 @@ def create_celery(settings: Settings | None = None) -> Celery:
         worker_hijack_root_logger=False,
         # Jobs of section 15.1 are added with their milestones and remain subject to the
         # release gates and domain checks (Freigabevorbehalt aller Zeitpläne).
-        beat_schedule={},
+        beat_schedule={
+            # Webhook delivery is not a money flow; its retries follow section 12.
+            "webhooks-dispatch": {
+                "task": "mhvp.core.webhooks.dispatch",
+                "schedule": 60.0,
+                "options": {"queue": "io"},
+            },
+        },
     )
     return app
 

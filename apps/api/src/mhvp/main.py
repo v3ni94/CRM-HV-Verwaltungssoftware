@@ -11,17 +11,21 @@ from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from mhvp.core import health
+from mhvp.core import crypto, health
+from mhvp.core.auth import oidc
+from mhvp.core.auth.routers import router as auth_router
 from mhvp.core.config import Settings, get_settings
-from mhvp.core.db.engine import create_app_engine
+from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.health import ReadinessCheck
 from mhvp.core.logging import configure_logging
 from mhvp.core.middleware import CorrelationIdMiddleware
 from mhvp.core.problems import install_problem_handlers
 from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGateResolver
 from mhvp.core.storage import create_s3_client
+from mhvp.platform.gates import DbReleaseGateResolver
+from mhvp.platform.routers import platform_router, tenant_router
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
@@ -32,6 +36,7 @@ API_PREFIX = "/api/v1"
 @dataclass(slots=True)
 class Resources:
     engine: AsyncEngine
+    session_factory: async_sessionmaker[AsyncSession]
     redis: Redis
     s3: "S3Client | None"
 
@@ -62,8 +67,12 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         timeout = settings.health_check_timeout_seconds
+        if settings.master_key is not None:
+            crypto.set_master_key(crypto.decode_master_key(settings.master_key.get_secret_value()))
+        engine = create_app_engine(settings)
         resources = Resources(
-            engine=create_app_engine(settings),
+            engine=engine,
+            session_factory=create_session_factory(engine),
             redis=Redis.from_url(
                 settings.redis_url.get_secret_value(),
                 socket_timeout=timeout,
@@ -73,6 +82,8 @@ def create_app(
         )
         app.state.resources = resources
         app.state.readiness_checks = checks_factory(settings, resources)
+        if release_gate_resolver is None:
+            app.state.release_gate_resolver = DbReleaseGateResolver(resources.session_factory)
         try:
             yield
         finally:
@@ -95,6 +106,11 @@ def create_app(
     app.state.release_gate_resolver = release_gate_resolver or ClosedReleaseGateResolver()
     install_problem_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
+    app.include_router(auth_router, prefix=API_PREFIX)
+    app.include_router(oidc.router, prefix=API_PREFIX)
+    app.include_router(oidc.well_known)
+    app.include_router(platform_router, prefix=API_PREFIX)
+    app.include_router(tenant_router, prefix=API_PREFIX)
     app.add_middleware(CorrelationIdMiddleware)
     return app
 

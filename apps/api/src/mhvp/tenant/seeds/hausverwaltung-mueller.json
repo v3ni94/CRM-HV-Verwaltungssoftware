@@ -1,0 +1,37 @@
+{
+  "slug": "hausverwaltung-mueller",
+  "name": "Hausverwaltung Müller GmbH",
+  "domains": ["portal.muellerhv.de"],
+  "company": {
+    "name": "Hausverwaltung Müller GmbH",
+    "legal_form": "GmbH",
+    "street": "Rheinpromenade 13",
+    "postal_code": "40789",
+    "city": "Monheim am Rhein",
+    "country": "DE",
+    "register_court": "Amtsgericht Düsseldorf",
+    "register_number": "HRB 104762",
+    "management": ["Timo Müller"],
+    "management_title": "Geschäftsführer",
+    "vat_id": null,
+    "phone": null,
+    "email": null,
+    "website": "www.muellerhv.de"
+  },
+  "branding": {
+    "primary_color": "#87888A",
+    "secondary_color": "#9C9D9F",
+    "accent_color": "#E6A83C",
+    "text_color": "#1A1A1A",
+    "muted_color": "#D7D8DA",
+    "surface_color": "#ECECEC",
+    "font_family": "system-ui, Helvetica Neue, Arial, sans-serif",
+    "logo_light_document_id": null,
+    "logo_dark_document_id": null
+  },
+  "sources": {
+    "company": "Skill hvm-ci, Abschnitt 1 (verbindliche Firmendaten)",
+    "branding": "Skill hvm-ci, Abschnitte 2 und 3 (CI-Farben, Typografie HTML/Web)",
+    "TODO": "USt-IdNr., Telefon, E-Mail nicht im Skill hinterlegt, nicht erfunden; Logo wird mit M6 als Dokument hochgeladen; Freigabe der Werte offen (V14)"
+  }
+}
