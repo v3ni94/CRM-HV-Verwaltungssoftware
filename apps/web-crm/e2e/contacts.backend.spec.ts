@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import * as OTPAuth from "otpauth";
 
+import { rememberSecret } from "./auth";
+
 // Runs only with E2E_BACKEND=1 against a real API (see scripts/e2e-backend.sh).
 const email = process.env.E2E_ADMIN_EMAIL ?? "";
 const password = process.env.E2E_ADMIN_PASSWORD ?? "";
@@ -25,6 +27,7 @@ test.describe("CRM against the API @backend", () => {
     await expect(page.getByRole("img", { name: "QR-Code für die Authenticator-App" })).toBeVisible();
     const secret = (await page.getByTestId("totp-secret").textContent())?.trim() ?? "";
     expect(secret).toMatch(/^[A-Z2-7]+=*$/);
+    rememberSecret(secret);
     const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30 });
     await page.getByLabel("Code").fill(totp.generate());
     await page.getByRole("button", { name: "Bestätigen" }).click();

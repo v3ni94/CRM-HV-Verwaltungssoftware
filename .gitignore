@@ -34,3 +34,4 @@ blob-report/
 # Local runtime data
 /data/
 *.log
+apps/web-crm/.e2e-auth.json
