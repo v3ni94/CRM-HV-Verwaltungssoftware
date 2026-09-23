@@ -224,6 +224,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M10 |
 | Datum | 23.09.2026 |
 
+## A-021
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Import aus Immoware24: Zuordnung über Objektnummer, Einheitennummer und die Kontakt-ID des Altsystems (`external_ids.immoware24`). Vorhandene Datensätze werden nie überschrieben (unverändert oder Konflikt zur Prüfung). Bankverbindungen aus dem Adressbuch gelten ab dem Importtag, weil der Export kein Gültigkeitsdatum trägt. Zahlungen brauchen einen Steuersatz aus der Datei; netto wird daraus gerechnet. Objektnummern werden nicht aufgefüllt (aus 7 wird nicht 007). |
+| Begründung | 13.1: Mapping versioniert, unbekannte Spalten manuell zuordnen; keine erfundenen Daten. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Import |
+| Überprüfung spätestens bei Meilenstein | M9 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

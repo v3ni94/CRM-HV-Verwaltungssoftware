@@ -1,10 +1,9 @@
 # mhvp.imports
 
-Immoware24 import and onboarding runs.
+Immoware24 import assistant (M8). Plan: `docs/plans/M8.md`.
 
-* Milestone: M8 (docs/MASTER-PROMPT.md section 18).
-* Specification: docs/MASTER-PROMPT.md section 13.1.
-* Status: not implemented. Package reserved by the repository layout of section 17.
-
-Layout once implemented: `models.py`, `schemas.py`, `services.py`, `routers.py`, tests under
-`apps/api/tests/imports/`. Register models in `mhvp/models.py` for Alembic autogenerate.
+* Specification: docs/MASTER-PROMPT.md 13.1, 6.9.10.
+* Files: `models.py` (mappings, source files, staging rows), `fields.py` (target fields and
+  parsing), `services.py` (stage, validate, test run, apply, reconcile), `routers.py`.
+* Import runs and undo come from `mhvp.ai` (`import_run`, `import_run_item`).
+* Tests: `apps/api/tests/integration/test_m8_import.py`, `apps/api/tests/unit/test_m8_fields.py`.
