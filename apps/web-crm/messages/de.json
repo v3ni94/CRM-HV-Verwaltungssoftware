@@ -63,7 +63,9 @@
       "contract": "Vertrag",
       "document": "Dokument"
     },
-    "accounting": "Buchhaltung"
+    "accounting": "Buchhaltung",
+    "hoa": "WEG",
+    "letting": "Vermietung"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -656,5 +658,44 @@
       "draft": "Entwurf",
       "posted": "gebucht"
     }
+  },
+  "Hoa": {
+    "title": "WEG-Verwaltung",
+    "gateNotice": "Ausgabe und Buchung von WEG-Abrechnungen sind bis zur Freigabestufe G4 gesperrt.",
+    "empty": "Keine WEG-Objekte erfasst.",
+    "collection": "Beschluss-Sammlung",
+    "noEntity": "Für dieses Objekt ist keine Gemeinschaft angelegt.",
+    "noResolutions": "Noch keine Beschlüsse erfasst.",
+    "number": "Nr.",
+    "decidedOn": "Datum",
+    "subject": "Gegenstand",
+    "kind": "Art",
+    "status": "Status",
+    "statuses": {
+      "positive": "positiv gefasst",
+      "negative": "abgelehnt",
+      "final": "bestandskräftig",
+      "contested": "angefochten",
+      "annulled": "für ungültig erklärt",
+      "legally_binding": "rechtskräftig",
+      "void": "nichtig"
+    },
+    "kinds": {
+      "meeting": "Versammlung",
+      "circular": "Umlaufbeschluss",
+      "court": "Gericht",
+      "external": "extern erfasst"
+    }
+  },
+  "Letting": {
+    "title": "Vermietung",
+    "rentIncreaseNotice": "Mieterhöhungen werden nur rechnerisch geprüft. Der Versand ist bis zur Freigabestufe G3 und bis zur dokumentierten Rechtsprüfung gesperrt.",
+    "noVacancies": "Kein Leerstand.",
+    "property": "Objekt",
+    "unit": "Einheit",
+    "area": "Wohnfläche",
+    "since": "Leer seit",
+    "days": "Tage",
+    "unknown": "unbekannt"
   }
 }

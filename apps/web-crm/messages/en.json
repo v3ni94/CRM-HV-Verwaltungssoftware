@@ -9,5 +9,48 @@
     "apiStatusLabel": "API status",
     "apiReady": "API ready",
     "apiUnavailable": "API unavailable"
+  },
+  "Shell": {
+    "hoa": "HOA",
+    "letting": "Letting"
+  },
+  "Hoa": {
+    "title": "HOA management",
+    "gateNotice": "Issuing and posting HOA statements stay locked until release gate G4.",
+    "empty": "No HOA properties.",
+    "collection": "Resolution collection",
+    "noEntity": "No community exists for this property.",
+    "noResolutions": "No resolutions recorded yet.",
+    "number": "No.",
+    "decidedOn": "Date",
+    "subject": "Subject",
+    "kind": "Kind",
+    "status": "Status",
+    "statuses": {
+      "positive": "passed",
+      "negative": "rejected",
+      "final": "final",
+      "contested": "contested",
+      "annulled": "annulled",
+      "legally_binding": "legally binding",
+      "void": "void"
+    },
+    "kinds": {
+      "meeting": "Meeting",
+      "circular": "Circular resolution",
+      "court": "Court",
+      "external": "External"
+    }
+  },
+  "Letting": {
+    "title": "Letting",
+    "rentIncreaseNotice": "Rent increases are checked arithmetically only. Sending stays locked until release gate G3 and a documented legal review.",
+    "noVacancies": "No vacancies.",
+    "property": "Property",
+    "unit": "Unit",
+    "area": "Living area",
+    "since": "Vacant since",
+    "days": "Days",
+    "unknown": "unknown"
   }
 }
