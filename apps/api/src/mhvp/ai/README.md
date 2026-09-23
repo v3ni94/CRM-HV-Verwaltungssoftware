@@ -1,10 +1,12 @@
 # mhvp.ai
 
-AI gateway, prompt registry, tasks, examples, evaluation, chat.
+AI gateway, onboarding chat, proposals and import runs (M7). Plan: `docs/plans/M7.md`.
 
-* Milestone: M7 (docs/MASTER-PROMPT.md section 18).
-* Specification: docs/MASTER-PROMPT.md section 9, 10.
-* Status: not implemented. Package reserved by the repository layout of section 17.
-
-Layout once implemented: `models.py`, `schemas.py`, `services.py`, `routers.py`, tests under
-`apps/api/tests/ai/`. Register models in `mhvp/models.py` for Alembic autogenerate.
+* Specification: docs/MASTER-PROMPT.md 6.8, 9, 10; rules 0.1.6 and 0.1.13.
+* Files: `models.py`, `tasks.py` (schemas, prompt registry), `prompts/<task>/v<n>.md`,
+  `providers.py`, `gateway.py`, `imports.py`, `jobs.py`, `routers.py`, `schemas.py`,
+  `evaluate.py` (`make ai-eval`).
+* AI output is a proposal. Nothing is written without confirmation; nothing is sent to a provider
+  without a released configuration with DPA evidence.
+* Tests: `apps/api/tests/integration/test_m7_ai.py`, `apps/api/tests/unit/test_m7_ai.py`,
+  evaluation cases in `apps/api/tests/ai_eval/`.

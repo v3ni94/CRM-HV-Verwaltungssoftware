@@ -202,6 +202,28 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M13 |
 | Datum | 23.09.2026 |
 
+## A-019
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Ein KI-Anbieter ist nur nutzbar, wenn AVV unterschrieben (mit Dokument), Trainings-Opt-out bestätigt, API-Schlüssel, Monatsbudget über 0 und Preise je Stufe hinterlegt sind und eine zweite Person freigegeben hat. Jede Änderung hebt die Freigabe auf. Kosten werden mit allen Eingabetoken zum Eingabepreis gerechnet (Obergrenze, auch bei Cache-Treffern). Bei erreichtem Budget ist jeder weitere Lauf gesperrt. |
+| Begründung | Regel 0.1.13 und 9.1 (AVV als Pflichtfeld, harte Sperre); Produktschutz für die Freigabe. Preise nicht erfunden, sondern vom Betreiber einzutragen. |
+| Kennzeichnung | Produktschutz, unkritisch |
+| Betroffene Bereiche | KI-Gateway |
+| Überprüfung spätestens bei Meilenstein | M9 |
+| Datum | 23.09.2026 |
+
+## A-020
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Übernahmen aus KI-Vorschlägen: Kontakte je mit eigener Vertragspartei; Objekte im Status onboarding; Verträge nur mit Beginn aus den Unterlagen (bei Eigentum zugleich Eigentumsübergang, zur Prüfung); Zahlungen nur mit vom Nutzer bestätigtem Steuersatz. Rückgängig entfernt nur, was nicht später verknüpft oder geändert wurde; Kontakte werden weich gelöscht. |
+| Begründung | 10.1 und 10.2; keine Teilanlage ohne Nutzeraktion; keine erfundenen Daten oder Steuerbehandlung (S01). |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Onboarding, Import |
+| Überprüfung spätestens bei Meilenstein | M10 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:
