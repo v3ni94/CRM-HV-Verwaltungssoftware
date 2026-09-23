@@ -1,0 +1,13 @@
+{
+  "Metadata": {
+    "title": "MH Verwaltungsplattform · Portal",
+    "description": "Portal der MH Verwaltungsplattform"
+  },
+  "Home": {
+    "productName": "MH Verwaltungsplattform",
+    "area": "Portal",
+    "apiStatusLabel": "Status der Schnittstelle",
+    "apiReady": "API bereit",
+    "apiUnavailable": "API nicht erreichbar"
+  }
+}

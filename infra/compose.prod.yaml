@@ -1,0 +1,120 @@
+# Production and staging overlay. No Traefik service: the IONOS server already runs Traefik
+# (MASTER-PROMPT 3.1). Public services join the external Traefik network and are routed by
+# labels; no ports are published.
+#
+# prod:    docker compose -p mhvp --env-file .env.prod -f infra/compose.yaml -f infra/compose.prod.yaml up -d
+# staging: docker compose -p mhvp-staging --env-file .env.staging -f infra/compose.yaml -f infra/compose.prod.yaml up -d
+#          (set MHVP_ENV=staging, MHVP_HOST_* and MHVP_TRAEFIK_PREFIX=mhvp-staging)
+#
+# MHVP_TRAEFIK_PREFIX keeps router/middleware names unique when prod and staging share one Traefik.
+
+x-prod: &prod
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
+x-api-image: &api-image
+  image: ${MHVP_IMAGE_REGISTRY:?MHVP_IMAGE_REGISTRY must be set}/mhvp-api:${MHVP_IMAGE_TAG:?MHVP_IMAGE_TAG must be set}
+
+services:
+  postgres:
+    <<: *prod
+
+  redis:
+    <<: *prod
+
+  objectstore:
+    # Production object storage is an open operator decision (ADR 0005). This SeaweedFS
+    # service is the default; point MHVP_S3_ENDPOINT_URL elsewhere to use an external store.
+    <<: *prod
+
+  migrate:
+    <<: *api-image
+    environment:
+      MHVP_ENV: ${MHVP_ENV:-prod}
+
+  api:
+    <<: [*prod, *api-image]
+    environment:
+      MHVP_ENV: ${MHVP_ENV:-prod}
+    networks:
+      - default
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:?TRAEFIK_NETWORK must be set}"
+      # Shared middlewares for all MHVP routers of this stack.
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit.ratelimit.burst=200"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit.ratelimit.period=1s"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-api.rule=Host(`${MHVP_HOST_API:-api.mueller-holding.ag}`)"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-api.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-api.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-api.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers,${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-api.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-api"
+      - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-api.loadbalancer.server.port=8000"
+
+  worker:
+    <<: [*prod, *api-image]
+    environment:
+      MHVP_ENV: ${MHVP_ENV:-prod}
+
+  beat:
+    <<: [*prod, *api-image]
+    environment:
+      MHVP_ENV: ${MHVP_ENV:-prod}
+
+  web-crm:
+    <<: *prod
+    image: ${MHVP_IMAGE_REGISTRY:?MHVP_IMAGE_REGISTRY must be set}/mhvp-web-crm:${MHVP_IMAGE_TAG:?MHVP_IMAGE_TAG must be set}
+    networks:
+      - default
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:?TRAEFIK_NETWORK must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm.rule=Host(`${MHVP_HOST_CRM:-crm.mueller-holding.ag}`)"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-crm"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-api.rule=Host(`${MHVP_HOST_CRM:-crm.mueller-holding.ag}`) && (PathPrefix(`/api`) || PathPrefix(`/auth`))"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-api.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-api.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-api.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers,${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm-api.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-crm"
+      - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-crm.loadbalancer.server.port=3000"
+
+  web-portal:
+    <<: *prod
+    image: ${MHVP_IMAGE_REGISTRY:?MHVP_IMAGE_REGISTRY must be set}/mhvp-web-portal:${MHVP_IMAGE_TAG:?MHVP_IMAGE_TAG must be set}
+    networks:
+      - default
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:?TRAEFIK_NETWORK must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal.rule=Host(`${MHVP_HOST_PORTAL_HVM:-portal.muellerhv.de}`) || Host(`${MHVP_HOST_PORTAL_MHAG:-portal.mueller-holding.ag}`)"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-portal"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.rule=(Host(`${MHVP_HOST_PORTAL_HVM:-portal.muellerhv.de}`) || Host(`${MHVP_HOST_PORTAL_MHAG:-portal.mueller-holding.ag}`)) && (PathPrefix(`/api`) || PathPrefix(`/auth`))"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers,${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-portal"
+      - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal.loadbalancer.server.port=3001"
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:?TRAEFIK_NETWORK must be set}

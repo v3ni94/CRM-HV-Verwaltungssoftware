@@ -1,0 +1,15 @@
+# Dev middlewares (file provider). Production defines equivalent middlewares as labels
+# in compose.prod.yaml because the file provider of the existing server Traefik is unknown.
+http:
+  middlewares:
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        referrerPolicy: strict-origin-when-cross-origin
+        # No HSTS in dev (plain HTTP on *.localhost); HSTS is set in production only.
+    api-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1s

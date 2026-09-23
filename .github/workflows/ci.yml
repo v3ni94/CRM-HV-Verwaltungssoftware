@@ -1,0 +1,197 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # CI-only throwaway credentials for ephemeral service containers. Not used anywhere else.
+  CI_POSTGRES_PASSWORD: ci-postgres-pw
+  CI_MIGRATOR_PASSWORD: ci-migrator-pw
+  CI_APP_PASSWORD: ci-app-pw
+  TRIVY_IMAGE: aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
+
+jobs:
+  agent-docs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 scripts/sync_agent_docs.py --check
+
+  api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.1-pg16
+        env:
+          POSTGRES_PASSWORD: ci-postgres-pw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      MHVP_ENV: test
+      MHVP_DATABASE_URL: postgresql+psycopg://mhvp_app:ci-app-pw@localhost:5432/mhvp
+      MHVP_MIGRATION_DATABASE_URL: postgresql+psycopg://mhvp_migrator:ci-migrator-pw@localhost:5432/mhvp
+      MHVP_REDIS_URL: redis://localhost:6379/0
+      MHVP_CELERY_BROKER_URL: redis://localhost:6379/1
+      MHVP_CELERY_RESULT_BACKEND: redis://localhost:6379/2
+      # S3 tests use moto; the endpoint is a dummy.
+      MHVP_S3_ENDPOINT_URL: http://localhost:8333
+      MHVP_S3_REGION: us-east-1
+      MHVP_S3_ACCESS_KEY_ID: ci-dummy
+      MHVP_S3_SECRET_ACCESS_KEY: ci-dummy
+      MHVP_S3_BUCKET: mhvp
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+      - name: Ensure psql
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client)
+      - name: Bootstrap database roles (ADR 0002)
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: ${{ env.CI_POSTGRES_PASSWORD }}
+          MHVP_DB_MIGRATOR_PASSWORD: ${{ env.CI_MIGRATOR_PASSWORD }}
+          MHVP_DB_APP_PASSWORD: ${{ env.CI_APP_PASSWORD }}
+        run: sh infra/postgres/bootstrap.sh
+      - name: Install
+        working-directory: apps/api
+        run: uv sync --frozen
+      - name: Ruff
+        working-directory: apps/api
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Mypy
+        working-directory: apps/api
+        run: uv run mypy
+      - name: Migrations
+        working-directory: apps/api
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
+      - name: Tests
+        working-directory: apps/api
+        env:
+          MHVP_REQUIRE_INTEGRATION: "1"
+        run: uv run pytest
+      - name: OpenAPI drift
+        working-directory: apps/api
+        run: |
+          uv run python -m mhvp.openapi > openapi.json
+          git diff --exit-code openapi.json
+
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: API client drift
+        run: |
+          pnpm api-client:generate
+          git diff --exit-code packages/api-client
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Install Playwright Chromium
+        run: pnpm --filter @mhvp/web-crm exec playwright install --with-deps chromium
+      - run: pnpm e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: |
+            apps/*/playwright-report
+            apps/*/test-results
+          retention-days: 7
+          if-no-files-found: ignore
+
+  compose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Dev config
+        run: |
+          cp .env.example .env
+          docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml config -q
+      - name: Prod and staging config
+        env:
+          POSTGRES_PASSWORD: dummy
+          MHVP_DB_MIGRATOR_PASSWORD: dummy
+          MHVP_DB_APP_PASSWORD: dummy
+          MHVP_S3_ACCESS_KEY_ID: dummy
+          MHVP_S3_SECRET_ACCESS_KEY: dummy
+          MHVP_IMAGE_REGISTRY: ghcr.io/example
+          MHVP_IMAGE_TAG: ci
+          TRAEFIK_NETWORK: proxy
+          TRAEFIK_CERTRESOLVER: letsencrypt
+        run: |
+          rm -f .env infra/.env
+          docker compose -p mhvp -f infra/compose.yaml -f infra/compose.prod.yaml config -q
+          MHVP_ENV=staging MHVP_TRAEFIK_PREFIX=mhvp-staging MHVP_HOST_CRM=crm.staging.mueller-holding.ag \
+            docker compose -p mhvp-staging -f infra/compose.yaml -f infra/compose.prod.yaml config -q
+
+  images:
+    needs: [api, web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build images
+        run: |
+          docker build -t mhvp-api:ci apps/api
+          docker build -f apps/web-crm/Dockerfile -t mhvp-web-crm:ci .
+          docker build -f apps/web-portal/Dockerfile -t mhvp-web-portal:ci .
+      - name: Trivy scan (CRITICAL, HIGH, fixed only)
+        run: |
+          mkdir -p "$RUNNER_TEMP/trivy-cache"
+          for image in mhvp-api:ci mhvp-web-crm:ci mhvp-web-portal:ci; do
+            echo "::group::trivy $image"
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock:ro \
+              -v "$RUNNER_TEMP/trivy-cache:/root/.cache/trivy" \
+              "$TRIVY_IMAGE" image \
+              --exit-code 1 --severity CRITICAL,HIGH --ignore-unfixed --no-progress \
+              "$image"
+            echo "::endgroup::"
+          done

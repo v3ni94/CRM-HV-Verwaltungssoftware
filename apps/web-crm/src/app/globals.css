@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@import "@mhvp/ui/tokens.css";
+
+/* Map the neutral MHVP tokens into Tailwind; tenant branding overrides the variables in M2 (V14). */
+@theme inline {
+  --color-bg: var(--mhvp-color-bg);
+  --color-surface: var(--mhvp-color-surface);
+  --color-fg: var(--mhvp-color-fg);
+  --color-muted: var(--mhvp-color-muted);
+  --color-border: var(--mhvp-color-border);
+  --color-accent: var(--mhvp-color-accent);
+  --font-sans: var(--mhvp-font-sans);
+}
+
+body {
+  background: var(--mhvp-color-bg);
+  color: var(--mhvp-color-fg);
+  font-family: var(--mhvp-font-sans);
+}

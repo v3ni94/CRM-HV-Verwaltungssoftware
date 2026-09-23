@@ -1,0 +1,17 @@
+{
+  "name": "mhvp",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22 <23",
+    "pnpm": ">=10 <11"
+  },
+  "scripts": {
+    "lint": "pnpm -r --filter \"./apps/*\" --filter \"./packages/*\" lint",
+    "typecheck": "pnpm -r --filter \"./apps/*\" --filter \"./packages/*\" typecheck",
+    "test": "pnpm -r --filter \"./apps/*\" --filter \"./packages/*\" test",
+    "build": "pnpm -r --filter \"./apps/*\" --filter \"./packages/*\" build",
+    "e2e": "pnpm -r --filter \"./apps/*\" e2e",
+    "api-client:generate": "pnpm --filter @mhvp/api-client generate"
+  }
+}

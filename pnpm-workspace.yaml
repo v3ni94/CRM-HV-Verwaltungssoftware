@@ -1,0 +1,13 @@
+packages:
+  - "apps/web-crm"
+  - "apps/web-portal"
+  - "packages/*"
+
+# pnpm 10 blocks dependency lifecycle scripts by default; only these may run.
+onlyBuiltDependencies:
+  - unrs-resolver
+
+# Optional native builds not needed by any script in this workspace.
+ignoredBuiltDependencies:
+  - "@parcel/watcher"
+  - "@swc/core"

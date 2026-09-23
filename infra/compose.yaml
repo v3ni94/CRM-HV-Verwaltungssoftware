@@ -1,0 +1,177 @@
+# MHVP base stack (docs/plans/M1.md section 4). Combine with compose.dev.yaml or
+# compose.prod.yaml; this file alone defines no images for the application services.
+# Relative paths resolve against this directory (infra/).
+name: mhvp
+
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+
+x-app-env: &app-env
+  MHVP_ENV: ${MHVP_ENV:-dev}
+  MHVP_LOG_LEVEL: ${MHVP_LOG_LEVEL:-INFO}
+  MHVP_LOG_FORMAT: ${MHVP_LOG_FORMAT:-json}
+  MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
+  # Runtime role mhvp_app (ADR 0002). Passwords must be URL safe.
+  MHVP_DATABASE_URL: ${MHVP_DATABASE_URL:-postgresql+psycopg://mhvp_app:${MHVP_DB_APP_PASSWORD:?MHVP_DB_APP_PASSWORD must be set}@postgres:5432/${MHVP_DB_NAME:-mhvp}}
+  MHVP_REDIS_URL: ${MHVP_REDIS_URL:-redis://redis:6379/0}
+  MHVP_CELERY_BROKER_URL: ${MHVP_CELERY_BROKER_URL:-redis://redis:6379/1}
+  MHVP_CELERY_RESULT_BACKEND: ${MHVP_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+  MHVP_S3_ENDPOINT_URL: ${MHVP_S3_ENDPOINT_URL:-http://objectstore:8333}
+  MHVP_S3_REGION: ${MHVP_S3_REGION:-us-east-1}
+  MHVP_S3_ACCESS_KEY_ID: ${MHVP_S3_ACCESS_KEY_ID:?MHVP_S3_ACCESS_KEY_ID must be set}
+  MHVP_S3_SECRET_ACCESS_KEY: ${MHVP_S3_SECRET_ACCESS_KEY:?MHVP_S3_SECRET_ACCESS_KEY must be set}
+  MHVP_S3_BUCKET: ${MHVP_S3_BUCKET:-mhvp}
+
+x-app-depends: &app-depends
+  migrate:
+    condition: service_completed_successfully
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+
+x-python-app: &python-app
+  <<: *hardening
+  read_only: true
+  tmpfs:
+    - /tmp
+  environment:
+    <<: *app-env
+  depends_on:
+    <<: *app-depends
+
+services:
+  postgres:
+    <<: *hardening
+    image: pgvector/pgvector:0.8.1-pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      MHVP_DB_NAME: ${MHVP_DB_NAME:-mhvp}
+      MHVP_DB_MIGRATOR_PASSWORD: ${MHVP_DB_MIGRATOR_PASSWORD:?MHVP_DB_MIGRATOR_PASSWORD must be set}
+      MHVP_DB_APP_PASSWORD: ${MHVP_DB_APP_PASSWORD:?MHVP_DB_APP_PASSWORD must be set}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/bootstrap.sh:/opt/mhvp/postgres/bootstrap.sh:ro
+      - ./postgres/sql:/opt/mhvp/postgres/sql:ro
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${MHVP_DB_NAME:-mhvp} -h 127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    <<: *hardening
+    image: redis:7.4-alpine
+    user: "999:1000"
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  objectstore:
+    # SeaweedFS as S3 store for dev/CI (ADR 0005). The application only uses the S3 API.
+    <<: *hardening
+    image: chrislusf/seaweedfs:4.47
+    # uid/gid of the "seaweed" user created in the upstream image.
+    user: "1000:1000"
+    entrypoint: ["/bin/sh", "/opt/mhvp/objectstore/entrypoint.sh"]
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      MHVP_S3_ACCESS_KEY_ID: ${MHVP_S3_ACCESS_KEY_ID:?MHVP_S3_ACCESS_KEY_ID must be set}
+      MHVP_S3_SECRET_ACCESS_KEY: ${MHVP_S3_SECRET_ACCESS_KEY:?MHVP_S3_SECRET_ACCESS_KEY must be set}
+    volumes:
+      - ./objectstore/entrypoint.sh:/opt/mhvp/objectstore/entrypoint.sh:ro
+      - objectstore-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  migrate:
+    <<: *hardening
+    read_only: true
+    tmpfs:
+      - /tmp
+    command: ["sh", "-c", "alembic upgrade head && python -m mhvp.core.storage_bootstrap"]
+    environment:
+      <<: *app-env
+      MHVP_MIGRATION_DATABASE_URL: ${MHVP_MIGRATION_DATABASE_URL:-postgresql+psycopg://mhvp_migrator:${MHVP_DB_MIGRATOR_PASSWORD:?MHVP_DB_MIGRATOR_PASSWORD must be set}@postgres:5432/${MHVP_DB_NAME:-mhvp}}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # The bucket bootstrap needs a ready S3 endpoint, not just a started container.
+      objectstore:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *python-app
+    command: ["uvicorn", "mhvp.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  worker:
+    <<: *python-app
+    command: ["celery", "-A", "mhvp.worker", "worker", "--loglevel", "INFO", "-Q", "default,io,ocr,ai,bank,mail,beat"]
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A mhvp.worker inspect ping -d celery@$$HOSTNAME --timeout 5"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 30s
+
+  beat:
+    <<: *python-app
+    command: ["celery", "-A", "mhvp.worker", "beat", "--loglevel", "INFO", "--schedule", "/tmp/celerybeat-schedule"]
+
+  web-crm:
+    <<: *hardening
+    environment:
+      MHVP_API_INTERNAL_URL: ${MHVP_API_INTERNAL_URL:-http://api:8000}
+      MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  web-portal:
+    <<: *hardening
+    environment:
+      MHVP_API_INTERNAL_URL: ${MHVP_API_INTERNAL_URL:-http://api:8000}
+      MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+volumes:
+  postgres-data:
+  redis-data:
+  objectstore-data:

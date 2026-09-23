@@ -1,0 +1,20 @@
+# Build context for the web images (repo root). apps/api has its own context.
+.git
+.github
+.env
+.env.*
+!.env.example
+**/node_modules
+**/.next
+**/.turbo
+**/out
+**/coverage
+**/playwright-report
+**/test-results
+**/blob-report
+**/*.tsbuildinfo
+apps/api
+docs
+infra
+*.log
+.DS_Store

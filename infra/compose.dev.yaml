@@ -1,0 +1,103 @@
+# Dev overlay: local builds, Traefik on *.localhost, infrastructure ports on 127.0.0.1 only.
+# Usage: make dev
+x-api-build: &api-build
+  build:
+    context: ../apps/api
+    args:
+      MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
+  image: mhvp-api:dev
+
+services:
+  traefik:
+    image: traefik:v3.7
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=mhvp_default
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entryPoints.web.address=:80
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --log.level=INFO
+      - --accessLog=true
+    ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  objectstore:
+    ports:
+      - "127.0.0.1:8333:8333"
+
+  migrate:
+    <<: *api-build
+
+  api:
+    <<: *api-build
+    command: ["uvicorn", "mhvp.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*", "--reload"]
+    volumes:
+      - ../apps/api/src:/app/src
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.api.rule: Host(`api.localhost`)
+      traefik.http.routers.api.entrypoints: web
+      traefik.http.routers.api.middlewares: security-headers@file,api-ratelimit@file
+      traefik.http.services.api.loadbalancer.server.port: "8000"
+
+  worker:
+    <<: *api-build
+    volumes:
+      - ../apps/api/src:/app/src:ro
+
+  beat:
+    <<: *api-build
+    volumes:
+      - ../apps/api/src:/app/src:ro
+
+  web-crm:
+    build:
+      context: ..
+      dockerfile: apps/web-crm/Dockerfile
+      args:
+        MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
+    image: mhvp-web-crm:dev
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.web-crm.rule: Host(`crm.localhost`)
+      traefik.http.routers.web-crm.entrypoints: web
+      traefik.http.routers.web-crm.middlewares: security-headers@file
+      traefik.http.routers.web-crm-api.rule: Host(`crm.localhost`) && (PathPrefix(`/api`) || PathPrefix(`/auth`))
+      traefik.http.routers.web-crm-api.entrypoints: web
+      traefik.http.routers.web-crm-api.middlewares: security-headers@file,api-ratelimit@file
+      traefik.http.services.web-crm.loadbalancer.server.port: "3000"
+
+  web-portal:
+    build:
+      context: ..
+      dockerfile: apps/web-portal/Dockerfile
+      args:
+        MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
+    image: mhvp-web-portal:dev
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.web-portal.rule: Host(`portal.localhost`)
+      traefik.http.routers.web-portal.entrypoints: web
+      traefik.http.routers.web-portal.middlewares: security-headers@file
+      traefik.http.routers.web-portal-api.rule: Host(`portal.localhost`) && (PathPrefix(`/api`) || PathPrefix(`/auth`))
+      traefik.http.routers.web-portal-api.entrypoints: web
+      traefik.http.routers.web-portal-api.middlewares: security-headers@file,api-ratelimit@file
+      traefik.http.services.web-portal.loadbalancer.server.port: "3001"

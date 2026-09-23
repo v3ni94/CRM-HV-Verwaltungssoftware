@@ -1,0 +1,44 @@
+/*
+ * Neutral design tokens for all MHVP web apps.
+ *
+ * These values are deliberately brand-free. Corporate colors and logos are not
+ * released yet (open question V14). From M2 on, tenant branding is loaded from
+ * GET /api/v1/tenant/branding and applied at runtime by overriding these CSS
+ * variables; do not hard-code brand values here.
+ */
+:root {
+  color-scheme: light dark;
+
+  --mhvp-color-bg: #ffffff;
+  --mhvp-color-surface: #f5f5f5;
+  --mhvp-color-fg: #171717;
+  --mhvp-color-muted: #525252;
+  --mhvp-color-border: #d4d4d4;
+  --mhvp-color-accent: #404040;
+  --mhvp-color-accent-fg: #ffffff;
+
+  --mhvp-color-success-bg: #e8f3ec;
+  --mhvp-color-success-fg: #1c5c34;
+  --mhvp-color-danger-bg: #fbeaea;
+  --mhvp-color-danger-fg: #8a1f1f;
+
+  --mhvp-radius: 0.375rem;
+  --mhvp-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mhvp-color-bg: #121212;
+    --mhvp-color-surface: #1e1e1e;
+    --mhvp-color-fg: #ededed;
+    --mhvp-color-muted: #a3a3a3;
+    --mhvp-color-border: #3a3a3a;
+    --mhvp-color-accent: #d4d4d4;
+    --mhvp-color-accent-fg: #121212;
+
+    --mhvp-color-success-bg: #16301f;
+    --mhvp-color-success-fg: #9fd8b2;
+    --mhvp-color-danger-bg: #3a1717;
+    --mhvp-color-danger-fg: #f2aaaa;
+  }
+}
