@@ -32,6 +32,8 @@ from mhvp.imports.routers import router as imports_router
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.routers import platform_router, tenant_router
 from mhvp.properties.routers import router as properties_router
+from mhvp.workspace.ops import router as ops_router
+from mhvp.workspace.routers import router as workspace_router
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
@@ -123,6 +125,8 @@ def create_app(
     app.include_router(documents_router, prefix=API_PREFIX)
     app.include_router(imports_router, prefix=API_PREFIX)
     app.include_router(ai_router, prefix=API_PREFIX)
+    app.include_router(workspace_router, prefix=API_PREFIX)
+    app.include_router(ops_router, prefix=API_PREFIX)
     app.add_middleware(CorrelationIdMiddleware)
     return app
 

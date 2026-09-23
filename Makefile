@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: help dev down migrate test test-api test-web e2e lint typecheck openapi db-bootstrap agent-docs seed ai-eval deploy backup-verify
+.PHONY: help dev down migrate test test-api test-web e2e lint typecheck openapi db-bootstrap agent-docs seed ai-eval deploy backup backup-verify
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -63,8 +63,11 @@ endif
 ai-eval: ## Offline AI evaluation with recorded answers (no live calls)
 	cd apps/api && uv run python -m mhvp.ai.evaluate tests/ai_eval
 
-deploy: ## Deploy to the server (available from M9)
-	@echo "make deploy: available from M9" >&2; exit 2
+deploy: ## Deploy ENV=staging|prod (needs DEPLOY_HOST, DEPLOY_PATH, MHVP_IMAGE_*)
+	ENV=$(ENV) scripts/deploy.sh
 
-backup-verify: ## Backup restore test (available from M9)
-	@echo "make backup-verify: available from M9" >&2; exit 2
+backup: ## Encrypted pg_dump into BACKUP_DIR (needs PG*, BACKUP_AGE_RECIPIENT)
+	scripts/backup.sh
+
+backup-verify: ## Restore newest backup into a throwaway database and check it
+	scripts/backup-verify.sh

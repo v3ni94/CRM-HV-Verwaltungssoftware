@@ -235,6 +235,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M9 |
 | Datum | 23.09.2026 |
 
+## A-022
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Arbeitsplatzfunktionen (Benachrichtigungen, Kalender, gespeicherte Filter) sind je Benutzer und Mandant getrennt. Geteilte Termine sieht jedes Mitglied des Mandanten. Die Erinnerung an Wartungen geht an den im Objekt hinterlegten Objektbetreuer, standardmäßig 14 Tage vor Fälligkeit, wenn keine Vorlaufzeit gesetzt ist. Massenaktionen betreffen nur Stammdaten ohne Geldwirkung (Schlagworte, Wartung erledigt) und laufen ganz oder gar nicht. |
+| Begründung | Abschnitt 3.5 und 18 (M9): Dashboard, Benachrichtigungen, Kalender, Listenfilter, Massenaktionen; Regel 0.1.4 für Massenaktionen. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | Arbeitsplatz, Wartung |
+| Überprüfung spätestens bei Meilenstein | M19 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

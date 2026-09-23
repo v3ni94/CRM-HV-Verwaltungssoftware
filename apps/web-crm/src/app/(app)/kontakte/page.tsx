@@ -1,6 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { BulkTagBar } from "@/components/workspace/BulkTagBar";
+import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -85,6 +87,12 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         </Link>
       </form>
 
+      <SavedFilters
+        resource="contacts"
+        basePath="/kontakte"
+        current={Object.fromEntries(Object.entries({ q, kind: kind ?? "", tag }).filter(([, v]) => v))}
+      />
+
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}
@@ -92,10 +100,14 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       ) : data.items.length === 0 ? (
         <p className="text-sm text-muted">{t("empty")}</p>
       ) : (
-        <>
+        <form id="contacts-bulk" className="flex flex-col gap-2">
+          <BulkTagBar formId="contacts-bulk" />
           <table className="w-full border-collapse text-sm">
             <thead className="border-b border-border text-left text-xs text-muted">
               <tr>
+                <th className="w-6 py-1.5 pr-2 font-medium">
+                  <span className="sr-only">{t("select")}</span>
+                </th>
                 <th className="py-1.5 pr-3 font-medium">{t("colName")}</th>
                 <th className="py-1.5 pr-3 font-medium">{t("colKind")}</th>
                 <th className="py-1.5 pr-3 font-medium">{t("colEmail")}</th>
@@ -107,6 +119,9 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
             <tbody>
               {data.items.map((c) => (
                 <tr key={c.id} className="border-b border-border hover:bg-surface">
+                  <td className="py-1.5 pr-2">
+                    <input type="checkbox" name="bulk-id" value={c.id} aria-label={t("selectRow", { name: c.display_name })} />
+                  </td>
                   <td className="py-1.5 pr-3">
                     <Link href={`/kontakte/${c.id}`} className="font-medium hover:underline">
                       {c.display_name}
@@ -137,7 +152,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
               </Link>
             ) : null}
           </nav>
-        </>
+        </form>
       )}
     </div>
   );

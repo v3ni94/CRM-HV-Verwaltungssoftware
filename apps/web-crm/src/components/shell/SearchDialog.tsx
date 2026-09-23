@@ -8,13 +8,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-type Hit = components["schemas"]["SearchHit"];
+type Hit = components["schemas"]["Hit"];
 
 function hrefOf(hit: Hit): string | null {
   return hit.entity_type === "contact" ? `/kontakte/${hit.id}` : null;
 }
 
-/** Global search, opened with Strg+K (Cmd+K on macOS), calls /api/v1/search through the BFF. */
+/** Global search over all areas (M9), opened with Strg+K (Cmd+K on macOS), via the BFF. */
 export function SearchDialog() {
   const t = useTranslations("Shell");
   const router = useRouter();
@@ -56,7 +56,7 @@ export function SearchDialog() {
       return;
     }
     const handle = setTimeout(() => {
-      void bff<Hit[]>(`/api/bff/search?q=${encodeURIComponent(q)}&limit=10`).then((result) => {
+      void bff<Hit[]>(`/api/bff/workspace/search?q=${encodeURIComponent(q)}&limit=6`).then((result) => {
         if (result.ok) {
           setHits(result.data);
           setActive(0);
@@ -141,6 +141,7 @@ export function SearchDialog() {
                   onMouseEnter={() => setActive(index)}
                   onClick={() => go(hit)}
                 >
+                  <span className="mr-2 text-xs text-muted">{t(`entity.${hit.entity_type}`)}</span>
                   <span className="font-medium">{hit.title}</span>
                   {hit.subtitle ? <span className="ml-2 text-muted">{hit.subtitle}</span> : null}
                 </li>

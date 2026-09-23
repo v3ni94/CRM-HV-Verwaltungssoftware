@@ -29,6 +29,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.core.webhook_tasks",
             "mhvp.documents.tasks",
             "mhvp.ai.jobs",
+            "mhvp.workspace.tasks",
         ],
     )
     app.conf.update(
@@ -59,6 +60,11 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.documents.mirror",
                 "schedule": 60.0,
                 "options": {"queue": "io"},
+            },
+            # Maintenance reminders as in-app notifications (M9); idempotent per unread item.
+            "workspace-reminders": {
+                "task": "mhvp.workspace.reminders",
+                "schedule": 3600.0,
             },
         },
     )

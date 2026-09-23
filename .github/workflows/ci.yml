@@ -100,6 +100,17 @@ jobs:
         env:
           MHVP_REQUIRE_INTEGRATION: "1"
         run: uv run pytest
+      - name: Backup and restore test (M9)
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: ${{ env.CI_POSTGRES_PASSWORD }}
+          PGDATABASE: mhvp
+          BACKUP_DIR: ${{ runner.temp }}/backup
+          BACKUP_ALLOW_UNENCRYPTED: "1"
+        run: |
+          scripts/backup.sh
+          scripts/backup-verify.sh
       - name: AI evaluation (recorded answers, no live calls)
         working-directory: apps/api
         run: uv run python -m mhvp.ai.evaluate tests/ai_eval

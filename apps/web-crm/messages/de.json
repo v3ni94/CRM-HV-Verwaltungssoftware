@@ -43,7 +43,7 @@
     "switchTenant": "Mandant wechseln",
     "search": "Suchen",
     "searchShortcut": "Strg+K",
-    "searchPlaceholder": "Kontakte suchen",
+    "searchPlaceholder": "Kontakte, Objekte, Einheiten, Verträge, Dokumente",
     "searchEmpty": "Keine Treffer.",
     "searchMin": "Mindestens zwei Zeichen eingeben.",
     "searchTitle": "Globale Suche",
@@ -53,7 +53,16 @@
     "searchError": "Die Suche ist derzeit nicht verfügbar.",
     "assistant": "Assistent",
     "imports": "Importe",
-    "aiSettings": "KI-Einstellungen"
+    "aiSettings": "KI-Einstellungen",
+    "dashboard": "Start",
+    "calendar": "Kalender",
+    "entity": {
+      "contact": "Kontakt",
+      "property": "Objekt",
+      "unit": "Einheit",
+      "contract": "Vertrag",
+      "document": "Dokument"
+    }
   },
   "Contacts": {
     "title": "Kontakte",
@@ -117,7 +126,9 @@
       "revokeConfirm": "Einwilligung wirklich als widerrufen erfassen?",
       "sourceInvalid": "Bitte die Quelle mit mindestens 2 Zeichen angeben.",
       "dateInvalid": "Bitte ein gültiges Datum angeben."
-    }
+    },
+    "select": "Auswahl",
+    "selectRow": "{name} auswählen"
   },
   "ContactForm": {
     "titleNew": "Neuer Kontakt",
@@ -563,5 +574,58 @@
     "colPlatform": "Einheiten in der Plattform",
     "colDifference": "Differenz",
     "restart": "Weiteren Bericht importieren"
+  },
+  "Workspace": {
+    "dashboard": "Start",
+    "tiles": "Kennzahlen",
+    "tile": {
+      "properties": "Objekte",
+      "units": "Einheiten",
+      "maintenance_due_30d": "Wartungen fällig (30 Tage)",
+      "contacts": "Kontakte",
+      "active_contracts": "Laufende Verträge",
+      "contracts_ending_90d": "Vertragsenden (90 Tage)",
+      "documents": "Dokumente",
+      "open_ai_proposals": "Offene KI-Vorschläge",
+      "unread_notifications": "Ungelesene Benachrichtigungen"
+    },
+    "accountingLocked": "Buchhaltungskennzahlen erscheinen erst nach Freigabe der produktiven Buchführung (G1).",
+    "upcoming": "Anstehende Termine und Fristen",
+    "toCalendar": "Zum Kalender",
+    "calendar": "Kalender",
+    "prevMonth": "Vorheriger Monat",
+    "nextMonth": "Nächster Monat",
+    "noEntries": "Keine Einträge.",
+    "kind": {
+      "appointment": "Termin",
+      "maintenance": "Wartung",
+      "contract_end_date": "Vertragsende",
+      "contract_termination_date": "Kündigung"
+    },
+    "delete": "Löschen",
+    "entryTitle": "Titel",
+    "entryDate": "Datum",
+    "shared": "Für alle sichtbar",
+    "addEntry": "Termin anlegen",
+    "notifications": "Benachrichtigungen",
+    "noNotifications": "Keine neuen Benachrichtigungen.",
+    "markAllRead": "Alle als gelesen markieren",
+    "themeLabel": "Darstellung: {theme}",
+    "theme": {
+      "system": "System",
+      "light": "Hell",
+      "dark": "Dunkel"
+    },
+    "savedFilters": "Gespeicherte Filter",
+    "filterName": "Name des Filters",
+    "saveFilter": "Filter speichern",
+    "deleteFilter": "Filter {name} löschen",
+    "bulk": "Massenaktion",
+    "bulkTag": "Schlagwort für markierte",
+    "bulkAdd": "Hinzufügen",
+    "bulkRemove": "Entfernen",
+    "bulkNone": "Keine Zeilen markiert.",
+    "bulkDone": "{changed} geändert.",
+    "select": "Auswählen"
   }
 }

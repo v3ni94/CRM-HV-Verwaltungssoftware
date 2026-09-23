@@ -10,6 +10,10 @@ import { problemJson } from "@/lib/problem";
 const ID = "[0-9a-fA-F-]{36}";
 const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^search$/ },
+  { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters)$/ },
+  { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|bulk)$/ },
+  { method: "PUT", pattern: /^workspace\/filters$/ },
+  { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
   { method: "GET", pattern: /^contacts$/ },
   { method: "POST", pattern: /^contacts$/ },
   { method: "GET", pattern: /^contacts\/duplicates$/ },

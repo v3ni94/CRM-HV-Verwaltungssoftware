@@ -8,6 +8,7 @@ from mhvp.documents import models as document_models
 from mhvp.imports import models as import_models
 from mhvp.platform import models as platform_models
 from mhvp.properties import models as property_models
+from mhvp.workspace import models as workspace_models
 
 __all__ = [
     "ai_models",
@@ -20,4 +21,5 @@ __all__ = [
     "platform_models",
     "property_models",
     "webhooks",
+    "workspace_models",
 ]
