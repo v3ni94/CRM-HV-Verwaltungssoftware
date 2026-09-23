@@ -8,9 +8,11 @@ M1 ships only the fail closed resolver. Persistence per tenant (scope, opened by
 document, revocation) arrives with the tenant table in M2.
 """
 
+import asyncio
+import functools
 from collections.abc import Awaitable, Callable
 from enum import StrEnum
-from typing import Protocol
+from typing import Any, ParamSpec, Protocol, TypeVar
 from uuid import UUID
 
 from fastapi import Request
@@ -101,3 +103,38 @@ def require_release_gate(gate: ReleaseGate) -> Callable[[Request], Awaitable[Non
         )
 
     return dependency
+
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+# Resolver for jobs (Celery, imports, bulk). Replaced by the persistent resolver in M2;
+# the default keeps every gate closed.
+job_release_gate_resolver: ReleaseGateResolver = ClosedReleaseGateResolver()
+
+
+def release_gated(gate: ReleaseGate) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Guard for synchronous jobs. The job must receive ``tenant_id`` as keyword argument.
+
+    The check runs before the job body; a closed gate raises :class:`ReleaseGateClosedError`.
+    """
+
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            tenant: Any = kwargs.get("tenant_id")
+            if isinstance(tenant, str):
+                try:
+                    tenant = UUID(tenant)
+                except ValueError:
+                    tenant = None
+            asyncio.run(
+                ensure_release_gate_open(
+                    gate, tenant if isinstance(tenant, UUID) else None, job_release_gate_resolver
+                )
+            )
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

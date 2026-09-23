@@ -41,9 +41,9 @@ def upgrade() -> None:
     # policies match no row (fail closed); a malformed value raises an error.
     op.execute(
         """
-        CREATE FUNCTION app_current_tenant_id() RETURNS uuid
+        CREATE FUNCTION public.app_current_tenant_id() RETURNS uuid
         LANGUAGE sql STABLE PARALLEL SAFE
-        AS $$ SELECT NULLIF(current_setting('app.tenant_id', true), '')::uuid $$
+        AS $$ SELECT NULLIF(pg_catalog.current_setting('app.tenant_id', true), '')::uuid $$
         """
     )
     op.execute(

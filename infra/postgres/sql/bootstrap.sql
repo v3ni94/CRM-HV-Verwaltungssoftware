@@ -38,14 +38,13 @@ SELECT format(
   'ALTER ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOINHERIT NOREPLICATION PASSWORD %L',
   :'app_role', :'app_pw') \gexec
 
--- The runtime role must never be able to assume the migrator role.
-SELECT format('REVOKE %I FROM %I', :'migrator_role', :'app_role')
-WHERE EXISTS (
-  SELECT 1 FROM pg_auth_members m
+-- The runtime role must not be member of any role: NOINHERIT does not prevent SET ROLE
+-- into an owning or privileged role (direct or indirect).
+SELECT format('REVOKE %I FROM %I', r.rolname, u.rolname)
+  FROM pg_auth_members m
   JOIN pg_roles r ON r.oid = m.roleid
   JOIN pg_roles u ON u.oid = m.member
-  WHERE r.rolname = :'migrator_role' AND u.rolname = :'app_role'
-) \gexec
+ WHERE u.rolname = :'app_role' \gexec
 
 -- Database ------------------------------------------------------------------------------
 

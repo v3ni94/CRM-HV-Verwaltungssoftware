@@ -111,3 +111,38 @@ def test_endpoint_guard_without_tenant_is_closed(settings: Settings) -> None:
     with _gated_client(settings, None, OpenResolver()) as client:
         response = client.post("/bookings")
     assert response.status_code == 403
+
+
+def test_job_guard_blocks_before_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mhvp.core import release_gates
+
+    calls: list[str] = []
+
+    @release_gates.release_gated(ReleaseGate.G2)
+    def pay(*, tenant_id: str) -> str:
+        calls.append(tenant_id)
+        return "paid"
+
+    with pytest.raises(ReleaseGateClosedError):
+        pay(tenant_id=str(TENANT))
+    with pytest.raises(ReleaseGateClosedError):
+        pay(tenant_id="not-a-uuid")
+    assert calls == []
+    monkeypatch.setattr(release_gates, "job_release_gate_resolver", OpenResolver())
+    assert pay(tenant_id=str(TENANT)) == "paid"
+
+
+def test_job_guard_in_celery_task(settings: Settings) -> None:
+    from mhvp.core.release_gates import release_gated
+    from mhvp.worker import create_celery
+
+    app = create_celery(settings)
+
+    @app.task(name="test.gated")
+    @release_gated(ReleaseGate.G1)
+    def gated(*, tenant_id: str) -> str:
+        return "booked"
+
+    result = gated.apply(kwargs={"tenant_id": str(TENANT)})
+    assert result.failed()
+    assert "ReleaseGateClosedError" in repr(result.result)

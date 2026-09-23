@@ -27,7 +27,7 @@ _UNISOLATED = text(
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
       JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped
-     WHERE n.nspname = 'public'
+     WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
        AND c.relkind IN ('r', 'p')
        AND NOT (
              c.relrowsecurity
@@ -38,8 +38,10 @@ _UNISOLATED = text(
                   AND p.polname = 'tenant_isolation'
                   AND NOT p.polpermissive
                   AND p.polcmd = '*'
-                  AND pg_get_expr(p.polqual, p.polrelid) LIKE '%app_current_tenant_id()%'
-                  AND pg_get_expr(p.polwithcheck, p.polrelid) LIKE '%app_current_tenant_id()%'
+                  AND p.polroles = '{0}'
+                  AND pg_get_expr(p.polqual, p.polrelid) = '(tenant_id = app_current_tenant_id())'
+                  AND pg_get_expr(p.polwithcheck, p.polrelid)
+                      = '(tenant_id = app_current_tenant_id())'
              )
        )
      ORDER BY c.relname
@@ -206,3 +208,24 @@ def test_guard_accepts_probe_and_detects_missing_rls(probe: str, migrator_engine
             assert unisolated_tenant_tables(conn) == ["rls_probe_unprotected"]
         finally:
             conn.execute(text("DROP TABLE rls_probe_unprotected"))
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [
+        "AS RESTRICTIVE FOR ALL TO CURRENT_USER USING (tenant_id = app_current_tenant_id()) "
+        "WITH CHECK (tenant_id = app_current_tenant_id())",
+        "AS RESTRICTIVE FOR ALL USING (app_current_tenant_id() IS NULL OR true) "
+        "WITH CHECK (tenant_id = app_current_tenant_id())",
+    ],
+)
+def test_guard_detects_weak_isolation_policy(migrator_engine: Engine, policy: str) -> None:
+    with migrator_engine.begin() as conn:
+        conn.execute(text("CREATE TABLE rls_probe_weak (tenant_id uuid NOT NULL)"))
+        try:
+            conn.execute(text("ALTER TABLE rls_probe_weak ENABLE ROW LEVEL SECURITY"))
+            conn.execute(text("ALTER TABLE rls_probe_weak FORCE ROW LEVEL SECURITY"))
+            conn.execute(text(f"CREATE POLICY tenant_isolation ON rls_probe_weak {policy}"))
+            assert unisolated_tenant_tables(conn) == ["rls_probe_weak"]
+        finally:
+            conn.execute(text("DROP TABLE rls_probe_weak"))

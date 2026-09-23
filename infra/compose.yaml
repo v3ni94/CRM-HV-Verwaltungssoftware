@@ -22,6 +22,8 @@ x-app-env: &app-env
   MHVP_S3_ACCESS_KEY_ID: ${MHVP_S3_ACCESS_KEY_ID:?MHVP_S3_ACCESS_KEY_ID must be set}
   MHVP_S3_SECRET_ACCESS_KEY: ${MHVP_S3_SECRET_ACCESS_KEY:?MHVP_S3_SECRET_ACCESS_KEY must be set}
   MHVP_S3_BUCKET: ${MHVP_S3_BUCKET:-mhvp}
+  # uvicorn trusts X-Forwarded-* only from these addresses (set to the Traefik network).
+  FORWARDED_ALLOW_IPS: ${MHVP_FORWARDED_ALLOW_IPS:-127.0.0.1}
 
 x-app-depends: &app-depends
   migrate:
@@ -119,7 +121,7 @@ services:
 
   api:
     <<: *python-app
-    command: ["uvicorn", "mhvp.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    command: ["uvicorn", "mhvp.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=3).status == 200 else 1)"]
       interval: 10s

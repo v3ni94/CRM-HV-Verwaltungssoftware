@@ -203,7 +203,6 @@ async def _handle_http(request: Request, exc: Exception) -> JSONResponse:
         ErrorCodes.HTTP_ERROR,
         instance=request.url.path,
         status=exc.status_code,
-        developer_message=str(exc.detail),
         headers=headers,
     )
 

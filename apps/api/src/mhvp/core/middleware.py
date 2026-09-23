@@ -56,8 +56,14 @@ class CorrelationIdMiddleware:
 
         try:
             await self.app(scope, receive, send_wrapper)
-        except Exception:
-            _log.exception("unhandled_exception", path=scope.get("path"))
+        except Exception as exc:
+            # Type and SQLSTATE only: messages and tracebacks can contain SQL values.
+            _log.error(
+                "unhandled_exception",
+                path=scope.get("path"),
+                error_type=type(exc).__name__,
+                sqlstate=getattr(getattr(exc, "orig", None), "sqlstate", None),
+            )
             if response_started:
                 raise
             response = problem_response(ErrorCodes.INTERNAL, instance=scope.get("path"))

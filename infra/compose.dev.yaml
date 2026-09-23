@@ -48,7 +48,7 @@ services:
 
   api:
     <<: *api-build
-    command: ["uvicorn", "mhvp.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*", "--reload"]
+    command: ["uvicorn", "mhvp.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--reload"]
     volumes:
       - ../apps/api/src:/app/src
     labels:

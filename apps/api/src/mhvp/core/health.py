@@ -89,6 +89,7 @@ async def run_check(name: str, check: ReadinessCheck, limit_seconds: float) -> C
 async def run_readiness(
     checks: dict[str, ReadinessCheck], *, version: str, limit_seconds: float
 ) -> HealthReport:
+    """Run all checks. Callers should use :class:`ReadinessCache` to bound load."""
     names = sorted(checks)
     results = await asyncio.gather(
         *(run_check(name, checks[name], limit_seconds) for name in names)
@@ -113,7 +114,10 @@ _ROLE_QUERY = text(
              WHERE c.relowner = r.oid
                AND n.nspname NOT IN ('pg_catalog', 'information_schema')
                AND n.nspname NOT LIKE 'pg_toast%%') AS owned_relations,
-           (SELECT count(*) FROM pg_namespace WHERE nspowner = r.oid) AS owned_schemas
+           (SELECT count(*) FROM pg_namespace WHERE nspowner = r.oid)
+         + (SELECT count(*) FROM pg_proc WHERE proowner = r.oid)
+         + (SELECT count(*) FROM pg_type WHERE typowner = r.oid) AS owned_schemas,
+           (SELECT count(*) FROM pg_auth_members m WHERE m.member = r.oid) AS memberships
       FROM pg_roles r
      WHERE r.rolname = current_user
     """
@@ -138,6 +142,9 @@ def database_role_check(engine: AsyncEngine) -> ReadinessCheck:
             raise HealthCheckFailedError("runtime role bypasses row level security")
         if row.owned_relations or row.owned_schemas:
             raise HealthCheckFailedError("runtime role owns database objects")
+        if row.memberships:
+            # NOINHERIT does not prevent SET ROLE into an owning or privileged role.
+            raise HealthCheckFailedError("runtime role is member of another role")
 
     return check
 
@@ -188,6 +195,28 @@ def object_storage_check(settings: Settings, client: "S3Client | None") -> Readi
     return check
 
 
+class ReadinessCache:
+    """Single flight plus short TTL so a flood of /ready calls cannot exhaust the pool."""
+
+    def __init__(self, ttl_seconds: float = 2.0) -> None:
+        self.ttl_seconds = ttl_seconds
+        self._lock = asyncio.Lock()
+        self._report: HealthReport | None = None
+        self._at = 0.0
+
+    async def get(
+        self, checks: dict[str, ReadinessCheck], *, version: str, limit_seconds: float
+    ) -> HealthReport:
+        async with self._lock:
+            now = time.monotonic()
+            if self._report is None or now - self._at > self.ttl_seconds:
+                self._report = await run_readiness(
+                    checks, version=version, limit_seconds=limit_seconds
+                )
+                self._at = time.monotonic()
+            return self._report
+
+
 # Router --------------------------------------------------------------------------------
 
 router = APIRouter(prefix="/health", tags=["Betrieb"])
@@ -210,7 +239,10 @@ async def live(request: Request) -> LiveReport:
 async def ready(request: Request) -> JSONResponse:
     settings: Settings = request.app.state.settings
     checks: dict[str, ReadinessCheck] = getattr(request.app.state, "readiness_checks", {})
-    report = await run_readiness(
+    cache: ReadinessCache | None = getattr(request.app.state, "readiness_cache", None)
+    if cache is None:
+        cache = request.app.state.readiness_cache = ReadinessCache()
+    report = await cache.get(
         checks, version=settings.app_version, limit_seconds=settings.health_check_timeout_seconds
     )
     status_code = 200 if report.status is CheckStatus.OK else 503

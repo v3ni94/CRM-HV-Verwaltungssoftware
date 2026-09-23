@@ -16,13 +16,14 @@ def create_app_engine(settings: Settings) -> AsyncEngine:
     return create_async_engine(
         settings.database_url.get_secret_value(),
         pool_pre_ping=True,
+        hide_parameters=True,  # bind values may carry personal data (section 16)
         pool_size=5,
         max_overflow=10,
     )
 
 
 def create_sync_engine(url: str) -> Engine:
-    return create_engine(url, pool_pre_ping=True)
+    return create_engine(url, pool_pre_ping=True, hide_parameters=True)
 
 
 def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
