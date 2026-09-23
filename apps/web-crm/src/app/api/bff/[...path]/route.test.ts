@@ -2,7 +2,7 @@
 const serverFetch = vi.fn();
 vi.mock("@/lib/api-server", () => ({ serverFetch: (...args: unknown[]) => serverFetch(...args) }));
 
-import { DELETE, GET, POST } from "./route";
+import { DELETE, GET, POST, PUT } from "./route";
 
 const ctx = (path: string) => ({ params: Promise.resolve({ path: path.split("/") }) });
 const ID = "01920000-0000-7000-8000-00000000000a";
@@ -38,5 +38,77 @@ describe("BFF proxy", () => {
     const [path, init] = serverFetch.mock.calls[0]!;
     expect(path).toBe("/api/v1/contacts");
     expect(new Headers(init.headers).get("if-match")).toBe('"1"');
+  });
+
+  it.each([
+    ["GET", "ai/conversations"],
+    ["POST", "ai/conversations"],
+    ["GET", `ai/conversations/${ID}`],
+    ["POST", `ai/conversations/${ID}/messages`],
+    ["GET", `ai/runs/${ID}`],
+    ["GET", `ai/proposals/${ID}`],
+    ["POST", `ai/proposals/${ID}/apply`],
+    ["POST", `ai/proposals/${ID}/reject`],
+    ["GET", "ai/usage"],
+    ["GET", "ai/providers"],
+    ["PUT", "ai/providers/anthropic"],
+    ["POST", "ai/providers/anthropic/release"],
+    ["GET", "imports"],
+    ["GET", `imports/${ID}`],
+    ["POST", `imports/${ID}/undo`],
+  ])("forwards the AI operation %s %s", async (method, path) => {
+    serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+    const req = new Request(`http://crm.localhost/api/bff/${path}`, {
+      method,
+      headers: { host: "crm.localhost", origin: "http://crm.localhost" },
+      ...(method === "GET" ? {} : { body: "{}" }),
+    });
+    const handler = { GET, POST, PUT, DELETE }[method as "GET" | "POST" | "PUT" | "DELETE"];
+    expect((await handler(req, ctx(path))).status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
+  });
+
+  it.each([
+    ["DELETE", `ai/conversations/${ID}`],
+    ["PUT", "ai/providers/unknown"],
+    ["GET", "documents"],
+    ["GET", `documents/${ID}/content`],
+    ["DELETE", `imports/${ID}`],
+  ])("keeps %s %s outside the allowlist", async (method, path) => {
+    const req = new Request(`http://crm.localhost/api/bff/${path}`, {
+      method,
+      headers: { host: "crm.localhost", origin: "http://crm.localhost" },
+    });
+    const handler = { GET, POST, PUT, DELETE }[method as "GET" | "POST" | "PUT" | "DELETE"];
+    expect((await handler(req, ctx(path))).status).toBe(404);
+    expect(serverFetch).not.toHaveBeenCalled();
+  });
+
+  it("forwards document uploads as multipart with the original boundary", async () => {
+    serverFetch.mockResolvedValue(new Response("{}", { status: 201, headers: { "content-type": "application/json" } }));
+    const form = new FormData();
+    form.set("file", new Blob(["hello"], { type: "text/plain" }), "a.txt");
+    const encoded = new Request("http://x", { method: "POST", body: form });
+    const type = encoded.headers.get("content-type")!;
+    const req = new Request("http://crm.localhost/api/bff/documents", {
+      method: "POST",
+      headers: { host: "crm.localhost", origin: "http://crm.localhost", "content-type": type },
+      body: await encoded.arrayBuffer(),
+    });
+    expect((await POST(req, ctx("documents"))).status).toBe(201);
+    const [path, init] = serverFetch.mock.calls[0]!;
+    expect(path).toBe("/api/v1/documents");
+    expect(new Headers(init.headers).get("content-type")).toBe(type);
+    expect(new TextDecoder().decode(init.body as ArrayBuffer)).toContain("hello");
+  });
+
+  it("rejects a non multipart document upload", async () => {
+    const req = new Request("http://crm.localhost/api/bff/documents", {
+      method: "POST",
+      headers: { host: "crm.localhost", origin: "http://crm.localhost", "content-type": "application/json" },
+      body: "{}",
+    });
+    expect((await POST(req, ctx("documents"))).status).toBe(415);
+    expect(serverFetch).not.toHaveBeenCalled();
   });
 });

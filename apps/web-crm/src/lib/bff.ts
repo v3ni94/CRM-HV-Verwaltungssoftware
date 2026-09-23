@@ -7,7 +7,8 @@ export type BffResult<T> =
 
 export async function bff<T>(path: string, init: RequestInit = {}): Promise<BffResult<T>> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has("content-type")) headers.set("content-type", "application/json");
+  // FormData sets its own multipart content type including the boundary.
+  if (init.body && !(init.body instanceof FormData) && !headers.has("content-type")) headers.set("content-type", "application/json");
   let response: Response;
   try {
     response = await fetch(path, { ...init, headers, credentials: "same-origin", cache: "no-store" });

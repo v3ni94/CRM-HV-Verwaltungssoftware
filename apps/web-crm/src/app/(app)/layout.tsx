@@ -29,6 +29,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Link href="/kontakte" className="hover:underline">
             {t("contacts")}
           </Link>
+          <Link href="/assistent" className="hover:underline">
+            {t("assistant")}
+          </Link>
+          <Link href="/importe" className="hover:underline">
+            {t("imports")}
+          </Link>
+          {me?.permissions.includes("tenant_settings:update") ? (
+            <Link href="/einstellungen/ki" className="hover:underline">
+              {t("aiSettings")}
+            </Link>
+          ) : null}
         </nav>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SearchDialog />

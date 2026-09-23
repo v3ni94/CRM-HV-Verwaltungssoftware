@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { isValidIban } from "./contact-schema";
 import { originAllowed } from "./csrf";
-import { formatDate } from "./format";
+import { formatConfidence, formatDate, formatEur } from "./format";
 import { VERSION_CONFLICT_MESSAGE, fieldPath, problemMessage } from "./problem";
 import { cookieOptions, isSecureHost, parseContext } from "./session";
 
@@ -58,5 +58,16 @@ describe("formats", () => {
   it("shows dates as TT.MM.JJJJ", () => {
     expect(formatDate("2026-09-23")).toBe("23.09.2026");
     expect(formatDate("2026-09-22T23:30:00Z")).toBe("23.09.2026");
+  });
+});
+
+describe("money format without float", () => {
+  it("formats decimal strings as 1.234,56 EUR and rounds half up", () => {
+    expect(formatEur("1234.5")).toBe("1.234,50 EUR");
+    expect(formatEur("0.005")).toBe("0,01 EUR");
+    expect(formatEur("999999.995")).toBe("1.000.000,00 EUR");
+    expect(formatEur("-12")).toBe("-12,00 EUR");
+    expect(formatEur(null)).toBe("");
+    expect(formatConfidence("0.873")).toBe("87 %");
   });
 });
