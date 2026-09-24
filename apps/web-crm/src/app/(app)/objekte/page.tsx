@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { PropertyCreate } from "@/components/properties/PropertyCreate";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -41,10 +42,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className={ui.subtitle}>{t("area")}</p>
-          <h1 className={ui.title}>{t(`scopeTitle.${scope}`)}</h1>
-        </div>
+        <PageHeader eyebrow={t("area")} title={t(`scopeTitle.${scope}`)} />
         <form className="flex gap-2" role="search">
           {scope !== "all" ? <input type="hidden" name="art" value={scope} /> : null}
           <input className={ui.input} name="q" defaultValue={q ?? ""} placeholder={t("searchPlaceholder")} aria-label={t("search")} />

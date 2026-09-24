@@ -3,8 +3,6 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
-import { ui } from "@/lib/ui";
-
 type Theme = "system" | "light" | "dark";
 const KEY = "mhvp-theme";
 const ORDER: Theme[] = ["system", "light", "dark"];
@@ -45,7 +43,12 @@ export function ThemeToggle() {
   }
 
   return (
-    <button type="button" className={ui.button} onClick={next} aria-label={t("themeLabel", { theme: t(`theme.${theme}`) })}>
+    <button
+      type="button"
+      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-bg px-3 text-sm font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface focus:outline-none focus:ring-2 focus:ring-gold/40"
+      onClick={next}
+      aria-label={t("themeLabel", { theme: t(`theme.${theme}`) })}
+    >
       {t(`theme.${theme}`)}
     </button>
   );

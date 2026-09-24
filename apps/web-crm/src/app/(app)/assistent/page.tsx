@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -36,11 +37,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
   const users = members?.data ?? [];
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className={ui.subtitle}>{t("area")}</p>
-        <h1 className={ui.title}>{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted">{t("auditIntro")}</p>
-      </div>
+      <PageHeader eyebrow={t("area")} title={t("title")} description={t("auditIntro")} />
       <p className={ui.notice}>{t("bubbleHint")}</p>
       <form className="grid gap-3 md:grid-cols-[auto_1fr_auto_auto_auto] md:items-end" role="search">
         {canAudit ? (

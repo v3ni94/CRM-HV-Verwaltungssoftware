@@ -30,7 +30,9 @@
     "rental": "Rental",
     "sev": "SEV",
     "settings": "Settings",
-    "myData": "My data"
+    "myData": "My data",
+    "navCollapse": "Collapse sidebar",
+    "navExpand": "Expand sidebar"
   },
   "Hoa": {
     "title": "HOA management",

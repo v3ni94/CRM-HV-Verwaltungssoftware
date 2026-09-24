@@ -83,7 +83,9 @@
     "rental": "Mietverwaltung",
     "sev": "SEV",
     "settings": "Einstellungen",
-    "myData": "Meine Daten"
+    "myData": "Meine Daten",
+    "navCollapse": "Leiste einklappen",
+    "navExpand": "Leiste ausklappen"
   },
   "Contacts": {
     "title": "Kontakte",

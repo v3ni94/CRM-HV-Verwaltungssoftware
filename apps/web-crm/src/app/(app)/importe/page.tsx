@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { ImportUndoButton } from "@/components/ai/ImportUndoButton";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -17,8 +18,7 @@ export default async function ImportsPage() {
   const canUndo = me.data?.permissions.includes("ai:delete") ?? false;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
-      <p className="text-sm text-muted">{t("intro")}</p>
+      <PageHeader title={t("title")} description={t("intro")} />
       <p>
         <Link href="/importe/immoware24" className="text-sm font-medium hover:underline">
           {t("immoware24Link")}
