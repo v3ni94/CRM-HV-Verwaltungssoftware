@@ -988,6 +988,25 @@
       "resolved": "beschlossen",
       "applied": "Raten übernommen",
       "cancelled": "verworfen"
+    },
+    "rule": {
+      "title": "Mehrheitsregeln dieser Gemeinschaft",
+      "none": "Keine Regeln erfasst. Ohne Regel gilt die einfache Mehrheit der abgegebenen Stimmen.",
+      "label": "Bezeichnung",
+      "principle": "Stimmprinzip",
+      "share": "Anteil der abgegebenen Stimmen in %",
+      "strictly": "mehr als (sonst mindestens)",
+      "mea": "Mindestanteil aller MEA in %",
+      "unanimous": "Allstimmigkeit",
+      "source": "Fundstelle (Gesetz, Vereinbarung)",
+      "from": "Gültig ab",
+      "add": "Regel anlegen",
+      "choose": "Mehrheitsregel",
+      "simple": "einfache Mehrheit",
+      "unanimousText": "alle Stimmen",
+      "moreThan": "mehr als {p} %",
+      "atLeast": "mindestens {p} %",
+      "meaMin": "mindestens {p} % aller MEA"
     }
   },
   "RentIncrease": {
@@ -1240,7 +1259,15 @@
       "resolved": "beschlossen",
       "applied": "Raten übernommen",
       "cancelled": "verworfen"
-    }
+    },
+    "amend": "Änderungsbeschluss",
+    "amendNote": "Legt eine neue Version an. Die übernommene Version bleibt unverändert; die Differenz je Einheit wird als Nachforderung oder Gutschrift ab dem gewählten Monat fällig.",
+    "newTotal": "Neue Gesamtsumme",
+    "differenceDue": "Differenz fällig ab (Monatserster)",
+    "reason": "Grund der Änderung",
+    "createAmendment": "Neue Version anlegen",
+    "version": "Version {n}",
+    "differenceFrom": "Differenz fällig ab {date}"
   },
   "RentLaw": {
     "title": "Mietrecht: Regelwerk",

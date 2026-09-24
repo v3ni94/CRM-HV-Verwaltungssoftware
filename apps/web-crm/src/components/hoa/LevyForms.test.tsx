@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { LevyCreate, LevySteps } from "./LevyForms";
+import { LevyAmend, LevyCreate, LevySteps } from "./LevyForms";
 
 const refresh = vi.fn();
 const push = vi.fn();
@@ -37,5 +37,28 @@ describe("Special levy forms", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toMatchObject({ subject_type: "special_levy", subject_id: LV, snapshot_hash: "b".repeat(64) });
     expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toEqual({ resolution_id: "r1" });
+  });
+});
+
+describe("LevyAmend", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("requires the first of a month and opens the new version", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: "v2" }, 201));
+    renderIntl(<LevyAmend id={LV} basePath="/weg/p1/sonderumlage" />);
+    await userEvent.type(screen.getByLabelText("Neue Gesamtsumme"), "12000,50");
+    await userEvent.type(screen.getByLabelText("Differenz fällig ab (Monatserster)"), "2026-11-15");
+    await userEvent.type(screen.getByLabelText("Grund der Änderung"), "Nachtragsangebot");
+    expect(screen.getByText("Neue Version anlegen")).toBeDisabled();
+    await userEvent.clear(screen.getByLabelText("Differenz fällig ab (Monatserster)"));
+    await userEvent.type(screen.getByLabelText("Differenz fällig ab (Monatserster)"), "2026-11-01");
+    await userEvent.click(screen.getByText("Neue Version anlegen"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/weg/p1/sonderumlage/v2"));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`/api/bff/hoa/special-levies/${LV}/amend`);
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      total: "12000.50",
+      difference_due: "2026-11-01",
+      reason: "Nachtragsangebot",
+    });
   });
 });

@@ -86,6 +86,8 @@ describe("BFF proxy", () => {
     ["PATCH", `letting/prospects/${ID}`],
     ["DELETE", `letting/prospects/${ID}`],
     ["PUT", "platform/rent-law/rules/cap_percent"],
+    ["POST", `hoa/special-levies/${ID}/amend`],
+    ["POST", "hoa/majority-rules"],
     ["POST", "platform/rent-law/cap-areas"],
     ["PUT", `platform/rent-law/cap-areas/${ID}`],
     ["POST", "tickets"],

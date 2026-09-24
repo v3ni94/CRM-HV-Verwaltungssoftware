@@ -267,19 +267,145 @@ export function HoaSteps({
 }
 
 /** Agenda, invitation, tally and announcement of an owners' meeting (M25). */
+export type MajorityRule = {
+  id: string;
+  label: string;
+  principle: string;
+  share_of_votes_cast: string | null;
+  strictly_greater: boolean;
+  min_mea_share_of_all: string | null;
+  unanimous: boolean;
+  source: string;
+  valid_from: string;
+  valid_to: string | null;
+};
+
+/** Majority rules per community with their source (M25-01, decided 24.09.2026). The tally
+ *  evaluates the chosen rule; the announcement stays a human decision. */
+export function MajorityRules({ legalEntityId, rules }: { legalEntityId: string; rules: MajorityRule[] }) {
+  const t = useTranslations("HoaWork");
+  const { busy, error, call } = useCall();
+  const empty = { label: "", principle: "head", share: "", greater: true, mea: "", unanimous: false, source: "", from: "" };
+  const [f, setF] = useState(empty);
+  // Percent to ratio as an exact decimal string (no float): "66,67" -> "0.6667".
+  const share = (v: string) => {
+    if (!v) return null;
+    const [whole = "0", frac = ""] = v.replace(",", ".").split(".");
+    const digits = whole.padStart(3, "0") + frac;
+    const ratio = `${digits.slice(0, -2 - frac.length) || "0"}.${digits.slice(-2 - frac.length)}`;
+    return ratio.replace(/^0+(?=\d)/, "").replace(/\.?0+$/, "") || "0";
+  };
+  const pct = /^\d+([.,]\d+)?$/;
+  const valid =
+    f.label.trim().length >= 3 &&
+    f.source.trim().length >= 3 &&
+    f.from &&
+    (f.unanimous || pct.test(f.share) || pct.test(f.mea)) &&
+    (!f.share || pct.test(f.share)) &&
+    (!f.mea || pct.test(f.mea));
+  const create = async () => {
+    const res = await call("majority-rules", {
+      legal_entity_id: legalEntityId,
+      label: f.label.trim(),
+      principle: f.principle,
+      share_of_votes_cast: share(f.share),
+      strictly_greater: f.greater,
+      min_mea_share_of_all: share(f.mea),
+      unanimous: f.unanimous,
+      source: f.source.trim(),
+      valid_from: f.from,
+    });
+    if (res !== null) setF(empty);
+  };
+  const describe = (r: MajorityRule) =>
+    [
+      r.unanimous ? t("rule.unanimousText") : null,
+      r.share_of_votes_cast
+        ? t(r.strictly_greater ? "rule.moreThan" : "rule.atLeast", { p: String(Number(r.share_of_votes_cast) * 100).replace(".", ",") })
+        : null,
+      r.min_mea_share_of_all ? t("rule.meaMin", { p: String(Number(r.min_mea_share_of_all) * 100).replace(".", ",") }) : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+  return (
+    <section className={ui.card}>
+      <h2 className="font-medium">{t("rule.title")}</h2>
+      {rules.length ? (
+        <ul className="mt-1 text-sm">
+          {rules.map((r) => (
+            <li key={r.id}>
+              <span className="font-medium">{r.label}</span> ({t(`principle.${r.principle}`)}): {describe(r)} ·{" "}
+              <span className="text-muted">{r.source}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted">{t("rule.none")}</p>
+      )}
+      <div className="mt-2 grid gap-2 sm:grid-cols-4">
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("rule.label")}</span>
+          <input className={ui.input} value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("rule.principle")}</span>
+          <select className={ui.input} value={f.principle} onChange={(e) => setF({ ...f, principle: e.target.value })}>
+            {["head", "mea", "unit"].map((p) => (
+              <option key={p} value={p}>
+                {t(`principle.${p}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("rule.share")}</span>
+          <input className={ui.input} value={f.share} onChange={(e) => setF({ ...f, share: e.target.value })} />
+        </label>
+        <label className="flex items-center gap-1 text-sm">
+          <input type="checkbox" checked={f.greater} onChange={(e) => setF({ ...f, greater: e.target.checked })} />
+          {t("rule.strictly")}
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("rule.mea")}</span>
+          <input className={ui.input} value={f.mea} onChange={(e) => setF({ ...f, mea: e.target.value })} />
+        </label>
+        <label className="flex items-center gap-1 text-sm">
+          <input type="checkbox" checked={f.unanimous} onChange={(e) => setF({ ...f, unanimous: e.target.checked })} />
+          {t("rule.unanimous")}
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("rule.source")}</span>
+          <input className={ui.input} value={f.source} onChange={(e) => setF({ ...f, source: e.target.value })} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("rule.from")}</span>
+          <input type="date" className={ui.input} value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} />
+        </label>
+      </div>
+      <button type="button" className={`${ui.button} mt-2`} disabled={busy || !valid} onClick={create}>
+        {t("rule.add")}
+      </button>
+      <ErrorLine error={error} />
+    </section>
+  );
+}
+
 export function MeetingPanel({
   id,
   status,
   agenda,
+  rules = [],
 }: {
   id: string;
   status: string;
+  rules?: MajorityRule[];
   agenda: { id: string; position: number; title: string; majority: string; resolution: { number: number; status: string } | null }[];
 }) {
   const t = useTranslations("HoaWork");
   const { busy, error, call } = useCall();
   const [title, setTitle] = useState("");
   const [proposal, setProposal] = useState("");
+  const [ruleId, setRuleId] = useState("");
   const [invitedAt, setInvitedAt] = useState("");
   const [urgency, setUrgency] = useState("");
   const [tallies, setTallies] = useState<Record<string, { yes: string; no: string; abstain: string; proposal: string | null; manual_check: boolean }>>({});
@@ -346,12 +472,29 @@ export function MeetingPanel({
               <span className={ui.label}>{t("proposal")}</span>
               <input className={ui.input} value={proposal} onChange={(e) => setProposal(e.target.value)} />
             </label>
+            {rules.length ? (
+              <label className="flex flex-col gap-1">
+                <span className={ui.label}>{t("rule.choose")}</span>
+                <select className={ui.input} value={ruleId} onChange={(e) => setRuleId(e.target.value)}>
+                  <option value="">{t("rule.simple")}</option>
+                  {rules.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <button
               type="button"
               className={ui.button}
               disabled={busy || title.trim().length < 3}
               onClick={async () => {
-                if ((await call(`meetings/${id}/agenda`, { title: title.trim(), proposal: proposal.trim() || null })) !== null) {
+                if ((await call(`meetings/${id}/agenda`, {
+                    title: title.trim(),
+                    proposal: proposal.trim() || null,
+                    ...(ruleId ? { rule_id: ruleId } : {}),
+                  })) !== null) {
                   setTitle("");
                   setProposal("");
                 }

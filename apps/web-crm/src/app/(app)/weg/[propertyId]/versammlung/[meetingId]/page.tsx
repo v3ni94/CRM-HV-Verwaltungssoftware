@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import { MeetingPanel } from "@/components/hoa/HoaForms";
+import { MajorityRules, MeetingPanel, type MajorityRule } from "@/components/hoa/HoaForms";
 import { MemberVoting } from "@/components/hoa/MemberVoting";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -18,6 +18,10 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
     api.GET("/api/v1/hoa/meetings/{meeting_id}/members", { params: { path: { meeting_id: meetingId } } }),
   ]);
   redirectIfUnauthenticated(response);
+  const entity = String(data?.legal_entity_id ?? "");
+  const rules = data
+    ? ((await api.GET("/api/v1/hoa/majority-rules", { params: { query: { legal_entity_id: entity } } })).data ?? [])
+    : [];
   if (!data) return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
   return (
     <div className="flex flex-col gap-4">
@@ -36,7 +40,13 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
         members={(members.data ?? []) as never}
         agenda={(data.agenda ?? []) as never}
       />
-      <MeetingPanel id={meetingId} status={String(data.status)} agenda={(data.agenda ?? []) as never} />
+      <MeetingPanel
+        id={meetingId}
+        status={String(data.status)}
+        agenda={(data.agenda ?? []) as never}
+        rules={rules as MajorityRule[]}
+      />
+      <MajorityRules legalEntityId={entity} rules={rules as MajorityRule[]} />
     </div>
   );
 }

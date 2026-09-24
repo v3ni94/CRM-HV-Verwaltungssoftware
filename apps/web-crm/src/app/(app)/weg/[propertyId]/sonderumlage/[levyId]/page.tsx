@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import { LevySteps } from "@/components/hoa/LevyForms";
+import { LevyAmend, LevySteps } from "@/components/hoa/LevyForms";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 type Unit = { unit_number: string; amount: string; instalments: { due_month: string; amount: string }[] };
 type Report = { resolved: string; charged: string; received: string; open: string; used: string; earmarked_remaining: string; note: string };
 
-export default async function LevyPage({ params }: { params: Promise<{ levyId: string }> }) {
-  const { levyId } = await params;
+export default async function LevyPage({ params }: { params: Promise<{ propertyId: string; levyId: string }> }) {
+  const { propertyId, levyId } = await params;
   const t = await getTranslations("Levy");
   const api = serverApi();
   const [{ data, error, response }, report] = await Promise.all([
@@ -39,6 +39,14 @@ export default async function LevyPage({ params }: { params: Promise<{ levyId: s
         snapshotHash={(d.snapshot_hash as string | null) ?? null}
         purpose={String(d.purpose)}
       />
+      {d.supersedes_id ? (
+        <p className="text-sm" data-testid="levy-version">
+          {t("version", { n: Number(d.version) })}
+          {d.change_reason ? ` · ${String(d.change_reason)}` : ""}
+          {d.difference_due ? ` · ${t("differenceFrom", { date: formatDate(String(d.difference_due)) })}` : ""}
+        </p>
+      ) : null}
+      {d.status === "applied" ? <LevyAmend id={levyId} basePath={`/weg/${propertyId}/sonderumlage`} /> : null}
       {units.length ? (
         <table className="w-full border-collapse text-sm">
           <thead className="border-b border-border text-left text-xs text-muted">

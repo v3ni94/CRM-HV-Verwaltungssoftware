@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { HoaSteps, MeetingPanel } from "./HoaForms";
+import { HoaSteps, MajorityRules, MeetingPanel } from "./HoaForms";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
@@ -59,5 +59,53 @@ describe("MeetingPanel", () => {
       outcome: "positive",
       majority_basis: "Einfache Mehrheit der abgegebenen Stimmen",
     });
+  });
+});
+
+describe("MajorityRules", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sends shares as exact ratios with the source", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: "r1" }, 201));
+    renderIntl(<MajorityRules legalEntityId={LE} rules={[]} />);
+    await userEvent.type(screen.getByLabelText("Bezeichnung"), "Doppelt qualifiziert");
+    await userEvent.type(screen.getByLabelText("Anteil der abgegebenen Stimmen in %"), "66,67");
+    await userEvent.type(screen.getByLabelText("Mindestanteil aller MEA in %"), "50");
+    await userEvent.type(screen.getByLabelText("Fundstelle (Gesetz, Vereinbarung)"), "Gemeinschaftsordnung § 5");
+    await userEvent.type(screen.getByLabelText("Gültig ab"), "2020-01-01");
+    await userEvent.click(screen.getByText("Regel anlegen"));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toMatchObject({
+      legal_entity_id: LE,
+      principle: "head",
+      share_of_votes_cast: "0.6667",
+      strictly_greater: true,
+      min_mea_share_of_all: "0.5",
+      unanimous: false,
+      source: "Gemeinschaftsordnung § 5",
+    });
+  });
+
+  it("describes existing rules", () => {
+    renderIntl(
+      <MajorityRules
+        legalEntityId={LE}
+        rules={[
+          {
+            id: "r1",
+            label: "Bauliche Veränderung",
+            principle: "mea",
+            share_of_votes_cast: "0.66670000",
+            strictly_greater: true,
+            min_mea_share_of_all: "0.50000000",
+            unanimous: false,
+            source: "Testfundstelle",
+            valid_from: "2020-01-01",
+            valid_to: null,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText(/mehr als 66,67 %, mindestens 50 % aller MEA/)).toBeInTheDocument();
   });
 });

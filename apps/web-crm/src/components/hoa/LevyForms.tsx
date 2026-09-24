@@ -156,3 +156,52 @@ export function LevySteps({
     </div>
   );
 }
+
+/** Amendment resolution for an applied levy (W09-01, decided 24.09.2026): a new version is
+ *  created; the difference per unit becomes an additional charge or a credit. The applied
+ *  version stays unchanged. */
+export function LevyAmend({ id, basePath }: { id: string; basePath: string }) {
+  const t = useTranslations("Levy");
+  const router = useRouter();
+  const [total, setTotal] = useState("");
+  const [due, setDue] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const valid = /^\d+([.,]\d{1,2})?$/.test(total) && /^\d{4}-\d{2}-01$/.test(due) && reason.trim().length >= 3;
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ id: string }>(`/api/bff/hoa/special-levies/${id}/amend`, {
+      method: "POST",
+      body: JSON.stringify({ total: total.replace(",", "."), difference_due: due, reason: reason.trim() }),
+    });
+    setBusy(false);
+    if (res.ok) router.push(`${basePath}/${res.data.id}`);
+    else setError(res.message);
+  };
+  return (
+    <section className={ui.card}>
+      <h2 className="font-medium">{t("amend")}</h2>
+      <p className="text-xs text-muted">{t("amendNote")}</p>
+      <div className="mt-2 flex flex-wrap items-end gap-2">
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("newTotal")}</span>
+          <input className={ui.input} value={total} onChange={(e) => setTotal(e.target.value)} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("differenceDue")}</span>
+          <input type="date" className={ui.input} value={due} onChange={(e) => setDue(e.target.value)} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("reason")}</span>
+          <input className={ui.input} value={reason} onChange={(e) => setReason(e.target.value)} />
+        </label>
+        <button type="button" className={ui.primary} disabled={busy || !valid} onClick={submit}>
+          {t("createAmendment")}
+        </button>
+      </div>
+      {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
+    </section>
+  );
+}

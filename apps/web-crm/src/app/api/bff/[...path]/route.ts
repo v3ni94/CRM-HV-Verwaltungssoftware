@@ -62,7 +62,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // HOA (M24, M25): drafts, calculation, resolution bound to the snapshot, meeting steps.
   // Issuing, due and posting of statements need G4 (checked by the API).
   { method: "POST", pattern: /^hoa\/(plans|statements|meetings|resolutions|special-levies)$/ },
-  { method: "POST", pattern: new RegExp(`^hoa/special-levies/${ID}/(calculate|resolve|apply)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/special-levies/${ID}/(calculate|resolve|apply|amend)$`) },
+  { method: "POST", pattern: /^hoa\/majority-rules$/ },
   { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/(items|calculate|transition|apply)$`) },
   { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(costs|calculate|transition|post|new-version)$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
