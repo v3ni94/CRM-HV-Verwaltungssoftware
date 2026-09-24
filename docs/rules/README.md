@@ -28,6 +28,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | ID | Title | Master prompt section | Status |
 | --- | --- | --- | --- |
 | [M26-RL](M26-rent-law.md) | Mieterhöhung Regelwerk | 8, M26 | implemented, not accepted |
+| [M28-01](M28-01.md) | Makler: Anzeigen, keine FLOWFACT-Anbindung | M28 | implemented, not accepted |
 | [B01](B01.md) | Richtiger Rechtsträger | 7.1 | implemented, not accepted |
 | [B02](B02.md) | Entwurf und Buchung | 7.1 | implemented, not accepted |
 | [B03](B03.md) | Korrektur statt Überschreiben | 7.1 | implemented, not accepted |

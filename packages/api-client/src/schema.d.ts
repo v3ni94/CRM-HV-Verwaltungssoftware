@@ -3254,6 +3254,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/letting/listings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Anzeigen */
+        get: operations["list_listings_api_v1_letting_listings_get"];
+        put?: never;
+        /** Anzeige anlegen */
+        post: operations["create_listing_api_v1_letting_listings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/listings/prefill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vorbelegung für eine neue Anzeige */
+        get: operations["listing_prefill_api_v1_letting_listings_prefill_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/listings/{listing_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Anzeige */
+        get: operations["get_listing_api_v1_letting_listings__listing_id__get"];
+        put?: never;
+        post?: never;
+        /** Anzeige löschen */
+        delete: operations["delete_listing_api_v1_letting_listings__listing_id__delete"];
+        options?: never;
+        head?: never;
+        /** Anzeige ändern */
+        patch: operations["patch_listing_api_v1_letting_listings__listing_id__patch"];
+        trace?: never;
+    };
     "/api/v1/letting/prospects": {
         parameters: {
             query?: never;
@@ -8351,6 +8405,69 @@ export interface components {
          * @enum {string}
          */
         LinkRole: "attachment" | "evidence" | "original" | "generated";
+        /** ListingIn */
+        ListingIn: {
+            /** Additional Costs */
+            additional_costs?: number | string | null;
+            /** Available From */
+            available_from?: string | null;
+            /** Commission Note */
+            commission_note?: string | null;
+            /** Deposit */
+            deposit?: number | string | null;
+            /** Description */
+            description?: string | null;
+            /** Energy Note */
+            energy_note?: string | null;
+            /** Floor */
+            floor?: string | null;
+            /** Kind */
+            kind: string;
+            /** Living Area Sqm */
+            living_area_sqm?: number | string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Price */
+            price?: number | string | null;
+            /** Rooms */
+            rooms?: number | string | null;
+            /** Title */
+            title?: string | null;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+        };
+        /** ListingPatch */
+        ListingPatch: {
+            /** Additional Costs */
+            additional_costs?: number | string | null;
+            /** Available From */
+            available_from?: string | null;
+            /** Commission Note */
+            commission_note?: string | null;
+            /** Deposit */
+            deposit?: number | string | null;
+            /** Description */
+            description?: string | null;
+            /** Energy Note */
+            energy_note?: string | null;
+            /** Floor */
+            floor?: string | null;
+            /** Living Area Sqm */
+            living_area_sqm?: number | string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Price */
+            price?: number | string | null;
+            /** Rooms */
+            rooms?: number | string | null;
+            /** Status */
+            status?: string | null;
+            /** Title */
+            title?: string | null;
+        };
         /** LiveReport */
         LiveReport: {
             /** Service */
@@ -18559,6 +18676,209 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SerialLetterOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_listings_api_v1_letting_listings_get: {
+        parameters: {
+            query?: {
+                kind?: string | null;
+                status?: string | null;
+                property_id?: string | null;
+                q?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_listing_api_v1_letting_listings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listing_prefill_api_v1_letting_listings_prefill_get: {
+        parameters: {
+            query: {
+                unit_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_listing_api_v1_letting_listings__listing_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_listing_api_v1_letting_listings__listing_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_listing_api_v1_letting_listings__listing_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListingPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

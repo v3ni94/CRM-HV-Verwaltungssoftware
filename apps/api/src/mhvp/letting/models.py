@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text, text
+from sqlalchemy import Date, DateTime, ForeignKey, Index, Numeric, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -71,3 +71,35 @@ class Prospect(IdMixin, TimestampMixin, TenantMixin, Base):
     viewing_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notes: Mapped[str | None] = mapped_column(Text)
     delete_after: Mapped[date] = mapped_column(Date, nullable=False)
+
+
+class Listing(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Listing for rent or sale (M28-01 stage 2). Handover to FLOWFACT is a placeholder
+    field only; no external interface exists until the FLOWFACT documentation is provided
+    (rule 0.1.3, docs/plans/M28-makler.md)."""
+
+    __tablename__ = "listing"
+    __table_args__ = (Index("ix_listing_tenant_status", "tenant_id", "status"),)
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id", nullable=False, ondelete="CASCADE")
+    unit_id: Mapped[uuid.UUID] = _fk("unit.id", nullable=False, ondelete="CASCADE")
+    kind: Mapped[str] = mapped_column(String(8), nullable=False)  # rental, sale
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    price: Mapped[Decimal | None] = mapped_column(MONEY)
+    additional_costs: Mapped[Decimal | None] = mapped_column(MONEY)
+    deposit: Mapped[Decimal | None] = mapped_column(MONEY)
+    available_from: Mapped[date | None] = mapped_column(Date)
+    commission_note: Mapped[str | None] = mapped_column(String(200))
+    energy_note: Mapped[str | None] = mapped_column(String(200))
+    living_area_sqm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    rooms: Mapped[Decimal | None] = mapped_column(Numeric(4, 1))
+    floor: Mapped[str | None] = mapped_column(String(20))
+    # Placeholder for the future FLOWFACT handover (stage 3); no adapter exists yet.
+    publication_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="not_published"
+    )
+    publication_ref: Mapped[str | None] = mapped_column(String(100))
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notes: Mapped[str | None] = mapped_column(Text)

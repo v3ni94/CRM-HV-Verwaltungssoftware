@@ -17,7 +17,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
-from mhvp.letting.models import Prospect, RentIncreaseCase
+from mhvp.letting.models import Listing, Prospect, RentIncreaseCase
 
 router = APIRouter(prefix="/letting", tags=["letting"])
 READ = require_permission("contracts:read")
@@ -530,3 +530,272 @@ async def delete_prospect(
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         await session.delete(row)
+
+
+# Makler (M28-01, stage 2): listings for rent and sale. FLOWFACT is not connected;
+# publication_status stays a placeholder until the interface documentation is available.
+
+
+class ListingIn(LettingBaseIn):
+    unit_id: uuid.UUID
+    kind: str = Field(pattern="^(rental|sale)$")
+    title: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=8000)
+    price: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    additional_costs: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    deposit: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    available_from: date | None = None
+    commission_note: str | None = Field(default=None, max_length=200)
+    energy_note: str | None = Field(default=None, max_length=200)
+    living_area_sqm: Decimal | None = Field(default=None, gt=0)
+    rooms: Decimal | None = Field(default=None, gt=0)
+    floor: str | None = Field(default=None, max_length=20)
+    notes: str | None = Field(default=None, max_length=4000)
+
+
+class ListingPatch(LettingBaseIn):
+    status: str | None = Field(default=None, pattern="^(draft|active|reserved|inactive)$")
+    title: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=8000)
+    price: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    additional_costs: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    deposit: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    available_from: date | None = None
+    commission_note: str | None = Field(default=None, max_length=200)
+    energy_note: str | None = Field(default=None, max_length=200)
+    living_area_sqm: Decimal | None = Field(default=None, gt=0)
+    rooms: Decimal | None = Field(default=None, gt=0)
+    floor: str | None = Field(default=None, max_length=20)
+    notes: str | None = Field(default=None, max_length=4000)
+
+
+async def _listing_prefill(session: Any, unit_id: uuid.UUID) -> dict[str, Any]:
+    from mhvp.properties.models import Property, Unit
+
+    unit = await session.get(Unit, unit_id)
+    if unit is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    prop = await session.get(Property, unit.property_id)
+    if prop is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    street_parts = [prop.street, prop.house_number]
+    street = " ".join(x for x in street_parts if x)
+    place_parts = [prop.postal_code, prop.city]
+    place = " ".join(x for x in place_parts if x)
+    address = ", ".join(x for x in [street, place] if x)
+    unit_label = unit.label or unit.number
+    title = ", ".join(x for x in [address, unit_label] if x) or unit_label
+    return {
+        "property_id": prop.id,
+        "unit_id": unit.id,
+        "title": title,
+        "living_area_sqm": unit.living_area_sqm,
+        "rooms": unit.rooms,
+        "floor": unit.floor,
+    }
+
+
+def _listing_out(
+    listing: Listing, prop_number: str | None, unit_number: str | None
+) -> dict[str, Any]:
+    return {
+        "id": listing.id,
+        "property_id": listing.property_id,
+        "unit_id": listing.unit_id,
+        "property_number": prop_number,
+        "unit_number": unit_number,
+        "kind": listing.kind,
+        "status": listing.status,
+        "title": listing.title,
+        "description": listing.description,
+        "price": listing.price,
+        "additional_costs": listing.additional_costs,
+        "deposit": listing.deposit,
+        "available_from": listing.available_from,
+        "commission_note": listing.commission_note,
+        "energy_note": listing.energy_note,
+        "living_area_sqm": listing.living_area_sqm,
+        "rooms": listing.rooms,
+        "floor": listing.floor,
+        "publication_status": listing.publication_status,
+        "publication_ref": listing.publication_ref,
+        "published_at": listing.published_at,
+        "notes": listing.notes,
+    }
+
+
+@router.get("/listings/prefill", summary="Vorbelegung für eine neue Anzeige")
+async def listing_prefill(
+    unit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        return await _listing_prefill(session, unit_id)
+
+
+@router.post("/listings", status_code=201, summary="Anzeige anlegen")
+async def create_listing(
+    body: ListingIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    from mhvp.properties.models import Property, Unit
+
+    async with tenant_tx(request, principal) as session:
+        prefill = await _listing_prefill(session, body.unit_id)
+        data = body.model_dump(exclude={"unit_id", "kind"})
+        listing = Listing(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            unit_id=body.unit_id,
+            property_id=prefill["property_id"],
+            kind=body.kind,
+            title=data.pop("title") or prefill["title"],
+            living_area_sqm=(
+                data.pop("living_area_sqm")
+                if body.living_area_sqm is not None
+                else prefill["living_area_sqm"]
+            ),
+            rooms=data.pop("rooms") if body.rooms is not None else prefill["rooms"],
+            floor=data.pop("floor") if body.floor is not None else prefill["floor"],
+            **{k: v for k, v in data.items() if k not in ("living_area_sqm", "rooms", "floor")},
+        )
+        session.add(listing)
+        await session.flush()
+        prop = await session.get(Property, listing.property_id)
+        unit = await session.get(Unit, listing.unit_id)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="listing.created",
+            entity_type="listing",
+            entity_id=listing.id,
+            actor_user_id=principal.user_id,
+            payload={"kind": listing.kind, "unit_id": str(listing.unit_id)},
+        )
+        return _listing_out(listing, prop.number if prop else None, unit.number if unit else None)
+
+
+@router.get("/listings", summary="Anzeigen")
+async def list_listings(
+    request: Request,
+    kind: str | None = None,
+    status: str | None = None,
+    property_id: uuid.UUID | None = None,
+    q: str | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[dict[str, Any]]:
+    from mhvp.properties.models import Property, Unit
+
+    async with tenant_tx(request, principal) as session:
+        query = (
+            select(Listing, Property, Unit)
+            .join(Property, Property.id == Listing.property_id)
+            .join(Unit, Unit.id == Listing.unit_id)
+            .order_by(Listing.created_at.desc())
+        )
+        if kind is not None:
+            query = query.where(Listing.kind == kind)
+        if status is not None:
+            query = query.where(Listing.status == status)
+        if property_id is not None:
+            query = query.where(Listing.property_id == property_id)
+        if q:
+            like = f"%{q}%"
+            query = query.where(or_(Listing.title.ilike(like), Property.number.ilike(like)))
+        rows = (await session.execute(query.limit(500))).all()
+        return [_listing_out(listing, prop.number, unit.number) for listing, prop, unit in rows]
+
+
+@router.get("/listings/{listing_id}", summary="Anzeige")
+async def get_listing(
+    listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.properties.models import Property, Unit
+
+    async with tenant_tx(request, principal) as session:
+        listing = await session.get(Listing, listing_id)
+        if listing is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        prop = await session.get(Property, listing.property_id)
+        unit = await session.get(Unit, listing.unit_id)
+        return _listing_out(listing, prop.number if prop else None, unit.number if unit else None)
+
+
+@router.patch("/listings/{listing_id}", summary="Anzeige ändern")
+async def patch_listing(
+    listing_id: uuid.UUID,
+    body: ListingPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    from mhvp.properties.models import Property, Unit
+
+    async with tenant_tx(request, principal) as session:
+        listing = await session.get(Listing, listing_id, with_for_update=True)
+        if listing is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        changes = body.model_dump(exclude_none=True)
+        new_status = changes.pop("status", None)
+        for key, value in changes.items():
+            setattr(listing, key, value)
+        if new_status is not None and new_status != listing.status:
+            if new_status == "active":
+                if not listing.title or listing.price is None:
+                    raise ProblemError(
+                        ErrorCodes.VALIDATION, detail="Titel und Preis sind für Aktiv nötig."
+                    )
+                if listing.kind == "rental" and listing.available_from is None:
+                    raise ProblemError(
+                        ErrorCodes.VALIDATION,
+                        detail="Verfügbar ab ist für Vermietungsanzeigen nötig.",
+                    )
+                other = await session.scalar(
+                    select(Listing).where(
+                        Listing.unit_id == listing.unit_id,
+                        Listing.kind == listing.kind,
+                        Listing.status == "active",
+                        Listing.id != listing.id,
+                    )
+                )
+                if other is not None:
+                    raise ProblemError(
+                        ErrorCodes.CONFLICT,
+                        detail="Für diese Einheit und Art ist bereits eine Anzeige aktiv.",
+                    )
+            old_status = listing.status
+            listing.status = new_status
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="listing.status_changed",
+                entity_type="listing",
+                entity_id=listing.id,
+                actor_user_id=principal.user_id,
+                payload={"from": old_status, "to": new_status},
+            )
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="listing.updated",
+            entity_type="listing",
+            entity_id=listing.id,
+            actor_user_id=principal.user_id,
+            payload={"fields": list(changes.keys())},
+        )
+        prop = await session.get(Property, listing.property_id)
+        unit = await session.get(Unit, listing.unit_id)
+        return _listing_out(listing, prop.number if prop else None, unit.number if unit else None)
+
+
+@router.delete("/listings/{listing_id}", status_code=204, summary="Anzeige löschen")
+async def delete_listing(
+    listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(DELETE)
+) -> None:
+    async with tenant_tx(request, principal) as session:
+        listing = await session.get(Listing, listing_id)
+        if listing is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if listing.status != "draft":
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Nur Anzeigen im Entwurf können gelöscht werden."
+            )
+        await session.delete(listing)
