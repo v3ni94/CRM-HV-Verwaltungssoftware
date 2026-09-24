@@ -16450,6 +16450,37 @@
         "title": "TicketIn",
         "type": "object"
       },
+      "TicketMergeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ticket_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 2,
+            "title": "Ticket Ids",
+            "type": "array"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "ticket_ids"
+        ],
+        "title": "TicketMergeIn",
+        "type": "object"
+      },
       "TicketPatch": {
         "additionalProperties": false,
         "properties": {
@@ -36503,6 +36534,49 @@
           }
         },
         "summary": "Ticket anlegen (Vorlage, Routing, SLA)",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/merge": {
+      "post": {
+        "operationId": "merge_tickets_api_v1_tickets_merge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketMergeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Merge Tickets Api V1 Tickets Merge Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tickets zusammenführen",
         "tags": [
           "Tickets und Aufträge"
         ]
