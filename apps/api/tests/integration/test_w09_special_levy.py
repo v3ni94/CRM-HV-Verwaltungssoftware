@@ -277,6 +277,60 @@ def test_special_levy(client: TestClient, world: World) -> None:
     assert {x["id"] for x in listed} == {lid, other["id"]}
     assert u1
 
+    # W09-01 (decided 24.09.2026): amendment to 12.000,00 -> +1.200,00 / +800,00 as charges in
+    # July; second amendment to 9.000,00 -> -1.800,00 / -1.200,00 as draft credits.
+    def amend(levy_id: str, total: str, due: str) -> dict[str, Any]:
+        new = _ok(
+            client.post(
+                f"{H}/special-levies/{levy_id}/amend",
+                json={"total": total, "difference_due": due, "reason": "Änderungsbeschluss"},
+                headers=h,
+            ),
+            201,
+        )
+        calc2 = _ok(client.post(f"{H}/special-levies/{new['id']}/calculate", headers=h))
+        _ok(
+            client.post(
+                f"{H}/special-levies/{new['id']}/resolve",
+                json={"resolution_id": resolution(calc2["snapshot_hash"])},
+                headers=h,
+            )
+        )
+        return {
+            "calc": calc2,
+            "applied": _ok(client.post(f"{H}/special-levies/{new['id']}/apply", headers=h)),
+        }
+
+    up = amend(lid, "12000.00", "2026-07-01")
+    diffs = {u["unit_number"]: u["difference"] for u in up["calc"]["snapshot"]["units"]}
+    assert diffs == {"01": "1200.00", "02": "800.00"}
+    assert (up["applied"]["charges_created"], up["applied"]["credit_drafts"]) == (2, 0)
+    assert up["applied"]["version"] == 2
+    assert _ok(client.get(f"{H}/special-levies/{lid}", headers=h))["status"] == "superseded"
+    assert (
+        client.post(
+            f"{H}/special-levies/{lid}/amend",
+            json={"total": "1.00", "difference_due": "2026-08-01", "reason": "abc"},
+            headers=h,
+        ).status_code
+        == 409
+    )  # superseded versions cannot be amended again
+    down = amend(up["applied"]["id"], "9000.00", "2026-09-01")
+    diffs = {u["unit_number"]: u["difference"] for u in down["calc"]["snapshot"]["units"]}
+    assert diffs == {"01": "-1800.00", "02": "-1200.00"}
+    assert (down["applied"]["charges_created"], down["applied"]["credit_drafts"]) == (0, 2)
+    entries = _ok(client.get(f"{A}/ledgers/{ledger}/entries", headers=h))
+    credits = [e for e in entries if e["text"].startswith("Gutschrift Sonderumlage V3")]
+    assert {e["status"] for e in credits} == {"draft"}  # no automatic posting or payout
+    assert len(credits) == 2
+    rep3 = _ok(client.get(f"{H}/special-levies/{down['applied']['id']}/report", headers=h))
+    # Chain months March to May plus July and September; only March was charged so far.
+    assert (rep3["resolved"], rep3["charged"], rep3["received"]) == (
+        "9000.00",
+        "2000.00",
+        "1500.00",
+    )
+
 
 def test_w12_package_blocks_release(client: TestClient, world: World) -> None:
     """Unit 02 has no owner and the cost item has no account: both block the approval."""

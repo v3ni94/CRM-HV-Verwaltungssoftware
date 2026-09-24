@@ -2680,6 +2680,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/special-levies/{levy_id}/amend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Änderungsbeschluss: neue Version mit Differenz (W09-01)
+         * @description Decided 24.09.2026: an amendment is a new version; the difference per unit becomes an
+         *     additional charge or a credit. The applied version stays unchanged and is superseded.
+         */
+        post: operations["amend_levy_api_v1_hoa_special_levies__levy_id__amend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/special-levies/{levy_id}/apply": {
         parameters: {
             query?: never;
@@ -7907,6 +7928,20 @@ export interface components {
             template_id: string;
             /** Unit Id */
             unit_id?: string | null;
+        };
+        /** LevyAmendIn */
+        LevyAmendIn: {
+            /**
+             * Difference Due
+             * Format: date
+             */
+            difference_due: string;
+            /** Purpose */
+            purpose?: string | null;
+            /** Reason */
+            reason: string;
+            /** Total */
+            total: number | string;
         };
         /** LevyIn */
         LevyIn: {
@@ -17070,6 +17105,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    amend_levy_api_v1_hoa_special_levies__levy_id__amend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                levy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LevyAmendIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

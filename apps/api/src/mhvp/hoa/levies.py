@@ -41,6 +41,14 @@ class LevyIn(BaseModel):
     account_id: uuid.UUID | None = None
 
 
+class LevyAmendIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    total: Decimal = Field(gt=0, decimal_places=2)
+    difference_due: date
+    reason: str = Field(min_length=3, max_length=4000)
+    purpose: str | None = Field(default=None, min_length=3, max_length=4000)
+
+
 class LevyResolveIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     resolution_id: uuid.UUID
@@ -72,6 +80,10 @@ def _out(lv: SpecialLevy) -> dict[str, Any]:
         "snapshot_hash": lv.snapshot_hash,
         "resolution_id": lv.resolution_id,
         "applied_at": lv.applied_at,
+        "version": lv.version,
+        "supersedes_id": lv.supersedes_id,
+        "difference_due": lv.difference_due,
+        "change_reason": lv.change_reason,
     }
 
 
@@ -162,6 +174,26 @@ async def calculate_levy(
                     ],
                 }
             )
+        if lv.supersedes_id is not None:
+            prev = await _levy(session, lv.supersedes_id)
+            prev_units: list[dict[str, Any]] = (prev.snapshot or {}).get("units", [])
+            before = {u["unit_id"]: Decimal(u["amount"]) for u in prev_units}
+            for u in units:
+                u["previous"] = str(before.pop(u["unit_id"], ZERO))
+                u["difference"] = str(Decimal(str(u["amount"])) - Decimal(str(u["previous"])))
+                u.pop("instalments")
+            for unit_id, amount in before.items():  # unit no longer affected
+                units.append(
+                    {
+                        "unit_id": unit_id,
+                        "unit_number": next(
+                            x["unit_number"] for x in prev_units if x["unit_id"] == unit_id
+                        ),
+                        "amount": "0.00",
+                        "previous": str(amount),
+                        "difference": str(-amount),
+                    }
+                )
         snapshot = {"total": str(lv.total), "units": units, "purpose": lv.purpose}
         lv.snapshot, lv.snapshot_hash, lv.status = snapshot, calc.digest(snapshot), "calculated"
         await session.flush()
@@ -215,6 +247,9 @@ async def apply_levy(
                     SpecialLevy.legal_entity_id == lv.legal_entity_id,
                     SpecialLevy.status == "applied",
                     SpecialLevy.id != lv.id,
+                    SpecialLevy.id != lv.supersedes_id
+                    if lv.supersedes_id
+                    else SpecialLevy.id == SpecialLevy.id,
                 )
             )
         ).all()
@@ -225,6 +260,13 @@ async def apply_levy(
                     ErrorCodes.CONFLICT,
                     detail="Zeitraum überschneidet sich mit einer anderen Sonderumlage.",
                 )
+        if lv.supersedes_id is not None:
+            result = await _apply_amendment(session, lv, principal)
+            lv.status, lv.applied_at = "applied", datetime.now(UTC)
+            prev = await _levy(session, lv.supersedes_id, lock=True)
+            prev.status = "superseded"
+            await session.flush()
+            return _out(lv) | result
         created = 0
         for unit in (lv.snapshot or {}).get("units", []):
             contract = await calc.owner_at(session, uuid.UUID(unit["unit_id"]), lv.first_due)
@@ -266,6 +308,19 @@ async def apply_levy(
         return _out(lv) | {"payments_created": created}
 
 
+async def _chain_months(session: AsyncSession, lv: SpecialLevy) -> set[date]:
+    """Instalment months of the first version plus every difference month of the chain."""
+    months: set[date] = set()
+    node: SpecialLevy | None = lv
+    while node is not None:
+        if node.supersedes_id is None:
+            months |= {_month(node.first_due, i) for i in range(node.instalments)}
+        elif node.difference_due is not None:
+            months.add(node.difference_due)
+        node = await session.get(SpecialLevy, node.supersedes_id) if node.supersedes_id else None
+    return months
+
+
 @router.get("/special-levies/{levy_id}/report", summary="Zweckgebundener Bestand (W09)")
 async def levy_report(
     levy_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -276,12 +331,17 @@ async def levy_report(
 
     async with tenant_tx(request, principal) as session:
         lv = await _levy(session, levy_id)
-        start = lv.first_due
-        end = _month_end(_month(lv.first_due, lv.instalments - 1))
+        months = await _chain_months(session, lv)
+        start = min(months)
         charged = received = ZERO
         per_unit = []
         for unit in (lv.snapshot or {}).get("units", []):
-            due, paid = await calc.advances(session, uuid.UUID(unit["unit_id"]), CODE, start, end)
+            due = paid = ZERO
+            for first in sorted(months):
+                d, p = await calc.advances(
+                    session, uuid.UUID(unit["unit_id"]), CODE, first, _month_end(first)
+                )
+                due, paid = due + d, paid + p
             charged += due
             received += paid
             per_unit.append(
@@ -318,3 +378,157 @@ async def levy_report(
             "units": per_unit,
             "note": "Zweckgebunden, nicht frei verfügbares Hausgeld (W09).",
         }
+
+
+@router.post(
+    "/special-levies/{levy_id}/amend",
+    status_code=201,
+    summary="Änderungsbeschluss: neue Version mit Differenz (W09-01)",
+)
+async def amend_levy(
+    levy_id: uuid.UUID,
+    body: LevyAmendIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """Decided 24.09.2026: an amendment is a new version; the difference per unit becomes an
+    additional charge or a credit. The applied version stays unchanged and is superseded."""
+    if body.difference_due.day != 1:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Fälligkeit ab dem Monatsersten.")
+    async with tenant_tx(request, principal) as session:
+        old = await _levy(session, levy_id, lock=True)
+        if old.status != "applied":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Nur übernommene Sonderumlagen ändern.")
+        pending = await session.scalar(
+            select(SpecialLevy.id).where(
+                SpecialLevy.supersedes_id == old.id, SpecialLevy.status != "cancelled"
+            )
+        )
+        if pending:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Änderung bereits angelegt.")
+        new = SpecialLevy(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            legal_entity_id=old.legal_entity_id,
+            ledger_id=old.ledger_id,
+            purpose=body.purpose or old.purpose,
+            total=body.total,
+            allocation_key_id=old.allocation_key_id,
+            unit_ids=old.unit_ids,
+            first_due=old.first_due,
+            instalments=1,
+            account_id=old.account_id,
+            version=old.version + 1,
+            supersedes_id=old.id,
+            difference_due=body.difference_due,
+            change_reason=body.reason,
+        )
+        session.add(new)
+        await session.flush()
+        return _out(new)
+
+
+async def _apply_amendment(
+    session: AsyncSession, lv: SpecialLevy, principal: TenantPrincipal
+) -> dict[str, Any]:
+    """Positive difference: one contract payment of type special_levy in the difference month.
+    Negative difference: a draft credit entry (debit levy revenue, credit debtor) that an
+    accountant posts; no automatic payout (G2)."""
+    from mhvp.accounting import services as acc
+    from mhvp.accounting.models import (
+        EntryKind,
+        EntrySource,
+        JournalEntry,
+        Ledger,
+        LedgerAccount,
+        PaymentTypeAccount,
+    )
+    from mhvp.contracts.models import ContractPayment, DebtorAccountReservation, PaymentReason
+
+    if lv.difference_due is None:
+        raise ProblemError(ErrorCodes.CONFLICT, detail="Fälligkeit der Differenz fehlt.")
+    ledger = await session.get(Ledger, lv.ledger_id)
+    if ledger is not None:
+        await acc.sync_debtor_accounts(session, ledger)  # debtor account for every contract
+    charges = credits = 0
+    for unit in (lv.snapshot or {}).get("units", []):
+        diff = Decimal(unit["difference"])
+        if diff == 0:
+            continue
+        contract = await calc.owner_at(session, uuid.UUID(unit["unit_id"]), lv.difference_due)
+        if contract is None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=f"Kein Eigentümer für Einheit {unit['unit_number']} zur Fälligkeit.",
+            )
+        if diff > 0:
+            session.add(
+                ContractPayment(
+                    tenant_id=principal.tenant_id,
+                    created_by=principal.user_id,
+                    contract_id=contract.id,
+                    payment_type_code=CODE,
+                    net=diff,
+                    gross=diff,
+                    valid_from=lv.difference_due,
+                    valid_to=_month_end(lv.difference_due),
+                    reason=PaymentReason.OTHER,
+                )
+            )
+            charges += 1
+            continue
+        mapping = await session.scalar(
+            select(PaymentTypeAccount).where(
+                PaymentTypeAccount.ledger_id == lv.ledger_id,
+                PaymentTypeAccount.payment_type_code == CODE,
+            )
+        )
+        reservation = await session.get(DebtorAccountReservation, contract.debtor_account_id)
+        debtor = (
+            await session.scalar(
+                select(LedgerAccount).where(
+                    LedgerAccount.ledger_id == lv.ledger_id,
+                    LedgerAccount.number == reservation.number,
+                )
+            )
+            if reservation
+            else None
+        )
+        if ledger is None or mapping is None or debtor is None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Erlöskonto Sonderumlage oder Debitorenkonto fehlt für die Gutschrift.",
+            )
+        entry = JournalEntry(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            ledger_id=ledger.id,
+            booking_date=lv.difference_due,
+            due_date=lv.difference_due,
+            text=f"Gutschrift Sonderumlage V{lv.version} Einheit {unit['unit_number']}",
+            kind=EntryKind.CUSTOM,
+            contract_id=contract.id,
+            source=EntrySource.MANUAL,
+            idempotency_key=f"levy-credit:{lv.id}:{unit['unit_id']}",
+        )
+        await acc.write_draft(
+            session,
+            ledger,
+            entry,
+            [
+                acc.LineIn(mapping.account_id, -diff, ZERO),
+                acc.LineIn(debtor.id, ZERO, -diff),
+            ],
+            [],
+        )
+        credits += 1
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type="special_levy.amended",
+        entity_type="special_levy",
+        entity_id=lv.id,
+        actor_user_id=principal.user_id,
+        payload={"charges": charges, "credit_drafts": credits},
+    )
+    return {"charges_created": charges, "credit_drafts": credits}

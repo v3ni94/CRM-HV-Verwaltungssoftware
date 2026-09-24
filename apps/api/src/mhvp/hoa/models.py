@@ -272,6 +272,12 @@ class SpecialLevy(IdMixin, TimestampMixin, TenantMixin, Base):
     snapshot_hash: Mapped[str | None] = mapped_column(String(64))
     resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
     applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default=text("1")
+    )
+    supersedes_id: Mapped[uuid.UUID | None] = _fk("special_levy.id")
+    difference_due: Mapped[date | None] = mapped_column(Date)  # W09-01 amendment month
+    change_reason: Mapped[str | None] = mapped_column(Text)
 
 
 class MajorityRule(IdMixin, TimestampMixin, TenantMixin, Base):

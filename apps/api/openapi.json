@@ -8421,6 +8421,55 @@
         "title": "LetterIn",
         "type": "object"
       },
+      "LevyAmendIn": {
+        "additionalProperties": false,
+        "properties": {
+          "difference_due": {
+            "format": "date",
+            "title": "Difference Due",
+            "type": "string"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "reason": {
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Total"
+          }
+        },
+        "required": [
+          "total",
+          "difference_due",
+          "reason"
+        ],
+        "title": "LevyAmendIn",
+        "type": "object"
+      },
       "LevyIn": {
         "additionalProperties": false,
         "properties": {
@@ -26813,6 +26862,62 @@
           }
         },
         "summary": "Sonderumlage",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/special-levies/{levy_id}/amend": {
+      "post": {
+        "description": "Decided 24.09.2026: an amendment is a new version; the difference per unit becomes an\nadditional charge or a credit. The applied version stays unchanged and is superseded.",
+        "operationId": "amend_levy_api_v1_hoa_special_levies__levy_id__amend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "levy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Levy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LevyAmendIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Amend Levy Api V1 Hoa Special Levies  Levy Id  Amend Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Änderungsbeschluss: neue Version mit Differenz (W09-01)",
         "tags": [
           "hoa"
         ]
