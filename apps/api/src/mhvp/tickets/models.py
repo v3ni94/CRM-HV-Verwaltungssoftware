@@ -132,6 +132,7 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
     sla_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     time_spent_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    merged_into_ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id")
 
 
 class TicketComment(IdMixin, TimestampMixin, TenantMixin, Base):

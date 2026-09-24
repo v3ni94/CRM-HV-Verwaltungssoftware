@@ -5294,6 +5294,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tickets/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tickets zusammenführen */
+        post: operations["merge_tickets_api_v1_tickets_merge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tickets/{ticket_id}": {
         parameters: {
             query?: never;
@@ -10982,6 +10999,13 @@ export interface components {
             unit_id?: string | null;
             /** Visible For */
             visible_for?: string[];
+        };
+        /** TicketMergeIn */
+        TicketMergeIn: {
+            /** Ticket Ids */
+            ticket_ids: string[];
+            /** Title */
+            title?: string | null;
         };
         /** TicketPatch */
         TicketPatch: {
@@ -23710,6 +23734,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TicketIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    merge_tickets_api_v1_tickets_merge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketMergeIn"];
             };
         };
         responses: {
