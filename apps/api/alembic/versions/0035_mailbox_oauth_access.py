@@ -33,7 +33,12 @@ def upgrade() -> None:
     op.create_table(
         "mailbox_user",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column(
+            "tenant_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("tenant.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
         sa.Column(
             "mailbox_id",
             postgresql.UUID(as_uuid=True),
