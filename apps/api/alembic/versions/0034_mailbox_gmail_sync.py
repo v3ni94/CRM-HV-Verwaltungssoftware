@@ -1,7 +1,7 @@
 """mailbox_gmail_sync: Gmail history cursor and sync state per mailbox (M20-01).
 
-Revision ID: 0033
-Revises: 0032
+Revision ID: 0034
+Revises: 0033
 """
 
 from collections.abc import Sequence
@@ -9,8 +9,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0033"
-down_revision: str | None = "0032"
+revision: str = "0034"
+down_revision: str | None = "0033"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
