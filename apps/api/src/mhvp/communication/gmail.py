@@ -120,9 +120,35 @@ class GmailClient:
             raise GmailError(f"Nachricht nicht lesbar (HTTP {r.status_code}).")
         return base64.urlsafe_b64decode(r.json()["raw"] + "==")
 
+    async def send_raw(self, raw: bytes) -> str:
+        """Sends a raw RFC 822 message; returns the Gmail message id."""
+        encoded = base64.urlsafe_b64encode(raw).decode().rstrip("=")
+        token = await self._access_token()
+
+        async def _post(bearer: str) -> httpx.Response:
+            return await self._http.post(
+                f"{API}/messages/send",
+                json={"raw": encoded},
+                headers={"Authorization": f"Bearer {bearer}"},
+            )
+
+        r = await _post(token)
+        if r.status_code == 401:
+            self._token = None
+            token = await self._access_token()
+            r = await _post(token)
+        if r.status_code == 403:
+            raise GmailError(
+                "Sendeberechtigung fehlt, Postfach unter Einstellungen, Postfächer erneut "
+                "mit Google verbinden."
+            )
+        if r.status_code != 200:
+            raise GmailError(f"Versand fehlgeschlagen (HTTP {r.status_code}).")
+        return str(r.json()["id"])
+
 
 OAUTH_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-SCOPES = "https://www.googleapis.com/auth/gmail.readonly"
+SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send"
 
 
 async def oauth_client(session: AsyncSession, settings: Settings) -> tuple[str, str]:

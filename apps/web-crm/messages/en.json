@@ -18,6 +18,7 @@
     "bank": "Bank",
     "billing": "Statements",
     "tickets": "Tickets",
+    "mail": "Mail",
     "platform": "Platform",
     "invoices": "Invoices",
     "properties": "Properties",
@@ -516,6 +517,62 @@
       "high": "high",
       "urgent": "urgent",
       "immediate": "immediate"
+    }
+  },
+  "Mail": {
+    "title": "Mail",
+    "loading": "Loading...",
+    "empty": "No messages.",
+    "noAddress": "no address",
+    "noSubject": "no subject",
+    "selectMessage": "Select a message.",
+    "refresh": "Refresh",
+    "searchPlaceholder": "Search",
+    "ticketBadge": "Ticket",
+    "thread": "Thread",
+    "directionIn": "Inbound",
+    "directionOut": "Outbound",
+    "from": "From {address}",
+    "toField": "To {address}",
+    "to": "To (comma separated)",
+    "subject": "Subject",
+    "body": "Body",
+    "save": "Save",
+    "submitForApproval": "Submit for approval",
+    "reply": "Reply",
+    "createTicket": "Create ticket",
+    "markDone": "Mark done",
+    "openTicket": "Open ticket",
+    "openContact": "Open contact",
+    "openProperty": "Open property",
+    "attachments": "{count} attachment(s)",
+    "approveAndSend": "Approve and send",
+    "reject": "Reject",
+    "confirmReject": "Save rejection",
+    "rejectionNoteLabel": "Rejection reason",
+    "rejectionNote": "Rejected: {note}",
+    "pendingHint": "Waiting for approval by someone with approval rights.",
+    "submittedBy": "Submitted by {who} on {at}",
+    "sentAt": "Sent on {at}",
+    "tabs": {
+      "inbox": "Inbox",
+      "drafts": "Drafts",
+      "pending": "Approvals",
+      "sent": "Sent"
+    },
+    "statusFilter": {
+      "all": "all"
+    },
+    "mailboxFilter": {
+      "all": "all mailboxes"
+    },
+    "status": {
+      "new": "new",
+      "assigned": "assigned",
+      "done": "done",
+      "draft": "draft",
+      "pending": "awaiting approval",
+      "sent": "sent"
     }
   },
   "Platform": {
