@@ -530,6 +530,7 @@ class Invoice(IdMixin, TimestampMixin, TenantMixin, Base):
     document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
     e_invoice_format: Mapped[str] = mapped_column(String(16), nullable=False, default="none")
     order_reference: Mapped[str | None] = mapped_column(String(100))
+    recipient_name: Mapped[str | None] = mapped_column(String(400))  # as printed (PÜ01)
     # Final invoice: [{invoice_id, gross}] of deducted partial invoices (D12).
     deductions: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
     review_status: Mapped[ReviewStatus] = mapped_column(

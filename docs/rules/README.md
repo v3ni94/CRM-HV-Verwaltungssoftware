@@ -56,11 +56,11 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | W11 | Vermögensbericht | 7.8 | partly implemented (M24 asset report); structure open, M24-02 |
 | W12 | Abrechnungspaket | 7.8 | implemented, not accepted (package and blocking checks, `test_w09_special_levy.py::test_w12_package_blocks_release`) |
 | W13 | Beirat und Versammlung | 7.8 | implemented, not accepted (M25); majority rules open, M25-01 |
-| PÜ01 | Vollständigkeit | 7.9.1 | specified, not implemented |
-| PÜ02 | Sachliche Prüfung | 7.9.1 | specified, not implemented |
-| PÜ03 | Rechnerische/steuerliche Prüfung | 7.9.1 | specified, not implemented |
-| PÜ04 | Dubletten/Betrugsrisiko | 7.9.1 | specified, not implemented |
-| PÜ05 | Prüfentscheidungen | 7.9.1 | specified, not implemented |
+| PÜ01 | Vollständigkeit | 7.9.1 | implemented, not accepted (M14 findings; recipient and reference hints, `test_pue_invoice_checks.py`) |
+| PÜ02 | Sachliche Prüfung | 7.9.1 | partly implemented (factual review step M14, missing reference hint); order/budget match open |
+| PÜ03 | Rechnerische/steuerliche Prüfung | 7.9.1 | implemented, not accepted (M14 arithmetic findings and review step) |
+| PÜ04 | Dubletten/Betrugsrisiko | 7.9.1 | implemented, not accepted (number, amount and day, same document, IBAN confirmation) |
+| PÜ05 | Prüfentscheidungen | 7.9.1 | implemented, not accepted (M14 review steps per version, four eyes release) |
 | PÜ06 | Prüfauftrag | 7.9.2 | implemented, not accepted (M25, audit engagement) |
 | PÜ07 | Nachvollziehbare Navigation | 7.9.2 | partly implemented (M25, items link entries and documents) |
 | PÜ08 | Prüfen und nachfordern | 7.9.2 | implemented, not accepted (M25, note, question, answer, outdated on new version) |

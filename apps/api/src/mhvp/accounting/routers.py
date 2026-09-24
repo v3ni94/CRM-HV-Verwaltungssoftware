@@ -881,6 +881,7 @@ class InvoiceIn(BaseModel):
     document_id: uuid.UUID | None = None
     e_invoice_format: str = Field(default="none", pattern="^(none|xrechnung|zugferd)$")
     order_reference: str | None = Field(default=None, max_length=100)
+    recipient_name: str | None = Field(default=None, max_length=400)
     deductions: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
     supersedes_id: uuid.UUID | None = None
     lines: list[InvoiceLineIn] = Field(min_length=1, max_length=200)

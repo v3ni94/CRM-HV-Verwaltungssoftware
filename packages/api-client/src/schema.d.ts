@@ -7696,6 +7696,8 @@ export interface components {
              * Format: uuid
              */
             provider_contact_id: string;
+            /** Recipient Name */
+            recipient_name?: string | null;
             /** Service From */
             service_from?: string | null;
             /** Service To */

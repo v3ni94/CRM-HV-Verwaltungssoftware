@@ -40,6 +40,10 @@ STEPS = ("completeness", "factual", "arithmetic_tax")
 CREDITOR_START = 70000
 
 
+def _norm(text: str) -> str:
+    return " ".join(text.casefold().split())
+
+
 def payment_hash(invoice: Invoice) -> str:
     """Hash over payment relevant fields; a change voids the release (6.9.9)."""
     fields = {
@@ -150,6 +154,40 @@ async def evaluate(session: AsyncSession, invoice: Invoice) -> None:
             findings.append(
                 "IBAN weicht von den freigegebenen Stammdaten ab: gesonderte Bestätigung nötig"
             )
+    if not invoice.order_reference:
+        findings.append("Auftrags- oder Vertragsbezug nicht angegeben (sachliche Prüfung)")
+    if invoice.recipient_name:
+        from mhvp.properties.models import LegalEntity
+
+        ledger = await session.get(Ledger, invoice.ledger_id)
+        entity = await session.get(LegalEntity, ledger.legal_entity_id) if ledger else None
+        if entity is not None and _norm(entity.name) not in _norm(invoice.recipient_name):
+            findings.append(
+                f"Rechnungsempfänger weicht vom Rechtsträger des Buchungskreises ab: {entity.name}"
+            )
+    same_amount = await session.scalar(
+        select(Invoice.id).where(
+            Invoice.provider_contact_id == invoice.provider_contact_id,
+            Invoice.gross == invoice.gross,
+            Invoice.invoice_date == invoice.invoice_date,
+            Invoice.number != invoice.number,
+            Invoice.id != invoice.id,
+        )
+    )
+    if same_amount and not invoice.supersedes_id:
+        findings.append("Mögliche Doppelrechnung: gleicher Betrag und Tag bei anderer Nummer")
+    if invoice.document_id:
+        same_doc = await session.scalar(
+            select(Invoice.id).where(
+                Invoice.document_id == invoice.document_id,
+                Invoice.id != invoice.id,
+                Invoice.id != invoice.supersedes_id
+                if invoice.supersedes_id
+                else Invoice.id == Invoice.id,
+            )
+        )
+        if same_doc:
+            findings.append("Originalbeleg ist bereits einer anderen Rechnung zugeordnet")
     invoice.findings = findings
 
 

@@ -125,6 +125,7 @@ def test_invoice_review_release_post_and_d12(client: TestClient, world: World) -
         "discount_percent": "2",
         "discount_until": "2026-02-08",
         "payee_iban": KNOWN,
+        "order_reference": "AUF-2026-01",
         "lines": [
             {
                 "account_id": acc["040100"],

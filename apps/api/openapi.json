@@ -7738,6 +7738,18 @@
             "title": "Provider Contact Id",
             "type": "string"
           },
+          "recipient_name": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Name"
+          },
           "service_from": {
             "anyOf": [
               {
