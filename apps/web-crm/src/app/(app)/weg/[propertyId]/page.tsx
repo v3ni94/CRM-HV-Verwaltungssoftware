@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { HoaCreate } from "@/components/hoa/HoaForms";
+import { LevyCreate } from "@/components/hoa/LevyForms";
 import { ResolutionTable } from "@/components/hoa/ResolutionTable";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -18,11 +19,12 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
   if (!ctx.property) return <p role="alert" className={ui.alert}>{t("noEntity")}</p>;
   const base = `/weg/${propertyId}`;
   if (!ctx.entity) return <p className="text-sm text-muted">{t("noEntity")}</p>;
-  const [resolutions, plans, statements, meetings] = await Promise.all([
+  const [resolutions, plans, statements, meetings, levies] = await Promise.all([
     ctx.api.GET("/api/v1/hoa/resolutions", { params: { query: { legal_entity_id: ctx.entity.id } } }),
     ctx.ledger ? ctx.api.GET("/api/v1/hoa/plans", { params: { query: { ledger_id: ctx.ledger.id } } }) : null,
     ctx.ledger ? ctx.api.GET("/api/v1/hoa/statements", { params: { query: { ledger_id: ctx.ledger.id } } }) : null,
     ctx.api.GET("/api/v1/hoa/meetings", { params: { query: { legal_entity_id: ctx.entity.id } } }),
+    ctx.api.GET("/api/v1/hoa/special-levies", { params: { query: { legal_entity_id: ctx.entity.id } } }),
   ]);
   return (
     <div className="flex flex-col gap-5">
@@ -70,6 +72,19 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
           ))}
         </ul>
         <HoaCreate kind="meeting" legalEntityId={ctx.entity.id} basePath={base} />
+      </section>
+      <section className="flex flex-col gap-2">
+        <h2 className="font-medium">{tw("levies")}</h2>
+        <ul className="text-sm">
+          {(levies.data ?? []).map((l) => (
+            <li key={String(l.id)}>
+              <Link href={`${base}/sonderumlage/${String(l.id)}`} className="hover:underline">
+                {String(l.purpose)} · {tw(`levyStatus.${String(l.status)}`)}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {ctx.ledger ? <LevyCreate ledgerId={ctx.ledger.id} keys={ctx.keys} basePath={base} /> : null}
       </section>
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">{t("collection")}</h2>

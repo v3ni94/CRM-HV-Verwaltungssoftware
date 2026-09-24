@@ -980,7 +980,15 @@
     },
     "blocked": "Freigabe gesperrt (Abrechnungspaket W12):",
     "account": "Kostenkonto",
-    "noAccount": "ohne Konto (sperrt die Freigabe)"
+    "noAccount": "ohne Konto (sperrt die Freigabe)",
+    "levies": "Sonderumlagen",
+    "levyStatus": {
+      "draft": "Entwurf",
+      "calculated": "berechnet",
+      "resolved": "beschlossen",
+      "applied": "Raten übernommen",
+      "cancelled": "verworfen"
+    }
   },
   "RentIncrease": {
     "title": "Mieterhöhungen",
@@ -1173,6 +1181,43 @@
       "unposted": "nicht gebucht",
       "posted": "gebucht",
       "reversed": "storniert"
+    }
+  },
+  "Levy": {
+    "title": "Sonderumlage",
+    "purpose": "Zweck",
+    "total": "Gesamtsumme",
+    "key": "Schlüssel",
+    "firstDue": "Erste Fälligkeit",
+    "instalments": "Raten",
+    "create": "Sonderumlage anlegen",
+    "calculate": "Berechnen",
+    "decidedOn": "Beschlussdatum",
+    "recordResolution": "Beschluss zu diesem Stand erfassen",
+    "subject": "Sonderumlage",
+    "wording": "Die Sonderumlage für {purpose} wird in der vorliegenden Verteilung beschlossen.",
+    "apply": "Raten als Sollstellungen übernehmen",
+    "confirmApply": "Raten jetzt als Vertragszahlungen übernehmen?",
+    "from": "ab {date}",
+    "rates": "{n} Raten",
+    "unit": "Einheit",
+    "share": "Anteil",
+    "instalmentsCol": "Raten",
+    "report": "Zweckgebundener Bestand",
+    "reportFields": {
+      "resolved": "beschlossen",
+      "charged": "gefordert",
+      "received": "eingegangen",
+      "open": "offen",
+      "used": "verwendet",
+      "earmarked_remaining": "verbleibend zweckgebunden"
+    },
+    "status": {
+      "draft": "Entwurf",
+      "calculated": "berechnet",
+      "resolved": "beschlossen",
+      "applied": "Raten übernommen",
+      "cancelled": "verworfen"
     }
   }
 }

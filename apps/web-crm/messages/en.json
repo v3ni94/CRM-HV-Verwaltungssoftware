@@ -333,7 +333,15 @@
     },
     "blocked": "Approval blocked (statement package W12):",
     "account": "Cost account",
-    "noAccount": "no account (blocks approval)"
+    "noAccount": "no account (blocks approval)",
+    "levies": "Special levies",
+    "levyStatus": {
+      "draft": "Draft",
+      "calculated": "Calculated",
+      "resolved": "Resolved",
+      "applied": "Instalments applied",
+      "cancelled": "Cancelled"
+    }
   },
   "RentIncrease": {
     "title": "Rent increases",
@@ -526,6 +534,43 @@
       "unposted": "not posted",
       "posted": "posted",
       "reversed": "reversed"
+    }
+  },
+  "Levy": {
+    "title": "Special levy",
+    "purpose": "Purpose",
+    "total": "Total",
+    "key": "Key",
+    "firstDue": "First due",
+    "instalments": "Instalments",
+    "create": "Create special levy",
+    "calculate": "Calculate",
+    "decidedOn": "Resolution date",
+    "recordResolution": "Record resolution for this version",
+    "subject": "Special levy",
+    "wording": "The special levy for {purpose} is resolved as distributed.",
+    "apply": "Apply instalments as receivables",
+    "confirmApply": "Apply the instalments as contract payments now?",
+    "from": "from {date}",
+    "rates": "{n} instalments",
+    "unit": "Unit",
+    "share": "Share",
+    "instalmentsCol": "Instalments",
+    "report": "Earmarked funds",
+    "reportFields": {
+      "resolved": "resolved",
+      "charged": "charged",
+      "received": "received",
+      "open": "open",
+      "used": "used",
+      "earmarked_remaining": "remaining earmarked"
+    },
+    "status": {
+      "draft": "Draft",
+      "calculated": "Calculated",
+      "resolved": "Resolved",
+      "applied": "Instalments applied",
+      "cancelled": "Cancelled"
     }
   }
 }
