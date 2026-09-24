@@ -49,7 +49,10 @@ fi
 # Backup before every production migration (rollback path, docs/runbooks/deploy.md).
 PRE=""
 [[ "$ENV_NAME" == prod ]] && PRE="set -a && . ./.env.backup && set +a && scripts/backup.sh &&"
-ssh "$DEPLOY_HOST" "cd '$DEPLOY_PATH' && git fetch --quiet --tags && git checkout --quiet '$TAG' \
+# umask 022: files pulled under a restrictive umask would be unreadable for the non-root
+# users inside the images (seen 24.09.2026); the .env files keep their 600.
+ssh "$DEPLOY_HOST" "cd '$DEPLOY_PATH' && umask 022 && git fetch --quiet --tags && git checkout --quiet '$TAG' \
+  && chmod -R u=rwX,go=rX apps packages infra scripts \
   && export MHVP_IMAGE_REGISTRY='$REG' MHVP_IMAGE_TAG='$TAG' MHVP_APP_VERSION='$TAG' \
   && $FETCH && $PRE $COMPOSE run --rm migrate && $COMPOSE up -d --remove-orphans"
 echo "deploy: $ENV_NAME $TAG done; check /api/v1/health/ready"

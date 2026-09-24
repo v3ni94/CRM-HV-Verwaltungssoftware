@@ -73,6 +73,10 @@ records before users get access (M9-03).
 
 ## 6. Updates and rollback
 
+Always update with a normal umask (`umask 022`) or via `make deploy`: files pulled under
+`umask 077` are unreadable inside the images (non-root users) and the migrate step fails
+with `PermissionError`. Fix: `chmod -R u=rwX,go=rX apps packages infra scripts`, then rebuild.
+
 * Staging first: `ENV=staging ...` with `.env.staging` (own passwords, own hosts).
 * Production: same command with the new tag; the script backs up before migrating.
 * Rollback: deploy the previous tag. If a migration failed, restore the backup taken right
