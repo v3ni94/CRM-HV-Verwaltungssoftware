@@ -22,6 +22,41 @@ x-api-image: &api-image
 services:
   postgres:
     <<: *prod
+    # Sized for the operator server (32 cores, 64 threads, 251 GB RAM, shared with other
+    # stacks). Override per host in .env.prod; values are PostgreSQL settings, not limits of
+    # the application. The connection budget must cover API workers x (pool 5 + overflow 10)
+    # plus Celery processes.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${PG_SHARED_BUFFERS:-4GB}
+      - -c
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-16GB}
+      - -c
+      - work_mem=${PG_WORK_MEM:-32MB}
+      - -c
+      - maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-1GB}
+      - -c
+      - max_connections=${PG_MAX_CONNECTIONS:-300}
+      - -c
+      - max_worker_processes=${PG_MAX_WORKER_PROCESSES:-32}
+      - -c
+      - max_parallel_workers=${PG_MAX_PARALLEL_WORKERS:-16}
+      - -c
+      - max_parallel_workers_per_gather=${PG_MAX_PARALLEL_WORKERS_PER_GATHER:-4}
+      - -c
+      - max_parallel_maintenance_workers=${PG_MAX_PARALLEL_MAINTENANCE_WORKERS:-4}
+      - -c
+      - wal_buffers=64MB
+      - -c
+      - random_page_cost=${PG_RANDOM_PAGE_COST:-1.1}
+      - -c
+      - effective_io_concurrency=${PG_EFFECTIVE_IO_CONCURRENCY:-200}
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - max_wal_size=${PG_MAX_WAL_SIZE:-4GB}
+    shm_size: ${PG_SHM_SIZE:-2g}
 
   redis:
     <<: *prod
@@ -38,6 +73,17 @@ services:
 
   api:
     <<: [*prod, *api-image]
+    # One process per worker; each holds its own connection pool (5 + 10 overflow).
+    command:
+      - uvicorn
+      - mhvp.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --workers
+      - ${MHVP_API_WORKERS:-8}
     environment:
       MHVP_ENV: ${MHVP_ENV:-prod}
     networks:
@@ -64,6 +110,22 @@ services:
 
   worker:
     <<: [*prod, *api-image]
+    # Prefork processes; OCR and statements are CPU bound, AI and bank tasks wait on I/O.
+    command:
+      - celery
+      - -A
+      - mhvp.worker
+      - worker
+      - --loglevel
+      - INFO
+      - -Q
+      - default,io,ocr,ai,bank,mail,beat
+      - --concurrency
+      - ${MHVP_WORKER_CONCURRENCY:-16}
+      - --prefetch-multiplier
+      - "1"
+      - --max-tasks-per-child
+      - "200"
     environment:
       MHVP_ENV: ${MHVP_ENV:-prod}
 
