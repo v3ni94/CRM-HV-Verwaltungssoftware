@@ -4992,10 +4992,50 @@
             "title": "Created At",
             "type": "string"
           },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          },
+          "message_count": {
+            "default": 0,
+            "title": "Message Count",
+            "type": "integer"
           },
           "messages": {
             "items": {
@@ -20892,6 +20932,7 @@
     },
     "/api/v1/ai/conversations": {
       "get": {
+        "description": "Chronological overview, newest first. ``scope=all`` is the audit view: it lists the chats\nof every user of the tenant without their messages; each chat is read via its own URL.",
         "operationId": "list_conversations_api_v1_ai_conversations_get",
         "parameters": [
           {
@@ -20925,6 +20966,110 @@
                 }
               ],
               "title": "Context Id"
+            }
+          },
+          {
+            "description": "own: eigene Chats; all: Chats aller Benutzer des Mandanten (audit:read)",
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "own",
+              "description": "own: eigene Chats; all: Chats aller Benutzer des Mandanten (audit:read)",
+              "enum": [
+                "own",
+                "all"
+              ],
+              "title": "Scope",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Nur mit scope=all",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nur mit scope=all",
+              "title": "User Id"
+            }
+          },
+          {
+            "description": "Erstellt ab (einschließlich)",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Erstellt ab (einschließlich)",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "Erstellt bis (einschließlich)",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Erstellt bis (einschließlich)",
+              "title": "Date To"
+            }
+          },
+          {
+            "description": "Suche in Titel und Text",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Suche in Titel und Text",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
             }
           }
         ],

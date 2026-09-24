@@ -797,7 +797,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Chats */
+        /**
+         * Chats
+         * @description Chronological overview, newest first. ``scope=all`` is the audit view: it lists the chats
+         *     of every user of the tenant without their messages; each chat is read via its own URL.
+         */
         get: operations["list_conversations_api_v1_ai_conversations_get"];
         put?: never;
         /** Chat beginnen */
@@ -6889,11 +6893,22 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Created By */
+            created_by?: string | null;
+            /** Created By Name */
+            created_by_name?: string | null;
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /** Last Message At */
+            last_message_at?: string | null;
+            /**
+             * Message Count
+             * @default 0
+             */
+            message_count: number;
             /** Messages */
             messages?: components["schemas"]["MessageOut"][];
             /** Title */
@@ -13067,6 +13082,17 @@ export interface operations {
             query?: {
                 context_type?: string | null;
                 context_id?: string | null;
+                /** @description own: eigene Chats; all: Chats aller Benutzer des Mandanten (audit:read) */
+                scope?: "own" | "all";
+                /** @description Nur mit scope=all */
+                user_id?: string | null;
+                /** @description Erstellt ab (einschließlich) */
+                date_from?: string | null;
+                /** @description Erstellt bis (einschließlich) */
+                date_to?: string | null;
+                /** @description Suche in Titel und Text */
+                q?: string | null;
+                limit?: number;
             };
             header?: never;
             path?: never;

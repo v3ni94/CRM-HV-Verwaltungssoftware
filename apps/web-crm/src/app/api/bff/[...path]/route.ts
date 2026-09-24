@@ -25,6 +25,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^consents/${ID}/revoke$`) },
   // AI assistant (M7): conversations, runs, proposals, import runs, provider settings.
   { method: "GET", pattern: /^ai\/conversations$/ },
+  { method: "GET", pattern: /^tenant\/members$/ },
   { method: "POST", pattern: /^ai\/conversations$/ },
   { method: "GET", pattern: new RegExp(`^ai/conversations/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^ai/conversations/${ID}/messages$`) },
