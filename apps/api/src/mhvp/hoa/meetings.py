@@ -65,7 +65,7 @@ class AgendaIn(MeetingBaseIn):
     rule_id: uuid.UUID | None = None
 
 
-class RuleIn(MeetingBaseIn):
+class MajorityRuleIn(MeetingBaseIn):
     legal_entity_id: uuid.UUID
     label: str = Field(min_length=3, max_length=200)
     principle: str = Field(pattern="^(head|mea|unit)$")
@@ -860,7 +860,7 @@ async def meeting_members(
 
 @router.post("/majority-rules", status_code=201, summary="Mehrheitsregel mit Fundstelle (M25-01)")
 async def create_rule(
-    body: RuleIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+    body: MajorityRuleIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
     if (
         body.share_of_votes_cast is None

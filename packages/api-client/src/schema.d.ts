@@ -8193,6 +8193,41 @@ export interface components {
             /** Unit Id */
             unit_id?: string | null;
         };
+        /** MajorityRuleIn */
+        MajorityRuleIn: {
+            /** Label */
+            label: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Min Mea Share Of All */
+            min_mea_share_of_all?: number | string | null;
+            /** Principle */
+            principle: string;
+            /** Share Of Votes Cast */
+            share_of_votes_cast?: number | string | null;
+            /** Source */
+            source: string;
+            /**
+             * Strictly Greater
+             * @default true
+             */
+            strictly_greater: boolean;
+            /**
+             * Unanimous
+             * @default false
+             */
+            unanimous: boolean;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
         /**
          * ManagementMode
          * @enum {string}
@@ -9740,6 +9775,37 @@ export interface components {
          * @enum {string}
          */
         RowStatus: "pending" | "valid" | "invalid" | "unchanged" | "conflict" | "created" | "staged_only";
+        /** RuleIn */
+        RuleIn: {
+            /** Account Id */
+            account_id?: string | null;
+            /** Amount Max */
+            amount_max?: number | string | null;
+            /** Amount Min */
+            amount_min?: number | string | null;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Counterpart Iban */
+            counterpart_iban?: string | null;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Name */
+            name: string;
+            /** Name Contains */
+            name_contains?: string | null;
+            /**
+             * Priority
+             * @default 100
+             */
+            priority: number;
+            /** Property Id */
+            property_id?: string | null;
+            /** Purpose Regex */
+            purpose_regex?: string | null;
+        };
         /** RuleOut */
         RuleOut: {
             /** Action */
@@ -10731,37 +10797,6 @@ export interface components {
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
         };
-        /** RuleIn */
-        mhvp__banking__routers__RuleIn: {
-            /** Account Id */
-            account_id?: string | null;
-            /** Amount Max */
-            amount_max?: number | string | null;
-            /** Amount Min */
-            amount_min?: number | string | null;
-            /** Contract Id */
-            contract_id?: string | null;
-            /** Counterpart Iban */
-            counterpart_iban?: string | null;
-            /**
-             * Legal Entity Id
-             * Format: uuid
-             */
-            legal_entity_id: string;
-            /** Name */
-            name: string;
-            /** Name Contains */
-            name_contains?: string | null;
-            /**
-             * Priority
-             * @default 100
-             */
-            priority: number;
-            /** Property Id */
-            property_id?: string | null;
-            /** Purpose Regex */
-            purpose_regex?: string | null;
-        };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
             /** Bank Name */
@@ -10816,41 +10851,6 @@ export interface components {
             id: string;
             /** Name */
             name: string;
-        };
-        /** RuleIn */
-        mhvp__hoa__meetings__RuleIn: {
-            /** Label */
-            label: string;
-            /**
-             * Legal Entity Id
-             * Format: uuid
-             */
-            legal_entity_id: string;
-            /** Min Mea Share Of All */
-            min_mea_share_of_all?: number | string | null;
-            /** Principle */
-            principle: string;
-            /** Share Of Votes Cast */
-            share_of_votes_cast?: number | string | null;
-            /** Source */
-            source: string;
-            /**
-             * Strictly Greater
-             * @default true
-             */
-            strictly_greater: boolean;
-            /**
-             * Unanimous
-             * @default false
-             */
-            unanimous: boolean;
-            /**
-             * Valid From
-             * Format: date
-             */
-            valid_from: string;
-            /** Valid To */
-            valid_to?: string | null;
         };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
@@ -13950,7 +13950,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__banking__routers__RuleIn"];
+                "application/json": components["schemas"]["RuleIn"];
             };
         };
         responses: {
@@ -16372,7 +16372,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__hoa__meetings__RuleIn"];
+                "application/json": components["schemas"]["MajorityRuleIn"];
             };
         };
         responses: {
