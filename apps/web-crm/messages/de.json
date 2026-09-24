@@ -79,7 +79,10 @@
       "finance": "Finanzen",
       "system": "System"
     },
-    "mailSettings": "Postfächer"
+    "rental": "Mietverwaltung",
+    "sev": "SEV",
+    "settings": "Einstellungen",
+    "myData": "Meine Daten"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -264,33 +267,11 @@
   },
   "Ai": {
     "title": "Assistent",
-    "conversations": "Unterhaltungen",
-    "newConversation": "Neue Unterhaltung",
-    "newTitle": "Unterhaltung vom {at}",
     "noConversations": "Noch keine Unterhaltungen.",
-    "selectConversation": "Bitte eine Unterhaltung auswählen oder eine neue beginnen.",
     "noMessages": "Noch keine Nachrichten.",
     "chat": "Unterhaltung",
     "disclaimer": "Der Assistent liefert ausschließlich Vorschläge. Es wird nichts angelegt, bevor Sie einen Vorschlag ausdrücklich bestätigen.",
-    "task": "Aufgabe",
-    "tasks": {
-      "extract_contacts": "Kontakte aus Liste",
-      "extract_property": "Objekt aus Unterlagen",
-      "answer_question": "Frage zu Dokumenten",
-      "summarize": "Zusammenfassung"
-    },
     "message": "Nachricht",
-    "placeholder": {
-      "extract_contacts": "Zum Beispiel: Bitte die Eigentümerliste im Anhang auslesen.",
-      "extract_property": "Zum Beispiel: Bitte das Objekt aus Teilungserklärung und Eigentümerliste anlegen.",
-      "answer_question": "Ihre Frage zu den angehängten Dokumenten",
-      "summarize": "Was soll zusammengefasst werden?"
-    },
-    "files": "Dateien",
-    "filesHint": "Dateien werden zuerst als Dokumente hochgeladen und dann an die Nachricht angehängt (höchstens 20).",
-    "send": "Senden",
-    "sending": "Wird gesendet",
-    "uploadFailed": "Hochladen von {name} fehlgeschlagen: {reason}",
     "attachments": "{count, plural, one {# Anhang} other {# Anhänge}}",
     "runQueued": "Auftrag ist eingereiht, bitte warten.",
     "runRunning": "Der Assistent arbeitet, bitte warten.",
@@ -403,7 +384,33 @@
     "missingManagement": "Verwaltungsart",
     "missingAsOf": "Stichtag",
     "invalidVat": "gültige Steuersätze",
-    "stillMissing": "Noch erforderlich: {list}."
+    "stillMissing": "Noch erforderlich: {list}.",
+    "area": "System",
+    "auditIntro": "Protokoll aller Unterhaltungen mit dem Assistenten: Fragen, Antworten, Vorschläge und Entscheidungen bleiben hier nachvollziehbar.",
+    "bubbleHint": "Neue Anliegen starten Sie über die Chatblase unten rechts auf jeder Seite. Der Assistent kennt dann die aktuelle Seite.",
+    "filterScope": "Umfang",
+    "scopeAll": "Alle Benutzer",
+    "scopeOwn": "Nur meine",
+    "filterUser": "Benutzer",
+    "allUsers": "Alle Benutzer",
+    "filterFrom": "Von",
+    "filterTo": "Bis",
+    "filterText": "Suche in Titel und Nachrichten",
+    "filter": "Filtern",
+    "colStarted": "Begonnen",
+    "colUser": "Benutzer",
+    "colTitle": "Titel",
+    "colContext": "Kontext",
+    "colMessages": "Nachrichten",
+    "colLast": "Letzte Nachricht",
+    "unknownUser": "Unbekannt",
+    "context": {
+      "global": "Allgemein",
+      "property": "Objekt",
+      "contact": "Kontakt"
+    },
+    "backToOverview": "Zurück zur Übersicht",
+    "transcript": "Protokoll"
   },
   "Imports": {
     "title": "Importe",
@@ -1394,7 +1401,27 @@
       "storage": "Lager",
       "garden": "Garten",
       "other": "Sonstiges"
-    }
+    },
+    "scopeNav": "Verwaltungsart",
+    "scope": {
+      "all": "Alle",
+      "rental": "Mietverwaltung",
+      "hoa": "WEG",
+      "sev": "SEV"
+    },
+    "scopeTitle": {
+      "all": "Objekte",
+      "rental": "Mietverwaltung",
+      "hoa": "WEG-Objekte",
+      "sev": "Sondereigentumsverwaltung"
+    },
+    "emptyScope": {
+      "all": "Keine Objekte vorhanden.",
+      "rental": "Keine Objekte in Mietverwaltung.",
+      "hoa": "Keine WEG-Objekte.",
+      "sev": "Keine WEG-Objekte mit aktivierter SEV und hinterlegten Mietverträgen."
+    },
+    "sevHint": "Angezeigt werden WEG-Objekte mit Sondereigentumsverwaltung, für die mindestens ein Mietvertrag hinterlegt ist."
   },
   "AiChat": {
     "title": "KI-Assistent",
@@ -1466,6 +1493,140 @@
     "send": "Senden",
     "uploadFailed": "Die Datei {name} konnte nicht hochgeladen werden.",
     "disclaimer": "Vorschläge der KI. Es wird nichts angelegt, bevor Sie zustimmen."
+  },
+  "Settings": {
+    "title": "Einstellungen",
+    "members": {
+      "title": "Benutzer und Rollen",
+      "description": "Konten des Mandanten verwalten und Rollen zuweisen."
+    },
+    "roles": {
+      "title": "Rollen und Rechte",
+      "description": "Rollen anlegen und Rechte je Rolle festlegen."
+    },
+    "company": {
+      "title": "Mandant und Briefbogen",
+      "description": "Firmendaten und Markenfarben des Mandanten."
+    },
+    "ai": {
+      "title": "KI",
+      "description": "Anbieter, Routing und Nutzung der KI Funktionen."
+    },
+    "profile": {
+      "title": "Meine Daten",
+      "description": "Eigene Angaben, Passwort und aktive Sitzungen."
+    },
+    "platform": {
+      "title": "Plattform",
+      "description": "Mandanten und Freigabestufen der Plattform."
+    },
+    "mail": {
+      "title": "Postfächer",
+      "description": "Google OAuth, Postfächer verbinden, Standardpostfach und Freigaben."
+    }
+  },
+  "Members": {
+    "title": "Benutzer und Rollen",
+    "neverDeleted": "Benutzerkonten werden nie gelöscht, sondern gesperrt oder wieder aktiviert. So bleibt die Nachvollziehbarkeit gewahrt.",
+    "name": "Name",
+    "email": "E-Mail",
+    "roles": "Rollen",
+    "status": {
+      "active": "Aktiv",
+      "disabled": "Gesperrt"
+    },
+    "statusColumn": "Status",
+    "lastLogin": "Letzte Anmeldung",
+    "actions": "Aktionen",
+    "editRoles": "Rollen bearbeiten",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "resetPassword": "Passwort zurücksetzen",
+    "resetHint": "Das neue Startpasswort ist persönlich zu übergeben. Der Benutzer sollte es unter Meine Daten selbst ändern.",
+    "resetDone": "Passwort wurde zurückgesetzt.",
+    "startPassword": "Startpasswort",
+    "disable": "Sperren",
+    "enable": "Aktivieren",
+    "confirmDisable": "Konto von {name} sperren?",
+    "confirmEnable": "Konto von {name} wieder aktivieren?",
+    "addTitle": "Benutzer hinzufügen",
+    "addContactHint": "Der Benutzer wird zusätzlich als Kontakt des Mandanten angelegt.",
+    "displayName": "Anzeigename",
+    "passwordHint": "Mindestens 12 Zeichen.",
+    "addSubmit": "Benutzer anlegen"
+  },
+  "Roles": {
+    "title": "Rollen und Rechte",
+    "intro": "Rechte werden pro Rolle vergeben. Systemrollen können nicht geändert werden.",
+    "system": "Systemrolle",
+    "noPermissions": "Keine Rechte zugewiesen.",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "createTitle": "Rolle anlegen",
+    "code": "Code",
+    "name": "Name",
+    "createSubmit": "Rolle anlegen"
+  },
+  "CompanySettings": {
+    "title": "Mandant und Briefbogen",
+    "loadError": "Die Mandanteneinstellungen konnten nicht geladen werden.",
+    "saved": "Gespeichert.",
+    "save": "Speichern",
+    "readOnly": "Nur zur Ansicht. Änderungen erfordert das Recht Mandanteneinstellungen ändern.",
+    "brandingTitle": "Markenfarben",
+    "brandingHint": "Farben werden hier nur angezeigt und an anderer Stelle gepflegt.",
+    "field": {
+      "name": "Firma",
+      "legal_form": "Rechtsform",
+      "street": "Straße",
+      "postal_code": "Postleitzahl",
+      "city": "Ort",
+      "country": "Land",
+      "register_court": "Registergericht",
+      "register_number": "Registernummer",
+      "vat_id": "USt-IdNr.",
+      "phone": "Telefon",
+      "email": "E-Mail",
+      "website": "Website",
+      "management_title": "Geschäftsführung/Vorstand",
+      "primaryColor": "Primärfarbe",
+      "accentColor": "Akzentfarbe"
+    }
+  },
+  "Profile": {
+    "title": "Meine Daten",
+    "name": "Name",
+    "email": "E-Mail",
+    "roles": "Rollen",
+    "tenant": "Mandant",
+    "passwordTitle": "Passwort ändern",
+    "currentPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "repeatPassword": "Neues Passwort wiederholen",
+    "mismatch": "Die Passwörter stimmen nicht überein.",
+    "passwordChanged": "Passwort wurde geändert.",
+    "save": "Speichern",
+    "sessionsTitle": "Aktive Sitzungen",
+    "noSessions": "Keine aktiven Sitzungen.",
+    "unknownDevice": "Unbekanntes Gerät",
+    "revoke": "Abmelden"
+  },
+  "TenantAdmin": {
+    "createTenantTitle": "Mandant anlegen",
+    "slug": "Kennung (Slug)",
+    "slugHint": "Nur Kleinbuchstaben, Ziffern und Bindestriche.",
+    "slugInvalid": "Ungültige Kennung.",
+    "name": "Name",
+    "createTenantSubmit": "Mandant anlegen",
+    "assignAdminTitle": "Mandantenadministrator zuweisen",
+    "assignAdminHint": "Ein Mandantenadministrator hat Rechte ausschließlich innerhalb des zugewiesenen Mandanten.",
+    "tenant": "Mandant",
+    "email": "E-Mail",
+    "displayName": "Anzeigename",
+    "startPassword": "Startpasswort",
+    "assignAdminSubmit": "Zuweisen",
+    "assignDone": "Zugewiesen.",
+    "emailExists": "Für diese E-Mail besteht bereits ein Konto. Es muss über die Benutzerverwaltung des Mandanten hinzugefügt werden."
   },
   "MailSettings": {
     "title": "Postfächer",

@@ -3,6 +3,7 @@
 import re
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -130,6 +131,28 @@ class MemberOut(BaseModel):
     display_name: str
     status: str
     roles: list[str]
+    contact_id: uuid.UUID | None = None
+    last_login_at: datetime | None = None
+
+
+class MemberInvite(BaseModel):
+    """Tenant administrators add a user: the account is created when the e-mail is new,
+    otherwise the existing account joins the tenant. A contact record is created as well."""
+
+    email: EmailStr
+    display_name: str = Field(min_length=2, max_length=200)
+    password: str | None = Field(
+        default=None, max_length=256, description="Startpasswort, nur für neue Konten"
+    )
+    role_codes: list[str] = Field(min_length=1)
+
+
+class MemberStatusIn(BaseModel):
+    status: Literal["active", "disabled"]
+
+
+class PasswordResetIn(BaseModel):
+    password: str = Field(min_length=1, max_length=256, description="Neues Startpasswort")
 
 
 class MemberRoles(BaseModel):

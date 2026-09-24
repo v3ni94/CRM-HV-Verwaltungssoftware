@@ -5,6 +5,7 @@ evidence and confirmed training opt-out (rule 0.1.13), a model and prices for th
 monthly budget. Results are validated against the task schema; one retry with the error message.
 """
 
+import asyncio
 import hashlib
 import io
 import json
@@ -32,6 +33,8 @@ MAX_INPUT_CHARS = 400_000
 MAX_TABLE_ROWS = 2_000
 FEW_SHOT = 8
 WARN_SHARE = Decimal("0.8")
+# Rate limits and overloads: wait and retry the same provider before falling back (seconds).
+RETRY_DELAYS_S: tuple[float, ...] = (3.0, 8.0)
 MTOK = Decimal(1_000_000)
 
 
@@ -136,6 +139,25 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
 
 def month_start(now: datetime) -> datetime:
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+async def _complete_with_retry(
+    client: providers.ProviderClient,
+    model: str,
+    system: str,
+    messages: list[dict[str, str]],
+    schema: dict[str, Any],
+) -> providers.Completion:
+    for delay in (*RETRY_DELAYS_S, None):
+        try:
+            return await client.complete(
+                model=model, system=system, messages=messages, schema=schema, max_tokens=16000
+            )
+        except providers.ProviderError as exc:
+            if not exc.retryable or delay is None:
+                raise
+            await asyncio.sleep(delay)
+    raise AssertionError("unreachable")
 
 
 async def spent_this_month(
@@ -378,12 +400,8 @@ async def execute(
         provider_failed = False
         for attempt in range(2):
             try:
-                completion = await client.complete(
-                    model=chosen.model,
-                    system=prompt.system,
-                    messages=messages,
-                    schema=schema,
-                    max_tokens=16000,
+                completion = await _complete_with_retry(
+                    client, chosen.model, prompt.system, messages, schema
                 )
             except providers.ProviderError as exc:
                 error = f"Anbieterfehler: {exc}"

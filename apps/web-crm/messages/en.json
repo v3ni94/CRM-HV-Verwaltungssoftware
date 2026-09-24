@@ -26,8 +26,10 @@
       "finance": "Finance",
       "system": "System"
     },
-    "mailSettings": "Mailboxes",
-    "aiSettings": "AI settings"
+    "rental": "Rental",
+    "sev": "SEV",
+    "settings": "Settings",
+    "myData": "My data"
   },
   "Hoa": {
     "title": "HOA management",
@@ -732,7 +734,27 @@
       "storage": "Storage",
       "garden": "Garden",
       "other": "Other"
-    }
+    },
+    "scopeNav": "Management scope",
+    "scope": {
+      "all": "All",
+      "rental": "Rental",
+      "hoa": "HOA",
+      "sev": "SEV"
+    },
+    "scopeTitle": {
+      "all": "Properties",
+      "rental": "Rental management",
+      "hoa": "HOA properties",
+      "sev": "Separate ownership management"
+    },
+    "emptyScope": {
+      "all": "No properties yet.",
+      "rental": "No rental properties.",
+      "hoa": "No HOA properties.",
+      "sev": "No HOA properties with SEV and tenancy contracts."
+    },
+    "sevHint": "HOA properties with SEV that have at least one tenancy contract."
   },
   "AiChat": {
     "title": "AI assistant",
@@ -840,5 +862,11 @@
     "syncResult": "{fetched} checked, {created} new, {duplicates} already present",
     "defaultHint": "Every user of the tenant sees a default mailbox, including newly created ones.",
     "access": "Access for users"
+  },
+  "Settings": {
+    "mail": {
+      "title": "Mailboxes",
+      "description": "Google OAuth, connect mailboxes, default mailbox and access."
+    }
   }
 }

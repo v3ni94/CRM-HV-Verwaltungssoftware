@@ -94,7 +94,11 @@ class ConversationOut(_Out):
     context_type: str
     context_id: uuid.UUID | None
     title: str
+    created_by: uuid.UUID | None = None
+    created_by_name: str | None = None
     created_at: datetime
+    message_count: int = 0
+    last_message_at: datetime | None = None
     messages: list[MessageOut] = Field(default_factory=list)
 
 

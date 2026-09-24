@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -35,8 +36,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     {
       label: t("group.management"),
       items: [
-        ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting") }] : []),
+        ...(can("properties:read") ? [{ href: "/objekte?art=rental", label: t("rental") }] : []),
         ...(can("accounting:read") ? [{ href: "/weg", label: t("hoa") }] : []),
+        ...(can("properties:read") ? [{ href: "/objekte?art=sev", label: t("sev") }] : []),
+        ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting") }] : []),
         ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets") }] : []),
       ],
     },
@@ -56,12 +59,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       items: [
         { href: "/assistent", label: t("assistant") },
         { href: "/importe", label: t("imports") },
-        ...(can("tenant_settings:update")
-          ? [
-              { href: "/einstellungen/ki", label: t("aiSettings") },
-              { href: "/einstellungen/postfaecher", label: t("mailSettings") },
-            ]
-          : []),
+        { href: "/einstellungen", label: t("settings") },
         ...(me?.is_platform_admin ? [{ href: "/plattform", label: t("platform") }] : []),
       ],
     },
@@ -71,7 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <a href="#inhalt" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50">
         {t("skip")}
       </a>
-      <aside className="flex flex-col border-b border-border bg-bg md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r">
+      <aside className="flex flex-col border-b border-border bg-surface md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r">
         <Link href="/start" className="flex items-center gap-3 border-b border-border px-4 py-3 md:py-4">
           <Image src="/logo-mhag.png" alt="" width={44} height={38} unoptimized priority className="h-9 w-auto" />
           <span className="flex flex-col leading-tight">
@@ -79,16 +77,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <span className="mhvp-label">{tHome("area")}</span>
           </span>
         </Link>
-        <SideNav groups={groups} label={t("nav")} />
+        <Suspense fallback={null}>
+          <SideNav groups={groups} label={t("nav")} />
+        </Suspense>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-bg/90 px-4 py-2 backdrop-blur">
+        <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-bg/80 px-4 py-2.5 backdrop-blur-md">
           <SearchDialog />
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <NotificationBell />
             <ThemeToggle />
             <TenantSwitcher tenants={ctx.tenants} current={ctx.tenantId} />
-            <UserMenu name={me?.display_name || me?.email || ""} />
+            <UserMenu name={me?.display_name || me?.email || ""} email={me?.email ?? undefined} />
           </div>
         </header>
         <main id="inhalt" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8">

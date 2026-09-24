@@ -4992,10 +4992,50 @@
             "title": "Created At",
             "type": "string"
           },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          },
+          "message_count": {
+            "default": 0,
+            "title": "Message Count",
+            "type": "integer"
           },
           "messages": {
             "items": {
@@ -10161,8 +10201,64 @@
         "title": "MemberCreate",
         "type": "object"
       },
+      "MemberInvite": {
+        "description": "Tenant administrators add a user: the account is created when the e-mail is new,\notherwise the existing account joins the tenant. A contact record is created as well.",
+        "properties": {
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Startpasswort, nur für neue Konten",
+            "title": "Password"
+          },
+          "role_codes": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Role Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "email",
+          "display_name",
+          "role_codes"
+        ],
+        "title": "MemberInvite",
+        "type": "object"
+      },
       "MemberOut": {
         "properties": {
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
           "display_name": {
             "title": "Display Name",
             "type": "string"
@@ -10170,6 +10266,18 @@
           "email": {
             "title": "Email",
             "type": "string"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
           },
           "membership_id": {
             "format": "uuid",
@@ -10218,6 +10326,23 @@
           "role_codes"
         ],
         "title": "MemberRoles",
+        "type": "object"
+      },
+      "MemberStatusIn": {
+        "properties": {
+          "status": {
+            "enum": [
+              "active",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "MemberStatusIn",
         "type": "object"
       },
       "MessageIn": {
@@ -11617,6 +11742,44 @@
         ],
         "title": "PartyRole",
         "type": "string"
+      },
+      "PasswordChange": {
+        "properties": {
+          "current_password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "PasswordChange",
+        "type": "object"
+      },
+      "PasswordResetIn": {
+        "properties": {
+          "password": {
+            "description": "Neues Startpasswort",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "PasswordResetIn",
+        "type": "object"
       },
       "PaymentIn": {
         "additionalProperties": false,
@@ -20997,6 +21160,7 @@
     },
     "/api/v1/ai/conversations": {
       "get": {
+        "description": "Chronological overview, newest first. ``scope=all`` is the audit view: it lists the chats\nof every user of the tenant without their messages; each chat is read via its own URL.",
         "operationId": "list_conversations_api_v1_ai_conversations_get",
         "parameters": [
           {
@@ -21030,6 +21194,110 @@
                 }
               ],
               "title": "Context Id"
+            }
+          },
+          {
+            "description": "own: eigene Chats; all: Chats aller Benutzer des Mandanten (audit:read)",
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "own",
+              "description": "own: eigene Chats; all: Chats aller Benutzer des Mandanten (audit:read)",
+              "enum": [
+                "own",
+                "all"
+              ],
+              "title": "Scope",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Nur mit scope=all",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nur mit scope=all",
+              "title": "User Id"
+            }
+          },
+          {
+            "description": "Erstellt ab (einschließlich)",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Erstellt ab (einschließlich)",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "Erstellt bis (einschließlich)",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Erstellt bis (einschließlich)",
+              "title": "Date To"
+            }
+          },
+          {
+            "description": "Suche in Titel und Text",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Suche in Titel und Text",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
             }
           }
         ],
@@ -21782,6 +22050,41 @@
           }
         },
         "summary": "Anmeldung Schritt 2: TOTP-Code, Token ausstellen",
+        "tags": [
+          "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/auth/password": {
+      "post": {
+        "description": "Requires the current password; other sessions of the user end (only the current token\nfamily stays valid until it expires).",
+        "operationId": "change_password_api_v1_auth_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigenes Passwort ändern",
         "tags": [
           "Anmeldung"
         ]
@@ -32254,6 +32557,34 @@
           },
           {
             "in": "query",
+            "name": "management_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ManagementType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Management Type"
+            }
+          },
+          {
+            "description": "Nur WEG-Objekte mit SEV, für die Mietverträge hinterlegt sind",
+            "in": "query",
+            "name": "sev_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Nur WEG-Objekte mit SEV, für die Mietverträge hinterlegt sind",
+              "title": "Sev Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "page",
             "required": false,
             "schema": {
@@ -34554,6 +34885,147 @@
           }
         },
         "summary": "Mitglieder des Mandanten",
+        "tags": [
+          "Mandant"
+        ]
+      },
+      "post": {
+        "description": "Creates the account when the e-mail is new (start password required), otherwise adds\nthe existing account to the tenant. Every user is also kept as a contact of the tenant.",
+        "operationId": "invite_member_api_v1_tenant_members_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberInvite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Benutzer hinzufügen",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/members/{membership_id}": {
+      "patch": {
+        "description": "Members are never deleted (audit trail); a disabled membership cannot log in to this\ntenant and its sessions are revoked. Nobody disables their own membership.",
+        "operationId": "patch_member_status_api_v1_tenant_members__membership_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberStatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mitglied aktivieren oder sperren",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/members/{membership_id}/reset-password": {
+      "post": {
+        "description": "Sets a new start password, clears the lockout and ends all sessions of the user. The\nadministrator hands the password over personally; the user changes it under Meine Daten.",
+        "operationId": "reset_member_password_api_v1_tenant_members__membership_id__reset_password_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Passwort zurücksetzen",
         "tags": [
           "Mandant"
         ]

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { TenantAdmin } from "@/components/platform/TenantAdmin";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
@@ -37,6 +38,7 @@ export default async function PlatformPage() {
       <Link className="text-sm underline" href="/plattform/mietrecht">
         {t("rentLaw")}
       </Link>
+      <TenantAdmin initialTenants={tenants.data ?? []} />
       {rows.map(({ tenant, readiness }) => (
         <section key={tenant.id} className={ui.card}>
           <h2 className="font-medium">{tenant.name}</h2>

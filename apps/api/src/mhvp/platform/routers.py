@@ -2,13 +2,14 @@
 
 import secrets
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
-from mhvp.core.auth import tokens
+from mhvp.core.auth import passwords, tokens
 from mhvp.core.auth.permissions import ALL_PERMISSIONS, validate_permission
 from mhvp.core.auth.principal import (
     Principal,
@@ -38,6 +39,8 @@ from mhvp.platform.models import (
     GateRequestStatus,
     Membership,
     MembershipRole,
+    MembershipStatus,
+    RefreshToken,
     ReleaseGateRequest,
     Role,
     RolePermission,
@@ -60,8 +63,11 @@ from mhvp.platform.schemas import (
     GateRequestOut,
     GateStateOut,
     MemberCreate,
+    MemberInvite,
     MemberOut,
     MemberRoles,
+    MemberStatusIn,
+    PasswordResetIn,
     RoleCreate,
     RoleOut,
     RolePermissions,
@@ -431,8 +437,10 @@ async def list_members(
                     Membership.id,
                     Membership.user_id,
                     Membership.status,
+                    Membership.contact_id,
                     User.email,
                     User.display_name,
+                    User.last_login_at,
                 )
                 .join(User, User.id == Membership.user_id)
                 .where(Membership.tenant_id == principal.tenant_id)
@@ -458,9 +466,165 @@ async def list_members(
             display_name=r.display_name,
             status=r.status.value,
             roles=sorted(roles.get(r.id, [])),
+            contact_id=r.contact_id,
+            last_login_at=r.last_login_at,
         )
         for r in rows
     ]
+
+
+@tenant_router.post("/members", status_code=201, summary="Benutzer hinzufügen")
+async def invite_member(
+    body: MemberInvite,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("members:create")),
+) -> MemberOut:
+    """Creates the account when the e-mail is new (start password required), otherwise adds
+    the existing account to the tenant. Every user is also kept as a contact of the tenant."""
+    from mhvp.contacts.models import Contact, ContactEmail, ContactKind
+
+    email = body.email.strip().lower()
+    async with platform_transaction(sessions(request)) as session:
+        user_id = await session.scalar(select(User.id).where(User.email == email))
+    if user_id is None:
+        if not body.password:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Für ein neues Konto ist ein Startpasswort nötig."
+            )
+        user_id = await create_user(
+            sessions(request), email=email, display_name=body.display_name, password=body.password
+        )
+    membership_id = await add_member(
+        sessions(request),
+        tenant_id=principal.tenant_id,
+        user_id=user_id,
+        role_codes=body.role_codes,
+        actor_user_id=principal.user_id,
+    )
+    async with platform_transaction(sessions(request)) as session:
+        membership = await session.get(Membership, membership_id)
+        assert membership is not None  # noqa: S101 - just created
+        contact_id = membership.contact_id
+    if contact_id is None:
+        first, _, last = body.display_name.strip().rpartition(" ")
+        async with tenant_tx(request, principal) as session:
+            contact = Contact(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                kind=ContactKind.PERSON,
+                first_name=first or None,
+                last_name=last or body.display_name.strip(),
+                display_name=body.display_name.strip(),
+                search_text=f"{body.display_name} {email}".lower(),
+            )
+            session.add(contact)
+            await session.flush()
+            session.add(
+                ContactEmail(
+                    tenant_id=principal.tenant_id,
+                    contact_id=contact.id,
+                    label="work",
+                    email=email,
+                    is_primary=True,
+                )
+            )
+            contact_id = contact.id
+        async with platform_transaction(sessions(request)) as session:
+            membership = await session.get(Membership, membership_id)
+            assert membership is not None  # noqa: S101
+            membership.contact_id = contact_id
+    members = await list_members(request, principal)
+    return next(m for m in members if m.membership_id == membership_id)
+
+
+async def _tenant_membership(
+    request: Request, principal: TenantPrincipal, membership_id: uuid.UUID
+) -> Membership:
+    async with platform_transaction(sessions(request)) as session:
+        membership = await session.get(Membership, membership_id)
+        if membership is None or membership.tenant_id != principal.tenant_id:
+            raise _not_found()
+        return membership
+
+
+@tenant_router.patch("/members/{membership_id}", summary="Mitglied aktivieren oder sperren")
+async def patch_member_status(
+    membership_id: uuid.UUID,
+    body: MemberStatusIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("members:update")),
+) -> MemberOut:
+    """Members are never deleted (audit trail); a disabled membership cannot log in to this
+    tenant and its sessions are revoked. Nobody disables their own membership."""
+    membership = await _tenant_membership(request, principal, membership_id)
+    if membership.user_id == principal.user_id and body.status == "disabled":
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Eigene Mitgliedschaft nicht sperrbar.")
+    async with platform_transaction(sessions(request)) as session:
+        row = await session.get(Membership, membership_id)
+        assert row is not None  # noqa: S101
+        before = row.status.value
+        row.status = MembershipStatus(body.status)
+        if body.status == "disabled":
+            await session.execute(
+                update(RefreshToken)
+                .where(
+                    RefreshToken.user_id == row.user_id,
+                    RefreshToken.tenant_id == principal.tenant_id,
+                    RefreshToken.revoked_at.is_(None),
+                )
+                .values(revoked_at=datetime.now(UTC))
+            )
+    async with tenant_tx(request, principal) as session:
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="membership.status_changed",
+            entity_type="membership",
+            entity_id=membership_id,
+            actor_user_id=principal.user_id,
+            payload={"before": before, "after": body.status},
+        )
+    members = await list_members(request, principal)
+    return next(m for m in members if m.membership_id == membership_id)
+
+
+@tenant_router.post(
+    "/members/{membership_id}/reset-password", status_code=204, summary="Passwort zurücksetzen"
+)
+async def reset_member_password(
+    membership_id: uuid.UUID,
+    body: PasswordResetIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("members:update")),
+) -> Response:
+    """Sets a new start password, clears the lockout and ends all sessions of the user. The
+    administrator hands the password over personally; the user changes it under Meine Daten."""
+    membership = await _tenant_membership(request, principal, membership_id)
+    violation = passwords.policy_violation(body.password)
+    if violation:
+        raise ProblemError(ErrorCodes.PASSWORD_POLICY, detail=violation)
+    async with platform_transaction(sessions(request)) as session:
+        user = await session.get(User, membership.user_id)
+        assert user is not None  # noqa: S101
+        user.password_hash = passwords.hash_password(body.password)
+        user.failed_logins = 0
+        user.locked_until = None
+        await session.execute(
+            update(RefreshToken)
+            .where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
+            .values(revoked_at=datetime.now(UTC))
+        )
+    async with tenant_tx(request, principal) as session:
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="membership.password_reset",
+            entity_type="membership",
+            entity_id=membership_id,
+            actor_user_id=principal.user_id,
+            payload={},
+        )
+    return Response(status_code=204)
 
 
 @tenant_router.put(

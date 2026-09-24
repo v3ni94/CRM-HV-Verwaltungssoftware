@@ -29,6 +29,8 @@ body {
   background: var(--mhvp-color-bg);
   color: var(--mhvp-color-fg);
   font-family: var(--mhvp-font-sans);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 /* Goldpunkt: page titles carry a short gold bar underneath instead of a full underline. */

@@ -1,11 +1,11 @@
 """AI endpoints (/api/v1/ai, /imports): provider setup, chat, runs, proposals, import runs."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 
 from mhvp.ai import gateway, imports, jobs, tasks
@@ -36,6 +36,7 @@ CREATE = require_permission("ai:create")
 UNDO = require_permission("ai:delete")
 APPROVE = require_permission("ai:approve")
 SETTINGS = require_permission("tenant_settings:update")
+AUDIT_PERMISSION = "audit:read"  # sees the chats of all users of the tenant (audit trail)
 
 
 async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
@@ -212,6 +213,16 @@ async def usage(request: Request, principal: TenantPrincipal = Depends(READ)) ->
 # Conversations and runs ------------------------------------------------------------------
 
 
+async def _user_names(session: Any, user_ids: set[uuid.UUID | None]) -> dict[uuid.UUID, str]:
+    from mhvp.platform.models import User
+
+    ids = [u for u in user_ids if u is not None]
+    if not ids:
+        return {}
+    rows = await session.execute(select(User.id, User.display_name).where(User.id.in_(ids)))
+    return {row[0]: row[1] for row in rows}
+
+
 async def _conversation_out(session: Any, row: AiConversation) -> s.ConversationOut:
     messages = (
         await session.scalars(
@@ -221,7 +232,11 @@ async def _conversation_out(session: Any, row: AiConversation) -> s.Conversation
         )
     ).all()
     out = s.ConversationOut.model_validate(row)
+    names = await _user_names(session, {row.created_by})
+    out.created_by_name = names.get(row.created_by) if row.created_by else None
     out.messages = [s.MessageOut.model_validate(m) for m in messages]
+    out.message_count = len(messages)
+    out.last_message_at = messages[-1].created_at if messages else None
     return out
 
 
@@ -238,31 +253,80 @@ async def create_conversation(
         return await _conversation_out(session, row)
 
 
+def _can_audit(principal: TenantPrincipal) -> bool:
+    return AUDIT_PERMISSION in principal.permissions
+
+
 @router.get("/ai/conversations", summary="Chats")
 async def list_conversations(
     request: Request,
     context_type: str | None = None,
     context_id: uuid.UUID | None = None,
+    scope: Literal["own", "all"] = Query(
+        default="own",
+        description="own: eigene Chats; all: Chats aller Benutzer des Mandanten (audit:read)",
+    ),
+    user_id: uuid.UUID | None = Query(default=None, description="Nur mit scope=all"),
+    date_from: date | None = Query(default=None, description="Erstellt ab (einschließlich)"),
+    date_to: date | None = Query(default=None, description="Erstellt bis (einschließlich)"),
+    q: str | None = Query(default=None, max_length=200, description="Suche in Titel und Text"),
+    limit: int = Query(default=50, ge=1, le=500),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.ConversationOut]:
+    """Chronological overview, newest first. ``scope=all`` is the audit view: it lists the chats
+    of every user of the tenant without their messages; each chat is read via its own URL."""
+    if scope == "all" and not _can_audit(principal):
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="audit:read required")
     async with tenant_tx(request, principal) as session:
-        query = select(AiConversation).where(AiConversation.created_by == principal.user_id)
+        query = select(AiConversation)
+        if scope == "own":
+            query = query.where(AiConversation.created_by == principal.user_id)
+        elif user_id is not None:
+            query = query.where(AiConversation.created_by == user_id)
         if context_type:
             query = query.where(AiConversation.context_type == context_type)
         if context_id:
             query = query.where(AiConversation.context_id == context_id)
+        if date_from:
+            query = query.where(func.date(AiConversation.created_at) >= date_from)
+        if date_to:
+            query = query.where(func.date(AiConversation.created_at) <= date_to)
+        if q:
+            needle = f"%{q.strip()}%"
+            in_text = select(AiMessage.conversation_id).where(AiMessage.content.ilike(needle))
+            query = query.where(AiConversation.title.ilike(needle) | AiConversation.id.in_(in_text))
         rows = (
-            await session.scalars(query.order_by(AiConversation.created_at.desc()).limit(50))
+            await session.scalars(query.order_by(AiConversation.created_at.desc()).limit(limit))
         ).all()
-        return [s.ConversationOut.model_validate(r) for r in rows]
+        names = await _user_names(session, {r.created_by for r in rows})
+        stats = {
+            conv_id: (count, last)
+            for conv_id, count, last in await session.execute(
+                select(
+                    AiMessage.conversation_id,
+                    func.count(AiMessage.id),
+                    func.max(AiMessage.created_at),
+                )
+                .where(AiMessage.conversation_id.in_([r.id for r in rows]))
+                .group_by(AiMessage.conversation_id)
+            )
+        }
+        out = []
+        for r in rows:
+            item = s.ConversationOut.model_validate(r)
+            item.created_by_name = names.get(r.created_by) if r.created_by else None
+            item.message_count, item.last_message_at = stats.get(r.id, (0, None))
+            out.append(item)
+        return out
 
 
 async def _own_conversation(
-    session: Any, principal: TenantPrincipal, conversation_id: uuid.UUID
+    session: Any, principal: TenantPrincipal, conversation_id: uuid.UUID, *, audit: bool = False
 ) -> AiConversation:
+    """Chats are personal. ``audit=True`` lets audit:read holders read (never write) any chat."""
     row: AiConversation = await _get(session, AiConversation, conversation_id)
-    if row.created_by != principal.user_id:
-        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)  # chats are personal
+    if row.created_by != principal.user_id and not (audit and _can_audit(principal)):
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     return row
 
 
@@ -272,7 +336,7 @@ async def get_conversation(
 ) -> s.ConversationOut:
     async with tenant_tx(request, principal) as session:
         return await _conversation_out(
-            session, await _own_conversation(session, principal, conversation_id)
+            session, await _own_conversation(session, principal, conversation_id, audit=True)
         )
 
 

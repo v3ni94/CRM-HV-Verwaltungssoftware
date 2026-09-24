@@ -16,7 +16,7 @@ from moto import mock_aws
 from openpyxl import Workbook
 from pydantic import SecretStr
 
-from mhvp.ai import providers
+from mhvp.ai import gateway, providers
 from mhvp.ai.providers import Completion, ProviderError
 from mhvp.core.config import Settings
 from mhvp.main import create_app
@@ -578,10 +578,13 @@ class RecordingFactory:
         return Client()
 
 
-def test_routing_strategy_and_fallback(client: TestClient, world: World) -> None:
+def test_routing_strategy_and_fallback(
+    client: TestClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Expected by hand: anthropic_first with an exhausted Anthropic budget -> OpenAI answers
     and the run records the fallback; anthropic_only -> blocked; openai_first -> OpenAI;
     alternate -> the provider not used last; an OpenAI outage under openai_first -> Anthropic."""
+    monkeypatch.setattr(gateway, "RETRY_DELAYS_S", ())
     factory = RecordingFactory()
     providers.set_factory(factory)
     try:
@@ -660,3 +663,67 @@ def test_routing_strategy_and_fallback(client: TestClient, world: World) -> None
             client.put("/api/v1/ai/routing", json={"strategy": "anthropic_first"}, headers=admin),
             200,
         )
+
+
+def test_audit_view_lists_all_chats_for_admins_only(client: TestClient, world: World) -> None:
+    """Expected by hand: a clerk sees only own chats and gets 403 for scope=all; the admin sees
+    the chats of every user newest first with user name and message count, can filter by user,
+    date and text, can read a foreign chat but cannot write into it."""
+    admin = bearer(login(client, world, "m7admin"))
+    clerk = bearer(login(client, world, "m7clerk"))
+    mine = _ok(
+        client.post("/api/v1/ai/conversations", json={"title": f"Clerk {RUN}"}, headers=clerk)
+    )
+    theirs = _ok(
+        client.post("/api/v1/ai/conversations", json={"title": f"Admin {RUN}"}, headers=admin)
+    )
+    own = _ok(client.get("/api/v1/ai/conversations", headers=clerk), 200)
+    assert {c["id"] for c in own} >= {mine["id"]}
+    assert theirs["id"] not in {c["id"] for c in own}
+    assert (
+        client.get("/api/v1/ai/conversations", params={"scope": "all"}, headers=clerk).status_code
+        == 403
+    )
+    assert client.get(f"/api/v1/ai/conversations/{theirs['id']}", headers=clerk).status_code == 404
+
+    everything = _ok(
+        client.get("/api/v1/ai/conversations", params={"scope": "all"}, headers=admin), 200
+    )
+    by_id = {c["id"]: c for c in everything}
+    assert mine["id"] in by_id
+    assert theirs["id"] in by_id
+    assert by_id[mine["id"]]["created_by_name"] == "m7clerk"
+    assert by_id[mine["id"]]["message_count"] == 0
+    stamps = [c["created_at"] for c in everything]
+    assert stamps == sorted(stamps, reverse=True)
+    filtered = _ok(
+        client.get(
+            "/api/v1/ai/conversations",
+            params={"scope": "all", "user_id": world.users["m7clerk"], "q": f"Clerk {RUN}"},
+            headers=admin,
+        ),
+        200,
+    )
+    assert [c["id"] for c in filtered] == [mine["id"]]
+    assert (
+        _ok(
+            client.get(
+                "/api/v1/ai/conversations",
+                params={"scope": "all", "date_to": "2000-01-01"},
+                headers=admin,
+            ),
+            200,
+        )
+        == []
+    )
+    # Read access for the audit trail, no write access into another person's chat.
+    detail = _ok(client.get(f"/api/v1/ai/conversations/{mine['id']}", headers=admin), 200)
+    assert detail["created_by_name"] == "m7clerk"
+    assert (
+        client.post(
+            f"/api/v1/ai/conversations/{mine['id']}/messages",
+            json={"content": "x", "task": "summarize", "document_ids": []},
+            headers=admin,
+        ).status_code
+        == 404
+    )
