@@ -1,7 +1,7 @@
 """mail_approval: Vier-Augen-Freigabe für ausgehende E-Mails (M20).
 
-Revision ID: 0038
-Revises: 0037
+Revision ID: 0039
+Revises: 0038
 """
 
 from collections.abc import Sequence
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0038"
-down_revision: str | None = "0037"
+revision: str = "0039"
+down_revision: str | None = "0038"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
