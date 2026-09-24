@@ -329,7 +329,10 @@
       "yes": "Yes",
       "no": "No",
       "abstain": "Abst."
-    }
+    },
+    "blocked": "Approval blocked (statement package W12):",
+    "account": "Cost account",
+    "noAccount": "no account (blocks approval)"
   },
   "RentIncrease": {
     "title": "Rent increases",

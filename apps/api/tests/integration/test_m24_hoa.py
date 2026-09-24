@@ -231,6 +231,7 @@ def test_hoa_statement_d01_d03(clients: tuple[TestClient, TestClient], world: Wo
                 "amount": "5500.00",
                 "allocation_key_id": keys["MEA"],
                 "basis": "Teilungserklärung, Verteilung nach MEA",
+                "account_id": acc["043000"],
             },
             headers=h,
         ),
@@ -265,6 +266,9 @@ def test_hoa_statement_d01_d03(clients: tuple[TestClient, TestClient], world: Wo
         ).status_code
         == 403
     )
+    package = _ok(client.get(f"{H}/statements/{sid}/package", headers=h))
+    assert (package["blocking"], package["releasable"]) == ([], True)
+    assert package["cost_items"][0]["key"]["code"] == "MEA"
     _ok(
         client.post(
             f"{H}/statements/{sid}/transition", json={"target": "internally_approved"}, headers=h2

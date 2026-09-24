@@ -89,7 +89,17 @@ export function HoaCreate({
 }
 
 /** Plan item or statement cost item with allocation key; statement items need a basis. */
-export function HoaItemForm({ target, id, keys }: { target: "plan" | "statement"; id: string; keys: Key[] }) {
+export function HoaItemForm({
+  target,
+  id,
+  keys,
+  accounts = [],
+}: {
+  target: "plan" | "statement";
+  id: string;
+  keys: Key[];
+  accounts?: { id: string; number: string; name: string }[];
+}) {
   const t = useTranslations("HoaWork");
   const { busy, error, call } = useCall();
   const [label, setLabel] = useState("");
@@ -97,13 +107,14 @@ export function HoaItemForm({ target, id, keys }: { target: "plan" | "statement"
   const [key, setKey] = useState(keys.find((k) => k.code === "MEA")?.id ?? keys[0]?.id ?? "");
   const [component, setComponent] = useState("hoa_fee");
   const [basis, setBasis] = useState("");
+  const [account, setAccount] = useState("");
   const ok = label.trim() && /^\d+([.,]\d{1,2})?$/.test(amount) && key && (target === "plan" || basis.trim().length >= 3);
   const add = async () => {
     const common = { label: label.trim(), amount: amount.replace(",", "."), allocation_key_id: key };
     const res =
       target === "plan"
         ? await call(`plans/${id}/items`, { ...common, component })
-        : await call(`statements/${id}/costs`, { ...common, basis: basis.trim() });
+        : await call(`statements/${id}/costs`, { ...common, basis: basis.trim(), account_id: account || null });
     if (res !== null) {
       setLabel("");
       setAmount("");
@@ -140,10 +151,23 @@ export function HoaItemForm({ target, id, keys }: { target: "plan" | "statement"
             </select>
           </label>
         ) : (
-          <label className="flex flex-col gap-1">
-            <span className={ui.label}>{t("basis")}</span>
-            <input className={ui.input} value={basis} onChange={(e) => setBasis(e.target.value)} />
-          </label>
+          <>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("basis")}</span>
+              <input className={ui.input} value={basis} onChange={(e) => setBasis(e.target.value)} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("account")}</span>
+              <select className={ui.input} value={account} onChange={(e) => setAccount(e.target.value)}>
+                <option value="">{t("noAccount")}</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.number} {a.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
         )}
         <button type="button" className={ui.button} onClick={add} disabled={busy || !ok}>
           {t("addItem")}

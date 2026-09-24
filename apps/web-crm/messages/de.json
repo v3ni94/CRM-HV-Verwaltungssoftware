@@ -976,7 +976,10 @@
       "yes": "Ja",
       "no": "Nein",
       "abstain": "Enth."
-    }
+    },
+    "blocked": "Freigabe gesperrt (Abrechnungspaket W12):",
+    "account": "Kostenkonto",
+    "noAccount": "ohne Konto (sperrt die Freigabe)"
   },
   "RentIncrease": {
     "title": "Mieterhöhungen",

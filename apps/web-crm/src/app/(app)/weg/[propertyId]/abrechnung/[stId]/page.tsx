@@ -16,7 +16,17 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
   const { propertyId, stId } = await params;
   const t = await getTranslations("HoaWork");
   const ctx = await hoaContext(propertyId);
-  const { data, error, response } = await ctx.api.GET("/api/v1/hoa/statements/{statement_id}", { params: { path: { statement_id: stId } } });
+  const [{ data, error, response }, pkg] = await Promise.all([
+    ctx.api.GET("/api/v1/hoa/statements/{statement_id}", { params: { path: { statement_id: stId } } }),
+    ctx.api.GET("/api/v1/hoa/statements/{statement_id}/package", { params: { path: { statement_id: stId } } }),
+  ]);
+  const accounts = await ctx.api.GET("/api/v1/accounting/ledgers/{ledger_id}/accounts", {
+    params: { path: { ledger_id: String(data?.ledger_id ?? "") } },
+  });
+  const costAccounts = ((accounts.data ?? []) as { id: string; number: string; name: string; category: string }[])
+    .filter((a) => a.category === "cost")
+    .map((a) => ({ id: a.id, number: a.number, name: a.name }));
+  const blocking = ((pkg.data?.blocking ?? []) as { code: string; detail: string }[]);
   redirectIfUnauthenticated(response);
   if (!data || !ctx.entity) {
     return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
@@ -29,6 +39,16 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
         {t("statement")} {String(data.year)} · V{String(data.version)} · {t(`status.${String(data.status)}`)}
       </h1>
       <p className={ui.notice}>{t("statementNotice")}</p>
+      {blocking.length ? (
+        <div className={ui.alert} data-testid="package-blocking">
+          <p className="font-medium">{t("blocked")}</p>
+          <ul className="list-inside list-disc">
+            {blocking.map((b) => (
+              <li key={b.detail}>{b.detail}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <table className="w-full border-collapse text-sm">
         <tbody>
           {items.map((i) => (
@@ -40,7 +60,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
           ))}
         </tbody>
       </table>
-      {data.status === "draft" ? <HoaItemForm target="statement" id={stId} keys={ctx.keys} /> : null}
+      {data.status === "draft" ? <HoaItemForm target="statement" id={stId} keys={ctx.keys} accounts={costAccounts} /> : null}
       <HoaSteps target="statement" id={stId} status={String(data.status)} legalEntityId={ctx.entity.id} snapshotHash={(data.snapshot_hash as string | null) ?? null} />
       {snap?.units ? (
         <table className="w-full border-collapse text-sm">

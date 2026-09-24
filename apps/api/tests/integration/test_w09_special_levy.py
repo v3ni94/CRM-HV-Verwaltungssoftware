@@ -31,13 +31,14 @@ async def _world(settings: Any) -> World:
     try:
         a, _ = await services.provision_tenant(factory, slug=f"su-{RUN}", name=f"SU {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        uid = await services.create_user(
-            factory, email=world.email("w09admin"), display_name="w09", password=PASSWORD
-        )
-        world.users["w09admin"] = uid
-        await services.add_member(
-            factory, tenant_id=a, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
-        )
+        for name in ("w09admin", "w09second"):
+            uid = await services.create_user(
+                factory, email=world.email(name), display_name=name, password=PASSWORD
+            )
+            world.users[name] = uid
+            await services.add_member(
+                factory, tenant_id=a, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
+            )
         return world
     finally:
         await engine.dispose()
@@ -275,3 +276,67 @@ def test_special_levy(client: TestClient, world: World) -> None:
     listed = _ok(client.get(f"{H}/special-levies", params={"legal_entity_id": hoa}, headers=h))
     assert {x["id"] for x in listed} == {lid, other["id"]}
     assert u1
+
+
+def test_w12_package_blocks_release(client: TestClient, world: World) -> None:
+    """Unit 02 has no owner and the cost item has no account: both block the approval."""
+    h = bearer(login(client, world, "w09admin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "792", "name": "WEG Paket", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    keys = {
+        k["code"]: k["id"]
+        for k in _ok(client.get(f"/api/v1/properties/{prop['id']}/allocation-keys", headers=h))
+    }
+    _owner(client, h, prop["id"], "01", "500", keys["MEA"], {})
+    from tests.integration.test_m5_contracts import _unit
+
+    u2 = _unit(client, h, prop["id"], "02")
+    _ok(
+        client.post(
+            f"/api/v1/units/{u2}/allocation-values",
+            json={"allocation_key_id": keys["MEA"], "value": "500", "valid_from": "2020-01-01"},
+            headers=h,
+        ),
+        201,
+    )
+    template = _ok(client.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    st = _ok(
+        client.post(f"{H}/statements", json={"ledger_id": ledger, "year": 2025}, headers=h), 201
+    )
+    _ok(
+        client.post(
+            f"{H}/statements/{st['id']}/costs",
+            json={
+                "label": "Versicherung",
+                "amount": "1000.00",
+                "allocation_key_id": keys["MEA"],
+                "basis": "Gemeinschaftsordnung",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.post(f"{H}/statements/{st['id']}/calculate", headers=h))
+    pkg = _ok(client.get(f"{H}/statements/{st['id']}/package", headers=h))
+    codes = sorted(f["code"] for f in pkg["blocking"])
+    assert codes == ["no_account", "owner_gap"]
+    assert pkg["releasable"] is False
+    h2 = bearer(login(client, world, "w09second"))
+    blocked = client.post(
+        f"{H}/statements/{st['id']}/transition", json={"target": "internally_approved"}, headers=h2
+    )
+    assert blocked.status_code == 409
+    assert "W12" in blocked.json()["detail"]

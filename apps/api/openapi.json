@@ -27079,6 +27079,51 @@
         ]
       }
     },
+    "/api/v1/hoa/statements/{statement_id}/package": {
+      "get": {
+        "operationId": "statement_package_api_v1_hoa_statements__statement_id__package_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Statement Package Api V1 Hoa Statements  Statement Id  Package Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abrechnungspaket (W12)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/statements/{statement_id}/post": {
       "post": {
         "description": "Only the resolved result per unit (Nachschuss or Anpassung) is posted against the owner at\nthe resolution date; arrears are not duplicated (7.3 Abrechnungsergebnis, D01, D02).",

@@ -54,7 +54,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | W09 | Sonderumlagen und Maßnahmen | 7.8 | implemented, not accepted (special levy, `test_w09_special_levy.py`); changes open, W09-01 |
 | W10 | Darlehen, Versicherungen, größere Maßnahmen | 7.8 | specified, not implemented |
 | W11 | Vermögensbericht | 7.8 | partly implemented (M24 asset report); structure open, M24-02 |
-| W12 | Abrechnungspaket | 7.8 | specified, not implemented |
+| W12 | Abrechnungspaket | 7.8 | implemented, not accepted (package and blocking checks, `test_w09_special_levy.py::test_w12_package_blocks_release`) |
 | W13 | Beirat und Versammlung | 7.8 | implemented, not accepted (M25); majority rules open, M25-01 |
 | PÜ01 | Vollständigkeit | 7.9.1 | specified, not implemented |
 | PÜ02 | Sachliche Prüfung | 7.9.1 | specified, not implemented |

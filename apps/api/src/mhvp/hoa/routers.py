@@ -149,6 +149,15 @@ async def _move(
             ErrorCodes.GATE_FOUR_EYES,
             detail="Die interne Freigabe muss eine andere Person erteilen.",
         )
+    if body.target is StatementStatus.INTERNALLY_APPROVED and isinstance(obj, HoaStatement):
+        from mhvp.hoa.package import blocking_checks
+
+        findings = await blocking_checks(session, obj)
+        if findings:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Freigabe gesperrt (W12): " + "; ".join(f["detail"] for f in findings),
+            )
     if body.target is StatementStatus.POSTED:
         resolution = await session.get(Resolution, obj.resolution_id) if obj.resolution_id else None
     try:
