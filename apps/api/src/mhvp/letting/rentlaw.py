@@ -65,6 +65,26 @@ class CapArea(IdMixin, TimestampMixin, Base):
     source: Mapped[str] = mapped_column(Text, nullable=False)
 
 
+NRW_ORDINANCE = (
+    "MietSchVO NRW vom 28.01.2025 (GV. NRW. S. 111), geändert 28.10.2025 (GV. NRW. S. 848), "
+    "§ 1 Abs. 2 mit Anlage; abgerufen von recht.nrw.de am 24.09.2026"
+)
+NRW_ORDINANCE_URL = (
+    "https://recht.nrw.de/system/files/BA/54532-52830-sgv_238_20250128_1_anlage1.pdf"
+)
+# Anlage zu § 1 MietSchVO NRW, names as printed; valid 01.03.2025 to 28.02.2030 (§ 3).
+NRW_CAP_TOWNS = (
+    "Aachen", "Alfter", "Bad Lippspringe", "Bergheim", "Bergisch Gladbach", "Bielefeld", "Bonn",
+    "Bornheim", "Brühl", "Dormagen", "Dortmund", "Düren, Stadt", "Düsseldorf", "Elsdorf",
+    "Erftstadt", "Erkrath", "Frechen", "Greven", "Grevenbroich", "Harsewinkel", "Hennef",
+    "Hilden", "Hürth", "Kaarst", "Kempen", "Kerpen", "Korschenbroich", "Köln", "Königswinter",
+    "Krefeld", "Langenfeld", "Leichlingen", "Leverkusen", "Lohmar", "Lotte", "Meckenheim",
+    "Meerbusch", "Monheim", "Münster", "Neuss", "Niederkassel", "Ostbevern", "Overath",
+    "Paderborn", "Pulheim", "Ratingen", "Rheinbach", "Rösrath", "Rommerskirchen",
+    "Sankt Augustin", "Siegburg", "Swisttal", "Telgte", "Troisdorf", "Wachtberg", "Weilerswist",
+    "Wesseling",
+)  # fmt: skip
+
 BGB = "https://www.gesetze-im-internet.de/bgb/"
 # Seed rows (migration 0030). Unverified until checked against the official text.
 _SEED = (
@@ -146,22 +166,75 @@ async def released_rules(session: AsyncSession) -> dict[str, Decimal]:
     return {r.code: r.value for r in rows if r.value is not None}
 
 
+STATES = {
+    "baden-württemberg": "BW", "bayern": "BY", "berlin": "BE", "brandenburg": "BB",
+    "bremen": "HB", "hamburg": "HH", "hessen": "HE", "mecklenburg-vorpommern": "MV",
+    "niedersachsen": "NI", "nordrhein-westfalen": "NW", "rheinland-pfalz": "RP",
+    "saarland": "SL", "sachsen": "SN", "sachsen-anhalt": "ST", "schleswig-holstein": "SH",
+    "thüringen": "TH",
+}  # fmt: skip
+
+
+def state_code(value: str | None) -> str | None:
+    """ISO 3166-2 suffix of a German state from a code or name, else None."""
+    if not value:
+        return None
+    text = value.strip()
+    if text.upper() in STATES.values():
+        return text.upper()
+    return STATES.get(text.lower())
+
+
+def _name(value: str) -> str:
+    # Ordinance lists name towns like "Düren, Stadt"; the property city may add a suffix
+    # such as "Monheim am Rhein" for "Monheim".
+    return value.split(",")[0].strip().lower()
+
+
 async def cap_for(session: AsyncSession, prop: Any, day: date, default: Decimal) -> dict[str, Any]:
-    """Reduced cap of the property's municipality on the day, else the general cap."""
+    """Reduced cap of the property's municipality on the day, else the general cap. Matching by
+    municipality code first; by name only within the property's state, else flagged."""
+    general = {"percent": default, "source": "allgemeine Kappungsgrenze", "flag": None}
     query = select(CapArea).where(
         CapArea.valid_from <= day,
         or_(CapArea.valid_to.is_(None), CapArea.valid_to >= day),
     )
-    if prop.municipality_code:
-        query = query.where(CapArea.municipality_code == prop.municipality_code)
-    elif prop.city:
-        query = query.where(CapArea.municipality.ilike(prop.city.strip()))
-    else:
-        return {"percent": default, "source": "allgemeine Kappungsgrenze"}
-    area = await session.scalar(query)
-    if area is None:
-        return {"percent": default, "source": "allgemeine Kappungsgrenze"}
-    return {"percent": area.cap_percent, "source": f"{area.municipality}: {area.source}"}
+    code = getattr(prop, "municipality_code", None)
+    if code:
+        area = await session.scalar(query.where(CapArea.municipality_code == code))
+        if area is not None:
+            return {
+                "percent": area.cap_percent,
+                "source": f"{area.municipality}: {area.source}",
+                "flag": None,
+            }
+    city = (getattr(prop, "city", None) or "").strip().lower()
+    if not city:
+        return general
+    state = state_code(getattr(prop, "state", None))
+    if state:
+        query = query.where(CapArea.state == state)
+    matches = [
+        a
+        for a in (await session.scalars(query)).all()
+        if city == _name(a.municipality) or city.startswith(_name(a.municipality) + " ")
+    ]
+    if not matches:
+        return general
+    area = max(matches, key=lambda a: len(_name(a.municipality)))
+    flag = None
+    if state is None:
+        flag = (
+            "Bundesland der Liegenschaft fehlt: Kappungsgebiet nur nach Gemeindename "
+            "zugeordnet, prüfen."
+        )
+    elif city != _name(area.municipality):
+        flag = f"Gemeinde nach Namensanfang zugeordnet ({area.municipality}), prüfen."
+    return {
+        "percent": area.cap_percent,
+        "source": f"{area.municipality}: {area.source}",
+        "flag": flag,
+    }
 
 
 def _active(rows: Any, day: date) -> Any:
@@ -227,6 +300,8 @@ async def statutory_check(
     cap = await cap_for(session, prop, case.effective_date, rules["cap_percent"])
     out["cap_percent"] = str(cap["percent"])
     out["cap_source"] = cap["source"]
+    if cap["flag"]:
+        flags.append(cap["flag"])
     if reference is None:
         flags.append(f"Keine Miete zum {ref_day:%d.%m.%Y} erfasst: Kappungsgrenze nicht prüfbar.")
     else:

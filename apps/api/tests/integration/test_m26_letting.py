@@ -339,6 +339,7 @@ def test_rent_law_rules_and_cap_area(clients: tuple[TestClient, TestClient], wor
                 "name": "Kappungshaus",
                 "management_type": "rental",
                 "city": f"Kappstadt {RUN}",
+                "state": "Nordrhein-Westfalen",
             },
             headers=h,
         ),
