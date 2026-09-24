@@ -153,7 +153,7 @@ def _ok(response: Any, status: int = 200) -> Any:
 
 
 def test_gmail_sync_creates_tickets_and_threads(
-    client: TestClient, world: World, fake: FakeGmail
+    client: TestClient, world: World, fake: FakeGmail, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     h = bearer(login(client, world, "gmadmin"))
     box = _ok(
@@ -172,7 +172,7 @@ def test_gmail_sync_creates_tickets_and_threads(
     fake.add("g1", _eml(f"a{RUN}@example.com", f"Heizung defekt {RUN}", f"<g1-{RUN}@x>"))
     fake.add("g2", _eml(f"b{RUN}@example.com", f"Frage Abrechnung {RUN}", f"<g2-{RUN}@x>"))
     result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
-    assert result == {"fetched": 2, "created": 2, "duplicates": 0}
+    assert result == {"fetched": 2, "created": 2, "duplicates": 0, "failed": 0}
 
     msgs = {m["subject"]: m for m in _ok(client.get(f"{M}/messages", headers=h))}
     first, second = msgs[f"Heizung defekt {RUN}"], msgs[f"Frage Abrechnung {RUN}"]
@@ -199,8 +199,32 @@ def test_gmail_sync_creates_tickets_and_threads(
         "fetched": 3,
         "created": 0,
         "duplicates": 3,
+        "failed": 0,
     }
     fake.expire_history = False
+
+    # One unstorable mail (NUL byte survives parsing, ingest raises) does not roll back the
+    # others: it is counted as failed, recorded on the mailbox, the rest is ingested.
+    fake.add("g4", _eml(f"c{RUN}@example.com", f"Kaputt {RUN}", f"<g4-{RUN}@x>"))
+    fake.add("g5", _eml(f"d{RUN}@example.com", f"Heil {RUN}", f"<g5-{RUN}@x>"))
+    from mhvp.communication import services
+
+    real_ingest = services.ingest_parsed
+
+    async def broken(session: Any, *args: Any, parsed: Any, **kwargs: Any) -> Any:
+        if parsed["subject"] == f"Kaputt {RUN}":
+            from sqlalchemy import text
+
+            await session.execute(text("select * from table_that_does_not_exist"))
+        return await real_ingest(session, *args, parsed=parsed, **kwargs)
+
+    monkeypatch.setattr(services, "ingest_parsed", broken)
+    result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert (result["created"], result["failed"]) == (1, 1)
+    monkeypatch.setattr(services, "ingest_parsed", real_ingest)
+    listed = {b["id"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+    assert "Nachricht g4" in (listed[box["id"]]["last_error"] or "")
+    assert f"Heil {RUN}" in {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=h))}
 
     # Failing token refresh: error recorded on the mailbox, no crash, no partial data.
     fake.token_ok = False
