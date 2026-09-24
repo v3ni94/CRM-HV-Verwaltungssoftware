@@ -174,6 +174,10 @@ async def statement_results(
                 "information_total": str(result + arrears),  # information only, not a new claim
                 "reserve_due": str(r_due),
                 "reserve_paid": str(r_paid),
+                # M24-01 (decided 24.09.2026): information for buyer and seller only; the
+                # result is owed by the owner at the resolution date, arrears stay with the
+                # original debtor.
+                "ownership_periods": await ownership_periods(session, uid, start, end),
             }
         )
     closing = (
@@ -272,3 +276,35 @@ async def owner_at(session: AsyncSession, unit_id: uuid.UUID, day: date) -> Any:
             or_(Contract.end_date.is_(None), Contract.end_date >= day),
         )
     )
+
+
+async def ownership_periods(
+    session: AsyncSession, unit_id: uuid.UUID, start: date, end: date
+) -> list[dict[str, Any]]:
+    from mhvp.contracts.models import Contract, ContractKind
+
+    rows = (
+        await session.scalars(
+            select(Contract)
+            .where(
+                Contract.unit_id == unit_id,
+                Contract.kind == ContractKind.OWNERSHIP,
+                Contract.start_date <= end,
+                or_(Contract.end_date.is_(None), Contract.end_date >= start),
+            )
+            .order_by(Contract.start_date)
+        )
+    ).all()
+    out = []
+    for c in rows:
+        s_, e_ = max(c.start_date, start), min(c.end_date or end, end)
+        out.append(
+            {
+                "contract_id": str(c.id),
+                "party_id": str(c.party_id),
+                "from": s_.isoformat(),
+                "to": e_.isoformat(),
+                "days": days(s_, e_),
+            }
+        )
+    return out

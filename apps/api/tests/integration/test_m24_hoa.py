@@ -253,6 +253,8 @@ def test_hoa_statement_d01_d03(clients: tuple[TestClient, TestClient], world: Wo
     )
     assert (d02["cost_share"], d02["result"], d02["arrears"]) == ("2500.00", "-300.00", "300.00")
     assert d02["information_total"] == "0.00"
+    periods = d01["ownership_periods"]
+    assert [(p["from"], p["to"], p["days"]) for p in periods] == [("2025-01-01", "2025-12-31", 365)]
     reserve = snap["reserve"]
     assert reserve["closing"] == "21600.00"  # not 23.100,00
     assert reserve["contributions_open"] == "1500.00"
