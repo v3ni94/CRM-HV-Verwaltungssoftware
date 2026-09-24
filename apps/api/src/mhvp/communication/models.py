@@ -30,6 +30,10 @@ class Mailbox(IdMixin, TimestampMixin, TenantMixin, Base):
     secret: Mapped[str | None] = mapped_column(EncryptedText())
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     last_uid: Mapped[int | None] = mapped_column(Integer)
+    # Gmail: `secret` holds the OAuth refresh token; the history id is the incremental cursor.
+    gmail_history_id: Mapped[str | None] = mapped_column(String(32))
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
 
 
 class Message(IdMixin, TimestampMixin, TenantMixin, Base):

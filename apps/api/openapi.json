@@ -9198,6 +9198,11 @@
       "MailIngestIn": {
         "additionalProperties": false,
         "properties": {
+          "auto_ticket": {
+            "default": false,
+            "title": "Auto Ticket",
+            "type": "boolean"
+          },
           "document_id": {
             "format": "uuid",
             "title": "Document Id",
@@ -9321,6 +9326,48 @@
           "address"
         ],
         "title": "MailboxIn",
+        "type": "object"
+      },
+      "MailboxPatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "pattern": "^(imap|gmail)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "secret": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret"
+          }
+        },
+        "title": "MailboxPatchIn",
         "type": "object"
       },
       "MaintenanceIn": {
@@ -29315,6 +29362,30 @@
       }
     },
     "/api/v1/mail/mailboxes": {
+      "get": {
+        "operationId": "list_mailboxes_api_v1_mail_mailboxes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Mailboxes Api V1 Mail Mailboxes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Postfächer (ohne Zugangsdaten)",
+        "tags": [
+          "Postfach"
+        ]
+      },
       "post": {
         "operationId": "create_mailbox_api_v1_mail_mailboxes_post",
         "requestBody": {
@@ -29352,6 +29423,106 @@
           }
         },
         "summary": "Postfach einrichten (Zugangsdaten verschlüsselt)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/mailboxes/{mailbox_id}": {
+      "patch": {
+        "operationId": "patch_mailbox_api_v1_mail_mailboxes__mailbox_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mailbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mailbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailboxPatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Mailbox Api V1 Mail Mailboxes  Mailbox Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Postfach ändern (Token, aktiv)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/mailboxes/{mailbox_id}/sync": {
+      "post": {
+        "operationId": "sync_mailbox_now_api_v1_mail_mailboxes__mailbox_id__sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mailbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mailbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Sync Mailbox Now Api V1 Mail Mailboxes  Mailbox Id  Sync Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gmail-Posteingang jetzt abrufen",
         "tags": [
           "Postfach"
         ]

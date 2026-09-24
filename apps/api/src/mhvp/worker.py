@@ -31,6 +31,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.documents.tasks",
             "mhvp.ai.jobs",
             "mhvp.workspace.tasks",
+            "mhvp.communication.tasks",
             "mhvp.banking.tasks",
             "mhvp.accounting.tasks",
             "mhvp.letting.tasks",
@@ -87,6 +88,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "accounting-dunning-run": {
                 "task": "mhvp.accounting.dunning_run",
                 "schedule": crontab(day_of_month=5, hour=6, minute=0),
+            },
+            # Gmail inbox sync for enabled mailboxes (M20-01); read only, Message-ID dedup.
+            "communication-gmail-sync": {
+                "task": "mhvp.communication.gmail_sync_all",
+                "schedule": 120.0,
+                "options": {"queue": "mail"},
             },
             "workspace-reminders": {
                 "task": "mhvp.workspace.reminders",

@@ -22,6 +22,7 @@ def test_queues_and_reliability_settings(settings: Settings) -> None:
         "accounting-dunning-run",
         "letting-purge-prospects",
         "platform-usage-all",
+        "communication-gmail-sync",
     }
     assert conf.beat_schedule["webhooks-dispatch"]["task"] == "mhvp.core.webhooks.dispatch"
 
