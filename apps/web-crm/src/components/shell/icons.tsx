@@ -112,6 +112,12 @@ const icons: Record<string, IconComponent> = {
       <circle cx="10" cy="10" r="4" />
     </Base>
   ),
+  dms: (p) => (
+    <Base {...p}>
+      <path d="M3.5 5.5h5l1.5 1.5h6.5v8h-13z" />
+      <path d="M3.5 9h13" />
+    </Base>
+  ),
   imports: (p) => (
     <Base {...p}>
       <path d="M10 3v9M6.5 8.5 10 12l3.5-3.5" />

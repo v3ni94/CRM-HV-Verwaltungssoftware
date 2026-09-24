@@ -155,6 +155,7 @@ services:
     <<: *hardening
     environment:
       MHVP_API_INTERNAL_URL: ${MHVP_API_INTERNAL_URL:-http://api:8000}
+      MHVP_DMS_URL: ${MHVP_DMS_URL:-https://uebernahme.muellerhv.de}
       MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
     depends_on:
       api:

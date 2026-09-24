@@ -32,7 +32,8 @@
     "settings": "Settings",
     "myData": "My data",
     "navCollapse": "Collapse sidebar",
-    "navExpand": "Expand sidebar"
+    "navExpand": "Expand sidebar",
+    "dms": "DMS"
   },
   "Hoa": {
     "title": "HOA management",
