@@ -146,6 +146,10 @@ services:
   beat:
     <<: *python-app
     command: ["celery", "-A", "mhvp.worker", "beat", "--loglevel", "INFO", "--schedule", "/tmp/celerybeat-schedule"]
+    # The image healthcheck probes the API port; beat serves no HTTP. Job health is visible in
+    # /api/v1/platform/ops/metrics (last run per job), so the inherited probe is disabled.
+    healthcheck:
+      disable: true
 
   web-crm:
     <<: *hardening
