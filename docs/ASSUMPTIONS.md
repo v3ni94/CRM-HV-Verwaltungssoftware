@@ -411,6 +411,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M27 |
 | Datum | 23.09.2026 |
 
+## A-038
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Sonderumlagen werden je Rate als Vertragszahlung der Zahlungsart Sonderumlage für genau einen Monat angelegt; Rundungsrest auf die letzte Rate. Zwei übernommene Sonderumlagen derselben Gemeinschaft dürfen sich zeitlich nicht überschneiden, weil Sollstellungen gleicher Zahlungsart sonst in der Auswertung nicht trennbar sind. Verwendete Mittel sind die gebuchten Salden auf dem gewählten Verwendungskonto ab der ersten Fälligkeit. |
+| Begründung | W09 |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
+| Betroffene Bereiche | WEG |
+| Überprüfung spätestens bei Meilenstein | W09 |
+| Datum | 23.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

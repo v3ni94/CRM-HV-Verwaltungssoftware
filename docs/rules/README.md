@@ -51,7 +51,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | W06 | Beschluss und Buchung | 7.8 | implemented (M24), [W06](W06-resolution.md) |
 | W07 | Eigentümerwechsel | 7.8 | open, M24-01 |
 | W08 | Erhaltungsrücklagen | 7.8 | implemented (M24), D03 tested |
-| W09 | Sonderumlagen und Maßnahmen | 7.8 | specified, not implemented |
+| W09 | Sonderumlagen und Maßnahmen | 7.8 | implemented, not accepted (special levy, `test_w09_special_levy.py`); changes open, W09-01 |
 | W10 | Darlehen, Versicherungen, größere Maßnahmen | 7.8 | specified, not implemented |
 | W11 | Vermögensbericht | 7.8 | partly implemented (M24 asset report); structure open, M24-02 |
 | W12 | Abrechnungspaket | 7.8 | specified, not implemented |

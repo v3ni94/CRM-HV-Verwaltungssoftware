@@ -8397,6 +8397,96 @@
         "title": "LetterIn",
         "type": "object"
       },
+      "LevyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "allocation_key_id": {
+            "format": "uuid",
+            "title": "Allocation Key Id",
+            "type": "string"
+          },
+          "first_due": {
+            "format": "date",
+            "title": "First Due",
+            "type": "string"
+          },
+          "instalments": {
+            "default": 1,
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Instalments",
+            "type": "integer"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "purpose": {
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Purpose",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Total"
+          },
+          "unit_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Unit Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "purpose",
+          "total",
+          "allocation_key_id",
+          "first_due"
+        ],
+        "title": "LevyIn",
+        "type": "object"
+      },
+      "LevyResolveIn": {
+        "additionalProperties": false,
+        "properties": {
+          "resolution_id": {
+            "format": "uuid",
+            "title": "Resolution Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resolution_id"
+        ],
+        "title": "LevyResolveIn",
+        "type": "object"
+      },
       "LicenseIn": {
         "additionalProperties": false,
         "properties": {
@@ -26381,6 +26471,332 @@
         "summary": "Wirksamkeitsstatus ändern (z. B. bestandskräftig, angefochten)",
         "tags": [
           "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/special-levies": {
+      "get": {
+        "operationId": "list_levies_api_v1_hoa_special_levies_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "legal_entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Legal Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Levies Api V1 Hoa Special Levies Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sonderumlagen einer GdWE",
+        "tags": [
+          "hoa"
+        ]
+      },
+      "post": {
+        "operationId": "create_levy_api_v1_hoa_special_levies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LevyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Levy Api V1 Hoa Special Levies Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sonderumlage (Entwurf)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/special-levies/{levy_id}": {
+      "get": {
+        "operationId": "get_levy_api_v1_hoa_special_levies__levy_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "levy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Levy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Levy Api V1 Hoa Special Levies  Levy Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sonderumlage",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/special-levies/{levy_id}/apply": {
+      "post": {
+        "description": "One payment row per instalment month (valid for that month only), so each receivable run\ncharges an instalment once. Overlapping applied levies of the same community are refused,\nbecause receivables of type special_levy could not be told apart in the report (A-038).",
+        "operationId": "apply_levy_api_v1_hoa_special_levies__levy_id__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "levy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Levy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Apply Levy Api V1 Hoa Special Levies  Levy Id  Apply Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Raten als Vertragszahlungen übernehmen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/special-levies/{levy_id}/calculate": {
+      "post": {
+        "operationId": "calculate_levy_api_v1_hoa_special_levies__levy_id__calculate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "levy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Levy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Calculate Levy Api V1 Hoa Special Levies  Levy Id  Calculate Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verteilung je Einheit und Rate",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/special-levies/{levy_id}/report": {
+      "get": {
+        "description": "Resolved total, charged (posted receivables), received, open, used (postings on the use\naccount) and remaining earmarked funds (received minus used), kept apart from HOA fees.",
+        "operationId": "levy_report_api_v1_hoa_special_levies__levy_id__report_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "levy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Levy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Levy Report Api V1 Hoa Special Levies  Levy Id  Report Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zweckgebundener Bestand (W09)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/special-levies/{levy_id}/resolve": {
+      "post": {
+        "operationId": "resolve_levy_api_v1_hoa_special_levies__levy_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "levy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Levy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LevyResolveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resolve Levy Api V1 Hoa Special Levies  Levy Id  Resolve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Beschluss zuordnen (W06, W09)",
+        "tags": [
+          "hoa"
         ]
       }
     },

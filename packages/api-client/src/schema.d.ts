@@ -2627,6 +2627,118 @@ export interface paths {
         patch: operations["patch_resolution_api_v1_hoa_resolutions__resolution_id__patch"];
         trace?: never;
     };
+    "/api/v1/hoa/special-levies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sonderumlagen einer GdWE */
+        get: operations["list_levies_api_v1_hoa_special_levies_get"];
+        put?: never;
+        /** Sonderumlage (Entwurf) */
+        post: operations["create_levy_api_v1_hoa_special_levies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/special-levies/{levy_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sonderumlage */
+        get: operations["get_levy_api_v1_hoa_special_levies__levy_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/special-levies/{levy_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Raten als Vertragszahlungen übernehmen
+         * @description One payment row per instalment month (valid for that month only), so each receivable run
+         *     charges an instalment once. Overlapping applied levies of the same community are refused,
+         *     because receivables of type special_levy could not be told apart in the report (A-038).
+         */
+        post: operations["apply_levy_api_v1_hoa_special_levies__levy_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/special-levies/{levy_id}/calculate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verteilung je Einheit und Rate */
+        post: operations["calculate_levy_api_v1_hoa_special_levies__levy_id__calculate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/special-levies/{levy_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Zweckgebundener Bestand (W09)
+         * @description Resolved total, charged (posted receivables), received, open, used (postings on the use
+         *     account) and remaining earmarked funds (received minus used), kept apart from HOA fees.
+         */
+        get: operations["levy_report_api_v1_hoa_special_levies__levy_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/special-levies/{levy_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Beschluss zuordnen (W06, W09) */
+        post: operations["resolve_levy_api_v1_hoa_special_levies__levy_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/statements": {
         parameters: {
             query?: never;
@@ -7756,6 +7868,45 @@ export interface components {
             template_id: string;
             /** Unit Id */
             unit_id?: string | null;
+        };
+        /** LevyIn */
+        LevyIn: {
+            /** Account Id */
+            account_id?: string | null;
+            /**
+             * Allocation Key Id
+             * Format: uuid
+             */
+            allocation_key_id: string;
+            /**
+             * First Due
+             * Format: date
+             */
+            first_due: string;
+            /**
+             * Instalments
+             * @default 1
+             */
+            instalments: number;
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /** Purpose */
+            purpose: string;
+            /** Total */
+            total: number | string;
+            /** Unit Ids */
+            unit_ids?: string[];
+        };
+        /** LevyResolveIn */
+        LevyResolveIn: {
+            /**
+             * Resolution Id
+             * Format: uuid
+             */
+            resolution_id: string;
         };
         /** LicenseIn */
         LicenseIn: {
@@ -16671,6 +16822,243 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["HoaResolutionPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_levies_api_v1_hoa_special_levies_get: {
+        parameters: {
+            query: {
+                legal_entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_levy_api_v1_hoa_special_levies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LevyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_levy_api_v1_hoa_special_levies__levy_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                levy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_levy_api_v1_hoa_special_levies__levy_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                levy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calculate_levy_api_v1_hoa_special_levies__levy_id__calculate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                levy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    levy_report_api_v1_hoa_special_levies__levy_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                levy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_levy_api_v1_hoa_special_levies__levy_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                levy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LevyResolveIn"];
             };
         };
         responses: {

@@ -249,3 +249,25 @@ class AuditReport(IdMixin, TenantMixin, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
+
+
+class SpecialLevy(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Special levy (W09): purpose, total, key, affected units, instalments, resolution binding.
+    Funds stay earmarked; they are not free current HOA fees."""
+
+    __tablename__ = "special_levy"
+
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id", nullable=False)
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", nullable=False)
+    purpose: Mapped[str] = mapped_column(Text, nullable=False)
+    total: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    allocation_key_id: Mapped[uuid.UUID] = _fk("allocation_key.id", nullable=False)
+    unit_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    first_due: Mapped[date] = mapped_column(Date, nullable=False)  # first day of a month
+    instalments: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    account_id: Mapped[uuid.UUID | None] = _fk("ledger_account.id")  # use of funds
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    snapshot_hash: Mapped[str | None] = mapped_column(String(64))
+    resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
