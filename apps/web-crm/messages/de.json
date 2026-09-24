@@ -71,6 +71,7 @@
     "bank": "Bank",
     "billing": "Abrechnung",
     "tickets": "Tickets",
+    "mail": "Mail",
     "platform": "Plattform",
     "invoices": "Rechnungen",
     "properties": "Objekte",
@@ -1272,6 +1273,62 @@
       "high": "hoch",
       "urgent": "dringend",
       "immediate": "sofort"
+    }
+  },
+  "Mail": {
+    "title": "Mail",
+    "loading": "Wird geladen...",
+    "empty": "Keine Nachrichten.",
+    "noAddress": "ohne Adresse",
+    "noSubject": "ohne Betreff",
+    "selectMessage": "Nachricht auswählen.",
+    "refresh": "Aktualisieren",
+    "searchPlaceholder": "Suche",
+    "ticketBadge": "Ticket",
+    "thread": "Verlauf",
+    "directionIn": "Eingang",
+    "directionOut": "Ausgang",
+    "from": "Von {address}",
+    "toField": "An {address}",
+    "to": "An (kommagetrennt)",
+    "subject": "Betreff",
+    "body": "Text",
+    "save": "Speichern",
+    "submitForApproval": "Zur Freigabe",
+    "reply": "Antworten",
+    "createTicket": "Ticket anlegen",
+    "markDone": "Erledigt",
+    "openTicket": "Ticket öffnen",
+    "openContact": "Kontakt öffnen",
+    "openProperty": "Objekt öffnen",
+    "attachments": "{count} Anhang/Anhänge",
+    "approveAndSend": "Freigeben und senden",
+    "reject": "Ablehnen",
+    "confirmReject": "Ablehnung speichern",
+    "rejectionNoteLabel": "Ablehnungsgrund",
+    "rejectionNote": "Abgelehnt: {note}",
+    "pendingHint": "Wartet auf Freigabe durch einen Freigabeberechtigten.",
+    "submittedBy": "Eingereicht von {who} am {at}",
+    "sentAt": "Gesendet am {at}",
+    "tabs": {
+      "inbox": "Posteingang",
+      "drafts": "Entwürfe",
+      "pending": "Freigaben",
+      "sent": "Gesendet"
+    },
+    "statusFilter": {
+      "all": "alle"
+    },
+    "mailboxFilter": {
+      "all": "alle Postfächer"
+    },
+    "status": {
+      "new": "neu",
+      "assigned": "zugeordnet",
+      "done": "erledigt",
+      "draft": "Entwurf",
+      "pending": "wartet auf Freigabe",
+      "sent": "gesendet"
     }
   },
   "Platform": {

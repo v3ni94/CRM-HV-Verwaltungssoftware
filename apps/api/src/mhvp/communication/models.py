@@ -78,7 +78,7 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     mailbox_id: Mapped[uuid.UUID | None] = _fk("mailbox.id")
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="new"
-    )  # new, assigned, done, draft, sent
+    )  # in: new, assigned, done. out: draft, pending, sent (Vier-Augen-Freigabe, M20).
     from_address: Mapped[str | None] = mapped_column(String(320))
     to_addresses: Mapped[list[str]] = mapped_column(
         ARRAY(String(320)), nullable=False, default=list
@@ -102,6 +102,13 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=list
     )
     reply_due: Mapped[date | None] = mapped_column(Date)
+    # Freigabe-Workflow für ausgehende Mails (M20): submit -> approve/reject (Vier-Augen-Prinzip).
+    submitted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejection_note: Mapped[str | None] = mapped_column(Text)
+    gmail_message_id: Mapped[str | None] = mapped_column(String(64))
 
 
 class Dispatch(IdMixin, TimestampMixin, TenantMixin, Base):

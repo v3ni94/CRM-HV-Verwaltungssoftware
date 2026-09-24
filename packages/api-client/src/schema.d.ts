@@ -3650,7 +3650,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Einzelne Nachricht */
+        get: operations["get_message_api_v1_mail_messages__message_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3677,6 +3678,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/messages/{message_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Entwurf freigeben und senden */
+        post: operations["approve_api_v1_mail_messages__message_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Entwurf bearbeiten */
+        patch: operations["patch_draft_api_v1_mail_messages__message_id__draft_patch"];
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Entwurf zurückweisen */
+        post: operations["reject_api_v1_mail_messages__message_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/messages/{message_id}/reply-draft": {
         parameters: {
             query?: never;
@@ -3694,7 +3746,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/mail/messages/{message_id}/send": {
+    "/api/v1/mail/messages/{message_id}/submit": {
         parameters: {
             query?: never;
             header?: never;
@@ -3703,8 +3755,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Entwurf senden (nur mit eingerichtetem Postfach) */
-        post: operations["send_api_v1_mail_messages__message_id__send_post"];
+        /** Entwurf zur Freigabe einreichen */
+        post: operations["submit_api_v1_mail_messages__message_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/thread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Alle Nachrichten des Vorgangs */
+        get: operations["message_thread_api_v1_mail_messages__message_id__thread_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8790,6 +8859,15 @@ export interface components {
             /** Status */
             status?: string | null;
         };
+        /** MailDraftPatchIn */
+        MailDraftPatchIn: {
+            /** Body */
+            body?: string | null;
+            /** Subject */
+            subject?: string | null;
+            /** To Addresses */
+            to_addresses?: string[] | null;
+        };
         /** MailIngestIn */
         MailIngestIn: {
             /**
@@ -8804,6 +8882,16 @@ export interface components {
             document_id: string;
             /** Mailbox Id */
             mailbox_id?: string | null;
+        };
+        /** MailRejectIn */
+        MailRejectIn: {
+            /** Note */
+            note: string;
+        };
+        /** MailReplyDraftIn */
+        MailReplyDraftIn: {
+            /** Body */
+            body?: string | null;
         };
         /** MailboxIn */
         MailboxIn: {
@@ -19956,6 +20044,10 @@ export interface operations {
             query?: {
                 status?: string | null;
                 contact_id?: string | null;
+                direction?: string | null;
+                ticket_id?: string | null;
+                mailbox_id?: string | null;
+                q?: string | null;
                 limit?: number;
             };
             header?: never;
@@ -19973,6 +20065,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_message_api_v1_mail_messages__message_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -20060,7 +20185,7 @@ export interface operations {
             };
         };
     };
-    reply_draft_api_v1_mail_messages__message_id__reply_draft_post: {
+    approve_api_v1_mail_messages__message_id__approve_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -20070,6 +20195,117 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_draft_api_v1_mail_messages__message_id__draft_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailDraftPatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_api_v1_mail_messages__message_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailRejectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reply_draft_api_v1_mail_messages__message_id__reply_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MailReplyDraftIn"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             201: {
@@ -20093,7 +20329,7 @@ export interface operations {
             };
         };
     };
-    send_api_v1_mail_messages__message_id__send_post: {
+    submit_api_v1_mail_messages__message_id__submit_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -20113,6 +20349,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    message_thread_api_v1_mail_messages__message_id__thread_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */

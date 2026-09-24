@@ -195,8 +195,9 @@ def test_mail_intake_to_ticket(client: TestClient, world: World) -> None:
     draft = _ok(client.post(f"{M}/messages/{msg['id']}/reply-draft", headers=h), 201)
     assert draft["body"].startswith(f"Sehr geehrte Frau Post{RUN},")
     assert f"Vorgang {ticket['number']}" in draft["body"]
-    blocked = client.post(f"{M}/messages/{draft['id']}/send", headers=h)
-    assert blocked.status_code == 409  # mailbox not enabled
+    _ok(client.post(f"{M}/messages/{draft['id']}/submit", headers=h))
+    blocked = client.post(f"{M}/messages/{draft['id']}/approve", headers=h)
+    assert blocked.status_code == 409  # own draft: Vier-Augen-Prinzip
     cal = _ok(
         client.post(
             f"{M}/messages/{msg['id']}/appointment",

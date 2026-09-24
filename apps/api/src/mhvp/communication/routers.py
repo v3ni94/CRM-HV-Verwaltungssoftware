@@ -1,11 +1,13 @@
 """Mailbox (/api/v1/mail, M20): intake, assignment, list of cases, ticket from mail, reply
-draft. Sending needs a configured and enabled mailbox (M20-01)."""
+draft. Sending an outbound draft needs a configured and enabled mailbox (M20-01) and runs
+through a Vier-Augen-Freigabe: submit -> approve (by someone else) -> sent, or reject -> draft."""
 
 import smtplib
 import ssl
 import uuid
 from datetime import UTC, date, datetime
 from email.message import EmailMessage
+from email.utils import make_msgid
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -18,12 +20,14 @@ from mhvp.communication import mail
 from mhvp.communication.models import Mailbox, MailboxUser, Message
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.db.tenancy import tenant_transaction
+from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(prefix="/mail", tags=["Postfach"])
 READ = require_permission("communication:read")
 CREATE = require_permission("communication:create")
 UPDATE = require_permission("communication:update")
+APPROVE = require_permission("communication:approve")
 ADMIN = require_permission("tenant_settings:update")
 SMTP_TIMEOUT = 30
 OAUTH_STATE_TTL = 600
@@ -60,6 +64,20 @@ class MailAssignIn(_In):
 class MailAppointmentIn(_In):
     index: int = Field(ge=0, le=4)
     title: str = Field(min_length=1, max_length=300)
+
+
+class MailDraftPatchIn(_In):
+    subject: str | None = Field(default=None, max_length=998)
+    body: str | None = None
+    to_addresses: list[str] | None = None
+
+
+class MailRejectIn(_In):
+    note: str = Field(min_length=1, max_length=4000)
+
+
+class MailReplyDraftIn(_In):
+    body: str | None = None
 
 
 def _mailbox_out(m: Mailbox, user_ids: list[uuid.UUID] | None = None) -> dict[str, Any]:
@@ -100,6 +118,14 @@ def _out(m: Message) -> dict[str, Any]:
             "attachment_document_ids",
             "classification",
             "appointment_suggestions",
+            "created_by",
+            "mailbox_id",
+            "submitted_by",
+            "submitted_at",
+            "approved_by",
+            "approved_at",
+            "rejection_note",
+            "gmail_message_id",
         )
     }
 
@@ -408,6 +434,10 @@ async def messages(
     request: Request,
     status: str | None = None,
     contact_id: uuid.UUID | None = None,
+    direction: str | None = Query(default=None, pattern="^(in|out)$"),
+    ticket_id: uuid.UUID | None = None,
+    mailbox_id: uuid.UUID | None = None,
+    q: str | None = None,
     limit: int = Query(default=100, ge=1, le=500),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
@@ -420,7 +450,52 @@ async def messages(
             query = query.where(Message.status == status)
         if contact_id:
             query = query.where(Message.contact_id == contact_id)
+        if direction:
+            query = query.where(Message.direction == direction)
+        if ticket_id:
+            query = query.where(Message.ticket_id == ticket_id)
+        if mailbox_id:
+            query = query.where(Message.mailbox_id == mailbox_id)
+        if q:
+            like = f"%{q}%"
+            query = query.where(
+                or_(
+                    Message.subject.ilike(like),
+                    Message.from_address.ilike(like),
+                    Message.body.ilike(like),
+                )
+            )
         return [_out(m) for m in (await session.scalars(query.limit(limit))).all()]
+
+
+@router.get("/messages/{message_id}", summary="Einzelne Nachricht")
+async def get_message(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Message, message_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return _out(row)
+
+
+@router.get("/messages/{message_id}/thread", summary="Alle Nachrichten des Vorgangs")
+async def message_thread(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    from sqlalchemy import func
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Message, message_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        thread_id = row.thread_id or row.id
+        query = (
+            select(Message)
+            .where(or_(Message.thread_id == thread_id, Message.id == thread_id))
+            .order_by(func.coalesce(Message.received_at, Message.sent_at, Message.created_at))
+        )
+        return [_out(m) for m in (await session.scalars(query)).all()]
 
 
 @router.patch("/messages/{message_id}", summary="Zuordnen oder erledigen")
@@ -460,7 +535,10 @@ async def to_ticket(
     summary="Antwortentwurf (Vorlage, keine KI)",
 )
 async def reply_draft(
-    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+    message_id: uuid.UUID,
+    request: Request,
+    body: MailReplyDraftIn | None = None,
+    principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     from mhvp.contacts.models import Contact
     from mhvp.tickets.models import Ticket
@@ -481,7 +559,9 @@ async def reply_draft(
             mailbox_id=row.mailbox_id,
             to_addresses=[row.from_address] if row.from_address else [],
             subject=f"AW: {row.subject or ''}"[:998],
-            body=mail.draft_reply(salutation, row.subject, ticket.number if ticket else None),
+            body=body.body
+            if body is not None and body.body is not None
+            else mail.draft_reply(salutation, row.subject, ticket.number if ticket else None),
             in_reply_to=row.header_message_id,
             thread_id=row.thread_id or row.id,
             contact_id=row.contact_id,
@@ -493,18 +573,60 @@ async def reply_draft(
         return _out(draft)
 
 
-@router.post(
-    "/messages/{message_id}/send", summary="Entwurf senden (nur mit eingerichtetem Postfach)"
-)
-async def send(
+@router.patch("/messages/{message_id}/draft", summary="Entwurf bearbeiten")
+async def patch_draft(
+    message_id: uuid.UUID,
+    body: MailDraftPatchIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)
+        if row.direction != "out" or row.status != "draft":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Nur Entwürfe können bearbeitet werden.")
+        for key, value in body.model_dump(exclude_none=True).items():
+            setattr(row, key, value)
+        await session.flush()
+        return _out(row)
+
+
+@router.post("/messages/{message_id}/submit", summary="Entwurf zur Freigabe einreichen")
+async def submit(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await _message(session, message_id)
         if row.direction != "out" or row.status != "draft":
-            raise ProblemError(ErrorCodes.CONFLICT, detail="Nur Entwürfe können gesendet werden.")
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Nur Entwürfe können eingereicht werden."
+            )
+        row.status = "pending"
+        row.submitted_by, row.submitted_at = principal.user_id, datetime.now(UTC)
+        row.rejection_note = None
+        await session.flush()
+        return _out(row)
+
+
+@router.post("/messages/{message_id}/approve", summary="Entwurf freigeben und senden")
+async def approve(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    from mhvp.communication import gmail
+    from mhvp.tickets.models import TicketEvent
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)
+        if row.direction != "out" or row.status != "pending":
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Nur eingereichte Entwürfe können freigegeben werden."
+            )
+        if principal.user_id in (row.submitted_by, row.created_by):
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Vier-Augen-Prinzip: eigene Entwürfe können nicht freigegeben werden.",
+            )
         box = await session.get(Mailbox, row.mailbox_id) if row.mailbox_id else None
-        if box is None or not box.enabled or not box.smtp_host or not box.secret:
+        if box is None or not box.enabled or not box.secret:
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Kein eingerichtetes Postfach für den Versand (M20-01)."
             )
@@ -516,12 +638,83 @@ async def send(
         )
         if row.in_reply_to:
             msg["In-Reply-To"] = row.in_reply_to
+            msg["References"] = row.in_reply_to
         msg.set_content(row.body or "")
-        with smtplib.SMTP(box.smtp_host, box.smtp_port or 587, timeout=SMTP_TIMEOUT) as smtp:
-            smtp.starttls(context=ssl.create_default_context())
-            smtp.login(box.username or box.address, box.secret)
-            smtp.send_message(msg)
+        domain = box.address.rsplit("@", 1)[-1] or None
+        msg["Message-ID"] = make_msgid(domain=domain)
+
+        if box.kind == "gmail":
+            try:
+                client_id, client_secret = await gmail.oauth_client(
+                    session, request.app.state.settings
+                )
+                client = gmail.make_client(client_id, client_secret, box)
+                try:
+                    gmail_message_id = await client.send_raw(bytes(msg))
+                finally:
+                    await client.aclose()
+            except gmail.GmailError as exc:
+                raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+            row.gmail_message_id = gmail_message_id
+        else:
+            if not box.smtp_host:
+                raise ProblemError(
+                    ErrorCodes.CONFLICT,
+                    detail="Kein eingerichtetes Postfach für den Versand (M20-01).",
+                )
+            try:
+                with smtplib.SMTP(
+                    box.smtp_host, box.smtp_port or 587, timeout=SMTP_TIMEOUT
+                ) as smtp:
+                    smtp.starttls(context=ssl.create_default_context())
+                    smtp.login(box.username or box.address, box.secret)
+                    smtp.send_message(msg)
+            except (smtplib.SMTPException, OSError) as exc:
+                raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+
         row.status, row.sent_at = "sent", datetime.now(UTC)
+        row.approved_by, row.approved_at = principal.user_id, datetime.now(UTC)
+        row.header_message_id = msg["Message-ID"]
+        await session.flush()
+        if row.ticket_id:
+            session.add(
+                TicketEvent(
+                    tenant_id=row.tenant_id,
+                    ticket_id=row.ticket_id,
+                    kind="mail_sent",
+                    data={"message_id": str(row.id), "to": row.to_addresses},
+                    user_id=principal.user_id,
+                )
+            )
+            await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="mail.sent",
+            entity_type="message",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"ticket_id": str(row.ticket_id) if row.ticket_id else None},
+        )
+        return _out(row)
+
+
+@router.post("/messages/{message_id}/reject", summary="Entwurf zurückweisen")
+async def reject(
+    message_id: uuid.UUID,
+    body: MailRejectIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)
+        if row.direction != "out" or row.status != "pending":
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Nur eingereichte Entwürfe können zurückgewiesen werden.",
+            )
+        row.status = "draft"
+        row.rejection_note = body.note
         await session.flush()
         return _out(row)
 

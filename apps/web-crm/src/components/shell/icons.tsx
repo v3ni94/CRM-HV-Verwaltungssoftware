@@ -82,6 +82,12 @@ const icons: Record<string, IconComponent> = {
       <path d="M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1.2a1.6 1.6 0 0 0 0 3.6V14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.2a1.6 1.6 0 0 0 0-3.6Z" />
     </Base>
   ),
+  mail: (p) => (
+    <Base {...p}>
+      <rect x="3" y="4.5" width="14" height="11" rx="1.6" />
+      <path d="m3.5 5.5 6.5 5 6.5-5" />
+    </Base>
+  ),
   accounting: (p) => (
     <Base {...p}>
       <path d="M6 3v14M14 3v14M4 6h4M12 6h4M4 14h4M12 14h4" />
