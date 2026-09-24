@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 export type NavGroup = { label: string; items: { href: string; label: string }[] };
 
@@ -9,7 +9,10 @@ export type NavGroup = { label: string; items: { href: string; label: string }[]
  *  Renders as a sidebar on wide screens and as a scrollable row on small ones. */
 export function SideNav({ groups, label }: { groups: NavGroup[]; label: string }) {
   const pathname = usePathname();
-  const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const search = useSearchParams();
+  const current = search?.toString() ? `${pathname}?${search.toString()}` : pathname;
+  const active = (href: string) =>
+    href.includes("?") ? current === href : pathname === href || pathname.startsWith(`${href}/`);
   return (
     <nav aria-label={label} className="flex gap-1 overflow-x-auto px-2 py-2 md:flex-col md:gap-5 md:overflow-visible md:px-3 md:py-4">
       {groups.map((g) => (

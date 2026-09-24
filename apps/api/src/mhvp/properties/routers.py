@@ -25,6 +25,7 @@ from mhvp.properties.models import (
     CustomFieldDefinition,
     LegalEntity,
     MaintenanceItem,
+    ManagementType,
     Meter,
     MeterReading,
     Property,
@@ -85,14 +86,33 @@ async def list_properties(
     request: Request,
     q: str | None = Query(default=None, max_length=200),
     status: PropertyStatus | None = None,
+    management_type: ManagementType | None = None,
+    sev_only: bool = Query(
+        default=False,
+        description="Nur WEG-Objekte mit SEV, für die Mietverträge hinterlegt sind",
+    ),
     page: Page = 1,
     page_size: PageSize = 50,
     principal: TenantPrincipal = Depends(READ),
 ) -> s.PropertyPage:
+    from mhvp.contracts.models import Contract
+
     async with tenant_tx(request, principal) as session:
         query = select(Property)
         if status:
             query = query.where(Property.status == status)
+        if management_type:
+            query = query.where(Property.management_type == management_type)
+        if sev_only:
+            tenancy = (
+                select(Unit.property_id)
+                .join(Contract, Contract.unit_id == Unit.id)
+                .where(Contract.kind == "tenancy")
+            )
+            query = query.where(
+                Property.management_type == ManagementType.HOA_WITH_SEV,
+                Property.id.in_(tenancy),
+            )
         if q:
             like = f"%{q.strip()}%"
             query = query.where(

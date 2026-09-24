@@ -20614,6 +20614,9 @@ export interface operations {
             query?: {
                 q?: string | null;
                 status?: components["schemas"]["PropertyStatus"] | null;
+                management_type?: components["schemas"]["ManagementType"] | null;
+                /** @description Nur WEG-Objekte mit SEV, für die Mietverträge hinterlegt sind */
+                sev_only?: boolean;
                 page?: number;
                 page_size?: number;
             };

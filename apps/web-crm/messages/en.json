@@ -25,7 +25,9 @@
       "management": "Management",
       "finance": "Finance",
       "system": "System"
-    }
+    },
+    "rental": "Rental",
+    "sev": "SEV"
   },
   "Hoa": {
     "title": "HOA management",
@@ -730,7 +732,27 @@
       "storage": "Storage",
       "garden": "Garden",
       "other": "Other"
-    }
+    },
+    "scopeNav": "Management scope",
+    "scope": {
+      "all": "All",
+      "rental": "Rental",
+      "hoa": "HOA",
+      "sev": "SEV"
+    },
+    "scopeTitle": {
+      "all": "Properties",
+      "rental": "Rental management",
+      "hoa": "HOA properties",
+      "sev": "Separate ownership management"
+    },
+    "emptyScope": {
+      "all": "No properties yet.",
+      "rental": "No rental properties.",
+      "hoa": "No HOA properties.",
+      "sev": "No HOA properties with SEV and tenancy contracts."
+    },
+    "sevHint": "HOA properties with SEV that have at least one tenancy contract."
   },
   "AiChat": {
     "title": "AI assistant",

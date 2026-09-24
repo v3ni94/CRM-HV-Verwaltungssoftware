@@ -499,3 +499,52 @@ def test_remaining_property_endpoints(client: TestClient, world: World) -> None:
         for f in client.get("/api/v1/custom-fields", headers=h).json()
     )
     assert client.get(f"/api/v1/properties/{pid}/units", headers=h).json()[0]["number"] == "G1"
+
+
+def test_property_list_filters_by_management_type_and_sev(client: TestClient, world: World) -> None:
+    """Expected: rental filter lists only rental properties; sev_only lists HOA-with-SEV
+    properties only once a tenancy contract exists on one of their units."""
+    from tests.integration.test_m5_contracts import _party, _unit
+
+    h = bearer(login(client, world, "m4admin"))
+    rental = client.post("/api/v1/properties", json=_prop("353", "rental"), headers=h)
+    assert rental.status_code == 201, rental.text
+    rental = rental.json()
+    sev = client.post("/api/v1/properties", json=_prop("354", "hoa_with_sev"), headers=h)
+    assert sev.status_code == 201, sev.text
+    sev = sev.json()
+    listed = client.get(
+        "/api/v1/properties", params={"management_type": "rental"}, headers=h
+    ).json()
+    ids = {p["id"] for p in listed["items"]}
+    assert rental["id"] in ids
+    assert sev["id"] not in ids
+    before = client.get("/api/v1/properties", params={"sev_only": "true"}, headers=h).json()
+    assert sev["id"] not in {p["id"] for p in before["items"]}
+    unit = _unit(client, h, sev["id"], "01")
+    owner, _ = _party(client, h, "SevEigentuemer")
+    ownership = client.post(
+        "/api/v1/contracts",
+        json={
+            "kind": "ownership",
+            "unit_id": unit,
+            "party_id": owner,
+            "start_date": "2020-01-01",
+            "title_transfer_date": "2020-01-01",
+            "acquisition_kind": "first_acquisition",
+            "sev_enabled": True,
+        },
+        headers=h,
+    )
+    assert ownership.status_code == 201, ownership.text
+    party, _ = _party(client, h, "SevMieter")
+    created = client.post(
+        "/api/v1/contracts",
+        json={"kind": "tenancy", "unit_id": unit, "party_id": party, "start_date": "2026-01-01"},
+        headers=h,
+    )
+    assert created.status_code == 201, created.text
+    after = client.get("/api/v1/properties", params={"sev_only": "true"}, headers=h).json()
+    ids = {p["id"] for p in after["items"]}
+    assert sev["id"] in ids
+    assert rental["id"] not in ids

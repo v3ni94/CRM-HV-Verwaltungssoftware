@@ -4,6 +4,7 @@ import io
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
 from openpyxl import Workbook
 
 from mhvp.ai import evaluate, gateway, tasks
@@ -57,3 +58,54 @@ def test_offline_evaluation_meets_threshold() -> None:
     for result in report.values():
         assert result["cases"] >= evaluate.MIN_CASES
         assert result["field_f1"] >= evaluate.THRESHOLD
+
+
+def test_complete_with_retry_waits_then_falls_through(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Expected by hand: a rate limit is retried after each configured delay; a persistent
+    rate limit is raised after the last attempt; a non retryable error is raised at once."""
+    import asyncio
+
+    from mhvp.ai.providers import Completion, ProviderError
+
+    slept: list[float] = []
+
+    async def fake_sleep(delay: float) -> None:
+        slept.append(delay)
+
+    monkeypatch.setattr(gateway.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(gateway, "RETRY_DELAYS_S", (1.0, 2.0))
+
+    class Flaky:
+        def __init__(self, failures: int, retryable: bool = True) -> None:
+            self.failures = failures
+            self.retryable = retryable
+            self.calls = 0
+
+        async def complete(self, **kwargs: object) -> Completion:
+            self.calls += 1
+            if self.calls <= self.failures:
+                raise ProviderError("rate limited", retryable=self.retryable)
+            return Completion(data={}, raw_text="{}", tokens_in=1, tokens_out=1, model="m")
+
+    async def run(client: Flaky) -> Completion:
+        return await gateway._complete_with_retry(client, "m", "s", [], {})
+
+    ok = Flaky(failures=2)
+    asyncio.run(run(ok))
+    assert ok.calls == 3
+    assert slept == [1.0, 2.0]
+
+    slept.clear()
+    dead = Flaky(failures=5)
+    with pytest.raises(ProviderError) as info:
+        asyncio.run(run(dead))
+    assert info.value.retryable
+    assert dead.calls == 3
+    assert slept == [1.0, 2.0]
+
+    slept.clear()
+    fatal = Flaky(failures=1, retryable=False)
+    with pytest.raises(ProviderError):
+        asyncio.run(run(fatal))
+    assert fatal.calls == 1
+    assert slept == []

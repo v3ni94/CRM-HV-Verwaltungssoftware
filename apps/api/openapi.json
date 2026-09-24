@@ -31846,6 +31846,34 @@
           },
           {
             "in": "query",
+            "name": "management_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ManagementType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Management Type"
+            }
+          },
+          {
+            "description": "Nur WEG-Objekte mit SEV, für die Mietverträge hinterlegt sind",
+            "in": "query",
+            "name": "sev_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Nur WEG-Objekte mit SEV, für die Mietverträge hinterlegt sind",
+              "title": "Sev Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "page",
             "required": false,
             "schema": {

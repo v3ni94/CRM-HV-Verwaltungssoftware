@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -35,8 +36,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     {
       label: t("group.management"),
       items: [
-        ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting") }] : []),
+        ...(can("properties:read") ? [{ href: "/objekte?art=rental", label: t("rental") }] : []),
         ...(can("accounting:read") ? [{ href: "/weg", label: t("hoa") }] : []),
+        ...(can("properties:read") ? [{ href: "/objekte?art=sev", label: t("sev") }] : []),
+        ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting") }] : []),
         ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets") }] : []),
       ],
     },
@@ -74,7 +77,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <span className="mhvp-label">{tHome("area")}</span>
           </span>
         </Link>
-        <SideNav groups={groups} label={t("nav")} />
+        <Suspense fallback={null}>
+          <SideNav groups={groups} label={t("nav")} />
+        </Suspense>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-bg/90 px-4 py-2 backdrop-blur">

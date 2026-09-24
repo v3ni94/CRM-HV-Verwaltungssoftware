@@ -78,7 +78,9 @@
       "management": "Verwaltung",
       "finance": "Finanzen",
       "system": "System"
-    }
+    },
+    "rental": "Mietverwaltung",
+    "sev": "SEV"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -1393,7 +1395,27 @@
       "storage": "Lager",
       "garden": "Garten",
       "other": "Sonstiges"
-    }
+    },
+    "scopeNav": "Verwaltungsart",
+    "scope": {
+      "all": "Alle",
+      "rental": "Mietverwaltung",
+      "hoa": "WEG",
+      "sev": "SEV"
+    },
+    "scopeTitle": {
+      "all": "Objekte",
+      "rental": "Mietverwaltung",
+      "hoa": "WEG-Objekte",
+      "sev": "Sondereigentumsverwaltung"
+    },
+    "emptyScope": {
+      "all": "Keine Objekte vorhanden.",
+      "rental": "Keine Objekte in Mietverwaltung.",
+      "hoa": "Keine WEG-Objekte.",
+      "sev": "Keine WEG-Objekte mit aktivierter SEV und hinterlegten Mietverträgen."
+    },
+    "sevHint": "Angezeigt werden WEG-Objekte mit Sondereigentumsverwaltung, für die mindestens ein Mietvertrag hinterlegt ist."
   },
   "AiChat": {
     "title": "KI-Assistent",

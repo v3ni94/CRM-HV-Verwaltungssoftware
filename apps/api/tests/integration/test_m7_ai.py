@@ -16,7 +16,7 @@ from moto import mock_aws
 from openpyxl import Workbook
 from pydantic import SecretStr
 
-from mhvp.ai import providers
+from mhvp.ai import gateway, providers
 from mhvp.ai.providers import Completion, ProviderError
 from mhvp.core.config import Settings
 from mhvp.main import create_app
@@ -578,10 +578,13 @@ class RecordingFactory:
         return Client()
 
 
-def test_routing_strategy_and_fallback(client: TestClient, world: World) -> None:
+def test_routing_strategy_and_fallback(
+    client: TestClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Expected by hand: anthropic_first with an exhausted Anthropic budget -> OpenAI answers
     and the run records the fallback; anthropic_only -> blocked; openai_first -> OpenAI;
     alternate -> the provider not used last; an OpenAI outage under openai_first -> Anthropic."""
+    monkeypatch.setattr(gateway, "RETRY_DELAYS_S", ())
     factory = RecordingFactory()
     providers.set_factory(factory)
     try:
