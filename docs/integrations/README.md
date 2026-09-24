@@ -5,8 +5,8 @@ Je Bestandstool und Fremdsystem entsteht hier ein Dossier nach Anhang B des Mast
 | Bestandstool | Erwartete Datei | Status |
 | --- | --- | --- |
 | Müller FLOW | `docs/integrations/mueller-flow.md` | offen |
-| Immoware Hub Integrationsplattform | `docs/integrations/immoware-hub.md` | offen |
-| Mail optimierung | `docs/integrations/mail-optimierung.md` | offen |
+| Immoware Hub Integrationsplattform | `docs/integrations/immoware-hub.md` | erstellt 25.09.2026, Empfehlung ablösen |
+| Mail optimierung | `docs/integrations/mail-optimierung.md` | erstellt 25.09.2026, Empfehlung übernehmen als Reiter Mail |
 | Übergabeprotokoll | `docs/integrations/uebergabeprotokoll.md` | offen |
 | Objektakte | `docs/integrations/objektakte.md` | offen |
 | smart-einzug | `docs/integrations/smart-einzug.md` | offen |
