@@ -2379,6 +2379,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/majority-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mehrheitsregeln einer GdWE */
+        get: operations["list_rules_api_v1_hoa_majority_rules_get"];
+        put?: never;
+        /** Mehrheitsregel mit Fundstelle (M25-01) */
+        post: operations["create_rule_api_v1_hoa_majority_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/meetings": {
         parameters: {
             query?: never;
@@ -5371,6 +5389,8 @@ export interface components {
             majority: string;
             /** Proposal */
             proposal?: string | null;
+            /** Rule Id */
+            rule_id?: string | null;
             /** Subject Id */
             subject_id?: string | null;
             /** Subject Type */
@@ -9720,37 +9740,6 @@ export interface components {
          * @enum {string}
          */
         RowStatus: "pending" | "valid" | "invalid" | "unchanged" | "conflict" | "created" | "staged_only";
-        /** RuleIn */
-        RuleIn: {
-            /** Account Id */
-            account_id?: string | null;
-            /** Amount Max */
-            amount_max?: number | string | null;
-            /** Amount Min */
-            amount_min?: number | string | null;
-            /** Contract Id */
-            contract_id?: string | null;
-            /** Counterpart Iban */
-            counterpart_iban?: string | null;
-            /**
-             * Legal Entity Id
-             * Format: uuid
-             */
-            legal_entity_id: string;
-            /** Name */
-            name: string;
-            /** Name Contains */
-            name_contains?: string | null;
-            /**
-             * Priority
-             * @default 100
-             */
-            priority: number;
-            /** Property Id */
-            property_id?: string | null;
-            /** Purpose Regex */
-            purpose_regex?: string | null;
-        };
         /** RuleOut */
         RuleOut: {
             /** Action */
@@ -10742,6 +10731,37 @@ export interface components {
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
         };
+        /** RuleIn */
+        mhvp__banking__routers__RuleIn: {
+            /** Account Id */
+            account_id?: string | null;
+            /** Amount Max */
+            amount_max?: number | string | null;
+            /** Amount Min */
+            amount_min?: number | string | null;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Counterpart Iban */
+            counterpart_iban?: string | null;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Name */
+            name: string;
+            /** Name Contains */
+            name_contains?: string | null;
+            /**
+             * Priority
+             * @default 100
+             */
+            priority: number;
+            /** Property Id */
+            property_id?: string | null;
+            /** Purpose Regex */
+            purpose_regex?: string | null;
+        };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
             /** Bank Name */
@@ -10796,6 +10816,41 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /** RuleIn */
+        mhvp__hoa__meetings__RuleIn: {
+            /** Label */
+            label: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Min Mea Share Of All */
+            min_mea_share_of_all?: number | string | null;
+            /** Principle */
+            principle: string;
+            /** Share Of Votes Cast */
+            share_of_votes_cast?: number | string | null;
+            /** Source */
+            source: string;
+            /**
+             * Strictly Greater
+             * @default true
+             */
+            strictly_greater: boolean;
+            /**
+             * Unanimous
+             * @default false
+             */
+            unanimous: boolean;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
         };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
@@ -13895,7 +13950,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RuleIn"];
+                "application/json": components["schemas"]["mhvp__banking__routers__RuleIn"];
             };
         };
         responses: {
@@ -16250,6 +16305,74 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CircularIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_rules_api_v1_hoa_majority_rules_get: {
+        parameters: {
+            query: {
+                legal_entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_rule_api_v1_hoa_majority_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__hoa__meetings__RuleIn"];
             };
         };
         responses: {

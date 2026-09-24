@@ -25,6 +25,7 @@ from mhvp.hoa.models import (
     AuditItem,
     AuditReport,
     HoaStatement,
+    MajorityRule,
     Meeting,
     Resolution,
     Vote,
@@ -56,11 +57,25 @@ class MeetingIn(MeetingBaseIn):
 class AgendaIn(MeetingBaseIn):
     title: str = Field(min_length=3, max_length=300)
     proposal: str | None = Field(default=None, max_length=20000)
-    majority: str = Field(default="simple", pattern="^(simple|qualified|unanimous)$")
+    majority: str = Field(default="simple", pattern="^(simple|qualified|unanimous|rule)$")
     subject_type: str | None = Field(
         default=None, pattern="^(economic_plan|hoa_statement|special_levy|other)$"
     )
     subject_id: uuid.UUID | None = None
+    rule_id: uuid.UUID | None = None
+
+
+class RuleIn(MeetingBaseIn):
+    legal_entity_id: uuid.UUID
+    label: str = Field(min_length=3, max_length=200)
+    principle: str = Field(pattern="^(head|mea|unit)$")
+    share_of_votes_cast: Decimal | None = Field(default=None, gt=0, lt=1)
+    strictly_greater: bool = True
+    min_mea_share_of_all: Decimal | None = Field(default=None, gt=0, le=1)
+    unanimous: bool = False
+    source: str = Field(min_length=3, max_length=4000)
+    valid_from: date
+    valid_to: date | None = None
 
 
 class InviteIn(MeetingBaseIn):
@@ -254,11 +269,15 @@ async def add_agenda(
                 )
             ).all()
         )
+        if body.rule_id is not None:
+            rule = await session.get(MajorityRule, body.rule_id)
+            if rule is None or rule.legal_entity_id != meeting.legal_entity_id:
+                raise ProblemError(ErrorCodes.VALIDATION, detail="Regel gehört nicht zur GdWE.")
         row = AgendaItem(
             tenant_id=principal.tenant_id,
             meeting_id=meeting.id,
             position=count + 1,
-            **body.model_dump(),
+            **(body.model_dump() | {"majority": "rule" if body.rule_id else body.majority}),
         )
         session.add(row)
         await session.flush()
@@ -384,16 +403,21 @@ async def _tally(session: AsyncSession, item: AgendaItem, meeting: Meeting) -> d
 
     prop = await _hoa_property(session, meeting.legal_entity_id)
     day = meeting.scheduled_at.date()
+    rule = await session.get(MajorityRule, item.rule_id) if item.rule_id else None
+    principle = rule.principle if rule else meeting.voting_principle
     votes = (await session.scalars(select(Vote).where(Vote.agenda_item_id == item.id))).all()
     sums = {"yes": ZERO, "no": ZERO, "abstain": ZERO}
     seen_heads: dict[uuid.UUID, str] = {}
+    yes_contracts: set[uuid.UUID] = set()
     excluded = 0
     for v in votes:
         if v.excluded:
             excluded += 1
             continue
         contract = await _get(session, Contract, v.contract_id)
-        if meeting.voting_principle == "head":
+        if v.choice == "yes":
+            yes_contracts.add(contract.id)
+        if principle == "head":
             # one vote per owner person regardless of the number of units (§ 25 Abs. 2 WEG)
             if contract.party_id in seen_heads:
                 if seen_heads[contract.party_id] != v.choice:
@@ -402,19 +426,55 @@ async def _tally(session: AsyncSession, item: AgendaItem, meeting: Meeting) -> d
                     )
                 continue
             seen_heads[contract.party_id] = v.choice
-        sums[v.choice] += await _weight(session, meeting.voting_principle, contract, prop, day)
+        sums[v.choice] += await _weight(session, principle, contract, prop, day)
     proposal: str | None = None
-    if item.majority == "simple":
+    checks: dict[str, Any] = {}
+    if rule is not None:
+        cast = sums["yes"] + sums["no"]
+        ok = True
+        if rule.share_of_votes_cast is not None:
+            share = sums["yes"] / cast if cast else ZERO
+            passed = (
+                share > rule.share_of_votes_cast
+                if rule.strictly_greater
+                else (share >= rule.share_of_votes_cast)
+            )
+            checks["share_of_votes_cast"] = {"value": f"{share:.4f}", "passed": passed}
+            ok = ok and passed
+        if rule.min_mea_share_of_all is not None:
+            members = await _members(session, prop, day)
+            total = sum([await _weight(session, "mea", c, prop, day) for c in members], ZERO)
+            yes_mea = sum(
+                [
+                    await _weight(session, "mea", c, prop, day)
+                    for c in members
+                    if c.id in yes_contracts
+                ],
+                ZERO,
+            )
+            share = yes_mea / total if total else ZERO
+            passed = share >= rule.min_mea_share_of_all
+            checks["mea_share_of_all"] = {"value": f"{share:.4f}", "passed": passed}
+            ok = ok and passed
+        if rule.unanimous:
+            members = await _members(session, prop, day)
+            passed = bool(members) and all(c.id in yes_contracts for c in members)
+            checks["unanimous"] = {"passed": passed}
+            ok = ok and passed
+        proposal = "positive" if ok else "negative"
+    elif item.majority == "simple":
         proposal = "positive" if sums["yes"] > sums["no"] else "negative"
     return {
-        "principle": meeting.voting_principle,
+        "principle": principle,
         "yes": f"{sums['yes'].normalize():f}",
         "no": f"{sums['no'].normalize():f}",
         "abstain": f"{sums['abstain'].normalize():f}",
         "excluded": excluded,
         "majority": item.majority,
+        "rule": {"id": str(rule.id), "label": rule.label, "source": rule.source} if rule else None,
+        "checks": checks,
         "proposal": proposal,
-        "manual_check": item.majority != "simple",
+        "manual_check": proposal is None,
     }
 
 
@@ -796,3 +856,50 @@ async def meeting_members(
                 }
             )
         return out
+
+
+@router.post("/majority-rules", status_code=201, summary="Mehrheitsregel mit Fundstelle (M25-01)")
+async def create_rule(
+    body: RuleIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    if (
+        body.share_of_votes_cast is None
+        and body.min_mea_share_of_all is None
+        and not body.unanimous
+    ):
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Regel ohne Schwelle.")
+    async with tenant_tx(request, principal) as session:
+        await _hoa_property(session, body.legal_entity_id)
+        row = MajorityRule(
+            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
+        )
+        session.add(row)
+        await session.flush()
+        return {"id": row.id, **body.model_dump()}
+
+
+@router.get("/majority-rules", summary="Mehrheitsregeln einer GdWE")
+async def list_rules(
+    legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(
+            select(MajorityRule)
+            .where(MajorityRule.legal_entity_id == legal_entity_id)
+            .order_by(MajorityRule.label)
+        )
+        return [
+            {
+                "id": r.id,
+                "label": r.label,
+                "principle": r.principle,
+                "share_of_votes_cast": r.share_of_votes_cast,
+                "strictly_greater": r.strictly_greater,
+                "min_mea_share_of_all": r.min_mea_share_of_all,
+                "unanimous": r.unanimous,
+                "source": r.source,
+                "valid_from": r.valid_from,
+                "valid_to": r.valid_to,
+            }
+            for r in rows.all()
+        ]

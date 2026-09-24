@@ -334,3 +334,95 @@ def test_meeting_votes_circular_audit(client: TestClient, world: World) -> None:
     assert "nicht die gesamte Abrechnung" in content["scope_note"]
     again = _ok(client.post(f"{H}/audits/{audit['id']}/reports", json={}, headers=h), 201)
     assert again["version"] == 2
+
+    # M25-01 rule set (decided 24.09.2026). Test rule, not a legal statement: MEA principle,
+    # more than 2/3 of votes cast and at least half of all MEA. A yes 700, B no 300 ->
+    # 0.7000 > 0.6667 and 0.7000 >= 0.5 -> positive. A unanimity rule fails because of B.
+    rule = _ok(
+        client.post(
+            f"{H}/majority-rules",
+            json={
+                "legal_entity_id": hoa,
+                "label": "Testregel qualifiziert",
+                "principle": "mea",
+                "share_of_votes_cast": "0.66666667",
+                "min_mea_share_of_all": "0.5",
+                "source": "Teilungserklärung § 12 (Testannahme)",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    allrule = _ok(
+        client.post(
+            f"{H}/majority-rules",
+            json={
+                "legal_entity_id": hoa,
+                "label": "Testregel allstimmig",
+                "principle": "head",
+                "unanimous": True,
+                "source": "Vereinbarung (Testannahme)",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    assert (
+        client.post(
+            f"{H}/majority-rules",
+            json={
+                "legal_entity_id": hoa,
+                "label": "ohne Schwelle",
+                "principle": "head",
+                "source": "x y z",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ).status_code
+        == 422
+    )
+    m3 = _ok(client.post(f"{H}/meetings", json=base, headers=h), 201)
+    items3 = [
+        _ok(
+            client.post(
+                f"{H}/meetings/{m3['id']}/agenda",
+                json={"title": title, "rule_id": rid},
+                headers=h,
+            ),
+            201,
+        )
+        for title, rid in [("Aufzug", rule["id"]), ("Gartennutzung", allrule["id"])]
+    ]
+    _ok(
+        client.post(f"{H}/meetings/{m3['id']}/invite", json={"invited_at": "2026-05-29"}, headers=h)
+    )
+    for no in ("01", "02", "03"):
+        _ok(
+            client.post(
+                f"{H}/meetings/{m3['id']}/attendance",
+                json={"contract_id": contracts[no], "present": True},
+                headers=h,
+            ),
+            201,
+        )
+    for item in items3:
+        for no, choice in [("01", "yes"), ("02", "yes"), ("03", "no")]:
+            _ok(
+                client.post(
+                    f"{H}/agenda/{item['id']}/votes",
+                    json={"contract_id": contracts[no], "choice": choice},
+                    headers=h,
+                ),
+                201,
+            )
+    q = _ok(client.get(f"{H}/agenda/{items3[0]['id']}/tally", headers=h))
+    assert (q["principle"], q["yes"], q["no"], q["proposal"]) == ("mea", "700", "300", "positive")
+    assert q["checks"]["share_of_votes_cast"] == {"value": "0.7000", "passed": True}
+    assert q["checks"]["mea_share_of_all"] == {"value": "0.7000", "passed": True}
+    assert q["rule"]["source"].startswith("Teilungserklärung")
+    u = _ok(client.get(f"{H}/agenda/{items3[1]['id']}/tally", headers=h))
+    assert (u["proposal"], u["checks"]["unanimous"]["passed"]) == ("negative", False)
+    rules = _ok(client.get(f"{H}/majority-rules", params={"legal_entity_id": hoa}, headers=h))
+    assert {r["label"] for r in rules} == {"Testregel qualifiziert", "Testregel allstimmig"}

@@ -171,6 +171,7 @@ class AgendaItem(IdMixin, TenantMixin, Base):
     )  # simple, qualified, unanimous
     subject_type: Mapped[str | None] = mapped_column(String(32))
     subject_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    rule_id: Mapped[uuid.UUID | None] = _fk("majority_rule.id")
 
 
 class Attendance(IdMixin, TenantMixin, Base):
@@ -271,3 +272,21 @@ class SpecialLevy(IdMixin, TimestampMixin, TenantMixin, Base):
     snapshot_hash: Mapped[str | None] = mapped_column(String(64))
     resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
     applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class MajorityRule(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Majority rule of one community for a subject (M25-01, decided 24.09.2026). The values
+    come from the community's documents with their source; the system only evaluates them."""
+
+    __tablename__ = "majority_rule"
+
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id", nullable=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    principle: Mapped[str] = mapped_column(String(16), nullable=False)  # head, mea, unit
+    share_of_votes_cast: Mapped[Decimal | None] = mapped_column(RATE)  # e.g. 0.5, 0.66666667
+    strictly_greater: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    min_mea_share_of_all: Mapped[Decimal | None] = mapped_column(RATE)
+    unanimous: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    valid_to: Mapped[date | None] = mapped_column(Date)

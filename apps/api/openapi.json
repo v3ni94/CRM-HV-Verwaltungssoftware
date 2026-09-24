@@ -515,7 +515,7 @@
         "properties": {
           "majority": {
             "default": "simple",
-            "pattern": "^(simple|qualified|unanimous)$",
+            "pattern": "^(simple|qualified|unanimous|rule)$",
             "title": "Majority",
             "type": "string"
           },
@@ -530,6 +530,18 @@
               }
             ],
             "title": "Proposal"
+          },
+          "rule_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Id"
           },
           "subject_id": {
             "anyOf": [
@@ -13849,136 +13861,6 @@
         "title": "RowStatus",
         "type": "string"
       },
-      "RuleIn": {
-        "additionalProperties": false,
-        "properties": {
-          "account_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Account Id"
-          },
-          "amount_max": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Amount Max"
-          },
-          "amount_min": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Amount Min"
-          },
-          "contract_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Contract Id"
-          },
-          "counterpart_iban": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Counterpart Iban"
-          },
-          "legal_entity_id": {
-            "format": "uuid",
-            "title": "Legal Entity Id",
-            "type": "string"
-          },
-          "name": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "name_contains": {
-            "anyOf": [
-              {
-                "maxLength": 200,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name Contains"
-          },
-          "priority": {
-            "default": 100,
-            "maximum": 10000.0,
-            "minimum": 0.0,
-            "title": "Priority",
-            "type": "integer"
-          },
-          "property_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Property Id"
-          },
-          "purpose_regex": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Purpose Regex"
-          }
-        },
-        "required": [
-          "name",
-          "legal_entity_id"
-        ],
-        "title": "RuleIn",
-        "type": "object"
-      },
       "RuleOut": {
         "properties": {
           "action": {
@@ -17047,6 +16929,136 @@
         "title": "ProviderOut",
         "type": "object"
       },
+      "mhvp__banking__routers__RuleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "amount_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Max"
+          },
+          "amount_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Min"
+          },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "counterpart_iban": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterpart Iban"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "name_contains": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name Contains"
+          },
+          "priority": {
+            "default": 100,
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "purpose_regex": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose Regex"
+          }
+        },
+        "required": [
+          "name",
+          "legal_entity_id"
+        ],
+        "title": "RuleIn",
+        "type": "object"
+      },
       "mhvp__contacts__schemas__BankAccountIn": {
         "additionalProperties": false,
         "properties": {
@@ -17231,6 +17243,103 @@
           "name"
         ],
         "title": "TenantOut",
+        "type": "object"
+      },
+      "mhvp__hoa__meetings__RuleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Label",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "min_mea_share_of_all": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Mea Share Of All"
+          },
+          "principle": {
+            "pattern": "^(head|mea|unit)$",
+            "title": "Principle",
+            "type": "string"
+          },
+          "share_of_votes_cast": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Of Votes Cast"
+          },
+          "source": {
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Source",
+            "type": "string"
+          },
+          "strictly_greater": {
+            "default": true,
+            "title": "Strictly Greater",
+            "type": "boolean"
+          },
+          "unanimous": {
+            "default": false,
+            "title": "Unanimous",
+            "type": "boolean"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "legal_entity_id",
+          "label",
+          "principle",
+          "source",
+          "valid_from"
+        ],
+        "title": "RuleIn",
         "type": "object"
       },
       "mhvp__platform__schemas__TenantOut": {
@@ -21935,7 +22044,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RuleIn"
+                "$ref": "#/components/schemas/mhvp__banking__routers__RuleIn"
               }
             }
           },
@@ -25654,6 +25763,95 @@
           }
         },
         "summary": "Umlaufbeschluss (Textform)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/majority-rules": {
+      "get": {
+        "operationId": "list_rules_api_v1_hoa_majority_rules_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "legal_entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Legal Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Rules Api V1 Hoa Majority Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregeln einer GdWE",
+        "tags": [
+          "hoa"
+        ]
+      },
+      "post": {
+        "operationId": "create_rule_api_v1_hoa_majority_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__hoa__meetings__RuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Rule Api V1 Hoa Majority Rules Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregel mit Fundstelle (M25-01)",
         "tags": [
           "hoa"
         ]
