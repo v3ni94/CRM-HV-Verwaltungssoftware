@@ -681,3 +681,111 @@ def _challenge(verifier: str) -> str:
     return (
         base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     )
+
+
+def test_tenant_admin_manages_members_and_users_change_password(
+    client: TestClient, world: World
+) -> None:
+    """Expected by hand (operator 25.09.2026): a tenant admin adds a user with start password
+    and roles, a contact is created alongside; the new user logs in and changes the password
+    (wrong current password refused); the admin resets the password, disables the membership
+    (login to the tenant refused) and cannot disable their own membership; a standard user
+    cannot manage members."""
+    admin = bearer(login(client, world, "admin"))
+    email = f"neu-{RUN}@example.org"
+    created = client.post(
+        "/api/v1/tenant/members",
+        json={
+            "email": email,
+            "display_name": f"Neue Person {RUN}",
+            "password": PASSWORD,
+            "role_codes": ["standard"],
+        },
+        headers=admin,
+    )
+    assert created.status_code == 201, created.text
+    member = created.json()
+    assert member["roles"] == ["standard"]
+    assert member["contact_id"] is not None
+    contact = client.get(f"/api/v1/contacts/{member['contact_id']}", headers=admin)
+    assert contact.status_code == 200, contact.text
+    assert contact.json()["emails"][0]["email"] == email
+    # Without a start password a new account cannot be created; an existing one just joins.
+    missing = client.post(
+        "/api/v1/tenant/members",
+        json={
+            "email": f"x-{RUN}@example.org",
+            "display_name": "Ohne Passwort",
+            "role_codes": ["standard"],
+        },
+        headers=admin,
+    )
+    assert missing.status_code == 422, missing.text
+
+    def login_new(password: str) -> Any:
+        return client.post("/api/v1/auth/login", json={"email": email, "password": password})
+
+    assert login_new(PASSWORD).json()["status"] == "mfa_setup_required"
+    step = login_new(PASSWORD).json()
+    setup = client.post("/api/v1/auth/mfa/setup", json={"mfa_token": step["mfa_token"]})
+    secret = setup.json()["secret"]
+    verified = client.post(
+        "/api/v1/auth/mfa/verify",
+        json={
+            "mfa_token": step["mfa_token"],
+            "code": _code(secret, 0),
+            "tenant_id": str(world.tenant_a),
+        },
+    )
+    assert verified.status_code == 200, verified.text
+    user = bearer(verified.json())
+    wrong = client.post(
+        "/api/v1/auth/password",
+        json={"current_password": "falsch", "new_password": "ein neues langes Passwort"},
+        headers=user,
+    )
+    assert wrong.status_code == 401, wrong.text
+    changed = client.post(
+        "/api/v1/auth/password",
+        json={"current_password": PASSWORD, "new_password": "ein neues langes Passwort"},
+        headers=user,
+    )
+    assert changed.status_code == 204, changed.text
+    assert login_new(PASSWORD).status_code == 401
+    assert login_new("ein neues langes Passwort").status_code == 200
+    # A standard user may not manage members.
+    assert client.get("/api/v1/tenant/members", headers=user).status_code == 403
+    # Admin resets the password and disables the membership.
+    reset = client.post(
+        f"/api/v1/tenant/members/{member['membership_id']}/reset-password",
+        json={"password": "Startpasswort 2026"},
+        headers=admin,
+    )
+    assert reset.status_code == 204, reset.text
+    assert login_new("Startpasswort 2026").status_code == 200
+    disabled = client.patch(
+        f"/api/v1/tenant/members/{member['membership_id']}",
+        json={"status": "disabled"},
+        headers=admin,
+    )
+    assert disabled.status_code == 200, disabled.text
+    assert disabled.json()["status"] == "disabled"
+    step = login_new("Startpasswort 2026").json()
+    refused = client.post(
+        "/api/v1/auth/mfa/verify",
+        json={
+            "mfa_token": step["mfa_token"],
+            "code": _code(secret, 1),
+            "tenant_id": str(world.tenant_a),
+        },
+    )
+    assert refused.status_code in (401, 403, 404), refused.text
+    me = next(
+        m
+        for m in client.get("/api/v1/tenant/members", headers=admin).json()
+        if m["email"] == world.email("admin")
+    )
+    own = client.patch(
+        f"/api/v1/tenant/members/{me['membership_id']}", json={"status": "disabled"}, headers=admin
+    )
+    assert own.status_code == 422, own.text

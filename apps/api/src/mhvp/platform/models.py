@@ -108,6 +108,10 @@ class Membership(IdMixin, TimestampMixin, Base):
         nullable=False,
         default=MembershipStatus.ACTIVE,
     )
+    # The user's contact record in this tenant (operator 25.09.2026: every user is a contact).
+    contact_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("contact.id", ondelete="SET NULL")
+    )
 
 
 class RefreshToken(IdMixin, Base):

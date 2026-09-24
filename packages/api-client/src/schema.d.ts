@@ -1115,6 +1115,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eigenes Passwort ändern
+         * @description Requires the current password; other sessions of the user end (only the current token
+         *     family stays valid until it expires).
+         */
+        post: operations["change_password_api_v1_auth_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/refresh": {
         parameters: {
             query?: never;
@@ -4848,7 +4869,54 @@ export interface paths {
         /** Mitglieder des Mandanten */
         get: operations["list_members_api_v1_tenant_members_get"];
         put?: never;
+        /**
+         * Benutzer hinzufügen
+         * @description Creates the account when the e-mail is new (start password required), otherwise adds
+         *     the existing account to the tenant. Every user is also kept as a contact of the tenant.
+         */
+        post: operations["invite_member_api_v1_tenant_members_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/members/{membership_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Mitglied aktivieren oder sperren
+         * @description Members are never deleted (audit trail); a disabled membership cannot log in to this
+         *     tenant and its sessions are revoked. Nobody disables their own membership.
+         */
+        patch: operations["patch_member_status_api_v1_tenant_members__membership_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/tenant/members/{membership_id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Passwort zurücksetzen
+         * @description Sets a new start password, clears the lockout and ends all sessions of the user. The
+         *     administrator hands the password over personally; the user changes it under Meine Daten.
+         */
+        post: operations["reset_member_password_api_v1_tenant_members__membership_id__reset_password_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8668,12 +8736,37 @@ export interface components {
              */
             user_id: string;
         };
+        /**
+         * MemberInvite
+         * @description Tenant administrators add a user: the account is created when the e-mail is new,
+         *     otherwise the existing account joins the tenant. A contact record is created as well.
+         */
+        MemberInvite: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Password
+             * @description Startpasswort, nur für neue Konten
+             */
+            password?: string | null;
+            /** Role Codes */
+            role_codes: string[];
+        };
         /** MemberOut */
         MemberOut: {
+            /** Contact Id */
+            contact_id?: string | null;
             /** Display Name */
             display_name: string;
             /** Email */
             email: string;
+            /** Last Login At */
+            last_login_at?: string | null;
             /**
              * Membership Id
              * Format: uuid
@@ -8693,6 +8786,14 @@ export interface components {
         MemberRoles: {
             /** Role Codes */
             role_codes: string[];
+        };
+        /** MemberStatusIn */
+        MemberStatusIn: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "disabled";
         };
         /** MessageIn */
         MessageIn: {
@@ -9145,6 +9246,21 @@ export interface components {
          * @enum {string}
          */
         PartyRole: "primary" | "co_party" | "guarantor" | "legal_representative";
+        /** PasswordChange */
+        PasswordChange: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
+        };
+        /** PasswordResetIn */
+        PasswordResetIn: {
+            /**
+             * Password
+             * @description Neues Startpasswort
+             */
+            password: string;
+        };
         /** PaymentIn */
         PaymentIn: {
             /** Document Id */
@@ -13664,6 +13780,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TokenResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password_api_v1_auth_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -22177,6 +22324,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MemberOut"][];
+                };
+            };
+        };
+    };
+    invite_member_api_v1_tenant_members_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberInvite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_member_status_api_v1_tenant_members__membership_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberStatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_member_password_api_v1_tenant_members__membership_id__reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
