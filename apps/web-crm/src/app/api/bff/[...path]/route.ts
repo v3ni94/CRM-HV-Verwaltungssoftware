@@ -25,7 +25,25 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^consents/${ID}/revoke$`) },
   // AI assistant (M7): conversations, runs, proposals, import runs, provider settings.
   { method: "GET", pattern: /^ai\/conversations$/ },
+  // Tenant members, roles and settings (settings area).
   { method: "GET", pattern: /^tenant\/members$/ },
+  { method: "POST", pattern: /^tenant\/members$/ },
+  { method: "PATCH", pattern: new RegExp(`^tenant/members/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^tenant/members/${ID}/reset-password$`) },
+  { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/roles$`) },
+  { method: "GET", pattern: /^tenant\/roles$/ },
+  { method: "POST", pattern: /^tenant\/roles$/ },
+  { method: "PUT", pattern: new RegExp(`^tenant/roles/${ID}/permissions$`) },
+  { method: "GET", pattern: /^tenant\/settings$/ },
+  { method: "PATCH", pattern: /^tenant\/settings$/ },
+  // Own account: password change and session list (Meine Daten).
+  { method: "POST", pattern: /^auth\/password$/ },
+  { method: "GET", pattern: /^auth\/sessions$/ },
+  { method: "DELETE", pattern: new RegExp(`^auth/sessions/${ID}$`) },
+  // Platform: tenant and tenant administrator creation (platform admins only, checked by the API).
+  { method: "POST", pattern: /^platform\/tenants$/ },
+  { method: "POST", pattern: /^platform\/users$/ },
+  { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/members$`) },
   { method: "POST", pattern: /^ai\/conversations$/ },
   { method: "GET", pattern: new RegExp(`^ai/conversations/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^ai/conversations/${ID}/messages$`) },

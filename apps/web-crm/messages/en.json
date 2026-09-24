@@ -27,7 +27,9 @@
       "system": "System"
     },
     "rental": "Rental",
-    "sev": "SEV"
+    "sev": "SEV",
+    "settings": "Settings",
+    "myData": "My data"
   },
   "Hoa": {
     "title": "HOA management",
