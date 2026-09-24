@@ -5,6 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy import Date, DateTime, ForeignKey, Index, Numeric, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -79,7 +80,16 @@ class Listing(IdMixin, TimestampMixin, TenantMixin, Base):
     (rule 0.1.3, docs/plans/M28-makler.md)."""
 
     __tablename__ = "listing"
-    __table_args__ = (Index("ix_listing_tenant_status", "tenant_id", "status"),)
+    __table_args__ = (
+        Index("ix_listing_tenant_status", "tenant_id", "status"),
+        Index(
+            "ux_listing_tenant_external_uuid",
+            "tenant_id",
+            "external_uuid",
+            unique=True,
+            postgresql_where=text("external_uuid IS NOT NULL"),
+        ),
+    )
 
     property_id: Mapped[uuid.UUID] = _fk("property.id", nullable=False, ondelete="CASCADE")
     unit_id: Mapped[uuid.UUID] = _fk("unit.id", nullable=False, ondelete="CASCADE")
@@ -103,3 +113,46 @@ class Listing(IdMixin, TimestampMixin, TenantMixin, Base):
     publication_ref: Mapped[str | None] = mapped_column(String(100))
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notes: Mapped[str | None] = mapped_column(Text)
+    # M28-01 stage 3 preparation (FLOW data contract, docs/rules/M28-01.md)
+    object_type: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="wohnung", server_default=text("'wohnung'")
+    )
+    address_release: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="vollstaendig",
+        server_default=text("'vollstaendig'"),
+    )
+    heating_type: Mapped[str | None] = mapped_column(String(32))
+    energy_source: Mapped[str | None] = mapped_column(String(32))
+    heating_costs: Mapped[Decimal | None] = mapped_column(MONEY)
+    heating_in_additional_costs: Mapped[bool] = mapped_column(
+        sa.Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    warm_rent: Mapped[Decimal | None] = mapped_column(MONEY)
+    hoa_fee: Mapped[Decimal | None] = mapped_column(MONEY)
+    parking_price: Mapped[Decimal | None] = mapped_column(MONEY)
+    energy_status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="in_erstellung",
+        server_default=text("'in_erstellung'"),
+    )
+    energy_type: Mapped[str | None] = mapped_column(String(16))
+    energy_value: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
+    energy_class: Mapped[str | None] = mapped_column(String(4))
+    energy_year_of_installation: Mapped[int | None] = mapped_column(sa.Integer)
+    energy_valid_until: Mapped[date | None] = mapped_column(Date)
+    energy_includes_hot_water: Mapped[bool] = mapped_column(
+        sa.Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    features: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    commission_type: Mapped[str | None] = mapped_column(String(16))
+    external_uuid: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    external_ref: Mapped[str | None] = mapped_column(String(64))
+    flowfact_entity_id: Mapped[str | None] = mapped_column(String(64))
+    source: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="crm", server_default=text("'crm'")
+    )

@@ -536,6 +536,36 @@ async def delete_prospect(
 # publication_status stays a placeholder until the interface documentation is available.
 
 
+_OBJECT_TYPES = "^(wohnung|haus|gewerbe|stellplatz|grundstueck)$"
+_ADDRESS_RELEASE = "^(vollstaendig|nur_plz_ort)$"
+_ENERGY_STATUS = "^(liegt_vor|nicht_erforderlich|in_erstellung)$"
+_ENERGY_TYPE = "^(bedarf|verbrauch)$"
+_FEATURE_KEYS = {
+    "balkon",
+    "terrasse",
+    "garten",
+    "keller",
+    "aufzug",
+    "einbaukueche",
+    "gaeste_wc",
+    "barrierefrei",
+    "moebliert",
+    "wg_geeignet",
+    "haustiere_erlaubt",
+}
+
+
+def _validate_features(value: dict[str, Any] | None) -> dict[str, Any]:
+    if not value:
+        return {}
+    unknown = set(value) - _FEATURE_KEYS
+    if unknown:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail=f"Unbekannte Ausstattungsmerkmale: {sorted(unknown)}"
+        )
+    return {k: bool(v) for k, v in value.items()}
+
+
 class ListingIn(LettingBaseIn):
     unit_id: uuid.UUID
     kind: str = Field(pattern="^(rental|sale)$")
@@ -551,6 +581,23 @@ class ListingIn(LettingBaseIn):
     rooms: Decimal | None = Field(default=None, gt=0)
     floor: str | None = Field(default=None, max_length=20)
     notes: str | None = Field(default=None, max_length=4000)
+    object_type: str = Field(default="wohnung", pattern=_OBJECT_TYPES)
+    address_release: str = Field(default="vollstaendig", pattern=_ADDRESS_RELEASE)
+    heating_type: str | None = Field(default=None, max_length=32)
+    energy_source: str | None = Field(default=None, max_length=32)
+    heating_costs: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    heating_in_additional_costs: bool = False
+    hoa_fee: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    parking_price: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    energy_status: str = Field(default="in_erstellung", pattern=_ENERGY_STATUS)
+    energy_type: str | None = Field(default=None, pattern=_ENERGY_TYPE)
+    energy_value: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    energy_class: str | None = Field(default=None, max_length=4)
+    energy_year_of_installation: int | None = Field(default=None, ge=1800, le=2100)
+    energy_valid_until: date | None = None
+    energy_includes_hot_water: bool = False
+    features: dict[str, Any] = Field(default_factory=dict)
+    commission_type: str | None = Field(default=None, max_length=16)
 
 
 class ListingPatch(LettingBaseIn):
@@ -567,6 +614,54 @@ class ListingPatch(LettingBaseIn):
     rooms: Decimal | None = Field(default=None, gt=0)
     floor: str | None = Field(default=None, max_length=20)
     notes: str | None = Field(default=None, max_length=4000)
+    object_type: str | None = Field(default=None, pattern=_OBJECT_TYPES)
+    address_release: str | None = Field(default=None, pattern=_ADDRESS_RELEASE)
+    heating_type: str | None = Field(default=None, max_length=32)
+    energy_source: str | None = Field(default=None, max_length=32)
+    heating_costs: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    heating_in_additional_costs: bool | None = None
+    hoa_fee: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    parking_price: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    energy_status: str | None = Field(default=None, pattern=_ENERGY_STATUS)
+    energy_type: str | None = Field(default=None, pattern=_ENERGY_TYPE)
+    energy_value: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    energy_class: str | None = Field(default=None, max_length=4)
+    energy_year_of_installation: int | None = Field(default=None, ge=1800, le=2100)
+    energy_valid_until: date | None = None
+    energy_includes_hot_water: bool | None = None
+    features: dict[str, Any] | None = None
+    commission_type: str | None = Field(default=None, max_length=16)
+
+
+def _compute_warm_rent(listing: Listing) -> None:
+    """Warm rent (Warmmiete) for rental listings only. Rule M28-01: warm_rent =
+    price + additional_costs + heating_costs, unless heating_costs is already included in
+    additional_costs (heating_in_additional_costs), and only when price is set.
+
+    Example (docstring, hand computed): price=800.00, additional_costs=150.00,
+    heating_costs=60.00, heating_in_additional_costs=False
+    -> warm_rent = 800.00 + 150.00 + 60.00 = 1010.00 EUR.
+    With heating_in_additional_costs=True -> warm_rent = 800.00 + 150.00 = 950.00 EUR
+    (heating_costs not added again, as it is part of additional_costs).
+    """
+    if listing.kind != "rental" or listing.price is None:
+        listing.warm_rent = None
+        return
+    additional = listing.additional_costs or Decimal("0")
+    heating = listing.heating_costs or Decimal("0")
+    if listing.heating_in_additional_costs:
+        if (
+            listing.heating_costs is not None
+            and listing.additional_costs is not None
+            and listing.heating_costs > listing.additional_costs
+        ):
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Heizkosten dürfen die Nebenkosten nicht übersteigen.",
+            )
+        listing.warm_rent = listing.price + additional
+    else:
+        listing.warm_rent = listing.price + additional + heating
 
 
 async def _listing_prefill(session: Any, unit_id: uuid.UUID) -> dict[str, Any]:
@@ -595,6 +690,16 @@ async def _listing_prefill(session: Any, unit_id: uuid.UUID) -> dict[str, Any]:
     }
 
 
+def _listing_warnings(listing: Listing) -> list[str]:
+    warnings: list[str] = []
+    if listing.status == "active" and listing.energy_status == "in_erstellung":
+        warnings.append(
+            "Energieausweis liegt noch nicht vor (Status in_erstellung); Aktivierung "
+            "ist zulässig, der Ausweis ist nachzureichen."
+        )
+    return warnings
+
+
 def _listing_out(
     listing: Listing, prop_number: str | None, unit_number: str | None
 ) -> dict[str, Any]:
@@ -621,6 +726,29 @@ def _listing_out(
         "publication_ref": listing.publication_ref,
         "published_at": listing.published_at,
         "notes": listing.notes,
+        "object_type": listing.object_type,
+        "address_release": listing.address_release,
+        "heating_type": listing.heating_type,
+        "energy_source": listing.energy_source,
+        "heating_costs": listing.heating_costs,
+        "heating_in_additional_costs": listing.heating_in_additional_costs,
+        "warm_rent": listing.warm_rent,
+        "hoa_fee": listing.hoa_fee,
+        "parking_price": listing.parking_price,
+        "energy_status": listing.energy_status,
+        "energy_type": listing.energy_type,
+        "energy_value": listing.energy_value,
+        "energy_class": listing.energy_class,
+        "energy_year_of_installation": listing.energy_year_of_installation,
+        "energy_valid_until": listing.energy_valid_until,
+        "energy_includes_hot_water": listing.energy_includes_hot_water,
+        "features": listing.features,
+        "commission_type": listing.commission_type,
+        "external_uuid": listing.external_uuid,
+        "external_ref": listing.external_ref,
+        "flowfact_entity_id": listing.flowfact_entity_id,
+        "source": listing.source,
+        "warnings": _listing_warnings(listing),
     }
 
 
@@ -641,6 +769,7 @@ async def create_listing(
     async with tenant_tx(request, principal) as session:
         prefill = await _listing_prefill(session, body.unit_id)
         data = body.model_dump(exclude={"unit_id", "kind"})
+        data["features"] = _validate_features(data.get("features"))
         listing = Listing(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -657,6 +786,7 @@ async def create_listing(
             floor=data.pop("floor") if body.floor is not None else prefill["floor"],
             **{k: v for k, v in data.items() if k not in ("living_area_sqm", "rooms", "floor")},
         )
+        _compute_warm_rent(listing)
         session.add(listing)
         await session.flush()
         prop = await session.get(Property, listing.property_id)
@@ -734,8 +864,18 @@ async def patch_listing(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         changes = body.model_dump(exclude_none=True)
         new_status = changes.pop("status", None)
+        if "features" in changes:
+            changes["features"] = _validate_features(changes["features"])
         for key, value in changes.items():
             setattr(listing, key, value)
+        warm_rent_fields = {
+            "price",
+            "additional_costs",
+            "heating_costs",
+            "heating_in_additional_costs",
+        }
+        if warm_rent_fields & set(changes):
+            _compute_warm_rent(listing)
         if new_status is not None and new_status != listing.status:
             if new_status == "active":
                 if not listing.title or listing.price is None:
@@ -746,6 +886,23 @@ async def patch_listing(
                     raise ProblemError(
                         ErrorCodes.VALIDATION,
                         detail="Verfügbar ab ist für Vermietungsanzeigen nötig.",
+                    )
+                if listing.kind == "rental" and listing.warm_rent is None:
+                    raise ProblemError(
+                        ErrorCodes.VALIDATION,
+                        detail="Warmmiete kann nicht berechnet werden (Preis fehlt).",
+                    )
+                if listing.energy_status == "liegt_vor" and (
+                    listing.energy_type is None
+                    or listing.energy_value is None
+                    or listing.energy_class is None
+                ):
+                    raise ProblemError(
+                        ErrorCodes.VALIDATION,
+                        detail=(
+                            "Energieausweis liegt_vor erfordert Energieart, Kennwert und "
+                            "Energieeffizienzklasse."
+                        ),
                     )
                 other = await session.scalar(
                     select(Listing).where(

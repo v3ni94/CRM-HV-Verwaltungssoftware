@@ -8586,24 +8586,75 @@ export interface components {
         ListingIn: {
             /** Additional Costs */
             additional_costs?: number | string | null;
+            /**
+             * Address Release
+             * @default vollstaendig
+             */
+            address_release: string;
             /** Available From */
             available_from?: string | null;
             /** Commission Note */
             commission_note?: string | null;
+            /** Commission Type */
+            commission_type?: string | null;
             /** Deposit */
             deposit?: number | string | null;
             /** Description */
             description?: string | null;
+            /** Energy Class */
+            energy_class?: string | null;
+            /**
+             * Energy Includes Hot Water
+             * @default false
+             */
+            energy_includes_hot_water: boolean;
             /** Energy Note */
             energy_note?: string | null;
+            /** Energy Source */
+            energy_source?: string | null;
+            /**
+             * Energy Status
+             * @default in_erstellung
+             */
+            energy_status: string;
+            /** Energy Type */
+            energy_type?: string | null;
+            /** Energy Valid Until */
+            energy_valid_until?: string | null;
+            /** Energy Value */
+            energy_value?: number | string | null;
+            /** Energy Year Of Installation */
+            energy_year_of_installation?: number | null;
+            /** Features */
+            features?: {
+                [key: string]: unknown;
+            };
             /** Floor */
             floor?: string | null;
+            /** Heating Costs */
+            heating_costs?: number | string | null;
+            /**
+             * Heating In Additional Costs
+             * @default false
+             */
+            heating_in_additional_costs: boolean;
+            /** Heating Type */
+            heating_type?: string | null;
+            /** Hoa Fee */
+            hoa_fee?: number | string | null;
             /** Kind */
             kind: string;
             /** Living Area Sqm */
             living_area_sqm?: number | string | null;
             /** Notes */
             notes?: string | null;
+            /**
+             * Object Type
+             * @default wohnung
+             */
+            object_type: string;
+            /** Parking Price */
+            parking_price?: number | string | null;
             /** Price */
             price?: number | string | null;
             /** Rooms */
@@ -8620,22 +8671,58 @@ export interface components {
         ListingPatch: {
             /** Additional Costs */
             additional_costs?: number | string | null;
+            /** Address Release */
+            address_release?: string | null;
             /** Available From */
             available_from?: string | null;
             /** Commission Note */
             commission_note?: string | null;
+            /** Commission Type */
+            commission_type?: string | null;
             /** Deposit */
             deposit?: number | string | null;
             /** Description */
             description?: string | null;
+            /** Energy Class */
+            energy_class?: string | null;
+            /** Energy Includes Hot Water */
+            energy_includes_hot_water?: boolean | null;
             /** Energy Note */
             energy_note?: string | null;
+            /** Energy Source */
+            energy_source?: string | null;
+            /** Energy Status */
+            energy_status?: string | null;
+            /** Energy Type */
+            energy_type?: string | null;
+            /** Energy Valid Until */
+            energy_valid_until?: string | null;
+            /** Energy Value */
+            energy_value?: number | string | null;
+            /** Energy Year Of Installation */
+            energy_year_of_installation?: number | null;
+            /** Features */
+            features?: {
+                [key: string]: unknown;
+            } | null;
             /** Floor */
             floor?: string | null;
+            /** Heating Costs */
+            heating_costs?: number | string | null;
+            /** Heating In Additional Costs */
+            heating_in_additional_costs?: boolean | null;
+            /** Heating Type */
+            heating_type?: string | null;
+            /** Hoa Fee */
+            hoa_fee?: number | string | null;
             /** Living Area Sqm */
             living_area_sqm?: number | string | null;
             /** Notes */
             notes?: string | null;
+            /** Object Type */
+            object_type?: string | null;
+            /** Parking Price */
+            parking_price?: number | string | null;
             /** Price */
             price?: number | string | null;
             /** Rooms */
