@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { TicketCreate } from "@/components/tickets/TicketForms";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -15,7 +16,7 @@ export default async function TicketsPage() {
   redirectIfUnauthenticated(response);
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <TicketCreate />
       {!data ? (
         <p role="alert" className={ui.alert}>

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -39,12 +40,14 @@ export default async function BrokerPage({ searchParams }: { searchParams: Promi
   const listings = (data ?? []) as unknown as Listing[];
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className={ui.title}>{t("title")}</h1>
-        <Link href="/makler/neu" className={ui.primary}>
-          {t("newListing")}
-        </Link>
-      </div>
+      <PageHeader
+        title={t("title")}
+        action={
+          <Link href="/makler/neu" className={ui.primary}>
+            {t("newListing")}
+          </Link>
+        }
+      />
       <p className={ui.notice}>{t("flowfactNotice")}</p>
       <nav className="flex gap-2 text-sm">
         <Link href={`/makler?art=rental${params.status ? `&status=${params.status}` : ""}`} className={kind === "rental" ? ui.badgeGold : ui.badge}>

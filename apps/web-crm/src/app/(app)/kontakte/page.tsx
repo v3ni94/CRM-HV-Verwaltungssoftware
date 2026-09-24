@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { PageHeader } from "@/components/ui/PageHeader";
 import { BulkTagBar } from "@/components/workspace/BulkTagBar";
 import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -47,15 +48,15 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <h1 className={ui.title}>{t("title")}</h1>
-        <div className="ml-auto">
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title={t("title")}
+        action={
           <Link href="/kontakte/neu" className={ui.primary}>
             {t("new")}
           </Link>
-        </div>
-      </div>
+        }
+      />
       <form method="get" action="/kontakte" role="search" className="flex flex-wrap items-end gap-2">
         <div className="min-w-64 flex-1">
           <label htmlFor="q" className={ui.label}>

@@ -392,7 +392,7 @@ export function AiChatWidget() {
         aria-label={open ? t("close") : t("open")}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-accent text-accent-fg shadow-card transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-gold/60"
+        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-lg transition duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-gold/60"
       >
         <span aria-hidden className="text-xl">
           {open ? "×" : "✦"}
@@ -401,20 +401,20 @@ export function AiChatWidget() {
       {open ? (
         <section
           aria-label={t("title")}
-          className="fixed bottom-20 right-5 z-40 flex h-[32rem] w-[min(26rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-lg border border-border bg-bg shadow-card"
+          className="fixed bottom-20 right-5 z-40 flex h-[32rem] w-[min(26rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-bg shadow-lg"
         >
-          <header className="flex items-center justify-between border-b border-border px-4 py-2">
+          <header className="flex items-center justify-between border-b border-border-soft bg-surface px-4 py-3">
             <div>
               <p className="text-sm font-semibold">{t("title")}</p>
               <p className="mhvp-label">{t("onPage", { page: t(`area.${ctx.area}`) })}</p>
             </div>
-            <span className="h-2 w-2 rounded-full bg-gold" aria-hidden />
+            <span className="h-2 w-2 shrink-0 rounded-full bg-gold" aria-hidden />
           </header>
           <ol className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 py-3 text-sm" data-testid="ai-chat-log">
             {entries.map((e, i) => {
               if (e.kind === "user") {
                 return (
-                  <li key={i} className="max-w-[85%] self-end rounded-lg bg-accent px-3 py-2 text-accent-fg">
+                  <li key={i} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-accent px-3.5 py-2 text-accent-fg">
                     {e.text}
                   </li>
                 );
@@ -435,12 +435,17 @@ export function AiChatWidget() {
               }
               const last = i === entries.length - 1;
               return (
-                <li key={i} className="max-w-[92%] self-start rounded-lg bg-surface px-3 py-2">
+                <li key={i} className="max-w-[92%] self-start rounded-2xl rounded-bl-md bg-surface px-3.5 py-2">
                   <p className="whitespace-pre-wrap">{e.text}</p>
                   {last && e.chips?.length && !busy ? (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {e.chips.map((c) => (
-                        <button key={c.id} type="button" className={ui.button} onClick={() => onChip(c)}>
+                        <button
+                          key={c.id}
+                          type="button"
+                          className="inline-flex items-center rounded-full border border-border bg-bg px-3 py-1 text-xs font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface focus:outline-none focus:ring-2 focus:ring-gold/40"
+                          onClick={() => onChip(c)}
+                        >
                           {c.label}
                         </button>
                       ))}
@@ -457,10 +462,10 @@ export function AiChatWidget() {
             ) : null}
             <div ref={bottom} />
           </ol>
-          <form onSubmit={submit} className="flex flex-col gap-2 border-t border-border p-3">
+          <form onSubmit={submit} className="flex flex-col gap-2 border-t border-border-soft p-3">
             {files.length ? <p className="text-xs text-muted">{files.map((f) => f.name).join(", ")}</p> : null}
             <div className="flex items-end gap-2">
-              <label className={`${ui.button} cursor-pointer px-2`} title={t("attach")}>
+              <label className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-bg text-fg transition duration-150 hover:border-gold hover:bg-surface" title={t("attach")}>
                 <span aria-hidden>📎</span>
                 <input ref={fileInput} type="file" multiple aria-label={t("attach")} className="sr-only" onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 20))} />
               </label>

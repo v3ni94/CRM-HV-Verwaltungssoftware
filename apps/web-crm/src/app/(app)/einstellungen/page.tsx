@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
@@ -27,7 +28,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <Link key={c.href} href={c.href} className={ui.cardLink}>

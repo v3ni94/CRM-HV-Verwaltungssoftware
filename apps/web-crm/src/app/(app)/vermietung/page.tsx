@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { RentIncreaseCreate } from "@/components/letting/RentIncreaseForms";
 import { VacancyTable } from "@/components/letting/VacancyTable";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -22,7 +23,7 @@ export default async function LettingPage() {
   redirectIfUnauthenticated(vac.response);
   return (
     <div className="flex flex-col gap-5">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("rentIncreaseNotice")}</p>
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">{tr("title")}</h2>

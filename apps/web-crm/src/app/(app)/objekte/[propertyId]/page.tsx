@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -40,27 +41,22 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
   const openMaintenance = (maintenance.data ?? []).filter((m) => m.status === "open");
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className={ui.subtitle}>
-            <Link href="/objekte" className="hover:underline">
-              {t("title")}
-            </Link>{" "}
-            · {data.number}
-          </p>
-          <h1 className={ui.title}>{data.name}</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {isHoa ? (
-            <Link href={`/weg/${propertyId}`} className={ui.primary}>
-              {t("toHoa")}
+      <PageHeader
+        breadcrumb={[{ href: "/objekte", label: t("title") }, { label: data.number }]}
+        title={data.name}
+        action={
+          <div className="flex flex-wrap gap-2">
+            {isHoa ? (
+              <Link href={`/weg/${propertyId}`} className={ui.primary}>
+                {t("toHoa")}
+              </Link>
+            ) : null}
+            <Link href="/vermietung" className={ui.button}>
+              {t("toLetting")}
             </Link>
-          ) : null}
-          <Link href="/vermietung" className={ui.button}>
-            {t("toLetting")}
-          </Link>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className={ui.card}>

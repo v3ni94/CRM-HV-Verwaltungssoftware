@@ -83,7 +83,10 @@
     "rental": "Mietverwaltung",
     "sev": "SEV",
     "settings": "Einstellungen",
-    "myData": "Meine Daten"
+    "myData": "Meine Daten",
+    "navCollapse": "Leiste einklappen",
+    "navExpand": "Leiste ausklappen",
+    "dms": "DMS"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -1723,5 +1726,24 @@
     "syncResult": "{fetched} geprüft, {created} neu, {duplicates} bereits vorhanden",
     "defaultHint": "Ein Standardpostfach sehen alle Benutzer des Mandanten, auch neu angelegte.",
     "access": "Freigabe für Benutzer"
+  },
+  "Dms": {
+    "area": "Verwaltung",
+    "title": "DMS und Objektübernahme",
+    "intro": "Die digitale Objektübernahme (Kurzname objektakte) führt die Objektakten in Google Drive: Sechs-Ordner-Struktur je Objekt, Texterkennung, Klassifikation, Review Center, Eigentümer- und Mieterlisten sowie Nachforderungen an die Vorverwaltung. Sie läuft als eigenes System und wird schrittweise mit dem CRM verbunden.",
+    "openApp": "Objektübernahme öffnen",
+    "openSearch": "In der Objektübernahme suchen",
+    "stage": "Stand der Anbindung",
+    "stageText": "Stufe 1: Absprung je Objekt über die Objektnummer. Stufe 2: zentrale Anmeldung über das CRM. Stufe 3: Übernahmestatus, offene Prüffälle und Dokumentliste im CRM, sobald die Schnittstelle der Objektübernahme vorliegt (Plan M29).",
+    "structure": "Ordnerstruktur je Objekt",
+    "folders": "01 Legitimationsunterlagen, 02 Stammakte, 03 Buchhaltung, 04 Mieterakte, 05 Eigentümerakte (je Einheit und Eigentümer mit elf Unterordnern), 06 Sonstiges (Unklar, Manuelle Prüfung, Dubletten, Nicht objektbezogen).",
+    "objects": "Objekte",
+    "colNumber": "Nummer",
+    "colName": "Objekt",
+    "colType": "Art",
+    "colAction": "Objektakte",
+    "searchObject": "Akte {number} suchen",
+    "empty": "Keine Objekte vorhanden.",
+    "hint": "Der Absprung öffnet die Suche der Objektübernahme mit der Objektnummer. Eine direkte Verknüpfung je Akte folgt mit Stufe 3."
   }
 }

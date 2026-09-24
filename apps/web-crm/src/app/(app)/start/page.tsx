@@ -1,6 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { PageHeader } from "@/components/ui/PageHeader";
+import { TileSkeleton } from "@/components/ui/Skeleton";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -26,7 +29,7 @@ const KIND_LINKS: Record<string, string> = {
   contract_termination_date: "/vermietung",
 };
 
-export default async function DashboardPage() {
+async function DashboardData() {
   const t = await getTranslations("Workspace");
   const { data, error, response } = await serverApi().GET("/api/v1/workspace/dashboard");
   redirectIfUnauthenticated(response);
@@ -40,70 +43,91 @@ export default async function DashboardPage() {
   const tiles = data.tiles as Record<string, number>;
   const upcoming = data.upcoming as { kind: string; title: string; date: string }[];
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <p className={ui.subtitle}>{t("greetingLabel")}</p>
-        <h1 className={ui.title}>{t("dashboard")}</h1>
+    <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
+      <div className="flex min-w-0 flex-1 flex-col gap-6">
+        <ul className="grid grid-cols-2 gap-3 md:grid-cols-3" aria-label={t("tiles")}>
+          {Object.entries(tiles).map(([key, value]) => {
+            const href = TILE_LINKS[key];
+            const body = (
+              <>
+                <span className="mhvp-label">{t(`tile.${key}`)}</span>
+                <span className="mhvp-display mt-2 block font-semibold tabular-nums">{value.toLocaleString("de-DE")}</span>
+                <span aria-hidden className="mt-3 block h-0.5 w-6 rounded-full bg-gold" />
+                {href ? <span className="mt-2 block text-xs text-gold">{t("open")} →</span> : null}
+              </>
+            );
+            return (
+              <li key={key} data-testid={`tile-${key}`}>
+                {href ? (
+                  <Link href={href} className={ui.cardLink}>
+                    {body}
+                  </Link>
+                ) : (
+                  <div className={ui.cardLift}>{body}</div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <p className={ui.notice}>{t("accountingLocked")}</p>
       </div>
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4" aria-label={t("tiles")}>
-        {Object.entries(tiles).map(([key, value]) => {
-          const href = TILE_LINKS[key];
-          const body = (
-            <>
-              <span className="mhvp-label">{t(`tile.${key}`)}</span>
-              <span className="mt-2 block text-3xl font-semibold tabular-nums tracking-tight">{value.toLocaleString("de-DE")}</span>
-              {href ? <span className="mt-2 block text-xs text-gold">{t("open")} →</span> : null}
-            </>
-          );
-          return (
-            <li key={key} data-testid={`tile-${key}`}>
-              {href ? (
-                <Link href={href} className={ui.cardLink}>
-                  {body}
-                </Link>
-              ) : (
-                <div className={ui.card}>{body}</div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      <p className={ui.notice}>{t("accountingLocked")}</p>
-      <section className="flex flex-col gap-3">
+      <aside className="flex w-full flex-col gap-3 lg:w-80 lg:shrink-0">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold">{t("upcoming")}</h2>
-          <Link href="/kalender" className="text-sm text-muted hover:text-fg hover:underline">
+          <h2 className={ui.h2}>{t("upcoming")}</h2>
+          <Link href="/kalender" className="text-sm text-muted transition duration-150 hover:text-fg hover:underline">
             {t("toCalendar")}
           </Link>
         </div>
         {upcoming.length === 0 ? (
-          <p className="text-sm text-muted">{t("noEntries")}</p>
+          <p className={`${ui.card} text-sm text-muted`}>{t("noEntries")}</p>
         ) : (
-          <ul className={`${ui.card} divide-y divide-border p-0`}>
+          <ul className={`${ui.card} divide-y divide-border-soft p-0`}>
             {upcoming.map((u) => {
               const href = KIND_LINKS[u.kind];
               const row = (
                 <>
-                  <span className="w-24 shrink-0 tabular-nums text-muted">{formatDate(u.date)}</span>
-                  <span className={ui.badge}>{t(`kind.${u.kind}`)}</span>
-                  <span className="min-w-0 flex-1 truncate">{u.title}</span>
+                  <span className="w-16 shrink-0 tabular-nums text-xs text-muted">{formatDate(u.date)}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">{u.title}</span>
+                    <span className={ui.badge}>{t(`kind.${u.kind}`)}</span>
+                  </span>
                 </>
               );
               return (
                 <li key={`${u.kind}-${u.title}-${u.date}`} className="text-sm">
                   {href ? (
-                    <Link href={href} className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-surface">
+                    <Link href={href} className="flex items-center gap-3 px-4 py-3 transition duration-150 hover:bg-surface">
                       {row}
                     </Link>
                   ) : (
-                    <div className="flex items-center gap-3 px-4 py-2.5">{row}</div>
+                    <div className="flex items-center gap-3 px-4 py-3">{row}</div>
                   )}
                 </li>
               );
             })}
           </ul>
         )}
-      </section>
+      </aside>
+    </div>
+  );
+}
+
+export default async function DashboardPage() {
+  const t = await getTranslations("Workspace");
+  return (
+    <div className="flex flex-col gap-8">
+      <PageHeader eyebrow={t("greetingLabel")} title={t("dashboard")} />
+      <Suspense
+        fallback={
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <TileSkeleton key={i} />
+            ))}
+          </div>
+        }
+      >
+        <DashboardData />
+      </Suspense>
     </div>
   );
 }

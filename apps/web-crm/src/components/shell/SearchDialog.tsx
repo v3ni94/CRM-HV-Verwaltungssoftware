@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { bff } from "@/lib/bff";
-import { ui } from "@/lib/ui";
 
 type Hit = components["schemas"]["Hit"];
 
@@ -97,23 +96,29 @@ export function SearchDialog() {
     <>
       <button
         type="button"
-        className={`${ui.button} min-w-48 justify-between text-muted`}
+        className="inline-flex min-w-56 items-center justify-between gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-muted transition duration-150 hover:border-gold hover:bg-bg focus:outline-none focus:ring-2 focus:ring-gold/40"
         onClick={(e) => {
           opener.current = e.currentTarget;
           setOpen(true);
         }}
         aria-keyshortcuts="Control+K Meta+K"
       >
-        <span>{t("search")}</span>
-        <kbd className="rounded border border-border px-1 text-xs">{t("searchShortcut")}</kbd>
+        <span className="flex items-center gap-2">
+          <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <circle cx="8.5" cy="8.5" r="5" />
+            <path d="m16 16-3.2-3.2" strokeLinecap="round" />
+          </svg>
+          {t("search")}
+        </span>
+        <kbd className="rounded border border-border bg-bg px-1.5 py-0.5 text-xs text-subtle">{t("searchShortcut")}</kbd>
       </button>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-24" onMouseDown={close}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-fg/40 p-4 pt-24" onMouseDown={close}>
           <div
             role="dialog"
             aria-modal="true"
             aria-label={t("searchTitle")}
-            className="w-full max-w-xl rounded border border-border bg-bg shadow-lg"
+            className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-bg shadow-lg"
             onMouseDown={(e) => e.stopPropagation()}
             onKeyDown={onKeyDown}
           >

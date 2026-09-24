@@ -1,7 +1,5 @@
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
-import Image from "next/image";
-import Link from "next/link";
 
 import { AiChatWidget } from "@/components/ai/AiChatWidget";
 import { SearchDialog } from "@/components/shell/SearchDialog";
@@ -27,63 +25,63 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     {
       label: t("group.overview"),
       items: [
-        { href: "/start", label: t("dashboard") },
-        ...(can("properties:read") ? [{ href: "/objekte", label: t("properties") }] : []),
-        { href: "/kontakte", label: t("contacts") },
-        { href: "/kalender", label: t("calendar") },
+        { href: "/start", label: t("dashboard"), icon: "dashboard" },
+        ...(can("properties:read") ? [{ href: "/objekte", label: t("properties"), icon: "properties" }] : []),
+        { href: "/kontakte", label: t("contacts"), icon: "contacts" },
+        { href: "/kalender", label: t("calendar"), icon: "calendar" },
       ],
     },
     {
       label: t("group.management"),
       items: [
-        ...(can("properties:read") ? [{ href: "/objekte?art=rental", label: t("rental") }] : []),
-        ...(can("accounting:read") ? [{ href: "/weg", label: t("hoa") }] : []),
-        ...(can("properties:read") ? [{ href: "/objekte?art=sev", label: t("sev") }] : []),
-        ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting") }] : []),
-        ...(can("contracts:read") ? [{ href: "/makler", label: t("broker") }] : []),
-        ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets") }] : []),
+        ...(can("properties:read") ? [{ href: "/objekte?art=rental", label: t("rental"), icon: "rental" }] : []),
+        ...(can("accounting:read") ? [{ href: "/weg", label: t("hoa"), icon: "hoa" }] : []),
+        ...(can("properties:read") ? [{ href: "/objekte?art=sev", label: t("sev"), icon: "sev" }] : []),
+        ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting"), icon: "letting" }] : []),
+        ...(can("contracts:read") ? [{ href: "/makler", label: t("broker"), icon: "broker" }] : []),
+        ...(can("documents:read") ? [{ href: "/dms", label: t("dms"), icon: "dms" }] : []),
+        ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets"), icon: "tickets" }] : []),
       ],
     },
     {
       label: t("group.finance"),
       items: can("accounting:read")
         ? [
-            { href: "/buchhaltung", label: t("accounting") },
-            { href: "/abrechnung", label: t("billing") },
-            { href: "/rechnungen", label: t("invoices") },
-            { href: "/bank", label: t("bank") },
+            { href: "/buchhaltung", label: t("accounting"), icon: "accounting" },
+            { href: "/abrechnung", label: t("billing"), icon: "billing" },
+            { href: "/rechnungen", label: t("invoices"), icon: "invoices" },
+            { href: "/bank", label: t("bank"), icon: "bank" },
           ]
         : [],
     },
     {
       label: t("group.system"),
       items: [
-        { href: "/assistent", label: t("assistant") },
-        { href: "/importe", label: t("imports") },
-        { href: "/einstellungen", label: t("settings") },
-        ...(me?.is_platform_admin ? [{ href: "/plattform", label: t("platform") }] : []),
+        { href: "/assistent", label: t("assistant"), icon: "assistant" },
+        { href: "/importe", label: t("imports"), icon: "imports" },
+        { href: "/einstellungen", label: t("settings"), icon: "settings" },
+        ...(me?.is_platform_admin ? [{ href: "/plattform", label: t("platform"), icon: "platform" }] : []),
       ],
     },
   ].filter((g) => g.items.length > 0);
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
+    <div className="flex min-h-screen flex-col bg-surface md:flex-row">
       <a href="#inhalt" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50">
         {t("skip")}
       </a>
-      <aside className="flex flex-col border-b border-border bg-surface md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r">
-        <Link href="/start" className="flex items-center gap-3 border-b border-border px-4 py-3 md:py-4">
-          <Image src="/logo-mhag.png" alt="" width={44} height={38} unoptimized priority className="h-9 w-auto" />
-          <span className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold">{tHome("productName")}</span>
-            <span className="mhvp-label">{tHome("area")}</span>
-          </span>
-        </Link>
-        <Suspense fallback={null}>
-          <SideNav groups={groups} label={t("nav")} />
-        </Suspense>
-      </aside>
+      <Suspense fallback={null}>
+        <SideNav
+          groups={groups}
+          label={t("nav")}
+          logoSrc="/logo-mhag.png"
+          productName={tHome("productName")}
+          area={tHome("area")}
+          collapseLabel={t("navCollapse")}
+          expandLabel={t("navExpand")}
+        />
+      </Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-bg/80 px-4 py-2.5 backdrop-blur-md">
+        <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-bg/80 px-4 py-2.5 backdrop-blur-md md:px-6">
           <SearchDialog />
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <NotificationBell />
@@ -92,10 +90,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <UserMenu name={me?.display_name || me?.email || ""} email={me?.email ?? undefined} />
           </div>
         </header>
-        <main id="inhalt" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8">
+        <main id="inhalt" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8 md:py-10">
           {children}
         </main>
-        <footer className="border-t border-border px-4 py-3 text-xs text-subtle md:px-8">{tHome("footer")}</footer>
+        <footer className="border-t border-border-soft px-4 py-4 text-xs text-subtle md:px-8">{tHome("footer")}</footer>
       </div>
       <AiChatWidget />
     </div>
