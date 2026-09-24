@@ -7,17 +7,21 @@ current inbox and relies on Message-ID deduplication.
 """
 
 import base64
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication.models import Mailbox
 from mhvp.core.config import Settings
 from mhvp.documents.blobs import BlobStore
+
+log = logging.getLogger(__name__)
 
 OAUTH_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"  # noqa: S105
 API = "https://gmail.googleapis.com/gmail/v1/users/me"
@@ -204,7 +208,7 @@ async def sync_mailbox(
     """Fetch new inbox messages and ingest them; updates cursor and error state."""
     from mhvp.communication.services import ingest_raw
 
-    counts = {"fetched": 0, "created": 0, "duplicates": 0}
+    counts = {"fetched": 0, "created": 0, "duplicates": 0, "failed": 0}
     try:
         new_cursor = await client.profile_history_id()
         ids = None
@@ -217,19 +221,32 @@ async def sync_mailbox(
             if raw is None:
                 continue
             counts["fetched"] += 1
-            _, created = await ingest_raw(
-                session,
-                blobs,
-                settings,
-                tenant_id=mailbox.tenant_id,
-                actor_user_id=mailbox.created_by,
-                raw=raw,
-                mailbox_id=mailbox.id,
-                auto_ticket=True,
-            )
+            # One savepoint per message: a broken mail (parse or database error) is logged
+            # and skipped, the others are kept and the session stays usable.
+            try:
+                async with session.begin_nested():
+                    _, created = await ingest_raw(
+                        session,
+                        blobs,
+                        settings,
+                        tenant_id=mailbox.tenant_id,
+                        actor_user_id=mailbox.created_by,
+                        raw=raw,
+                        mailbox_id=mailbox.id,
+                        auto_ticket=True,
+                    )
+            except (SQLAlchemyError, ValueError, UnicodeError, KeyError) as exc:
+                counts["failed"] += 1
+                log.warning(
+                    "gmail_message_ingest_failed",
+                    extra={"gmail_message_id": mid, "error": f"{type(exc).__name__}: {exc}"[:500]},
+                )
+                continue
             counts["created" if created else "duplicates"] += 1
         mailbox.gmail_history_id = new_cursor
-        mailbox.last_error = None
+        mailbox.last_error = (
+            None if not counts["failed"] else f"{counts['failed']} Nachrichten nicht übernommen"
+        )
     except (GmailError, httpx.HTTPError, ValueError) as exc:
         mailbox.last_error = str(exc)[:1000]
         raise

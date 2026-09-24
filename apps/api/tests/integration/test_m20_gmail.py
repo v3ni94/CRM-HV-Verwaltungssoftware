@@ -172,7 +172,7 @@ def test_gmail_sync_creates_tickets_and_threads(
     fake.add("g1", _eml(f"a{RUN}@example.com", f"Heizung defekt {RUN}", f"<g1-{RUN}@x>"))
     fake.add("g2", _eml(f"b{RUN}@example.com", f"Frage Abrechnung {RUN}", f"<g2-{RUN}@x>"))
     result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
-    assert result == {"fetched": 2, "created": 2, "duplicates": 0}
+    assert result == {"fetched": 2, "created": 2, "duplicates": 0, "failed": 0}
 
     msgs = {m["subject"]: m for m in _ok(client.get(f"{M}/messages", headers=h))}
     first, second = msgs[f"Heizung defekt {RUN}"], msgs[f"Frage Abrechnung {RUN}"]
@@ -199,6 +199,7 @@ def test_gmail_sync_creates_tickets_and_threads(
         "fetched": 3,
         "created": 0,
         "duplicates": 3,
+        "failed": 0,
     }
     fake.expire_history = False
 
@@ -292,3 +293,44 @@ def test_oauth_client_consent_and_mailbox_access(
     # Removing the mailbox keeps the messages (mailbox_id becomes null).
     assert client.delete(f"{M}/mailboxes/{box['id']}", headers=h).status_code == 204
     assert address not in {b["address"] for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+
+
+def test_gmail_sync_skips_a_broken_message_and_keeps_the_rest(
+    client: TestClient, world: World, fake: FakeGmail, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Expected by hand: of three fetched messages one fails in the database; the other two
+    are created, the run answers 200 with failed=1 and the mailbox shows the note. Before the
+    fix the failed flush surfaced as an internal error and nothing was kept."""
+    from sqlalchemy.exc import IntegrityError
+
+    from mhvp.communication import services
+
+    h = bearer(login(client, world, "gmadmin"))
+    box = _ok(
+        client.post(
+            f"{M}/mailboxes",
+            json={"address": f"broken{RUN}@example.com", "kind": "gmail", "secret": "rt"},
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.patch(f"{M}/mailboxes/{box['id']}", json={"enabled": True}, headers=h))
+    original = services.ingest_raw
+
+    async def flaky(*args: Any, **kwargs: Any) -> Any:
+        if b"kaputt" in kwargs["raw"]:
+            raise IntegrityError("insert", {}, Exception("duplicate key"))
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(services, "ingest_raw", flaky)
+    fake.add("k1", _eml(f"c{RUN}@example.com", f"Gut eins {RUN}", f"<k1-{RUN}@x>"))
+    fake.add("k2", _eml(f"c{RUN}@example.com", f"kaputt {RUN}", f"<k2-{RUN}@x>"))
+    fake.add("k3", _eml(f"c{RUN}@example.com", f"Gut zwei {RUN}", f"<k3-{RUN}@x>"))
+    result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert result == {"fetched": 3, "created": 2, "duplicates": 0, "failed": 1}
+    boxes = _ok(client.get(f"{M}/mailboxes", headers=h))
+    mine = next(b for b in boxes if b["id"] == box["id"])
+    assert mine["last_error"] == "1 Nachrichten nicht übernommen"
+    subjects = {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=h))}
+    assert f"Gut eins {RUN}" in subjects
+    assert f"Gut zwei {RUN}" in subjects
