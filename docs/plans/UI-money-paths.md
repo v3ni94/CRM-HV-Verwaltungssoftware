@@ -20,4 +20,8 @@ a user interface. No release gate is opened; the screens show locks instead of b
 * Tests: component tests per screen, BFF allowlist tests including the locked operations,
   Playwright `e2e/money.backend.spec.ts` against the API (receivable run, open items, dunning
   lock on a non leading ledger, operating cost statement with four eyes refusal, HOA plan).
-* Not covered by Playwright: bank import (camt file per run), meeting votes, rent increase.
+* Playwright `e2e/workflows.backend.spec.ts`: rent increase with arithmetic check and four eyes
+  refusal, incoming invoice with hints, three review steps and release refusal, meeting with
+  attendance, votes, tally and announcement.
+* Not covered by Playwright: bank import (camt file per run), special levy screens.
+* Added later: incoming invoice screens (`/rechnungen`), special levy screens on `/weg`.
