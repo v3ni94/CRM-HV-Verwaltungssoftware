@@ -5,7 +5,7 @@ are operating metrics (counts and sums), never domain data. No price is seeded: 
 an operator decision (M27-01). Readiness never opens a gate; G5 stays a per tenant flag."""
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -62,7 +62,8 @@ class License(IdMixin, TimestampMixin, Base):
     unit_quota: Mapped[int] = mapped_column(Integer, nullable=False)
     valid_from: Mapped[date] = mapped_column(Date, nullable=False)
     valid_until: Mapped[date | None] = mapped_column(Date)
-    price_per_unit: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    price_per_unit: Mapped[Decimal] = mapped_column(MONEY, nullable=False)  # per unit and month
+    min_monthly_amount: Mapped[Decimal | None] = mapped_column(MONEY)
 
 
 class UsageCounter(IdMixin, TimestampMixin, Base):
@@ -102,6 +103,7 @@ class LicenseIn(LicensingBaseIn):
     valid_from: date
     valid_until: date | None = None
     price_per_unit: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    min_monthly_amount: Decimal | None = Field(default=None, ge=0, decimal_places=2)
 
 
 class UsageIn(LicensingBaseIn):
@@ -198,6 +200,7 @@ def _license_out(r: License) -> dict[str, Any]:
         "valid_from": r.valid_from,
         "valid_until": r.valid_until,
         "price_per_unit": r.price_per_unit,
+        "min_monthly_amount": r.min_monthly_amount,
     }
 
 
@@ -372,3 +375,52 @@ def usage_all() -> dict[str, int]:
     from mhvp.core.config import get_settings
 
     return asyncio.run(usage_all_once(get_settings()))
+
+
+@router.get("/tenants/{tenant_id}/billing-preview", summary="Lizenzentgelt je Monat (Vorschau)")
+async def billing_preview(
+    tenant_id: uuid.UUID,
+    month: date,
+    request: Request,
+    _: Principal = Depends(require_platform_admin),
+) -> dict[str, Any]:
+    """Decided 24.09.2026 (M27-01): price per unit, module and month, optional minimum. Net
+    only; VAT and invoicing of licence fees are open (M27-01). Units from the usage counter."""
+    first = month.replace(day=1)
+    last = date(first.year + (first.month == 12), first.month % 12 + 1, 1) - timedelta(days=1)
+    factory = sessions(request)
+    counter = await count_usage(factory, tenant_id, first)
+    async with platform_transaction(factory) as session:
+        licenses = (
+            await session.scalars(
+                select(License).where(
+                    License.tenant_id == tenant_id,
+                    License.valid_from <= last,
+                    or_(License.valid_until.is_(None), License.valid_until >= first),
+                )
+            )
+        ).all()
+    lines = []
+    total = Decimal("0.00")
+    for lic in sorted(licenses, key=lambda x: x.module):
+        amount = (lic.price_per_unit * counter.units).quantize(Decimal("0.01"))
+        minimum = lic.min_monthly_amount or Decimal("0.00")
+        charged = max(amount, minimum)
+        total += charged
+        lines.append(
+            {
+                "module": lic.module,
+                "units": counter.units,
+                "price_per_unit": str(lic.price_per_unit),
+                "amount": str(amount),
+                "minimum": str(minimum),
+                "charged": str(charged),
+                "over_quota": counter.units > lic.unit_quota,
+            }
+        )
+    return {
+        "month": first,
+        "lines": lines,
+        "net_total": str(total),
+        "note": "Nettovorschau ohne Umsatzsteuer; Rechnungsstellung offen (M27-01).",
+    }

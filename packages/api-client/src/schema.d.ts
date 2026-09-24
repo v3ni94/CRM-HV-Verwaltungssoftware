@@ -3661,6 +3661,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/tenants/{tenant_id}/billing-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lizenzentgelt je Monat (Vorschau)
+         * @description Decided 24.09.2026 (M27-01): price per unit, module and month, optional minimum. Net
+         *     only; VAT and invoicing of licence fees are open (M27-01). Units from the usage counter.
+         */
+        get: operations["billing_preview_api_v1_platform_tenants__tenant_id__billing_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/tenants/{tenant_id}/members": {
         parameters: {
             query?: never;
@@ -7984,6 +8005,8 @@ export interface components {
         };
         /** LicenseIn */
         LicenseIn: {
+            /** Min Monthly Amount */
+            min_monthly_amount?: number | string | null;
             /** Module */
             module: string;
             /** Price Per Unit */
@@ -19215,6 +19238,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["mhvp__platform__schemas__TenantOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    billing_preview_api_v1_platform_tenants__tenant_id__billing_preview_get: {
+        parameters: {
+            query: {
+                month: string;
+            };
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

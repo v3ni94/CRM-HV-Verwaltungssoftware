@@ -148,6 +148,41 @@ def test_license_usage_readiness(
     assert {c["item"]: c["done"] for c in before["checklist"]}["Lizenz Kernmodul gültig"] is False
     assert client.get(f"{P}/tenants/{tenant}/readiness", headers=h).status_code == 403
 
+    # M27-01 (decided 24.09.2026): price per unit and month, optional minimum. 2 units:
+    # core 2 x 1,50 = 3,00 (no minimum); hoa 2 x 2,00 = 4,00, minimum 10,00 -> 10,00.
+    _ok(
+        client.post(
+            f"{P}/licenses",
+            json={
+                "tenant_id": tenant,
+                "module": "hoa",
+                "unit_quota": 1,
+                "valid_from": day,
+                "price_per_unit": "2.00",
+                "min_monthly_amount": "10.00",
+            },
+            headers=ph,
+        ),
+        201,
+    )
+    bill = _ok(
+        client.get(f"{P}/tenants/{tenant}/billing-preview", params={"month": day}, headers=ph)
+    )
+    lines = {x["module"]: x for x in bill["lines"]}
+    assert (lines["core"]["amount"], lines["core"]["charged"]) == ("3.00", "3.00")
+    assert (lines["hoa"]["amount"], lines["hoa"]["charged"], lines["hoa"]["over_quota"]) == (
+        "4.00",
+        "10.00",
+        True,
+    )
+    assert bill["net_total"] == "13.00"
+    assert (
+        client.get(
+            f"{P}/tenants/{tenant}/billing-preview", params={"month": day}, headers=h
+        ).status_code
+        == 403
+    )
+
     from mhvp.platform.licensing import usage_all_once
 
     assert asyncio.run(usage_all_once(_settings(database, redis_url)))["counted"] >= 1

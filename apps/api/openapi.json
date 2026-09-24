@@ -8563,6 +8563,22 @@
       "LicenseIn": {
         "additionalProperties": false,
         "properties": {
+          "min_monthly_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Monthly Amount"
+          },
           "module": {
             "pattern": "^(core|rental|hoa|accounting|banking|portal|ai)$",
             "title": "Module",
@@ -29862,6 +29878,62 @@
         "summary": "Mandanten anlegen",
         "tags": [
           "Plattform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenant_id}/billing-preview": {
+      "get": {
+        "description": "Decided 24.09.2026 (M27-01): price per unit, module and month, optional minimum. Net\nonly; VAT and invoicing of licence fees are open (M27-01). Units from the usage counter.",
+        "operationId": "billing_preview_api_v1_platform_tenants__tenant_id__billing_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Month",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Billing Preview Api V1 Platform Tenants  Tenant Id  Billing Preview Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lizenzentgelt je Monat (Vorschau)",
+        "tags": [
+          "platform"
         ]
       }
     },
