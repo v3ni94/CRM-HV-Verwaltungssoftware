@@ -153,7 +153,7 @@ def _ok(response: Any, status: int = 200) -> Any:
 
 
 def test_gmail_sync_creates_tickets_and_threads(
-    client: TestClient, world: World, fake: FakeGmail
+    client: TestClient, world: World, fake: FakeGmail, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     h = bearer(login(client, world, "gmadmin"))
     box = _ok(
@@ -202,6 +202,29 @@ def test_gmail_sync_creates_tickets_and_threads(
         "failed": 0,
     }
     fake.expire_history = False
+
+    # One unstorable mail (NUL byte survives parsing, ingest raises) does not roll back the
+    # others: it is counted as failed, recorded on the mailbox, the rest is ingested.
+    fake.add("g4", _eml(f"c{RUN}@example.com", f"Kaputt {RUN}", f"<g4-{RUN}@x>"))
+    fake.add("g5", _eml(f"d{RUN}@example.com", f"Heil {RUN}", f"<g5-{RUN}@x>"))
+    from mhvp.communication import services
+
+    real_ingest = services.ingest_parsed
+
+    async def broken(session: Any, *args: Any, parsed: Any, **kwargs: Any) -> Any:
+        if parsed["subject"] == f"Kaputt {RUN}":
+            from sqlalchemy import text
+
+            await session.execute(text("select * from table_that_does_not_exist"))
+        return await real_ingest(session, *args, parsed=parsed, **kwargs)
+
+    monkeypatch.setattr(services, "ingest_parsed", broken)
+    result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert (result["created"], result["failed"]) == (1, 1)
+    monkeypatch.setattr(services, "ingest_parsed", real_ingest)
+    listed = {b["id"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+    assert "Nachricht g4" in (listed[box["id"]]["last_error"] or "")
+    assert f"Heil {RUN}" in {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=h))}
 
     # Failing token refresh: error recorded on the mailbox, no crash, no partial data.
     fake.token_ok = False
@@ -293,44 +316,3 @@ def test_oauth_client_consent_and_mailbox_access(
     # Removing the mailbox keeps the messages (mailbox_id becomes null).
     assert client.delete(f"{M}/mailboxes/{box['id']}", headers=h).status_code == 204
     assert address not in {b["address"] for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
-
-
-def test_gmail_sync_skips_a_broken_message_and_keeps_the_rest(
-    client: TestClient, world: World, fake: FakeGmail, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Expected by hand: of three fetched messages one fails in the database; the other two
-    are created, the run answers 200 with failed=1 and the mailbox shows the note. Before the
-    fix the failed flush surfaced as an internal error and nothing was kept."""
-    from sqlalchemy.exc import IntegrityError
-
-    from mhvp.communication import services
-
-    h = bearer(login(client, world, "gmadmin"))
-    box = _ok(
-        client.post(
-            f"{M}/mailboxes",
-            json={"address": f"broken{RUN}@example.com", "kind": "gmail", "secret": "rt"},
-            headers=h,
-        ),
-        201,
-    )
-    _ok(client.patch(f"{M}/mailboxes/{box['id']}", json={"enabled": True}, headers=h))
-    original = services.ingest_raw
-
-    async def flaky(*args: Any, **kwargs: Any) -> Any:
-        if b"kaputt" in kwargs["raw"]:
-            raise IntegrityError("insert", {}, Exception("duplicate key"))
-        return await original(*args, **kwargs)
-
-    monkeypatch.setattr(services, "ingest_raw", flaky)
-    fake.add("k1", _eml(f"c{RUN}@example.com", f"Gut eins {RUN}", f"<k1-{RUN}@x>"))
-    fake.add("k2", _eml(f"c{RUN}@example.com", f"kaputt {RUN}", f"<k2-{RUN}@x>"))
-    fake.add("k3", _eml(f"c{RUN}@example.com", f"Gut zwei {RUN}", f"<k3-{RUN}@x>"))
-    result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
-    assert result == {"fetched": 3, "created": 2, "duplicates": 0, "failed": 1}
-    boxes = _ok(client.get(f"{M}/mailboxes", headers=h))
-    mine = next(b for b in boxes if b["id"] == box["id"])
-    assert mine["last_error"] == "1 Nachrichten nicht übernommen"
-    subjects = {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=h))}
-    assert f"Gut eins {RUN}" in subjects
-    assert f"Gut zwei {RUN}" in subjects

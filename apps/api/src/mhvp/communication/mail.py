@@ -26,6 +26,10 @@ DATE_RE = re.compile(
 PROPERTY_RE = re.compile(r"\bObjekt\s*(?:Nr\.?\s*)?(\d{3})\b", re.IGNORECASE)
 
 
+def _clean(value: str, limit: int) -> str:
+    return value.replace("\x00", "")[:limit]
+
+
 def parse(raw: bytes) -> dict[str, Any]:
     msg = email.message_from_bytes(raw, policy=policy.default)
     if not isinstance(msg, EmailMessage):  # pragma: no cover - policy.default yields EmailMessage
@@ -48,15 +52,20 @@ def parse(raw: bytes) -> dict[str, Any]:
             received = parsedate_to_datetime(str(msg["Date"]))
         except (TypeError, ValueError):
             received = None
+    # PostgreSQL rejects NUL bytes in text columns; column limits mirror the model.
+    clean = _clean
+    sender = (getaddresses([str(msg["From"] or "")]) or [("", "")])[0][1].lower()
     return {
-        "from": (getaddresses([str(msg["From"] or "")]) or [("", "")])[0][1].lower() or None,
+        "from": clean(sender, 320) or None,
         "to": [
-            a.lower() for _, a in getaddresses([str(msg["To"] or ""), str(msg["Cc"] or "")]) if a
+            clean(a.lower(), 320)
+            for _, a in getaddresses([str(msg["To"] or ""), str(msg["Cc"] or "")])
+            if a
         ],
-        "subject": str(msg["Subject"] or "")[:998] or None,
-        "body": text.strip()[:100000],
-        "message_id": str(msg["Message-ID"] or "").strip() or None,
-        "in_reply_to": str(msg["In-Reply-To"] or "").strip() or None,
+        "subject": clean(str(msg["Subject"] or ""), 998) or None,
+        "body": clean(text.strip(), 100000),
+        "message_id": clean(str(msg["Message-ID"] or "").strip(), 998) or None,
+        "in_reply_to": clean(str(msg["In-Reply-To"] or "").strip(), 998) or None,
         "received_at": received,
         "attachments": attachments,
     }

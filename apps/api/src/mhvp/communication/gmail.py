@@ -14,7 +14,6 @@ from typing import Any
 
 import httpx
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication.models import Mailbox
@@ -235,6 +234,7 @@ async def sync_mailbox(
     from mhvp.communication.services import ingest_raw
 
     counts = {"fetched": 0, "created": 0, "duplicates": 0, "failed": 0}
+    first_failure: str | None = None
     try:
         new_cursor = await client.profile_history_id()
         ids = None
@@ -247,8 +247,8 @@ async def sync_mailbox(
             if raw is None:
                 continue
             counts["fetched"] += 1
-            # One savepoint per message: a broken mail (parse or database error) is logged
-            # and skipped, the others are kept and the session stays usable.
+            # Savepoint per mail: one unreadable or unstorable mail must not roll back the
+            # whole batch or poison the session (seen 25.09.2026 as PendingRollbackError).
             try:
                 async with session.begin_nested():
                     _, created = await ingest_raw(
@@ -261,24 +261,21 @@ async def sync_mailbox(
                         mailbox_id=mailbox.id,
                         auto_ticket=True,
                     )
-            except (SQLAlchemyError, ValueError, UnicodeError, KeyError) as exc:
+            except Exception as exc:  # recorded on the mailbox, batch continues
                 counts["failed"] += 1
-                log.warning(
-                    "gmail_message_ingest_failed",
-                    extra={"gmail_message_id": mid, "error": f"{type(exc).__name__}: {exc}"[:500]},
-                )
+                log.exception("gmail message not ingested", extra={"gmail_id": mid})
+                if first_failure is None:
+                    first_failure = f"Nachricht {mid}: {type(exc).__name__}: {exc}"[:1000]
                 continue
             counts["created" if created else "duplicates"] += 1
         mailbox.gmail_history_id = new_cursor
-        mailbox.last_error = (
-            None if not counts["failed"] else f"{counts['failed']} Nachrichten nicht übernommen"
-        )
-    except (GmailError, httpx.HTTPError, ValueError) as exc:
+        mailbox.last_error = first_failure
+    except (GmailError, httpx.HTTPError) as exc:
         mailbox.last_error = str(exc)[:1000]
         raise
     finally:
         mailbox.last_synced_at = datetime.now(UTC)
-        await session.flush()
+    await session.flush()
     return counts
 
 
