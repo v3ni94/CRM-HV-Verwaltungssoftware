@@ -38,6 +38,8 @@ from mhvp.hoa.meetings import router as hoa_meetings_router
 from mhvp.hoa.package import router as hoa_package_router
 from mhvp.hoa.routers import router as hoa_router
 from mhvp.imports.routers import router as imports_router
+from mhvp.letting.rentlaw import platform_router as rentlaw_platform_router
+from mhvp.letting.rentlaw import tenant_router as rentlaw_router
 from mhvp.letting.routers import router as letting_router
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.licensing import router as licensing_router
@@ -149,6 +151,8 @@ def create_app(
     app.include_router(hoa_levies_router, prefix=API_PREFIX)
     app.include_router(hoa_package_router, prefix=API_PREFIX)
     app.include_router(letting_router, prefix=API_PREFIX)
+    app.include_router(rentlaw_router, prefix=API_PREFIX)
+    app.include_router(rentlaw_platform_router, prefix=API_PREFIX)
     app.include_router(licensing_router, prefix=API_PREFIX)
     app.include_router(tickets_router, prefix=API_PREFIX)
     app.include_router(mail_router, prefix=API_PREFIX)

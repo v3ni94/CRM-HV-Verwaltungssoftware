@@ -3295,6 +3295,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/letting/rent-increases/{case_id}/letter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Musterschreiben (Entwurf) */
+        get: operations["rent_increase_letter_api_v1_letting_rent_increases__case_id__letter_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/rent-law/cap-areas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gebiete mit abgesenkter Kappungsgrenze (lesend) */
+        get: operations["list_areas_api_v1_letting_rent_law_cap_areas_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/rent-law/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mietrechtliche Parameter (lesend) */
+        get: operations["list_rules_api_v1_letting_rent_law_rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/letting/units/{unit_id}/expose": {
         parameters: {
             query?: never;
@@ -3637,6 +3688,57 @@ export interface paths {
         put?: never;
         /** Preis je Modul und Einheit erfassen */
         post: operations["add_price_api_v1_platform_price_list_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/rent-law/cap-areas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kappungsgebiet anlegen */
+        post: operations["create_area_api_v1_platform_rent_law_cap_areas_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/rent-law/cap-areas/{area_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Kappungsgebiet ändern */
+        put: operations["update_area_api_v1_platform_rent_law_cap_areas__area_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/rent-law/rules/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Parameter pflegen oder freigeben */
+        put: operations["update_rule_api_v1_platform_rent_law_rules__code__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6051,6 +6153,26 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** CapAreaIn */
+        CapAreaIn: {
+            /** Cap Percent */
+            cap_percent: number | string;
+            /** Municipality */
+            municipality: string;
+            /** Municipality Code */
+            municipality_code?: string | null;
+            /** Source */
+            source: string;
+            /** State */
+            state: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
         /** CatalogEntryIn */
         CatalogEntryIn: {
             /** Code */
@@ -6238,6 +6360,17 @@ export interface components {
             vat_id?: string | null;
             /** Website */
             website?: string | null;
+        };
+        /** ComparisonFlatIn */
+        ComparisonFlatIn: {
+            /** Address */
+            address: string;
+            /** Living Area Sqm */
+            living_area_sqm?: number | string | null;
+            /** Note */
+            note?: string | null;
+            /** Rent Per Sqm */
+            rent_per_sqm: number | string;
         };
         /**
          * Completeness
@@ -9681,6 +9814,8 @@ export interface components {
             action: string;
             /** Document Id */
             document_id?: string | null;
+            /** Received On */
+            received_on?: string | null;
         };
         /** RentIncreaseIn */
         RentIncreaseIn: {
@@ -9688,6 +9823,8 @@ export interface components {
             basis: string;
             /** Cap Limit Percent */
             cap_limit_percent?: number | string | null;
+            /** Comparison Flats */
+            comparison_flats?: components["schemas"]["ComparisonFlatIn"][];
             /** Comparison Rent Per Sqm */
             comparison_rent_per_sqm?: number | string | null;
             /**
@@ -9702,14 +9839,35 @@ export interface components {
              * Format: date
              */
             effective_date: string;
+            /** Expert Document Id */
+            expert_document_id?: string | null;
+            /** Justification */
+            justification?: string | null;
             /** Reference Rent */
             reference_rent?: number | string | null;
+            /** Rent Index Date */
+            rent_index_date?: string | null;
+            /** Rent Index Name */
+            rent_index_name?: string | null;
             /** Source Document Id */
             source_document_id?: string | null;
             /** Source Note */
             source_note?: string | null;
             /** Target Rent */
             target_rent: number | string;
+        };
+        /** RentLawRuleIn */
+        RentLawRuleIn: {
+            /** Note */
+            note?: string | null;
+            /** Source Url */
+            source_url?: string | null;
+            /** Source Verified */
+            source_verified?: boolean | null;
+            /** Status */
+            status?: string | null;
+            /** Value */
+            value?: number | string | null;
         };
         /**
          * ReportType
@@ -18420,6 +18578,94 @@ export interface operations {
             };
         };
     };
+    rent_increase_letter_api_v1_letting_rent_increases__case_id__letter_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_areas_api_v1_letting_rent_law_cap_areas_get: {
+        parameters: {
+            query?: {
+                state?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_rules_api_v1_letting_rent_law_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
     expose_api_v1_letting_units__unit_id__expose_get: {
         parameters: {
             query?: never;
@@ -19178,6 +19424,115 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_area_api_v1_platform_rent_law_cap_areas_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CapAreaIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_area_api_v1_platform_rent_law_cap_areas__area_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                area_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CapAreaIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_rule_api_v1_platform_rent_law_rules__code__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RentLawRuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

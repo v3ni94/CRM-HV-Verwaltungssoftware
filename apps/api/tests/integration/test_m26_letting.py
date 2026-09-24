@@ -7,6 +7,7 @@ Target 700,00 -> two flags. After consent: rent line 600,00 ends 30.11.2026, 690
 
 import asyncio
 from collections.abc import Iterator
+from datetime import date
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -51,6 +52,14 @@ async def _world(settings: Any) -> World:
             await services.add_member(
                 factory, tenant_id=a, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
             )
+        uid = await services.create_user(
+            factory,
+            email=world.email("m26padmin"),
+            display_name="m26padmin",
+            password=PASSWORD,
+            is_platform_admin=True,
+        )
+        world.users["m26padmin"] = uid
         return world
     finally:
         await engine.dispose()
@@ -93,7 +102,12 @@ def test_rent_increase_vacancy_prospects(
     prop = _ok(
         client.post(
             "/api/v1/properties",
-            json={"number": "761", "name": "Mietshaus", "management_type": "rental"},
+            json={
+                "number": "761",
+                "name": "Mietshaus",
+                "management_type": "rental",
+                "city": f"Teststadt {RUN}",
+            },
             headers=h,
         ),
         201,
@@ -216,7 +230,14 @@ def test_rent_increase_vacancy_prospects(
     gh = bearer(login(gated, world, "m26second"))
     assert gated.post(act, json={"action": "send"}, headers=gh).status_code == 422
     review = _doc(client, h, "pruefung.pdf")
-    sent = _ok(gated.post(act, json={"action": "send", "document_id": review}, headers=gh))
+    sent = _ok(
+        gated.post(
+            act,
+            json={"action": "send", "document_id": review, "received_on": "2026-09-15"},
+            headers=gh,
+        )
+    )
+    assert sent["received_on"] == "2026-09-15"
     assert sent["status"] == "sent"
     assert client.post(act, json={"action": "apply"}, headers=h).status_code == 409
     assert client.post(act, json={"action": "consent"}, headers=h).status_code == 422
@@ -273,3 +294,212 @@ def test_rent_increase_vacancy_prospects(
     )
     assert client.delete(f"{L}/prospects/{p['id']}", headers=h).status_code == 204
     assert _ok(client.get(f"{L}/prospects", params={"unit_id": units["02"]}, headers=h)) == []
+
+
+RULES = (
+    "waiting_months",
+    "cap_percent",
+    "cap_window_years",
+    "comparison_flats_min",
+    "consent_months",
+    "effective_month",
+)
+
+
+def test_rent_law_rules_and_cap_area(clients: tuple[TestClient, TestClient], world: World) -> None:
+    """M26-01: checks only with released parameters (test run releases and resets them).
+    Values below are the pre-filled draft values, used here as test inputs. Rent 600,00 since
+    01.01.2023, effective 01.12.2026: waiting period met; reference rent on 01.12.2023 600,00;
+    cap area of the test city 15 % -> maximum 690,00; 700,00 exceeds it. Receipt 15.09.2026 ->
+    consent until 30.11.2026, increased rent from 01.12.2026."""
+    from mhvp.letting.rentlaw import deadlines
+
+    assert deadlines(date(2026, 9, 15), 2, 3) == {
+        "consent_until": date(2026, 11, 30),
+        "effective_from": date(2026, 12, 1),
+    }
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    ph = bearer(login(client, world, "m26padmin"))
+    pl = "/api/v1/platform/rent-law"
+    rules = {r["code"]: r for r in _ok(client.get(f"{L}/rent-law/rules", headers=h))}
+    assert set(RULES) <= set(rules)
+    assert all(not rules[c]["source_verified"] for c in RULES)
+    # Release is refused without a verified source.
+    assert (
+        client.put(f"{pl}/rules/cap_percent", json={"status": "released"}, headers=ph).status_code
+        == 409
+    )
+    assert client.put(f"{pl}/rules/cap_percent", json={"note": "x"}, headers=h).status_code == 403
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "762",
+                "name": "Kappungshaus",
+                "management_type": "rental",
+                "city": f"Kappstadt {RUN}",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    landlord, _ = _party(client, h, "Vermieter262", "company")
+    _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/owners",
+            json={"party_id": landlord, "valid_from": "2020-01-01"},
+            headers=h,
+        ),
+        201,
+    )
+    building = _ok(
+        client.post(f"/api/v1/properties/{prop['id']}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )["id"]
+    unit = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/units",
+            json={
+                "building_id": building,
+                "number": "01",
+                "unit_type": "apartment",
+                "living_area_sqm": "60",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    tenant, _ = _party(client, h, "Mieter262")
+    contract = _ok(
+        client.post(
+            "/api/v1/contracts",
+            json={
+                "kind": "tenancy",
+                "unit_id": unit,
+                "party_id": tenant,
+                "start_date": "2023-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    _ok(
+        client.post(
+            f"/api/v1/contracts/{contract}/payments",
+            json={
+                "payment_type_code": "rent",
+                "net": "600.00",
+                "gross": "600.00",
+                "valid_from": "2023-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    base = {
+        "contract_id": contract,
+        "basis": "comparison",
+        "target_rent": "690.00",
+        "effective_date": "2026-12-01",
+        "reference_rent": "600.00",
+        "cap_limit_percent": "15",
+        "comparison_rent_per_sqm": "11.50",
+        "source_note": "Testwerte",
+    }
+    inactive = _ok(client.post(f"{L}/rent-increases", json=base, headers=h), 201)
+    assert inactive["check"]["statutory"]["active"] is False
+    area = _ok(
+        client.post(
+            f"{pl}/cap-areas",
+            json={
+                "state": "NW",
+                "municipality": f"Kappstadt {RUN}",
+                "cap_percent": "15",
+                "valid_from": "2020-01-01",
+                "source": "Testeintrag ohne Rechtswirkung",
+            },
+            headers=ph,
+        ),
+        201,
+    )
+    try:
+        for code in RULES:
+            _ok(
+                client.put(
+                    f"{pl}/rules/{code}",
+                    json={"source_verified": True, "status": "released"},
+                    headers=ph,
+                )
+            )
+        two = [{"address": f"Weg {i}", "rent_per_sqm": "11.50"} for i in (1, 2)]
+        few = _ok(
+            client.post(
+                f"{L}/rent-increases",
+                json=base | {"justification": "vergleichswohnungen", "comparison_flats": two},
+                headers=h,
+            ),
+            201,
+        )
+        stat = few["check"]["statutory"]
+        assert stat["active"] is True
+        assert (stat["cap_percent"], stat["cap_max_rent"]) == ("15.00000000", "690.00")
+        assert stat["cap_source"].startswith(f"Kappstadt {RUN}")
+        assert stat["flags"] == ["Mindestens 3 Vergleichswohnungen benennen."]
+        three = [*two, {"address": "Weg 3", "rent_per_sqm": "11.60"}]
+        ok = _ok(
+            client.post(
+                f"{L}/rent-increases",
+                json=base | {"justification": "vergleichswohnungen", "comparison_flats": three},
+                headers=h,
+            ),
+            201,
+        )
+        assert ok["check"]["statutory"]["flags"] == []
+        assert ok["check"]["ok"] is True
+        letter = _ok(client.get(f"{L}/rent-increases/{ok['id']}/letter", headers=h))
+        assert letter["status"] == "draft"
+        assert "ENTWURF" in letter["text"]
+        assert "690,00 EUR" in letter["text"]
+        assert "Weg 3: 11,60 EUR je m²" in letter["text"]
+        assert letter["placeholders"]
+        too_high = _ok(
+            client.post(
+                f"{L}/rent-increases",
+                json=base
+                | {
+                    "target_rent": "700.00",
+                    "justification": "mietspiegel",
+                    "rent_index_name": "Testmietspiegel 2025",
+                },
+                headers=h,
+            ),
+            201,
+        )
+        assert (
+            "Kappungsgrenze überschritten: höchstens 690.00 EUR."
+            in too_high["check"]["statutory"]["flags"]
+        )
+    finally:
+        for code in RULES:
+            _ok(
+                client.put(
+                    f"{pl}/rules/{code}",
+                    json={"source_verified": False, "status": "draft"},
+                    headers=ph,
+                )
+            )
+        _ok(
+            client.put(
+                f"{pl}/cap-areas/{area['id']}",
+                json={
+                    "state": "NW",
+                    "municipality": f"Kappstadt {RUN}",
+                    "cap_percent": "15",
+                    "valid_from": "2020-01-01",
+                    "valid_to": "2020-01-02",
+                    "source": "Testeintrag beendet",
+                },
+                headers=ph,
+            )
+        )

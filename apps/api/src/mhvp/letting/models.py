@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -49,6 +49,15 @@ class RentIncreaseCase(IdMixin, TimestampMixin, TenantMixin, Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     consent_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
     new_payment_id: Mapped[uuid.UUID | None] = _fk("contract_payment.id")
+    # Justification (M26-01): mietspiegel, gutachten, vergleichswohnungen
+    justification: Mapped[str | None] = mapped_column(String(24))
+    rent_index_name: Mapped[str | None] = mapped_column(String(300))
+    rent_index_date: Mapped[date | None] = mapped_column(Date)
+    expert_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
+    comparison_flats: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    received_on: Mapped[date | None] = mapped_column(Date)  # Zugang beim Mieter
 
 
 class Prospect(IdMixin, TimestampMixin, TenantMixin, Base):

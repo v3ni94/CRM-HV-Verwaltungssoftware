@@ -2729,6 +2729,80 @@
         "title": "CalendarItem",
         "type": "object"
       },
+      "CapAreaIn": {
+        "additionalProperties": false,
+        "properties": {
+          "cap_percent": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 100.0,
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Cap Percent"
+          },
+          "municipality": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Municipality",
+            "type": "string"
+          },
+          "municipality_code": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipality Code"
+          },
+          "source": {
+            "maxLength": 4000,
+            "minLength": 5,
+            "title": "Source",
+            "type": "string"
+          },
+          "state": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "State",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "state",
+          "municipality",
+          "cap_percent",
+          "valid_from",
+          "source"
+        ],
+        "title": "CapAreaIn",
+        "type": "object"
+      },
       "CatalogEntryIn": {
         "additionalProperties": false,
         "properties": {
@@ -3301,6 +3375,64 @@
           }
         },
         "title": "CompanyData",
+        "type": "object"
+      },
+      "ComparisonFlatIn": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Address",
+            "type": "string"
+          },
+          "living_area_sqm": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Living Area Sqm"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rent_per_sqm": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Rent Per Sqm"
+          }
+        },
+        "required": [
+          "address",
+          "rent_per_sqm"
+        ],
+        "title": "ComparisonFlatIn",
         "type": "object"
       },
       "Completeness": {
@@ -13502,6 +13634,18 @@
               }
             ],
             "title": "Document Id"
+          },
+          "received_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received On"
           }
         },
         "required": [
@@ -13534,6 +13678,14 @@
               }
             ],
             "title": "Cap Limit Percent"
+          },
+          "comparison_flats": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonFlatIn"
+            },
+            "maxItems": 20,
+            "title": "Comparison Flats",
+            "type": "array"
           },
           "comparison_rent_per_sqm": {
             "anyOf": [
@@ -13573,6 +13725,30 @@
             "title": "Effective Date",
             "type": "string"
           },
+          "expert_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expert Document Id"
+          },
+          "justification": {
+            "anyOf": [
+              {
+                "pattern": "^(mietspiegel|gutachten|vergleichswohnungen)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Justification"
+          },
           "reference_rent": {
             "anyOf": [
               {
@@ -13588,6 +13764,30 @@
               }
             ],
             "title": "Reference Rent"
+          },
+          "rent_index_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Index Date"
+          },
+          "rent_index_name": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Index Name"
           },
           "source_document_id": {
             "anyOf": [
@@ -13634,6 +13834,76 @@
           "effective_date"
         ],
         "title": "RentIncreaseIn",
+        "type": "object"
+      },
+      "RentLawRuleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "source_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Verified"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "pattern": "^(draft|released)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "title": "RentLawRuleIn",
         "type": "object"
       },
       "ReportType": {
@@ -28666,6 +28936,131 @@
         ]
       }
     },
+    "/api/v1/letting/rent-increases/{case_id}/letter": {
+      "get": {
+        "operationId": "rent_increase_letter_api_v1_letting_rent_increases__case_id__letter_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Rent Increase Letter Api V1 Letting Rent Increases  Case Id  Letter Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Musterschreiben (Entwurf)",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/rent-law/cap-areas": {
+      "get": {
+        "operationId": "list_areas_api_v1_letting_rent_law_cap_areas_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Areas Api V1 Letting Rent Law Cap Areas Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gebiete mit abgesenkter Kappungsgrenze (lesend)",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/rent-law/rules": {
+      "get": {
+        "operationId": "list_rules_api_v1_letting_rent_law_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Rules Api V1 Letting Rent Law Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mietrechtliche Parameter (lesend)",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
     "/api/v1/letting/units/{unit_id}/expose": {
       "get": {
         "description": "Draft only from master data; no personal data of former tenants, no invented text.\nEnergy certificate data are required for ads but not modelled yet (M26-03).",
@@ -29812,6 +30207,158 @@
           }
         },
         "summary": "Preis je Modul und Einheit erfassen",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/rent-law/cap-areas": {
+      "post": {
+        "operationId": "create_area_api_v1_platform_rent_law_cap_areas_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapAreaIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Area Api V1 Platform Rent Law Cap Areas Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kappungsgebiet anlegen",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/rent-law/cap-areas/{area_id}": {
+      "put": {
+        "operationId": "update_area_api_v1_platform_rent_law_cap_areas__area_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "area_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Area Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapAreaIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Area Api V1 Platform Rent Law Cap Areas  Area Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kappungsgebiet ändern",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/rent-law/rules/{code}": {
+      "put": {
+        "operationId": "update_rule_api_v1_platform_rent_law_rules__code__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RentLawRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Rule Api V1 Platform Rent Law Rules  Code  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Parameter pflegen oder freigeben",
         "tags": [
           "platform"
         ]

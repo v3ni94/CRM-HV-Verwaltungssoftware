@@ -36,6 +36,13 @@ class LettingBaseIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ComparisonFlatIn(LettingBaseIn):
+    address: str = Field(min_length=3, max_length=300)
+    living_area_sqm: Decimal | None = Field(default=None, gt=0)
+    rent_per_sqm: Decimal = Field(gt=0)
+    note: str | None = Field(default=None, max_length=500)
+
+
 class RentIncreaseIn(LettingBaseIn):
     contract_id: uuid.UUID
     basis: str = Field(pattern="^(mietspiegel|comparison|modernization|index|graduated)$")
@@ -47,11 +54,19 @@ class RentIncreaseIn(LettingBaseIn):
     earliest_effective_date: date | None = None
     source_note: str | None = Field(default=None, max_length=4000)
     source_document_id: uuid.UUID | None = None
+    justification: str | None = Field(
+        default=None, pattern="^(mietspiegel|gutachten|vergleichswohnungen)$"
+    )
+    rent_index_name: str | None = Field(default=None, max_length=300)
+    rent_index_date: date | None = None
+    expert_document_id: uuid.UUID | None = None
+    comparison_flats: list[ComparisonFlatIn] = Field(default_factory=list, max_length=20)
 
 
 class RentIncreaseAction(LettingBaseIn):
     action: str = Field(pattern="^(approve|send|consent|reject|apply|cancel)$")
     document_id: uuid.UUID | None = None
+    received_on: date | None = None
 
 
 class ProspectIn(LettingBaseIn):
@@ -81,6 +96,10 @@ def _case_out(c: RentIncreaseCase) -> dict[str, Any]:
         "status": c.status,
         "check": c.check,
         "sent_at": c.sent_at,
+        "received_on": c.received_on,
+        "justification": c.justification,
+        "rent_index_name": c.rent_index_name,
+        "comparison_flats": c.comparison_flats,
         "new_payment_id": c.new_payment_id,
     }
 
@@ -156,14 +175,36 @@ async def create_rent_increase(
         if payment is None:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Keine Miete zum Stichtag erfasst.")
         unit = await session.get(Unit, contract.unit_id)
+        from mhvp.letting.rentlaw import statutory_check
+        from mhvp.properties.models import Property
+
         case = RentIncreaseCase(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
             current_rent=payment.net,
             living_area_sqm=unit.living_area_sqm if unit else None,
-            **body.model_dump(),
+            **(
+                body.model_dump(mode="json")
+                | {
+                    "target_rent": body.target_rent,
+                    "reference_rent": body.reference_rent,
+                    "cap_limit_percent": body.cap_limit_percent,
+                    "comparison_rent_per_sqm": body.comparison_rent_per_sqm,
+                    "effective_date": body.effective_date,
+                    "earliest_effective_date": body.earliest_effective_date,
+                    "rent_index_date": body.rent_index_date,
+                    "contract_id": body.contract_id,
+                    "source_document_id": body.source_document_id,
+                    "expert_document_id": body.expert_document_id,
+                }
+            ),
         )
-        case.check = _check(case, contract.rent_increase_block_until)
+        check = _check(case, contract.rent_increase_block_until)
+        prop = await session.get(Property, contract.property_id)
+        statutory = await statutory_check(session, case, contract, prop)
+        check["statutory"] = statutory
+        check["ok"] = check["ok"] and not statutory["flags"]
+        case.check = check
         session.add(case)
         await session.flush()
         return _case_out(case)
@@ -191,6 +232,30 @@ async def get_rent_increase(
         if case is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         return _case_out(case)
+
+
+@router.get("/rent-increases/{case_id}/letter", summary="Musterschreiben (Entwurf)")
+async def rent_increase_letter(
+    case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.contracts.models import Contract
+    from mhvp.letting.rentlaw import letter_text
+    from mhvp.properties.models import Property, Unit
+
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(RentIncreaseCase, case_id)
+        if case is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        contract = await session.get(Contract, case.contract_id)
+        unit = await session.get(Unit, contract.unit_id) if contract else None
+        prop = await session.get(Property, unit.property_id) if unit else None
+        parts = [prop.street, prop.house_number] if prop else []
+        street = " ".join(x for x in parts if x)
+        places = [prop.postal_code, prop.city] if prop else []
+        city = " ".join(x for x in places if x)
+        address = ", ".join(x for x in [street, city] if x) or "[Anschrift]"
+        label = (unit.label or unit.number) if unit else "[Einheit]"
+        return letter_text(case, label, address)
 
 
 NEXT = {
@@ -242,6 +307,25 @@ async def rent_increase_action(
                 )
             case.legal_review_document_id = body.document_id
             case.sent_at = datetime.now(UTC)
+            if body.received_on is not None:
+                from mhvp.letting.rentlaw import deadlines, released_rules
+
+                case.received_on = body.received_on
+                rules = await released_rules(session)
+                if "consent_months" in rules and "effective_month" in rules:
+                    d = deadlines(
+                        body.received_on,
+                        int(rules["consent_months"]),
+                        int(rules["effective_month"]),
+                    )
+                    case.check = case.check | {
+                        "consent_until": d["consent_until"].isoformat(),
+                        "effective_from": d["effective_from"].isoformat(),
+                    }
+                    if case.effective_date < d["effective_from"]:
+                        case.check = case.check | {
+                            "deadline_flag": "Wirksamkeit liegt vor dem gesetzlichen Beginn."
+                        }
         if body.action == "consent":
             if body.document_id is None:
                 raise ProblemError(ErrorCodes.VALIDATION, detail="Nachweis der Zustimmung fehlt.")
