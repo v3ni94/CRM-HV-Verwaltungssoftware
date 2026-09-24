@@ -2,17 +2,29 @@
 # Restore test (M9 acceptance, job ops.backup_verify): restores the newest backup into a
 # throwaway database, compares schema revision and row counts of core tables with the source,
 # then drops the throwaway database. Exit code 0 only if every check passes.
+# BACKUP_COMPOSE: run psql/pg_restore inside the postgres container (see scripts/backup.sh).
 set -euo pipefail
 
-: "${PGHOST:?PGHOST must be set}" "${PGDATABASE:?PGDATABASE must be set}"
+: "${PGDATABASE:?PGDATABASE must be set}"
 : "${BACKUP_DIR:?BACKUP_DIR must be set}"
+[[ -n "${BACKUP_COMPOSE:-}" ]] || : "${PGHOST:?PGHOST must be set (or BACKUP_COMPOSE)}"
 TARGET="${RESTORE_DATABASE:-mhvp_restore_check}"
-LATEST="$(ls -1t "$BACKUP_DIR"/mhvp-*.dump "$BACKUP_DIR"/mhvp-*.dump.age 2>/dev/null | head -1 || true)"
+[[ "$TARGET" =~ ^[a-z_][a-z0-9_]*$ && "$TARGET" != "$PGDATABASE" ]] \
+  || { echo "backup-verify: invalid RESTORE_DATABASE" >&2; exit 2; }
+LATEST="$(ls -1t "$BACKUP_DIR"/mhvp-2*.dump "$BACKUP_DIR"/mhvp-2*.dump.age 2>/dev/null | head -1 || true)"
 [[ -n "$LATEST" ]] || { echo "backup-verify: no backup in $BACKUP_DIR" >&2; exit 1; }
-sha256sum --check --status "$LATEST.sha256" || { echo "backup-verify: checksum mismatch" >&2; exit 1; }
+(cd "$(dirname "$LATEST")" && sha256sum --check --status "$(basename "$LATEST").sha256") \
+  || { echo "backup-verify: checksum mismatch" >&2; exit 1; }
+
+if [[ -n "${BACKUP_COMPOSE:-}" ]]; then
+  # shellcheck disable=SC2086
+  pg() { local tool="$1"; shift; $BACKUP_COMPOSE exec -T postgres "$tool" -U postgres "$@"; }
+else
+  pg() { local tool="$1"; shift; "$tool" "$@"; }
+fi
 
 WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"; psql -q -d postgres -c "DROP DATABASE IF EXISTS \"$TARGET\"" >/dev/null 2>&1 || true' EXIT
+trap 'rm -rf "$WORK"; pg psql -q -d postgres -c "DROP DATABASE IF EXISTS \"$TARGET\"" >/dev/null 2>&1 || true' EXIT
 DUMP="$LATEST"
 if [[ "$LATEST" == *.age ]]; then
   : "${BACKUP_AGE_IDENTITY:?BACKUP_AGE_IDENTITY must be set to decrypt}"
@@ -20,10 +32,10 @@ if [[ "$LATEST" == *.age ]]; then
   DUMP="$WORK/restore.dump"
 fi
 
-psql -q -d postgres -c "DROP DATABASE IF EXISTS \"$TARGET\"" -c "CREATE DATABASE \"$TARGET\""
-pg_restore --no-owner --no-privileges --exit-on-error --dbname="$TARGET" "$DUMP"
+pg psql -q -d postgres -c "DROP DATABASE IF EXISTS \"$TARGET\"" -c "CREATE DATABASE \"$TARGET\""
+pg pg_restore --no-owner --no-privileges --exit-on-error --dbname="$TARGET" < "$DUMP"
 
-query() { psql -tA -d "$1" -c "$2"; }
+query() { pg psql -tA -d "$1" -c "$2"; }
 fail=0
 check() {
   local label="$1" sql="$2" src dst

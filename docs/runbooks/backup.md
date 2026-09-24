@@ -10,5 +10,8 @@ Source: MASTER-PROMPT 3.5, 6.9.5 (E05), 16. Backup protects operation; it is not
 * Restore test: `make backup-verify` restores the newest backup into `RESTORE_DATABASE`
   (default `mhvp_restore_check`), checks checksum, Alembic revision and core tables, drops the
   database. Encrypted backups need `BACKUP_AGE_IDENTITY`. Run monthly, record the output.
-* WAL archiving and object storage sync: server setup pending (M9-02).
+* Server mode: `BACKUP_COMPOSE` runs the dump inside the postgres container;
+  `BACKUP_OBJECTSTORE_VOLUME` archives the document store; `BACKUP_REMOTE` copies off-site;
+  systemd timers in `infra/systemd` (see `server-setup.md`).
+* WAL archiving (point in time recovery): not set up; recovery point is the daily backup.
 * After a real restore: re-apply deletion records before users get access (M9-03, D47).

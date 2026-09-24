@@ -11,4 +11,5 @@ network (`infra/compose.prod.yaml`).
    migrations. Rollback: previous tag, and for a failed migration restore the backup taken in
    step 5.
 
-Missing server data: M9-01.
+Own server without Traefik or registry: see `server-setup.md` (`DEPLOY_BUILD=1`,
+`infra/compose.edge.yaml`). Missing server data: M9-01.

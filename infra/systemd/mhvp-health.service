@@ -1,0 +1,8 @@
+[Unit]
+Description=MHVP health check
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/mhvp
+EnvironmentFile=/opt/mhvp/.env.backup
+ExecStart=/opt/mhvp/scripts/healthcheck.sh

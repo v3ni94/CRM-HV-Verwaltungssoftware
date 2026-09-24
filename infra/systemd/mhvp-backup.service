@@ -1,0 +1,11 @@
+# Daily encrypted backup of database and document store (docs/runbooks/server-setup.md).
+[Unit]
+Description=MHVP backup
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/mhvp
+EnvironmentFile=/opt/mhvp/.env.backup
+ExecStart=/opt/mhvp/scripts/backup.sh

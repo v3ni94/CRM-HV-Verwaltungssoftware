@@ -1,0 +1,9 @@
+[Unit]
+Description=MHVP monthly restore test
+
+[Timer]
+OnCalendar=*-*-01 04:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

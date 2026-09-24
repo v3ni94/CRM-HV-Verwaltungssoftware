@@ -1,0 +1,58 @@
+# Edge proxy for a server without an existing Traefik (own server, OPEN_QUESTIONS M9-01).
+# Runs once per server as its own project; prod and staging stacks join its network.
+#
+#   docker compose -p mhvp-edge --env-file .env.edge -f infra/compose.edge.yaml up -d
+#
+# Then set in .env.prod / .env.staging: TRAEFIK_NETWORK=mhvp-edge, TRAEFIK_ENTRYPOINT=websecure,
+# TRAEFIK_CERTRESOLVER=le. Only ports 80 and 443 are published; HTTP redirects to HTTPS.
+name: mhvp-edge
+
+services:
+  traefik:
+    image: traefik:v3.7  # same line as the dev stack
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=mhvp-edge
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?ACME_EMAIL must be set}
+      - --certificatesresolvers.le.acme.storage=/acme/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --accesslog=true
+      - --log.level=INFO
+      - --api.dashboard=false
+      - --ping=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Read only socket; Traefik only reads container labels.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - acme:/acme
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - edge
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  acme:
+
+networks:
+  edge:
+    name: mhvp-edge

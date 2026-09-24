@@ -1,0 +1,11 @@
+# Monthly restore test into a throwaway database (M9 acceptance). Record the journal output.
+[Unit]
+Description=MHVP restore test
+Wants=docker.service
+After=docker.service mhvp-backup.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/mhvp
+EnvironmentFile=/opt/mhvp/.env.backup
+ExecStart=/opt/mhvp/scripts/backup-verify.sh

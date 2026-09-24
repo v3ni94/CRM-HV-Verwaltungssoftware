@@ -252,6 +252,8 @@ jobs:
         run: |
           rm -f .env infra/.env
           docker compose -p mhvp -f infra/compose.yaml -f infra/compose.prod.yaml config -q
+          ACME_EMAIL=ci@example.invalid docker compose -p mhvp-edge -f infra/compose.edge.yaml config -q
+          bash -n scripts/*.sh
           MHVP_ENV=staging MHVP_TRAEFIK_PREFIX=mhvp-staging MHVP_HOST_CRM=crm.staging.mueller-holding.ag \
             docker compose -p mhvp-staging -f infra/compose.yaml -f infra/compose.prod.yaml config -q
 
