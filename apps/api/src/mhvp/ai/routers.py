@@ -149,13 +149,46 @@ async def release_provider(
         return _provider_out(row)
 
 
+@router.get("/ai/routing", summary="Anbieterstrategie")
+async def get_routing(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.RoutingOut:
+    async with tenant_tx(request, principal) as session:
+        return s.RoutingOut(strategy=await gateway.routing_strategy(session))
+
+
+@router.put("/ai/routing", summary="Anbieterstrategie setzen")
+async def put_routing(
+    body: s.RoutingIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.RoutingOut:
+    """Which released provider answers first and whether the other one takes over when the
+    budget is exhausted or the provider fails (M7-02). "_only" strategies never switch."""
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row.ai_routing = body.strategy
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ai_routing.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"strategy": body.strategy},
+        )
+        return s.RoutingOut(strategy=body.strategy)
+
+
 @router.get("/ai/usage", summary="KI-Kosten im laufenden Monat")
 async def usage(request: Request, principal: TenantPrincipal = Depends(READ)) -> s.UsageOut:
     now = datetime.now(UTC)
     async with tenant_tx(request, principal) as session:
         spent = await gateway.spent_this_month(session, now)
         budget = await session.scalar(
-            select(func.coalesce(func.max(AiProviderConfig.monthly_budget_eur), 0)).where(
+            select(func.coalesce(func.sum(AiProviderConfig.monthly_budget_eur), 0)).where(
                 AiProviderConfig.enabled.is_(True)
             )
         ) or Decimal(0)
@@ -324,6 +357,7 @@ async def get_run(
     async with tenant_tx(request, principal) as session:
         run = await _get(session, AiTaskRun, run_id)
         out = s.RunOut.model_validate(run)
+        out.fallback = list((run.input_ref or {}).get("fallback") or [])
         out.proposal_id = await session.scalar(
             select(AiProposal.id).where(AiProposal.task_run_id == run.id)
         )

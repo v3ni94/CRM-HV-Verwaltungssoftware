@@ -953,6 +953,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/routing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Anbieterstrategie */
+        get: operations["get_routing_api_v1_ai_routing_get"];
+        /**
+         * Anbieterstrategie setzen
+         * @description Which released provider answers first and whether the other one takes over when the
+         *     budget is exhausted or the provider fails (M7-02). "_only" strategies never switch.
+         */
+        put: operations["put_routing_api_v1_ai_routing_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/runs/{run_id}": {
         parameters: {
             query?: never;
@@ -9966,6 +9988,22 @@ export interface components {
             /** Permissions */
             permissions: string[];
         };
+        /** RoutingIn */
+        RoutingIn: {
+            /**
+             * Strategy
+             * @enum {string}
+             */
+            strategy: "anthropic_first" | "openai_first" | "alternate" | "anthropic_only" | "openai_only";
+        };
+        /** RoutingOut */
+        RoutingOut: {
+            /**
+             * Strategy
+             * @enum {string}
+             */
+            strategy: "anthropic_first" | "openai_first" | "alternate" | "anthropic_only" | "openai_only";
+        };
         /** RowOut */
         RowOut: {
             /** Entity Id */
@@ -10088,6 +10126,8 @@ export interface components {
             duration_ms: number;
             /** Error */
             error: string | null;
+            /** Fallback */
+            fallback?: string[];
             /**
              * Id
              * Format: uuid
@@ -13323,6 +13363,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["mhvp__ai__schemas__ProviderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_routing_api_v1_ai_routing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutingOut"];
+                };
+            };
+        };
+    };
+    put_routing_api_v1_ai_routing_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoutingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutingOut"];
                 };
             };
             /** @description Validation Error */

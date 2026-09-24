@@ -138,13 +138,44 @@ def month_start(now: datetime) -> datetime:
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
-async def spent_this_month(session: AsyncSession, now: datetime) -> Decimal:
-    value = await session.scalar(
-        select(func.coalesce(func.sum(AiTaskRun.cost_eur), 0)).where(
-            AiTaskRun.created_at >= month_start(now)
-        )
+async def spent_this_month(
+    session: AsyncSession, now: datetime, provider: AiProvider | None = None
+) -> Decimal:
+    query = select(func.coalesce(func.sum(AiTaskRun.cost_eur), 0)).where(
+        AiTaskRun.created_at >= month_start(now)
     )
+    if provider is not None:
+        query = query.where(AiTaskRun.provider == provider)
+    value = await session.scalar(query)
     return Decimal(value or 0)
+
+
+ONLY = {"anthropic_only": AiProvider.ANTHROPIC, "openai_only": AiProvider.OPENAI}
+FIRST = {"anthropic_first": AiProvider.ANTHROPIC, "openai_first": AiProvider.OPENAI}
+
+
+async def routing_strategy(session: AsyncSession) -> str:
+    from mhvp.platform.models import TenantSettings
+
+    value = await session.scalar(select(TenantSettings.ai_routing))
+    return value or "anthropic_first"
+
+
+async def _provider_order(session: AsyncSession, strategy: str) -> list[AiProvider]:
+    """Preferred provider first; "alternate" starts with the provider not used last."""
+    if strategy in ONLY:
+        return [ONLY[strategy]]
+    first = FIRST.get(strategy)
+    if strategy == "alternate":
+        last = await session.scalar(
+            select(AiTaskRun.provider)
+            .where(AiTaskRun.provider.is_not(None))
+            .order_by(AiTaskRun.created_at.desc())
+            .limit(1)
+        )
+        first = AiProvider.OPENAI if last is AiProvider.ANTHROPIC else AiProvider.ANTHROPIC
+    others = [p for p in AiProvider if p is not first]
+    return [first, *others] if first else others
 
 
 @dataclass
@@ -155,18 +186,28 @@ class Route:
     price_out: Decimal
 
 
-async def route(session: AsyncSession, task: AiTask) -> Route:
-    configs = (
-        await session.scalars(
-            select(AiProviderConfig)
-            .where(AiProviderConfig.enabled.is_(True))
-            .order_by(AiProviderConfig.provider)
-        )
-    ).all()
+async def routes(session: AsyncSession, task: AiTask) -> tuple[list[Route], list[str]]:
+    """Usable providers in strategy order plus the reasons for the unusable ones."""
+    strategy = await routing_strategy(session)
+    order = await _provider_order(session, strategy)
+    configs = {
+        c.provider: c
+        for c in (
+            await session.scalars(
+                select(AiProviderConfig).where(AiProviderConfig.enabled.is_(True))
+            )
+        ).all()
+    }
     if not configs:
         raise GatewayBlockedError("Kein freigegebener KI-Anbieter eingerichtet.")
-    reasons = []
-    for config in configs:
+    usable: list[Route] = []
+    reasons: list[str] = []
+    for provider in order:
+        config = configs.get(provider)
+        if config is None:
+            if strategy in ONLY:
+                reasons.append(f"{provider.value}: nicht eingerichtet oder nicht aktiv")
+            continue
         if config.released_at is None:
             reasons.append(f"{config.provider.value}: Freigabe (Vier-Augen) fehlt")
             continue
@@ -189,8 +230,15 @@ async def route(session: AsyncSession, task: AiTask) -> Route:
         except (KeyError, ArithmeticError):
             reasons.append(f"{config.provider.value}: Modell oder Preise für Stufe {tier} fehlen")
             continue
-        return Route(config, model, price_in, price_out)
-    raise GatewayBlockedError("; ".join(reasons))
+        usable.append(Route(config, model, price_in, price_out))
+    return usable, reasons
+
+
+async def route(session: AsyncSession, task: AiTask) -> Route:
+    usable, reasons = await routes(session, task)
+    if not usable:
+        raise GatewayBlockedError("; ".join(reasons))
+    return usable[0]
 
 
 def cost(route_: Route, tokens_in: int, tokens_out: int) -> Decimal:
@@ -260,13 +308,23 @@ async def execute(
         prompt = tasks.prompt(task, run.prompt_version)
         try:
             item = await build_input(session, blobs, run)
-            chosen = await route(session, task)
-            budget = chosen.config.monthly_budget_eur
-            spent = await spent_this_month(session, now)
-            if budget <= 0 or spent >= budget:
-                raise GatewayBlockedError(
-                    f"Monatsbudget erreicht ({spent:.2f} von {budget:.2f} EUR); harte Sperre."
-                )
+            usable, reasons = await routes(session, task)
+            # Budget per provider; exhausted providers are skipped (fallback, M7-02) unless
+            # the strategy names a single provider, then the run is blocked.
+            plan: list[tuple[Route, Decimal, Decimal]] = []
+            for candidate in usable:
+                budget = candidate.config.monthly_budget_eur
+                spent = await spent_this_month(session, now, candidate.config.provider)
+                if budget <= 0 or spent >= budget:
+                    reasons.append(
+                        f"{candidate.config.provider.value}: Monatsbudget erreicht "
+                        f"({spent:.2f} von {budget:.2f} EUR); harte Sperre"
+                    )
+                    continue
+                plan.append((candidate, spent, budget))
+            if not plan:
+                raise GatewayBlockedError("; ".join(reasons))
+            skipped = list(reasons)
         except GatewayBlockedError as exc:
             run.status, run.error = RunStatus.BLOCKED, str(exc)
             await emit(
@@ -299,49 +357,66 @@ async def execute(
             run.input_ref = {**run.input_ref, "deduplicated_from": str(previous.id)}
             return run
         shots = await examples(session, task)
-        api_key = chosen.config.api_key or ""
-        provider: AiProvider = chosen.config.provider
-        run.status, run.provider, run.model = RunStatus.RUNNING, provider, chosen.model
+        keys = {c.config.provider: c.config.api_key or "" for c, _, _ in plan}
+        chosen, spent, budget = plan[0]
+        run.status, run.provider, run.model = (
+            RunStatus.RUNNING,
+            chosen.config.provider,
+            chosen.model,
+        )
     started = time.monotonic()
-    client = providers.client_for(provider, api_key)
     schema = tasks.json_schema(task)
-    messages = _messages(item, shots)
+    base_messages = _messages(item, shots)
     tokens_in = tokens_out = 0
     output: dict[str, Any] | None = None
     error: str | None = None
-    for attempt in range(2):
-        try:
-            completion = await client.complete(
-                model=chosen.model,
-                system=prompt.system,
-                messages=messages,
-                schema=schema,
-                max_tokens=16000,
-            )
-        except providers.ProviderError as exc:
-            error = f"Anbieterfehler: {exc}"
+    for step in plan:
+        chosen, spent, budget = step
+        provider = chosen.config.provider
+        client = providers.client_for(provider, keys[provider])
+        messages = base_messages
+        provider_failed = False
+        for attempt in range(2):
+            try:
+                completion = await client.complete(
+                    model=chosen.model,
+                    system=prompt.system,
+                    messages=messages,
+                    schema=schema,
+                    max_tokens=16000,
+                )
+            except providers.ProviderError as exc:
+                error = f"Anbieterfehler: {exc}"
+                provider_failed = True
+                break
+            tokens_in += completion.tokens_in
+            tokens_out += completion.tokens_out
+            try:
+                output = tasks.SCHEMAS[task].model_validate(completion.data).model_dump(mode="json")
+                error = None
+                break
+            except ValidationError as exc:
+                error = f"Schemafehler: {exc.errors()[0]['msg']} bei {exc.errors()[0]['loc']}"
+                if attempt == 0:
+                    messages = [
+                        *messages,
+                        {"role": "assistant", "content": completion.raw_text or "{}"},
+                        {
+                            "role": "user",
+                            "content": f"Die Antwort verletzt das Schema: {error}. "
+                            "Bitte vollständig und schemakonform neu antworten.",
+                        },
+                    ]
+        if not provider_failed:
             break
-        tokens_in += completion.tokens_in
-        tokens_out += completion.tokens_out
-        try:
-            output = tasks.SCHEMAS[task].model_validate(completion.data).model_dump(mode="json")
-            error = None
-            break
-        except ValidationError as exc:
-            error = f"Schemafehler: {exc.errors()[0]['msg']} bei {exc.errors()[0]['loc']}"
-            if attempt == 0:
-                messages = [
-                    *messages,
-                    {"role": "assistant", "content": completion.raw_text or "{}"},
-                    {
-                        "role": "user",
-                        "content": f"Die Antwort verletzt das Schema: {error}. "
-                        "Bitte vollständig und schemakonform neu antworten.",
-                    },
-                ]
+        # Provider error: try the next provider of the strategy (fallback), if any.
+        skipped.append(f"{provider.value}: {error}")
     async with tenant_transaction(factory, tenant_id) as session:
         run = await session.get(AiTaskRun, run_id)
         assert run is not None  # noqa: S101 - locked above
+        run.provider, run.model = chosen.config.provider, chosen.model
+        if skipped:
+            run.input_ref = {**run.input_ref, "fallback": skipped}
         run.tokens_in, run.tokens_out = tokens_in, tokens_out
         run.cost_eur = cost(chosen, tokens_in, tokens_out)
         run.duration_ms = int((time.monotonic() - started) * 1000)

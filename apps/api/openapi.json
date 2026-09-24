@@ -14211,6 +14211,47 @@
         "title": "RolePermissions",
         "type": "object"
       },
+      "RoutingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "strategy": {
+            "enum": [
+              "anthropic_first",
+              "openai_first",
+              "alternate",
+              "anthropic_only",
+              "openai_only"
+            ],
+            "title": "Strategy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy"
+        ],
+        "title": "RoutingIn",
+        "type": "object"
+      },
+      "RoutingOut": {
+        "properties": {
+          "strategy": {
+            "enum": [
+              "anthropic_first",
+              "openai_first",
+              "alternate",
+              "anthropic_only",
+              "openai_only"
+            ],
+            "title": "Strategy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy"
+        ],
+        "title": "RoutingOut",
+        "type": "object"
+      },
       "RowOut": {
         "properties": {
           "entity_id": {
@@ -14611,6 +14652,13 @@
               }
             ],
             "title": "Error"
+          },
+          "fallback": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fallback",
+            "type": "array"
           },
           "id": {
             "format": "uuid",
@@ -21301,6 +21349,67 @@
           }
         },
         "summary": "KI-Anbieter freigeben (Vier-Augen)",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/routing": {
+      "get": {
+        "operationId": "get_routing_api_v1_ai_routing_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Anbieterstrategie",
+        "tags": [
+          "KI-Assistent"
+        ]
+      },
+      "put": {
+        "description": "Which released provider answers first and whether the other one takes over when the\nbudget is exhausted or the provider fails (M7-02). \"_only\" strategies never switch.",
+        "operationId": "put_routing_api_v1_ai_routing_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoutingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anbieterstrategie setzen",
         "tags": [
           "KI-Assistent"
         ]

@@ -51,6 +51,19 @@ class ProviderOut(_Out):
     released_by: uuid.UUID | None
 
 
+RoutingStrategy = Literal[
+    "anthropic_first", "openai_first", "alternate", "anthropic_only", "openai_only"
+]
+
+
+class RoutingIn(_In):
+    strategy: RoutingStrategy
+
+
+class RoutingOut(BaseModel):
+    strategy: RoutingStrategy
+
+
 class UsageOut(BaseModel):
     month: str
     spent_eur: Decimal
@@ -106,6 +119,8 @@ class RunOut(_Out):
     duration_ms: int
     error: str | None
     proposal_id: uuid.UUID | None = None
+    # Providers skipped before the answering one (budget exhausted or provider error, M7-02).
+    fallback: list[str] = Field(default_factory=list)
 
 
 class ProposalOut(_Out):

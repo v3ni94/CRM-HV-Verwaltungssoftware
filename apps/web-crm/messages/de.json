@@ -493,7 +493,24 @@
     "usageSpent": "{spent} von {budget}",
     "usageWarning": "Achtung: 80 Prozent des Monatsbudgets sind erreicht.",
     "usageBlocked": "Das Monatsbudget ist ausgeschöpft. Neue Aufträge werden gesperrt.",
-    "openaiHint": "Beide Anbieter werden nur nach Freigabe im Vier-Augen-Prinzip und mit nachgewiesenem AVV genutzt. Modellnamen: bei OpenAI zum Beispiel gpt-4.1 oder gpt-4o, bei Anthropic zum Beispiel claude-sonnet-4-5."
+    "openaiHint": "Beide Anbieter werden nur nach Freigabe im Vier-Augen-Prinzip und mit nachgewiesenem AVV genutzt. Modellnamen: bei OpenAI zum Beispiel gpt-4.1 oder gpt-4o, bei Anthropic zum Beispiel claude-sonnet-4-5.",
+    "routingTitle": "Anbieterstrategie",
+    "routingLabel": "Welcher Anbieter antwortet",
+    "routingSaved": "Strategie gespeichert.",
+    "routing": {
+      "anthropic_first": "Zuerst Anthropic, bei Bedarf OpenAI",
+      "openai_first": "Zuerst OpenAI, bei Bedarf Anthropic",
+      "alternate": "Abwechselnd",
+      "anthropic_only": "Nur Anthropic",
+      "openai_only": "Nur OpenAI"
+    },
+    "routingHint": {
+      "anthropic_first": "Anthropic beantwortet alle Aufträge. Ist das Monatsbudget von Anthropic aufgebraucht oder meldet der Anbieter einen Fehler, übernimmt OpenAI automatisch.",
+      "openai_first": "OpenAI beantwortet alle Aufträge. Ist das Monatsbudget von OpenAI aufgebraucht oder meldet der Anbieter einen Fehler, übernimmt Anthropic automatisch.",
+      "alternate": "Die Aufträge wechseln zwischen beiden Anbietern. Fällt einer aus oder ist sein Budget aufgebraucht, übernimmt der andere.",
+      "anthropic_only": "Nur Anthropic wird genutzt. Ist das Budget aufgebraucht, werden neue Aufträge gesperrt, es findet kein Wechsel statt.",
+      "openai_only": "Nur OpenAI wird genutzt. Ist das Budget aufgebraucht, werden neue Aufträge gesperrt, es findet kein Wechsel statt."
+    }
   },
   "Immoware24": {
     "title": "Importassistent Immoware24",

@@ -17,7 +17,7 @@ from openpyxl import Workbook
 from pydantic import SecretStr
 
 from mhvp.ai import providers
-from mhvp.ai.providers import Completion
+from mhvp.ai.providers import Completion, ProviderError
 from mhvp.core.config import Settings
 from mhvp.main import create_app
 from mhvp.platform import services
@@ -549,3 +549,114 @@ def test_answer_question_budget_lock_and_failures(
             break
     assert last["status"] == "blocked"
     assert "Monatsbudget" in last["error"]
+
+
+class RecordingFactory:
+    """One fake client per provider; records which provider answered; can fail one provider."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+        self.failing: set[str] = set()
+
+    def __call__(self, provider: Any, _key: str) -> Any:
+        factory = self
+
+        class Client:
+            async def complete(self, **kwargs: Any) -> Completion:
+                factory.calls.append(provider.value)
+                if provider.value in factory.failing:
+                    raise ProviderError("HTTP 503", retryable=True)
+                data = {"summary": f"von {provider.value}", "open_points": []}
+                return Completion(
+                    data=data,
+                    raw_text=json.dumps(data),
+                    tokens_in=100,
+                    tokens_out=50,
+                    model=kwargs["model"],
+                )
+
+        return Client()
+
+
+def test_routing_strategy_and_fallback(client: TestClient, world: World) -> None:
+    """Expected by hand: anthropic_first with an exhausted Anthropic budget -> OpenAI answers
+    and the run records the fallback; anthropic_only -> blocked; openai_first -> OpenAI;
+    alternate -> the provider not used last; an OpenAI outage under openai_first -> Anthropic."""
+    factory = RecordingFactory()
+    providers.set_factory(factory)
+    try:
+        admin = _setup_provider(client, world, monthly_budget_eur="500.00")
+        second = bearer(login(client, world, "m7second"))
+        dpa = _upload(client, admin, "avv-openai.txt", b"AVV OpenAI Muster", "text/plain")
+        openai_body = {
+            **PROVIDER,
+            "dpa_document_id": dpa,
+            "monthly_budget_eur": "500.00",
+            "models": {
+                "small": {
+                    "model": "gpt-5-mini",
+                    "input_eur_per_mtok": "1",
+                    "output_eur_per_mtok": "5",
+                },
+                "large": {"model": "gpt-5", "input_eur_per_mtok": "5", "output_eur_per_mtok": "25"},
+            },
+        }
+        _ok(client.put("/api/v1/ai/providers/openai", json=openai_body, headers=admin), 200)
+        _ok(client.post("/api/v1/ai/providers/openai/release", headers=second), 200)
+
+        assert (
+            _ok(client.get("/api/v1/ai/routing", headers=admin), 200)["strategy"]
+            == "anthropic_first"
+        )
+        run = _chat(client, admin, "summarize", f"Strategie A {RUN}", [])
+        assert (run["status"], run["provider"], run["model"]) == (
+            "succeeded",
+            "anthropic",
+            "claude-haiku-4-5",
+        )
+
+        _ok(client.put("/api/v1/ai/routing", json={"strategy": "openai_first"}, headers=admin), 200)
+        run = _chat(client, admin, "summarize", f"Strategie B {RUN}", [])
+        assert (run["provider"], run["model"]) == ("openai", "gpt-5-mini")
+
+        _ok(client.put("/api/v1/ai/routing", json={"strategy": "alternate"}, headers=admin), 200)
+        first = _chat(client, admin, "summarize", f"Strategie C1 {RUN}", [])["provider"]
+        second_run = _chat(client, admin, "summarize", f"Strategie C2 {RUN}", [])["provider"]
+        assert {first, second_run} == {"anthropic", "openai"}
+
+        # Anthropic budget exhausted: anthropic_first falls back to OpenAI ...
+        spent = Decimal(_ok(client.get("/api/v1/ai/usage", headers=admin), 200)["spent_eur"])
+        _setup_provider(client, world, monthly_budget_eur="0.01")
+        _ok(
+            client.put("/api/v1/ai/routing", json={"strategy": "anthropic_first"}, headers=admin),
+            200,
+        )
+        run = _chat(client, admin, "summarize", f"Strategie D {RUN} {spent}", [])
+        assert (run["status"], run["provider"]) == ("succeeded", "openai")
+        assert any("anthropic: Monatsbudget" in x for x in run["fallback"])
+        # ... anthropic_only does not.
+        _ok(
+            client.put("/api/v1/ai/routing", json={"strategy": "anthropic_only"}, headers=admin),
+            200,
+        )
+        run = _chat(client, admin, "summarize", f"Strategie E {RUN}", [])
+        assert run["status"] == "blocked"
+        assert "Monatsbudget" in run["error"]
+        assert "openai" not in run["error"]
+
+        # OpenAI outage under openai_first: Anthropic (budget restored) takes over.
+        _setup_provider(client, world, monthly_budget_eur="500.00")
+        _ok(client.put("/api/v1/ai/routing", json={"strategy": "openai_first"}, headers=admin), 200)
+        factory.failing.add("openai")
+        run = _chat(client, admin, "summarize", f"Strategie F {RUN}", [])
+        assert (run["status"], run["provider"]) == ("succeeded", "anthropic")
+        assert any("openai: Anbieterfehler" in x for x in run["fallback"])
+        _ok(client.put("/api/v1/ai/routing", json={"strategy": "openai_only"}, headers=admin), 200)
+        run = _chat(client, admin, "summarize", f"Strategie G {RUN}", [])
+        assert (run["status"], run["provider"]) == ("failed", "openai")
+    finally:
+        providers.set_factory(providers.default_factory)
+        _ok(
+            client.put("/api/v1/ai/routing", json={"strategy": "anthropic_first"}, headers=admin),
+            200,
+        )

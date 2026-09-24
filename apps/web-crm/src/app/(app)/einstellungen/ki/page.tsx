@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { ProviderSettings } from "@/components/ai/ProviderSettings";
+import { RoutingSettings, type Strategy } from "@/components/ai/RoutingSettings";
 import { UsagePanel } from "@/components/ai/UsagePanel";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -15,7 +16,11 @@ export default async function AiSettingsPage() {
   const me = await api.GET("/api/v1/auth/me");
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
-  const [providers, usage] = await Promise.all([api.GET("/api/v1/ai/providers"), api.GET("/api/v1/ai/usage")]);
+  const [providers, usage, routing] = await Promise.all([
+    api.GET("/api/v1/ai/providers"),
+    api.GET("/api/v1/ai/usage"),
+    api.GET("/api/v1/ai/routing"),
+  ]);
   const anthropic = providers.data?.find((p) => p.provider === "anthropic") ?? null;
   const openai = providers.data?.find((p) => p.provider === "openai") ?? null;
   return (
@@ -23,6 +28,7 @@ export default async function AiSettingsPage() {
       <h1 className={ui.title}>{t("title")}</h1>
       <p className="text-sm text-muted">{t("intro")}</p>
       {usage.data ? <UsagePanel usage={usage.data} /> : null}
+      <RoutingSettings initial={(routing.data?.strategy ?? "anthropic_first") as Strategy} />
       {!providers.data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(providers.error as Problem | undefined, providers.response.status)}

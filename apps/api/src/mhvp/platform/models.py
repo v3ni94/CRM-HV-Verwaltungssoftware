@@ -209,6 +209,12 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     sources: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     # 6.9.4: automatic postings are off unless explicitly released.
     auto_posting_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # AI provider routing (9.1): anthropic_first, openai_first, alternate, anthropic_only,
+    # openai_only. The "_first" and "alternate" strategies fall back to the other provider when
+    # the budget is exhausted or the provider fails; "_only" strategies never switch.
+    ai_routing: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="anthropic_first", server_default="anthropic_first"
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 

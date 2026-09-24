@@ -33,6 +33,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^ai/proposals/${ID}/(apply|reject)$`) },
   { method: "GET", pattern: /^ai\/usage$/ },
   { method: "GET", pattern: /^ai\/providers$/ },
+  { method: "PUT", pattern: /^ai\/routing$/ },
   { method: "PUT", pattern: /^ai\/providers\/(anthropic|openai)$/ },
   { method: "POST", pattern: /^ai\/providers\/(anthropic|openai)\/release$/ },
   { method: "GET", pattern: /^imports$/ },
