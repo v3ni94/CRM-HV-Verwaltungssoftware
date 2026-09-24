@@ -363,7 +363,11 @@
       "reference_rent": "Reference rent (cap)",
       "cap_limit_percent": "Cap in %",
       "comparison_rent_per_sqm": "Comparison rent per m²",
-      "source_note": "Source of values"
+      "source_note": "Source of values",
+      "justification": "Justification",
+      "rent_index_name": "Rent index (name)",
+      "rent_index_date": "Rent index date",
+      "expert_document": "Expert opinion (document)"
     },
     "basis": {
       "mietspiegel": "Rent index table",
@@ -388,7 +392,24 @@
       "rejected": "Rejected",
       "applied": "Applied",
       "cancelled": "Cancelled"
-    }
+    },
+    "justification": {
+      "none": "not chosen yet",
+      "mietspiegel": "Rent index",
+      "gutachten": "Expert opinion",
+      "vergleichswohnungen": "Comparable flats"
+    },
+    "flats": "Comparable flats (address, rent per m²)",
+    "flatAddress": "Address comparable flat {n}",
+    "flatRate": "Rent per m² comparable flat {n}",
+    "addFlat": "Another comparable flat",
+    "statutory": "Check against released rule set",
+    "inactive": "Rule set not fully released, no automatic check. Missing: {rules}",
+    "earliest": "Earliest date after waiting period",
+    "capPercent": "Cap",
+    "capSource": "Source",
+    "letter": "Letter (draft)",
+    "letterNote": "Draft with placeholders. Legal review before sending; sending only after G3."
   },
   "Prospects": {
     "title": "Prospects",
@@ -472,7 +493,8 @@
     "open": "open",
     "closed": "closed",
     "g5": "G5 evidence",
-    "noData": "No data."
+    "noData": "No data.",
+    "rentLaw": "Maintain rent law rule set"
   },
   "Invoices": {
     "title": "Incoming invoices",
@@ -571,6 +593,39 @@
       "resolved": "Resolved",
       "applied": "Instalments applied",
       "cancelled": "Cancelled"
+    }
+  },
+  "RentLaw": {
+    "title": "Rent law: rule set",
+    "notice": "Values apply to automatic checks only after release. Release needs a value and a source checked against the statute; any change resets the rule to draft. The system does not replace a legal review of the individual case.",
+    "forbidden": "Platform administrators only.",
+    "rules": "Parameters",
+    "areas": "Areas with a reduced cap",
+    "rule": "Rule",
+    "valueHead": "Value",
+    "sourceHead": "Source",
+    "status": "Status",
+    "source": "Statute",
+    "value": "Value for {label}",
+    "verified": "checked against original",
+    "released": "released on {date}",
+    "draft": "Draft",
+    "save": "Save",
+    "release": "Release",
+    "withdraw": "Withdraw release",
+    "endPrompt": "Valid until (YYYY-MM-DD):",
+    "area": {
+      "state": "State",
+      "municipality": "Municipality",
+      "municipality_code": "Municipality code",
+      "cap_percent": "Cap in %",
+      "valid_from": "Valid from",
+      "period": "Period",
+      "source": "Source (regulation)",
+      "open": "open ended",
+      "end": "End",
+      "none": "No areas recorded. Without an entry the released rule value applies.",
+      "add": "Add area"
     }
   }
 }

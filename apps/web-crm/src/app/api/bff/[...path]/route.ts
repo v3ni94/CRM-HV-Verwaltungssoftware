@@ -74,6 +74,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^letting/rent-increases/${ID}/actions$`) },
   { method: "PATCH", pattern: new RegExp(`^letting/prospects/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^letting/prospects/${ID}$`) },
+  // Rent law rule set (M26-01): platform administrators only (checked by the API).
+  { method: "PUT", pattern: /^platform\/rent-law\/rules\/[a-z_]{2,40}$/ },
+  { method: "POST", pattern: /^platform\/rent-law\/cap-areas$/ },
+  { method: "PUT", pattern: new RegExp(`^platform/rent-law/cap-areas/${ID}$`) },
   // Tickets (M19).
   { method: "POST", pattern: /^tickets$/ },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}$`) },

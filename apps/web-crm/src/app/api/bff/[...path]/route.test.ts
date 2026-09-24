@@ -85,6 +85,9 @@ describe("BFF proxy", () => {
     ["POST", `letting/rent-increases/${ID}/actions`],
     ["PATCH", `letting/prospects/${ID}`],
     ["DELETE", `letting/prospects/${ID}`],
+    ["PUT", "platform/rent-law/rules/cap_percent"],
+    ["POST", "platform/rent-law/cap-areas"],
+    ["PUT", `platform/rent-law/cap-areas/${ID}`],
     ["POST", "tickets"],
     ["PATCH", `tickets/${ID}`],
     ["POST", `tickets/${ID}/comments`],
@@ -120,6 +123,7 @@ describe("BFF proxy", () => {
     ["POST", "platform/licenses"],
     ["POST", `accounting/receivable-runs/${ID}/reverse`],
     ["PATCH", `hoa/resolutions/${ID}`],
+    ["DELETE", `platform/rent-law/cap-areas/${ID}`],
   ])("keeps %s %s outside the allowlist", async (method, path) => {
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {
       method,

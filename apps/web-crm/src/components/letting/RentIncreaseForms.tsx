@@ -8,6 +8,7 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 const MONEY = /^\d+([.,]\d{1,2})?$/;
+const NUMBER = /^\d+([.,]\d+)?$/;
 const dec = (v: string) => v.replace(",", ".");
 
 /** New rent increase case (M26). Cap, comparison rent and dates are entered with their source;
@@ -24,7 +25,12 @@ export function RentIncreaseCreate({ contracts }: { contracts: { id: string; lab
     cap_limit_percent: "",
     comparison_rent_per_sqm: "",
     source_note: "",
+    justification: "",
+    rent_index_name: "",
+    rent_index_date: "",
   });
+  const [flats, setFlats] = useState([{ address: "", rent_per_sqm: "" }]);
+  const [expert, setExpert] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -43,7 +49,32 @@ export function RentIncreaseCreate({ contracts }: { contracts: { id: string; lab
     if (f.cap_limit_percent) body.cap_limit_percent = dec(f.cap_limit_percent);
     if (f.comparison_rent_per_sqm) body.comparison_rent_per_sqm = dec(f.comparison_rent_per_sqm);
     if (f.source_note.trim()) body.source_note = f.source_note.trim();
-    const res = await bff<{ id: string }>("/api/bff/letting/rent-increases", { method: "POST", body: JSON.stringify(body) });
+    const extra: Record<string, unknown> = {};
+    if (f.justification) extra.justification = f.justification;
+    if (f.justification === "mietspiegel") {
+      if (f.rent_index_name.trim()) extra.rent_index_name = f.rent_index_name.trim();
+      if (f.rent_index_date) extra.rent_index_date = f.rent_index_date;
+    }
+    if (f.justification === "vergleichswohnungen") {
+      extra.comparison_flats = flats
+        .filter((x) => x.address.trim() && NUMBER.test(x.rent_per_sqm))
+        .map((x) => ({ address: x.address.trim(), rent_per_sqm: dec(x.rent_per_sqm) }));
+    }
+    if (f.justification === "gutachten" && expert) {
+      const form = new FormData();
+      form.append("file", expert);
+      const doc = await bff<{ id: string }>("/api/bff/documents", { method: "POST", body: form });
+      if (!doc.ok) {
+        setBusy(false);
+        setError(doc.message);
+        return;
+      }
+      extra.expert_document_id = doc.data.id;
+    }
+    const res = await bff<{ id: string }>("/api/bff/letting/rent-increases", {
+      method: "POST",
+      body: JSON.stringify({ ...body, ...extra }),
+    });
     setBusy(false);
     if (res.ok) router.push(`/vermietung/mieterhoehung/${res.data.id}`);
     else setError(res.message);
@@ -83,7 +114,56 @@ export function RentIncreaseCreate({ contracts }: { contracts: { id: string; lab
         {field("cap_limit_percent")}
         {field("comparison_rent_per_sqm")}
         {field("source_note")}
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("fields.justification")}</span>
+          <select className={ui.input} value={f.justification} onChange={set("justification")}>
+            <option value="">{t("justification.none")}</option>
+            {["mietspiegel", "gutachten", "vergleichswohnungen"].map((j) => (
+              <option key={j} value={j}>
+                {t(`justification.${j}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {f.justification === "mietspiegel" ? (
+          <>
+            {field("rent_index_name")}
+            {field("rent_index_date", "date")}
+          </>
+        ) : null}
+        {f.justification === "gutachten" ? (
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("fields.expert_document")}</span>
+            <input type="file" onChange={(e) => setExpert(e.target.files?.[0] ?? null)} />
+          </label>
+        ) : null}
       </div>
+      {f.justification === "vergleichswohnungen" ? (
+        <fieldset className="flex flex-col gap-2">
+          <legend className={ui.label}>{t("flats")}</legend>
+          {flats.map((x, i) => (
+            <div key={i} className="grid gap-2 sm:grid-cols-2">
+              <input
+                className={ui.input}
+                aria-label={t("flatAddress", { n: i + 1 })}
+                value={x.address}
+                onChange={(e) => setFlats((p) => p.map((y, k) => (k === i ? { ...y, address: e.target.value } : y)))}
+              />
+              <input
+                className={ui.input}
+                aria-label={t("flatRate", { n: i + 1 })}
+                value={x.rent_per_sqm}
+                onChange={(e) => setFlats((p) => p.map((y, k) => (k === i ? { ...y, rent_per_sqm: e.target.value } : y)))}
+              />
+            </div>
+          ))}
+          {flats.length < 20 ? (
+            <button type="button" className={ui.button} onClick={() => setFlats((p) => [...p, { address: "", rent_per_sqm: "" }])}>
+              {t("addFlat")}
+            </button>
+          ) : null}
+        </fieldset>
+      ) : null}
       <button type="button" className={ui.primary} onClick={submit} disabled={busy || !valid}>
         {t("createCheck")}
       </button>

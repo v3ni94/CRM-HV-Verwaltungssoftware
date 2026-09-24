@@ -1010,7 +1010,11 @@
       "reference_rent": "Ausgangsmiete (Kappung)",
       "cap_limit_percent": "Kappungsgrenze in %",
       "comparison_rent_per_sqm": "Vergleichsmiete je m²",
-      "source_note": "Quelle der Werte"
+      "source_note": "Quelle der Werte",
+      "justification": "Begründungsmittel",
+      "rent_index_name": "Mietspiegel (Bezeichnung)",
+      "rent_index_date": "Stand des Mietspiegels",
+      "expert_document": "Gutachten (Dokument)"
     },
     "basis": {
       "mietspiegel": "Mietspiegel",
@@ -1035,7 +1039,24 @@
       "rejected": "abgelehnt",
       "applied": "übernommen",
       "cancelled": "verworfen"
-    }
+    },
+    "justification": {
+      "none": "noch nicht gewählt",
+      "mietspiegel": "Mietspiegel",
+      "gutachten": "Sachverständigengutachten",
+      "vergleichswohnungen": "Vergleichswohnungen"
+    },
+    "flats": "Vergleichswohnungen (Anschrift, Miete je m²)",
+    "flatAddress": "Anschrift Vergleichswohnung {n}",
+    "flatRate": "Miete je m² Vergleichswohnung {n}",
+    "addFlat": "Weitere Vergleichswohnung",
+    "statutory": "Prüfung nach freigegebenem Regelwerk",
+    "inactive": "Regelwerk nicht vollständig freigegeben, keine automatische Prüfung. Fehlend: {rules}",
+    "earliest": "Frühester Zeitpunkt nach Wartefrist",
+    "capPercent": "Kappungsgrenze",
+    "capSource": "Quelle",
+    "letter": "Schreiben (Entwurf)",
+    "letterNote": "Entwurf mit Platzhaltern. Vor Versand rechtlich prüfen; Versand nur nach G3."
   },
   "Prospects": {
     "title": "Interessenten",
@@ -1119,7 +1140,8 @@
     "open": "offen",
     "closed": "geschlossen",
     "g5": "G5-Nachweise",
-    "noData": "Keine Daten."
+    "noData": "Keine Daten.",
+    "rentLaw": "Mietrecht: Regelwerk pflegen"
   },
   "Invoices": {
     "title": "Rechnungseingang",
@@ -1218,6 +1240,39 @@
       "resolved": "beschlossen",
       "applied": "Raten übernommen",
       "cancelled": "verworfen"
+    }
+  },
+  "RentLaw": {
+    "title": "Mietrecht: Regelwerk",
+    "notice": "Werte gelten für automatische Prüfungen erst nach Freigabe. Freigabe nur mit Wert und am Gesetzestext geprüfter Quelle; jede Änderung setzt die Regel auf Entwurf zurück. Das System ersetzt keine rechtliche Prüfung des Einzelfalls.",
+    "forbidden": "Nur für Plattformadministratoren.",
+    "rules": "Parameter",
+    "areas": "Gebiete mit abgesenkter Kappungsgrenze",
+    "rule": "Regel",
+    "valueHead": "Wert",
+    "sourceHead": "Quelle",
+    "status": "Status",
+    "source": "Gesetzestext",
+    "value": "Wert für {label}",
+    "verified": "am Originaltext geprüft",
+    "released": "freigegeben am {date}",
+    "draft": "Entwurf",
+    "save": "Speichern",
+    "release": "Freigeben",
+    "withdraw": "Freigabe zurücknehmen",
+    "endPrompt": "Gültig bis (JJJJ-MM-TT):",
+    "area": {
+      "state": "Land",
+      "municipality": "Gemeinde",
+      "municipality_code": "Gemeindeschlüssel",
+      "cap_percent": "Kappungsgrenze in %",
+      "valid_from": "Gültig ab",
+      "period": "Zeitraum",
+      "source": "Quelle (Verordnung)",
+      "open": "unbefristet",
+      "end": "Beenden",
+      "none": "Keine Gebiete erfasst. Ohne Eintrag gilt der freigegebene Regelwert.",
+      "add": "Gebiet anlegen"
     }
   }
 }

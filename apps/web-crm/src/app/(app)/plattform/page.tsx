@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -33,6 +34,9 @@ export default async function PlatformPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">{t("title")}</h1>
       <p className={ui.notice}>{t("notice")}</p>
+      <Link className="text-sm underline" href="/plattform/mietrecht">
+        {t("rentLaw")}
+      </Link>
       {rows.map(({ tenant, readiness }) => (
         <section key={tenant.id} className={ui.card}>
           <h2 className="font-medium">{tenant.name}</h2>

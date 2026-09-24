@@ -31,6 +31,27 @@ describe("RentIncreaseCreate", () => {
   });
 });
 
+describe("RentIncreaseCreate justification", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sends comparable flats only when that justification is chosen", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: ID }, 201));
+    renderIntl(<RentIncreaseCreate contracts={[{ id: "c1", label: "MV-1" }]} />);
+    await userEvent.type(screen.getByLabelText("Zielmiete netto"), "690");
+    await userEvent.type(screen.getByLabelText("Wirksam ab"), "2026-12-01");
+    await userEvent.selectOptions(screen.getByLabelText("Begründungsmittel"), "vergleichswohnungen");
+    await userEvent.type(screen.getByLabelText("Anschrift Vergleichswohnung 1"), "Weg 1");
+    await userEvent.type(screen.getByLabelText("Miete je m² Vergleichswohnung 1"), "11,50");
+    await userEvent.click(screen.getByText("Weitere Vergleichswohnung"));
+    await userEvent.type(screen.getByLabelText("Anschrift Vergleichswohnung 2"), "Weg 2");
+    await userEvent.click(screen.getByText("Anlegen und rechnerisch prüfen"));
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string);
+    expect(body.justification).toBe("vergleichswohnungen");
+    expect(body.comparison_flats).toEqual([{ address: "Weg 1", rent_per_sqm: "11.50" }]);
+  });
+});
+
 describe("RentIncreaseActions", () => {
   afterEach(() => vi.restoreAllMocks());
 
