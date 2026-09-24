@@ -25,7 +25,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
   const lines = (d.lines ?? []) as Line[];
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className={ui.title}>
         {t("invoice")} {String(d.number)} · V{String(d.version)}
       </h1>
       <p className="text-sm text-muted">

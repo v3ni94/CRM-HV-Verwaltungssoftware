@@ -8,7 +8,8 @@
     "area": "Administration",
     "apiStatusLabel": "API status",
     "apiReady": "API ready",
-    "apiUnavailable": "API unavailable"
+    "apiUnavailable": "API unavailable",
+    "footer": "Müller Holding AG · Rheinpromenade 13 · 40789 Monheim am Rhein · Sitz: Monheim am Rhein · Amtsgericht Düsseldorf · HRB 104291 · Vorstand: Timo Müller · Aufsichtsratsvorsitzender: Jan Walprecht"
   },
   "Shell": {
     "hoa": "HOA",
@@ -17,7 +18,14 @@
     "billing": "Statements",
     "tickets": "Tickets",
     "platform": "Platform",
-    "invoices": "Invoices"
+    "invoices": "Invoices",
+    "properties": "Properties",
+    "group": {
+      "overview": "Overview",
+      "management": "Management",
+      "finance": "Finance",
+      "system": "System"
+    }
   },
   "Hoa": {
     "title": "HOA management",
@@ -653,6 +661,75 @@
       "end": "End",
       "none": "No areas recorded. Without an entry the released rule value applies.",
       "add": "Add area"
+    }
+  },
+  "Workspace": {
+    "greetingLabel": "Overview",
+    "open": "Open"
+  },
+  "Properties": {
+    "area": "Portfolio",
+    "title": "Properties",
+    "search": "Search",
+    "searchPlaceholder": "Number, name, street, city",
+    "empty": "No properties yet.",
+    "number": "No.",
+    "name": "Name",
+    "address": "Address",
+    "noAddress": "no address",
+    "type": "Management type",
+    "status": {
+      "onboarding": "onboarding",
+      "active": "active",
+      "terminated": "terminated"
+    },
+    "units": "Units",
+    "noUnits": "No units yet.",
+    "unitNumber": "No.",
+    "unitLabel": "Label",
+    "unitType": "Type",
+    "livingArea": "Living area",
+    "allocation": "Allocation values",
+    "legalEntities": "Legal entities",
+    "contacts": "Contacts",
+    "noContacts": "No contacts yet.",
+    "maintenanceOpen": "Open maintenance",
+    "noMaintenance": "No open maintenance.",
+    "toHoa": "HOA management",
+    "toLetting": "Letting",
+    "create": "Add property",
+    "createButton": "Create",
+    "createHint": "The management type fixes the legal entities and cannot be changed later.",
+    "fields": {
+      "number": "Property number (3 digits)",
+      "name": "Name",
+      "management_type": "Management type",
+      "street": "Street",
+      "house_number": "House number",
+      "postal_code": "Postal code",
+      "city": "City",
+      "state": "State"
+    },
+    "managementType": {
+      "rental": "Rental",
+      "hoa": "HOA",
+      "hoa_with_sev": "HOA with SEV"
+    },
+    "entityKind": {
+      "hoa": "HOA",
+      "rental_owner": "Owner",
+      "sev_owner": "SEV owner",
+      "manager": "Manager"
+    },
+    "unitTypes": {
+      "apartment": "Apartment",
+      "commercial": "Commercial",
+      "office": "Office",
+      "parking": "Parking",
+      "garage": "Garage",
+      "storage": "Storage",
+      "garden": "Garden",
+      "other": "Other"
     }
   }
 }

@@ -15,7 +15,7 @@ export default async function DunningPage() {
   const today = new Date().toISOString().slice(0, 10);
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">{t("title")}</h1>
+      <h1 className={ui.title}>{t("title")}</h1>
       <p className={ui.notice}>{t("notice")}</p>
       <DunningPreviewButton today={today} />
       <h2 className="font-medium">{t("runs")}</h2>

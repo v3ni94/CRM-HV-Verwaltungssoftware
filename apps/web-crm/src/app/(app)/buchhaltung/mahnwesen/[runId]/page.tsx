@@ -28,7 +28,7 @@ export default async function DunningRunPage({ params }: { params: Promise<{ run
   const proposed = cases.filter((c) => c.status === "proposed").length;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className={ui.title}>
         {t("run", { date: formatDate(String(data.run_date)) })} · {t(`runStatus.${String(data.status)}`)}
       </h1>
       <p className={ui.notice}>{t("feesLocked")}</p>

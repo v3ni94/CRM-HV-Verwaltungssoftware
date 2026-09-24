@@ -10,3 +10,6 @@ AI gateway, onboarding chat, proposals and import runs (M7). Plan: `docs/plans/M
   without a released configuration with DPA evidence.
 * Tests: `apps/api/tests/integration/test_m7_ai.py`, `apps/api/tests/unit/test_m7_ai.py`,
   evaluation cases in `apps/api/tests/ai_eval/`.
+
+
+Providers (M7-02, 24.09.2026): Anthropic (Messages API, structured output) and OpenAI (Chat Completions, `response_format` json_schema), both behind `providers.ProviderClient`. A provider is used only after four-eyes release with a documented DPA (9.4).

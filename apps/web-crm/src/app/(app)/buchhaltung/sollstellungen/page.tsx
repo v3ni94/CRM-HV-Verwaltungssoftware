@@ -10,7 +10,7 @@ export default async function ReceivablesPage() {
   const month = new Date().toISOString().slice(0, 7);
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">{t("title")}</h1>
+      <h1 className={ui.title}>{t("title")}</h1>
       <p className={ui.notice}>{t("notice")}</p>
       <ReceivableRunPanel initialMonth={month} />
     </div>

@@ -1,24 +1,85 @@
 @import "tailwindcss";
 @import "@mhvp/ui/tokens.css";
 
-/* Map the neutral MHVP tokens into Tailwind; tenant branding overrides the variables in M2 (V14). */
+/* Map the MHVP tokens into Tailwind; tenant branding overrides the variables at runtime (V14). */
 @theme inline {
   --color-bg: var(--mhvp-color-bg);
   --color-surface: var(--mhvp-color-surface);
+  --color-surface-2: var(--mhvp-color-surface-2);
   --color-fg: var(--mhvp-color-fg);
   --color-muted: var(--mhvp-color-muted);
+  --color-subtle: var(--mhvp-color-subtle);
   --color-border: var(--mhvp-color-border);
+  --color-gold: var(--mhvp-color-gold);
+  --color-gold-soft: var(--mhvp-color-gold-soft);
   --color-accent: var(--mhvp-color-accent);
   --color-accent-fg: var(--mhvp-color-accent-fg);
   --color-success-bg: var(--mhvp-color-success-bg);
   --color-success-fg: var(--mhvp-color-success-fg);
+  --color-warning-bg: var(--mhvp-color-warning-bg);
+  --color-warning-fg: var(--mhvp-color-warning-fg);
   --color-danger-bg: var(--mhvp-color-danger-bg);
   --color-danger-fg: var(--mhvp-color-danger-fg);
   --font-sans: var(--mhvp-font-sans);
+  --radius-card: var(--mhvp-radius);
+  --shadow-card: var(--mhvp-shadow);
 }
 
 body {
   background: var(--mhvp-color-bg);
   color: var(--mhvp-color-fg);
   font-family: var(--mhvp-font-sans);
+}
+
+/* Goldpunkt: page titles carry a short gold bar underneath instead of a full underline. */
+.mhvp-title {
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+.mhvp-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2.25rem;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--mhvp-color-gold);
+}
+
+/* Versal labels: uppercase, letter spaced, grey (CI section 3a, item 4). */
+.mhvp-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mhvp-color-subtle);
+}
+
+/* Data tables: airy rows, beige header, no vertical rules. */
+.mhvp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.mhvp-table thead th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mhvp-color-subtle);
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--mhvp-color-border);
+}
+.mhvp-table tbody td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--mhvp-color-border);
+  vertical-align: top;
+}
+.mhvp-table tbody tr:hover {
+  background: var(--mhvp-color-surface);
+}
+.mhvp-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

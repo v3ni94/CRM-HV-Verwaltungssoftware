@@ -24,7 +24,7 @@ export default async function PlanPage({ params }: { params: Promise<{ propertyI
   const units = ((data.snapshot as { units?: Unit[] } | null)?.units ?? []) as Unit[];
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className={ui.title}>
         {t("plan")} {String(data.year)} · V{String(data.version)} · {t(`status.${String(data.status)}`)}
       </h1>
       <table className="w-full border-collapse text-sm">

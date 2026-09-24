@@ -35,7 +35,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
   const snap = data.snapshot as { units?: Unit[]; reserve?: Reserve } | null;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className={ui.title}>
         {t("statement")} {String(data.year)} · V{String(data.version)} · {t(`status.${String(data.status)}`)}
       </h1>
       <p className={ui.notice}>{t("statementNotice")}</p>

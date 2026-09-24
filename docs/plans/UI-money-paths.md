@@ -25,3 +25,13 @@ a user interface. No release gate is opened; the screens show locks instead of b
   attendance, votes, tally and announcement.
 * Not covered by Playwright: bank import (camt file per run), special levy screens.
 * Added later: incoming invoice screens (`/rechnungen`), special levy screens on `/weg`.
+
+## Addendum 24.09.2026: CI, navigation, properties, dashboard
+
+Operator request: default theme in the corporate identity of the Müller Holding AG (skill
+mhag-ci: gold #E3AC48 as the only accent, anthracite text, beige surfaces, Carlito/Calibri).
+Tokens live in `packages/ui/src/tokens.css` and stay overridable per tenant (V14). New:
+grouped sidebar navigation (`SideNav`), logo and mandatory footer line, page titles with a
+gold bar, table and badge styles, a "Objekte" area (`/objekte`, `/objekte/[id]` with units,
+legal entities, contacts, open maintenance, creation form), and dashboard tiles that open
+their area. Tests: vitest 166, Playwright 5 (backend), API 228.

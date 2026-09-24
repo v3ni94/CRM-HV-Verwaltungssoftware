@@ -26,7 +26,7 @@ export default async function Immoware24Page() {
       <Link href="/importe" className="text-sm text-muted hover:underline">
         {t("backToImports")}
       </Link>
-      <h1 className="text-xl font-semibold">{t("title")}</h1>
+      <h1 className={ui.title}>{t("title")}</h1>
       <p className="text-sm text-muted">{t("intro")}</p>
       {overview.data ? (
         <section className={ui.card} aria-labelledby="overview-title">

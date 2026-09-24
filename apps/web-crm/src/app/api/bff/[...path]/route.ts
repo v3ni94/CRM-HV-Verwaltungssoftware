@@ -79,6 +79,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^platform\/rent-law\/rules\/[a-z_]{2,40}$/ },
   { method: "POST", pattern: /^platform\/rent-law\/cap-areas$/ },
   { method: "PUT", pattern: new RegExp(`^platform/rent-law/cap-areas/${ID}$`) },
+  // Properties (M4): creation only; reads go through the server components.
+  { method: "POST", pattern: /^properties$/ },
   // Tickets (M19).
   { method: "POST", pattern: /^tickets$/ },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}$`) },

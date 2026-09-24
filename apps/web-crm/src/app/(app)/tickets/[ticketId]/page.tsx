@@ -23,7 +23,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   const events = (data.events ?? []) as Event[];
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className={ui.title}>
         #{String(data.number)} {String(data.title ?? "")}
       </h1>
       {data.public_description ? <p className="text-sm">{String(data.public_description)}</p> : null}

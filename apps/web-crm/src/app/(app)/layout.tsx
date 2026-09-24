@@ -1,7 +1,9 @@
 import { getTranslations } from "next-intl/server";
+import Image from "next/image";
 import Link from "next/link";
 
 import { SearchDialog } from "@/components/shell/SearchDialog";
+import { SideNav, type NavGroup } from "@/components/shell/SideNav";
 import { TenantSwitcher } from "@/components/shell/TenantSwitcher";
 import { UserMenu } from "@/components/shell/UserMenu";
 import { NotificationBell } from "@/components/workspace/NotificationBell";
@@ -18,88 +20,76 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]);
   const { data: me, response } = await serverApi().GET("/api/v1/auth/me");
   redirectIfUnauthenticated(response);
+  const can = (p: string) => me?.permissions.includes(p) ?? false;
+  const groups: NavGroup[] = [
+    {
+      label: t("group.overview"),
+      items: [
+        { href: "/start", label: t("dashboard") },
+        ...(can("properties:read") ? [{ href: "/objekte", label: t("properties") }] : []),
+        { href: "/kontakte", label: t("contacts") },
+        { href: "/kalender", label: t("calendar") },
+      ],
+    },
+    {
+      label: t("group.management"),
+      items: [
+        ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting") }] : []),
+        ...(can("accounting:read") ? [{ href: "/weg", label: t("hoa") }] : []),
+        ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets") }] : []),
+      ],
+    },
+    {
+      label: t("group.finance"),
+      items: can("accounting:read")
+        ? [
+            { href: "/buchhaltung", label: t("accounting") },
+            { href: "/abrechnung", label: t("billing") },
+            { href: "/rechnungen", label: t("invoices") },
+            { href: "/bank", label: t("bank") },
+          ]
+        : [],
+    },
+    {
+      label: t("group.system"),
+      items: [
+        { href: "/assistent", label: t("assistant") },
+        { href: "/importe", label: t("imports") },
+        ...(can("tenant_settings:update") ? [{ href: "/einstellungen/ki", label: t("aiSettings") }] : []),
+        ...(me?.is_platform_admin ? [{ href: "/plattform", label: t("platform") }] : []),
+      ],
+    },
+  ].filter((g) => g.items.length > 0);
   return (
-    <div className="flex min-h-screen flex-col">
-      <a href="#inhalt" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2">
+    <div className="flex min-h-screen flex-col md:flex-row">
+      <a href="#inhalt" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50">
         {t("skip")}
       </a>
-      <header className="flex flex-wrap items-center gap-3 border-b border-border bg-surface px-4 py-2">
-        <Link href="/start" className="text-sm font-semibold">
-          {tHome("productName")}
+      <aside className="flex flex-col border-b border-border bg-bg md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r">
+        <Link href="/start" className="flex items-center gap-3 border-b border-border px-4 py-3 md:py-4">
+          <Image src="/logo-mhag.png" alt="" width={44} height={38} unoptimized priority className="h-9 w-auto" />
+          <span className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold">{tHome("productName")}</span>
+            <span className="mhvp-label">{tHome("area")}</span>
+          </span>
         </Link>
-        <nav aria-label={t("nav")} className="flex flex-wrap gap-3 text-sm">
-          <Link href="/start" className="hover:underline">
-            {t("dashboard")}
-          </Link>
-          <Link href="/kontakte" className="hover:underline">
-            {t("contacts")}
-          </Link>
-          <Link href="/kalender" className="hover:underline">
-            {t("calendar")}
-          </Link>
-          {me?.permissions.includes("accounting:read") ? (
-            <Link href="/buchhaltung" className="hover:underline">
-              {t("accounting")}
-            </Link>
-          ) : null}
-          {me?.permissions.includes("accounting:read") ? (
-            <Link href="/abrechnung" className="hover:underline">
-              {t("billing")}
-            </Link>
-          ) : null}
-          {me?.permissions.includes("accounting:read") ? (
-            <Link href="/rechnungen" className="hover:underline">
-              {t("invoices")}
-            </Link>
-          ) : null}
-          {me?.permissions.includes("accounting:read") ? (
-            <Link href="/bank" className="hover:underline">
-              {t("bank")}
-            </Link>
-          ) : null}
-          {me?.permissions.includes("accounting:read") ? (
-            <Link href="/weg" className="hover:underline">
-              {t("hoa")}
-            </Link>
-          ) : null}
-          {me?.permissions.includes("contracts:read") ? (
-            <Link href="/vermietung" className="hover:underline">
-              {t("letting")}
-            </Link>
-          ) : null}
-          {me?.permissions.includes("tickets:read") ? (
-            <Link href="/tickets" className="hover:underline">
-              {t("tickets")}
-            </Link>
-          ) : null}
-          <Link href="/assistent" className="hover:underline">
-            {t("assistant")}
-          </Link>
-          <Link href="/importe" className="hover:underline">
-            {t("imports")}
-          </Link>
-          {me?.is_platform_admin ? (
-            <Link href="/plattform" className="hover:underline">
-              {t("platform")}
-            </Link>
-          ) : null}
-          {me?.permissions.includes("tenant_settings:update") ? (
-            <Link href="/einstellungen/ki" className="hover:underline">
-              {t("aiSettings")}
-            </Link>
-          ) : null}
-        </nav>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <SideNav groups={groups} label={t("nav")} />
+      </aside>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-bg/90 px-4 py-2 backdrop-blur">
           <SearchDialog />
-          <NotificationBell />
-          <ThemeToggle />
-          <TenantSwitcher tenants={ctx.tenants} current={ctx.tenantId} />
-          <UserMenu name={me?.display_name || me?.email || ""} />
-        </div>
-      </header>
-      <main id="inhalt" className="mx-auto w-full max-w-6xl flex-1 px-4 py-4">
-        {children}
-      </main>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <NotificationBell />
+            <ThemeToggle />
+            <TenantSwitcher tenants={ctx.tenants} current={ctx.tenantId} />
+            <UserMenu name={me?.display_name || me?.email || ""} />
+          </div>
+        </header>
+        <main id="inhalt" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8">
+          {children}
+        </main>
+        <footer className="border-t border-border px-4 py-3 text-xs text-subtle md:px-8">{tHome("footer")}</footer>
+      </div>
     </div>
   );
 }

@@ -16,7 +16,7 @@ export default async function HoaPage() {
   const rows = (data?.items ?? []).filter((p) => p.management_type !== "rental");
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">{t("title")}</h1>
+      <h1 className={ui.title}>{t("title")}</h1>
       <p className={ui.notice}>{t("gateNotice")}</p>
       {!data ? (
         <p role="alert" className={ui.alert}>

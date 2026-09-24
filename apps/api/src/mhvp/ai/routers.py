@@ -83,10 +83,6 @@ async def put_provider(
     principal: TenantPrincipal = Depends(SETTINGS),
 ) -> s.ProviderOut:
     """Every change withdraws the release: the second person must confirm again."""
-    if provider is AiProvider.OPENAI:
-        raise ProblemError(
-            ErrorCodes.VALIDATION, detail="Der OpenAI-Adapter ist noch nicht umgesetzt."
-        )
     async with tenant_tx(request, principal) as session:
         if body.dpa_document_id is not None:
             await _get(session, Document, body.dpa_document_id)

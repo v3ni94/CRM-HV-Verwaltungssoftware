@@ -38,7 +38,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
   const snap = data.snapshot as Snapshot | null;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className={ui.title}>
         {t("statement")} {formatDate(String(data.period_from))} bis {formatDate(String(data.period_to))} · V
         {String(data.version)}
       </h1>

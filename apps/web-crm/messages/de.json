@@ -10,7 +10,8 @@
     "apiReady": "API bereit",
     "apiUnavailable": "API nicht erreichbar",
     "toLogin": "Zur Anmeldung",
-    "toContacts": "Zu den Kontakten"
+    "toContacts": "Zu den Kontakten",
+    "footer": "Müller Holding AG · Rheinpromenade 13 · 40789 Monheim am Rhein · Sitz: Monheim am Rhein · Amtsgericht Düsseldorf · HRB 104291 · Vorstand: Timo Müller · Aufsichtsratsvorsitzender: Jan Walprecht"
   },
   "Auth": {
     "loginTitle": "Anmelden",
@@ -70,7 +71,14 @@
     "billing": "Abrechnung",
     "tickets": "Tickets",
     "platform": "Plattform",
-    "invoices": "Rechnungen"
+    "invoices": "Rechnungen",
+    "properties": "Objekte",
+    "group": {
+      "overview": "Übersicht",
+      "management": "Verwaltung",
+      "finance": "Finanzen",
+      "system": "System"
+    }
   },
   "Contacts": {
     "title": "Kontakte",
@@ -444,7 +452,8 @@
     "title": "KI-Einstellungen",
     "intro": "Anbieter, Modelle, Budget und Datenschutz des Assistenten. Jede Änderung hebt eine bestehende Freigabe auf.",
     "provider": {
-      "anthropic": "Anthropic"
+      "anthropic": "Anthropic",
+      "openai": "OpenAI (ChatGPT)"
     },
     "providerTitle": "Anbieter {provider}",
     "releasedAt": "freigegeben am {at}",
@@ -484,7 +493,7 @@
     "usageSpent": "{spent} von {budget}",
     "usageWarning": "Achtung: 80 Prozent des Monatsbudgets sind erreicht.",
     "usageBlocked": "Das Monatsbudget ist ausgeschöpft. Neue Aufträge werden gesperrt.",
-    "openaiHint": "Der Anbieter OpenAI ist in der Schnittstelle noch nicht umgesetzt und wird daher nicht angeboten."
+    "openaiHint": "Beide Anbieter werden nur nach Freigabe im Vier-Augen-Prinzip und mit nachgewiesenem AVV genutzt. Modellnamen: bei OpenAI zum Beispiel gpt-4.1 oder gpt-4o, bei Anthropic zum Beispiel claude-sonnet-4-5."
   },
   "Immoware24": {
     "title": "Importassistent Immoware24",
@@ -634,7 +643,9 @@
     "bulkRemove": "Entfernen",
     "bulkNone": "Keine Zeilen markiert.",
     "bulkDone": "{changed} geändert.",
-    "select": "Auswählen"
+    "select": "Auswählen",
+    "greetingLabel": "Übersicht",
+    "open": "Öffnen"
   },
   "Accounting": {
     "title": "Buchhaltung",
@@ -1300,6 +1311,71 @@
       "end": "Beenden",
       "none": "Keine Gebiete erfasst. Ohne Eintrag gilt der freigegebene Regelwert.",
       "add": "Gebiet anlegen"
+    }
+  },
+  "Properties": {
+    "area": "Bestand",
+    "title": "Objekte",
+    "search": "Suchen",
+    "searchPlaceholder": "Nummer, Name, Straße, Ort",
+    "empty": "Keine Objekte vorhanden.",
+    "number": "Nr.",
+    "name": "Name",
+    "address": "Anschrift",
+    "noAddress": "keine Anschrift erfasst",
+    "type": "Verwaltungsart",
+    "status": {
+      "onboarding": "in Aufnahme",
+      "active": "aktiv",
+      "terminated": "beendet"
+    },
+    "units": "Einheiten",
+    "noUnits": "Keine Einheiten erfasst.",
+    "unitNumber": "Nr.",
+    "unitLabel": "Bezeichnung",
+    "unitType": "Art",
+    "livingArea": "Wohnfläche",
+    "allocation": "Schlüsselwerte",
+    "legalEntities": "Rechtsträger",
+    "contacts": "Ansprechpartner",
+    "noContacts": "Keine Ansprechpartner erfasst.",
+    "maintenanceOpen": "Offene Wartungen und Prüfpflichten",
+    "noMaintenance": "Keine offenen Wartungen.",
+    "toHoa": "Zur WEG-Verwaltung",
+    "toLetting": "Zur Vermietung",
+    "create": "Objekt anlegen",
+    "createButton": "Anlegen",
+    "createHint": "Die Verwaltungsart legt die Rechtsträger fest und kann nach Anlage nicht geändert werden.",
+    "fields": {
+      "number": "Objektnummer (3 Ziffern)",
+      "name": "Name",
+      "management_type": "Verwaltungsart",
+      "street": "Straße",
+      "house_number": "Hausnummer",
+      "postal_code": "PLZ",
+      "city": "Ort",
+      "state": "Bundesland"
+    },
+    "managementType": {
+      "rental": "Mietverwaltung",
+      "hoa": "WEG",
+      "hoa_with_sev": "WEG mit SEV"
+    },
+    "entityKind": {
+      "hoa": "GdWE",
+      "rental_owner": "Eigentümer",
+      "sev_owner": "SEV-Eigentümer",
+      "manager": "Verwalter"
+    },
+    "unitTypes": {
+      "apartment": "Wohnung",
+      "commercial": "Gewerbe",
+      "office": "Büro",
+      "parking": "Stellplatz",
+      "garage": "Garage",
+      "storage": "Lager",
+      "garden": "Garten",
+      "other": "Sonstiges"
     }
   }
 }

@@ -26,7 +26,7 @@ export default async function LevyPage({ params }: { params: Promise<{ propertyI
   const r = report.data as Report | undefined;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className={ui.title}>
         {t("title")}: {String(d.purpose)} · {t(`status.${String(d.status)}`)}
       </h1>
       <p className="text-sm text-muted">

@@ -29,7 +29,7 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
   const missing = expose.data.missing as string[];
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">{String(fields.title ?? "")}</h1>
+      <h1 className={ui.title}>{String(fields.title ?? "")}</h1>
       <section className={ui.card}>
         <h2 className="font-medium">{t("expose")}</h2>
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">

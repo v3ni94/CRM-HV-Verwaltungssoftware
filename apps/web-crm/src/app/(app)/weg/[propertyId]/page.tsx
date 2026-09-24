@@ -28,7 +28,7 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
   ]);
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-xl font-semibold">
+      <h1 className={ui.title}>
         {ctx.property.number} {ctx.property.name}
       </h1>
       <p className={ui.notice}>{t("gateNotice")}</p>

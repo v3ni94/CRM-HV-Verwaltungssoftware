@@ -227,9 +227,8 @@ def test_release_needs_second_person_and_evidence(
     listed = _ok(client.get("/api/v1/ai/providers", headers=admin), 200)
     assert listed[0]["has_api_key"] is True
     assert "api_key" not in listed[0]
-    assert (
-        client.put("/api/v1/ai/providers/openai", json=PROVIDER, headers=admin).status_code == 422
-    )
+    second = _ok(client.put("/api/v1/ai/providers/openai", json=PROVIDER, headers=admin), 200)
+    assert (second["provider"], second["has_api_key"]) == ("openai", True)
     clerk = bearer(login(client, world, "m7clerk"))
     assert client.get("/api/v1/ai/providers", headers=clerk).status_code == 403
 

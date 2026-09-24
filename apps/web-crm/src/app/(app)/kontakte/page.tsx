@@ -49,7 +49,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <h1 className="text-xl font-semibold">{t("title")}</h1>
+        <h1 className={ui.title}>{t("title")}</h1>
         <div className="ml-auto">
           <Link href="/kontakte/neu" className={ui.primary}>
             {t("new")}

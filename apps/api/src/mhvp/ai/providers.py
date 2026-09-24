@@ -1,10 +1,11 @@
-"""Provider clients behind one protocol (9.1). Only the Anthropic adapter exists (M7-02)."""
+"""Provider clients behind one protocol (9.1): Anthropic and OpenAI (M7-02)."""
 
 import json
 from dataclasses import dataclass
 from typing import Any, Protocol
 
 import anthropic
+import openai
 
 from mhvp.ai.models import AiProvider
 
@@ -93,11 +94,78 @@ class AnthropicClient:
         )
 
 
+class OpenAIClient:
+    """Chat Completions with structured output (``response_format`` json_schema, strict).
+    ``base_url`` allows an EU endpoint or a compatible gateway (9.4, endpoint_region)."""
+
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        base_url: str | None = None,
+        client: openai.AsyncOpenAI | None = None,
+    ) -> None:
+        self._client = client or openai.AsyncOpenAI(
+            api_key=api_key, base_url=base_url, max_retries=1
+        )
+
+    async def complete(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: list[dict[str, str]],
+        schema: dict[str, Any],
+        max_tokens: int,
+    ) -> Completion:
+        request: dict[str, Any] = {
+            "model": model,
+            "max_completion_tokens": max_tokens,
+            "messages": [{"role": "system", "content": system}, *messages],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {"name": "output", "schema": schema, "strict": False},
+            },
+        }
+        try:
+            response = await self._client.chat.completions.create(**request)
+        except openai.RateLimitError as exc:
+            raise ProviderError("rate limited", retryable=True) from exc
+        except openai.APIStatusError as exc:
+            raise ProviderError(
+                f"HTTP {exc.status_code}", retryable=exc.status_code >= 500
+            ) from exc
+        except openai.APIConnectionError as exc:
+            raise ProviderError("connection failed", retryable=True) from exc
+        if not response.choices:
+            raise ProviderError("empty response")
+        choice = response.choices[0]
+        if choice.message.refusal:
+            raise ProviderError("refusal")
+        if choice.finish_reason == "length":
+            raise ProviderError("output truncated (max_tokens)")
+        text = choice.message.content or ""
+        try:
+            data = json.loads(text)
+        except ValueError:
+            data = None
+        usage = response.usage
+        return Completion(
+            data=data,
+            raw_text=text,
+            tokens_in=usage.prompt_tokens if usage else 0,
+            tokens_out=usage.completion_tokens if usage else 0,
+            model=response.model,
+        )
+
+
 # Tests and the evaluation replace this factory with recorded responses.
 def default_factory(provider: AiProvider, api_key: str) -> ProviderClient:
     if provider is AiProvider.ANTHROPIC:
         return AnthropicClient(api_key)
-    raise ProviderError(f"provider {provider.value} is not implemented (M7-02)")
+    if provider is AiProvider.OPENAI:
+        return OpenAIClient(api_key)
+    raise ProviderError(f"provider {provider.value} is not implemented")
 
 
 _factory = default_factory

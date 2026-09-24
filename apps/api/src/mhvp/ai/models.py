@@ -43,7 +43,7 @@ def _fk(target: str, *, nullable: bool = False, ondelete: str = "RESTRICT") -> M
 
 class AiProvider(StrEnum):
     ANTHROPIC = "anthropic"
-    OPENAI = "openai"  # listed in 6.8; adapter not implemented yet (M7-02)
+    OPENAI = "openai"
 
 
 class AiTask(StrEnum):

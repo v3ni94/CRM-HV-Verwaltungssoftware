@@ -25,7 +25,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
   if (!data) return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className={ui.title}>
         {t("meeting")} {formatDateTime(String(data.scheduled_at))} · {t(`meetingStatus.${String(data.status)}`)}
       </h1>
       <p className="text-sm text-muted">

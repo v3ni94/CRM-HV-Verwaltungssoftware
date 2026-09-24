@@ -23,7 +23,7 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ i
       <Link href="/importe" className="text-sm underline">
         {t("back")}
       </Link>
-      <h1 className="text-xl font-semibold">{t("detailTitle")}</h1>
+      <h1 className={ui.title}>{t("detailTitle")}</h1>
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}

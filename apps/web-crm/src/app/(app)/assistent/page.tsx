@@ -15,7 +15,7 @@ export default async function AssistantPage() {
   redirectIfUnauthenticated(response);
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">{t("title")}</h1>
+      <h1 className={ui.title}>{t("title")}</h1>
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}

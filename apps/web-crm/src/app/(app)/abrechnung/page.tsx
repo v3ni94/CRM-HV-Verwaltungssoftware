@@ -18,7 +18,7 @@ export default async function StatementsPage() {
   redirectIfUnauthenticated(list.response);
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">{t("title")}</h1>
+      <h1 className={ui.title}>{t("title")}</h1>
       <p className={ui.notice}>{t("notice")}</p>
       <StatementCreate ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, name: l.name }))} />
       {(list.data ?? []).length === 0 ? (

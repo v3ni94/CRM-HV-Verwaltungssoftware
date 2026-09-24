@@ -17,7 +17,7 @@ export default async function ImportsPage() {
   const canUndo = me.data?.permissions.includes("ai:delete") ?? false;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">{t("title")}</h1>
+      <h1 className={ui.title}>{t("title")}</h1>
       <p className="text-sm text-muted">{t("intro")}</p>
       <p>
         <Link href="/importe/immoware24" className="text-sm font-medium hover:underline">

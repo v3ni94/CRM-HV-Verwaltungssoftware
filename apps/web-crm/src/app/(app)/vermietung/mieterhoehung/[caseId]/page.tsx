@@ -34,7 +34,7 @@ export default async function RentIncreasePage({ params }: { params: Promise<{ c
   const draft = letter.data as { text?: string } | undefined;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">
+      <h1 className={ui.title}>
         {t("case")} · {t(`status.${String(data.status)}`)}
       </h1>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">

@@ -22,7 +22,7 @@ function tierOf(models: Record<string, unknown>, tier: Tier): TierForm {
 }
 
 /** Provider configuration (9.2): only the Anthropic adapter exists in the API so far. */
-export function ProviderSettings({ provider: name, initial }: { provider: "anthropic"; initial: Provider | null }) {
+export function ProviderSettings({ provider: name, initial }: { provider: "anthropic" | "openai"; initial: Provider | null }) {
   const t = useTranslations("AiSettings");
   const [saved, setSaved] = useState<Provider | null>(initial);
   const [apiKey, setApiKey] = useState("");

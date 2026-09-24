@@ -36,7 +36,7 @@ export default async function LedgerPage({ params }: { params: Promise<{ id: str
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold">{ledger.data.name}</h1>
+        <h1 className={ui.title}>{ledger.data.name}</h1>
         <p className="text-sm text-muted">
           {t("leading")}: {t(`system.${ledger.data.leading_system}`)} · {t("lockedUntil")}:{" "}
           {formatDate(ledger.data.locked_until) || t("notLocked")}

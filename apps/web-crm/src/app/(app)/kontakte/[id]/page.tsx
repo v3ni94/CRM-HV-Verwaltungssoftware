@@ -8,6 +8,7 @@ import { serverApi } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
 
 import { loadContact } from "./load";
+import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export default async function ContactDetailPage({
           <Link href="/kontakte" className="text-xs text-muted hover:underline">
             {t("back")}
           </Link>
-          <h1 className="text-xl font-semibold">{contact.display_name}</h1>
+          <h1 className={ui.title}>{contact.display_name}</h1>
           <p className="text-xs text-muted">
             {tl(`kind.${contact.kind}`)}
             {contact.types.length ? `, ${contact.types.map((x) => tl(`type.${x}`)).join(", ")}` : ""}
