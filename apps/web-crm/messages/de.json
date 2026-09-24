@@ -1581,6 +1581,10 @@
     "platform": {
       "title": "Plattform",
       "description": "Mandanten und Freigabestufen der Plattform."
+    },
+    "mail": {
+      "title": "Postfächer",
+      "description": "Google OAuth, Postfächer verbinden, Standardpostfach und Freigaben."
     }
   },
   "Members": {
@@ -1685,5 +1689,41 @@
     "assignAdminSubmit": "Zuweisen",
     "assignDone": "Zugewiesen.",
     "emailExists": "Für diese E-Mail besteht bereits ein Konto. Es muss über die Benutzerverwaltung des Mandanten hinzugefügt werden."
+  },
+  "MailSettings": {
+    "title": "Postfächer",
+    "intro": "Google OAuth-Client des Mandanten, verbundene Postfächer, Standardpostfach und Freigabe je Benutzer. Postfächer werden nur gelesen; jede neue Mail erzeugt ein Ticket.",
+    "connected": "Postfach {address} wurde verbunden.",
+    "oauthFailed": "Verbindung fehlgeschlagen: {reason}",
+    "oauthTitle": "Google OAuth-Client",
+    "oauthHint": "In der Google Cloud Console einen OAuth-Client vom Typ Webanwendung anlegen, die Weiterleitungs-URI unten eintragen und die Gmail API aktivieren. Das Secret wird verschlüsselt gespeichert und nie angezeigt.",
+    "redirectUri": "Weiterleitungs-URI",
+    "clientId": "Client-ID",
+    "clientSecret": "Client-Secret",
+    "secretKept": "gespeichert, zum Ändern neu eingeben",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "notConfigured": "nicht eingerichtet",
+    "source": {
+      "tenant": "eingerichtet (Mandant)",
+      "environment": "eingerichtet (Server)"
+    },
+    "mailboxesTitle": "Verbundene Postfächer",
+    "mailboxesHint": "Mit Google verbinden öffnet die Google-Anmeldung. Nach der Zustimmung erscheint das Postfach hier und wird alle zwei Minuten abgerufen.",
+    "connectGoogle": "Mit Google verbinden",
+    "empty": "Noch kein Postfach verbunden.",
+    "defaultBadge": "Standard",
+    "disabled": "inaktiv",
+    "errorBadge": "Fehler",
+    "lastSynced": "Zuletzt abgerufen {at}",
+    "neverSynced": "Noch nicht abgerufen",
+    "isDefault": "Standardpostfach (alle Benutzer)",
+    "enabled": "Aktiv",
+    "syncNow": "Jetzt abrufen",
+    "remove": "Entfernen",
+    "removeConfirm": "Postfach {address} entfernen? Bereits aufgenommene Mails und Tickets bleiben erhalten.",
+    "syncResult": "{fetched} geprüft, {created} neu, {duplicates} bereits vorhanden",
+    "defaultHint": "Ein Standardpostfach sehen alle Benutzer des Mandanten, auch neu angelegte.",
+    "access": "Freigabe für Benutzer"
   }
 }

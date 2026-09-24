@@ -9606,6 +9606,11 @@
       "MailIngestIn": {
         "additionalProperties": false,
         "properties": {
+          "auto_ticket": {
+            "default": false,
+            "title": "Auto Ticket",
+            "type": "boolean"
+          },
           "document_id": {
             "format": "uuid",
             "title": "Document Id",
@@ -9729,6 +9734,78 @@
           "address"
         ],
         "title": "MailboxIn",
+        "type": "object"
+      },
+      "MailboxPatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "is_default": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Default"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "pattern": "^(imap|gmail)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "secret": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret"
+          }
+        },
+        "title": "MailboxPatchIn",
+        "type": "object"
+      },
+      "MailboxUsersIn": {
+        "additionalProperties": false,
+        "properties": {
+          "user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "User Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_ids"
+        ],
+        "title": "MailboxUsersIn",
         "type": "object"
       },
       "MaintenanceIn": {
@@ -11271,6 +11348,34 @@
           "created_at"
         ],
         "title": "NotificationOut",
+        "type": "object"
+      },
+      "OAuthClientIn": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Secret"
+          }
+        },
+        "required": [
+          "client_id"
+        ],
+        "title": "OAuthClientIn",
         "type": "object"
       },
       "OccupancyRow": {
@@ -30307,6 +30412,30 @@
       }
     },
     "/api/v1/mail/mailboxes": {
+      "get": {
+        "operationId": "list_mailboxes_api_v1_mail_mailboxes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Mailboxes Api V1 Mail Mailboxes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Postfächer (ohne Zugangsdaten)",
+        "tags": [
+          "Postfach"
+        ]
+      },
       "post": {
         "operationId": "create_mailbox_api_v1_mail_mailboxes_post",
         "requestBody": {
@@ -30344,6 +30473,196 @@
           }
         },
         "summary": "Postfach einrichten (Zugangsdaten verschlüsselt)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/mailboxes/{mailbox_id}": {
+      "delete": {
+        "operationId": "delete_mailbox_api_v1_mail_mailboxes__mailbox_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mailbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mailbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Postfach entfernen",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_mailbox_api_v1_mail_mailboxes__mailbox_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mailbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mailbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailboxPatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Mailbox Api V1 Mail Mailboxes  Mailbox Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Postfach ändern (Token, aktiv)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/mailboxes/{mailbox_id}/sync": {
+      "post": {
+        "operationId": "sync_mailbox_now_api_v1_mail_mailboxes__mailbox_id__sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mailbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mailbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Sync Mailbox Now Api V1 Mail Mailboxes  Mailbox Id  Sync Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gmail-Posteingang jetzt abrufen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/mailboxes/{mailbox_id}/users": {
+      "put": {
+        "description": "Replaces the explicit grants. A default mailbox is visible to every member anyway.",
+        "operationId": "put_mailbox_users_api_v1_mail_mailboxes__mailbox_id__users_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mailbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mailbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailboxUsersIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Mailbox Users Api V1 Mail Mailboxes  Mailbox Id  Users Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Postfach für Benutzer freigeben",
         "tags": [
           "Postfach"
         ]
@@ -30672,6 +30991,95 @@
           }
         },
         "summary": "Ticket aus E-Mail",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/oauth/google": {
+      "get": {
+        "operationId": "get_oauth_client_api_v1_mail_oauth_google_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Oauth Client Api V1 Mail Oauth Google Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Google OAuth-Client (Status)",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "put": {
+        "operationId": "put_oauth_client_api_v1_mail_oauth_google_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthClientIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Oauth Client Api V1 Mail Oauth Google Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Google OAuth-Client speichern",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/oauth/google/start": {
+      "post": {
+        "operationId": "start_oauth_api_v1_mail_oauth_google_start_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Start Oauth Api V1 Mail Oauth Google Start Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Google-Postfach verbinden (Consent-URL)",
         "tags": [
           "Postfach"
         ]

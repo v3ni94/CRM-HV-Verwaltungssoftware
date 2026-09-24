@@ -10,6 +10,13 @@ import { problemJson } from "@/lib/problem";
 const ID = "[0-9a-fA-F-]{36}";
 const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^search$/ },
+  { method: "GET", pattern: /^mail\/oauth\/google$/ },
+  { method: "PUT", pattern: /^mail\/oauth\/google$/ },
+  { method: "POST", pattern: /^mail\/oauth\/google\/start$/ },
+  { method: "PATCH", pattern: new RegExp(`^mail/mailboxes/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^mail/mailboxes/${ID}$`) },
+  { method: "PUT", pattern: new RegExp(`^mail/mailboxes/${ID}/users$`) },
+  { method: "POST", pattern: new RegExp(`^mail/mailboxes/${ID}/sync$`) },
   { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters)$/ },
   { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|bulk)$/ },
   { method: "PUT", pattern: /^workspace\/filters$/ },

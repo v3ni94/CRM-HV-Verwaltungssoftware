@@ -73,6 +73,14 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = Field(default=30, gt=0, le=90)
     # Webhook targets on private networks are only allowed for local development and tests.
     webhook_allow_private_targets: bool = False
+    # Google OAuth client of the platform for Gmail mailboxes (M20-01); the refresh token is
+    # stored encrypted per mailbox.
+    google_client_id: str | None = None
+    google_client_secret: SecretStr | None = None
+    gmail_sync_batch: int = Field(default=50, ge=1, le=500)
+    # Public URLs for the OAuth redirect (API callback) and the return to the CRM screen.
+    api_public_url: str | None = None
+    web_crm_url: str | None = None
 
     @model_validator(mode="after")
     def _guard_shared_environments(self) -> "Settings":

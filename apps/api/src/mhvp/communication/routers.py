@@ -4,21 +4,21 @@ draft. Sending needs a configured and enabled mailbox (M20-01)."""
 import smtplib
 import ssl
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from email.message import EmailMessage
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication import mail
-from mhvp.communication.models import Mailbox, Message
-from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
-from mhvp.core.events import emit
+from mhvp.communication.models import Mailbox, MailboxUser, Message
+from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
+from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/mail", tags=["Postfach"])
 READ = require_permission("communication:read")
@@ -26,6 +26,7 @@ CREATE = require_permission("communication:create")
 UPDATE = require_permission("communication:update")
 ADMIN = require_permission("tenant_settings:update")
 SMTP_TIMEOUT = 30
+OAUTH_STATE_TTL = 600
 
 
 class _In(BaseModel):
@@ -47,6 +48,7 @@ class MailboxIn(_In):
 class MailIngestIn(_In):
     document_id: uuid.UUID
     mailbox_id: uuid.UUID | None = None
+    auto_ticket: bool = False
 
 
 class MailAssignIn(_In):
@@ -60,7 +62,7 @@ class MailAppointmentIn(_In):
     title: str = Field(min_length=1, max_length=300)
 
 
-def _mailbox_out(m: Mailbox) -> dict[str, Any]:
+def _mailbox_out(m: Mailbox, user_ids: list[uuid.UUID] | None = None) -> dict[str, Any]:
     return {
         "id": m.id,
         "address": m.address,
@@ -69,6 +71,10 @@ def _mailbox_out(m: Mailbox) -> dict[str, Any]:
         "smtp_host": m.smtp_host,
         "enabled": m.enabled,
         "has_secret": bool(m.secret),
+        "last_synced_at": m.last_synced_at,
+        "last_error": m.last_error,
+        "is_default": m.is_default,
+        "user_ids": user_ids or [],
     }
 
 
@@ -120,16 +126,247 @@ async def create_mailbox(
         return _mailbox_out(row)
 
 
+class MailboxPatchIn(_In):
+    secret: str | None = Field(default=None, max_length=4000)
+    enabled: bool | None = None
+    kind: str | None = Field(default=None, pattern="^(imap|gmail)$")
+    is_default: bool | None = None
+
+
+class MailboxUsersIn(_In):
+    user_ids: list[uuid.UUID] = Field(max_length=500)
+
+
+class OAuthClientIn(_In):
+    client_id: str = Field(min_length=10, max_length=200)
+    client_secret: str | None = Field(default=None, max_length=200)
+
+
+async def _mailbox_users(session: AsyncSession) -> dict[uuid.UUID, list[uuid.UUID]]:
+    grants: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for mailbox_id, user_id in await session.execute(
+        select(MailboxUser.mailbox_id, MailboxUser.user_id)
+    ):
+        grants.setdefault(mailbox_id, []).append(user_id)
+    return grants
+
+
+async def _accessible_mailboxes(session: AsyncSession, user_id: uuid.UUID | None) -> Any:
+    """Mailboxes visible to a member: default ones plus explicitly granted ones."""
+    granted = select(MailboxUser.mailbox_id).where(MailboxUser.user_id == user_id)
+    return select(Mailbox.id).where(or_(Mailbox.is_default.is_(True), Mailbox.id.in_(granted)))
+
+
+@router.get("/mailboxes", summary="Postfächer (ohne Zugangsdaten)")
+async def list_mailboxes(
+    request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(select(Mailbox).order_by(Mailbox.address))
+        grants = await _mailbox_users(session)
+        return [_mailbox_out(m, grants.get(m.id)) for m in rows]
+
+
+@router.patch("/mailboxes/{mailbox_id}", summary="Postfach ändern (Token, aktiv)")
+async def patch_mailbox(
+    mailbox_id: uuid.UUID,
+    body: MailboxPatchIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(ADMIN),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Mailbox, mailbox_id, with_for_update=True)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        for key, value in body.model_dump(exclude_none=True).items():
+            setattr(row, key, value)
+        await session.flush()
+        return _mailbox_out(row, (await _mailbox_users(session)).get(row.id))
+
+
+@router.put("/mailboxes/{mailbox_id}/users", summary="Postfach für Benutzer freigeben")
+async def put_mailbox_users(
+    mailbox_id: uuid.UUID,
+    body: MailboxUsersIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(ADMIN),
+) -> dict[str, Any]:
+    """Replaces the explicit grants. A default mailbox is visible to every member anyway."""
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Mailbox, mailbox_id, with_for_update=True)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await session.execute(delete(MailboxUser).where(MailboxUser.mailbox_id == mailbox_id))
+        wanted = sorted(set(body.user_ids), key=str)
+        session.add_all(
+            [
+                MailboxUser(tenant_id=principal.tenant_id, mailbox_id=mailbox_id, user_id=uid)
+                for uid in wanted
+            ]
+        )
+        await session.flush()
+        return _mailbox_out(row, wanted)
+
+
+@router.delete("/mailboxes/{mailbox_id}", status_code=204, summary="Postfach entfernen")
+async def delete_mailbox(
+    mailbox_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> None:
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Mailbox, mailbox_id, with_for_update=True)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        # Messages stay (audit trail); they just lose the mailbox link.
+        await session.execute(
+            update(Message).where(Message.mailbox_id == mailbox_id).values(mailbox_id=None)
+        )
+        await session.delete(row)
+
+
+# Google OAuth (M20-01): client per tenant, consent flow creates the mailbox --------------
+
+
+@router.get("/oauth/google", summary="Google OAuth-Client (Status)")
+async def get_oauth_client(
+    request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> dict[str, Any]:
+    from mhvp.communication import gmail
+    from mhvp.platform.models import TenantSettings
+
+    settings = request.app.state.settings
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings))
+        own = bool(row and row.google_client_id and row.google_client_secret)
+        own_id = row.google_client_id if row and own else None
+    env = bool(settings.google_client_id and settings.google_client_secret)
+    return {
+        "client_id": own_id or settings.google_client_id,
+        "configured": own or env,
+        "source": "tenant" if own else ("environment" if env else None),
+        "redirect_uri": gmail.redirect_uri(settings),
+    }
+
+
+@router.put("/oauth/google", summary="Google OAuth-Client speichern")
+async def put_oauth_client(
+    body: OAuthClientIn, request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> dict[str, Any]:
+    from mhvp.communication import gmail
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row.google_client_id = body.client_id.strip()
+        if body.client_secret:
+            row.google_client_secret = body.client_secret.strip()
+        if not row.google_client_secret:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Client-Secret fehlt.")
+    return {
+        "client_id": body.client_id.strip(),
+        "configured": True,
+        "source": "tenant",
+        "redirect_uri": gmail.redirect_uri(request.app.state.settings),
+    }
+
+
+@router.post("/oauth/google/start", summary="Google-Postfach verbinden (Consent-URL)")
+async def start_oauth(
+    request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> dict[str, str]:
+    import secrets
+
+    from mhvp.communication import gmail
+
+    settings = request.app.state.settings
+    async with tenant_tx(request, principal) as session:
+        try:
+            client_id, _ = await gmail.oauth_client(session, settings)
+        except gmail.GmailError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+    state = secrets.token_urlsafe(32)
+    await request.app.state.resources.redis.set(
+        f"mail:oauth:{state}", f"{principal.tenant_id}:{principal.user_id}", ex=OAUTH_STATE_TTL
+    )
+    return {"url": gmail.authorization_url(client_id, settings, state)}
+
+
+@router.get("/oauth/google/callback", summary="Google OAuth-Rückruf", include_in_schema=False)
+async def oauth_callback(
+    request: Request, state: str, code: str | None = None, error: str | None = None
+) -> Any:
+    from mhvp.communication import gmail
+
+    settings = request.app.state.settings
+    redis = request.app.state.resources.redis
+    stored = await redis.getdel(f"mail:oauth:{state}")
+    if not stored:
+        return _oauth_result(settings, error="Der Verbindungsversuch ist abgelaufen.")
+    tenant_id, user_id = (uuid.UUID(x) for x in stored.decode().split(":"))
+    if error or not code:
+        return _oauth_result(settings, error="Google hat den Zugriff nicht erteilt.")
+    try:
+        async with tenant_transaction(sessions(request), tenant_id) as session:
+            client_id, client_secret = await gmail.oauth_client(session, settings)
+            refresh, address = await gmail.exchange_code(client_id, client_secret, code, settings)
+            box = await session.scalar(
+                select(Mailbox).where(Mailbox.address == address).with_for_update()
+            )
+            if box is None:
+                box = Mailbox(tenant_id=tenant_id, created_by=user_id, address=address)
+                session.add(box)
+            box.kind, box.secret, box.enabled, box.last_error = "gmail", refresh, True, None
+            box.gmail_history_id = None
+            await session.flush()
+    except gmail.GmailError as exc:
+        return _oauth_result(settings, error=str(exc))
+    return _oauth_result(settings, address=address)
+
+
+def _oauth_result(settings: Any, address: str | None = None, error: str | None = None) -> Any:
+    from urllib.parse import urlencode
+
+    if settings.web_crm_url:
+        query = {"connected": address} if address else {"oauth_error": error or ""}
+        base = settings.web_crm_url.rstrip("/")
+        return RedirectResponse(f"{base}/einstellungen/postfaecher?{urlencode(query)}", 302)
+    text = f"Postfach {address} verbunden." if address else f"Fehler: {error}"
+    return HTMLResponse(f"<p>{text}</p>", status_code=200 if address else 400)
+
+
+@router.post("/mailboxes/{mailbox_id}/sync", summary="Gmail-Posteingang jetzt abrufen")
+async def sync_mailbox_now(
+    mailbox_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> dict[str, Any]:
+    from mhvp.communication.gmail import GmailError, sync_one
+
+    try:
+        async with tenant_tx(request, principal) as session:
+            box = await session.get(Mailbox, mailbox_id)
+            if box is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+            if box.kind != "gmail":
+                raise ProblemError(
+                    ErrorCodes.CONFLICT, detail="Nur Gmail-Postfächer werden abgerufen."
+                )
+            return await sync_one(session, request.app.state.settings, mailbox_id)
+    except GmailError as exc:
+        # The failed sync rolled back; keep the reason visible on the mailbox.
+        async with tenant_tx(request, principal) as session:
+            box = await session.get(Mailbox, mailbox_id, with_for_update=True)
+            if box is not None:
+                box.last_error = str(exc)[:1000]
+        raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+
+
 @router.post("/ingest", status_code=201, summary="E-Mail (.eml) aufnehmen und zuordnen")
 async def ingest(
     body: MailIngestIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
-    from mhvp.contacts.models import ContactEmail
+    from mhvp.communication.services import ingest_parsed
     from mhvp.documents.blobs import BlobStore
-    from mhvp.documents.models import Document, DocumentSource
-    from mhvp.documents.services import check_upload, store_document
-    from mhvp.properties.models import Property
-    from mhvp.tickets.models import TicketTemplate
+    from mhvp.documents.models import Document
 
     async with tenant_tx(request, principal) as session:
         document = await session.get(Document, body.document_id)
@@ -142,96 +379,16 @@ async def ingest(
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail="Die Datei ist keine lesbare E-Mail."
             ) from None
-        if parsed["message_id"]:
-            known = await session.scalar(
-                select(Message).where(
-                    Message.header_message_id == parsed["message_id"], Message.direction == "in"
-                )
-            )
-            if known is not None:
-                return _out(known)  # re-import: no second case (B08 analog)
-        contact_id = None
-        if parsed["from"]:
-            contact_id = await session.scalar(
-                select(ContactEmail.contact_id)
-                .where(func.lower(ContactEmail.email) == parsed["from"])
-                .limit(1)
-            )
-        number = mail.property_number(parsed["subject"], parsed["body"])
-        property_id = (
-            await session.scalar(select(Property.id).where(Property.number == number))
-            if number
-            else None
-        )
-        categories = list(await session.scalars(select(TicketTemplate.category)))
-        thread_id = None
-        if parsed["in_reply_to"]:
-            parent = await session.scalar(
-                select(Message).where(Message.header_message_id == parsed["in_reply_to"])
-            )
-            if parent is not None:
-                thread_id = parent.thread_id or parent.id
-                contact_id = contact_id or parent.contact_id
-                property_id = property_id or parent.property_id
-        attachments = []
-        for att in parsed["attachments"]:
-            try:
-                check_upload(
-                    att["mime"], att["data"], request.app.state.settings.document_max_bytes
-                )
-                doc = await store_document(
-                    session,
-                    blobs,
-                    tenant_id=principal.tenant_id,
-                    data=att["data"],
-                    title=att["filename"],
-                    filename=att["filename"],
-                    mime_type=att["mime"],
-                    source=DocumentSource.EMAIL,
-                    category_id=None,
-                    links=[],
-                    created_by=principal.user_id,
-                )
-                attachments.append(doc.id)
-            except ProblemError:
-                continue  # unsupported attachment types stay in the original mail document
-        row = Message(
-            tenant_id=principal.tenant_id,
-            created_by=principal.user_id,
-            direction="in",
-            mailbox_id=body.mailbox_id,
-            from_address=parsed["from"],
-            to_addresses=parsed["to"],
-            subject=parsed["subject"],
-            body=parsed["body"],
-            header_message_id=parsed["message_id"],
-            in_reply_to=parsed["in_reply_to"],
-            thread_id=thread_id,
-            received_at=parsed["received_at"] or datetime.now(UTC),
-            contact_id=contact_id,
-            property_id=property_id,
-            document_id=document.id,
-            attachment_document_ids=attachments,
-            status="assigned" if contact_id else "new",
-            classification={
-                "method": "rules",
-                "urgency": mail.urgency(parsed["subject"], parsed["body"]),
-                "category": mail.category(parsed["subject"], parsed["body"], categories),
-                "property_number": number,
-                "contact_matched": contact_id is not None,
-            },
-            appointment_suggestions=mail.appointments(parsed["body"], local_today()),
-        )
-        session.add(row)
-        await session.flush()
-        await emit(
+        row, _ = await ingest_parsed(
             session,
+            blobs,
+            request.app.state.settings,
             tenant_id=principal.tenant_id,
-            type="message.received",
-            entity_type="message",
-            entity_id=row.id,
             actor_user_id=principal.user_id,
-            payload={"urgency": row.classification["urgency"]},
+            parsed=parsed,
+            document_id=document.id,
+            mailbox_id=body.mailbox_id,
+            auto_ticket=body.auto_ticket,
         )
         return _out(row)
 
@@ -246,6 +403,9 @@ async def messages(
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         query = select(Message).order_by(Message.created_at.desc())
+        if not principal.has("tenant_settings:update"):  # admins see every mailbox
+            allowed = await _accessible_mailboxes(session, principal.user_id)
+            query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
         if status:
             query = query.where(Message.status == status)
         if contact_id:
@@ -274,49 +434,13 @@ async def assign(
 async def to_ticket(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> dict[str, Any]:
-    from mhvp.core.numbering import next_number
-    from mhvp.tickets.models import Priority, Ticket, TicketSource, TicketTemplate
-    from mhvp.tickets.routers import SLA_HOURS
+    from mhvp.communication.services import create_ticket
 
     if not principal.has("tickets:create"):
         raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Missing tickets:create.")
     async with tenant_tx(request, principal) as session:
         row = await _message(session, message_id)
-        if row.ticket_id:
-            return {"ticket_id": row.ticket_id}
-        tpl = None
-        if row.classification.get("category"):
-            tpl = await session.scalar(
-                select(TicketTemplate).where(
-                    TicketTemplate.category == row.classification["category"]
-                )
-            )
-        priority = (
-            Priority.URGENT
-            if row.classification.get("urgency") == "urgent"
-            else (tpl.default_priority if tpl else Priority.NORMAL)
-        )
-        ticket = Ticket(
-            tenant_id=principal.tenant_id,
-            created_by=principal.user_id,
-            number=await next_number(session, principal.tenant_id, "ticket"),
-            template_id=tpl.id if tpl else None,
-            category=tpl.category if tpl else None,
-            title=(row.subject or "E-Mail ohne Betreff")[:300],
-            public_description=row.body,
-            priority=priority,
-            team_id=tpl.default_team_id if tpl else None,
-            assignee_user_id=tpl.default_assignee_user_id if tpl else None,
-            initiator_contact_id=row.contact_id,
-            property_id=row.property_id,
-            source=TicketSource.EMAIL,
-            sla_due_at=datetime.now(UTC)
-            + timedelta(hours=(tpl.sla_hours if tpl and tpl.sla_hours else SLA_HOURS[priority])),
-        )
-        session.add(ticket)
-        await session.flush()
-        row.ticket_id, row.status = ticket.id, "assigned"
-        await session.flush()
+        ticket = await create_ticket(session, row, principal.user_id)
         return {"ticket_id": ticket.id, "number": ticket.number, "priority": ticket.priority.value}
 
 

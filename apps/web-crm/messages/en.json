@@ -829,5 +829,47 @@
     "send": "Send",
     "uploadFailed": "File {name} could not be uploaded.",
     "disclaimer": "AI proposals. Nothing is created before you confirm."
+  },
+  "MailSettings": {
+    "title": "Mailboxes",
+    "intro": "Google OAuth client of the tenant, connected mailboxes, default mailbox and per user access. Mailboxes are read only; every new mail opens a ticket.",
+    "connected": "Mailbox {address} connected.",
+    "oauthFailed": "Connection failed: {reason}",
+    "oauthTitle": "Google OAuth client",
+    "oauthHint": "Create a web application OAuth client in the Google Cloud Console, add the redirect URI below and enable the Gmail API. The secret is stored encrypted and never shown.",
+    "redirectUri": "Redirect URI",
+    "clientId": "Client ID",
+    "clientSecret": "Client secret",
+    "secretKept": "stored, enter again to change",
+    "save": "Save",
+    "saved": "Saved.",
+    "notConfigured": "not configured",
+    "source": {
+      "tenant": "configured (tenant)",
+      "environment": "configured (server)"
+    },
+    "mailboxesTitle": "Connected mailboxes",
+    "mailboxesHint": "Connect with Google opens the Google sign in. After consent the mailbox appears here and is fetched every two minutes.",
+    "connectGoogle": "Connect with Google",
+    "empty": "No mailbox connected yet.",
+    "defaultBadge": "Default",
+    "disabled": "inactive",
+    "errorBadge": "Error",
+    "lastSynced": "Last fetched {at}",
+    "neverSynced": "Not fetched yet",
+    "isDefault": "Default mailbox (all users)",
+    "enabled": "Active",
+    "syncNow": "Fetch now",
+    "remove": "Remove",
+    "removeConfirm": "Remove mailbox {address}? Ingested mails and tickets are kept.",
+    "syncResult": "{fetched} checked, {created} new, {duplicates} already present",
+    "defaultHint": "Every user of the tenant sees a default mailbox, including newly created ones.",
+    "access": "Access for users"
+  },
+  "Settings": {
+    "mail": {
+      "title": "Mailboxes",
+      "description": "Google OAuth, connect mailboxes, default mailbox and access."
+    }
   }
 }
