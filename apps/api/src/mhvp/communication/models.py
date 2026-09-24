@@ -4,7 +4,18 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,6 +45,28 @@ class Mailbox(IdMixin, TimestampMixin, TenantMixin, Base):
     gmail_history_id: Mapped[str | None] = mapped_column(String(32))
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(Text)
+    # Default mailbox: every member of the tenant may read it; others need a MailboxUser row.
+    is_default: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+
+
+class MailboxUser(IdMixin, TenantMixin, Base):
+    """Read access of a user to a non default mailbox (granted by a tenant admin)."""
+
+    __tablename__ = "mailbox_user"
+    __table_args__ = (
+        UniqueConstraint("mailbox_id", "user_id", name="uq_mailbox_user"),
+        Index("ix_mailbox_user_tenant", "tenant_id", "user_id"),
+    )
+
+    mailbox_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("mailbox.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
 
 
 class Message(IdMixin, TimestampMixin, TenantMixin, Base):

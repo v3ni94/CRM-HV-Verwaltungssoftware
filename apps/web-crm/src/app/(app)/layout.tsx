@@ -56,7 +56,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       items: [
         { href: "/assistent", label: t("assistant") },
         { href: "/importe", label: t("imports") },
-        ...(can("tenant_settings:update") ? [{ href: "/einstellungen/ki", label: t("aiSettings") }] : []),
+        ...(can("tenant_settings:update")
+          ? [
+              { href: "/einstellungen/ki", label: t("aiSettings") },
+              { href: "/einstellungen/postfaecher", label: t("mailSettings") },
+            ]
+          : []),
         ...(me?.is_platform_admin ? [{ href: "/plattform", label: t("platform") }] : []),
       ],
     },

@@ -215,6 +215,10 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     ai_routing: Mapped[str] = mapped_column(
         String(24), nullable=False, default="anthropic_first", server_default="anthropic_first"
     )
+    # Google OAuth client of the tenant for Gmail mailboxes (M20-01); env settings are the
+    # platform wide fallback. The secret is encrypted and never returned by the API.
+    google_client_id: Mapped[str | None] = mapped_column(String(200))
+    google_client_secret: Mapped[str | None] = mapped_column(EncryptedText())
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 

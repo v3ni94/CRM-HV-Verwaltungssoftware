@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     google_client_id: str | None = None
     google_client_secret: SecretStr | None = None
     gmail_sync_batch: int = Field(default=50, ge=1, le=500)
+    # Public URLs for the OAuth redirect (API callback) and the return to the CRM screen.
+    api_public_url: str | None = None
+    web_crm_url: str | None = None
 
     @model_validator(mode="after")
     def _guard_shared_environments(self) -> "Settings":

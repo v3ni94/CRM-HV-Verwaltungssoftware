@@ -96,7 +96,11 @@ async def _world(settings: Any) -> World:
     try:
         a, _ = await services.provision_tenant(factory, slug=f"gm-{RUN}", name=f"Gmail {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        for name, role in [("gmadmin", "tenant_admin"), ("gmread", "read_only_master_data")]:
+        for name, role in [
+            ("gmadmin", "tenant_admin"),
+            ("gmread", "read_only_master_data"),
+            ("gmclerk", "standard"),
+        ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -131,7 +135,7 @@ def client(
     original = gmail.GmailClient
 
     def patched(client_id: str, client_secret: str, refresh_token: str, **_: Any) -> Any:
-        assert (client_id, client_secret, refresh_token) == ("cid", "csecret", "rt")
+        assert (client_id, client_secret) in [("cid", "csecret"), ("tcid-0123456789", "tsecret")]
         return original(
             client_id, client_secret, refresh_token, transport=httpx.MockTransport(fake.handler)
         )
@@ -207,3 +211,84 @@ def test_gmail_sync_creates_tickets_and_threads(
     # Read only role cannot manage mailboxes.
     r = bearer(login(client, world, "gmread"))
     assert client.post(f"{M}/mailboxes/{box['id']}/sync", headers=r).status_code == 403
+
+
+def test_oauth_client_consent_and_mailbox_access(
+    client: TestClient, world: World, fake: FakeGmail, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    h = bearer(login(client, world, "gmadmin"))
+    clerk = bearer(login(client, world, "gmclerk"))
+
+    # Environment client is the fallback until the tenant stores its own.
+    status = _ok(client.get(f"{M}/oauth/google", headers=h))
+    assert status["source"] == "environment"
+    assert status["redirect_uri"].endswith("/api/v1/mail/oauth/google/callback")
+    saved = _ok(
+        client.put(
+            f"{M}/oauth/google",
+            json={"client_id": "tcid-0123456789", "client_secret": "tsecret"},
+            headers=h,
+        )
+    )
+    assert saved["source"] == "tenant"
+    assert "tsecret" not in json.dumps(_ok(client.get(f"{M}/oauth/google", headers=h)))
+    assert (
+        client.put(f"{M}/oauth/google", json={"client_id": "x"}, headers=clerk).status_code == 403
+    )
+
+    # Consent: start returns the Google URL, the callback exchanges the code and creates the box.
+    url = _ok(client.post(f"{M}/oauth/google/start", headers=h))["url"]
+    assert url.startswith("https://accounts.google.com/")
+    assert "client_id=tcid-0123456789" in url
+    state = httpx.URL(url).params["state"]
+    address = f"info-oauth-{RUN}@example.com"
+
+    async def exchange(client_id: str, client_secret: str, code: str, *_: Any) -> tuple[str, str]:
+        assert (client_id, client_secret, code) == ("tcid-0123456789", "tsecret", "c0de")
+        return "rt", address
+
+    monkeypatch.setattr(gmail, "exchange_code", exchange)
+    r = client.get(
+        f"{M}/oauth/google/callback",
+        params={"state": state, "code": "c0de"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 200, r.text  # no web url configured: plain confirmation page
+    assert address in r.text
+    # State is single use.
+    r = client.get(f"{M}/oauth/google/callback", params={"state": state, "code": "c0de"})
+    assert r.status_code == 400
+
+    boxes = {b["address"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+    box = boxes[address]
+    assert (box["kind"], box["enabled"], box["has_secret"]) == ("gmail", True, True)
+    assert (box["is_default"], box["user_ids"]) == (False, [])
+
+    # A mail in this box is invisible to a member without a grant.
+    fake.add("o1", _eml(f"o{RUN}@example.com", f"OAuth Test {RUN}", f"<o1-{RUN}@x>"))
+    assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["created"] == 1
+    subjects = lambda hdr: {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=hdr))}  # noqa: E731
+    assert f"OAuth Test {RUN}" not in subjects(clerk)
+
+    # Explicit grant makes it visible; removing the grant hides it again.
+    granted = _ok(
+        client.put(
+            f"{M}/mailboxes/{box['id']}/users",
+            json={"user_ids": [str(world.users["gmclerk"])]},
+            headers=h,
+        )
+    )
+    assert granted["user_ids"] == [str(world.users["gmclerk"])]
+    assert f"OAuth Test {RUN}" in subjects(clerk)
+    _ok(client.put(f"{M}/mailboxes/{box['id']}/users", json={"user_ids": []}, headers=h))
+    assert f"OAuth Test {RUN}" not in subjects(clerk)
+
+    # Default mailbox: every member sees it without a grant.
+    assert _ok(client.patch(f"{M}/mailboxes/{box['id']}", json={"is_default": True}, headers=h))[
+        "is_default"
+    ]
+    assert f"OAuth Test {RUN}" in subjects(clerk)
+
+    # Removing the mailbox keeps the messages (mailbox_id becomes null).
+    assert client.delete(f"{M}/mailboxes/{box['id']}", headers=h).status_code == 204
+    assert address not in {b["address"] for b in _ok(client.get(f"{M}/mailboxes", headers=h))}

@@ -121,14 +121,77 @@ class GmailClient:
         return base64.urlsafe_b64decode(r.json()["raw"] + "==")
 
 
-def make_client(settings: Settings, mailbox: Mailbox) -> GmailClient:
-    if not settings.google_client_id or not settings.google_client_secret:
-        raise GmailError("Google OAuth-Client der Plattform ist nicht konfiguriert.")
+OAUTH_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
+SCOPES = "https://www.googleapis.com/auth/gmail.readonly"
+
+
+async def oauth_client(session: AsyncSession, settings: Settings) -> tuple[str, str]:
+    """Tenant OAuth client (settings page), falling back to the platform environment."""
+    from mhvp.platform.models import TenantSettings
+
+    row = await session.scalar(select(TenantSettings))
+    if row is not None and row.google_client_id and row.google_client_secret:
+        return row.google_client_id, row.google_client_secret
+    if settings.google_client_id and settings.google_client_secret:
+        return settings.google_client_id, settings.google_client_secret.get_secret_value()
+    raise GmailError("Google OAuth-Client ist nicht eingerichtet (Einstellungen, Postfächer).")
+
+
+def redirect_uri(settings: Settings) -> str:
+    base = (settings.api_public_url or settings.jwt_issuer).rstrip("/")
+    return f"{base}/api/v1/mail/oauth/google/callback"
+
+
+def authorization_url(client_id: str, settings: Settings, state: str) -> str:
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri(settings),
+        "response_type": "code",
+        "scope": SCOPES,
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": state,
+    }
+    return str(httpx.URL(OAUTH_AUTH_ENDPOINT, params=params))
+
+
+async def exchange_code(
+    client_id: str,
+    client_secret: str,
+    code: str,
+    settings: Settings,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> tuple[str, str]:
+    """Exchange the consent code; returns (refresh_token, mailbox address)."""
+    async with httpx.AsyncClient(timeout=30.0, transport=transport) as http:
+        r = await http.post(
+            OAUTH_TOKEN_ENDPOINT,
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": redirect_uri(settings),
+            },
+        )
+        if r.status_code != 200:
+            raise GmailError(f"Google hat den Code abgelehnt (HTTP {r.status_code}).")
+        tokens = r.json()
+        refresh = tokens.get("refresh_token")
+        if not refresh:
+            raise GmailError("Google hat kein Refresh-Token geliefert; Zugriff erneut erteilen.")
+        p = await http.get(
+            f"{API}/profile", headers={"Authorization": f"Bearer {tokens['access_token']}"}
+        )
+        if p.status_code != 200:
+            raise GmailError(f"Postfachadresse nicht lesbar (HTTP {p.status_code}).")
+        return str(refresh), str(p.json()["emailAddress"]).lower()
+
+
+def make_client(client_id: str, client_secret: str, mailbox: Mailbox) -> GmailClient:
     if not mailbox.secret:
         raise GmailError("Kein Refresh-Token für dieses Postfach hinterlegt.")
-    return GmailClient(
-        settings.google_client_id, settings.google_client_secret.get_secret_value(), mailbox.secret
-    )
+    return GmailClient(client_id, client_secret, mailbox.secret)
 
 
 async def sync_mailbox(
@@ -189,7 +252,8 @@ async def sync_one(
     mailbox = await session.get(Mailbox, mailbox_id, with_for_update=True)
     if mailbox is None:
         raise GmailError("Postfach nicht gefunden.")
-    client = make_client(settings, mailbox)
+    client_id, client_secret = await oauth_client(session, settings)
+    client = make_client(client_id, client_secret, mailbox)
     try:
         return await sync_mailbox(session, BlobStore(settings), settings, mailbox, client)
     finally:
