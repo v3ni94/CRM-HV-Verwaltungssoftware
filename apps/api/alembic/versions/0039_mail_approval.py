@@ -17,7 +17,9 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column("message", sa.Column("submitted_by", postgresql.UUID(as_uuid=True), nullable=True))
+    op.add_column(
+        "message", sa.Column("submitted_by", postgresql.UUID(as_uuid=True), nullable=True)
+    )
     op.add_column("message", sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True))
     op.add_column("message", sa.Column("approved_by", postgresql.UUID(as_uuid=True), nullable=True))
     op.add_column("message", sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True))

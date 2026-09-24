@@ -1,7 +1,7 @@
 """flow_import_run: FLOW SQL dump import previews (M28 stage 4, docs/rules/M28-01.md).
 
 Revision ID: 0040
-Revises: 0038 (TEMP, rebase onto 0039_mail_approval at merge)
+Revises: 0039 (TEMP, rebase onto 0039_mail_approval at merge)
 
 Tenant tables must call mhvp.core.db.rls.tenant_rls_statements() (ADR 0002).
 """
@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
 revision: str = "0040"
-down_revision: str | None = "0038"  # TEMP: rebase onto 0039_mail_approval once merged
+down_revision: str | None = "0039"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
