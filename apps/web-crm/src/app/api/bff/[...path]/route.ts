@@ -102,6 +102,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^letting/rent-increases/${ID}/actions$`) },
   { method: "PATCH", pattern: new RegExp(`^letting/prospects/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^letting/prospects/${ID}$`) },
+  // Makler (M28-01): listings for rent and sale. No FLOWFACT connection.
+  { method: "GET", pattern: /^letting\/listings$/ },
+  { method: "GET", pattern: /^letting\/listings\/prefill$/ },
+  { method: "GET", pattern: new RegExp(`^letting/listings/${ID}$`) },
+  { method: "POST", pattern: /^letting\/listings$/ },
+  { method: "PATCH", pattern: new RegExp(`^letting/listings/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^letting/listings/${ID}$`) },
+  // Makler (M28-01): property and unit pickers for the listing creation form.
+  { method: "GET", pattern: /^properties$/ },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/units$`) },
   // Rent law rule set (M26-01): platform administrators only (checked by the API).
   { method: "PUT", pattern: /^platform\/rent-law\/rules\/[a-z_]{2,40}$/ },
   { method: "POST", pattern: /^platform\/rent-law\/cap-areas$/ },

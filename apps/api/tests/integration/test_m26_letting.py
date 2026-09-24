@@ -504,3 +504,141 @@ def test_rent_law_rules_and_cap_area(clients: tuple[TestClient, TestClient], wor
                 headers=ph,
             )
         )
+
+
+def test_listings(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
+    """M28-01 stage 2: listings for rent and sale, no FLOWFACT connection."""
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "763",
+                "name": "Maklerhaus",
+                "management_type": "rental",
+                "city": f"Maklerstadt {RUN}",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    building = _ok(
+        client.post(f"/api/v1/properties/{prop['id']}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )["id"]
+    unit = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/units",
+            json={
+                "building_id": building,
+                "number": "01",
+                "unit_type": "apartment",
+                "living_area_sqm": "60",
+                "rooms": "2.5",
+                "floor": "2",
+                "street": "Musterweg",
+                "house_number": "1",
+                "postal_code": "12345",
+                "city": "Maklerstadt",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+
+    prefill = _ok(client.get(f"{L}/listings/prefill", params={"unit_id": unit}, headers=h))
+    assert Decimal(prefill["living_area_sqm"]) == Decimal("60")
+    assert prefill["rooms"]
+    assert prefill["floor"] == "2"
+
+    listing = _ok(
+        client.post(f"{L}/listings", json={"unit_id": unit, "kind": "rental"}, headers=h), 201
+    )
+    assert listing["status"] == "draft"
+    assert listing["publication_status"] == "not_published"
+    assert listing["title"] == prefill["title"]
+    assert Decimal(listing["living_area_sqm"]) == Decimal("60")
+
+    # activation without price and available_from fails
+    act = client.patch(f"{L}/listings/{listing['id']}", json={"status": "active"}, headers=h)
+    assert act.status_code == 422
+
+    updated = _ok(
+        client.patch(
+            f"{L}/listings/{listing['id']}",
+            json={"price": "850.00", "available_from": "2026-11-01"},
+            headers=h,
+        )
+    )
+    assert updated["price"] == "850.00"
+
+    active = _ok(
+        client.patch(f"{L}/listings/{listing['id']}", json={"status": "active"}, headers=h)
+    )
+    assert active["status"] == "active"
+
+    second = _ok(
+        client.post(f"{L}/listings", json={"unit_id": unit, "kind": "rental"}, headers=h), 201
+    )
+    _ok(
+        client.patch(
+            f"{L}/listings/{second['id']}",
+            json={"price": "900.00", "available_from": "2026-11-01"},
+            headers=h,
+        )
+    )
+    dup = client.patch(f"{L}/listings/{second['id']}", json={"status": "active"}, headers=h)
+    assert dup.status_code == 409
+
+    # a sale listing for the same unit does not conflict with the active rental listing
+    sale = _ok(client.post(f"{L}/listings", json={"unit_id": unit, "kind": "sale"}, headers=h), 201)
+    _ok(client.patch(f"{L}/listings/{sale['id']}", json={"price": "250000.00"}, headers=h))
+    sale_active = _ok(
+        client.patch(f"{L}/listings/{sale['id']}", json={"status": "active"}, headers=h)
+    )
+    assert sale_active["status"] == "active"
+
+    rentals = _ok(client.get(f"{L}/listings", params={"kind": "rental"}, headers=h))
+    assert {r["id"] for r in rentals} == {listing["id"], second["id"]}
+    active_rentals = _ok(
+        client.get(f"{L}/listings", params={"kind": "rental", "status": "active"}, headers=h)
+    )
+    assert {r["id"] for r in active_rentals} == {listing["id"]}
+    by_prop = _ok(client.get(f"{L}/listings", params={"property_id": prop["id"]}, headers=h))
+    assert len(by_prop) == 3
+    by_text = _ok(client.get(f"{L}/listings", params={"q": "763"}, headers=h))
+    assert len(by_text) == 3
+
+    assert client.delete(f"{L}/listings/{listing['id']}", headers=h).status_code == 409
+    draft = _ok(
+        client.post(f"{L}/listings", json={"unit_id": unit, "kind": "sale"}, headers=h), 201
+    )
+    assert client.delete(f"{L}/listings/{draft['id']}", headers=h).status_code == 204
+
+    async def _other_tenant_world(settings: Any) -> World:
+        from mhvp.core import crypto
+        from mhvp.core.db.engine import create_app_engine, create_session_factory
+
+        crypto.set_master_key(b"k" * 32)
+        engine = create_app_engine(settings)
+        factory = create_session_factory(engine)
+        try:
+            b, _ = await services.provision_tenant(factory, slug=f"vm28-{RUN}", name=f"VM28 {RUN}")
+            other = World(tenant_a=b, tenant_b=b, app_url=world.app_url)
+            uid = await services.create_user(
+                factory, email=other.email("m28other"), display_name="m28other", password=PASSWORD
+            )
+            other.users["m28other"] = uid
+            await services.add_member(
+                factory, tenant_id=b, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
+            )
+            return other
+        finally:
+            await engine.dispose()
+
+    other_world = asyncio.run(_other_tenant_world(_settings(database, redis_url)))
+    ho = bearer(login(client, other_world, "m28other"))
+    assert _ok(client.get(f"{L}/listings", headers=ho)) == []

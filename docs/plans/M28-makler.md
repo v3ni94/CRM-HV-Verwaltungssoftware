@@ -47,3 +47,35 @@ Zielhost der Übergangszeit: flow.mueller-holding.ag.
 Keine Geldflüsse; Provisionen und Rechnungen an Käufer oder Vermieter bleiben außerhalb dieses
 Meilensteins. Veröffentlichung erfolgt durch FLOWFACT, daher keine neue Freigabestufe; der
 Versand von Daten an FLOWFACT braucht die Zugangsdaten und die dokumentierte Schnittstelle.
+
+## Erkenntnisse aus dem FLOW-Repository (v3ni94/FLOWFACTxHVM, gelesen 25.09.2026)
+
+- Stack: Laravel 12, PHP 8.3, MariaDB. Betrieb geprüft 25.09.2026: flowfact.muellerhv.de zeigt auf
+  217.160.0.148 (IONOS Webhosting), nicht auf den CRM-Server. Der Container "immoware-hub" auf
+  dem CRM-Server ist eine andere Anwendung (Immoware Hub). Kein Docker-Compose im FLOW-Repo.
+  Folge: Stufe 1 (FLOW hinter Traefik) entfällt; FLOW bleibt bis zur Ablösung im Webhosting,
+  die Datenübernahme erfolgt per Datenbankexport aus dem Webhosting.
+- FLOWFACT-API: belegt nur aus dem SDK `@flowfact/api-services`; zweistufige Anmeldung
+  (Zugangsschlüssel gegen Cognito-Token über admin-token-service, dann Header cognitoToken),
+  Dienste entity-service, schema-service, search-service, multimedia-service,
+  portal-management-service. Idempotenz über eigene uuid als identifier mit Suche vor dem
+  Anlegen. Portalstatus nur aus der Statusabfrage, nie aus dem Sendebefehl.
+- Stand der Prüfung: bis auf den Token-Tausch (21.09.2026) ist keine Funktion gegen ein echtes
+  FLOWFACT-Konto gelaufen, alles simuliert. Offen laut FLOW: ob der Tarif einen API-Token erlaubt,
+  angebundene Portale, echte Schemanamen, Freigabeverhalten, Bildlimits.
+- Datenvertrag: Vermarktungsart miete/kauf, Objektarten wohnung, haus, gewerbe, stellplatz,
+  grundstueck; Preise in Cent mit Heizkostenregeln (Warmmiete serverseitig berechnet);
+  Energieausweisfelder; drei Statusachsen (Bearbeitung, Übertragung, Portal je Portal);
+  interne Daten strikt getrennt von Inseratsfeldern (Positivliste im Mapper).
+- Migration: zu übernehmen sind listings.uuid, listing_flowfact_links.flowfact_entity_id und
+  listing_media.flowfact_multimedia_id. Kein Exportbefehl vorhanden, Übernahme per Datenbankexport.
+  Login klassisch (E-Mail, Passwort, optional 2FA), kein OIDC; für die zentrale Anmeldung ist ein
+  OIDC-Client in FLOW zu ergänzen oder FLOW wird direkt abgelöst.
+
+## Folgerungen für das CRM-Modell (Stufe 2, umgesetzt) und Stufe 3
+
+- Das CRM-Modell `listing` wird um Objektart, Energieausweisfelder, Heizkostenregel und die
+  drei Statusachsen erweitert, sobald der FLOWFACT-Adapter gebaut wird; die FLOW-Positivliste
+  wird als Mapper übernommen. Bilder als Dokumente mit Prüfsumme und FLOWFACT-Medien-ID.
+- Der Adapter wird aus docs/flowfact-api.md und docs/connector.md des FLOW-Repos abgeleitet und
+  erst nach einem Smoke-Test gegen das echte Konto (Token, currentUser, Schemata) freigegeben.

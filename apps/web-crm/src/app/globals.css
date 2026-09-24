@@ -10,10 +10,19 @@
   --color-muted: var(--mhvp-color-muted);
   --color-subtle: var(--mhvp-color-subtle);
   --color-border: var(--mhvp-color-border);
+  --color-border-soft: var(--mhvp-color-border-soft);
   --color-gold: var(--mhvp-color-gold);
   --color-gold-soft: var(--mhvp-color-gold-soft);
+  --color-gold-tint: var(--mhvp-color-gold-tint);
+  --color-anthracite-soft: var(--mhvp-color-anthracite-soft);
   --color-accent: var(--mhvp-color-accent);
   --color-accent-fg: var(--mhvp-color-accent-fg);
+  --color-rail-bg: var(--mhvp-color-rail-bg);
+  --color-rail-fg: var(--mhvp-color-rail-fg);
+  --color-rail-muted: var(--mhvp-color-rail-muted);
+  --color-rail-border: var(--mhvp-color-rail-border);
+  --color-rail-hover: var(--mhvp-color-rail-hover);
+  --color-rail-active: var(--mhvp-color-rail-active);
   --color-success-bg: var(--mhvp-color-success-bg);
   --color-success-fg: var(--mhvp-color-success-fg);
   --color-warning-bg: var(--mhvp-color-warning-bg);
@@ -21,22 +30,44 @@
   --color-danger-bg: var(--mhvp-color-danger-bg);
   --color-danger-fg: var(--mhvp-color-danger-fg);
   --font-sans: var(--mhvp-font-sans);
-  --radius-card: var(--mhvp-radius);
-  --shadow-card: var(--mhvp-shadow);
+  --radius-sm: var(--mhvp-radius-sm);
+  --radius-md: var(--mhvp-radius-md);
+  --radius-lg: var(--mhvp-radius-lg);
+  --radius-xl: var(--mhvp-radius-xl);
+  --radius-card: var(--mhvp-radius-lg);
+  --shadow-xs: var(--mhvp-shadow-xs);
+  --shadow-sm: var(--mhvp-shadow-sm);
+  --shadow-md: var(--mhvp-shadow-md);
+  --shadow-lg: var(--mhvp-shadow-lg);
+  --shadow-card: var(--mhvp-shadow-sm);
 }
 
 body {
   background: var(--mhvp-color-bg);
   color: var(--mhvp-color-fg);
   font-family: var(--mhvp-font-sans);
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: var(--mhvp-font-body-size);
+  line-height: var(--mhvp-font-body-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Goldpunkt: page titles carry a short gold bar underneath instead of a full underline. */
 .mhvp-title {
   position: relative;
   padding-bottom: 0.5rem;
+  font-size: var(--mhvp-font-h1-size);
+  line-height: var(--mhvp-font-h1-line);
+  letter-spacing: var(--mhvp-font-h1-tracking);
 }
 .mhvp-title::after {
   content: "";
@@ -49,6 +80,23 @@ body {
   background: var(--mhvp-color-gold);
 }
 
+.mhvp-display {
+  font-size: var(--mhvp-font-display-size);
+  line-height: var(--mhvp-font-display-line);
+  letter-spacing: var(--mhvp-font-display-tracking);
+}
+
+.mhvp-h2 {
+  font-size: var(--mhvp-font-h2-size);
+  line-height: var(--mhvp-font-h2-line);
+  letter-spacing: var(--mhvp-font-h2-tracking);
+}
+
+.mhvp-caption {
+  font-size: var(--mhvp-font-caption-size);
+  line-height: var(--mhvp-font-caption-line);
+}
+
 /* Versal labels: uppercase, letter spaced, grey (CI section 3a, item 4). */
 .mhvp-label {
   font-size: 0.68rem;
@@ -57,26 +105,33 @@ body {
   color: var(--mhvp-color-subtle);
 }
 
-/* Data tables: airy rows, beige header, no vertical rules. */
+/* Data tables: airy rows, beige header, no vertical rules, sticky head. */
 .mhvp-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
 .mhvp-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   text-align: left;
   font-weight: 500;
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--mhvp-color-subtle);
+  background: var(--mhvp-color-bg);
   padding: 0.6rem 0.75rem;
   border-bottom: 1px solid var(--mhvp-color-border);
 }
 .mhvp-table tbody td {
   padding: 0.65rem 0.75rem;
-  border-bottom: 1px solid var(--mhvp-color-border);
+  border-bottom: 1px solid var(--mhvp-color-border-soft);
   vertical-align: top;
+}
+.mhvp-table tbody tr {
+  transition: background var(--mhvp-motion-fast) var(--mhvp-motion-ease);
 }
 .mhvp-table tbody tr:hover {
   background: var(--mhvp-color-surface);
@@ -84,4 +139,30 @@ body {
 .mhvp-table .num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Soft status pill with a leading dot; used by badge-* helpers in lib/ui.ts. */
+.mhvp-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* Card hover lift for clickable surfaces (dashboard tiles, list cards). */
+.mhvp-lift {
+  transition:
+    transform var(--mhvp-motion) var(--mhvp-motion-ease),
+    box-shadow var(--mhvp-motion) var(--mhvp-motion-ease),
+    border-color var(--mhvp-motion) var(--mhvp-motion-ease);
+}
+.mhvp-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mhvp-shadow-md);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mhvp-lift:hover {
+    transform: none;
+  }
 }

@@ -6,6 +6,10 @@
  * #9F9F9F for secondary information, warm beige #FBF6EC for surfaces. Gold is used for lines,
  * markers and focus, never for running text. Tenant branding (V14) overrides these variables
  * at runtime from GET /api/v1/tenant/branding; nothing here is hard coded in components.
+ *
+ * This file also carries a refined scale (spacing, radius, shadow, type) so the product reads
+ * as a modern SaaS surface rather than a plain document theme. No new brand colours are
+ * introduced; only tints and shadow levels derived from the existing CI palette.
  */
 :root {
   color-scheme: light dark;
@@ -17,10 +21,21 @@
   --mhvp-color-muted: #6f6e70;
   --mhvp-color-subtle: #9f9f9f;
   --mhvp-color-border: #e6e1d6;
+  --mhvp-color-border-soft: #efe9dd;
   --mhvp-color-gold: #e3ac48;
   --mhvp-color-gold-soft: #f6e6c2;
+  --mhvp-color-gold-tint: #fbf2dd;
+  --mhvp-color-anthracite-soft: #eeecec;
   --mhvp-color-accent: #2e2d2e;
   --mhvp-color-accent-fg: #ffffff;
+
+  /* Dark, calm sidebar rail; distinct from the page background in both themes. */
+  --mhvp-color-rail-bg: #23222a;
+  --mhvp-color-rail-fg: #efece6;
+  --mhvp-color-rail-muted: #a9a6a4;
+  --mhvp-color-rail-border: #34333b;
+  --mhvp-color-rail-hover: #2c2b33;
+  --mhvp-color-rail-active: #34333c;
 
   --mhvp-color-success-bg: #e8f3ec;
   --mhvp-color-success-fg: #1c5c34;
@@ -29,25 +44,74 @@
   --mhvp-color-danger-bg: #fbeaea;
   --mhvp-color-danger-fg: #8a1f1f;
 
-  --mhvp-radius: 0.5rem;
-  --mhvp-shadow: 0 1px 2px rgba(46, 45, 46, 0.06), 0 4px 16px rgba(46, 45, 46, 0.04);
+  /* Spacing scale (rem), for callers that want a token instead of a Tailwind class. */
+  --mhvp-space-1: 0.25rem;
+  --mhvp-space-2: 0.5rem;
+  --mhvp-space-3: 0.75rem;
+  --mhvp-space-4: 1rem;
+  --mhvp-space-6: 1.5rem;
+  --mhvp-space-8: 2rem;
+
+  /* Radius scale. */
+  --mhvp-radius-sm: 0.5rem;
+  --mhvp-radius-md: 0.75rem;
+  --mhvp-radius-lg: 1rem;
+  --mhvp-radius-xl: 1.5rem;
+  --mhvp-radius: var(--mhvp-radius-sm);
+
+  /* Soft, layered shadows (never a hard single drop shadow). */
+  --mhvp-shadow-xs: 0 1px 2px rgba(46, 45, 46, 0.05);
+  --mhvp-shadow-sm: 0 1px 2px rgba(46, 45, 46, 0.06), 0 4px 10px rgba(46, 45, 46, 0.05);
+  --mhvp-shadow-md: 0 2px 4px rgba(46, 45, 46, 0.05), 0 10px 24px rgba(46, 45, 46, 0.07);
+  --mhvp-shadow-lg: 0 8px 16px rgba(46, 45, 46, 0.06), 0 24px 48px rgba(46, 45, 46, 0.1);
+  --mhvp-shadow: var(--mhvp-shadow-sm);
+
+  /* Type scale: display, h1, h2, body, caption. */
+  --mhvp-font-display-size: 1.875rem;
+  --mhvp-font-display-line: 2.25rem;
+  --mhvp-font-display-tracking: -0.02em;
+  --mhvp-font-h1-size: 1.5rem;
+  --mhvp-font-h1-line: 1.9rem;
+  --mhvp-font-h1-tracking: -0.015em;
+  --mhvp-font-h2-size: 1.125rem;
+  --mhvp-font-h2-line: 1.5rem;
+  --mhvp-font-h2-tracking: -0.01em;
+  --mhvp-font-body-size: 0.875rem;
+  --mhvp-font-body-line: 1.4rem;
+  --mhvp-font-caption-size: 0.75rem;
+  --mhvp-font-caption-line: 1rem;
+
+  --mhvp-motion-fast: 150ms;
+  --mhvp-motion: 200ms;
+  --mhvp-motion-ease: cubic-bezier(0.2, 0, 0, 1);
+
   --mhvp-font-sans: Carlito, Calibri, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Dark mode follows the system unless the user picked a theme (data-theme on <html>, M9). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --mhvp-color-bg: #161516;
-    --mhvp-color-surface: #201f20;
-    --mhvp-color-surface-2: #2a292a;
+    --mhvp-color-bg: #17161a;
+    --mhvp-color-surface: #1e1d22;
+    --mhvp-color-surface-2: #26252b;
     --mhvp-color-fg: #efece6;
     --mhvp-color-muted: #b3b0aa;
     --mhvp-color-subtle: #8a8886;
-    --mhvp-color-border: #3a393a;
-    --mhvp-color-gold: #e3ac48;
+    --mhvp-color-border: #34333a;
+    --mhvp-color-border-soft: #2a292f;
+    --mhvp-color-gold: #e6b458;
     --mhvp-color-gold-soft: #4a3a1c;
+    --mhvp-color-gold-tint: #2c2515;
+    --mhvp-color-anthracite-soft: #26252b;
     --mhvp-color-accent: #e3ac48;
-    --mhvp-color-accent-fg: #161516;
+    --mhvp-color-accent-fg: #201c10;
+
+    --mhvp-color-rail-bg: #131218;
+    --mhvp-color-rail-fg: #efece6;
+    --mhvp-color-rail-muted: #93908d;
+    --mhvp-color-rail-border: #262530;
+    --mhvp-color-rail-hover: #1c1b22;
+    --mhvp-color-rail-active: #22212a;
 
     --mhvp-color-success-bg: #16301f;
     --mhvp-color-success-fg: #9fd8b2;
@@ -55,23 +119,37 @@
     --mhvp-color-warning-fg: #f0cf84;
     --mhvp-color-danger-bg: #3a1717;
     --mhvp-color-danger-fg: #f2aaaa;
-    --mhvp-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
+    --mhvp-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --mhvp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+    --mhvp-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.35);
+    --mhvp-shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.4), 0 28px 56px rgba(0, 0, 0, 0.45);
+    --mhvp-shadow: var(--mhvp-shadow-sm);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --mhvp-color-bg: #161516;
-  --mhvp-color-surface: #201f20;
-  --mhvp-color-surface-2: #2a292a;
+  --mhvp-color-bg: #17161a;
+  --mhvp-color-surface: #1e1d22;
+  --mhvp-color-surface-2: #26252b;
   --mhvp-color-fg: #efece6;
   --mhvp-color-muted: #b3b0aa;
   --mhvp-color-subtle: #8a8886;
-  --mhvp-color-border: #3a393a;
-  --mhvp-color-gold: #e3ac48;
+  --mhvp-color-border: #34333a;
+  --mhvp-color-border-soft: #2a292f;
+  --mhvp-color-gold: #e6b458;
   --mhvp-color-gold-soft: #4a3a1c;
+  --mhvp-color-gold-tint: #2c2515;
+  --mhvp-color-anthracite-soft: #26252b;
   --mhvp-color-accent: #e3ac48;
-  --mhvp-color-accent-fg: #161516;
+  --mhvp-color-accent-fg: #201c10;
+
+  --mhvp-color-rail-bg: #131218;
+  --mhvp-color-rail-fg: #efece6;
+  --mhvp-color-rail-muted: #93908d;
+  --mhvp-color-rail-border: #262530;
+  --mhvp-color-rail-hover: #1c1b22;
+  --mhvp-color-rail-active: #22212a;
 
   --mhvp-color-success-bg: #16301f;
   --mhvp-color-success-fg: #9fd8b2;
@@ -79,5 +157,9 @@
   --mhvp-color-warning-fg: #f0cf84;
   --mhvp-color-danger-bg: #3a1717;
   --mhvp-color-danger-fg: #f2aaaa;
-  --mhvp-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
+  --mhvp-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --mhvp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --mhvp-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.35);
+  --mhvp-shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.4), 0 28px 56px rgba(0, 0, 0, 0.45);
+  --mhvp-shadow: var(--mhvp-shadow-sm);
 }

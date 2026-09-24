@@ -14,6 +14,7 @@
   "Shell": {
     "hoa": "HOA",
     "letting": "Letting",
+    "broker": "Broker",
     "bank": "Bank",
     "billing": "Statements",
     "tickets": "Tickets",
