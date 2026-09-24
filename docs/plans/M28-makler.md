@@ -18,7 +18,10 @@ Zielhost der Übergangszeit: flow.mueller-holding.ag.
 
 1. **Betrieb**: DNS flow.mueller-holding.ag, FLOW als Container hinter dem bestehenden Traefik
    (Netz traefik-proxy, Zertifikatsauflöser letsencrypt), flowfact.muellerhv.de als zweiter
-   Hostname bis zur Ablösung. Kein Eingriff in FLOW.
+   Hostname bis zur Ablösung. Anmeldung zentral über das CRM (Entscheidung 25.09.2026):
+   FLOW wird als OIDC-Client des Plattform-Providers registriert (ADR 0006 Nr. 7, Authorization
+   Code mit PKCE); Benutzer und Rechte werden nur im CRM gepflegt. Voraussetzung: FLOW kann
+   OIDC-Login (sonst kleiner Eingriff in FLOW).
 2. **Datenmodell im CRM** (Domäne `letting`): `listing` (Anzeige: Einheit, Art Vermietung oder
    Verkauf, Preis, Texte, Bilder als Dokumente, Status Entwurf, aktiv, reserviert, beendet),
    `listing_publication` (Übergabe an FLOWFACT: Zeitpunkt, externe ID, Status, Fehlertext).
