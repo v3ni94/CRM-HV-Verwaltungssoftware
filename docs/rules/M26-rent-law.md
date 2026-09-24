@@ -8,7 +8,7 @@
 | Source status | Addition to annex C requested by the operator on 24.09.2026. Retrieval from gesetze-im-internet.de not yet possible (network egress blocked); all rules `draft`, `source_verified=false`. Release per rule only by the operator (RA) via `PUT /platform/rent-law/rules/{code}` |
 | Acceptance case | none in annex D yet; tests `tests/integration/test_m26_letting.py::test_rent_law_rules_and_cap_area` |
 | Implementation | `mhvp.letting.rentlaw`, migration 0030 |
-| Change reason | M26-01 decision of the operator, 24.09.2026 |
+| Change reason | M26-01 decision of the operator, 24.09.2026. Seed values and letter template reviewed by the operator (RA) on 24.09.2026; release per rule is recorded in the backend (`released_by`, `released_at`) |
 
 ## Seed values (to verify against the statute text)
 
