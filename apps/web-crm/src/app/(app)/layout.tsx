@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import Link from "next/link";
 
+import { AiChatWidget } from "@/components/ai/AiChatWidget";
 import { SearchDialog } from "@/components/shell/SearchDialog";
 import { SideNav, type NavGroup } from "@/components/shell/SideNav";
 import { TenantSwitcher } from "@/components/shell/TenantSwitcher";
@@ -90,6 +91,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
         <footer className="border-t border-border px-4 py-3 text-xs text-subtle md:px-8">{tHome("footer")}</footer>
       </div>
+      <AiChatWidget />
     </div>
   );
 }
