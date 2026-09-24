@@ -294,11 +294,21 @@ async def start_oauth(
 
 @router.get("/oauth/google/callback", summary="Google OAuth-Rückruf", include_in_schema=False)
 async def oauth_callback(
-    request: Request, state: str, code: str | None = None, error: str | None = None
+    request: Request,
+    state: str | None = None,
+    code: str | None = None,
+    error: str | None = None,
 ) -> Any:
     from mhvp.communication import gmail
 
     settings = request.app.state.settings
+    if not state:
+        # Direct call of the redirect URI (browser, monitoring): explain instead of a 422.
+        return _oauth_result(
+            settings,
+            error="Diese Adresse ist nur der Rücksprung von Google. Bitte im CRM unter "
+            "Einstellungen, Postfächer auf 'Mit Google verbinden' klicken.",
+        )
     redis = request.app.state.resources.redis
     stored = await redis.getdel(f"mail:oauth:{state}")
     if not stored:
