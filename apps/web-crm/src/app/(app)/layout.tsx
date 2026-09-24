@@ -48,6 +48,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
           ) : null}
           {me?.permissions.includes("accounting:read") ? (
+            <Link href="/rechnungen" className="hover:underline">
+              {t("invoices")}
+            </Link>
+          ) : null}
+          {me?.permissions.includes("accounting:read") ? (
             <Link href="/bank" className="hover:underline">
               {t("bank")}
             </Link>

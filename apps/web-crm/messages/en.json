@@ -16,7 +16,8 @@
     "bank": "Bank",
     "billing": "Statements",
     "tickets": "Tickets",
-    "platform": "Platform"
+    "platform": "Platform",
+    "invoices": "Invoices"
   },
   "Hoa": {
     "title": "HOA management",
@@ -464,5 +465,67 @@
     "closed": "closed",
     "g5": "G5 evidence",
     "noData": "No data."
+  },
+  "Invoices": {
+    "title": "Incoming invoices",
+    "notice": "Automatic checks only give hints. Invoice release, posting and payment release are separate; a second person releases, only for the reviewed version.",
+    "empty": "No invoices.",
+    "search": "Search",
+    "choose": "please choose",
+    "create": "Capture invoice",
+    "gross": "Gross {gross} EUR (VAT {vat} EUR)",
+    "grossLabel": "Gross",
+    "review": "Review",
+    "posting": "Posting",
+    "hints": "Hints",
+    "invoice": "Invoice",
+    "hintsTitle": "Hints (no decision)",
+    "reviews": "Review steps",
+    "step": "Step",
+    "result": "Result",
+    "reason": "Reason",
+    "recordStep": "Record step",
+    "confirmIbanButton": "Confirm changed IBAN",
+    "confirmIban": "Confirm the changed IBAN after calling the issuer back?",
+    "release": "Release invoice (second person)",
+    "post": "Post",
+    "confirmPost": "Post the invoice now? Corrections only by reversal.",
+    "steps": {
+      "completeness": "Completeness",
+      "factual": "Factual review",
+      "arithmetic_tax": "Arithmetic and tax review"
+    },
+    "results": {
+      "ok": "no objection",
+      "reservation": "with reservation",
+      "query": "query",
+      "objected": "objected"
+    },
+    "fields": {
+      "ledger": "Ledger",
+      "provider_search": "Search issuer",
+      "provider": "Issuer",
+      "number": "Invoice number",
+      "invoice_date": "Invoice date",
+      "service_from": "Service from",
+      "net": "Net",
+      "vat_percent": "VAT rate",
+      "account": "Cost account",
+      "order_reference": "Order or contract",
+      "recipient_name": "Recipient as printed"
+    },
+    "reviewStatus": {
+      "open": "open",
+      "partially_reviewed": "partially reviewed",
+      "query": "query",
+      "objected": "objected",
+      "closed_with_reservation": "closed with reservation",
+      "closed_ok": "closed without objection"
+    },
+    "postingStatus": {
+      "unposted": "not posted",
+      "posted": "posted",
+      "reversed": "reversed"
+    }
   }
 }

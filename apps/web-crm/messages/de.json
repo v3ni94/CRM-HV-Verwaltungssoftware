@@ -69,7 +69,8 @@
     "bank": "Bank",
     "billing": "Abrechnung",
     "tickets": "Tickets",
-    "platform": "Plattform"
+    "platform": "Plattform",
+    "invoices": "Rechnungen"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -1111,5 +1112,67 @@
     "closed": "geschlossen",
     "g5": "G5-Nachweise",
     "noData": "Keine Daten."
+  },
+  "Invoices": {
+    "title": "Rechnungseingang",
+    "notice": "Automatische Prüfungen liefern nur Hinweise. Rechnungsfreigabe, Buchung und Zahlungsfreigabe sind getrennt; die Freigabe erteilt eine zweite Person und gilt nur für die geprüfte Version.",
+    "empty": "Keine Rechnungen.",
+    "search": "Suchen",
+    "choose": "bitte wählen",
+    "create": "Rechnung erfassen",
+    "gross": "Brutto {gross} EUR (Steuer {vat} EUR)",
+    "grossLabel": "Brutto",
+    "review": "Prüfung",
+    "posting": "Buchung",
+    "hints": "Hinweise",
+    "invoice": "Rechnung",
+    "hintsTitle": "Hinweise (keine Entscheidung)",
+    "reviews": "Prüfschritte",
+    "step": "Prüfschritt",
+    "result": "Ergebnis",
+    "reason": "Begründung",
+    "recordStep": "Prüfschritt erfassen",
+    "confirmIbanButton": "Abweichende IBAN bestätigen",
+    "confirmIban": "Abweichende IBAN nach Rückruf beim Aussteller bestätigen?",
+    "release": "Rechnung freigeben (zweite Person)",
+    "post": "Buchen",
+    "confirmPost": "Rechnung jetzt buchen? Korrektur nur per Storno.",
+    "steps": {
+      "completeness": "Vollständigkeit",
+      "factual": "sachliche Prüfung",
+      "arithmetic_tax": "rechnerische und steuerliche Prüfung"
+    },
+    "results": {
+      "ok": "ohne Beanstandung",
+      "reservation": "mit Vorbehalt",
+      "query": "Rückfrage",
+      "objected": "beanstandet"
+    },
+    "fields": {
+      "ledger": "Buchungskreis",
+      "provider_search": "Aussteller suchen",
+      "provider": "Aussteller",
+      "number": "Rechnungsnummer",
+      "invoice_date": "Rechnungsdatum",
+      "service_from": "Leistung ab",
+      "net": "Netto",
+      "vat_percent": "Steuersatz",
+      "account": "Kostenkonto",
+      "order_reference": "Auftrag oder Vertrag",
+      "recipient_name": "Rechnungsempfänger laut Beleg"
+    },
+    "reviewStatus": {
+      "open": "offen",
+      "partially_reviewed": "teilweise geprüft",
+      "query": "Rückfrage",
+      "objected": "beanstandet",
+      "closed_with_reservation": "mit Vorbehalt abgeschlossen",
+      "closed_ok": "ohne Beanstandung abgeschlossen"
+    },
+    "postingStatus": {
+      "unposted": "nicht gebucht",
+      "posted": "gebucht",
+      "reversed": "storniert"
+    }
   }
 }
