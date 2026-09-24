@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -35,68 +36,72 @@ export default async function LedgerPage({ params }: { params: Promise<{ id: str
   const rows = ((trial.data?.accounts ?? []) as TrialRow[]);
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className={ui.title}>{ledger.data.name}</h1>
-        <p className="text-sm text-muted">
-          {t("leading")}: {t(`system.${ledger.data.leading_system}`)} · {t("lockedUntil")}:{" "}
-          {formatDate(ledger.data.locked_until) || t("notLocked")}
-        </p>
-      </div>
+      <PageHeader
+        breadcrumb={[{ href: "/buchhaltung", label: t("title") }]}
+        title={ledger.data.name}
+        description={`${t("leading")}: ${t(`system.${ledger.data.leading_system}`)} · ${t("lockedUntil")}: ${
+          formatDate(ledger.data.locked_until) || t("notLocked")
+        }`}
+      />
       {ledger.data.leading_system !== "mhvp" ? <p className={ui.notice}>{t("parallelNotice")}</p> : null}
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">{t("trialBalance", { date: formatDate(today) })}</h2>
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+        <h2 className={ui.h2}>{t("trialBalance", { date: formatDate(today) })}</h2>
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("account")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("debit")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("credit")}</th>
-              <th className="py-1.5 text-right font-medium">{t("balance")}</th>
+              <th>{t("account")}</th>
+              <th className="num">{t("debit")}</th>
+              <th className="num">{t("credit")}</th>
+              <th className="num">{t("balance")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.account_id} className="border-b border-border">
-                <td className="py-1.5 pr-3">
+              <tr key={r.account_id}>
+                <td>
                   {r.number} {r.name}
                 </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(r.debit)}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(r.credit)}</td>
-                <td className="py-1.5 text-right tabular-nums">{formatEur(r.balance)}</td>
+                <td className="num">{formatEur(r.debit)}</td>
+                <td className="num">{formatEur(r.credit)}</td>
+                <td className="num">{formatEur(r.balance)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+</div>
       </section>
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">{tr("openItems", { date: formatDate(today) })}</h2>
+        <h2 className={ui.h2}>{tr("openItems", { date: formatDate(today) })}</h2>
         <OpenItemsTable rows={(open.data ?? []) as OpenItem[]} />
       </section>
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">{t("journal")}</h2>
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+        <h2 className={ui.h2}>{t("journal")}</h2>
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("number")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("date")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("text")}</th>
-              <th className="py-1.5 font-medium">{t("status")}</th>
+              <th>{t("number")}</th>
+              <th>{t("date")}</th>
+              <th>{t("text")}</th>
+              <th>{t("status")}</th>
             </tr>
           </thead>
           <tbody>
             {(journal.data ?? []).map((e) => (
-              <tr key={e.id} className="border-b border-border">
-                <td className="py-1.5 pr-3 tabular-nums">{e.number ? `${e.fiscal_year}-${e.number}` : ""}</td>
-                <td className="py-1.5 pr-3">{formatDate(e.booking_date)}</td>
-                <td className="py-1.5 pr-3">
+              <tr key={e.id}>
+                <td className="tabular-nums">{e.number ? `${e.fiscal_year}-${e.number}` : ""}</td>
+                <td>{formatDate(e.booking_date)}</td>
+                <td>
                   {e.text}
                   {e.reversed_by_id ? <span className="ml-2 text-xs text-muted">{t("reversed")}</span> : null}
                 </td>
-                <td className="py-1.5">{t(`entryStatus.${e.status}`)}</td>
+                <td>{t(`entryStatus.${e.status}`)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+</div>
       </section>
     </div>
   );

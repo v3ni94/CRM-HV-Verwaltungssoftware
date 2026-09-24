@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { Prospects } from "@/components/letting/Prospects";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -29,9 +30,9 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
   const missing = expose.data.missing as string[];
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{String(fields.title ?? "")}</h1>
+      <PageHeader breadcrumb={[{ href: "/vermietung", label: t("title") }]} title={String(fields.title ?? "")} />
       <section className={ui.card}>
-        <h2 className="font-medium">{t("expose")}</h2>
+        <h2 className={ui.h2}>{t("expose")}</h2>
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           {Object.entries(fields).map(([k, v]) => (
             <div key={k} className="contents">
@@ -45,7 +46,7 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
         </p>
         <p className="mt-1 text-xs text-muted">{String(expose.data.note)}</p>
       </section>
-      <h2 className="font-medium">{t("title")}</h2>
+      <h2 className={ui.h2}>{t("title")}</h2>
       <Prospects unitId={unitId} rows={rows} names={names} />
     </div>
   );

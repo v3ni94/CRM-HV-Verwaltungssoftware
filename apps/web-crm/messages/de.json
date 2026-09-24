@@ -86,7 +86,8 @@
     "myData": "Meine Daten",
     "navCollapse": "Leiste einklappen",
     "navExpand": "Leiste ausklappen",
-    "dms": "DMS"
+    "dms": "DMS",
+    "openNav": "Navigation öffnen"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -803,6 +804,31 @@
       "delete": "Löschen",
       "confirmDelete": "Anzeige wirklich löschen?",
       "onlyDraftDelete": "Nur Anzeigen im Entwurf können gelöscht werden."
+    },
+    "import": {
+      "title": "FLOW-Import",
+      "back": "Zurück zu Makler",
+      "intro": "SQL-Datenbankexport aus Müller FLOW hochladen und vor der Übernahme prüfen. Es erfolgt kein Zugriff auf FLOWFACT.",
+      "file": "SQL-Dump",
+      "upload": "Prüfen",
+      "flowNumber": "FLOW-Nr.",
+      "kind": "Art",
+      "match": "Zuordnung",
+      "problems": "Hinweise",
+      "action": "Aktion",
+      "property": "Objekt",
+      "unit": "Einheit",
+      "selectProperty": "Objekt wählen",
+      "selectUnit": "Einheit wählen",
+      "actionCreate": "Übernehmen",
+      "actionSkip": "Überspringen",
+      "apply": "Ausgewählte übernehmen",
+      "confirmApply": "Sollen {count} Anzeigen übernommen werden?",
+      "resultSummary": "{created} Anzeigen angelegt, {skipped} übersprungen.",
+      "outcome": {
+        "created": "Angelegt",
+        "skipped": "Übersprungen"
+      }
     }
   },
   "Receivables": {

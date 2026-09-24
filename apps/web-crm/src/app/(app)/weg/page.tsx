@@ -4,6 +4,8 @@ import Link from "next/link";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -16,14 +18,14 @@ export default async function HoaPage() {
   const rows = (data?.items ?? []).filter((p) => p.management_type !== "rental");
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("gateNotice")}</p>
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <EmptyState title={t("empty")} />
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
           {rows.map((p) => (

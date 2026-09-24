@@ -152,3 +152,21 @@ export function ChevronIcon(props: SVGProps<SVGSVGElement>) {
     </Base>
   );
 }
+
+/** Hamburger glyph for the mobile navigation toggle. */
+export function MenuIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M3 6h14M3 10h14M3 14h14" />
+    </Base>
+  );
+}
+
+/** Close (×) glyph, used by the mobile navigation drawer. */
+export function CloseIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M5 5l10 10M15 5 5 15" />
+    </Base>
+  );
+}

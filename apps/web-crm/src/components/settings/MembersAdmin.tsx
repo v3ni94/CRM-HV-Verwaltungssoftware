@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { StatusPill } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -14,7 +15,7 @@ type Role = components["schemas"]["RoleOut"];
 
 function StatusBadge({ status }: { status: string }) {
   const t = useTranslations("Members");
-  return <span className={status === "active" ? ui.badgeSuccess : ui.badgeWarning}>{t(`status.${status}`)}</span>;
+  return <StatusPill variant={status === "active" ? "success" : "warning"} label={t(`status.${status}`)} />;
 }
 
 function RolesEditor({ member, roles, onSaved }: { member: Member; roles: Role[]; onSaved: (roleCodes: string[]) => void }) {
@@ -42,7 +43,7 @@ function RolesEditor({ member, roles, onSaved }: { member: Member; roles: Role[]
 
   if (!open) {
     return (
-      <button type="button" className="text-xs underline" onClick={() => setOpen(true)}>
+      <button type="button" className={ui.buttonSm} onClick={() => setOpen(true)}>
         {t("editRoles")}
       </button>
     );
@@ -101,7 +102,7 @@ function ResetPassword({ membershipId }: { membershipId: string }) {
 
   if (!open) {
     return (
-      <button type="button" className="text-xs underline" onClick={() => setOpen(true)}>
+      <button type="button" className={ui.buttonSm} onClick={() => setOpen(true)}>
         {t("resetPassword")}
       </button>
     );
@@ -240,7 +241,42 @@ export function MembersAdmin({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <ul className="flex flex-col gap-2 sm:hidden" data-testid="members-cards">
+        {members.map((m) => (
+          <li key={m.membership_id} className={ui.card} data-testid="member-card">
+            <div className="flex flex-col gap-1.5">
+              <span className="flex items-center justify-between gap-2">
+                {m.contact_id ? (
+                  <Link href={`/kontakte/${m.contact_id}`} className="font-medium underline">
+                    {m.display_name}
+                  </Link>
+                ) : (
+                  <span className="font-medium">{m.display_name}</span>
+                )}
+                <StatusBadge status={m.status} />
+              </span>
+              <span className="text-sm text-muted">{m.email}</span>
+              <span className="text-sm text-muted">{m.roles.join(", ")}</span>
+              <span className="text-xs text-muted">{t("lastLogin")}: {formatDateTime(m.last_login_at)}</span>
+              {canUpdate ? (
+                <div className="flex flex-col gap-1.5 pt-1">
+                  <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
+                  <ResetPassword membershipId={m.membership_id} />
+                  <button
+                    type="button"
+                    className={`${ui.buttonSm} ${ui.actionFull}`}
+                    disabled={busyId === m.membership_id}
+                    onClick={() => void toggleStatus(m)}
+                  >
+                    {m.status === "active" ? t("disable") : t("enable")}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className={ui.table}>
           <thead>
             <tr>
@@ -277,7 +313,7 @@ export function MembersAdmin({
                       <ResetPassword membershipId={m.membership_id} />
                       <button
                         type="button"
-                        className="text-xs underline"
+                        className={ui.buttonSm}
                         disabled={busyId === m.membership_id}
                         onClick={() => void toggleStatus(m)}
                       >

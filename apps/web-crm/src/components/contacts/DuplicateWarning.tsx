@@ -26,7 +26,8 @@ export function DuplicateWarning({
         {t("title")}
       </h2>
       <p className="mb-3 text-sm text-muted">{t("hint")}</p>
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+<table className="w-full text-sm">
         <thead className="text-left text-xs text-muted">
           <tr>
             <th className="py-1 pr-2 font-medium">{tf("lastName")}</th>
@@ -58,6 +59,7 @@ export function DuplicateWarning({
           ))}
         </tbody>
       </table>
+</div>
       <div className="mt-3 flex gap-2">
         <button type="button" className={ui.primary} onClick={onSaveAnyway} disabled={busy}>
           {tf("saveAnyway")}

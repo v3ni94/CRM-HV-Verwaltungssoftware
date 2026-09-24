@@ -3,16 +3,17 @@ import Link from "next/link";
 
 import { PropertyCreate } from "@/components/properties/PropertyCreate";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_CLASS: Record<string, string> = {
-  active: ui.badgeSuccess,
-  onboarding: ui.badgeWarning,
-  terminated: ui.badge,
+const STATUS_VARIANT: Record<string, StatusPillVariant> = {
+  active: "success",
+  onboarding: "warning",
+  terminated: "neutral",
 };
 
 /** Filter by management scope (operator 24.09.2026): rental, HOA, or HOA with SEV that has
@@ -71,42 +72,66 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted">{t(`emptyScope.${scope}`)}</p>
       ) : (
-        <div className={`${ui.card} overflow-x-auto p-0`}>
-          <table className={ui.table} data-testid="properties">
-            <thead>
-              <tr>
-                <th>{t("number")}</th>
-                <th>{t("name")}</th>
-                <th>{t("address")}</th>
-                <th>{t("type")}</th>
-                <th>{t("status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((p) => (
-                <tr key={p.id}>
-                  <td className="tabular-nums">
-                    <Link href={`/objekte/${p.id}`} className="font-medium hover:underline">
-                      {p.number}
-                    </Link>
-                  </td>
-                  <td>
-                    <Link href={`/objekte/${p.id}`} className="hover:underline">
-                      {p.name}
-                    </Link>
-                  </td>
-                  <td className="text-muted">{[p.street, p.house_number].filter(Boolean).join(" ")}{p.city ? `, ${p.city}` : ""}</td>
-                  <td>
-                    <span className={ui.badge}>{t(`managementType.${p.management_type}`)}</span>
-                  </td>
-                  <td>
-                    <span className={STATUS_CLASS[p.status] ?? ui.badge}>{t(`status.${p.status}`)}</span>
-                  </td>
+        <>
+          <ul className="flex flex-col gap-2 sm:hidden" data-testid="properties-cards">
+            {rows.map((p) => (
+              <li key={p.id} className={ui.cardLink} data-testid="property-card">
+                <Link href={`/objekte/${p.id}`} className="flex flex-col gap-1.5">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="font-medium">
+                      {p.number} · {p.name}
+                    </span>
+                    <StatusPill variant={STATUS_VARIANT[p.status] ?? "neutral"} label={t(`status.${p.status}`)} />
+                  </span>
+                  <span className="text-sm text-muted">
+                    {[p.street, p.house_number].filter(Boolean).join(" ")}
+                    {p.city ? `, ${p.city}` : ""}
+                  </span>
+                  <span className={ui.badge}>{t(`managementType.${p.management_type}`)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className={`${ui.card} hidden overflow-x-auto p-0 sm:block`}>
+            <table className={`${ui.table} mhvp-table--sticky-col`} data-testid="properties">
+              <thead>
+                <tr>
+                  <th>{t("number")}</th>
+                  <th>{t("name")}</th>
+                  <th>{t("address")}</th>
+                  <th>{t("type")}</th>
+                  <th>{t("status")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((p) => (
+                  <tr key={p.id}>
+                    <td className="tabular-nums">
+                      <Link href={`/objekte/${p.id}`} className="font-medium hover:underline">
+                        {p.number}
+                      </Link>
+                    </td>
+                    <td>
+                      <Link href={`/objekte/${p.id}`} className="hover:underline">
+                        {p.name}
+                      </Link>
+                    </td>
+                    <td className="text-muted">
+                      {[p.street, p.house_number].filter(Boolean).join(" ")}
+                      {p.city ? `, ${p.city}` : ""}
+                    </td>
+                    <td>
+                      <span className={ui.badge}>{t(`managementType.${p.management_type}`)}</span>
+                    </td>
+                    <td>
+                      <StatusPill variant={STATUS_VARIANT[p.status] ?? "neutral"} label={t(`status.${p.status}`)} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
       {canCreate ? <PropertyCreate /> : null}
     </div>

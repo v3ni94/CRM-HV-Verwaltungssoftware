@@ -133,7 +133,7 @@ export function Immoware24Wizard({ fields, mappings: initialMappings, canUndo }:
 
       {step === "type" ? (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">{t("typeTitle")}</h2>
+          <h2 className={ui.h2}>{t("typeTitle")}</h2>
           <p className={ui.notice}>{t("orderHint")}</p>
           <fieldset className="flex flex-col gap-2">
             <legend className="sr-only">{t("typeTitle")}</legend>
@@ -156,7 +156,7 @@ export function Immoware24Wizard({ fields, mappings: initialMappings, canUndo }:
 
       {step === "upload" ? (
         <form className="flex max-w-lg flex-col gap-3" onSubmit={upload}>
-          <h2 className="text-lg font-semibold">{t("uploadTitle", { report: t(`report.${reportType}`) })}</h2>
+          <h2 className={ui.h2}>{t("uploadTitle", { report: t(`report.${reportType}`) })}</h2>
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{t("file")}</span>
             <input
@@ -196,7 +196,7 @@ export function Immoware24Wizard({ fields, mappings: initialMappings, canUndo }:
 
       {step === "validate" && source ? (
         <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">{t("validationTitle")}</h2>
+          <h2 className={ui.h2}>{t("validationTitle")}</h2>
           {mapping ? <p className="text-sm text-muted">{t("templateOption", { name: mapping.name, version: mapping.version })}</p> : null}
           <ValidationReport sourceId={source.id} counts={validation} />
           <div className="flex flex-wrap gap-2">
@@ -226,7 +226,7 @@ export function Immoware24Wizard({ fields, mappings: initialMappings, canUndo }:
 
       {step === "done" && source ? (
         <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">{t("applyTitle")}</h2>
+          <h2 className={ui.h2}>{t("applyTitle")}</h2>
           {applied ? <RunReportView report={applied} testId="apply-report" /> : null}
           {source.import_run_id ? (
             <div className="flex flex-wrap items-center gap-3">

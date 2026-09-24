@@ -182,7 +182,7 @@ export function LevyAmend({ id, basePath }: { id: string; basePath: string }) {
   };
   return (
     <section className={ui.card}>
-      <h2 className="font-medium">{t("amend")}</h2>
+      <h2 className={ui.h2}>{t("amend")}</h2>
       <p className="text-xs text-muted">{t("amendNote")}</p>
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
@@ -197,7 +197,7 @@ export function LevyAmend({ id, basePath }: { id: string; basePath: string }) {
           <span className={ui.label}>{t("reason")}</span>
           <input className={ui.input} value={reason} onChange={(e) => setReason(e.target.value)} />
         </label>
-        <button type="button" className={ui.primary} disabled={busy || !valid} onClick={submit}>
+        <button type="button" className={`${ui.primary} ${ui.actionFull}`} disabled={busy || !valid} onClick={submit}>
           {t("createAmendment")}
         </button>
       </div>

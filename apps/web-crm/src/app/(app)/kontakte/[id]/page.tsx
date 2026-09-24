@@ -187,7 +187,8 @@ export default async function ContactDetailPage({
 
       {tab === "bankverbindungen" ? (
         contact.bank_accounts.length ? (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+<table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs text-muted">
               <tr>
                 <th className="py-1 pr-3 font-medium">{tf("iban")}</th>
@@ -211,6 +212,7 @@ export default async function ContactDetailPage({
               ))}
             </tbody>
           </table>
+</div>
         ) : (
           <p className="text-sm text-muted">{t("none")}</p>
         )

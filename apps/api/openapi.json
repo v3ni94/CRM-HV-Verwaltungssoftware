@@ -1593,6 +1593,20 @@
         "title": "BatchIn",
         "type": "object"
       },
+      "Body_flow_import_preview_api_v1_letting_flow_import_preview_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_flow_import_preview_api_v1_letting_flow_import_preview_post",
+        "type": "object"
+      },
       "Body_token_api_v1_oidc_token_post": {
         "properties": {
           "client_id": {
@@ -6966,6 +6980,58 @@
           "params"
         ],
         "title": "FilterOut",
+        "type": "object"
+      },
+      "FlowImportApplyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FlowImportItemIn"
+            },
+            "maxItems": 2000,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "FlowImportApplyIn",
+        "type": "object"
+      },
+      "FlowImportItemIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "pattern": "^(create|skip)$",
+            "title": "Action",
+            "type": "string"
+          },
+          "index": {
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          }
+        },
+        "required": [
+          "index",
+          "action"
+        ],
+        "title": "FlowImportItemIn",
         "type": "object"
       },
       "GateDecision": {
@@ -29876,6 +29942,149 @@
         "summary": "Serienbrief erzeugen",
         "tags": [
           "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/letting/flow-import/preview": {
+      "post": {
+        "operationId": "flow_import_preview_api_v1_letting_flow_import_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_flow_import_preview_api_v1_letting_flow_import_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Flow Import Preview Api V1 Letting Flow Import Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "FLOW-Datenbankexport (SQL-Dump) prüfen",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/flow-import/{run_id}": {
+      "get": {
+        "operationId": "get_flow_import_run_api_v1_letting_flow_import__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Flow Import Run Api V1 Letting Flow Import  Run Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "FLOW-Importlauf",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/flow-import/{run_id}/apply": {
+      "post": {
+        "operationId": "apply_flow_import_api_v1_letting_flow_import__run_id__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowImportApplyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Apply Flow Import Api V1 Letting Flow Import  Run Id  Apply Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "FLOW-Anzeigen übernehmen",
+        "tags": [
+          "letting"
         ]
       }
     },

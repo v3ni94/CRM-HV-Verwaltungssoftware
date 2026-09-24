@@ -5,6 +5,8 @@ import { InvoiceCreate } from "@/components/invoices/InvoiceForms";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -27,38 +29,40 @@ export default async function InvoicesPage() {
   }[];
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("notice")}</p>
       <InvoiceCreate ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, label: l.name }))} accounts={accounts} />
       {rows.length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <EmptyState title={t("empty")} />
       ) : (
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("fields.number")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("fields.invoice_date")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("grossLabel")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("review")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("posting")}</th>
-              <th className="py-1.5 font-medium">{t("hints")}</th>
+              <th>{t("fields.number")}</th>
+              <th>{t("fields.invoice_date")}</th>
+              <th className="num">{t("grossLabel")}</th>
+              <th>{t("review")}</th>
+              <th>{t("posting")}</th>
+              <th>{t("hints")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-border">
-                <td className="py-1.5 pr-3">
+              <tr key={r.id}>
+                <td>
                   <Link href={`/rechnungen/${r.id}`} className="font-medium hover:underline">{r.number}</Link>
                 </td>
-                <td className="py-1.5 pr-3">{formatDate(r.invoice_date)}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(r.gross)}</td>
-                <td className="py-1.5 pr-3">{t(`reviewStatus.${r.review_status}`)}</td>
-                <td className="py-1.5 pr-3">{t(`postingStatus.${r.posting_status}`)}</td>
-                <td className="py-1.5 tabular-nums">{r.findings.length}</td>
+                <td>{formatDate(r.invoice_date)}</td>
+                <td className="num">{formatEur(r.gross)}</td>
+                <td>{t(`reviewStatus.${r.review_status}`)}</td>
+                <td>{t(`postingStatus.${r.posting_status}`)}</td>
+                <td className="tabular-nums">{r.findings.length}</td>
               </tr>
             ))}
           </tbody>
         </table>
+</div>
       )}
     </div>
   );

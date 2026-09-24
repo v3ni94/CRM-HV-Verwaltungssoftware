@@ -401,14 +401,25 @@ export function AiChatWidget() {
       {open ? (
         <section
           aria-label={t("title")}
-          className="fixed bottom-20 right-5 z-40 flex h-[32rem] w-[min(26rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-bg shadow-lg"
+          className="fixed inset-0 z-40 flex flex-col overflow-hidden border border-border bg-bg shadow-lg sm:inset-auto sm:bottom-20 sm:right-5 sm:h-[32rem] sm:w-[min(26rem,calc(100vw-2.5rem))] sm:rounded-2xl"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <header className="flex items-center justify-between border-b border-border-soft bg-surface px-4 py-3">
             <div>
               <p className="text-sm font-semibold">{t("title")}</p>
               <p className="mhvp-label">{t("onPage", { page: t(`area.${ctx.area}`) })}</p>
             </div>
-            <span className="h-2 w-2 shrink-0 rounded-full bg-gold" aria-hidden />
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-gold" aria-hidden />
+              <button
+                type="button"
+                aria-label={t("close")}
+                onClick={() => setOpen(false)}
+                className="flex h-11 w-11 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg sm:hidden"
+              >
+                <span aria-hidden>×</span>
+              </button>
+            </div>
           </header>
           <ol className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 py-3 text-sm" data-testid="ai-chat-log">
             {entries.map((e, i) => {

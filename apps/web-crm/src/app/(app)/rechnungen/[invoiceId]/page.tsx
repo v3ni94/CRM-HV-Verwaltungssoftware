@@ -35,25 +35,27 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
       </p>
       {findings.length ? (
         <section className={ui.notice} data-testid="findings">
-          <h2 className="font-medium">{t("hintsTitle")}</h2>
+          <h2 className={ui.h2}>{t("hintsTitle")}</h2>
           <ul className="list-inside list-disc">
             {findings.map((f) => <li key={f}>{f}</li>)}
           </ul>
         </section>
       ) : null}
-      <table className="w-full border-collapse text-sm">
+      <div className="overflow-x-auto">
+<table className="mhvp-table">
         <tbody>
           {lines.map((l, i) => (
-            <tr key={i} className="border-b border-border">
-              <td className="py-1.5 pr-3">{l.text}</td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(l.net)}</td>
-              <td className="py-1.5 text-right tabular-nums">{formatEur(l.vat)}</td>
+            <tr key={i}>
+              <td>{l.text}</td>
+              <td className="num">{formatEur(l.net)}</td>
+              <td className="num">{formatEur(l.vat)}</td>
             </tr>
           ))}
         </tbody>
       </table>
+</div>
       <section className="flex flex-col gap-1">
-        <h2 className="font-medium">{t("reviews")}</h2>
+        <h2 className={ui.h2}>{t("reviews")}</h2>
         <ul className="text-sm">
           {reviews.map((r, i) => (
             <li key={i}>

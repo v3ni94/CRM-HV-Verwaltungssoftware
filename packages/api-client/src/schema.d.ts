@@ -3254,6 +3254,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/letting/flow-import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** FLOW-Datenbankexport (SQL-Dump) prüfen */
+        post: operations["flow_import_preview_api_v1_letting_flow_import_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/flow-import/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** FLOW-Importlauf */
+        get: operations["get_flow_import_run_api_v1_letting_flow_import__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/flow-import/{run_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** FLOW-Anzeigen übernehmen */
+        post: operations["apply_flow_import_api_v1_letting_flow_import__run_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/letting/listings": {
         parameters: {
             query?: never;
@@ -6127,6 +6178,11 @@ export interface components {
             /** Order Ids */
             order_ids: string[];
         };
+        /** Body_flow_import_preview_api_v1_letting_flow_import_preview_post */
+        Body_flow_import_preview_api_v1_letting_flow_import_preview_post: {
+            /** File */
+            file: string;
+        };
         /** Body_token_api_v1_oidc_token_post */
         Body_token_api_v1_oidc_token_post: {
             /** Client Id */
@@ -7813,6 +7869,20 @@ export interface components {
             };
             /** Resource */
             resource: string;
+        };
+        /** FlowImportApplyIn */
+        FlowImportApplyIn: {
+            /** Items */
+            items: components["schemas"]["FlowImportItemIn"][];
+        };
+        /** FlowImportItemIn */
+        FlowImportItemIn: {
+            /** Action */
+            action: string;
+            /** Index */
+            index: number;
+            /** Unit Id */
+            unit_id?: string | null;
         };
         /** GateDecision */
         GateDecision: {
@@ -18906,6 +18976,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SerialLetterOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    flow_import_preview_api_v1_letting_flow_import_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_flow_import_preview_api_v1_letting_flow_import_preview_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_flow_import_run_api_v1_letting_flow_import__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_flow_import_api_v1_letting_flow_import__run_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlowImportApplyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

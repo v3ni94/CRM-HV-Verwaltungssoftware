@@ -129,7 +129,8 @@ function RuleRow({ rule }: { rule: RentLawRule }) {
 export function RentLawRules({ rules }: { rules: RentLawRule[] }) {
   const t = useTranslations("RentLaw");
   return (
-    <table className="w-full text-sm">
+    <div className="overflow-x-auto">
+<table className="w-full text-sm">
       <thead>
         <tr className="text-left text-xs text-muted">
           <th>{t("rule")}</th>
@@ -145,6 +146,7 @@ export function RentLawRules({ rules }: { rules: RentLawRule[] }) {
         ))}
       </tbody>
     </table>
+</div>
   );
 }
 
@@ -194,7 +196,8 @@ export function CapAreas({ areas }: { areas: CapArea[] }) {
   return (
     <div className="flex flex-col gap-3">
       {areas.length ? (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+<table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-muted">
               <th>{t("area.state")}</th>
@@ -226,6 +229,7 @@ export function CapAreas({ areas }: { areas: CapArea[] }) {
             ))}
           </tbody>
         </table>
+</div>
       ) : (
         <p className="text-sm text-muted">{t("area.none")}</p>
       )}

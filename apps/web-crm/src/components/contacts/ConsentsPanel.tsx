@@ -68,7 +68,8 @@ export function ConsentsPanel({ contactId, consents }: { contactId: string; cons
         </p>
       ) : null}
       {consents.length ? (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+<table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs text-muted">
             <tr>
               <th className="py-1 pr-3 font-medium">{t("consents.kind")}</th>
@@ -96,6 +97,7 @@ export function ConsentsPanel({ contactId, consents }: { contactId: string; cons
             ))}
           </tbody>
         </table>
+</div>
       ) : (
         <p className="text-sm text-muted">{t("none")}</p>
       )}

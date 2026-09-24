@@ -46,15 +46,16 @@ export function MemberVoting({
   const openItems = agenda.filter((a) => !a.resolution);
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="font-medium">{t("attendance")}</h2>
-      <table className="w-full border-collapse text-sm">
-        <thead className="border-b border-border text-left text-xs text-muted">
+      <h2 className={ui.h2}>{t("attendance")}</h2>
+      <div className="overflow-x-auto">
+<table className="mhvp-table">
+        <thead>
           <tr>
-            <th className="py-1.5 pr-3 font-medium">{t("unit")}</th>
-            <th className="py-1.5 pr-3 font-medium">{t("owner")}</th>
-            <th className="py-1.5 pr-3 font-medium">{t("presence")}</th>
+            <th>{t("unit")}</th>
+            <th>{t("owner")}</th>
+            <th>{t("presence")}</th>
             {openItems.map((a) => (
-              <th key={a.id} className="py-1.5 pr-3 font-medium">
+              <th key={a.id}>
                 TOP {a.position}
               </th>
             ))}
@@ -64,17 +65,17 @@ export function MemberVoting({
           {members.map((m) => {
             const represented = m.present || m.proxy;
             return (
-              <tr key={m.contract_id} className="border-b border-border">
-                <td className="py-1.5 pr-3">{m.unit_number}</td>
-                <td className="py-1.5 pr-3">{m.party_name}</td>
-                <td className="py-1.5 pr-3">
+              <tr key={m.contract_id}>
+                <td>{m.unit_number}</td>
+                <td>{m.party_name}</td>
+                <td>
                   {m.proxy ? t("byProxy") : m.present ? t("present") : open ? (
                     <button
                       type="button"
                       className={ui.button}
                       disabled={busy}
                       onClick={() => post(`meetings/${meetingId}/attendance`, { contract_id: m.contract_id, present: true })}
-                    >
+>
                       {t("markPresent")}
                     </button>
                   ) : (
@@ -97,7 +98,7 @@ export function MemberVoting({
                               disabled={busy}
                               aria-label={`${m.unit_number ?? ""} TOP ${a.position} ${t(`choice.${c}`)}`}
                               onClick={() => post(`agenda/${a.id}/votes`, { contract_id: m.contract_id, choice: c })}
-                            >
+>
                               {t(`choiceShort.${c}`)}
                             </button>
                           ))}
@@ -111,6 +112,7 @@ export function MemberVoting({
           })}
         </tbody>
       </table>
+</div>
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}

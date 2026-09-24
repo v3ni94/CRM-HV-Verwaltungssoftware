@@ -88,7 +88,7 @@ export function SideNav({
 
   return (
     <aside
-      className={`flex flex-col border-b border-rail-border bg-rail-bg text-rail-fg md:sticky md:top-0 md:h-screen md:shrink-0 md:border-b-0 md:border-r md:transition-[width] md:duration-200 ${
+      className={`hidden flex-col bg-rail-bg text-rail-fg md:sticky md:top-0 md:flex md:h-screen md:shrink-0 md:border-r md:border-rail-border md:transition-[width] md:duration-200 ${
         railCollapsed ? "md:w-[4.5rem]" : "md:w-64"
       }`}
     >
@@ -136,7 +136,7 @@ export function SideNav({
                       href={item.href}
                       title={railCollapsed ? item.label : undefined}
                       aria-current={active(item.href) ? "page" : undefined}
-                      className={`relative flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition duration-150 ${
+                      className={`relative flex min-h-11 items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition duration-150 ${
                         railCollapsed ? "md:justify-center md:px-2" : ""
                       } ${
                         active(item.href)

@@ -39,19 +39,20 @@ export function Prospects({ unitId, rows, names }: { unitId: string; rows: Prosp
   };
   return (
     <section className="flex flex-col gap-2">
-      <table className="w-full border-collapse text-sm">
+      <div className="overflow-x-auto">
+<table className="mhvp-table">
         <tbody>
           {rows.map((p) => (
-            <tr key={p.id} className="border-b border-border">
-              <td className="py-1.5 pr-3">{names[p.contact_id] ?? p.contact_id}</td>
-              <td className="py-1.5 pr-3">
+            <tr key={p.id}>
+              <td>{names[p.contact_id] ?? p.contact_id}</td>
+              <td>
                 <select
                   aria-label={t("status")}
                   className={ui.input}
                   value={p.status}
                   disabled={busy}
                   onChange={(e) => run(`/api/bff/letting/prospects/${p.id}`, "PATCH", { status: e.target.value })}
-                >
+>
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>
                       {t(`statuses.${s}`)}
@@ -59,14 +60,14 @@ export function Prospects({ unitId, rows, names }: { unitId: string; rows: Prosp
                   ))}
                 </select>
               </td>
-              <td className="py-1.5 pr-3 text-muted">{t("deleteAfter", { date: formatDate(p.delete_after) })}</td>
-              <td className="py-1.5">
+              <td className="text-muted">{t("deleteAfter", { date: formatDate(p.delete_after) })}</td>
+              <td>
                 <button
                   type="button"
                   className={ui.button}
                   disabled={busy}
                   onClick={() => window.confirm(t("confirmDelete")) && run(`/api/bff/letting/prospects/${p.id}`, "DELETE")}
-                >
+>
                   {t("delete")}
                 </button>
               </td>
@@ -74,6 +75,7 @@ export function Prospects({ unitId, rows, names }: { unitId: string; rows: Prosp
           ))}
         </tbody>
       </table>
+</div>
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("searchContact")}</span>
@@ -88,7 +90,7 @@ export function Prospects({ unitId, rows, names }: { unitId: string; rows: Prosp
             className={ui.input}
             value={contact?.id ?? ""}
             onChange={(e) => setContact(hits.find((h) => h.id === e.target.value) ?? null)}
-          >
+>
             <option value="">{t("choose")}</option>
             {hits.map((h) => (
               <option key={h.id} value={h.id}>
@@ -112,7 +114,7 @@ export function Prospects({ unitId, rows, names }: { unitId: string; rows: Prosp
               setQ("");
             }
           }}
-        >
+>
           {t("add")}
         </button>
       </div>

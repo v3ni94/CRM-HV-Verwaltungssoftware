@@ -48,7 +48,7 @@ export function StatementWorkbench({ id, status, keys }: { id: string; status: s
       setBasis("");
     }
   };
-  const valid = label.trim() && /^\d+([.,]\d{1,2})?$/.test(amount) && key && basis.trim().length >= 3;
+  const valid = label.trim() && /^\d+([.,]\d{1,2})?$/.test(amount) && key && basis.trim().length>= 3;
   return (
     <section className="flex flex-col gap-3">
       {status === "draft" ? (
@@ -99,7 +99,7 @@ export function StatementWorkbench({ id, status, keys }: { id: string; status: s
             className={ui.primary}
             onClick={() => call("transition", { target: "issued", delivered_at: delivered })}
             disabled={busy || !delivered}
-          >
+>
             {t("issue")}
           </button>
         </div>
@@ -121,27 +121,29 @@ export function StatementWorkbench({ id, status, keys }: { id: string; status: s
 export function ResultTable({ rows }: { rows: { unit_number: string; costs: string; advances_due: string; advances_paid: string; balance: string }[] }) {
   const t = useTranslations("Billing");
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="border-b border-border text-left text-xs text-muted">
+    <div className="overflow-x-auto">
+<table className="mhvp-table">
+      <thead>
         <tr>
-          <th className="py-1.5 pr-3 font-medium">{t("unit")}</th>
-          <th className="py-1.5 pr-3 text-right font-medium">{t("costs")}</th>
-          <th className="py-1.5 pr-3 text-right font-medium">{t("advancesDue")}</th>
-          <th className="py-1.5 pr-3 text-right font-medium">{t("advancesPaid")}</th>
-          <th className="py-1.5 text-right font-medium">{t("balance")}</th>
+          <th>{t("unit")}</th>
+          <th className="num">{t("costs")}</th>
+          <th className="num">{t("advancesDue")}</th>
+          <th className="num">{t("advancesPaid")}</th>
+          <th className="num">{t("balance")}</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((r, i) => (
-          <tr key={`${r.unit_number}-${i}`} className="border-b border-border">
-            <td className="py-1.5 pr-3">{r.unit_number}</td>
-            <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(r.costs)}</td>
-            <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(r.advances_due)}</td>
-            <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(r.advances_paid)}</td>
-            <td className="py-1.5 text-right tabular-nums">{formatEur(r.balance)}</td>
+          <tr key={`${r.unit_number}-${i}`}>
+            <td>{r.unit_number}</td>
+            <td className="num">{formatEur(r.costs)}</td>
+            <td className="num">{formatEur(r.advances_due)}</td>
+            <td className="num">{formatEur(r.advances_paid)}</td>
+            <td className="num">{formatEur(r.balance)}</td>
           </tr>
         ))}
       </tbody>
     </table>
+</div>
   );
 }

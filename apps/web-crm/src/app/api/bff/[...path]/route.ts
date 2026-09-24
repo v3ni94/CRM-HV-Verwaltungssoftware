@@ -112,6 +112,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Makler (M28-01): property and unit pickers for the listing creation form.
   { method: "GET", pattern: /^properties$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/units$`) },
+  // Makler (M28 stage 4, docs/rules/M28-01.md): FLOW SQL dump import preview and apply.
+  { method: "POST", pattern: /^letting\/flow-import\/preview$/ },
+  { method: "GET", pattern: new RegExp(`^letting/flow-import/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^letting/flow-import/${ID}/apply$`) },
   // Rent law rule set (M26-01): platform administrators only (checked by the API).
   { method: "PUT", pattern: /^platform\/rent-law\/rules\/[a-z_]{2,40}$/ },
   { method: "POST", pattern: /^platform\/rent-law\/cap-areas$/ },
@@ -130,7 +134,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
-const MULTIPART = /^documents$/;
+const MULTIPART = /^(documents|letting\/flow-import\/preview)$/;
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 

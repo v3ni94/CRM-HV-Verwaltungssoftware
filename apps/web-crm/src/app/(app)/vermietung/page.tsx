@@ -26,7 +26,7 @@ export default async function LettingPage() {
       <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("rentIncreaseNotice")}</p>
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">{tr("title")}</h2>
+        <h2 className={ui.h2}>{tr("title")}</h2>
         <ul className="text-sm">
           {(cases.data ?? []).map((c) => (
             <li key={String(c.id)}>
@@ -40,7 +40,7 @@ export default async function LettingPage() {
         <RentIncreaseCreate contracts={(contracts.data ?? []).map((c) => ({ id: c.id, label: c.number }))} />
       </section>
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">{t("vacancies")}</h2>
+        <h2 className={ui.h2}>{t("vacancies")}</h2>
         {!vac.data ? (
           <p role="alert" className={ui.alert}>
             {problemMessage(vac.error as Problem | undefined, vac.response.status)}

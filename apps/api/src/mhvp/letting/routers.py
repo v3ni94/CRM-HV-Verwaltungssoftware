@@ -4,20 +4,25 @@ The source register (annex C) holds no rent law norms. The rent increase check i
 on values entered with their source; it never states that an increase is lawful. Sending the
 demand is a legally relevant statement and needs G3 plus a documented legal review (M26-01)."""
 
+import copy
+import re
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.attributes import flag_modified
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
-from mhvp.letting.models import Listing, Prospect, RentIncreaseCase
+from mhvp.letting import flow_import as flow
+from mhvp.letting.models import FlowImportRun, Listing, Prospect, RentIncreaseCase
 
 router = APIRouter(prefix="/letting", tags=["letting"])
 READ = require_permission("contracts:read")
@@ -956,3 +961,282 @@ async def delete_listing(
                 ErrorCodes.CONFLICT, detail="Nur Anzeigen im Entwurf können gelöscht werden."
             )
         await session.delete(listing)
+
+
+# FLOW import (M28 stage 4, docs/rules/M28-01.md) ----------------------------------------
+
+FLOW_IMPORT_MAX_BYTES = 50 * 1024 * 1024
+
+
+async def _match_unit(session: Any, match: dict[str, Any]) -> dict[str, Any]:
+    """Propose a unit for a preview row: by object number (property.number) when
+    ``verwaltungsobjekt_referenz`` names one, else by street, house number and postal code
+    against Property; unit stays unmatched otherwise (docs/rules/M28-01.md)."""
+    from mhvp.properties.models import Property, Unit
+
+    result = dict(match)
+    object_number = match.get("object_number")
+    prop = None
+    if object_number:
+        m = re.search(r"(\d{3})", str(object_number))
+        if m:
+            prop = await session.scalar(select(Property).where(Property.number == m.group(1)))
+    if prop is None and (match.get("basis") == "address"):
+        # street/house_number/postal_code are carried on the row itself, not on match; the
+        # caller passes them in via match["street"] etc.
+        street = match.get("street")
+        house_number = match.get("house_number")
+        postal_code = match.get("postal_code")
+        if street and postal_code:
+            query = select(Property).where(
+                Property.street.ilike(street), Property.postal_code == postal_code
+            )
+            if house_number:
+                query = query.where(Property.house_number == house_number)
+            prop = await session.scalar(query)
+    if prop is None:
+        result["unit_id"] = None
+        result["property_id"] = None
+        return result
+    result["property_id"] = str(prop.id)
+    result["property_number"] = prop.number
+    unit_label = match.get("unit_label")
+    unit = None
+    if unit_label:
+        unit = await session.scalar(
+            select(Unit).where(
+                Unit.property_id == prop.id,
+                or_(Unit.label == unit_label, Unit.number == unit_label),
+            )
+        )
+    result["unit_id"] = str(unit.id) if unit else None
+    result["unit_number"] = unit.number if unit else None
+    return result
+
+
+@router.post(
+    "/flow-import/preview", status_code=201, summary="FLOW-Datenbankexport (SQL-Dump) prüfen"
+)
+async def flow_import_preview(
+    request: Request,
+    file: UploadFile = File(),
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    data = await file.read(FLOW_IMPORT_MAX_BYTES + 1)
+    if len(data) > FLOW_IMPORT_MAX_BYTES:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Datei überschreitet 50 MB und wird nicht angenommen."
+        )
+    try:
+        text_content = data.decode("utf-8")
+    except UnicodeDecodeError:
+        text_content = data.decode("latin-1")
+    try:
+        dump = flow.parse_dump(text_content)
+    except flow.FlowDumpError as exc:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from None
+    previews = flow.build_previews(dump)
+    async with tenant_tx(request, principal) as session:
+        rows: list[dict[str, Any]] = []
+        for preview in previews:
+            row = preview.to_dict()
+            match_input = dict(preview.match)
+            match_input["street"] = preview.listing_fields.get("street")
+            match_input["house_number"] = preview.listing_fields.get("house_number")
+            match_input["postal_code"] = preview.listing_fields.get("postal_code")
+            row["match"] = await _match_unit(session, match_input)
+            if row["match"].get("unit_id") is None:
+                row["problems"].append("Keine Einheit zugeordnet; vor Übernahme manuell auswählen.")
+            rows.append(row)
+        run = FlowImportRun(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            filename=file.filename or "flow_export.sql",
+            status="previewed",
+            row_count=len(rows),
+            rows=rows,
+        )
+        session.add(run)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="flow_import.previewed",
+            entity_type="flow_import_run",
+            entity_id=run.id,
+            actor_user_id=principal.user_id,
+            payload={"row_count": run.row_count},
+        )
+        return {
+            "id": run.id,
+            "filename": run.filename,
+            "status": run.status,
+            "row_count": run.row_count,
+            "rows": run.rows,
+        }
+
+
+def _run_out(run: FlowImportRun) -> dict[str, Any]:
+    return {
+        "id": run.id,
+        "filename": run.filename,
+        "status": run.status,
+        "row_count": run.row_count,
+        "created_count": run.created_count,
+        "skipped_count": run.skipped_count,
+        "rows": run.rows,
+        "applied_at": run.applied_at,
+    }
+
+
+@router.get("/flow-import/{run_id}", summary="FLOW-Importlauf")
+async def get_flow_import_run(
+    run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        run = await session.get(FlowImportRun, run_id)
+        if run is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return _run_out(run)
+
+
+class FlowImportItemIn(LettingBaseIn):
+    index: int = Field(ge=0)
+    action: str = Field(pattern="^(create|skip)$")
+    unit_id: uuid.UUID | None = None
+
+
+class FlowImportApplyIn(LettingBaseIn):
+    items: list[FlowImportItemIn] = Field(min_length=1, max_length=2000)
+
+
+@router.post("/flow-import/{run_id}/apply", summary="FLOW-Anzeigen übernehmen")
+async def apply_flow_import(
+    run_id: uuid.UUID,
+    body: FlowImportApplyIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    from mhvp.properties.models import Unit
+
+    async with tenant_tx(request, principal) as session:
+        run = await session.get(FlowImportRun, run_id, with_for_update=True)
+        if run is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        # Deep copy: mutating the stored dicts in place would make the reassigned value
+        # compare equal to the pre-existing one, and SQLAlchemy would then skip the UPDATE.
+        rows = copy.deepcopy(run.rows)
+        by_index = {row["index"]: row for row in rows}
+        created = 0
+        skipped = 0
+        for item in body.items:
+            row = by_index.get(item.index)
+            if row is None:
+                raise ProblemError(ErrorCodes.VALIDATION, detail=f"Zeile {item.index} unbekannt.")
+            if row.get("applied"):
+                # Idempotency: applying a run twice creates nothing new.
+                skipped += 1
+                continue
+            if item.action == "skip":
+                row["applied"] = True
+                row["outcome"] = "skipped"
+                skipped += 1
+                continue
+            external_uuid = row.get("external_uuid")
+            if external_uuid:
+                existing = await session.scalar(
+                    select(Listing).where(Listing.external_uuid == uuid.UUID(external_uuid))
+                )
+                if existing is not None:
+                    row["applied"] = True
+                    row["outcome"] = "skipped"
+                    row["note"] = "external_uuid bereits vorhanden"
+                    skipped += 1
+                    continue
+            unit_id = item.unit_id or (
+                uuid.UUID(row["match"]["unit_id"]) if row["match"].get("unit_id") else None
+            )
+            if unit_id is None:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail=f"Zeile {item.index}: keine Einheit für die Übernahme ausgewählt.",
+                )
+            unit = await session.get(Unit, unit_id)
+            if unit is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Einheit nicht gefunden.")
+            fields = dict(row["listing_fields"])
+            for key in ("street", "house_number", "postal_code", "city"):
+                fields.pop(key, None)
+            for key in (
+                "price",
+                "additional_costs",
+                "heating_costs",
+                "deposit",
+                "hoa_fee",
+                "parking_price",
+                "energy_value",
+            ):
+                if fields.get(key) is not None:
+                    fields[key] = Decimal(str(fields[key]))
+            if fields.get("energy_valid_until"):
+                fields["energy_valid_until"] = date.fromisoformat(
+                    str(fields["energy_valid_until"])[:10]
+                )
+            if fields.get("rooms") is not None:
+                fields["rooms"] = Decimal(str(fields["rooms"]))
+            if fields.get("living_area_sqm") is not None:
+                fields["living_area_sqm"] = Decimal(str(fields["living_area_sqm"]))
+            fallback_title = f"FLOW-Import {row.get('external_ref') or ''}".strip()
+            title = fields.pop("title", None) or fallback_title
+            listing = Listing(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                unit_id=unit.id,
+                property_id=unit.property_id,
+                title=title,
+                source="flow_import",
+                external_uuid=uuid.UUID(external_uuid) if external_uuid else None,
+                external_ref=row.get("external_ref"),
+                **{k: v for k, v in fields.items() if k not in ("kind",)},
+                kind=fields.get("kind", "rental"),
+            )
+            _compute_warm_rent(listing)
+            session.add(listing)
+            try:
+                await session.flush()
+            except IntegrityError as exc:
+                raise ProblemError(
+                    ErrorCodes.CONFLICT,
+                    detail="Anzeige konnte wegen einer bestehenden Zuordnung nicht angelegt "
+                    "werden (external_uuid bereits vergeben).",
+                ) from exc
+            row["applied"] = True
+            row["outcome"] = "created"
+            row["listing_id"] = str(listing.id)
+            created += 1
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="listing.created",
+                entity_type="listing",
+                entity_id=listing.id,
+                actor_user_id=principal.user_id,
+                payload={"source": "flow_import", "flow_import_run_id": str(run.id)},
+            )
+        run.rows = rows
+        flag_modified(run, "rows")
+        run.created_count += created
+        run.skipped_count += skipped
+        run.status = "applied"
+        run.applied_at = datetime.now(UTC)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="flow_import.applied",
+            entity_type="flow_import_run",
+            entity_id=run.id,
+            actor_user_id=principal.user_id,
+            payload={"created": created, "skipped": skipped},
+        )
+        return _run_out(run)

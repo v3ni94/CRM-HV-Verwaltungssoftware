@@ -18,33 +18,35 @@ export function VacancyTable({ rows }: { rows: VacancyRow[] }) {
   const t = useTranslations("Letting");
   if (rows.length === 0) return <p className="text-sm text-muted">{t("noVacancies")}</p>;
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="border-b border-border text-left text-xs text-muted">
+    <div className="overflow-x-auto">
+<table className="mhvp-table">
+      <thead>
         <tr>
-          <th className="py-1.5 pr-3 font-medium">{t("property")}</th>
-          <th className="py-1.5 pr-3 font-medium">{t("unit")}</th>
-          <th className="py-1.5 pr-3 font-medium">{t("area")}</th>
-          <th className="py-1.5 pr-3 font-medium">{t("since")}</th>
-          <th className="py-1.5 font-medium">{t("days")}</th>
+          <th>{t("property")}</th>
+          <th>{t("unit")}</th>
+          <th>{t("area")}</th>
+          <th>{t("since")}</th>
+          <th>{t("days")}</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((v) => (
-          <tr key={v.unit_id} className="border-b border-border">
-            <td className="py-1.5 pr-3">{v.property_number}</td>
-            <td className="py-1.5 pr-3">
+          <tr key={v.unit_id}>
+            <td>{v.property_number}</td>
+            <td>
               <Link href={`/vermietung/einheit/${v.unit_id}`} className="hover:underline">
                 {v.unit_number}
               </Link>
             </td>
-            <td className="py-1.5 pr-3 tabular-nums">
+            <td className="tabular-nums">
               {v.living_area_sqm ? `${formatDecimal(v.living_area_sqm, 2)} m²` : t("unknown")}
             </td>
-            <td className="py-1.5 pr-3">{v.vacant_since ? formatDate(v.vacant_since) : t("unknown")}</td>
-            <td className="py-1.5 tabular-nums">{v.vacant_days ?? t("unknown")}</td>
+            <td>{v.vacant_since ? formatDate(v.vacant_since) : t("unknown")}</td>
+            <td className="tabular-nums">{v.vacant_days ?? t("unknown")}</td>
           </tr>
         ))}
       </tbody>
     </table>
+</div>
   );
 }

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { ResultTable, StatementWorkbench } from "@/components/billing/StatementWorkbench";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -38,26 +39,26 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
   const snap = data.snapshot as Snapshot | null;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>
-        {t("statement")} {formatDate(String(data.period_from))} bis {formatDate(String(data.period_to))} · V
-        {String(data.version)}
-      </h1>
-      <p className="text-sm text-muted">
-        {t(`status.${String(data.status)}`)} · {t("deadline", { date: formatDate(String(data.deadline_orientation)) })}
-      </p>
+      <PageHeader
+        breadcrumb={[{ href: "/abrechnung", label: t("title") }]}
+        title={`${t("statement")} ${formatDate(String(data.period_from))} bis ${formatDate(String(data.period_to))} · V${String(data.version)}`}
+        description={`${t(`status.${String(data.status)}`)} · ${t("deadline", { date: formatDate(String(data.deadline_orientation)) })}`}
+      />
       <p className={ui.notice}>{t("notice")}</p>
-      <h2 className="font-medium">{t("items")}</h2>
-      <table className="w-full border-collapse text-sm">
+      <h2 className={ui.h2}>{t("items")}</h2>
+      <div className="overflow-x-auto">
+<table className="mhvp-table">
         <tbody>
           {items.map((i) => (
-            <tr key={i.id} className="border-b border-border">
-              <td className="py-1.5 pr-3">{i.label}</td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(i.amount)}</td>
-              <td className="py-1.5 text-muted">{i.basis}</td>
+            <tr key={i.id}>
+              <td>{i.label}</td>
+              <td className="num">{formatEur(i.amount)}</td>
+              <td className="text-muted">{i.basis}</td>
             </tr>
           ))}
         </tbody>
       </table>
+</div>
       <StatementWorkbench
         id={id}
         status={String(data.status)}
@@ -65,7 +66,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
       />
       {snap?.results ? (
         <>
-          <h2 className="font-medium">{t("results")}</h2>
+          <h2 className={ui.h2}>{t("results")}</h2>
           <ResultTable rows={snap.results} />
           {snap.vacancy_owner_share ? (
             <p className="text-sm">{t("vacancyShare", { amount: formatEur(snap.vacancy_owner_share) })}</p>

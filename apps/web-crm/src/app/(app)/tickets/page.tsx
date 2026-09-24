@@ -2,13 +2,32 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { TicketCreate } from "@/components/tickets/TicketForms";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
+
+const STATUS_VARIANT: Record<string, StatusPillVariant> = {
+  new: "gold",
+  in_progress: "warning",
+  waiting: "neutral",
+  done: "success",
+  closed: "neutral",
+  rejected: "danger",
+};
+
+const PRIORITY_VARIANT: Record<string, StatusPillVariant> = {
+  low: "neutral",
+  normal: "neutral",
+  high: "warning",
+  urgent: "danger",
+  immediate: "danger",
+};
 
 export default async function TicketsPage() {
   const t = await getTranslations("Tickets");
@@ -23,37 +42,68 @@ export default async function TicketsPage() {
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
       ) : data.length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <EmptyState title={t("empty")} />
       ) : (
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
-            <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("number")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("titleField")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("priority")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("status")}</th>
-              <th className="py-1.5 font-medium">{t("sla")}</th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <ul className="flex flex-col gap-2 sm:hidden" data-testid="tickets-cards">
             {data.map((tk) => (
-              <tr key={String(tk.id)} className="border-b border-border">
-                <td className="py-1.5 pr-3 tabular-nums">{String(tk.number)}</td>
-                <td className="py-1.5 pr-3">
-                  <Link href={`/tickets/${String(tk.id)}`} className="font-medium hover:underline">
-                    {String(tk.title ?? "")}
-                  </Link>
-                </td>
-                <td className="py-1.5 pr-3">{t(`priorities.${String(tk.priority)}`)}</td>
-                <td className="py-1.5 pr-3">{t(`statuses.${String(tk.status)}`)}</td>
-                <td className="py-1.5">
-                  {tk.sla_due_at ? formatDateTime(String(tk.sla_due_at)) : ""}
-                  {tk.sla_breached ? <span className="ml-1 text-danger-fg">{t("breached")}</span> : null}
-                </td>
-              </tr>
+              <li key={String(tk.id)} className={ui.cardLink} data-testid="ticket-card">
+                <Link href={`/tickets/${String(tk.id)}`} className="flex flex-col gap-1.5">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="font-medium">
+                      #{String(tk.number)} {String(tk.title ?? "")}
+                    </span>
+                  </span>
+                  <span className="flex flex-wrap gap-1.5">
+                    <StatusPill variant={PRIORITY_VARIANT[String(tk.priority)] ?? "neutral"} label={t(`priorities.${String(tk.priority)}`)} />
+                    <StatusPill variant={STATUS_VARIANT[String(tk.status)] ?? "neutral"} label={t(`statuses.${String(tk.status)}`)} />
+                  </span>
+                  {tk.sla_due_at ? (
+                    <span className="text-sm text-muted">
+                      {formatDateTime(String(tk.sla_due_at))}
+                      {tk.sla_breached ? <span className="ml-1 text-danger-fg">{t("breached")}</span> : null}
+                    </span>
+                  ) : null}
+                </Link>
+              </li>
             ))}
-          </tbody>
-        </table>
+          </ul>
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="mhvp-table">
+              <thead>
+                <tr>
+                  <th>{t("number")}</th>
+                  <th>{t("titleField")}</th>
+                  <th>{t("priority")}</th>
+                  <th>{t("status")}</th>
+                  <th>{t("sla")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((tk) => (
+                  <tr key={String(tk.id)}>
+                    <td className="tabular-nums">{String(tk.number)}</td>
+                    <td>
+                      <Link href={`/tickets/${String(tk.id)}`} className="font-medium hover:underline">
+                        {String(tk.title ?? "")}
+                      </Link>
+                    </td>
+                    <td>
+                      <StatusPill variant={PRIORITY_VARIANT[String(tk.priority)] ?? "neutral"} label={t(`priorities.${String(tk.priority)}`)} />
+                    </td>
+                    <td>
+                      <StatusPill variant={STATUS_VARIANT[String(tk.status)] ?? "neutral"} label={t(`statuses.${String(tk.status)}`)} />
+                    </td>
+                    <td>
+                      {tk.sla_due_at ? formatDateTime(String(tk.sla_due_at)) : ""}
+                      {tk.sla_breached ? <span className="ml-1 text-danger-fg">{t("breached")}</span> : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { RolesAdmin } from "@/components/settings/RolesAdmin";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
-import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export default async function RolesPage() {
   const roles = await api.GET("/api/v1/tenant/roles");
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <RolesAdmin initialRoles={roles.data ?? []} canUpdate={can("roles:update")} />
     </div>
   );

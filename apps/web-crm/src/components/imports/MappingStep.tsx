@@ -46,7 +46,7 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
   }, [source.id]);
 
   const missing = missingRequired(fields, columns);
-  const choiceFields = useMemo(() => fields.filter((f) => f.choices.length > 0 && columns[f.name]), [fields, columns]);
+  const choiceFields = useMemo(() => fields.filter((f) => f.choices.length> 0 && columns[f.name]), [fields, columns]);
 
   const pickTemplate = (id: string) => {
     setTemplateId(id);
@@ -88,10 +88,10 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="mapping-title">
-      <h2 id="mapping-title" className="text-lg font-semibold">
+      <h2 id="mapping-title" className={ui.h2}>
         {t("mappingTitle")}
       </h2>
-      {templates.length > 0 ? (
+      {templates.length> 0 ? (
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{t("template")}</span>
@@ -104,7 +104,7 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
               ))}
             </select>
           </label>
-          <button type="button" className={ui.button} disabled={!templateId || missing.length > 0} onClick={useTemplate}>
+          <button type="button" className={ui.button} disabled={!templateId || missing.length> 0} onClick={useTemplate}>
             {t("templateUse")}
           </button>
         </div>
@@ -113,30 +113,31 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
       {fields.length === 0 ? (
         <p className={ui.notice}>{t("stagedOnlyMapping")}</p>
       ) : (
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("colTarget")}</th>
-              <th className="py-1.5 font-medium">{t("colSourceHeader")}</th>
+              <th>{t("colTarget")}</th>
+              <th>{t("colSourceHeader")}</th>
             </tr>
           </thead>
           <tbody>
             {fields.map((f) => (
-              <tr key={f.name} className="border-b border-border">
-                <td className="py-1.5 pr-3">
+              <tr key={f.name}>
+                <td>
                   <label htmlFor={`col-${f.name}`}>
                     {f.label}
                     {f.required ? <span className="ml-1 text-danger-fg">{t("requiredMark")}</span> : null}
                   </label>
                 </td>
-                <td className="py-1.5">
+                <td>
                   <select
                     id={`col-${f.name}`}
                     className={ui.input}
                     value={columns[f.name] ?? ""}
                     aria-required={f.required}
                     onChange={(e) => setColumn(f.name, e.target.value)}
-                  >
+>
                     <option value="">{t("notAssigned")}</option>
                     {source.headers.map((h) => (
                       <option key={h} value={h}>
@@ -149,6 +150,7 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
             ))}
           </tbody>
         </table>
+</div>
       )}
 
       {choiceFields.map((f) => {
@@ -179,7 +181,7 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
         );
       })}
 
-      {missing.length > 0 ? (
+      {missing.length> 0 ? (
         <p className="text-sm text-muted" data-testid="required-missing">
           {t("requiredMissing", { fields: missing.map((f) => f.label).join(", ") })}
         </p>
@@ -189,7 +191,7 @@ export function MappingStep({ source, fields, mappings, onMapping }: Props) {
           <span className={ui.label}>{t("templateName")}</span>
           <input className={ui.input} value={name} onChange={(e) => setName(e.target.value)} />
         </label>
-        <button type="button" className={ui.primary} disabled={busy || missing.length > 0} onClick={save}>
+        <button type="button" className={ui.primary} disabled={busy || missing.length> 0} onClick={save}>
           {t("templateSave")}
         </button>
       </div>

@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { CapAreas, RentLawRules, type CapArea, type RentLawRule } from "@/components/letting/RentLawAdmin";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function RentLawPage() {
   ]);
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("notice")}</p>
       <section className={ui.card}>
         <h2 className="mb-2 font-medium">{t("rules")}</h2>

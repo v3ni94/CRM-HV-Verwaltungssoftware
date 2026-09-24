@@ -32,7 +32,7 @@ export default async function SettingsPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <Link key={c.href} href={c.href} className={ui.cardLink}>
-            <h2 className="font-medium">{c.title}</h2>
+            <h2 className={ui.h2}>{c.title}</h2>
             <p className="mt-1 text-sm text-muted">{c.description}</p>
           </Link>
         ))}

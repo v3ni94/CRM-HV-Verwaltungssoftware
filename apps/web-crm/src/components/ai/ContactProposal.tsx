@@ -78,7 +78,7 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
   return (
     <section className="flex flex-col gap-3" aria-label={t("contactPreviewTitle")}>
       <h3 className="text-sm font-semibold">{t("contactPreviewTitle")}</h3>
-      {preview.questions.length > 0 ? (
+      {preview.questions.length> 0 ? (
         <div className={ui.notice}>
           <p className="font-medium">{t("openQuestions")}</p>
           <ul className="list-disc pl-4">
@@ -90,15 +90,16 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
       ) : null}
       <p className="text-xs text-muted">{t("contactLegend")}</p>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1 pr-2 font-medium">{t("colStatus")}</th>
-              <th className="py-1 pr-2 font-medium">{t("colName")}</th>
-              <th className="py-1 pr-2 font-medium">{t("colRole")}</th>
-              <th className="py-1 pr-2 font-medium">{t("colConfidence")}</th>
-              <th className="py-1 pr-2 font-medium">{t("colNotes")}</th>
-              <th className="py-1 font-medium">{t("colAction")}</th>
+              <th className="font-medium">{t("colStatus")}</th>
+              <th className="font-medium">{t("colName")}</th>
+              <th className="font-medium">{t("colRole")}</th>
+              <th className="font-medium">{t("colConfidence")}</th>
+              <th className="font-medium">{t("colNotes")}</th>
+              <th className="font-medium">{t("colAction")}</th>
             </tr>
           </thead>
           <tbody>
@@ -107,16 +108,16 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
               const name = contactName(row.contact) || t("noName");
               return (
                 <tr key={row.index} className="border-b border-border align-top" data-testid={`contact-row-${row.index}`}>
-                  <td className="py-1 pr-2">
+                  <td>
                     <span className="inline-flex items-center gap-1">
                       <span className={`inline-block h-3 w-3 rounded-full ${LIGHT[row.status]}`} aria-hidden />
                       <span>{t(`rowStatus.${row.status}`)}</span>
                     </span>
                   </td>
-                  <td className="py-1 pr-2">
+                  <td>
                     <div>{name}</div>
                     {row.source_row ? <div className="text-xs text-muted">{t("sourceRow", { row: row.source_row })}</div> : null}
-                    {row.duplicates.length > 0 ? (
+                    {row.duplicates.length> 0 ? (
                       <ul className="text-xs text-muted">
                         {row.duplicates.map((d) => (
                           <li key={d.contact_id}>
@@ -127,13 +128,13 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
                       </ul>
                     ) : null}
                   </td>
-                  <td className="py-1 pr-2">
+                  <td>
                     {row.role ? t(`role.${row.role}`) : ""}
                     {row.unit_number ? <div className="text-xs text-muted">{t("unit", { number: row.unit_number })}</div> : null}
                   </td>
-                  <td className="py-1 pr-2">{formatConfidence(row.confidence)}</td>
-                  <td className="py-1 pr-2">
-                    {row.notes.length > 0 ? (
+                  <td>{formatConfidence(row.confidence)}</td>
+                  <td>
+                    {row.notes.length> 0 ? (
                       <ul className="list-disc pl-4 text-xs">
                         {row.notes.map((n, k) => (
                           <li key={k}>{n}</li>
@@ -141,7 +142,7 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
                       </ul>
                     ) : null}
                   </td>
-                  <td className="py-1">
+                  <td>
                     <label className="sr-only" htmlFor={`action-${row.index}`}>
                       {t("actionFor", { name })}
                     </label>
@@ -154,7 +155,7 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
                         const action = e.target.value as Action;
                         set(i, { action, contactId: action === "link" ? (row.duplicates[0]?.contact_id ?? null) : null });
                       }}
-                    >
+>
                       <option value="create" disabled={row.status === "invalid"}>
                         {t("actionCreate")}
                       </option>
@@ -163,13 +164,13 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
                       </option>
                       <option value="skip">{t("actionSkip")}</option>
                     </select>
-                    {choice.action === "link" && row.duplicates.length > 1 ? (
+                    {choice.action === "link" && row.duplicates.length> 1 ? (
                       <select
                         aria-label={t("linkTarget", { name })}
                         className={`${ui.input} mt-1`}
                         value={choice.contactId ?? ""}
                         onChange={(e) => set(i, { contactId: e.target.value })}
-                      >
+>
                         {row.duplicates.map((d) => (
                           <option key={d.contact_id} value={d.contact_id}>
                             {d.name}
@@ -183,6 +184,7 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
             })}
           </tbody>
         </table>
+</div>
       </div>
       {error ? (
         <p role="alert" className={ui.alert}>

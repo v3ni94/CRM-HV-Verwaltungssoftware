@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { redirectIfUnauthenticated, serverApi, sessionContext } from "@/lib/api-server";
-import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,7 @@ export default async function ProfilePage() {
   const tenantName = ctx.tenants.find((tenant) => tenant.id === ctx.tenantId)?.name ?? "";
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <ProfileSettings
         displayName={me.data?.display_name ?? ""}
         email={me.data?.email ?? ""}

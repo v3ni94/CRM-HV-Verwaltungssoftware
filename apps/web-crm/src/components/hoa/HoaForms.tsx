@@ -329,7 +329,7 @@ export function MajorityRules({ legalEntityId, rules }: { legalEntityId: string;
       .join(", ");
   return (
     <section className={ui.card}>
-      <h2 className="font-medium">{t("rule.title")}</h2>
+      <h2 className={ui.h2}>{t("rule.title")}</h2>
       {rules.length ? (
         <ul className="mt-1 text-sm">
           {rules.map((r) => (
