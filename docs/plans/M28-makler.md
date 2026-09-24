@@ -50,8 +50,11 @@ Versand von Daten an FLOWFACT braucht die Zugangsdaten und die dokumentierte Sch
 
 ## Erkenntnisse aus dem FLOW-Repository (v3ni94/FLOWFACTxHVM, gelesen 25.09.2026)
 
-- Stack: Laravel 12, PHP 8.3, MariaDB, Betrieb laut README auf IONOS Webhosting; laut Betreiber
-  auf demselben Server wie das CRM unter flowfact.muellerhv.de. Kein Docker-Compose im Repo.
+- Stack: Laravel 12, PHP 8.3, MariaDB. Betrieb geprüft 25.09.2026: flowfact.muellerhv.de zeigt auf
+  217.160.0.148 (IONOS Webhosting), nicht auf den CRM-Server. Der Container "immoware-hub" auf
+  dem CRM-Server ist eine andere Anwendung (Immoware Hub). Kein Docker-Compose im FLOW-Repo.
+  Folge: Stufe 1 (FLOW hinter Traefik) entfällt; FLOW bleibt bis zur Ablösung im Webhosting,
+  die Datenübernahme erfolgt per Datenbankexport aus dem Webhosting.
 - FLOWFACT-API: belegt nur aus dem SDK `@flowfact/api-services`; zweistufige Anmeldung
   (Zugangsschlüssel gegen Cognito-Token über admin-token-service, dann Header cognitoToken),
   Dienste entity-service, schema-service, search-service, multimedia-service,
