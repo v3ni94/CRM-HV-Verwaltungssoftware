@@ -29,8 +29,9 @@ from mhvp.core.events import emit
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, TextStatus
 
-MAX_INPUT_CHARS = 400_000
-MAX_TABLE_ROWS = 2_000
+MAX_INPUT_CHARS = 600_000
+MAX_TABLE_ROWS = 2_000  # rows with content; formatted empty rows do not count
+MAX_DOCUMENT_CHARS = 250_000  # per file; longer files are cut with a visible note
 FEW_SHOT = 8
 WARN_SHARE = Decimal("0.8")
 # Rate limits and overloads: wait and retry the same provider before falling back (seconds).
@@ -53,11 +54,22 @@ class TaskInput:
 
 
 def _table_text(rows: list[list[Any]]) -> str:
-    lines = []
-    for number, row in enumerate(rows[:MAX_TABLE_ROWS], start=1):
+    """Compact rendering: empty rows are skipped, trailing empty cells are dropped (Excel files
+    often carry formatting far beyond the data, which used to blow up the text), and only rows
+    with content count towards the row limit. Row numbers stay those of the sheet."""
+    lines: list[str] = []
+    kept = 0
+    for number, row in enumerate(rows, start=1):
         cells = ["" if c is None else str(c).strip() for c in row]
-        if any(cells):
-            lines.append(f"Zeile {number}: " + " | ".join(cells))
+        while cells and not cells[-1]:
+            cells.pop()
+        if not any(cells):
+            continue
+        if kept >= MAX_TABLE_ROWS:
+            lines.append(f"[gekürzt: weitere Zeilen ab Zeile {number} nicht übernommen]")
+            break
+        kept += 1
+        lines.append(f"Zeile {number}: " + " | ".join(cells))
     return "\n".join(lines)
 
 
@@ -95,6 +107,8 @@ async def document_text(session: AsyncSession, blobs: BlobStore, document_id: uu
         raise GatewayBlockedError(
             f"Für {document.filename} liegt noch kein Text vor (Texterkennung ausstehend)."
         )
+    if len(body) > MAX_DOCUMENT_CHARS:
+        body = body[:MAX_DOCUMENT_CHARS] + "\n[gekürzt: Datei länger als das Limit für eine Datei]"
     return f'<datei name="{document.filename}" id="{document.id}">\n{body}\n</datei>'
 
 

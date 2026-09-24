@@ -81,3 +81,13 @@ with `PermissionError`. Fix: `chmod -R u=rwX,go=rX apps packages infra scripts`,
 * Production: same command with the new tag; the script backs up before migrating.
 * Rollback: deploy the previous tag. If a migration failed, restore the backup taken right
   before it, then deploy the previous tag.
+
+## Mehrkernbetrieb (25.09.2026)
+
+Das Produktions-Overlay startet die API mit `MHVP_API_WORKERS` Uvicorn-Prozessen (Vorgabe 8), den
+Celery-Worker mit `MHVP_WORKER_CONCURRENCY` Prozessen (Vorgabe 16) und PostgreSQL mit den
+`PG_*`-Werten aus `.env.prod` (Vorgabe: shared_buffers 4 GB, effective_cache_size 16 GB,
+max_connections 300, 16 parallele Worker). Der Server teilt sich 64 Threads mit anderen
+Stacks; bei dauerhaft hoher Last der Nachbarstacks die Werte senken statt erhöhen. Prüfung nach
+dem Start: `./mhvp.sh exec api sh -c 'ps -o pid,cmd | grep -c uvicorn'` zeigt die Prozesse,
+`./mhvp.sh exec -T postgres psql -U postgres -Atc "show shared_buffers"` die Datenbankeinstellung.

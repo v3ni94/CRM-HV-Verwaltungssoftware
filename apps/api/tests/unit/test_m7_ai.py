@@ -109,3 +109,19 @@ def test_complete_with_retry_waits_then_falls_through(monkeypatch: pytest.Monkey
         asyncio.run(run(fatal))
     assert fatal.calls == 1
     assert slept == []
+
+
+def test_table_text_skips_formatted_empty_area(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Expected by hand: a sheet with two data rows followed by thousands of formatted but empty
+    rows and columns renders only the two rows; trailing empty cells are dropped; the row limit
+    counts rows with content and adds a visible note when exceeded."""
+    rows: list[list[object]] = [
+        ["Name", "Ort", None, None, None],
+        ["Muster", "Monheim", None, None, None],
+    ]
+    rows += [[None] * 5 for _ in range(5000)]
+    text = gateway._table_text(rows)
+    assert text == "Zeile 1: Name | Ort\nZeile 2: Muster | Monheim"
+    monkeypatch.setattr(gateway, "MAX_TABLE_ROWS", 1)
+    text = gateway._table_text([["a"], ["b"], ["c"]])
+    assert text == "Zeile 1: a\n[gekürzt: weitere Zeilen ab Zeile 2 nicht übernommen]"
