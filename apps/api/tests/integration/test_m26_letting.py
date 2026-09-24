@@ -642,3 +642,170 @@ def test_listings(
     other_world = asyncio.run(_other_tenant_world(_settings(database, redis_url)))
     ho = bearer(login(client, other_world, "m28other"))
     assert _ok(client.get(f"{L}/listings", headers=ho)) == []
+
+
+def test_listing_flow_fields(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
+    """M28-01 stage 3 preparation: warm rent computation, heating and energy certificate
+    validation, external_uuid uniqueness. Warm rent by hand: price 800,00 + additional_costs
+    150,00 + heating_costs 60,00 = 1.010,00 EUR (heating_in_additional_costs False).
+    With heating_in_additional_costs True: 800,00 + 150,00 = 950,00 EUR (heating_costs 60,00
+    is already part of additional_costs, not added again)."""
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "764",
+                "name": "Maklerhaus Flow",
+                "management_type": "rental",
+                "city": f"Maklerstadt {RUN}",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    building = _ok(
+        client.post(f"/api/v1/properties/{prop['id']}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )["id"]
+    unit = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/units",
+            json={
+                "building_id": building,
+                "number": "01",
+                "unit_type": "apartment",
+                "living_area_sqm": "60",
+                "street": "Musterweg",
+                "house_number": "2",
+                "postal_code": "12345",
+                "city": "Maklerstadt",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+
+    listing = _ok(
+        client.post(
+            f"{L}/listings",
+            json={
+                "unit_id": unit,
+                "kind": "rental",
+                "price": "800.00",
+                "additional_costs": "150.00",
+                "heating_costs": "60.00",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    assert listing["warm_rent"] == "1010.00"
+
+    with_included = _ok(
+        client.post(
+            f"{L}/listings",
+            json={
+                "unit_id": unit,
+                "kind": "rental",
+                "price": "800.00",
+                "additional_costs": "150.00",
+                "heating_costs": "60.00",
+                "heating_in_additional_costs": True,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    assert with_included["warm_rent"] == "950.00"
+
+    # heating_costs above additional_costs when included is rejected
+    bad = client.post(
+        f"{L}/listings",
+        json={
+            "unit_id": unit,
+            "kind": "rental",
+            "price": "800.00",
+            "additional_costs": "50.00",
+            "heating_costs": "60.00",
+            "heating_in_additional_costs": True,
+        },
+        headers=h,
+    )
+    assert bad.status_code == 422
+
+    # activation requires warm_rent to be computable (price missing)
+    no_price = _ok(
+        client.post(f"{L}/listings", json={"unit_id": unit, "kind": "rental"}, headers=h), 201
+    )
+    act = client.patch(
+        f"{L}/listings/{no_price['id']}",
+        json={"status": "active", "available_from": "2026-11-01"},
+        headers=h,
+    )
+    assert act.status_code == 422
+
+    # activation with energy_status liegt_vor requires type, value and class
+    energy_incomplete = _ok(
+        client.patch(
+            f"{L}/listings/{listing['id']}",
+            json={"available_from": "2026-11-01", "energy_status": "liegt_vor"},
+            headers=h,
+        )
+    )
+    assert energy_incomplete["energy_status"] == "liegt_vor"
+    act2 = client.patch(f"{L}/listings/{listing['id']}", json={"status": "active"}, headers=h)
+    assert act2.status_code == 422
+
+    complete = _ok(
+        client.patch(
+            f"{L}/listings/{listing['id']}",
+            json={
+                "energy_type": "verbrauch",
+                "energy_value": "85.00",
+                "energy_class": "C",
+            },
+            headers=h,
+        )
+    )
+    assert complete["energy_class"] == "C"
+    active = _ok(
+        client.patch(f"{L}/listings/{listing['id']}", json={"status": "active"}, headers=h)
+    )
+    assert active["status"] == "active"
+    assert active["warnings"] == []
+
+    # activation with energy_status in_erstellung (default) is allowed but carries a warning
+    warn_listing = _ok(
+        client.post(
+            f"{L}/listings",
+            json={"unit_id": unit, "kind": "sale", "price": "250000.00"},
+            headers=h,
+        ),
+        201,
+    )
+    warn_active = _ok(
+        client.patch(f"{L}/listings/{warn_listing['id']}", json={"status": "active"}, headers=h)
+    )
+    assert warn_active["status"] == "active"
+    assert warn_active["warnings"]
+
+    # features: unknown keys rejected, known keys stored as booleans
+    feat = client.post(
+        f"{L}/listings",
+        json={"unit_id": unit, "kind": "sale", "features": {"unbekannt": True}},
+        headers=h,
+    )
+    assert feat.status_code == 422
+    feat_ok = _ok(
+        client.post(
+            f"{L}/listings",
+            json={"unit_id": unit, "kind": "sale", "features": {"balkon": True, "keller": False}},
+            headers=h,
+        ),
+        201,
+    )
+    assert feat_ok["features"] == {"balkon": True, "keller": False}

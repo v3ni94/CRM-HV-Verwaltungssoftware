@@ -9109,6 +9109,12 @@
             ],
             "title": "Additional Costs"
           },
+          "address_release": {
+            "default": "vollstaendig",
+            "pattern": "^(vollstaendig|nur_plz_ort)$",
+            "title": "Address Release",
+            "type": "string"
+          },
           "available_from": {
             "anyOf": [
               {
@@ -9132,6 +9138,18 @@
               }
             ],
             "title": "Commission Note"
+          },
+          "commission_type": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commission Type"
           },
           "deposit": {
             "anyOf": [
@@ -9161,6 +9179,23 @@
             ],
             "title": "Description"
           },
+          "energy_class": {
+            "anyOf": [
+              {
+                "maxLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Class"
+          },
+          "energy_includes_hot_water": {
+            "default": false,
+            "title": "Energy Includes Hot Water",
+            "type": "boolean"
+          },
           "energy_note": {
             "anyOf": [
               {
@@ -9173,6 +9208,82 @@
             ],
             "title": "Energy Note"
           },
+          "energy_source": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Source"
+          },
+          "energy_status": {
+            "default": "in_erstellung",
+            "pattern": "^(liegt_vor|nicht_erforderlich|in_erstellung)$",
+            "title": "Energy Status",
+            "type": "string"
+          },
+          "energy_type": {
+            "anyOf": [
+              {
+                "pattern": "^(bedarf|verbrauch)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Type"
+          },
+          "energy_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Valid Until"
+          },
+          "energy_value": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Value"
+          },
+          "energy_year_of_installation": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1800.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Year Of Installation"
+          },
+          "features": {
+            "additionalProperties": true,
+            "title": "Features",
+            "type": "object"
+          },
           "floor": {
             "anyOf": [
               {
@@ -9184,6 +9295,55 @@
               }
             ],
             "title": "Floor"
+          },
+          "heating_costs": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heating Costs"
+          },
+          "heating_in_additional_costs": {
+            "default": false,
+            "title": "Heating In Additional Costs",
+            "type": "boolean"
+          },
+          "heating_type": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heating Type"
+          },
+          "hoa_fee": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hoa Fee"
           },
           "kind": {
             "pattern": "^(rental|sale)$",
@@ -9217,6 +9377,28 @@
               }
             ],
             "title": "Notes"
+          },
+          "object_type": {
+            "default": "wohnung",
+            "pattern": "^(wohnung|haus|gewerbe|stellplatz|grundstueck)$",
+            "title": "Object Type",
+            "type": "string"
+          },
+          "parking_price": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parking Price"
           },
           "price": {
             "anyOf": [
@@ -9294,6 +9476,18 @@
             ],
             "title": "Additional Costs"
           },
+          "address_release": {
+            "anyOf": [
+              {
+                "pattern": "^(vollstaendig|nur_plz_ort)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Release"
+          },
           "available_from": {
             "anyOf": [
               {
@@ -9317,6 +9511,18 @@
               }
             ],
             "title": "Commission Note"
+          },
+          "commission_type": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commission Type"
           },
           "deposit": {
             "anyOf": [
@@ -9346,6 +9552,29 @@
             ],
             "title": "Description"
           },
+          "energy_class": {
+            "anyOf": [
+              {
+                "maxLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Class"
+          },
+          "energy_includes_hot_water": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Includes Hot Water"
+          },
           "energy_note": {
             "anyOf": [
               {
@@ -9358,6 +9587,95 @@
             ],
             "title": "Energy Note"
           },
+          "energy_source": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Source"
+          },
+          "energy_status": {
+            "anyOf": [
+              {
+                "pattern": "^(liegt_vor|nicht_erforderlich|in_erstellung)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Status"
+          },
+          "energy_type": {
+            "anyOf": [
+              {
+                "pattern": "^(bedarf|verbrauch)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Type"
+          },
+          "energy_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Valid Until"
+          },
+          "energy_value": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Value"
+          },
+          "energy_year_of_installation": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1800.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Year Of Installation"
+          },
+          "features": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Features"
+          },
           "floor": {
             "anyOf": [
               {
@@ -9369,6 +9687,61 @@
               }
             ],
             "title": "Floor"
+          },
+          "heating_costs": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heating Costs"
+          },
+          "heating_in_additional_costs": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heating In Additional Costs"
+          },
+          "heating_type": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heating Type"
+          },
+          "hoa_fee": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hoa Fee"
           },
           "living_area_sqm": {
             "anyOf": [
@@ -9397,6 +9770,34 @@
               }
             ],
             "title": "Notes"
+          },
+          "object_type": {
+            "anyOf": [
+              {
+                "pattern": "^(wohnung|haus|gewerbe|stellplatz|grundstueck)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Type"
+          },
+          "parking_price": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parking Price"
           },
           "price": {
             "anyOf": [
