@@ -1,8 +1,8 @@
 """mailbox_oauth_access: Google OAuth client per tenant, default mailbox, mailbox access per
 user (M20-01).
 
-Revision ID: 0035
-Revises: 0034
+Revision ID: 0036
+Revises: 0035
 """
 
 from collections.abc import Sequence
@@ -13,8 +13,8 @@ from sqlalchemy.dialects import postgresql
 
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
-revision: str = "0035"
-down_revision: str | None = "0034"
+revision: str = "0036"
+down_revision: str | None = "0035"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
