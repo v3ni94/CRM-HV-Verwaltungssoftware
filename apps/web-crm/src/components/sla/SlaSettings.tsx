@@ -7,6 +7,8 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { ChannelsByLevelEditor, type ChannelsByLevel } from "./ChannelsByLevelEditor";
+
 export type Priority = "low" | "normal" | "high" | "urgent" | "immediate";
 export type ClockType = "business" | "calendar";
 export type AlertChannel = "email" | "internal" | "sms";
@@ -19,6 +21,7 @@ export type SlaRule = {
   resolution_minutes: number;
   clock_type: ClockType;
   active: boolean;
+  channels_by_level?: Record<string, AlertChannel[]> | null;
 };
 
 export type EscalationStep = {
@@ -265,6 +268,8 @@ function RuleForm({
       resolution_minutes: resolutionMinutes,
       clock_type: clockType,
       active,
+      // PATCH ersetzt die Regel vollständig; Kanalwahl je Stufe darf beim Bearbeiten nicht verloren gehen.
+      channels_by_level: initial?.channels_by_level ?? null,
     });
     setBusy(false);
     if (ok) onCancel();
@@ -384,6 +389,21 @@ function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members
     else setError(res.message);
   };
 
+  const saveChannels = async (rule: SlaRule, channels: ChannelsByLevel) => {
+    setError(null);
+    const { id, ...rest } = rule;
+    const res = await bff<SlaRule>(`/api/bff/sla/rules/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ ...rest, channels_by_level: channels }),
+    });
+    if (res.ok) {
+      setRules((prev) => prev.map((r) => (r.id === id ? res.data : r)));
+      return true;
+    }
+    setError(res.message);
+    return false;
+  };
+
   return (
     <section className={`${ui.card} flex flex-col gap-3`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -439,6 +459,11 @@ function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members
                     </button>
                   </div>
                 ) : null}
+                <ChannelsByLevelEditor
+                  value={r.channels_by_level}
+                  canManage={canManage}
+                  onSave={(channels) => saveChannels(r, channels)}
+                />
                 <RuleSteps rule={r} members={members} canManage={canManage} />
               </li>
             ),

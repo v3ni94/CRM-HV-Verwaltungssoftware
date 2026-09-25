@@ -9,6 +9,11 @@ unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge ob
 
 - Google-Verbindung (DMS und Postfächer): die Rückleitung von Google landet auf einer same-site Zwischenseite, damit die Sitzung erhalten bleibt; bisher erschien nach dem Google-Login die Anmeldeseite des CRM, obwohl die Verbindung gespeichert war
 
+## 1.17.4 (25.09.2026) SLA: Kanäle je Eskalationsstufe in der Oberfläche
+
+- SLA-Einstellungen: je Regel Tabelle Stufe 1 bis 3 mit Intern, E-Mail und SMS, vorbelegt mit dem Standard (M35), Speichern über die bestehende Regeländerung; Hinweis, dass SMS nur mit aktivem Gateway und Mobilnummer greift
+- Korrektur: Bearbeiten einer Regel im Formular setzt channels_by_level nicht mehr auf Standard zurück
+
 ## 1.17.3 (25.09.2026) Datenschutz: Ticket-Vorschau lädt nur den Kontaktnamen
 
 - Neuer Endpunkt GET /contacts/{id}/name liefert nur Anzeigename statt des vollständigen Kontakts; die Vorschau beim Zusammenführen von Tickets nutzt ihn (Datenminimierung)

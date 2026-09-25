@@ -2463,6 +2463,18 @@
       "test": "Testnachricht senden",
       "testOk": "Testnachricht wurde vom Gateway angenommen.",
       "testFailed": "Test fehlgeschlagen: {error}"
+    },
+    "channelEditor": {
+      "title": "Kanäle je Eskalationsstufe",
+      "level": "Stufe",
+      "levelN": "Stufe {level}",
+      "internal": "Intern",
+      "email": "E-Mail",
+      "sms": "SMS",
+      "checkbox": "Stufe {level}: {channel}",
+      "smsHint": "SMS wird nur zugestellt, wenn das SMS-Gateway aktiv ist und für den Empfänger eine Mobilnummer hinterlegt ist.",
+      "save": "Kanäle speichern",
+      "saved": "Gespeichert"
     }
   },
   "Version": {
