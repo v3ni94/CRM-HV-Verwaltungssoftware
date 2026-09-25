@@ -56,7 +56,7 @@ def upgrade() -> None:
     )
     op.create_table('sla_rule',
     sa.Column('name', sa.String(length=200), nullable=False),
-    sa.Column('priority', sa.Enum('low', 'normal', 'high', 'urgent', 'immediate', name='ticket_priority'), nullable=False),
+    sa.Column('priority', postgresql.ENUM('low', 'normal', 'high', 'urgent', 'immediate', name='ticket_priority', create_type=False), nullable=False),
     sa.Column('response_minutes', sa.Integer(), nullable=False),
     sa.Column('resolution_minutes', sa.Integer(), nullable=False),
     sa.Column('clock_type', sa.Enum('business', 'calendar', name='sla_clock_type'), nullable=False),
@@ -134,7 +134,7 @@ def upgrade() -> None:
     sa.Column('ticket_id', sa.UUID(), nullable=False),
     sa.Column('level', sa.Integer(), nullable=False),
     sa.Column('sent_to', sa.String(length=300), nullable=False),
-    sa.Column('channel', sa.Enum('email', 'internal', name='sla_alert_channel'), nullable=False),
+    sa.Column('channel', postgresql.ENUM('email', 'internal', name='sla_alert_channel', create_type=False), nullable=False),
     sa.Column('sent_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('acknowledged_by', sa.UUID(), nullable=True),
     sa.Column('acknowledged_at', sa.DateTime(timezone=True), nullable=True),

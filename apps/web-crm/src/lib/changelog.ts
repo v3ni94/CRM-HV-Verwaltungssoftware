@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.5.1",
+    date: "25.09.2026",
+    title: "Korrektur Migration SLA",
+    changes: [
+      "Migration 0042 verwendet den vorhandenen Typ ticket_priority statt ihn erneut anzulegen, Deploy brach bisher ab",
+    ],
+  },
+  {
     version: "1.5.0",
     date: "25.09.2026",
     title: "Paperless-Dokumente in Ticket und Objekt",
