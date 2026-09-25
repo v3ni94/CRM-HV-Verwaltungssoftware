@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { appBuild, appVersion } from "@/lib/version";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
@@ -107,7 +109,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           className="border-t border-border-soft px-4 py-4 text-xs text-subtle md:px-8"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
-          {tHome("footer")}
+          <span>{tHome("footer")}</span>
+          <span className="mt-1 block">
+            <Link href="/version" className="underline-offset-2 hover:underline">
+              Version {appVersion()}
+              {appBuild() ? ` (${appBuild()})` : ""}
+            </Link>
+          </span>
         </footer>
       </div>
       <AiChatWidget />

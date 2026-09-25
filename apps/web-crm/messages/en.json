@@ -1104,5 +1104,37 @@
       "pause": "Pause",
       "resume": "Resume"
     }
+  },
+  "Version": {
+    "title": "Version history",
+    "description": "What changed in which version.",
+    "current": "Current version {version}",
+    "scheme": "Scheme: first digit for major rebuilds, second for new features, third for small fixes."
+  },
+  "DmsDocuments": {
+    "title": "Documents (Paperless)",
+    "loading": "Loading documents...",
+    "empty": "No documents available.",
+    "columns": {
+      "title": "Title",
+      "date": "Date",
+      "correspondent": "Correspondent",
+      "documentType": "Document type",
+      "tags": "Tags",
+      "actions": "Actions"
+    },
+    "actions": {
+      "preview": "Preview",
+      "download": "Download"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page}"
+    },
+    "errors": {
+      "unreachable": "Paperless unreachable",
+      "notConfigured": "Paperless not configured"
+    }
   }
 }

@@ -2002,5 +2002,37 @@
       "pause": "Pausieren",
       "resume": "Fortsetzen"
     }
+  },
+  "Version": {
+    "title": "Versionsverlauf",
+    "description": "Was wurde in welcher Version geändert.",
+    "current": "Aktuelle Version {version}",
+    "scheme": "Schema: erste Stelle für grundlegende Umbauten, zweite Stelle für neue Funktionen, dritte Stelle für kleine Korrekturen."
+  },
+  "DmsDocuments": {
+    "title": "Dokumente (Paperless)",
+    "loading": "Dokumente werden geladen...",
+    "empty": "Keine Dokumente vorhanden.",
+    "columns": {
+      "title": "Titel",
+      "date": "Datum",
+      "correspondent": "Korrespondent",
+      "documentType": "Dokumenttyp",
+      "tags": "Tags",
+      "actions": "Aktionen"
+    },
+    "actions": {
+      "preview": "Vorschau",
+      "download": "Download"
+    },
+    "pagination": {
+      "previous": "Zurück",
+      "next": "Weiter",
+      "page": "Seite {page}"
+    },
+    "errors": {
+      "unreachable": "Paperless nicht erreichbar",
+      "notConfigured": "Paperless nicht eingerichtet"
+    }
   }
 }
