@@ -2252,6 +2252,285 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/handover/protocols": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Übergabeprotokolle */
+        get: operations["list_protocols_api_v1_handover_protocols_get"];
+        put?: never;
+        /** Übergabeprotokoll anlegen */
+        post: operations["create_protocol_api_v1_handover_protocols_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/prefill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vorbelegung aus Einheit und Objekt */
+        get: operations["prefill_api_v1_handover_protocols_prefill_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Übergabeprotokoll lesen */
+        get: operations["get_protocol_api_v1_handover_protocols__protocol_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Protokollfelder ändern (Autosave) */
+        patch: operations["patch_protocol_api_v1_handover_protocols__protocol_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verbindlich abschließen */
+        post: operations["complete_api_v1_handover_protocols__protocol_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/dispatches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Zustellung an Beteiligte vorbereiten
+         * @description One dispatch (M23) per participant with a CRM contact. E-mail creates a draft in the
+         *     outbox that needs the four-eyes approval (M20-01); nothing leaves the system here.
+         */
+        post: operations["prepare_dispatches_api_v1_handover_protocols__protocol_id__dispatches_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Foto oder Anhang hochladen */
+        post: operations["upload_document_api_v1_handover_protocols__protocol_id__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Foto oder Anhang entfernen */
+        delete: operations["delete_document_api_v1_handover_protocols__protocol_id__documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/hints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hinweise vor dem Abschluss */
+        get: operations["hints_api_v1_handover_protocols__protocol_id__hints_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** PDF (gespeicherte Version oder Vorschau als Entwurf) */
+        get: operations["get_pdf_api_v1_handover_protocols__protocol_id__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/signatures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unterschrift speichern */
+        post: operations["add_signature_api_v1_handover_protocols__protocol_id__signatures_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/signatures/{signature_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unterschrift löschen */
+        delete: operations["delete_signature_api_v1_handover_protocols__protocol_id__signatures__signature_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stornieren, archivieren, zurückholen */
+        post: operations["change_status_api_v1_handover_protocols__protocol_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Neue Version anlegen */
+        post: operations["new_version_api_v1_handover_protocols__protocol_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/{section}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Teildatensatz anlegen */
+        post: operations["create_item_api_v1_handover_protocols__protocol_id___section__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/{section}/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reihenfolge speichern */
+        post: operations["order_items_api_v1_handover_protocols__protocol_id___section__order_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/{section}/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Teildatensatz löschen */
+        delete: operations["delete_item_api_v1_handover_protocols__protocol_id___section___item_id__delete"];
+        options?: never;
+        head?: never;
+        /** Teildatensatz ändern */
+        patch: operations["patch_item_api_v1_handover_protocols__protocol_id___section___item_id__patch"];
+        trace?: never;
+    };
     "/api/v1/health/live": {
         parameters: {
             query?: never;
@@ -6286,6 +6565,17 @@ export interface components {
             /** File */
             file: string;
         };
+        /** Body_upload_document_api_v1_handover_protocols__protocol_id__documents_post */
+        Body_upload_document_api_v1_handover_protocols__protocol_id__documents_post: {
+            /** File */
+            file: string;
+            /** Item Id */
+            item_id?: string | null;
+            /** Section */
+            section?: string | null;
+            /** Title */
+            title?: string | null;
+        };
         /** BookIn */
         BookIn: {
             /** Counter Account Id */
@@ -6752,6 +7042,14 @@ export interface components {
             note?: string | null;
             /** Rent Per Sqm */
             rent_per_sqm: number | string;
+        };
+        /** CompleteIn */
+        CompleteIn: {
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
         };
         /**
          * Completeness
@@ -7490,21 +7788,6 @@ export interface components {
             valid_from: string;
             /** Valid To */
             valid_to: string | null;
-        };
-        /** DispatchIn */
-        DispatchIn: {
-            /** Channel */
-            channel?: string | null;
-            /**
-             * Contact Id
-             * Format: uuid
-             */
-            contact_id: string;
-            /**
-             * Document Id
-             * Format: uuid
-             */
-            document_id: string;
         };
         /** DmsConnectionIn */
         DmsConnectionIn: {
@@ -9545,6 +9828,11 @@ export interface components {
              */
             token_type: string;
         };
+        /** OrderIn */
+        OrderIn: {
+            /** Ids */
+            ids: string[];
+        };
         /** OrderOut */
         OrderOut: {
             /** Amount */
@@ -10360,6 +10648,95 @@ export interface components {
             /** Viewing At */
             viewing_at?: string | null;
         };
+        /** ProtocolCreateIn */
+        ProtocolCreateIn: {
+            /** Contract Id */
+            contract_id?: string | null;
+            /**
+             * Kind
+             * @default rental
+             */
+            kind: string;
+            /** Listing Id */
+            listing_id?: string | null;
+            /** Unit Id */
+            unit_id?: string | null;
+        };
+        /** ProtocolPatch */
+        ProtocolPatch: {
+            /** Building */
+            building?: string | null;
+            /** City */
+            city?: string | null;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Current Step */
+            current_step?: string | null;
+            /** Deposit Account Holder */
+            deposit_account_holder?: string | null;
+            /** Deposit Amount */
+            deposit_amount?: number | string | null;
+            /** Deposit Bank Name */
+            deposit_bank_name?: string | null;
+            /** Deposit Bic */
+            deposit_bic?: string | null;
+            /** Deposit Iban */
+            deposit_iban?: string | null;
+            /** Deposit Iban Verified */
+            deposit_iban_verified?: boolean | null;
+            /** Deposit Note */
+            deposit_note?: string | null;
+            /** Deposit Separate Statement */
+            deposit_separate_statement?: boolean | null;
+            /** Floor */
+            floor?: string | null;
+            /** General Note */
+            general_note?: string | null;
+            /** Handover Date */
+            handover_date?: string | null;
+            /** Handover End */
+            handover_end?: string | null;
+            /** Handover Location */
+            handover_location?: string | null;
+            /** Handover Start */
+            handover_start?: string | null;
+            /** Hide Time Information */
+            hide_time_information?: boolean | null;
+            /** House Number */
+            house_number?: string | null;
+            /** Internal Contact */
+            internal_contact?: string | null;
+            /** Internal Note */
+            internal_note?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Listing Id */
+            listing_id?: string | null;
+            /** Management Number */
+            management_number?: string | null;
+            /** Object Label */
+            object_label?: string | null;
+            /** Postal Code */
+            postal_code?: string | null;
+            /** Property Id */
+            property_id?: string | null;
+            /** Reference Number */
+            reference_number?: string | null;
+            /** Rental Contract Number */
+            rental_contract_number?: string | null;
+            /** Street */
+            street?: string | null;
+            /** Ticket Number */
+            ticket_number?: string | null;
+            /** Unit Id */
+            unit_id?: string | null;
+            /** Unit Label */
+            unit_label?: string | null;
+            /** Unit Number */
+            unit_number?: string | null;
+            /** Unit Position */
+            unit_position?: string | null;
+        };
         /** ReadingIn */
         ReadingIn: {
             /**
@@ -10854,7 +11231,7 @@ export interface components {
         /** SerialDispatchIn */
         SerialDispatchIn: {
             /** Items */
-            items: components["schemas"]["DispatchIn"][];
+            items: components["schemas"]["mhvp__communication__dispatch__DispatchIn"][];
         };
         /** SerialLetterIn */
         SerialLetterIn: {
@@ -10924,6 +11301,24 @@ export interface components {
              * Format: uuid
              */
             open_item_id: string;
+        };
+        /** SignatureIn */
+        SignatureIn: {
+            /** Comment */
+            comment?: string | null;
+            /**
+             * Image
+             * @description PNG als Data-URI
+             */
+            image: string;
+            /** Participant Id */
+            participant_id?: string | null;
+            /** Signed Location */
+            signed_location?: string | null;
+            /** Signer Name */
+            signer_name?: string | null;
+            /** Signer Role */
+            signer_role?: string | null;
         };
         /** SourceIn */
         SourceIn: {
@@ -11003,6 +11398,11 @@ export interface components {
         /** StatusChange */
         StatusChange: {
             status: components["schemas"]["PropertyStatus"];
+        };
+        /** StatusIn */
+        StatusIn: {
+            /** Action */
+            action: string;
         };
         /**
          * StorageKind
@@ -11521,6 +11921,11 @@ export interface components {
             /** Valid To */
             valid_to?: string | null;
         };
+        /** VersionIn */
+        VersionIn: {
+            /** Reason */
+            reason: string;
+        };
         /** VoteIn */
         VoteIn: {
             /** Choice */
@@ -11689,6 +12094,21 @@ export interface components {
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
         };
+        /** DispatchIn */
+        mhvp__communication__dispatch__DispatchIn: {
+            /** Channel */
+            channel?: string | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+        };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
             /** Bank Name */
@@ -11743,6 +12163,16 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /** DispatchIn */
+        mhvp__handover__routers__DispatchIn: {
+            /**
+             * Channel
+             * @default email
+             */
+            channel: string;
+            /** Participant Ids */
+            participant_ids?: string[] | null;
         };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
@@ -16358,7 +16788,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DispatchIn"];
+                "application/json": components["schemas"]["mhvp__communication__dispatch__DispatchIn"];
             };
         };
         responses: {
@@ -16967,6 +17397,670 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_protocols_api_v1_handover_protocols_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                status?: string | null;
+                kind?: string | null;
+                property_id?: string | null;
+                unit_id?: string | null;
+                include_archived?: boolean;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_protocol_api_v1_handover_protocols_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProtocolCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prefill_api_v1_handover_protocols_prefill_get: {
+        parameters: {
+            query: {
+                unit_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_protocol_api_v1_handover_protocols__protocol_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_protocol_api_v1_handover_protocols__protocol_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProtocolPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_api_v1_handover_protocols__protocol_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prepare_dispatches_api_v1_handover_protocols__protocol_id__dispatches_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__handover__routers__DispatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_document_api_v1_handover_protocols__protocol_id__documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_document_api_v1_handover_protocols__protocol_id__documents_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_document_api_v1_handover_protocols__protocol_id__documents__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hints_api_v1_handover_protocols__protocol_id__hints_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pdf_api_v1_handover_protocols__protocol_id__pdf_get: {
+        parameters: {
+            query?: {
+                download?: boolean;
+            };
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_signature_api_v1_handover_protocols__protocol_id__signatures_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignatureIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_signature_api_v1_handover_protocols__protocol_id__signatures__signature_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                signature_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_status_api_v1_handover_protocols__protocol_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    new_version_api_v1_handover_protocols__protocol_id__versions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_item_api_v1_handover_protocols__protocol_id___section__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                section: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    order_items_api_v1_handover_protocols__protocol_id___section__order_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                section: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_item_api_v1_handover_protocols__protocol_id___section___item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                section: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_item_api_v1_handover_protocols__protocol_id___section___item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                section: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
