@@ -11,6 +11,10 @@ export type ImmowareConnection = {
   base_url: string | null;
   carddav_url: string | null;
   caldav_url: string | null;
+  webdav_root_url: string | null;
+  carddav_url_discovered: boolean;
+  caldav_url_discovered: boolean;
+  webdav_root_discovered: boolean;
   username: string | null;
   has_password: boolean;
   enabled: boolean;
@@ -19,6 +23,25 @@ export type ImmowareConnection = {
   last_check_at: string | null;
   last_check_ok: boolean | null;
   last_error: string | null;
+  last_diagnosis: DiagnosisResult | null;
+  last_diagnosis_at: string | null;
+};
+
+export type DiagnosisStep = {
+  name: string;
+  url: string;
+  status: number | null;
+  ok: boolean;
+  note: string;
+  collections: string[];
+};
+
+export type DiagnosisResult = {
+  steps: DiagnosisStep[];
+  carddav_url: string | null;
+  caldav_url: string | null;
+  webdav_url: string | null;
+  dav_module_likely_not_booked: boolean;
 };
 
 export type ImmowareSyncRun = {
@@ -65,6 +88,10 @@ export function ImmowareSettings({
   const [checkBusy, setCheckBusy] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
 
+  const [diagnoseBusy, setDiagnoseBusy] = useState(false);
+  const [diagnoseError, setDiagnoseError] = useState<string | null>(null);
+  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(connection.last_diagnosis);
+
   const [syncBusy, setSyncBusy] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [runs, setRuns] = useState<ImmowareSyncRun[]>(initialRuns);
@@ -102,6 +129,23 @@ export function ImmowareSettings({
     setCheckBusy(false);
     if (!res.ok) return setCheckError(res.message);
     setSaved(res.data);
+  };
+
+  const diagnose = async () => {
+    setDiagnoseError(null);
+    setDiagnoseBusy(true);
+    const res = await bff<DiagnosisResult>("/api/bff/immoware/connection/diagnose", { method: "POST" });
+    setDiagnoseBusy(false);
+    if (!res.ok) return setDiagnoseError(res.message);
+    setDiagnosis(res.data);
+    const conn = await bff<ImmowareConnection>("/api/bff/immoware/connection");
+    if (conn.ok) setSaved(conn.data);
+  };
+
+  const applyDiscovered = (kind: "carddav" | "caldav" | "webdav", url: string) => {
+    if (kind === "carddav") setCarddavUrl(url);
+    else if (kind === "caldav") setCaldavUrl(url);
+    else setBaseUrl(url);
   };
 
   const triggerSync = async (kind: (typeof SYNC_KINDS)[number]) => {
@@ -239,6 +283,14 @@ export function ImmowareSettings({
             <button type="button" className={`${ui.button} ${ui.actionFull}`} onClick={check} disabled={checkBusy}>
               {t("check")}
             </button>
+            <button
+              type="button"
+              className={`${ui.button} ${ui.actionFull}`}
+              onClick={diagnose}
+              disabled={diagnoseBusy}
+            >
+              {diagnoseBusy ? t("diagnose.running") : t("diagnose.button")}
+            </button>
           </div>
         ) : null}
 
@@ -264,6 +316,89 @@ export function ImmowareSettings({
           {saved.last_error ? <p className="mt-1 text-xs text-danger-fg">{saved.last_error}</p> : null}
         </div>
       </form>
+
+      {diagnoseError ? (
+        <p role="alert" className={ui.alert}>
+          {diagnoseError}
+        </p>
+      ) : null}
+
+      {diagnosis ? (
+        <section className={`${ui.card} flex flex-col gap-3`} aria-label={t("diagnose.title")}>
+          <h2 className={ui.h2}>{t("diagnose.title")}</h2>
+          {diagnosis.dav_module_likely_not_booked ? (
+            <p role="alert" className={ui.alert}>
+              {t("diagnose.notBooked")}
+            </p>
+          ) : null}
+          <div className="flex flex-col gap-1">
+            {diagnosis.carddav_url ? (
+              <p className="text-sm">
+                {t("diagnose.discovered.carddav", { url: diagnosis.carddav_url })}{" "}
+                <button
+                  type="button"
+                  className={ui.buttonSm}
+                  onClick={() => applyDiscovered("carddav", diagnosis.carddav_url ?? "")}
+                >
+                  {t("diagnose.discovered.apply")}
+                </button>
+              </p>
+            ) : null}
+            {diagnosis.caldav_url ? (
+              <p className="text-sm">
+                {t("diagnose.discovered.caldav", { url: diagnosis.caldav_url })}{" "}
+                <button
+                  type="button"
+                  className={ui.buttonSm}
+                  onClick={() => applyDiscovered("caldav", diagnosis.caldav_url ?? "")}
+                >
+                  {t("diagnose.discovered.apply")}
+                </button>
+              </p>
+            ) : null}
+            {diagnosis.webdav_url ? (
+              <p className="text-sm">
+                {t("diagnose.discovered.webdav", { url: diagnosis.webdav_url })}{" "}
+                <button
+                  type="button"
+                  className={ui.buttonSm}
+                  onClick={() => applyDiscovered("webdav", diagnosis.webdav_url ?? "")}
+                >
+                  {t("diagnose.discovered.apply")}
+                </button>
+              </p>
+            ) : null}
+          </div>
+          <div className="overflow-x-auto">
+            <table className={ui.table} data-testid="immoware-diagnosis-steps">
+              <thead>
+                <tr>
+                  <th>{t("diagnose.columns.step")}</th>
+                  <th>{t("diagnose.columns.url")}</th>
+                  <th>{t("diagnose.columns.status")}</th>
+                  <th>{t("diagnose.columns.note")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {diagnosis.steps.map((step, index) => (
+                  <tr key={`${step.name}-${index}`}>
+                    <td>{step.name}</td>
+                    <td className="break-all text-xs text-muted">{step.url}</td>
+                    <td className="tabular-nums">
+                      {step.ok ? (
+                        <span className={ui.badgeSuccess}>{step.status ?? "-"}</span>
+                      ) : (
+                        <span className={ui.badgeDanger}>{step.status ?? "-"}</span>
+                      )}
+                    </td>
+                    <td className="text-xs text-muted">{step.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       {canManage ? (
         <section className={`${ui.card} flex flex-col gap-3`} aria-label={t("syncTitle")}>

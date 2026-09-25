@@ -214,6 +214,144 @@ async def test_discover_calendars_returns_empty_on_error() -> None:
         await client.aclose()
 
 
+@pytest.mark.asyncio
+async def test_propfind_folder_reports_403_without_raising() -> None:
+    """A locked subfolder (401/403) must not raise, so ``pull_tree`` can keep walking other
+    folders and only record the error (Betreiberbericht 25.09.2026, Auftragspunkt 4)."""
+    from mhvp.immoware.webdav import _propfind_folder
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403)
+
+    client = ReadOnlyDavClient(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    try:
+        entries, error = await _propfind_folder(client, "https://dav.example/locked/")
+    finally:
+        await client.aclose()
+    assert entries == []
+    assert error is not None
+    assert error["status"] == 403
+    assert "verweigert" in str(error["note"])
+
+
+@pytest.mark.asyncio
+async def test_propfind_folder_ok_returns_entries_and_no_error() -> None:
+    from mhvp.immoware.webdav import _propfind_folder
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(207, content=PROPFIND_XML)
+
+    client = ReadOnlyDavClient(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    try:
+        entries, error = await _propfind_folder(client, "https://dav.example/ok/")
+    finally:
+        await client.aclose()
+    assert error is None
+    assert len(entries) == 2
+
+
+_PRINCIPAL_XML = b"""<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/dav/</D:href>
+    <D:propstat>
+      <D:prop><D:current-user-principal><D:href>/dav/principals/info@example.de/</D:href></D:current-user-principal></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+
+_ADDRESSBOOK_HOME_XML = b"""<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:carddav">
+  <D:response>
+    <D:href>/dav/principals/info@example.de/</D:href>
+    <D:propstat>
+      <D:prop><C:addressbook-home-set><D:href>/dav/addressbooks/info@example.de/</D:href></C:addressbook-home-set></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+
+_CALENDAR_HOME_XML = b"""<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:" xmlns:CAL="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/dav/principals/info@example.de/</D:href>
+    <D:propstat>
+      <D:prop><CAL:calendar-home-set><D:href>/dav/calendars/info@example.de/</D:href></CAL:calendar-home-set></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+
+
+def _home_listing_xml(href: str) -> bytes:
+    return f"""<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>{href}</D:href>
+    <D:propstat><D:prop><D:resourcetype/></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat>
+  </D:response>
+</D:multistatus>""".encode()
+
+
+def _sabredav_like_handler(request: httpx.Request) -> httpx.Response:
+    path = request.url.path
+    if path in ("/dav/", "/dav"):
+        return httpx.Response(207, content=_PRINCIPAL_XML)
+    if path == "/dav/principals/info@example.de/":
+        body = request.content
+        if b"addressbook-home-set" in body:
+            return httpx.Response(207, content=_ADDRESSBOOK_HOME_XML)
+        if b"calendar-home-set" in body:
+            return httpx.Response(207, content=_CALENDAR_HOME_XML)
+    if path == "/dav/addressbooks/info@example.de/":
+        return httpx.Response(
+            207, content=_home_listing_xml("/dav/addressbooks/info@example.de/default/")
+        )
+    if path == "/dav/calendars/info@example.de/":
+        return httpx.Response(
+            207, content=_home_listing_xml("/dav/calendars/info@example.de/default/")
+        )
+    if path.startswith("/.well-known/"):
+        return httpx.Response(404)
+    return httpx.Response(404)
+
+
+@pytest.mark.asyncio
+async def test_run_full_discovery_sabredav_like() -> None:
+    from mhvp.immoware.discovery import run_full_discovery
+
+    client = ReadOnlyDavClient(
+        httpx.AsyncClient(transport=httpx.MockTransport(_sabredav_like_handler))
+    )
+    try:
+        result = await run_full_discovery(client, "https://dav.example/dav/", "info@example.de")
+    finally:
+        await client.aclose()
+    assert result.carddav_url is not None
+    assert "addressbooks/info@example.de" in result.carddav_url
+    assert result.caldav_url is not None
+    assert "calendars/info@example.de" in result.caldav_url
+    assert any(step.ok for step in result.steps)
+
+
+@pytest.mark.asyncio
+async def test_run_full_discovery_all_404() -> None:
+    from mhvp.immoware.discovery import run_full_discovery
+
+    client = ReadOnlyDavClient(
+        httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(404)))
+    )
+    try:
+        result = await run_full_discovery(client, "https://dav.example/dav/", "info@example.de")
+    finally:
+        await client.aclose()
+    assert result.carddav_url is None
+    assert result.caldav_url is None
+    assert result.webdav_url is None
+    assert all(step.status == 404 for step in result.steps)
+
+
 def test_derive_urls_use_username_when_known() -> None:
     from mhvp.immoware.client import derive_caldav_url, derive_carddav_url
 

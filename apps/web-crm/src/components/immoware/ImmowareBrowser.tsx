@@ -43,6 +43,9 @@ type Page<T> = { data: T[]; meta: { page: number; per_page: number; total: numbe
 
 type ContactHit = { id: string; display_name: string };
 
+type TakeOverFolderResult = { created: number; linked: number; failed: number; total: number };
+type TakeOverContactsResult = { created: number; linked: number; skipped: number; total: number };
+
 const PAGE_SIZE = 25;
 
 function todayIso(): string {
@@ -136,6 +139,37 @@ function DocumentsTab() {
   const hasNext = page * PAGE_SIZE < total;
   const hasPrev = page > 1;
 
+  const [takeOverBusy, setTakeOverBusy] = useState(false);
+  const [takeOverError, setTakeOverError] = useState<string | null>(null);
+  const [takeOverResult, setTakeOverResult] = useState<TakeOverFolderResult | null>(null);
+  const [rowTakeOverBusy, setRowTakeOverBusy] = useState<string | null>(null);
+  const [rowTakeOverError, setRowTakeOverError] = useState<Record<string, string>>({});
+  const [takenOver, setTakenOver] = useState<Record<string, boolean>>({});
+
+  const takeOverFolder = async () => {
+    setTakeOverError(null);
+    setTakeOverResult(null);
+    setTakeOverBusy(true);
+    const res = await bff<TakeOverFolderResult>("/api/bff/immoware/documents/take-over-folder", {
+      method: "POST",
+      body: JSON.stringify({ folder_prefix: path || "/" }),
+    });
+    setTakeOverBusy(false);
+    if (!res.ok) return setTakeOverError(res.message);
+    setTakeOverResult(res.data);
+  };
+
+  const takeOverOne = async (docId: string) => {
+    setRowTakeOverBusy(docId);
+    const res = await bff<{ document_id: string; created: boolean }>(
+      `/api/bff/immoware/documents/${docId}/take-over`,
+      { method: "POST" },
+    );
+    setRowTakeOverBusy(null);
+    if (res.ok) setTakenOver((prev) => ({ ...prev, [docId]: true }));
+    else setRowTakeOverError((prev) => ({ ...prev, [docId]: res.message }));
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <nav aria-label={t("documents.breadcrumb")} className="mhvp-caption flex flex-wrap items-center gap-1 text-subtle">
@@ -155,17 +189,37 @@ function DocumentsTab() {
           </span>
         ))}
       </nav>
-      <input
-        type="search"
-        className={ui.input}
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setPage(1);
-        }}
-        placeholder={t("documents.searchPlaceholder")}
-        aria-label={t("documents.searchPlaceholder")}
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          className={ui.input}
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
+          placeholder={t("documents.searchPlaceholder")}
+          aria-label={t("documents.searchPlaceholder")}
+        />
+        <button type="button" className={ui.buttonSm} onClick={takeOverFolder} disabled={takeOverBusy}>
+          {takeOverBusy ? t("documents.takeOverFolderRunning") : t("documents.takeOverFolder")}
+        </button>
+      </div>
+      {takeOverError ? (
+        <p role="alert" className={ui.alert}>
+          {takeOverError}
+        </p>
+      ) : null}
+      {takeOverResult ? (
+        <p className={ui.success}>
+          {t("documents.takeOverFolderResult", {
+            created: takeOverResult.created,
+            linked: takeOverResult.linked,
+            failed: takeOverResult.failed,
+            total: takeOverResult.total,
+          })}
+        </p>
+      ) : null}
       {!loaded ? (
         <p className="text-sm text-muted">{t("loading")}</p>
       ) : error ? (
@@ -209,14 +263,31 @@ function DocumentsTab() {
                     <td className="tabular-nums text-muted">{formatDateTime(doc.last_modified)}</td>
                     <td>
                       {!doc.is_collection ? (
-                        <a
-                          href={`/api/bff/immoware/documents/${doc.id}/file`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={ui.buttonSm}
-                        >
-                          {t("documents.download")}
-                        </a>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <a
+                            href={`/api/bff/immoware/documents/${doc.id}/file`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={ui.buttonSm}
+                          >
+                            {t("documents.download")}
+                          </a>
+                          {takenOver[doc.id] ? (
+                            <span className={ui.badgeSuccess}>{t("documents.takenOver")}</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className={ui.buttonSm}
+                              disabled={rowTakeOverBusy === doc.id}
+                              onClick={() => takeOverOne(doc.id)}
+                            >
+                              {t("documents.takeOver")}
+                            </button>
+                          )}
+                          {rowTakeOverError[doc.id] ? (
+                            <span className="text-xs text-danger-fg">{rowTakeOverError[doc.id]}</span>
+                          ) : null}
+                        </div>
                       ) : null}
                     </td>
                   </tr>
@@ -303,6 +374,24 @@ function ContactsTab() {
     }
   };
 
+  const [takeOverAllBusy, setTakeOverAllBusy] = useState(false);
+  const [takeOverAllError, setTakeOverAllError] = useState<string | null>(null);
+  const [takeOverAllResult, setTakeOverAllResult] = useState<TakeOverContactsResult | null>(null);
+
+  const takeOverAll = async () => {
+    setTakeOverAllError(null);
+    setTakeOverAllResult(null);
+    setTakeOverAllBusy(true);
+    const res = await bff<TakeOverContactsResult>("/api/bff/immoware/contacts/take-over", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    setTakeOverAllBusy(false);
+    if (!res.ok) return setTakeOverAllError(res.message);
+    setTakeOverAllResult(res.data);
+    void load();
+  };
+
   const rows = result?.data ?? [];
   const total = result?.meta.total ?? 0;
   const hasNext = page * PAGE_SIZE < total;
@@ -333,7 +422,25 @@ function ContactsTab() {
           />
           {t("contacts.onlyUnmatched")}
         </label>
+        <button type="button" className={ui.buttonSm} onClick={takeOverAll} disabled={takeOverAllBusy}>
+          {takeOverAllBusy ? t("contacts.takeOverAllRunning") : t("contacts.takeOverAll")}
+        </button>
       </div>
+      {takeOverAllError ? (
+        <p role="alert" className={ui.alert}>
+          {takeOverAllError}
+        </p>
+      ) : null}
+      {takeOverAllResult ? (
+        <p className={ui.success}>
+          {t("contacts.takeOverAllResult", {
+            created: takeOverAllResult.created,
+            linked: takeOverAllResult.linked,
+            skipped: takeOverAllResult.skipped,
+            total: takeOverAllResult.total,
+          })}
+        </p>
+      ) : null}
       {!loaded ? (
         <p className="text-sm text-muted">{t("loading")}</p>
       ) : error ? (

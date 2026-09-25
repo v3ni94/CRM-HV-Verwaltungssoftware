@@ -21,6 +21,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -65,6 +66,23 @@ class ImmowareConnection(IdMixin, TimestampMixin, TenantMixin, Base):
     last_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_check_ok: Mapped[bool | None] = mapped_column(Boolean)
     last_error: Mapped[str | None] = mapped_column(Text)
+    # Discovery (RFC 6764/4918, Betreiberbericht 25.09.2026): nur gesetzt, solange die
+    # jeweilige URL nicht manuell vom Anwender gepflegt wurde.
+    webdav_root_url: Mapped[str | None] = mapped_column(String(500))
+    carddav_url_discovered: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    caldav_url_discovered: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    webdav_root_discovered: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    last_diagnosis: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    last_diagnosis_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    auto_take_over_contacts: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
 
 class _MirrorMixin:
@@ -97,6 +115,12 @@ class ImmowareDavDocument(IdMixin, TimestampMixin, TenantMixin, _MirrorMixin, Ba
     depth: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     # Dreistellige Objektnummer, aus dem Pfad geraten (z.B. ".../123 Musterstrasse/...").
     object_number_guess: Mapped[str | None] = mapped_column(String(3))
+    # Uebernahme in den CRM-Dokumentenbestand (Betreiberbericht 25.09.2026): idempotent je
+    # href+etag, siehe service.take_over_document.
+    taken_over_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document.id", ondelete="SET NULL"), index=True
+    )
+    taken_over_etag: Mapped[str | None] = mapped_column(String(300))
 
 
 class ImmowareDavContact(IdMixin, TimestampMixin, TenantMixin, _MirrorMixin, Base):
@@ -152,6 +176,11 @@ class ImmowareSyncRun(IdMixin, TimestampMixin, TenantMixin, Base):
     changed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     removed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     error: Mapped[str | None] = mapped_column(Text)
+    # Pro-Ordner-Fehler eines WebDAV-Laufs (401/403 u.a.), der Lauf selbst bricht dabei nicht ab
+    # (Betreiberbericht 25.09.2026): Liste von {"url": <maskiert>, "status": int, "note": str}.
+    folder_errors: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class LearningKind(StrEnum):

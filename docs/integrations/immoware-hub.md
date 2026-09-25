@@ -123,3 +123,82 @@ Kalender darunter per PROPFIND und fragt jeden einzeln ab. Antwortet der Server 
 401, stimmen Login oder Passwort nicht oder das DAV-Modul ist beim Mandanten nicht freigeschaltet;
 mit 404 existiert der Benutzerpfad nicht. In beiden Fällen ist die Klärung beim Immoware24-Support
 nötig, die Software kann das nicht umgehen.
+
+## Standardbasierte Discovery und Diagnose (M32-Folgeauftrag, Betreiberbericht 25.09.2026)
+
+Der Betreiberbericht vom 25.09.2026 hält fest, dass die Immoware24-DAV-Anbindung in Produktion
+nicht funktioniert: Kontakte wurden nicht ins CRM übernommen, und es war unklar, ob das DAV-Modul
+beim Mandanten überhaupt gebucht ist. Als Reaktion implementiert `mhvp.immoware.discovery` eine
+standardbasierte Endpunktermittlung (RFC 6764 für CardDAV/CalDAV, RFC 4918 für WebDAV) und ein
+Diagnose-Endpunkt macht das Ergebnis im CRM sichtbar, statt es nur im Log zu vermuten.
+
+### Discovery-Ablauf
+
+Ausgehend von `base_url` und `username` probiert die Discovery in dieser Reihenfolge, immer nur
+lesend über `ReadOnlyDavClient` (PROPFIND, keine anderen Methoden):
+
+1. `.well-known/carddav` und `.well-known/caldav` (RFC 6764), mit automatischem Redirect-Folgen.
+2. `PROPFIND current-user-principal` auf `base_url` und, falls das ins Leere läuft, auf
+   `base_url` + `/dav/`.
+3. Auf dem gefundenen Principal: `PROPFIND addressbook-home-set` beziehungsweise
+   `calendar-home-set` (RFC 6352/4791).
+4. `PROPFIND Depth 1` auf das jeweilige Home-Set, um die einzelnen Adressbücher beziehungsweise
+   Kalender darunter zu listen; das erste Ergebnis wird als Vorschlag übernommen.
+5. Für Dokumente (kein RFC-Standard, da Immoware24 keine WebDAV-Collection-Discovery anbietet):
+   `PROPFIND Depth 1` auf `base_url` sowie den gebräuchlichen Wurzeln `/dav/`, `/dav/files/`,
+   `/dav/documents/`; die erste Antwort mit Sammlungen gewinnt.
+
+Eine gefundene URL wird nur dann auf der Connection gespeichert (`carddav_url`, `caldav_url`,
+`webdav_root_url`), wenn dort noch keine manuell gepflegte URL steht (`*_discovered`-Flag zeigt
+das an). Sobald der Anwender eine URL im CRM selbst einträgt oder ändert, wird deren
+`*_discovered`-Flag zurückgesetzt und die Discovery überschreibt sie nie wieder automatisch.
+
+### Diagnose-Endpunkt
+
+`POST /api/v1/immoware/connection/diagnose` führt die Discovery aus und liefert eine Schrittliste
+(Name, credential-maskierte URL, HTTP-Status, kurze deutsche Einordnung), die auch auf der
+Connection gespeichert wird (`last_diagnosis`, `last_diagnosis_at`) und im CRM unter
+„Verbindung diagnostizieren“ als Tabelle erscheint.
+
+Einordnung je Status:
+
+| Status | Bedeutung |
+| --- | --- |
+| 401/403 | Zugangsdaten falsch oder das DAV-Modul ist für den Mandanten nicht freigeschaltet. |
+| 404 auf allen Wurzeln | Das DAV-Modul ist bei Immoware24 vermutlich nicht gebucht; beim Immoware24-Support nachfragen, ob und unter welcher Basis-URL WebDAV/CardDAV/CalDAV für diesen Mandanten aktiv sind. |
+| 207 | Der Schritt hat eine Multistatus-Antwort geliefert, ist also erreichbar (`n Sammlungen` in der Notiz). |
+
+Antworten alle Discovery-Schritte mit 404, setzt die Diagnose `dav_module_likely_not_booked=true`;
+das CRM zeigt dann den Hinweis, dass das DAV-Modul vermutlich nicht gebucht ist und der
+Immoware24-Support gefragt werden sollte. Das ist eine Einschätzung aus dem Protokollverhalten,
+keine Auskunft von Immoware24 selbst; siehe den offenen Punkt unten.
+
+### Was beim Immoware24-Support zu erfragen ist
+
+- Ist das DAV-Modul (WebDAV, CardDAV, CalDAV) für den Mandanten `<uuid>.dav.immoware24.de`
+  gebucht und freigeschaltet?
+- Falls ja: welche Basis-URL und welcher Benutzerpfad gelten (der Login per E-Mail muss nicht mit
+  dem DAV-Benutzernamen übereinstimmen)?
+- Gibt es dokumentierte `.well-known`-Einträge oder ist `current-user-principal` auf einem
+  anderen Pfad als `/dav/` zu erwarten?
+- Welche WebDAV-Wurzel enthält den Dokumentenbaum (Posteingang, Objektablage)?
+
+### Kontakte- und Dokumentenübernahme ins CRM
+
+- `POST /api/v1/immoware/contacts/take-over` übernimmt alle (oder per `contact_ids` ausgewählte)
+  noch nicht verknüpften CardDAV-Kontakte als CRM-Kontakte, mit Duplikatprüfung über
+  `mhvp.contacts.services.find_duplicates`; idempotent, meldet `created`/`linked`/`skipped`/
+  `total`. Das Connection-Flag `auto_take_over_contacts` (Default aus, Regel 0.1.6: keine
+  automatischen Übernahmen ohne ausdrückliche Freigabe) löst dieselbe Übernahme automatisch nach
+  jedem CardDAV-Sync aus, wenn der Betreiber es aktiviert.
+- `POST /api/v1/immoware/documents/{id}/take-over` lädt eine einzelne WebDAV-Datei per GET
+  herunter und legt sie über `mhvp.documents.services.store_document` als CRM-Dokument an;
+  idempotent je `href`+`etag` (ein zweiter Aufruf auf eine unveränderte Zeile legt kein zweites
+  Dokument an). Die Objektzuordnung erfolgt über die aus dem Pfad geratene dreistellige
+  Objektnummer (`object_number_guess`), sofern ein passendes Objekt existiert.
+- `POST /api/v1/immoware/documents/take-over-folder` (Body `folder_prefix`) wendet dieselbe
+  Übernahme auf alle Dateien unterhalb eines Ordnerpfads an; einzelne fehlgeschlagene Dateien
+  brechen den Lauf nicht ab, sondern werden gezählt (`failed`).
+- Der WebDAV-Lauf selbst (`pull_tree`) bricht seit diesem Auftrag nicht mehr beim ersten
+  gesperrten Unterordner (401/403) ab, sondern protokolliert ihn in
+  `immoware_sync_run.folder_errors` und geht mit den restlichen Ordnern weiter.

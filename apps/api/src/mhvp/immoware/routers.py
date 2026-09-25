@@ -53,11 +53,13 @@ def _connection_out(row: ImmowareConnection | None) -> s.ImmowareConnectionOut:
             base_url=None,
             carddav_url=None,
             caldav_url=None,
+            webdav_root_url=None,
             username=None,
             has_password=False,
             enabled=False,
             verify_tls=True,
             poll_minutes=30,
+            auto_take_over_contacts=False,
             last_check_at=None,
             last_check_ok=None,
             last_error=None,
@@ -66,14 +68,21 @@ def _connection_out(row: ImmowareConnection | None) -> s.ImmowareConnectionOut:
         base_url=row.base_url,
         carddav_url=row.carddav_url,
         caldav_url=row.caldav_url,
+        webdav_root_url=row.webdav_root_url,
+        carddav_url_discovered=row.carddav_url_discovered,
+        caldav_url_discovered=row.caldav_url_discovered,
+        webdav_root_discovered=row.webdav_root_discovered,
         username=row.username,
         has_password=bool(row.password),
         enabled=row.enabled,
         verify_tls=row.verify_tls,
         poll_minutes=row.poll_minutes,
+        auto_take_over_contacts=row.auto_take_over_contacts,
         last_check_at=row.last_check_at,
         last_check_ok=row.last_check_ok,
         last_error=row.last_error,
+        last_diagnosis=row.last_diagnosis,
+        last_diagnosis_at=row.last_diagnosis_at,
     )
 
 
@@ -95,7 +104,11 @@ async def put_connection(
             row = ImmowareConnection(tenant_id=principal.tenant_id)
             session.add(row)
         row.base_url = body.base_url
+        if body.carddav_url != row.carddav_url:
+            row.carddav_url_discovered = False
         row.carddav_url = body.carddav_url
+        if body.caldav_url != row.caldav_url:
+            row.caldav_url_discovered = False
         row.caldav_url = body.caldav_url
         row.username = body.username
         if body.password is not None:
@@ -103,6 +116,7 @@ async def put_connection(
         row.enabled = body.enabled
         row.verify_tls = body.verify_tls
         row.poll_minutes = body.poll_minutes
+        row.auto_take_over_contacts = body.auto_take_over_contacts
         await session.flush()
         await _event(session, principal, "immoware.connection_updated", row.id, enabled=row.enabled)
         return _connection_out(row)
@@ -121,6 +135,35 @@ async def check_connection(
             session, principal, "immoware.connection_checked", row.id, ok=bool(row.last_check_ok)
         )
         return _connection_out(row)
+
+
+@router.post(
+    "/connection/diagnose",
+    summary="Verbindung diagnostizieren (RFC 6764/4918 Discovery)",
+)
+async def diagnose_connection(
+    request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> s.DiagnosisOut:
+    async with tenant_tx(request, principal) as session:
+        row = await svc.get_connection(session)
+        if row is None or not row.base_url:
+            raise ProblemError(ErrorCodes.IMW_NOT_CONFIGURED)
+        row = await svc.diagnose_connection(session, row)
+        await _event(
+            session,
+            principal,
+            "immoware.connection_diagnosed",
+            row.id,
+            not_booked=bool((row.last_diagnosis or {}).get("dav_module_likely_not_booked")),
+        )
+        diagnosis = row.last_diagnosis or {}
+        return s.DiagnosisOut(
+            steps=[s.DiagnosisStepOut.model_validate(step) for step in diagnosis.get("steps", [])],
+            carddav_url=diagnosis.get("carddav_url"),
+            caldav_url=diagnosis.get("caldav_url"),
+            webdav_url=diagnosis.get("webdav_url"),
+            dav_module_likely_not_booked=bool(diagnosis.get("dav_module_likely_not_booked")),
+        )
 
 
 @router.post("/sync/{kind}", summary="Abholung manuell anstossen")
@@ -205,6 +248,87 @@ async def download_document(
             await client.aclose()
 
     return StreamingResponse(_stream(), media_type=content_type)
+
+
+def _blobs(request: Request) -> Any:
+    from mhvp.documents.blobs import BlobStore
+
+    return BlobStore(request.app.state.settings)
+
+
+@router.post(
+    "/documents/{document_id}/take-over",
+    status_code=201,
+    summary="Als CRM-Dokument uebernehmen",
+)
+async def take_over_document(
+    document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> s.TakeOverDocumentOut:
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(ImmowareDavDocument, document_id)
+        if row is None or row.tenant_id != principal.tenant_id or row.deleted_at is not None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if row.is_collection:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Ordner koennen nicht uebernommen werden."
+            )
+        connection = await svc.require_connection(session)
+        try:
+            document, created = await svc.take_over_document(
+                session, _blobs(request), connection, row, created_by=principal.user_id
+            )
+        except Exception as exc:
+            raise ProblemError(ErrorCodes.IMW_UNAVAILABLE, detail=sanitize_error(str(exc))) from exc
+        await _event(
+            session,
+            principal,
+            "immoware.document_taken_over",
+            row.id,
+            document_id=str(document.id),
+            created=created,
+        )
+        return s.TakeOverDocumentOut(document_id=document.id, created=created)
+
+
+@router.post("/documents/take-over-folder", summary="Ordner uebernehmen")
+async def take_over_documents_in_folder(
+    body: s.TakeOverFolderIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> s.TakeOverFolderOut:
+    async with tenant_tx(request, principal) as session:
+        connection = await svc.require_connection(session)
+        result = await svc.take_over_documents_in_folder(
+            session,
+            _blobs(request),
+            connection,
+            folder_prefix=body.folder_prefix,
+            created_by=principal.user_id,
+        )
+        await _event(
+            session, principal, "immoware.documents_taken_over_folder", connection.id, **result
+        )
+        return s.TakeOverFolderOut(**result)
+
+
+@router.post("/contacts/take-over", summary="Alle unverknuepften Kontakte uebernehmen")
+async def take_over_contacts(
+    body: s.TakeOverContactsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(MANAGE),
+) -> s.TakeOverContactsOut:
+    async with tenant_tx(request, principal) as session:
+        result = await svc.take_over_contacts(
+            session,
+            principal.tenant_id,
+            contact_ids=body.contact_ids,
+        )
+        await _event(
+            session,
+            principal,
+            "immoware.contacts_taken_over",
+            principal.tenant_id,
+            **result,
+        )
+        return s.TakeOverContactsOut(**result)
 
 
 @router.get("/contacts", summary="Immoware24-Kontakte")

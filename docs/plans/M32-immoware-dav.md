@@ -83,3 +83,36 @@ Migration `alembic/versions/0044_immoware_dav.py` (RLS ueber `tenant_rls_stateme
   Read-only-Garantie (kein Schreib-Endpunkt, `ReadOnlyDavClient` blockiert Schreibmethoden vor
   jeder Anfrage). Die Unit-Tests in `tests/unit/test_immoware_dav.py` decken weiterhin Parser,
   Methodensperre und Fehlerbereinigung ab.
+
+## Ergebnis Folgeauftrag (Betreiberbericht 25.09.2026)
+
+Anlass: die DAV-Anbindung funktioniert in Produktion nicht, Kontakte wurden nicht ins CRM
+übernommen, und es ist unklar, ob das DAV-Modul bei Immoware24 gebucht ist. Umgesetzt:
+
+1. **Discovery** (`mhvp.immoware.discovery`, RFC 6764/4918/6352/4791): `.well-known`,
+   `current-user-principal`, `addressbook-home-set`/`calendar-home-set`, Depth-1-Listing der
+   Home-Sets sowie eine WebDAV-Wurzelsuche über die gebräuchlichen Pfade. Gefundene URLs werden
+   nur übernommen, solange keine manuelle URL gesetzt ist (`*_discovered`-Flags auf
+   `immoware_connection`).
+2. **Diagnose-Endpunkt** `POST /connection/diagnose`: Schrittliste mit maskierter URL, Status und
+   deutscher Einordnung (401/403, 404 auf allen Wurzeln → DAV-Modul vermutlich nicht gebucht,
+   207 → gefunden), persistiert auf der Connection und im CRM unter „Verbindung
+   diagnostizieren“ sichtbar (Migration `0063_immoware_discovery_diagnosis.py`).
+3. **Kontakte-Massenübernahme** `POST /contacts/take-over` (alle oder ausgewählte), mit
+   Duplikatprüfung über `mhvp.contacts.services.find_duplicates`, idempotent; optionales
+   Connection-Flag `auto_take_over_contacts` (Default aus) löst dieselbe Übernahme automatisch
+   nach jedem CardDAV-Sync aus. CRM-Seite „Kontakte“ hat einen „Alle übernehmen“-Knopf mit
+   Ergebniszusammenfassung.
+4. **Dokumente**: `pull_tree` bricht bei einem gesperrten Unterordner (401/403) nicht mehr ab,
+   sondern protokolliert ihn in `immoware_sync_run.folder_errors` und geht weiter
+   (Migration `0066_immoware_document_takeover.py`). Neue Endpunkte
+   `POST /documents/{id}/take-over` (einzelne Datei, idempotent je href+etag, Objektverknüpfung
+   über die geratene Objektnummer) und `POST /documents/take-over-folder` (Ordner-Bulk, einzelne
+   Fehler zählen statt abzubrechen). CRM-Seite „Dokumente“ hat einen „Ordner übernehmen“-Knopf.
+5. Tests: `tests/unit/test_immoware_dav.py` (SabreDAV-ähnlicher Discovery-Mock, reiner
+   404-Server, gesperrter Unterordner ohne Abbruch) und `tests/integration/test_m32_immoware.py`
+   (Diagnose-Endpunkt inkl. Credential-Maskierung, Kontakte-Bulk-Übernahme idempotent,
+   Dokument- und Ordner-Übernahme idempotent, WebDAV-Lauf mit gesperrtem Unterordner).
+6. Offener Punkt: ob das DAV-Modul bei Immoware24 tatsächlich gebucht ist, bleibt unbekannt und
+   ist in `docs/OPEN_QUESTIONS.md` beim Betreiber eingetragen; die Diagnose macht den Verdacht nur
+   sichtbar, ersetzt aber nicht die Rückfrage beim Immoware24-Support.

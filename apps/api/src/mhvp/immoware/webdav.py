@@ -50,6 +50,7 @@ class WebdavPullResult:
     changed: int = 0
     removed: int = 0
     entries: list[DavEntry] = field(default_factory=list)
+    folder_errors: list[dict[str, object]] = field(default_factory=list)
 
 
 def _tag(el: ET.Element) -> str:
@@ -113,6 +114,35 @@ async def propfind(client: ReadOnlyDavClient, url: str, *, depth: int | str = 1)
     return parse_propfind(response.content)
 
 
+async def _propfind_folder(
+    client: ReadOnlyDavClient, url: str
+) -> tuple[list[DavEntry], dict[str, object] | None]:
+    """Wie ``propfind``, aber ein Fehlerstatus (insbesondere 401/403) fuehrt nicht zum
+    RuntimeError, sondern kommt als Fehlerdatensatz zurueck, damit ``pull_tree`` den Lauf pro
+    Ordner fortsetzen kann (Betreiberbericht 25.09.2026: manche Unterordner sind gesperrt, ohne
+    dass der gesamte Sync abbrechen soll)."""
+    try:
+        response = await client.request(
+            "PROPFIND",
+            url,
+            content=PROPFIND_BODY.encode("utf-8"),
+            headers={"Depth": "1", "Content-Type": "application/xml; charset=utf-8"},
+        )
+    except Exception as exc:
+        return [], {"url": sanitize_error(url), "status": None, "note": sanitize_error(str(exc))}
+    if response.status_code >= 400:
+        note = (
+            "Zugriff verweigert (401/403)."
+            if response.status_code in (401, 403)
+            else f"HTTP {response.status_code}."
+        )
+        return [], {"url": sanitize_error(url), "status": response.status_code, "note": note}
+    try:
+        return parse_propfind(response.content), None
+    except ET.ParseError as exc:
+        return [], {"url": sanitize_error(url), "status": response.status_code, "note": str(exc)}
+
+
 async def pull_tree(
     client: ReadOnlyDavClient,
     session: AsyncSession,
@@ -122,7 +152,9 @@ async def pull_tree(
     max_depth: int = 4,
 ) -> WebdavPullResult:
     """PROPFIND Depth 1 rekursiv bis ``max_depth``. Immoware24 unterstuetzt kein Depth: infinity
-    zuverlaessig, daher wird Ordner fuer Ordner abgestiegen (Hub-Vorbild: DavPullRunner)."""
+    zuverlaessig, daher wird Ordner fuer Ordner abgestiegen (Hub-Vorbild: DavPullRunner). Ein
+    401/403 auf einem einzelnen Unterordner bricht den Lauf nicht ab, sondern wird in
+    ``result.folder_errors`` protokolliert (Betreiberbericht 25.09.2026)."""
     result = WebdavPullResult()
     seen_ids: set[str] = set()
     queue: list[tuple[str, int]] = [(base_url, 0)]
@@ -132,7 +164,10 @@ async def pull_tree(
         if url in visited:
             continue
         visited.add(url)
-        entries = await propfind(client, url, depth=1)
+        entries, folder_error = await _propfind_folder(client, url)
+        if folder_error is not None:
+            result.folder_errors.append(folder_error)
+            continue
         for entry in entries:
             result.entries.append(entry)
             result.seen += 1

@@ -67,6 +67,13 @@ class FakeDav:
         self.password = "secret-dav-pw"
         self.methods_seen: list[str] = []
         self.write_attempted = False
+        self._locked_paths: set[str] = set()
+
+    def lock_subfolder(self, path: str) -> None:
+        """Ab jetzt liefert PROPFIND auf ``path`` 403 und die Wurzel listet ``path`` zusaetzlich
+        als Sammlung (Betreiberbericht 25.09.2026, Auftragspunkt 4: gesperrte Unterordner duerfen
+        den Lauf nicht abbrechen)."""
+        self._locked_paths.add(path)
 
     def _auth_ok(self, request: httpx.Request) -> bool:
         auth = request.headers.get("Authorization", "")
@@ -80,10 +87,21 @@ class FakeDav:
         if not self._auth_ok(request):
             return httpx.Response(401)
         path = request.url.path
+        if request.method == "PROPFIND" and path in self._locked_paths:
+            return httpx.Response(403)
         if request.method == "PROPFIND" and path == "/":
             depth = request.headers.get("Depth")
             if depth == "0":  # connection check
                 return httpx.Response(207, content=_multistatus([]))
+            locked_entries = [
+                (
+                    f"<D:response><D:href>{locked}</D:href><D:propstat>"
+                    f"<D:prop><D:displayname>{locked.strip('/')}</D:displayname>"
+                    "<D:resourcetype><D:collection/></D:resourcetype>"
+                    "</D:prop></D:propstat></D:response>"
+                )
+                for locked in sorted(self._locked_paths)
+            ]
             return httpx.Response(
                 207,
                 content=_multistatus(
@@ -104,11 +122,14 @@ class FakeDav:
                             '<D:getetag>"etag-mahnung"</D:getetag>'
                             "<D:resourcetype/></D:prop></D:propstat></D:response>"
                         ),
+                        *locked_entries,
                     ]
                 ),
             )
         if request.method == "GET" and path == "/rechnung.pdf":
             return httpx.Response(200, content=b"%PDF-1.4 fake rechnung")
+        if request.method == "GET" and path == "/mahnung.pdf":
+            return httpx.Response(200, content=b"%PDF-1.4 fake mahnung")
         if request.method == "PROPFIND" and path == "/addressbooks/default/":
             return httpx.Response(
                 207,
@@ -416,3 +437,108 @@ def test_read_only_guarantee(client: TestClient, world: World, fake: FakeDav) ->
 
     asyncio.run(_attempt_put())
     assert fake.write_attempted is False  # blocked before it reached the fake server
+
+
+def test_diagnose_connection_reports_steps(client: TestClient, world: World, fake: FakeDav) -> None:
+    """The fake server only answers the fixed paths it knows; it does not implement RFC 6764
+    (no current-user-principal href, no home-sets), so the standards based discovery finds
+    neither an addressbook nor a calendar home and never overwrites the manually configured URLs
+    (Betreiberbericht 25.09.2026). Every step is protocol-only and never leaks the DAV password."""
+    h = bearer(login(client, world, "m32admin"))
+    _connect(client, h, fake)
+
+    diagnosis = _ok(client.post(f"{IM}/connection/diagnose", headers=h))
+    assert diagnosis["carddav_url"] is None
+    assert diagnosis["caldav_url"] is None
+    assert len(diagnosis["steps"]) > 0
+    for step in diagnosis["steps"]:
+        assert fake.password not in step["url"]
+        assert fake.password not in step["note"]
+
+    persisted = _ok(client.get(f"{IM}/connection", headers=h))
+    assert persisted["last_diagnosis_at"] is not None
+    assert persisted["last_diagnosis"]["carddav_url"] is None
+    # Manually configured URLs (via _connect) are never overwritten by discovery.
+    assert persisted["carddav_url"] == CARDDAV_URL
+    assert persisted["carddav_url_discovered"] is False
+
+
+def test_take_over_contacts_bulk(client: TestClient, world: World, fake: FakeDav) -> None:
+    """The module scoped ``world``/tenant is shared with earlier tests in this file, so an
+    earlier ``/match`` on the same DAV contact may already have linked it; the bulk endpoint must
+    stay correct either way (unmatched count before == created+linked, 0 afterwards)."""
+    h = bearer(login(client, world, "m32admin"))
+    _connect(client, h, fake)
+    _ok(client.post(f"{IM}/sync/carddav", headers=h))
+    unmatched_before = _ok(client.get(f"{IM}/contacts", params={"unmatched": True}, headers=h))
+    contact_id = unmatched_before["data"][0]["id"] if unmatched_before["data"] else None
+    expected_total = unmatched_before["meta"]["total"]
+
+    result = _ok(client.post(f"{IM}/contacts/take-over", json={}, headers=h))
+    assert result["total"] == expected_total
+    assert result["created"] + result["linked"] == expected_total
+    assert result["skipped"] == 0
+
+    still_unmatched = _ok(client.get(f"{IM}/contacts", params={"unmatched": True}, headers=h))
+    assert still_unmatched["meta"]["total"] == 0
+
+    # Idempotent: a second call finds no more unlinked rows.
+    result2 = _ok(
+        client.post(
+            f"{IM}/contacts/take-over",
+            json={"contact_ids": [contact_id]} if contact_id else {},
+            headers=h,
+        )
+    )
+    assert result2 == {"created": 0, "linked": 0, "skipped": 0, "total": 0}
+
+
+def test_take_over_document_single_and_folder(
+    client: TestClient, world: World, fake: FakeDav
+) -> None:
+    h = bearer(login(client, world, "m32admin"))
+    _connect(client, h, fake)
+    _ok(client.post(f"{IM}/sync/webdav", headers=h))
+    docs = _ok(client.get(f"{IM}/documents", headers=h))["data"]
+    doc_id = next(d["id"] for d in docs if d["display_name"] == "rechnung.pdf")
+
+    result = _ok(
+        client.post(f"{IM}/documents/{doc_id}/take-over", headers=h),
+        201,
+    )
+    assert result["created"] is True
+    crm_document_id = result["document_id"]
+
+    # Idempotent by href+etag: a second take-over of the same, unchanged row does not create a
+    # second CRM document.
+    result2 = _ok(client.post(f"{IM}/documents/{doc_id}/take-over", headers=h), 201)
+    assert result2 == {"document_id": crm_document_id, "created": False}
+
+    # Bulk-Uebernahme des gesamten (flachen) Baums: die bereits uebernommene Datei zaehlt als
+    # "linked" (idempotent), nur die noch offene ("mahnung.pdf") wird neu angelegt.
+    folder_result = _ok(
+        client.post(f"{IM}/documents/take-over-folder", json={"folder_prefix": "/"}, headers=h)
+    )
+    assert folder_result["failed"] == 0
+    assert folder_result["total"] == 2
+    assert folder_result["created"] + folder_result["linked"] == 2
+
+
+def test_webdav_sync_continues_past_locked_subfolder(
+    client: TestClient, world: World, fake: FakeDav
+) -> None:
+    """A subfolder answering 401/403 must not abort the whole WebDAV run; it is recorded in
+    ``folder_errors`` on the sync run instead (Betreiberbericht 25.09.2026, Auftragspunkt 4)."""
+    h = bearer(login(client, world, "m32admin"))
+    _connect(client, h, fake)
+    fake.lock_subfolder("/locked/")
+
+    run = _ok(client.post(f"{IM}/sync/webdav", headers=h))
+    runs = {r["id"]: r for r in _ok(client.get(f"{IM}/sync/runs", headers=h))}
+    row = runs[run["run_id"]]
+    assert row["status"] == "ok"
+    assert row["seen"] >= 2  # the two known top level files were still picked up
+    assert len(row["folder_errors"]) == 1
+    assert row["folder_errors"][0]["status"] == 403
+    for entry in row["folder_errors"]:
+        assert fake.password not in entry["url"]
