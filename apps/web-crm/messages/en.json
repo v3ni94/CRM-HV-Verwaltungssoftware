@@ -955,6 +955,10 @@
     "mail": {
       "title": "Mailboxes",
       "description": "Google OAuth, connect mailboxes, default mailbox and access."
+    },
+    "sla": {
+      "title": "SLA and on-call",
+      "description": "Rules, escalation steps, on-call schedule, calendar and emergency alerts."
     }
   },
   "MailPlaybooks": {
@@ -977,5 +981,128 @@
     "activate": "Activate",
     "usageCount": "used {count}x",
     "backToMail": "Back to mail"
+  },
+  "Sla": {
+    "title": "SLA and on-call",
+    "intro": "Response and resolution times per priority, escalation steps, on-call schedule, business calendar and emergency alerts.",
+    "tabs": {
+      "rules": "Rules",
+      "onCall": "On-call",
+      "calendar": "Calendar",
+      "alerts": "Alerts"
+    },
+    "priorities": {
+      "low": "low",
+      "normal": "normal",
+      "high": "high",
+      "urgent": "urgent",
+      "immediate": "immediate"
+    },
+    "clockTypes": {
+      "business": "business hours",
+      "calendar": "calendar time"
+    },
+    "channels": {
+      "email": "email",
+      "internal": "internal"
+    },
+    "channel": "Channel",
+    "colors": {
+      "green": "on track",
+      "yellow": "at risk",
+      "red": "breached"
+    },
+    "clockStates": {
+      "running": "running",
+      "paused": "paused",
+      "breached": "breached",
+      "done": "done"
+    },
+    "rules": {
+      "title": "SLA rules",
+      "empty": "No rule created yet.",
+      "create": "Create rule",
+      "name": "Name",
+      "priority": "Priority",
+      "responseMinutes": "Response time (minutes)",
+      "resolutionMinutes": "Resolution time (minutes)",
+      "clockType": "Clock type",
+      "active": "Active",
+      "inactive": "inactive",
+      "save": "Save",
+      "cancelEdit": "Cancel",
+      "edit": "Edit",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "responseSummary": "Response {minutes} min",
+      "resolutionSummary": "Resolution {minutes} min"
+    },
+    "escalation": {
+      "show": "Show escalation steps",
+      "title": "Escalation steps",
+      "empty": "No escalation step created yet.",
+      "step": "Step {step}",
+      "after": "after {minutes} min",
+      "role": "Role {role}",
+      "noTarget": "no target set",
+      "remove": "Remove",
+      "stepNo": "Step",
+      "afterMinutes": "After minutes",
+      "notifyUser": "User",
+      "noUser": "no user",
+      "notifyRole": "Role",
+      "add": "Create step"
+    },
+    "onCall": {
+      "title": "On-call schedule",
+      "current": "Currently on call: {name}",
+      "none": "No one is currently on call.",
+      "empty": "No on-call period created yet.",
+      "remove": "Delete",
+      "user": "User",
+      "startsAt": "From",
+      "endsAt": "To",
+      "phone": "Phone",
+      "note": "Note",
+      "add": "Add on-call period"
+    },
+    "calendar": {
+      "title": "Business calendar",
+      "weekdays": "Working days",
+      "day": {
+        "0": "Monday",
+        "1": "Tuesday",
+        "2": "Wednesday",
+        "3": "Thursday",
+        "4": "Friday",
+        "5": "Saturday",
+        "6": "Sunday"
+      },
+      "opensAt": "Opens at",
+      "closesAt": "Closes at",
+      "timezone": "Time zone {timezone}",
+      "holidays": "Holidays",
+      "noHolidays": "No holiday set yet.",
+      "holidayDate": "Date",
+      "addHoliday": "Add holiday",
+      "save": "Save",
+      "saved": "Saved."
+    },
+    "alerts": {
+      "title": "Emergency alerts",
+      "empty": "No open emergency alerts.",
+      "level": "Level {level}",
+      "acked": "acknowledged",
+      "ack": "Acknowledge"
+    },
+    "badge": {
+      "responseRemaining": "Response due in {minutes} min",
+      "responseOverdue": "Response overdue by {minutes} min",
+      "resolutionRemaining": "Resolution due in {minutes} min",
+      "resolutionOverdue": "Resolution overdue by {minutes} min",
+      "resolvedAt": "Resolved on {at}",
+      "pause": "Pause",
+      "resume": "Resume"
+    }
   }
 }
