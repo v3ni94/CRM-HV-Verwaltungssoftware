@@ -169,6 +169,26 @@ async def get_contact(
         return out
 
 
+@router.get("/contacts/{contact_id}/name", summary="Anzeigename eines Kontakts (nur Name)")
+async def get_contact_name(
+    contact_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> schemas.ContactName:
+    """Data minimisation: previews (e.g. ticket merge) only need the name, not the record."""
+    async with tenant_tx(request, principal) as session:
+        row = (
+            await session.execute(
+                select(Contact.id, Contact.display_name).where(
+                    Contact.id == contact_id, Contact.deleted_at.is_(None)
+                )
+            )
+        ).first()
+        if row is None:
+            raise _not_found()
+        return schemas.ContactName(id=row[0], display_name=row[1])
+
+
 @router.put("/contacts/{contact_id}", summary="Kontakt ändern (vollständig)")
 async def replace_contact(
     contact_id: uuid.UUID,

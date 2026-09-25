@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.17.3",
+    date: "25.09.2026",
+    title: "Datenschutz: Ticket-Vorschau lädt nur den Kontaktnamen",
+    changes: [
+      "Neuer Endpunkt für den Anzeigenamen eines Kontakts; die Vorschau beim Zusammenführen von Tickets lädt damit nicht mehr den vollständigen Kontakt (Datenminimierung)",
+    ],
+  },
+  {
     version: "1.17.2",
     date: "25.09.2026",
     title: "Worker: KI-Clients sauber schließen",

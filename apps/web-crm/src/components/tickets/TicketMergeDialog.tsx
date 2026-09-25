@@ -44,7 +44,7 @@ async function loadSide(id: string): Promise<MergeSide | null> {
   if (!res.ok) return null;
   const d = res.data;
   const [contact, property] = await Promise.all([
-    d.contact_id ? bff<{ display_name?: string | null }>(`/api/bff/contacts/${d.contact_id}`) : null,
+    d.contact_id ? bff<{ display_name?: string | null }>(`/api/bff/contacts/${d.contact_id}/name`) : null,
     d.property_id ? bff<{ name?: string | null }>(`/api/bff/properties/${d.property_id}`) : null,
   ]);
   return {

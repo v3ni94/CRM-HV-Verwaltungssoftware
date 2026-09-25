@@ -2020,6 +2020,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contacts/{contact_id}/name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anzeigename eines Kontakts (nur Name)
+         * @description Data minimisation: previews (e.g. ticket merge) only need the name, not the record.
+         */
+        get: operations["get_contact_name_api_v1_contacts__contact_id__name_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts/{contact_id}/notes": {
         parameters: {
             query?: never;
@@ -9027,6 +9047,19 @@ export interface components {
          * @enum {string}
          */
         ContactMandateStatus: "active" | "revoked";
+        /**
+         * ContactName
+         * @description Minimal view for previews (ticket merge): only the display name, no contact details.
+         */
+        ContactName: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
         /** ContactOut */
         ContactOut: {
             /** Addresses */
@@ -19331,6 +19364,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_contact_name_api_v1_contacts__contact_id__name_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactName"];
                 };
             };
             /** @description Validation Error */

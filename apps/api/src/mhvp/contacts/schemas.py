@@ -213,6 +213,13 @@ class SepaMandateOut(BaseModel):
     mandate_revoked_on: date | None
 
 
+class ContactName(BaseModel):
+    """Minimal view for previews (ticket merge): only the display name, no contact details."""
+
+    id: uuid.UUID
+    display_name: str
+
+
 class ContactSummary(BaseModel):
     id: uuid.UUID
     kind: ContactKind
