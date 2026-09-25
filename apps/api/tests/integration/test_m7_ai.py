@@ -150,6 +150,13 @@ PROVIDER = {
 }
 
 
+def _disable_fast_table_import(c: TestClient, admin: dict[str, str]) -> None:
+    """These older tests exercise the full chunked LLM extraction with exact call counts (M7);
+    the fast table import path (M7-06) is covered separately in
+    ``test_m7_fast_table_import.py`` and defaults to on for every tenant."""
+    _ok(c.put("/api/v1/ai/fast-table-import", json={"enabled": False}, headers=admin), 200)
+
+
 def _setup_provider(c: TestClient, world: World, **overrides: Any) -> dict[str, str]:
     admin = bearer(login(c, world, "m7admin"))
     second = bearer(login(c, world, "m7second"))
@@ -237,6 +244,7 @@ def test_contact_list_to_contacts_and_undo(
     client: TestClient, world: World, fake: FakeProvider
 ) -> None:
     admin = _setup_provider(client, world)
+    _disable_fast_table_import(client, admin)
     existing = _ok(
         client.post(
             "/api/v1/contacts",
@@ -379,6 +387,7 @@ def test_large_spreadsheet_is_chunked_not_blocked(
     of table text used to be blocked outright ("zu umfangreich"); it must now be split into row
     chunks and processed with one provider call per chunk instead."""
     admin = _setup_provider(client, world)
+    _disable_fast_table_import(client, admin)
     header = ["Name", "Vorname", "Straße", "PLZ", "Ort", "Telefon", "E-Mail", "IBAN"]
 
     def _row(n: int) -> list[Any]:
@@ -413,6 +422,120 @@ def test_large_spreadsheet_is_chunked_not_blocked(
         "current": expected_chunks,
         "total": expected_chunks,
     }
+
+
+CONTACT_HEADER = ["Name", "Straße", "PLZ", "Ort", "Telefon", "E-Mail"]
+CONTACT_MAPPING = {
+    "mappings": [
+        {"source_column": "Name", "target_field": "name_full", "confidence": 1.0},
+        {"source_column": "Straße", "target_field": "street", "confidence": 1.0},
+        {"source_column": "PLZ", "target_field": "postal_code", "confidence": 1.0},
+        {"source_column": "Ort", "target_field": "city", "confidence": 1.0},
+        {"source_column": "Telefon", "target_field": "phone", "confidence": 1.0},
+        {"source_column": "E-Mail", "target_field": "email", "confidence": 1.0},
+    ],
+    "has_header": True,
+    "default_role": "owner",
+    "confidence": 0.95,
+}
+
+
+def _contact_row(n: int, *, ambiguous: bool = False) -> list[Any]:
+    if ambiguous:
+        return [f"Person{n} und Partner{n} Mustermann", None, None, None, None, None]
+    return [
+        f"Vorname{n} Nachname{n}",
+        f"Musterstraße {n}",
+        "40789",
+        "Monheim am Rhein",
+        "0171 0000000",
+        f"kontakt{n}@example.org",
+    ]
+
+
+def test_fast_table_import_only_sends_residual_rows_to_the_provider(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
+    """M7-06 acceptance: a 50 row CSV with two ambiguous rows sends one small map_columns call
+    plus one call for the two residual rows, not one call per row (the old behaviour)."""
+    admin = _setup_provider(client, world)
+    _ok(client.put("/api/v1/ai/fast-table-import", json={"enabled": True}, headers=admin), 200)
+    rows = [CONTACT_HEADER]
+    for n in range(1, 49):
+        rows.append(_contact_row(n))
+    rows.append(_contact_row(49, ambiguous=True))
+    rows.append(_contact_row(50, ambiguous=True))
+    csv_bytes = "\n".join(";".join("" if c is None else str(c) for c in r) for r in rows).encode(
+        "utf-8"
+    )
+    doc = _upload(client, admin, "kontakte.csv", csv_bytes, "text/csv")
+    fake.queue.append(CONTACT_MAPPING)
+    fake.queue.append(
+        {
+            "contacts": [
+                _contact(
+                    source_row=50,
+                    first_name="Person49",
+                    last_name="Mustermann",
+                    co_members=["Partner49 Mustermann"],
+                    role="owner",
+                ),
+                _contact(
+                    source_row=51,
+                    first_name="Person50",
+                    last_name="Mustermann",
+                    co_members=["Partner50 Mustermann"],
+                    role="owner",
+                ),
+            ],
+            "questions": ["Zwei Zeilen nennen je zwei Personen. Wer ist Hauptkontakt?"],
+        }
+    )
+    run = _chat(client, admin, "extract_contacts", "Kontakte anlegen", [doc])
+    assert run["status"] == "succeeded", run
+    # exactly one map_columns call and one call for the residual rows, not 50 row calls
+    assert len(fake.calls) == 2  # one map_columns call, one call for the two residual rows
+    contents = [c["messages"][0]["content"] for c in fake.calls]
+    assert sum("Kopfzeile:" in c for c in contents) == 1  # the map_columns call
+    residual_calls = [c for c in contents if "Kopfzeile:" not in c]
+    assert len(residual_calls) == 1
+    assert "Zeile 50" in residual_calls[0]
+    assert "Zeile 51" in residual_calls[0]
+    assert "Zeile 2:" not in residual_calls[0]  # the 48 deterministic rows were not sent
+    assert run["progress"] == {"stage": "Fertig", "current": 1, "total": 1}
+    proposal = _ok(client.get(f"/api/v1/ai/proposals/{run['proposal_id']}", headers=admin), 200)
+    assert len(proposal["proposed"]["rows"]) == 50
+
+
+def test_fast_table_import_falls_back_on_low_confidence_mapping(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
+    """M7-06: a low confidence column mapping (or no header) falls back to the full chunked LLM
+    extraction for every row instead of guessing a deterministic split."""
+    admin = _setup_provider(client, world)
+    _ok(client.put("/api/v1/ai/fast-table-import", json={"enabled": True}, headers=admin), 200)
+    rows = [CONTACT_HEADER, _contact_row(1), _contact_row(2), _contact_row(3)]
+    csv_bytes = "\n".join(";".join("" if c is None else str(c) for c in r) for r in rows).encode(
+        "utf-8"
+    )
+    doc = _upload(client, admin, "kontakte.csv", csv_bytes, "text/csv")
+    fake.queue.append({**CONTACT_MAPPING, "confidence": 0.3})  # below MIN_CONFIDENCE
+    fake.queue.append(
+        {
+            "contacts": [
+                _contact(source_row=2, first_name="Vorname1", last_name="Nachname1"),
+                _contact(source_row=3, first_name="Vorname2", last_name="Nachname2"),
+                _contact(source_row=4, first_name="Vorname3", last_name="Nachname3"),
+            ],
+            "questions": [],
+        }
+    )
+    run = _chat(client, admin, "extract_contacts", "Kontakte anlegen", [doc])
+    assert run["status"] == "succeeded", run
+    assert len(fake.calls) == 2  # map_columns (rejected) + one full chunked LLM call
+    assert run["model"] == "claude-opus-5"  # the extract_contacts (large tier) route, not small
+    proposal = _ok(client.get(f"/api/v1/ai/proposals/{run['proposal_id']}", headers=admin), 200)
+    assert len(proposal["proposed"]["rows"]) == 3
 
 
 def _unit(**values: Any) -> dict[str, Any]:

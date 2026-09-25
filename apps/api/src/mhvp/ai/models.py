@@ -49,6 +49,7 @@ class AiProvider(StrEnum):
 class AiTask(StrEnum):
     EXTRACT_CONTACTS = "extract_contacts"
     EXTRACT_PROPERTY = "extract_property"
+    MAP_COLUMNS = "map_columns"
     CLASSIFY_EMAIL = "classify_email"
     PROPOSE_POSTING = "propose_posting"
     EXTRACT_INVOICE = "extract_invoice"
@@ -56,6 +57,7 @@ class AiTask(StrEnum):
     CHECK_STATEMENT = "check_statement"
     ANSWER_QUESTION = "answer_question"
     SUMMARIZE = "summarize"
+    CLASSIFY_DOCUMENT = "classify_document"
 
 
 class RunStatus(StrEnum):

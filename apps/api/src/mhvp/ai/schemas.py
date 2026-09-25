@@ -72,6 +72,14 @@ class RoutingOut(BaseModel):
     strategy: RoutingStrategy
 
 
+class FastTableImportIn(_In):
+    enabled: bool
+
+
+class FastTableImportOut(BaseModel):
+    enabled: bool
+
+
 class UsageOut(BaseModel):
     month: str
     spent_eur: Decimal

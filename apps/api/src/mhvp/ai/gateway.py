@@ -22,7 +22,7 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from mhvp.ai import providers, tasks
+from mhvp.ai import providers, table_mapper, tasks
 from mhvp.ai.models import AiExample, AiProvider, AiProviderConfig, AiTask, AiTaskRun, RunStatus
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.events import emit
@@ -45,6 +45,10 @@ RETRY_DELAYS_S: tuple[float, ...] = (3.0, 8.0)
 MTOK = Decimal(1_000_000)
 CHARS_PER_TOKEN = Decimal("3.5")
 CHUNKED_TASKS: frozenset[AiTask] = frozenset({AiTask.EXTRACT_CONTACTS, AiTask.EXTRACT_PROPERTY})
+# Fast table import (M7-06): deterministic column mapping instead of sending every row to the
+# LLM. Only extract_contacts is wired up; extract_property stays on the chunked path (M7-07,
+# open point) since its rows carry unit/party/payment structure the mapper does not model yet.
+FAST_TABLE_TASKS: frozenset[AiTask] = frozenset({AiTask.EXTRACT_CONTACTS})
 
 
 class GatewayBlockedError(Exception):
@@ -355,6 +359,13 @@ async def routing_strategy(session: AsyncSession) -> str:
     return value or "anthropic_first"
 
 
+async def fast_table_import_enabled(session: AsyncSession) -> bool:
+    from mhvp.platform.models import TenantSettings
+
+    value = await session.scalar(select(TenantSettings.ai_fast_table_import))
+    return True if value is None else bool(value)
+
+
 async def _provider_order(session: AsyncSession, strategy: str) -> list[AiProvider]:
     """Preferred provider first; "alternate" starts with the provider not used last."""
     if strategy in ONLY:
@@ -575,6 +586,188 @@ def _split_chunk_in_half(chunk_text: str) -> list[str] | None:
 
 
 @dataclass
+class _ChunkResult:
+    outputs: list[dict[str, Any]]
+    tokens_in: int
+    tokens_out: int
+    warnings: list[str]
+    skips: list[str]
+    chosen: "Route"
+
+
+async def _process_chunks(
+    chunks: list[str],
+    plan: list[tuple["Route", Decimal, Decimal]],
+    keys: dict[AiProvider, str],
+    system: str,
+    schema: dict[str, Any],
+    task: AiTask,
+    context: dict[str, Any],
+    shots: list[dict[str, Any]],
+    factory: async_sessionmaker[AsyncSession],
+    tenant_id: uuid.UUID,
+    run_id: uuid.UUID,
+    chosen: "Route",
+) -> _ChunkResult:
+    """Row chunked extraction (rule 2): one provider call per chunk, run concurrently (bounded
+    by ``CHUNK_CONCURRENCY``); progress is reported after every finished chunk. Shared by the
+    chunked extraction path and the residual rows of the fast table import (M7-06)."""
+    tokens_in = tokens_out = 0
+    outputs: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    skips: list[str] = []
+    queue: asyncio.Queue[str] = asyncio.Queue()
+    for chunk_text in chunks:
+        queue.put_nowait(chunk_text)
+    done = 0
+    pending = len(chunks)
+    chosen_ref: list[Any] = [chosen]
+    lock = asyncio.Lock()
+
+    async def _work() -> None:
+        nonlocal tokens_in, tokens_out, done, pending
+        while True:
+            try:
+                chunk_text = queue.get_nowait()
+            except asyncio.QueueEmpty:
+                return
+            messages = _messages(chunk_text, context, shots)
+            result = await _call_plan(plan, keys, system, messages, schema, task)
+            async with lock:
+                tokens_in += result.tokens_in
+                tokens_out += result.tokens_out
+                skips.extend(result.skips)
+                chosen_ref[0] = result.chosen
+                if result.output is None and result.error and "max_tokens" in result.error:
+                    halves = _split_chunk_in_half(chunk_text)
+                    if halves is not None:
+                        for half in halves:
+                            queue.put_nowait(half)
+                        pending += 1
+                        continue
+                if result.output is not None:
+                    outputs.append(result.output)
+                else:
+                    warnings.append(f"Ein Teil konnte nicht verarbeitet werden: {result.error}")
+                done += 1
+                total_now = pending
+                stage = (
+                    f"Verarbeitung Teil {done} von {total_now}" if done < total_now else "Fertig"
+                )
+            await _update_progress(
+                factory, tenant_id, run_id, {"stage": stage, "current": done, "total": total_now}
+            )
+
+    await asyncio.gather(*(_work() for _ in range(max(1, CHUNK_CONCURRENCY))))
+    return _ChunkResult(outputs, tokens_in, tokens_out, warnings, skips, chosen_ref[0])
+
+
+async def _run_fast_contacts(
+    factory: async_sessionmaker[AsyncSession],
+    tenant_id: uuid.UUID,
+    run_id: uuid.UUID,
+    table: table_mapper.TableData,
+    map_plan: list[tuple["Route", Decimal, Decimal]],
+    plan: list[tuple["Route", Decimal, Decimal]],
+    keys: dict[AiProvider, str],
+    instruction: str,
+    context: dict[str, Any],
+    shots: list[dict[str, Any]],
+    chosen: "Route",
+) -> tuple[dict[str, Any], int, int, list[str], list[str], "Route"] | None:
+    """Fast path for ``extract_contacts`` on a CSV/XLSX table (M7-06): one small ``map_columns``
+    call, then deterministic row processing in Python, then only the residual rows (ambiguous or
+    invalid ones) through the normal chunked LLM extraction. Returns ``None`` to tell the caller
+    to fall back to the full chunked path (no header, or the mapping's confidence is below
+    ``table_mapper.MIN_CONFIDENCE``, rule 2 of the plan)."""
+    map_prompt = tasks.prompt(AiTask.MAP_COLUMNS)
+    map_schema = tasks.json_schema(AiTask.MAP_COLUMNS)
+    map_messages = _messages(table_mapper.column_samples(table), {}, [])
+    map_result = await _call_plan(
+        map_plan, keys, map_prompt.system, map_messages, map_schema, AiTask.MAP_COLUMNS
+    )
+    tokens_in, tokens_out = map_result.tokens_in, map_result.tokens_out
+    mapping_output = map_result.output
+    if (
+        mapping_output is None
+        or not mapping_output.get("has_header", True)
+        or float(mapping_output.get("confidence") or 0) < table_mapper.MIN_CONFIDENCE
+    ):
+        return None
+    await _update_progress(
+        factory, tenant_id, run_id, {"stage": "Spalten erkannt", "current": 0, "total": 1}
+    )
+    mapping: dict[str, Any] = {
+        m["source_column"]: m["target_field"] for m in mapping_output["mappings"]
+    }
+    mapped = table_mapper.apply_mapping(
+        table, mapping, default_role=mapping_output.get("default_role")
+    )
+    await _update_progress(
+        factory,
+        tenant_id,
+        run_id,
+        {"stage": f"{mapped.processed_rows} Zeilen verarbeitet", "current": 0, "total": 1},
+    )
+    warnings: list[str] = []
+    skipped: list[str] = list(map_result.skips)
+    contacts = list(mapped.contacts)
+    questions: list[str] = []
+    chosen_final = map_result.chosen
+    if mapped.residual:
+        await _update_progress(
+            factory,
+            tenant_id,
+            run_id,
+            {
+                "stage": f"{len(mapped.residual)} Zeilen an KI",
+                "current": 0,
+                "total": len(mapped.residual),
+            },
+        )
+        body = table_mapper.residual_table_text(table, mapped.residual)
+        pieces = _chunk_table_body(body)
+        residual_chunks = [
+            f'{instruction}\n\n<datei name="{table.filename}" teil="{i}/{len(pieces)}">\n'
+            f"{piece}\n</datei>"
+            for i, piece in enumerate(pieces, start=1)
+        ]
+        chunk_result = await _process_chunks(
+            residual_chunks,
+            plan,
+            keys,
+            tasks.prompt(AiTask.EXTRACT_CONTACTS).system,
+            tasks.json_schema(AiTask.EXTRACT_CONTACTS),
+            AiTask.EXTRACT_CONTACTS,
+            context,
+            shots,
+            factory,
+            tenant_id,
+            run_id,
+            chosen,
+        )
+        tokens_in += chunk_result.tokens_in
+        tokens_out += chunk_result.tokens_out
+        warnings.extend(chunk_result.warnings)
+        skipped.extend(chunk_result.skips)
+        chosen_final = chunk_result.chosen
+        if chunk_result.outputs:
+            llm_merged = merge_extraction(AiTask.EXTRACT_CONTACTS, chunk_result.outputs)
+            contacts = _dedupe_dicts([*contacts, *llm_merged["contacts"]])
+            questions = llm_merged["questions"]
+        else:
+            warnings.append(
+                f"{len(mapped.residual)} Zeile(n) konnten nicht per KI ergänzt werden: "
+                f"{chunk_result.warnings[-1] if chunk_result.warnings else 'unbekannter Fehler'}"
+            )
+    await _update_progress(
+        factory, tenant_id, run_id, {"stage": "Fertig", "current": 1, "total": 1}
+    )
+    output = {"contacts": contacts, "questions": questions}
+    return output, tokens_in, tokens_out, warnings, skipped, chosen_final
+
+
+@dataclass
 class _PlanResult:
     output: dict[str, Any] | None
     tokens_in: int
@@ -701,6 +894,35 @@ async def execute(
             if not plan:
                 raise GatewayBlockedError("; ".join(reasons))
             skipped = list(reasons)
+            # Fast table import (M7-06): a table document eligible for the deterministic path
+            # also needs its own (small) route for the map_columns call; without one, or with
+            # the flag off, the run falls back to the normal chunked extraction below unchanged.
+            fast_table: table_mapper.TableData | None = None
+            map_plan: list[tuple[Route, Decimal, Decimal]] = []
+            if task in FAST_TABLE_TASKS and await fast_table_import_enabled(session):
+                doc_ids = [uuid.UUID(d) for d in run.input_ref.get("document_ids", [])]
+                if len(doc_ids) == 1:
+                    document = await session.get(Document, doc_ids[0])
+                    if document is not None and document.mime_type in TABLE_MIME_TYPES:
+                        candidate_table = table_mapper.load_table(
+                            document.mime_type,
+                            blobs.get(document.storage_ref),
+                            document.filename,
+                        )
+                        if candidate_table.header and candidate_table.rows:
+                            fast_table = candidate_table
+            if fast_table is not None:
+                try:
+                    map_usable, _map_reasons = await routes(session, AiTask.MAP_COLUMNS)
+                except GatewayBlockedError:
+                    map_usable = []
+                for candidate in map_usable:
+                    m_spent = await spent_this_month(session, now, candidate.config.provider)
+                    m_budget = candidate.config.monthly_budget_eur
+                    if m_budget > 0 and m_spent < m_budget:
+                        map_plan.append((candidate, m_spent, m_budget))
+                if not map_plan:
+                    fast_table = None  # no usable route for the mapping call: silent fallback
         except GatewayBlockedError as exc:
             run.status, run.error = RunStatus.BLOCKED, str(exc)
             await emit(
@@ -733,9 +955,10 @@ async def execute(
             run.input_ref = {**run.input_ref, "deduplicated_from": str(previous.id)}
             return run
         shots = await examples(session, task)
-        keys = {c.config.provider: c.config.api_key or "" for c, _, _ in plan}
+        keys = {c.config.provider: c.config.api_key or "" for c, _, _ in [*plan, *map_plan]}
         chosen, spent, budget = plan[0]
         total_parts = len(item.chunks) if item.chunks else 1
+        instruction = f"Anweisung des Nutzers: {run.input_ref.get('instruction', '')}"
         run.status, run.provider, run.model = (
             RunStatus.RUNNING,
             chosen.config.provider,
@@ -757,75 +980,71 @@ async def execute(
     skipped_extra: list[str] = []
     warnings: list[str] = []
 
-    if item.chunks and task in CHUNKED_TASKS:
-        # Row chunked extraction (rule 2): one provider call per chunk, merged afterwards.
-        # Chunks run concurrently (bounded by CHUNK_CONCURRENCY): the wall clock is dominated
-        # by provider latency, not CPU, so sequential calls made an 11 part import take minutes.
-        queue: asyncio.Queue[str] = asyncio.Queue()
-        for chunk_text in item.chunks:
-            queue.put_nowait(chunk_text)
-        outputs = []
-        done = 0
-        pending = len(item.chunks)
-        chosen_ref: list[Any] = [chosen]
-        lock = asyncio.Lock()
-
-        async def _work() -> None:
-            nonlocal tokens_in, tokens_out, done, pending
-            while True:
-                try:
-                    chunk_text = queue.get_nowait()
-                except asyncio.QueueEmpty:
-                    return
-                messages = _messages(chunk_text, item.context, shots)
-                result = await _call_plan(plan, keys, prompt.system, messages, schema, task)
-                async with lock:
-                    tokens_in += result.tokens_in
-                    tokens_out += result.tokens_out
-                    skipped_extra.extend(result.skips)
-                    chosen_ref[0] = result.chosen
-                    if result.output is None and result.error and "max_tokens" in result.error:
-                        halves = _split_chunk_in_half(chunk_text)
-                        if halves is not None:
-                            for half in halves:
-                                queue.put_nowait(half)
-                            pending += 1  # one chunk became two
-                            continue
-                    if result.output is not None:
-                        outputs.append(result.output)
-                    else:
-                        warnings.append(f"Ein Teil konnte nicht verarbeitet werden: {result.error}")
-                    done += 1
-                    total_now = pending
-                    stage = (
-                        f"Verarbeitung Teil {done} von {total_now}"
-                        if done < total_now
-                        else "Fertig"
-                    )
-                await _update_progress(
-                    factory,
-                    tenant_id,
-                    run_id,
-                    {"stage": stage, "current": done, "total": total_now},
-                )
-
-        await asyncio.gather(*(_work() for _ in range(max(1, CHUNK_CONCURRENCY))))
-        chosen = chosen_ref[0]
-        if outputs:
-            output = merge_extraction(task, outputs)
-            error = None
-        else:
-            error = warnings[-1] if warnings else "Alle Teile fehlgeschlagen."
-    else:
-        messages = _messages(item.text, item.context, shots)
-        result = await _call_plan(plan, keys, prompt.system, messages, schema, task)
-        tokens_in, tokens_out = result.tokens_in, result.tokens_out
-        output, error, skipped_extra, chosen = (
-            result.output,
-            result.error,
-            result.skips,
-            result.chosen,
+    outputs: list[dict[str, Any]] = []
+    fast_used = False
+    if fast_table is not None:
+        # Fast table import (M7-06): map_columns plus deterministic rows, only residual rows
+        # (if any) go through the chunked LLM extraction below.
+        fast_out = await _run_fast_contacts(
+            factory,
+            tenant_id,
+            run_id,
+            fast_table,
+            map_plan,
+            plan,
+            keys,
+            instruction,
+            item.context,
+            shots,
+            chosen,
         )
+        if fast_out is not None:
+            fast_used = True
+            output, tokens_in, tokens_out, warnings, skipped_extra, chosen = fast_out
+            error = None
+            total_parts = 1
+    if not fast_used:
+        if item.chunks and task in CHUNKED_TASKS:
+            # Row chunked extraction (rule 2): one provider call per chunk, merged afterwards.
+            # Chunks run concurrently (bounded by CHUNK_CONCURRENCY): the wall clock is dominated
+            # by provider latency, not CPU, so sequential calls made an 11 part import take
+            # minutes.
+            chunk_result = await _process_chunks(
+                item.chunks,
+                plan,
+                keys,
+                prompt.system,
+                schema,
+                task,
+                item.context,
+                shots,
+                factory,
+                tenant_id,
+                run_id,
+                chosen,
+            )
+            outputs = chunk_result.outputs
+            tokens_in, tokens_out = chunk_result.tokens_in, chunk_result.tokens_out
+            warnings, skipped_extra, chosen = (
+                chunk_result.warnings,
+                chunk_result.skips,
+                chunk_result.chosen,
+            )
+            if outputs:
+                output = merge_extraction(task, outputs)
+                error = None
+            else:
+                error = warnings[-1] if warnings else "Alle Teile fehlgeschlagen."
+        else:
+            messages = _messages(item.text, item.context, shots)
+            result = await _call_plan(plan, keys, prompt.system, messages, schema, task)
+            tokens_in, tokens_out = result.tokens_in, result.tokens_out
+            output, error, skipped_extra, chosen = (
+                result.output,
+                result.error,
+                result.skips,
+                result.chosen,
+            )
 
     skipped.extend(skipped_extra)
     async with tenant_transaction(factory, tenant_id) as session:
@@ -834,7 +1053,7 @@ async def execute(
         run.provider, run.model = chosen.config.provider, chosen.model
         if skipped:
             run.input_ref = {**run.input_ref, "fallback": skipped}
-        if item.chunks and task in CHUNKED_TASKS:
+        if not fast_used and item.chunks and task in CHUNKED_TASKS:
             row_count = sum(text.count("Zeile ") for text in item.chunks)
             extracted = len(output.get("contacts") or output.get("units") or []) if output else 0
             skipped_rows = len(item.chunks) - len(outputs)

@@ -185,6 +185,39 @@ async def put_routing(
         return s.RoutingOut(strategy=body.strategy)
 
 
+@router.get("/ai/fast-table-import", summary="Schneller Tabellenimport (Einstellung)")
+async def get_fast_table_import(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.FastTableImportOut:
+    async with tenant_tx(request, principal) as session:
+        return s.FastTableImportOut(enabled=await gateway.fast_table_import_enabled(session))
+
+
+@router.put("/ai/fast-table-import", summary="Schnellen Tabellenimport setzen")
+async def put_fast_table_import(
+    body: s.FastTableImportIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.FastTableImportOut:
+    """Deterministic CSV/XLSX contact import (M7-06, docs/rules/M7-06.md): on by default. Off
+    falls every ``extract_contacts`` run back to sending every row through the LLM."""
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row.ai_fast_table_import = body.enabled
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ai_fast_table_import.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"enabled": body.enabled},
+        )
+        return s.FastTableImportOut(enabled=body.enabled)
+
+
 @router.get("/ai/usage", summary="KI-Kosten im laufenden Monat")
 async def usage(request: Request, principal: TenantPrincipal = Depends(READ)) -> s.UsageOut:
     now = datetime.now(UTC)

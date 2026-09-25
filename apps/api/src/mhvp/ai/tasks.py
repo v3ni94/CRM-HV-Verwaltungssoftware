@@ -49,6 +49,47 @@ class ContactsResult(_Out):
     questions: list[str]
 
 
+TargetField = Literal[
+    "salutation",
+    "title",
+    "first_name",
+    "last_name",
+    "name_full",
+    "company_name",
+    "street",
+    "house_number",
+    "address_full",
+    "postal_code",
+    "city",
+    "postal_city",
+    "phone",
+    "email",
+    "iban",
+    "role",
+    "unit_number",
+    "ignore",
+]
+
+
+class ColumnMapping(_Out):
+    """One source column of a CSV/XLSX table mapped to a target field of ``ExtractedContact``
+    (fast table import, M7-06). ``name_full``, ``address_full`` and ``postal_city`` mark a
+    column that still needs deterministic splitting (e.g. "Vorname Nachname")."""
+
+    source_column: str
+    target_field: TargetField
+    confidence: float = Confidence
+
+
+class ColumnMappingResult(_Out):
+    mappings: list[ColumnMapping]
+    has_header: bool = Field(description="false, wenn die erste Zeile bereits Daten enthält")
+    default_role: Literal["owner", "tenant", "provider", "other"] | None = Field(
+        description="Rolle, die für alle Zeilen gilt, falls keine Spalte die Rolle nennt"
+    )
+    confidence: float = Confidence
+
+
 class ExtractedUnit(_Out):
     number: str
     label: str | None
@@ -174,6 +215,16 @@ class PlaybookDraft(_Out):
     reply_template: str | None = Field(description="Antwortvorlage mit Platzhaltern, sonst null")
 
 
+class ClassifyDocumentResult(_Out):
+    """M35 Stufe 3, KI-Stufe (Stufe 3 von drei der Dokumentklassifikation, docs/rules/M35-02.md
+    Ergänzung): Vorschlag, nie automatisch angewandt (rule 0.1.6)."""
+
+    document_class: str | None = Field(description="sprechender Code, z. B. 'wirtschaftsplan'")
+    category: str | None = Field(description="zweistelliger Kategoriecode 01 bis 06")
+    confidence: float = Confidence
+    reasons: list[str] = Field(description="ein bis vier kurze Stichpunkte auf Deutsch")
+
+
 SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.EXTRACT_CONTACTS: ContactsResult,
     AiTask.EXTRACT_PROPERTY: PropertyResult,
@@ -182,6 +233,8 @@ SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.SUMMARIZE: SummaryResult,
     AiTask.CLASSIFY_EMAIL: MailSuggestion,
     AiTask.DRAFT_REPLY: PlaybookDraft,
+    AiTask.MAP_COLUMNS: ColumnMappingResult,
+    AiTask.CLASSIFY_DOCUMENT: ClassifyDocumentResult,
 }
 DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.EXTRACT_CONTACTS: "large",
@@ -191,6 +244,8 @@ DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.SUMMARIZE: "small",
     AiTask.CLASSIFY_EMAIL: "small",
     AiTask.DRAFT_REPLY: "small",
+    AiTask.MAP_COLUMNS: "small",
+    AiTask.CLASSIFY_DOCUMENT: "small",
 }
 
 
