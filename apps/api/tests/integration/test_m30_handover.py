@@ -668,14 +668,17 @@ def test_handover_portal_flow(client: TestClient, world: World) -> None:
     assert hints
     assert client.post(f"{PH}/{pid}/complete", json={"force": False}, headers=hp).status_code == 422
     done = _ok(client.post(f"{PH}/{pid}/complete", json={"force": True}, headers=hp))
-    assert done["status"] == "completed"
+    # Helper finish flow (ported from U-Protokoll): completion by a participant also prepares
+    # one dispatch draft per participant with an e-mail address plus the helper, so the status
+    # advances straight to "sent" (M30-06), same as a staff triggered dispatch would.
+    assert done["status"] == "sent"
     assert done["locked"] is True
     assert done["access"]["right"] == "read"
     assert done["access"]["valid_to"] == (today + timedelta(days=READ_DAYS)).isoformat()
     assert "internal_note" not in done
 
     # Read only from now on: reading and the PDF work, every write is refused.
-    assert _ok(client.get(f"{PH}/{pid}", headers=hp))["status"] == "completed"
+    assert _ok(client.get(f"{PH}/{pid}", headers=hp))["status"] == "sent"
     pdf = client.get(f"{PH}/{pid}/pdf", headers=hp)
     assert pdf.status_code == 200
     assert pdf.headers["content-type"] == "application/pdf"
@@ -689,7 +692,7 @@ def test_handover_portal_flow(client: TestClient, world: World) -> None:
 
     # The CRM sees the completion by the participant and the read only access.
     crm_view = _ok(client.get(f"{H}/{pid}", headers=h))
-    assert crm_view["status"] == "completed"
+    assert crm_view["status"] == "sent"
     assert crm_view["internal_note"] == "nur intern"
     access = next(x for x in crm_view["participants"] if x["id"] == mover["id"])["portal_access"]
     assert access["right"] == "read"
@@ -721,3 +724,155 @@ def test_handover_portal_flow(client: TestClient, world: World) -> None:
         )["portal_access"]
         is None
     )
+
+
+def test_helper_access_flow(client: TestClient, world: World) -> None:
+    """Gehilfenzugang (M30, ported from U-Protokoll): create with an optional participant
+    registration, list, resend before activation, revoke; no second, password based login."""
+    h = bearer(login(client, world, "m30admin"))
+    pid = _ok(client.post(H, json={"kind": "general"}, headers=h), 201)["id"]
+
+    created = _ok(
+        client.post(
+            f"{H}/{pid}/helper-access",
+            json={
+                "name": "Gerd Gehilfe",
+                "email": f"gerd.gehilfe.{RUN}@example.test",
+                "kind": "helper",
+                "register_as_participant": True,
+                "participant_role": "moving_in",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    assert created["kind"] == "helper"
+    # No mailbox is configured in this test tenant, so the code is shown once.
+    assert created["invitation_token"] or created["mail_draft_id"]
+
+    rows = _ok(client.get(f"{H}/{pid}/helper-access", headers=h))
+    assert len(rows) == 1
+    assert rows[0]["kind"] == "helper"
+    assert rows[0]["activated"] is False
+
+    participants = _ok(client.get(f"{H}/{pid}", headers=h))["participants"]
+    assert any(p["role"] == "moving_in" and p["first_name"] == "Gerd" for p in participants)
+
+    if created["invitation_token"] is not None:
+        resent = _ok(
+            client.post(f"{H}/{pid}/helper-access/{rows[0]['grant_id']}/resend", headers=h)
+        )
+        assert resent["invitation_token"] or resent["mail_draft_id"]
+
+    assert (
+        client.delete(f"{H}/{pid}/helper-access/{rows[0]['grant_id']}", headers=h).status_code
+        == 204
+    )
+    assert _ok(client.get(f"{H}/{pid}/helper-access", headers=h)) == []
+
+
+UPROTOKOLL_DUMP = """
+INSERT INTO `properties` (`id`, `street`, `house_number`, `postal_code`, `city`, `label`)
+VALUES (1,'Musterweg','12','40789','Monheim am Rhein','Haus Muster');
+
+INSERT INTO `protocols` (`id`, `protocol_number`, `protocol_type`, `status`, `version`,
+`property_id`, `street`, `house_number`, `postal_code`, `city`, `handover_date`, `internal_note`)
+VALUES (9001,'UP-009001','rental','completed',1,1,'Musterweg','12','40789',
+'Monheim am Rhein','2026-02-01','nur intern');
+
+INSERT INTO `protocol_participants` (`id`,`protocol_id`,`role`,`first_name`,`last_name`,`email`)
+VALUES (5001,9001,'moving_out','Erika','Musterfrau','erika@example.test');
+
+INSERT INTO `protocol_notes` (`id`,`protocol_id`,`category`,`text`,`is_internal`)
+VALUES (9101,9001,'hint','Zaehler schwer zugaenglich',0);
+
+INSERT INTO `protocol_files` (`id`,`protocol_id`,`file_category`,`original_filename`,
+`stored_filename`,`storage_path`,`mime_type`,`sha256`,`is_internal`)
+VALUES (9201,9001,'photo','flur.jpg','a1.jpg','protocols/9001/a1.jpg','image/jpeg',
+'{sha}',0);
+"""
+
+
+def test_uprotokoll_import_preview_apply_and_files(client: TestClient, world: World) -> None:
+    import hashlib
+    import io as _io
+    import zipfile
+
+    h = bearer(login(client, world, "m30admin"))
+    _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "831",
+                "name": "Importhaus",
+                "management_type": "rental",
+                "street": "Musterweg",
+                "house_number": "12",
+                "postal_code": "40789",
+                "city": "Monheim am Rhein",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    photo = _jpeg()
+    sha256 = hashlib.sha256(photo).hexdigest()
+    dump = UPROTOKOLL_DUMP.format(sha=sha256).encode("utf-8")
+
+    preview = _ok(
+        client.post(
+            f"{H.rsplit('/', 1)[0]}/imports/uprotokoll",
+            params={"mode": "preview"},
+            files={"file": ("dump.sql", dump, "application/sql")},
+            headers=h,
+        )
+    )
+    assert preview["counts"]["protocols"] == 1
+    assert preview["protocols"][0]["matched_property"] is True
+    assert preview["duplicates"] == 0
+
+    applied = _ok(
+        client.post(
+            f"{H.rsplit('/', 1)[0]}/imports/uprotokoll",
+            params={"mode": "apply"},
+            files={"file": ("dump.sql", dump, "application/sql")},
+            headers=h,
+        )
+    )
+    assert applied["created"]["protocols"] == 1
+    run_id = applied["import_run_id"]
+
+    listed = _ok(client.get(H, headers=h))["items"]
+    imported = next(p for p in listed if p["number"] == "UP-009001")
+    full = _ok(client.get(f"{H}/{imported['id']}", headers=h))
+    assert full["internal_note"] == "nur intern"
+    assert any(p["last_name"] == "Musterfrau" for p in full["participants"])
+    assert any(n["text"] and "Zaehler" in n["text"] for n in full["notes"])
+
+    # Idempotent: re-running the same dump creates nothing new.
+    reapplied = _ok(
+        client.post(
+            f"{H.rsplit('/', 1)[0]}/imports/uprotokoll",
+            params={"mode": "apply"},
+            files={"file": ("dump.sql", dump, "application/sql")},
+            headers=h,
+        )
+    )
+    assert reapplied["created"] == {}
+    assert reapplied["skipped_duplicates"] == 1
+
+    # Binary files (photos, signatures) come from a ZIP of the U-Protokoll storage directory.
+    buffer = _io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as zf:
+        zf.writestr("protocols/9001/a1.jpg", photo)
+    buffer.seek(0)
+    matched = _ok(
+        client.post(
+            f"{H.rsplit('/', 1)[0]}/imports/uprotokoll/files",
+            params={"import_run_id": run_id},
+            files={"file": ("storage.zip", buffer.read(), "application/zip")},
+            headers=h,
+        )
+    )
+    assert len(matched["matched"]) == 1
+    assert matched["unmatched_in_zip"] == []

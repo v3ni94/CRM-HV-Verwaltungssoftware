@@ -24,6 +24,47 @@ function submitterLabel(message: Message, members: Member[] | null, t: ReturnTyp
   return message.submitted_at ? t("submittedBy", { who, at: formatDateTime(message.submitted_at) }) : who;
 }
 
+/** "Als Rechnung erfassen" on one attachment (M14): starts extract_invoice and links to the
+ * review form in the invoices area; the invoice itself is created only there, after review. */
+function AttachmentInvoiceAction({ messageId, attachmentId, label }: { messageId: string; attachmentId: string; label: string }) {
+  const t = useTranslations("Mail");
+  const [busy, setBusy] = useState(false);
+  const [proposalId, setProposalId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const start = async () => {
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ run_id: string; proposal_id: string | null }>(
+      `/api/bff/mail/messages/${messageId}/attachments/${attachmentId}/invoice-extraction`,
+      { method: "POST" },
+    );
+    setBusy(false);
+    if (!res.ok) {
+      setError(t("invoiceExtractionFailed", { reason: res.message }));
+      return;
+    }
+    setProposalId(res.data.proposal_id);
+  };
+
+  if (proposalId) {
+    return (
+      <Link href={`/rechnungen?proposal=${proposalId}`} className="text-xs font-medium text-accent hover:underline">
+        {t("openInvoiceReview")}
+      </Link>
+    );
+  }
+
+  return (
+    <span className="flex flex-col gap-1">
+      <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void start()}>
+        {label}: {t("captureAsInvoice")}
+      </button>
+      {error ? <span className="text-xs text-danger-fg">{error}</span> : null}
+    </span>
+  );
+}
+
 function ThreadEntry({ message }: { message: Message }) {
   const t = useTranslations("Mail");
   return (
@@ -169,6 +210,15 @@ export function MailDetail({
           ) : null}
           {message.attachment_document_ids.length > 0 ? <span>{t("attachments", { count: message.attachment_document_ids.length })}</span> : null}
         </div>
+        {message.direction === "in" && message.attachment_document_ids.length > 0 ? (
+          <ul className="flex flex-wrap gap-2">
+            {message.attachment_document_ids.map((attachmentId, i) => (
+              <li key={attachmentId}>
+                <AttachmentInvoiceAction messageId={message.id} attachmentId={attachmentId} label={t("attachmentInvoice", { number: i + 1 })} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
 
       {message.direction === "in" ? <SuggestionCard message={message} onUpdated={onUpdated} onDraftCreated={onCreated} /> : null}

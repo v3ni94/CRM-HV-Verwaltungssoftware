@@ -110,6 +110,31 @@ class PropertyResult(_Out):
     questions: list[str]
 
 
+class ExtractedInvoice(_Out):
+    """Kopfdaten einer Eingangsrechnung (M14 Belegeingang, 6.4); reines Vorschlagsergebnis."""
+
+    supplier_name: str | None
+    iban: str | None = Field(description="IBAN des Rechnungsstellers, sonst null")
+    invoice_number: str | None
+    invoice_date: str | None = Field(description="ISO-Datum JJJJ-MM-TT, sonst null")
+    due_date: str | None = Field(description="ISO-Datum JJJJ-MM-TT, sonst null")
+    net: str | None = Field(description="Nettobetrag mit Punkt als Dezimaltrenner, sonst null")
+    vat: str | None = Field(description="Steuerbetrag mit Punkt als Dezimaltrenner, sonst null")
+    gross: str | None = Field(description="Bruttobetrag mit Punkt als Dezimaltrenner, sonst null")
+    currency: str | None = Field(description="ISO-4217-Code, sonst null (Annahme EUR)")
+    discount_percent: str | None
+    discount_until: str | None = Field(description="ISO-Datum JJJJ-MM-TT, sonst null")
+    order_reference: str | None
+    property_number_guess: str | None
+    warnings: list[str] = Field(description="eigene Unsicherheiten des Modells")
+    confidence: float = Confidence
+
+
+class InvoiceExtractionResult(_Out):
+    invoice: ExtractedInvoice
+    questions: list[str]
+
+
 class Source(_Out):
     document_id: str
     excerpt: str
@@ -152,6 +177,7 @@ class PlaybookDraft(_Out):
 SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.EXTRACT_CONTACTS: ContactsResult,
     AiTask.EXTRACT_PROPERTY: PropertyResult,
+    AiTask.EXTRACT_INVOICE: InvoiceExtractionResult,
     AiTask.ANSWER_QUESTION: AnswerResult,
     AiTask.SUMMARIZE: SummaryResult,
     AiTask.CLASSIFY_EMAIL: MailSuggestion,
@@ -160,6 +186,7 @@ SCHEMAS: dict[AiTask, type[_Out]] = {
 DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.EXTRACT_CONTACTS: "large",
     AiTask.EXTRACT_PROPERTY: "large",
+    AiTask.EXTRACT_INVOICE: "large",
     AiTask.ANSWER_QUESTION: "small",
     AiTask.SUMMARIZE: "small",
     AiTask.CLASSIFY_EMAIL: "small",

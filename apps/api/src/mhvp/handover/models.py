@@ -95,6 +95,10 @@ class HandoverProtocol(IdMixin, TimestampMixin, TenantMixin, Base):
     unit_number: Mapped[str | None] = mapped_column(String(50))
     unit_label: Mapped[str | None] = mapped_column(String(100))
     unit_position: Mapped[str | None] = mapped_column(String(100))
+    # Manual object (not in the managed portfolio, property_id/unit_id stay null): external
+    # object number and the landlord/owner name, free text, editable, part of the PDF.
+    external_object_number: Mapped[str | None] = mapped_column(String(100))
+    owner_name: Mapped[str | None] = mapped_column(String(200))
 
     handover_date: Mapped[date | None] = mapped_column(Date)
     handover_start: Mapped[time | None] = mapped_column(Time)
@@ -132,6 +136,9 @@ class HandoverProtocol(IdMixin, TimestampMixin, TenantMixin, Base):
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     pdf_document_id: Mapped[uuid.UUID | None] = _fk("document.id", ondelete="SET NULL")
     pdf_sha256: Mapped[str | None] = mapped_column(String(64))
+    # Data takeover from U-Protokoll (M30 stage 4): "uprotokoll:<protocols.id>", unique per
+    # tenant, makes the import idempotent (a re-run of the same dump changes nothing).
+    import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
 class HandoverParticipant(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -154,6 +161,7 @@ class HandoverParticipant(IdMixin, TimestampMixin, TenantMixin, Base):
     phone: Mapped[str | None] = mapped_column(String(50))
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
 class HandoverMeter(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -171,6 +179,7 @@ class HandoverMeter(IdMixin, TimestampMixin, TenantMixin, Base):
     read_at: Mapped[time | None] = mapped_column(Time)
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
 class HandoverRoom(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -183,6 +192,7 @@ class HandoverRoom(IdMixin, TimestampMixin, TenantMixin, Base):
     condition: Mapped[str | None] = mapped_column(String(20))
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
 class HandoverDefect(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -200,6 +210,7 @@ class HandoverDefect(IdMixin, TimestampMixin, TenantMixin, Base):
     defect_status: Mapped[str | None] = mapped_column(String(20))
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
 class HandoverKey(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -215,6 +226,7 @@ class HandoverKey(IdMixin, TimestampMixin, TenantMixin, Base):
     )  # handed_over, not_handed_over, to_follow
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
 class HandoverItem(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -227,6 +239,7 @@ class HandoverItem(IdMixin, TimestampMixin, TenantMixin, Base):
     condition: Mapped[str | None] = mapped_column(String(100))
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
 class HandoverNote(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -243,6 +256,7 @@ class HandoverNote(IdMixin, TimestampMixin, TenantMixin, Base):
         sa.Boolean, nullable=False, default=False, server_default=sa_text("false")
     )
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
 class HandoverSignature(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -259,3 +273,4 @@ class HandoverSignature(IdMixin, TimestampMixin, TenantMixin, Base):
     signed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     signed_location: Mapped[str | None] = mapped_column(String(200))
     comment: Mapped[str | None] = mapped_column(String(255))
+    import_source: Mapped[str | None] = mapped_column(String(100), index=True)

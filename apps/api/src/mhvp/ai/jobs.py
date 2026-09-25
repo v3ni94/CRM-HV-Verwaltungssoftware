@@ -59,17 +59,22 @@ async def run_and_propose(
         if run.status is RunStatus.SUCCEEDED and run.task in (
             AiTask.EXTRACT_CONTACTS,
             AiTask.EXTRACT_PROPERTY,
+            AiTask.EXTRACT_INVOICE,
         ):
             output = run.output or {}
-            preview = (
-                await imports.contacts_preview(session, output)
-                if run.task is AiTask.EXTRACT_CONTACTS
-                else imports.property_preview(output)
-            )
+            if run.task is AiTask.EXTRACT_CONTACTS:
+                preview = await imports.contacts_preview(session, output)
+                entity_type = "contacts"
+            elif run.task is AiTask.EXTRACT_PROPERTY:
+                preview = imports.property_preview(output)
+                entity_type = "property"
+            else:
+                preview = await imports.invoice_preview(session, output, run)
+                entity_type = "invoice"
             proposal = AiProposal(
                 tenant_id=tenant_id,
                 task_run_id=run.id,
-                entity_type="contacts" if run.task is AiTask.EXTRACT_CONTACTS else "property",
+                entity_type=entity_type,
                 context_id=_uuid(run.input_ref.get("context", {}).get("context_id")),
                 proposed=preview,
             )

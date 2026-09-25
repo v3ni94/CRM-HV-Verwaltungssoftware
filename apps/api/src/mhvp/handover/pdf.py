@@ -301,6 +301,8 @@ def render(
     rows: list[tuple[str, Any]] = [
         ("Adresse", svc.address_line(p)),
         ("Objekt", p.object_label),
+        ("Externe Objektnummer", p.external_object_number),
+        ("Eigentümer / Vermieter", p.owner_name),
         ("Einheit", " ".join(x for x in (p.unit_number, p.unit_label, p.unit_position) if x)),
         ("Gebäude / Etage", " ".join(x for x in (p.building, p.floor) if x)),
         ("Übergabedatum", fmt_date(p.handover_date)),

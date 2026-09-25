@@ -1463,3 +1463,67 @@ async def export_datev(ledger_id: uuid.UUID, principal: TenantPrincipal = Depend
         ErrorCodes.CONFLICT,
         detail="DATEV-Format und Berater-/Mandantennummern sind noch nicht festgelegt (M18-01).",
     )
+
+
+# Invoice intake (M14, manual actions only; no automatic polling, see docs/OPEN_QUESTIONS.md
+# M14-05) -------------------------------------------------------------------------------------
+
+intake_router = APIRouter(prefix="/invoices/intake", tags=["Buchhaltung"])
+
+
+class PaperlessIntakeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    paperless_document_id: int
+
+
+@intake_router.post(
+    "/paperless", status_code=202, summary="Beleg aus Paperless holen und Rechnung erfassen"
+)
+async def paperless_intake(
+    body: PaperlessIntakeIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    """Pulls one document by id from Paperless-ngx into the document store (read only client
+    already used for the ticket/property DMS panels, M31) and starts extract_invoice on it. No
+    automatic polling: this is a manual action per document (M14-05)."""
+    from mhvp.ai.models import AiTask
+    from mhvp.ai.routers import start_extraction_run
+    from mhvp.documents import services as doc_services
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.documents.models import DocumentSource
+    from mhvp.documents.paperless_search import PaperlessSearchError
+
+    async with tenant_tx(request, principal) as session:
+        from mhvp.documents.routers import _paperless_client
+
+        client = await _paperless_client(session)
+        try:
+            file = await client.fetch_file(body.paperless_document_id, "download")
+        except PaperlessSearchError as exc:
+            raise ProblemError(ErrorCodes.DMS_UNAVAILABLE, detail=str(exc)) from None
+        finally:
+            await client.aclose()
+        filename = file.filename or f"paperless-{body.paperless_document_id}.pdf"
+        document = await doc_services.store_document(
+            session,
+            BlobStore(request.app.state.settings),
+            tenant_id=principal.tenant_id,
+            data=file.content,
+            title=filename,
+            filename=filename,
+            mime_type=file.content_type,
+            source=DocumentSource.IMPORT,
+            category_id=None,
+            links=[],
+            created_by=principal.user_id,
+        )
+        document_id = document.id
+    run = await start_extraction_run(
+        request,
+        principal,
+        AiTask.EXTRACT_INVOICE,
+        [document_id],
+        "Rechnung aus Paperless erfassen",
+        "invoice",
+        None,
+    )
+    return {"document_id": str(document_id), "run_id": str(run.id), "proposal_id": run.proposal_id}

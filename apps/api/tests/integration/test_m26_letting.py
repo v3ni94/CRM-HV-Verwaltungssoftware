@@ -959,3 +959,174 @@ def test_flow_import_preview_apply_idempotency_and_tenant_separation(
     other_world = asyncio.run(_other_tenant_world(_settings(database, redis_url)))
     ho = bearer(login(client, other_world, "mflowother"))
     assert client.get(f"{L}/flow-import/{run_id}", headers=ho).status_code == 404
+
+
+def test_listing_openimmo_export(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
+    """M26-02: OpenImmo 1.2.7 export, read only, no portal upload (docs/rules/M26-02.md)."""
+    import xml.etree.ElementTree as ET
+
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "766",
+                "name": "OpenImmo-Haus",
+                "management_type": "rental",
+                "street": "Exportweg",
+                "house_number": "9",
+                "postal_code": "40001",
+                "city": f"Exportstadt {RUN}",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    building = _ok(
+        client.post(f"/api/v1/properties/{prop['id']}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )["id"]
+    unit = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/units",
+            json={
+                "building_id": building,
+                "number": "01",
+                "unit_type": "apartment",
+                "living_area_sqm": "70",
+                "rooms": "3",
+                "floor": "1",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+
+    # freshly created listing: check names the missing fields, no XML claim beyond that
+    listing = _ok(
+        client.post(f"{L}/listings", json={"unit_id": unit, "kind": "rental"}, headers=h), 201
+    )
+    check = _ok(client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=h))
+    assert any("Preis" in w for w in check["warnings"])
+    assert any("beschreibung" in w.lower() for w in check["warnings"])
+    assert any("Energieausweis" in w for w in check["warnings"])
+
+    filled = _ok(
+        client.patch(
+            f"{L}/listings/{listing['id']}",
+            json={
+                "price": "900.00",
+                "additional_costs": "150.00",
+                "heating_costs": "40.00",
+                "available_from": "2026-12-01",
+                "description": "Helle Wohnung mit Balkon.",
+                "features": {"balkon": True, "keller": True},
+                "energy_status": "liegt_vor",
+                "energy_type": "verbrauch",
+                "energy_value": "80.00",
+                "energy_class": "C",
+                "energy_valid_until": "2030-01-01",
+            },
+            headers=h,
+        )
+    )
+    assert filled["warm_rent"] == "1090.00"
+    check2 = _ok(client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=h))
+    assert check2["warnings"] == []
+
+    resp = client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=h)
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/xml")
+    root = ET.fromstring(resp.content)  # raises on malformed XML  # noqa: S314
+    assert root.tag == "openimmo"
+    immobilie = root.find("anbieter/immobilie")
+    assert immobilie is not None
+    nutzungsart = immobilie.find("objektkategorie/nutzungsart")
+    assert nutzungsart is not None
+    assert nutzungsart.get("WOHNEN") == "true"
+    vermarktungsart = immobilie.find("objektkategorie/vermarktungsart")
+    assert vermarktungsart is not None
+    assert vermarktungsart.get("MIETE_PACHT") == "true"
+    assert immobilie.find("objektkategorie/objektart/wohnung") is not None
+    geo = immobilie.find("geo")
+    assert geo is not None
+    assert geo.findtext("plz") == "40001"
+    assert geo.findtext("ort") == f"Exportstadt {RUN}"
+    assert geo.findtext("strasse") == "Exportweg"
+    assert geo.findtext("hausnummer") == "9"
+    preise = immobilie.find("preise")
+    assert preise is not None
+    assert preise.findtext("kaltmiete") == "900.00"
+    assert preise.findtext("nebenkosten") == "150.00"
+    assert preise.findtext("warmmiete") == "1090.00"
+    flaechen = immobilie.find("flaechen")
+    assert flaechen is not None
+    assert flaechen.findtext("wohnflaeche") == "70.00"
+    ausstattung = immobilie.find("ausstattung")
+    assert ausstattung is not None
+    assert ausstattung.find("balkon") is not None
+    assert ausstattung.find("keller") is not None
+    energiepass = immobilie.find("zustand_angaben/energiepass")
+    assert energiepass is not None
+    assert energiepass.get("epart") == "energieverbrauchkennwert"
+    assert energiepass.get("wertklasse") == "C"
+    assert energiepass.findtext("energieverbrauchkennwert") == "80.00"
+    freitexte = immobilie.find("freitexte")
+    assert freitexte is not None
+    assert freitexte.findtext("objekttitel") == filled["title"]
+    assert freitexte.findtext("objektbeschreibung") == "Helle Wohnung mit Balkon."
+    verwaltung = immobilie.find("verwaltung_techn")
+    assert verwaltung is not None
+    assert verwaltung.findtext("objektnr_intern") == listing["id"]
+    aktion = verwaltung.find("aktion")
+    assert aktion is not None
+    assert aktion.get("aktionart") == "CHANGE"
+
+    # address release restricted to PLZ/Ort masks street and house number
+    _ok(
+        client.patch(
+            f"{L}/listings/{listing['id']}", json={"address_release": "nur_plz_ort"}, headers=h
+        )
+    )
+    masked = client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=h)
+    masked_geo = ET.fromstring(masked.content).find("anbieter/immobilie/geo")  # noqa: S314
+    assert masked_geo is not None
+    assert masked_geo.findtext("plz") == "40001"
+    assert masked_geo.find("strasse") is None
+    assert masked_geo.find("hausnummer") is None
+
+    not_found = client.get(f"{L}/listings/{UUID(int=0)}/openimmo.xml", headers=h)
+    assert not_found.status_code == 404
+
+    zipped = client.get(f"{L}/listings/openimmo.zip", headers=h)
+    assert zipped.status_code == 200
+    assert zipped.headers["content-type"] == "application/zip"
+
+    # tenant separation and authorization
+    async def _other_tenant_world(settings: Any) -> World:
+        from mhvp.core import crypto
+        from mhvp.core.db.engine import create_app_engine, create_session_factory
+
+        crypto.set_master_key(b"k" * 32)
+        engine = create_app_engine(settings)
+        factory = create_session_factory(engine)
+        try:
+            b, _ = await services.provision_tenant(factory, slug=f"voi-{RUN}", name=f"VOI {RUN}")
+            other = World(tenant_a=b, tenant_b=b, app_url=world.app_url)
+            uid = await services.create_user(
+                factory, email=other.email("moiother"), display_name="moiother", password=PASSWORD
+            )
+            other.users["moiother"] = uid
+            await services.add_member(
+                factory, tenant_id=b, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
+            )
+            return other
+        finally:
+            await engine.dispose()
+
+    other_world = asyncio.run(_other_tenant_world(_settings(database, redis_url)))
+    ho = bearer(login(client, other_world, "moiother"))
+    assert client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=ho).status_code == 404

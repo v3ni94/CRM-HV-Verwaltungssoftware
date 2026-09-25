@@ -112,7 +112,9 @@ class ConversationOut(_Out):
 
 class MessageIn(_In):
     content: str = Field(min_length=1, max_length=10_000)
-    task: Literal["extract_contacts", "extract_property", "answer_question", "summarize"]
+    task: Literal[
+        "extract_contacts", "extract_property", "extract_invoice", "answer_question", "summarize"
+    ]
     document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
 
 
@@ -175,9 +177,39 @@ class PropertyChoice(_In):
     )
 
 
+class InvoiceApplyLineIn(_In):
+    account_id: uuid.UUID
+    net: Decimal
+    vat_percent: Decimal = Decimal(0)
+    vat: Decimal = Decimal(0)
+    text: str | None = Field(default=None, max_length=500)
+
+
+class InvoiceApplyIn(_In):
+    """Every field is what the reviewer confirmed in the review form (rule 0.1.6, 0.1.7); the
+    AI proposal is never applied by itself, only a human choice reusing it as a starting point."""
+
+    ledger_id: uuid.UUID
+    provider_contact_id: uuid.UUID
+    number: str = Field(min_length=1, max_length=100)
+    invoice_date: date
+    due_date: date | None = None
+    net: Decimal
+    vat: Decimal
+    gross: Decimal
+    discount_percent: Decimal | None = Field(default=None, ge=0, le=100)
+    discount_until: date | None = None
+    payee_iban: str | None = Field(default=None, max_length=34)
+    document_id: uuid.UUID | None = None
+    order_reference: str | None = Field(default=None, max_length=100)
+    currency: str = Field(default="EUR", max_length=3, description="nur EUR wird unterstützt")
+    lines: list[InvoiceApplyLineIn] = Field(min_length=1, max_length=200)
+
+
 class ApplyIn(_In):
     contacts: list[ContactChoice] | None = None
     property: PropertyChoice | None = None
+    invoice: InvoiceApplyIn | None = None
 
 
 class ImportItemOut(_Out):

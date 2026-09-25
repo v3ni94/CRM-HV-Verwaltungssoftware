@@ -413,8 +413,8 @@
     "complete": {
       "action": "Protokoll verbindlich abschließen",
       "force": "Trotz Hinweisen verbindlich abschließen",
-      "confirm": "Das Protokoll wird abgeschlossen, festgeschrieben und als PDF abgelegt. Danach sind keine Änderungen mehr möglich. Fortfahren?",
-      "confirmForce": "Es liegen Hinweise vor. Das Protokoll wird trotzdem abgeschlossen und festgeschrieben. Fortfahren?",
+      "confirm": "Ist die Übergabe vollständig abgeschlossen? Mit Ja wird das Protokoll festgeschrieben und als PDF abgelegt. Danach sind keine Änderungen mehr möglich.",
+      "confirmForce": "Es liegen Hinweise vor. Ist die Übergabe trotzdem vollständig abgeschlossen? Mit Ja wird das Protokoll festgeschrieben.",
       "help": "Mit dem Abschluss wird das Protokoll festgeschrieben und als PDF erzeugt. Danach sind keine Änderungen mehr möglich; das PDF bleibt hier für {days} Tage abrufbar. Die Zustellung übernimmt die Verwaltung."
     },
     "intro": "Bitte füllen Sie das Übergabeprotokoll Abschnitt für Abschnitt aus. Jede Eingabe wird sofort gespeichert.",

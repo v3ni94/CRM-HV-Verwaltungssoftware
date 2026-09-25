@@ -14,10 +14,12 @@ from pydantic import ValidationError
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.ai.models import ImportRun, ImportRunItem, ImportStatus
+from mhvp.accounting import invoices as acc_invoices
+from mhvp.accounting.models import Invoice, InvoiceKind, Ledger, PostingStatus
+from mhvp.ai.models import AiTaskRun, ImportRun, ImportRunItem, ImportStatus
 from mhvp.contacts import schemas as cs
 from mhvp.contacts import services as contact_services
-from mhvp.contacts.models import Completeness, Contact, Party, PartyMember
+from mhvp.contacts.models import Completeness, Contact, ContactBankAccount, Party, PartyMember
 from mhvp.contracts.models import (
     Contract,
     ContractPayment,
@@ -295,6 +297,10 @@ async def _referenced(session: AsyncSession, entity_type: str, entity_id: uuid.U
         select(PartyMember.id).where(PartyMember.contact_id == entity_id).limit(1)
     ):
         return "Mitglied einer Vertragspartei"
+    if entity_type == "invoice":
+        invoice = await session.get(Invoice, entity_id)
+        if invoice is not None and invoice.posting_status is not PostingStatus.UNPOSTED:
+            return "Rechnung ist bereits gebucht"
     return None
 
 
@@ -347,6 +353,15 @@ async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID)
         return
     if entity_type == "party":
         await session.execute(delete(PartyMember).where(PartyMember.party_id == entity_id))
+    if entity_type == "invoice":
+        from mhvp.accounting.models import InvoiceLine
+
+        await session.execute(delete(InvoiceLine).where(InvoiceLine.invoice_id == entity_id))
+        invoice = await session.get(Invoice, entity_id)
+        if invoice is not None:
+            await session.delete(invoice)
+        await session.flush()
+        return
     model: dict[str, Any] = {
         "party": Party,
         "unit": Unit,
@@ -609,3 +624,134 @@ async def apply_property(
             )
     await session.flush()
     return {"property_id": str(prop.id), "units": len(units), "notes": notes}
+
+
+# Invoice extraction (M14, 6.4) -------------------------------------------------------------
+
+
+async def invoice_preview(
+    session: AsyncSession, output: dict[str, Any], run: AiTaskRun
+) -> dict[str, Any]:
+    """Header fields plus platform side hints (10.1 step 4 pattern); nothing is guessed here.
+
+    Warnings the model wrote itself are kept as is; the duplicate invoice number and IBAN
+    mismatch hints are computed here from tenant data, never invented by the model (rule 0.1.6:
+    AI never alone approves a payee or IBAN change).
+    """
+    data = dict(output.get("invoice") or {})
+    warnings = list(data.get("warnings") or [])
+    supplier_name = data.get("supplier_name")
+    candidates: list[dict[str, Any]] = []
+    if supplier_name:
+        probe = cs.DuplicateQuery(company_name=supplier_name)
+        for found, score, reasons in await contact_services.find_duplicates(
+            session, probe, limit=5
+        ):
+            candidates.append(
+                {
+                    "contact_id": str(found.id),
+                    "name": found.display_name,
+                    "score": score,
+                    "reasons": reasons,
+                }
+            )
+    currency = data.get("currency")
+    if currency and currency.upper() != "EUR":
+        warnings.append(
+            f"Fremdwährung erkannt ({currency}): wird nicht unterstützt, Anlage als Entwurf ist "
+            "gesperrt, bis der Betrag in EUR geprüft und bestätigt ist."
+        )
+    iban = data.get("iban")
+    number = data.get("invoice_number")
+    if len(candidates) == 1 and iban:
+        contact_id = uuid.UUID(candidates[0]["contact_id"])
+        from mhvp.core import crypto
+
+        fingerprint = crypto.fingerprint(iban)
+        known = await session.scalar(
+            select(ContactBankAccount.id).where(
+                ContactBankAccount.contact_id == contact_id,
+                ContactBankAccount.iban_fingerprint == fingerprint,
+            )
+        )
+        if known is None:
+            warnings.append(
+                "IBAN weicht von den bekannten Bankverbindungen des erkannten Ausstellers ab: "
+                "gesonderte Bestätigung vor Freigabe nötig."
+            )
+    if number:
+        if len(candidates) == 1:
+            duplicate = await session.scalar(
+                select(Invoice.id).where(
+                    Invoice.provider_contact_id == uuid.UUID(candidates[0]["contact_id"]),
+                    Invoice.number == number,
+                )
+            )
+        else:
+            duplicate = await session.scalar(select(Invoice.id).where(Invoice.number == number))
+        if duplicate:
+            warnings.append(
+                "Mögliche Doppelrechnung: Rechnungsnummer ist bereits erfasst"
+                + (" (Aussteller nicht eindeutig erkannt)." if len(candidates) != 1 else ".")
+            )
+    return {
+        "invoice": data,
+        "supplier_candidates": candidates,
+        "warnings": warnings,
+        "questions": output.get("questions", []),
+        "document_ids": [str(d) for d in run.input_ref.get("document_ids", [])],
+    }
+
+
+async def apply_invoice(
+    session: AsyncSession,
+    run: ImportRun,
+    principal: Any,
+    data: Any,
+) -> dict[str, Any]:
+    """Creates the invoice as an open draft (review not started, nothing posted, rule 0.1.6/7).
+
+    Every field, including the payee and any IBAN, is what the reviewer confirmed in the form;
+    the AI proposal is never applied as is.
+    """
+    if data.currency.upper() != "EUR":
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail=(
+                f"Fremdwährung ({data.currency}) wird nicht unterstützt: die Rechnung wurde "
+                "nicht angelegt. Betrag in EUR prüfen und den Beleg erneut erfassen."
+            ),
+        )
+    recorder = Recorder(session, run)
+    ledger = await session.get(Ledger, data.ledger_id)
+    if ledger is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Buchungskreis nicht gefunden.")
+    invoice = Invoice(
+        tenant_id=principal.tenant_id,
+        created_by=principal.user_id,
+        ledger_id=data.ledger_id,
+        provider_contact_id=data.provider_contact_id,
+        kind=InvoiceKind.INVOICE,
+        number=data.number,
+        invoice_date=data.invoice_date,
+        due_date=data.due_date,
+        service_from=None,
+        service_to=None,
+        discount_percent=data.discount_percent,
+        discount_until=data.discount_until,
+        document_id=data.document_id,
+        order_reference=data.order_reference,
+        net=data.net,
+        vat=data.vat,
+        gross=data.gross,
+    )
+    await acc_invoices.write(
+        session, invoice, [ln.model_dump() for ln in data.lines], data.payee_iban
+    )
+    recorder.add("invoice", invoice.id)
+    await session.flush()
+    return {
+        "invoice_id": str(invoice.id),
+        "findings": invoice.findings,
+        "review_status": invoice.review_status.value,
+    }

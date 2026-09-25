@@ -124,6 +124,63 @@ export function contactsPreview(proposed: Record<string, unknown>): ContactsPrev
   return { rows: Array.isArray(p.rows) ? p.rows : [], questions: Array.isArray(p.questions) ? p.questions : [] };
 }
 
+/** Invoice extraction preview (M14, `mhvp.ai.imports.invoice_preview`). The IBAN the API returns
+ * here is masked (last four digits only, rule 0.1.6); the reviewer types the full IBAN from the
+ * original document into a separate confirmation field, it is never taken from this proposal. */
+export type ExtractedInvoiceFields = {
+  supplier_name: string | null;
+  iban: string | null;
+  invoice_number: string | null;
+  invoice_date: string | null;
+  due_date: string | null;
+  net: string | null;
+  vat: string | null;
+  gross: string | null;
+  currency: string | null;
+  discount_percent: string | null;
+  discount_until: string | null;
+  order_reference: string | null;
+  property_number_guess: string | null;
+  warnings: string[];
+  confidence: number | null;
+};
+export type SupplierCandidate = { contact_id: string; name: string; score: number; reasons: string[] };
+export type InvoicePreview = {
+  invoice: ExtractedInvoiceFields;
+  supplier_candidates: SupplierCandidate[];
+  warnings: string[];
+  questions: string[];
+  document_ids: string[];
+};
+
+export function invoicePreview(proposed: Record<string, unknown>): InvoicePreview {
+  const p = proposed as Partial<InvoicePreview>;
+  return {
+    invoice: {
+      supplier_name: null,
+      iban: null,
+      invoice_number: null,
+      invoice_date: null,
+      due_date: null,
+      net: null,
+      vat: null,
+      gross: null,
+      currency: null,
+      discount_percent: null,
+      discount_until: null,
+      order_reference: null,
+      property_number_guess: null,
+      warnings: [],
+      confidence: null,
+      ...p.invoice,
+    },
+    supplier_candidates: p.supplier_candidates ?? [],
+    warnings: p.warnings ?? [],
+    questions: p.questions ?? [],
+    document_ids: p.document_ids ?? [],
+  };
+}
+
 export function propertyPreview(proposed: Record<string, unknown>): PropertyPreview {
   const p = proposed as Partial<PropertyPreview>;
   return {

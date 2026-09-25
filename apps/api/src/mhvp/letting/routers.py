@@ -5,13 +5,15 @@ on values entered with their source; it never states that an increase is lawful.
 demand is a legally relevant statement and needs G3 plus a documented legal review (M26-01)."""
 
 import copy
+import io
 import re
 import uuid
+import zipfile
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
@@ -21,7 +23,9 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
+from mhvp.documents.models import Document, DocumentLink
 from mhvp.letting import flow_import as flow
+from mhvp.letting import openimmo
 from mhvp.letting.models import FlowImportRun, Listing, Prospect, RentIncreaseCase
 
 router = APIRouter(prefix="/letting", tags=["letting"])
@@ -839,6 +843,55 @@ async def list_listings(
         return [_listing_out(listing, prop.number, unit.number) for listing, prop, unit in rows]
 
 
+@router.get(
+    "/listings/openimmo.zip",
+    summary="OpenImmo-Sammelexport aktiver Anzeigen (XML, Bilder soweit verknüpft)",
+    response_class=Response,
+    responses={200: {"content": {"application/zip": {}}}},
+)
+async def get_listings_openimmo_zip(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> Response:
+    from mhvp.properties.models import Property, Unit
+
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.execute(
+                select(Listing, Property, Unit)
+                .join(Property, Property.id == Listing.property_id)
+                .join(Unit, Unit.id == Listing.unit_id)
+                .where(Listing.status == "active")
+                .order_by(Listing.created_at.desc())
+                .limit(500)
+            )
+        ).all()
+        blobs = _blobs_store(request)
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for listing, prop, unit in rows:
+                xml = openimmo.build_openimmo_xml(listing, prop, unit)
+                archive.writestr(f"{listing.id}/listing.xml", xml)
+                links = (
+                    await session.execute(
+                        select(Document)
+                        .join(DocumentLink, DocumentLink.document_id == Document.id)
+                        .where(
+                            DocumentLink.entity_type == "listing",
+                            DocumentLink.entity_id == listing.id,
+                            Document.mime_type.ilike("image/%"),
+                        )
+                    )
+                ).scalars()
+                for document in links:
+                    data = blobs.get(document.storage_ref)
+                    archive.writestr(f"{listing.id}/images/{document.filename}", data)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="listings-openimmo.zip"'},
+    )
+
+
 @router.get("/listings/{listing_id}", summary="Anzeige")
 async def get_listing(
     listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -961,6 +1014,59 @@ async def delete_listing(
                 ErrorCodes.CONFLICT, detail="Nur Anzeigen im Entwurf können gelöscht werden."
             )
         await session.delete(listing)
+
+
+# OpenImmo export (M26-02, docs/rules/M26-02.md): read only, no portal upload -----------
+
+
+async def _listing_and_property(session: Any, listing_id: uuid.UUID) -> tuple[Listing, Any, Any]:
+    from mhvp.properties.models import Property, Unit
+
+    listing = await session.get(Listing, listing_id)
+    if listing is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    prop = await session.get(Property, listing.property_id)
+    unit = await session.get(Unit, listing.unit_id)
+    if prop is None or unit is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    return listing, prop, unit
+
+
+@router.get(
+    "/listings/{listing_id}/openimmo-check",
+    summary="OpenImmo-Export: fehlende oder ungültige Felder",
+)
+async def openimmo_check(
+    listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        listing, prop, _unit = await _listing_and_property(session, listing_id)
+        return {"warnings": openimmo.check_openimmo(listing, prop)}
+
+
+@router.get(
+    "/listings/{listing_id}/openimmo.xml",
+    summary="OpenImmo 1.2.7 Export (nur lesend, kein Portal-Upload)",
+    response_class=Response,
+    responses={200: {"content": {"application/xml": {}}}},
+)
+async def get_listing_openimmo(
+    listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        listing, prop, unit = await _listing_and_property(session, listing_id)
+        xml = openimmo.build_openimmo_xml(listing, prop, unit)
+    return Response(
+        content=xml,
+        media_type="application/xml",
+        headers={"Content-Disposition": f'attachment; filename="listing-{listing_id}.xml"'},
+    )
+
+
+def _blobs_store(request: Request) -> Any:
+    from mhvp.documents.blobs import BlobStore
+
+    return BlobStore(request.app.state.settings)
 
 
 # FLOW import (M28 stage 4, docs/rules/M28-01.md) ----------------------------------------

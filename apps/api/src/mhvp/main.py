@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from mhvp.accounting.routers import intake_router as accounting_intake_router
 from mhvp.accounting.routers import router as accounting_router
 from mhvp.ai.routers import router as ai_router
 from mhvp.banking.routers import finapi_router
@@ -34,6 +35,7 @@ from mhvp.core.problems import install_problem_handlers
 from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGateResolver
 from mhvp.core.storage import create_s3_client
 from mhvp.documents.routers import router as documents_router
+from mhvp.handover.imports import router as handover_imports_router
 from mhvp.handover.portal import router as handover_portal_router
 from mhvp.handover.routers import router as handover_router
 from mhvp.hoa.levies import router as hoa_levies_router
@@ -145,12 +147,14 @@ def create_app(
     app.include_router(contracts_router, prefix=API_PREFIX)
     app.include_router(documents_router, prefix=API_PREFIX)
     app.include_router(handover_router, prefix=API_PREFIX)
+    app.include_router(handover_imports_router, prefix=API_PREFIX)
     app.include_router(handover_portal_router, prefix=API_PREFIX)
     app.include_router(imports_router, prefix=API_PREFIX)
     app.include_router(ai_router, prefix=API_PREFIX)
     app.include_router(workspace_router, prefix=API_PREFIX)
     app.include_router(ops_router, prefix=API_PREFIX)
     app.include_router(accounting_router, prefix=API_PREFIX)
+    app.include_router(accounting_intake_router, prefix=API_PREFIX)
     app.include_router(banking_router, prefix=API_PREFIX)
     app.include_router(finapi_router, prefix=API_PREFIX)
     app.include_router(billing_router, prefix=API_PREFIX)

@@ -7,12 +7,15 @@ Bestand laut Architektur: 67 Objekte, 869 Einheiten. Funktionen: Sechs-Ordner-St
 Upload, OCR, dreistufige Klassifikation (Regeln, lokales Modell, externe KI mit Maskierung),
 Review Center, Eigentümer- und Mieterlisten, Vollständigkeitsprüfung, Nachforderungsschreiben.
 
-## Entscheidung: nicht in dieses Repository kopieren
+## Entscheidung: vollständige Übernahme in dieses Repository (ersetzt frühere Entscheidung)
 
-objektakte ist ein eigener Django-Monolith mit eigener Datenbank, eigenen Rollen, eigener
-Verschlüsselung (Drive-Token, IBAN) und laufender fachlicher Entwicklung. Ein Kopieren des Codes
-in das CRM (FastAPI, PostgreSQL) hieße Neuschreiben. Die Anbindung erfolgt als Dienst:
-das CRM bekommt den Reiter DMS, objektakte bleibt das System für Übernahme und Aktenablage.
+Betreiberentscheidung vom 25.09.2026: die frühere Entscheidung "nicht in dieses Repository
+kopieren" ist aufgehoben. objektakte wird vollständig in dieses CRM überführt (Datenmodell,
+Daten, Funktionen als Neubau, kein Code-Copy). Stufenplan, Datenmodellinventar,
+Migrationsansatz, Risiken und Aufwandsschätzung stehen in
+`docs/plans/M35-objektakte-uebernahme.md`. Die Stufen 1 bis 5 unten (Reiter DMS, SSO,
+lesende Schnittstelle) sind damit hinfällig bzw. nur als Übergangslösung während des in
+M35 beschriebenen Parallelbetriebs relevant.
 
 ## Stufen
 

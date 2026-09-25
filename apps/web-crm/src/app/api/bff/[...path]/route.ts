@@ -25,6 +25,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}/draft$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/(reply-draft|submit|approve|reject|ticket|forward-invoice)$`) },
+  // Rechnung aus E-Mail-Anhang erfassen (M14 KI-Extraktion).
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/attachments/${ID}/invoice-extraction$`) },
   { method: "GET", pattern: /^mail\/invoice-forwarding$/ },
   { method: "PUT", pattern: /^mail\/invoice-forwarding$/ },
   // KI-Vorschläge und Playbooks (M20 Übernahme aus dem Immoware Hub).
@@ -150,6 +152,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^letting\/listings$/ },
   { method: "PATCH", pattern: new RegExp(`^letting/listings/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^letting/listings/${ID}$`) },
+  // OpenImmo-Export (M26-02): read only, no portal upload.
+  { method: "GET", pattern: new RegExp(`^letting/listings/${ID}/openimmo-check$`) },
+  { method: "GET", pattern: new RegExp(`^letting/listings/${ID}/openimmo\\.xml$`) },
+  { method: "GET", pattern: /^letting\/listings\/openimmo\.zip$/ },
   // Makler (M28-01): property and unit pickers for the listing creation form.
   // Übergabeprotokolle (M30): protocol, sub records, photos, signatures, completion, versions.
   { method: "GET", pattern: /^handover\/protocols$/ },
@@ -163,6 +169,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Portalzugang eines Beteiligten (M30 Stufe 3): einrichten und beenden.
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/participants/${ID}/portal-access$`) },
   { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/participants/${ID}/portal-access$`) },
+  // Gehilfenzugänge (M30, ported from U-Protokoll): list, create, revoke, resend.
+  { method: "GET", pattern: new RegExp(`^handover/protocols/${ID}/helper-access$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/helper-access$`) },
+  { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/helper-access/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/helper-access/${ID}/resend$`) },
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)(/order)?$`) },
   { method: "PATCH", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
@@ -234,6 +245,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Incoming invoices (M14): capture, review steps, IBAN confirmation, release, posting.
   { method: "POST", pattern: /^accounting\/invoices$/ },
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },
+  // Beleg aus Paperless holen und als Rechnung erfassen (M14 KI-Extraktion, manuelle Aktion).
+  { method: "POST", pattern: /^invoices\/intake\/paperless$/ },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];

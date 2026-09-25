@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { InvoiceCreate } from "@/components/invoices/InvoiceForms";
+import { InvoiceExtract } from "@/components/invoices/InvoiceExtract";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -10,8 +11,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
-export default async function InvoicesPage() {
+export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ proposal?: string }> }) {
   const t = await getTranslations("Invoices");
+  const { proposal: initialProposalId } = await searchParams;
   const api = serverApi();
   const [list, ledgers] = await Promise.all([api.GET("/api/v1/accounting/invoices"), api.GET("/api/v1/accounting/ledgers")]);
   redirectIfUnauthenticated(list.response);
@@ -31,6 +33,11 @@ export default async function InvoicesPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("notice")}</p>
+      <InvoiceExtract
+        ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, label: l.name }))}
+        accounts={accounts}
+        initialProposalId={initialProposalId ?? null}
+      />
       <InvoiceCreate ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, label: l.name }))} accounts={accounts} />
       {rows.length === 0 ? (
         <EmptyState title={t("empty")} />

@@ -2520,6 +2520,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/handover/imports/uprotokoll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * U-Protokoll-Export prüfen oder übernehmen
+         * @description `mode=preview` (default) only parses and reports, changes nothing. `mode=apply` creates
+         *     the rows; call it only after reviewing the preview, since the operator (not this endpoint)
+         *     decides whether the unmatched objects and duplicates it reports are acceptable.
+         */
+        post: operations["preview_or_apply_api_v1_handover_imports_uprotokoll_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/imports/uprotokoll/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dateien aus dem Speicherordner von U-Protokoll zuordnen (ZIP)
+         * @description Matches each entry of the ZIP to a `protocol_files` row staged by `/apply` (by SHA-256
+         *     first, else by the exact stored path) and stores it as a document of the protocol, room,
+         *     defect, meter or item it belonged to in U-Protokoll; a `file_category=signature` file also
+         *     creates the `handover_signature` row (needs the image, so it could not be created by
+         *     `/apply`). Files with no match are reported, not silently dropped.
+         */
+        post: operations["match_files_api_v1_handover_imports_uprotokoll_files_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/handover/protocols": {
         parameters: {
             query?: never;
@@ -2640,6 +2686,58 @@ export interface paths {
         post?: never;
         /** Foto oder Anhang entfernen */
         delete: operations["delete_document_api_v1_handover_protocols__protocol_id__documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/helper-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gehilfenzugänge auflisten */
+        get: operations["list_helper_access_api_v1_handover_protocols__protocol_id__helper_access_get"];
+        put?: never;
+        /** Gehilfenzugang anlegen (Portalzugang mit eingeschränkter Sicht auf ein Protokoll) */
+        post: operations["create_helper_access_api_v1_handover_protocols__protocol_id__helper_access_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Gehilfenzugang beenden */
+        delete: operations["revoke_helper_access_api_v1_handover_protocols__protocol_id__helper_access__grant_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Zugangsdaten erneut zustellen */
+        post: operations["resend_helper_access_api_v1_handover_protocols__protocol_id__helper_access__grant_id__resend_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3975,6 +4073,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoices/intake/paperless": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Beleg aus Paperless holen und Rechnung erfassen
+         * @description Pulls one document by id from Paperless-ngx into the document store (read only client
+         *     already used for the ticket/property DMS panels, M31) and starts extract_invoice on it. No
+         *     automatic polling: this is a manual action per document (M14-05).
+         */
+        post: operations["paperless_intake_api_v1_invoices_intake_paperless_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/letters": {
         parameters: {
             query?: never;
@@ -4101,6 +4221,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/letting/listings/openimmo.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** OpenImmo-Sammelexport aktiver Anzeigen (XML, Bilder soweit verknüpft) */
+        get: operations["get_listings_openimmo_zip_api_v1_letting_listings_openimmo_zip_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/letting/listings/prefill": {
         parameters: {
             query?: never;
@@ -4135,6 +4272,40 @@ export interface paths {
         head?: never;
         /** Anzeige ändern */
         patch: operations["patch_listing_api_v1_letting_listings__listing_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/letting/listings/{listing_id}/openimmo-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** OpenImmo-Export: fehlende oder ungültige Felder */
+        get: operations["openimmo_check_api_v1_letting_listings__listing_id__openimmo_check_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/letting/listings/{listing_id}/openimmo.xml": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** OpenImmo 1.2.7 Export (nur lesend, kein Portal-Upload) */
+        get: operations["get_listing_openimmo_api_v1_letting_listings__listing_id__openimmo_xml_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/letting/prospects": {
@@ -4502,6 +4673,27 @@ export interface paths {
         put?: never;
         /** Entwurf freigeben und senden */
         post: operations["approve_api_v1_mail_messages__message_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/attachments/{attachment_id}/invoice-extraction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anhang als Rechnung erfassen (KI-Vorschlag)
+         * @description Starts extract_invoice on an existing mail attachment document (rule 0.1.6: proposal
+         *     only, the invoice itself is created only after a confirmed review, see mhvp.ai.imports).
+         */
+        post: operations["invoice_extraction_from_attachment_api_v1_mail_messages__message_id__attachments__attachment_id__invoice_extraction_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7788,6 +7980,7 @@ export interface components {
         ApplyIn: {
             /** Contacts */
             contacts?: components["schemas"]["ContactChoice"][] | null;
+            invoice?: components["schemas"]["InvoiceApplyIn"] | null;
             property?: components["schemas"]["PropertyChoice"] | null;
         };
         /** ApplyPlaybookIn */
@@ -7953,6 +8146,16 @@ export interface components {
         };
         /** Body_flow_import_preview_api_v1_letting_flow_import_preview_post */
         Body_flow_import_preview_api_v1_letting_flow_import_preview_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_match_files_api_v1_handover_imports_uprotokoll_files_post */
+        Body_match_files_api_v1_handover_imports_uprotokoll_files_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_preview_or_apply_api_v1_handover_imports_uprotokoll_post */
+        Body_preview_or_apply_api_v1_handover_imports_uprotokoll_post: {
             /** File */
             file: string;
         };
@@ -10068,6 +10271,27 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** HelperAccessIn */
+        HelperAccessIn: {
+            /** Email */
+            email: string;
+            /** Expires Days */
+            expires_days?: number | null;
+            /**
+             * Kind
+             * @default helper
+             */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Participant Role */
+            participant_role?: string | null;
+            /**
+             * Register As Participant
+             * @default false
+             */
+            register_as_participant: boolean;
+        };
         /** Hit */
         Hit: {
             /** Entity Type */
@@ -10402,6 +10626,78 @@ export interface components {
             invited_at: string;
             /** Urgency Reason */
             urgency_reason?: string | null;
+        };
+        /**
+         * InvoiceApplyIn
+         * @description Every field is what the reviewer confirmed in the review form (rule 0.1.6, 0.1.7); the
+         *     AI proposal is never applied by itself, only a human choice reusing it as a starting point.
+         */
+        InvoiceApplyIn: {
+            /**
+             * Currency
+             * @description nur EUR wird unterstützt
+             * @default EUR
+             */
+            currency: string;
+            /** Discount Percent */
+            discount_percent?: number | string | null;
+            /** Discount Until */
+            discount_until?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Gross */
+            gross: number | string;
+            /**
+             * Invoice Date
+             * Format: date
+             */
+            invoice_date: string;
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /** Lines */
+            lines: components["schemas"]["InvoiceApplyLineIn"][];
+            /** Net */
+            net: number | string;
+            /** Number */
+            number: string;
+            /** Order Reference */
+            order_reference?: string | null;
+            /** Payee Iban */
+            payee_iban?: string | null;
+            /**
+             * Provider Contact Id
+             * Format: uuid
+             */
+            provider_contact_id: string;
+            /** Vat */
+            vat: number | string;
+        };
+        /** InvoiceApplyLineIn */
+        InvoiceApplyLineIn: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Net */
+            net: number | string;
+            /** Text */
+            text?: string | null;
+            /**
+             * Vat
+             * @default 0
+             */
+            vat: number | string;
+            /**
+             * Vat Percent
+             * @default 0
+             */
+            vat_percent: number | string;
         };
         /** InvoiceForwardSettingsIn */
         InvoiceForwardSettingsIn: {
@@ -11595,7 +11891,7 @@ export interface components {
              * Task
              * @enum {string}
              */
-            task: "extract_contacts" | "extract_property" | "answer_question" | "summarize";
+            task: "extract_contacts" | "extract_property" | "extract_invoice" | "answer_question" | "summarize";
         };
         /** MessageOut */
         MessageOut: {
@@ -12029,6 +12325,11 @@ export interface components {
              * Format: date
              */
             title_transfer_date: string;
+        };
+        /** PaperlessIntakeIn */
+        PaperlessIntakeIn: {
+            /** Paperless Document Id */
+            paperless_document_id: number;
         };
         /** PartyIn */
         PartyIn: {
@@ -12798,6 +13099,8 @@ export interface components {
             deposit_note?: string | null;
             /** Deposit Separate Statement */
             deposit_separate_statement?: boolean | null;
+            /** External Object Number */
+            external_object_number?: string | null;
             /** Floor */
             floor?: string | null;
             /** General Note */
@@ -12826,6 +13129,8 @@ export interface components {
             management_number?: string | null;
             /** Object Label */
             object_label?: string | null;
+            /** Owner Name */
+            owner_name?: string | null;
             /** Postal Code */
             postal_code?: string | null;
             /** Property Id */
@@ -20216,6 +20521,80 @@ export interface operations {
             };
         };
     };
+    preview_or_apply_api_v1_handover_imports_uprotokoll_post: {
+        parameters: {
+            query?: {
+                mode?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_preview_or_apply_api_v1_handover_imports_uprotokoll_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    match_files_api_v1_handover_imports_uprotokoll_files_post: {
+        parameters: {
+            query: {
+                import_run_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_match_files_api_v1_handover_imports_uprotokoll_files_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_protocols_api_v1_handover_protocols_get: {
         parameters: {
             query?: {
@@ -20523,6 +20902,140 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_helper_access_api_v1_handover_protocols__protocol_id__helper_access_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_helper_access_api_v1_handover_protocols__protocol_id__helper_access_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HelperAccessIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_helper_access_api_v1_handover_protocols__protocol_id__helper_access__grant_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_helper_access_api_v1_handover_protocols__protocol_id__helper_access__grant_id__resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
             };
             /** @description Validation Error */
             422: {
@@ -23376,6 +23889,41 @@ export interface operations {
             };
         };
     };
+    paperless_intake_api_v1_invoices_intake_paperless_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaperlessIntakeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_letter_api_v1_letters_post: {
         parameters: {
             query?: never;
@@ -23651,6 +24199,26 @@ export interface operations {
             };
         };
     };
+    get_listings_openimmo_zip_api_v1_letting_listings_openimmo_zip_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": unknown;
+                };
+            };
+        };
+    };
     listing_prefill_api_v1_letting_listings_prefill_get: {
         parameters: {
             query: {
@@ -23770,6 +24338,70 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    openimmo_check_api_v1_letting_listings__listing_id__openimmo_check_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_listing_openimmo_api_v1_letting_listings__listing_id__openimmo_xml_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/xml": unknown;
                 };
             };
             /** @description Validation Error */
@@ -24690,6 +25322,40 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invoice_extraction_from_attachment_api_v1_mail_messages__message_id__attachments__attachment_id__invoice_extraction_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+                attachment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

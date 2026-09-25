@@ -1200,6 +1200,16 @@
             ],
             "title": "Contacts"
           },
+          "invoice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InvoiceApplyIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "property": {
             "anyOf": [
               {
@@ -1687,6 +1697,34 @@
           "file"
         ],
         "title": "Body_flow_import_preview_api_v1_letting_flow_import_preview_post",
+        "type": "object"
+      },
+      "Body_match_files_api_v1_handover_imports_uprotokoll_files_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_match_files_api_v1_handover_imports_uprotokoll_files_post",
+        "type": "object"
+      },
+      "Body_preview_or_apply_api_v1_handover_imports_uprotokoll_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_or_apply_api_v1_handover_imports_uprotokoll_post",
         "type": "object"
       },
       "Body_token_api_v1_oidc_token_post": {
@@ -8415,6 +8453,65 @@
         "title": "HealthReport",
         "type": "object"
       },
+      "HelperAccessIn": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          },
+          "expires_days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires Days"
+          },
+          "kind": {
+            "default": "helper",
+            "pattern": "^(helper|tenant|owner)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "participant_role": {
+            "anyOf": [
+              {
+                "pattern": "^(moving_in|moving_out)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant Role"
+          },
+          "register_as_participant": {
+            "default": false,
+            "title": "Register As Participant",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "email"
+        ],
+        "title": "HelperAccessIn",
+        "type": "object"
+      },
       "Hit": {
         "properties": {
           "entity_type": {
@@ -9386,6 +9483,240 @@
           "invited_at"
         ],
         "title": "InviteIn",
+        "type": "object"
+      },
+      "InvoiceApplyIn": {
+        "additionalProperties": false,
+        "description": "Every field is what the reviewer confirmed in the review form (rule 0.1.6, 0.1.7); the\nAI proposal is never applied by itself, only a human choice reusing it as a starting point.",
+        "properties": {
+          "currency": {
+            "default": "EUR",
+            "description": "nur EUR wird unterstützt",
+            "maxLength": 3,
+            "title": "Currency",
+            "type": "string"
+          },
+          "discount_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Percent"
+          },
+          "discount_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Until"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "gross": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Gross"
+          },
+          "invoice_date": {
+            "format": "date",
+            "title": "Invoice Date",
+            "type": "string"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/InvoiceApplyLineIn"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Lines",
+            "type": "array"
+          },
+          "net": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Net"
+          },
+          "number": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Number",
+            "type": "string"
+          },
+          "order_reference": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Reference"
+          },
+          "payee_iban": {
+            "anyOf": [
+              {
+                "maxLength": 34,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payee Iban"
+          },
+          "provider_contact_id": {
+            "format": "uuid",
+            "title": "Provider Contact Id",
+            "type": "string"
+          },
+          "vat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Vat"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "provider_contact_id",
+          "number",
+          "invoice_date",
+          "net",
+          "vat",
+          "gross",
+          "lines"
+        ],
+        "title": "InvoiceApplyIn",
+        "type": "object"
+      },
+      "InvoiceApplyLineIn": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "net": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Net"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "vat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Vat"
+          },
+          "vat_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Vat Percent"
+          }
+        },
+        "required": [
+          "account_id",
+          "net"
+        ],
+        "title": "InvoiceApplyLineIn",
         "type": "object"
       },
       "InvoiceForwardSettingsIn": {
@@ -13283,6 +13614,7 @@
             "enum": [
               "extract_contacts",
               "extract_property",
+              "extract_invoice",
               "answer_question",
               "summarize"
             ],
@@ -14604,6 +14936,20 @@
           "acquisition_kind"
         ],
         "title": "OwnershipTransferIn",
+        "type": "object"
+      },
+      "PaperlessIntakeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "paperless_document_id": {
+            "title": "Paperless Document Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "paperless_document_id"
+        ],
+        "title": "PaperlessIntakeIn",
         "type": "object"
       },
       "PartyIn": {
@@ -17084,6 +17430,18 @@
             ],
             "title": "Deposit Separate Statement"
           },
+          "external_object_number": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Object Number"
+          },
           "floor": {
             "anyOf": [
               {
@@ -17250,6 +17608,18 @@
               }
             ],
             "title": "Object Label"
+          },
+          "owner_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name"
           },
           "postal_code": {
             "anyOf": [
@@ -31491,6 +31861,119 @@
         ]
       }
     },
+    "/api/v1/handover/imports/uprotokoll": {
+      "post": {
+        "description": "`mode=preview` (default) only parses and reports, changes nothing. `mode=apply` creates\nthe rows; call it only after reviewing the preview, since the operator (not this endpoint)\ndecides whether the unmatched objects and duplicates it reports are acceptable.",
+        "operationId": "preview_or_apply_api_v1_handover_imports_uprotokoll_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "preview",
+              "pattern": "^(preview|apply)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_or_apply_api_v1_handover_imports_uprotokoll_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Preview Or Apply Api V1 Handover Imports Uprotokoll Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "U-Protokoll-Export prüfen oder übernehmen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/imports/uprotokoll/files": {
+      "post": {
+        "description": "Matches each entry of the ZIP to a `protocol_files` row staged by `/apply` (by SHA-256\nfirst, else by the exact stored path) and stores it as a document of the protocol, room,\ndefect, meter or item it belonged to in U-Protokoll; a `file_category=signature` file also\ncreates the `handover_signature` row (needs the image, so it could not be created by\n`/apply`). Files with no match are reported, not silently dropped.",
+        "operationId": "match_files_api_v1_handover_imports_uprotokoll_files_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "import_run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_match_files_api_v1_handover_imports_uprotokoll_files_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Match Files Api V1 Handover Imports Uprotokoll Files Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dateien aus dem Speicherordner von U-Protokoll zuordnen (ZIP)",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
     "/api/v1/handover/protocols": {
       "get": {
         "operationId": "list_protocols_api_v1_handover_protocols_get",
@@ -32035,6 +32518,208 @@
           }
         },
         "summary": "Foto oder Anhang entfernen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/helper-access": {
+      "get": {
+        "operationId": "list_helper_access_api_v1_handover_protocols__protocol_id__helper_access_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Helper Access Api V1 Handover Protocols  Protocol Id  Helper Access Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gehilfenzugänge auflisten",
+        "tags": [
+          "handover"
+        ]
+      },
+      "post": {
+        "operationId": "create_helper_access_api_v1_handover_protocols__protocol_id__helper_access_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HelperAccessIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Helper Access Api V1 Handover Protocols  Protocol Id  Helper Access Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gehilfenzugang anlegen (Portalzugang mit eingeschränkter Sicht auf ein Protokoll)",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}": {
+      "delete": {
+        "operationId": "revoke_helper_access_api_v1_handover_protocols__protocol_id__helper_access__grant_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gehilfenzugang beenden",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/resend": {
+      "post": {
+        "operationId": "resend_helper_access_api_v1_handover_protocols__protocol_id__helper_access__grant_id__resend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resend Helper Access Api V1 Handover Protocols  Protocol Id  Helper Access  Grant Id  Resend Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zugangsdaten erneut zustellen",
         "tags": [
           "handover"
         ]
@@ -36191,6 +36876,50 @@
         ]
       }
     },
+    "/api/v1/invoices/intake/paperless": {
+      "post": {
+        "description": "Pulls one document by id from Paperless-ngx into the document store (read only client\nalready used for the ticket/property DMS panels, M31) and starts extract_invoice on it. No\nautomatic polling: this is a manual action per document (M14-05).",
+        "operationId": "paperless_intake_api_v1_invoices_intake_paperless_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaperlessIntakeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Paperless Intake Api V1 Invoices Intake Paperless Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Beleg aus Paperless holen und Rechnung erfassen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/letters": {
       "post": {
         "description": "Generated letters are filed and linked automatically (11.3); nothing is sent.",
@@ -36599,6 +37328,23 @@
         ]
       }
     },
+    "/api/v1/letting/listings/openimmo.zip": {
+      "get": {
+        "operationId": "get_listings_openimmo_zip_api_v1_letting_listings_openimmo_zip_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {}
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "OpenImmo-Sammelexport aktiver Anzeigen (XML, Bilder soweit verknüpft)",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
     "/api/v1/letting/listings/prefill": {
       "get": {
         "operationId": "listing_prefill_api_v1_letting_listings_prefill_get",
@@ -36771,6 +37517,90 @@
           }
         },
         "summary": "Anzeige ändern",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/listings/{listing_id}/openimmo-check": {
+      "get": {
+        "operationId": "openimmo_check_api_v1_letting_listings__listing_id__openimmo_check_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Openimmo Check Api V1 Letting Listings  Listing Id  Openimmo Check Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "OpenImmo-Export: fehlende oder ungültige Felder",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/listings/{listing_id}/openimmo.xml": {
+      "get": {
+        "operationId": "get_listing_openimmo_api_v1_letting_listings__listing_id__openimmo_xml_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/xml": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "OpenImmo 1.2.7 Export (nur lesend, kein Portal-Upload)",
         "tags": [
           "letting"
         ]
@@ -38138,6 +38968,62 @@
           }
         },
         "summary": "Entwurf freigeben und senden",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/attachments/{attachment_id}/invoice-extraction": {
+      "post": {
+        "description": "Starts extract_invoice on an existing mail attachment document (rule 0.1.6: proposal\nonly, the invoice itself is created only after a confirmed review, see mhvp.ai.imports).",
+        "operationId": "invoice_extraction_from_attachment_api_v1_mail_messages__message_id__attachments__attachment_id__invoice_extraction_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attachment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Invoice Extraction From Attachment Api V1 Mail Messages  Message Id  Attachments  Attachment Id  Invoice Extraction Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anhang als Rechnung erfassen (KI-Vorschlag)",
         "tags": [
           "Postfach"
         ]

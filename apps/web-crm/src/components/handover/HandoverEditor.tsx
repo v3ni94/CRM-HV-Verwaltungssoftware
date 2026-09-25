@@ -9,6 +9,7 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { HelperAccessSection } from "./HelperAccessSection";
 import { PortalAccessBox } from "./PortalAccessBox";
 import { SignaturePad } from "./SignaturePad";
 import {
@@ -59,6 +60,8 @@ const OBJECT_FIELDS: FieldDef[] = [
   { name: "unit_number", type: "text" },
   { name: "unit_label", type: "text" },
   { name: "unit_position", type: "text" },
+  { name: "external_object_number", type: "text" },
+  { name: "owner_name", type: "text" },
   { name: "handover_date", type: "date" },
   { name: "handover_start", type: "time" },
   { name: "handover_end", type: "time" },
@@ -576,6 +579,7 @@ export function HandoverEditor({ initial }: { initial: Full }) {
               <dd>{p.signatures.length}</dd>
             </dl>
           </div>
+          <HelperAccessSection base={base} disabled={locked} t={t} />
           {p.hints.length && (showHints || !locked) ? (
             <div className={ui.notice} data-testid="hints">
               <strong>{t("hints.title")}</strong>

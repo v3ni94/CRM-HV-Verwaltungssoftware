@@ -64,9 +64,58 @@ Postausgang mit Vier-Augen-Freigabe (M20).
    Cookie-Sitzung), `/uebergabe` (Liste), `/uebergabe/[id]` (Abschnitte, Fotos, Unterschrift,
    Abschluss). Offen: Zustellung des Einladungscodes per Schreiben oder E-Mail (M23) und die
    Frage, ob die Pflicht zum zweiten Faktor für Gehilfen tragbar ist (M30-05).
-4. **Datenübernahme** aus U-Protokoll (offen, M30-03): Export der MariaDB und der Dateien,
-   Import mit Testlauf wie M8 und M28 Stufe 4; Zuordnung zu Objekt, Einheit und Kontakt
-   manuell im Erfassungsbogen. Danach Ablösung von uprotokoll.muellerhv.de.
+3a. **Gehilfenzugänge und manuelles Objekt** (umgesetzt 25.09.2026, Entscheidung des
+   Integrators: bestehenden Portalzugang erweitern statt eines zweiten Auth-Systems):
+   - Freitext-Objekt (Teil A des Betreiberauftrags): neue Felder `external_object_number` und
+     `owner_name` am Protokoll (Migration 0053), zusätzlich zu den bereits vorhandenen
+     Freitext-Feldern für Adresse, Etage und Einheit. Anlageformular (`HandoverCreate.tsx`)
+     zeigt einen Schalter „Objekt aus dem Bestand“ / „Objekt manuell erfassen“; im manuellen
+     Fall werden Adresse, Etage, Einheit, externe Objektnummer und Eigentümer/Vermieter frei
+     eingegeben und direkt nach der Anlage gespeichert. Beide Felder erscheinen im PDF und im
+     Formular (`HandoverEditor.tsx`).
+   - Gehilfenzugänge (Teil B, aus U-Protokoll übernommen, docs/rules/M30-06.md): eigene
+     Endpunkte `/handover/protocols/{id}/helper-access` (Liste, Anlage mit Art
+     helper/tenant/owner, optionaler Anmeldung als Beteiligter mit Einzug/Auszug, Wiederversand,
+     Beenden). Es entsteht kein zweites Zugangssystem: die Anlage sucht oder legt einen
+     minimalen CRM-Kontakt an und richtet darauf denselben Portalzugang (M21) wie bei einem
+     Beteiligten ein, mit `role` = Art des Gehilfen und `valid_to` = 30 Tage ab Anlage (wie
+     U-Protokoll Migration 006, Einstellung `helper.access_days`). Die Einladung geht, wenn ein
+     Postfach eingerichtet ist, als Entwurf in den Postausgang (Vier-Augen-Freigabe, M20-01);
+     sonst wird der Code der Verwaltung einmalig angezeigt. Staff-Oberfläche: Abschnitt
+     „Gehilfenzugänge“ im Reiter Prüfung/Abschluss (`HelperAccessSection.tsx`).
+   - Abschluss durch einen Gehilfen (`POST /portal/handover/{id}/complete`) sperrt das
+     Protokoll wie bisher, bereitet danach automatisch je einen Zustellungsentwurf (M23) für
+     jeden Beteiligten mit CRM-Kontakt sowie für den Gehilfen vor (Status wechselt dadurch auf
+     „Zustellung vorbereitet“, nicht mehr nur „abgeschlossen“) und erzeugt ein internes
+     Ereignis für den anlegenden Sachbearbeiter (kein eigener Push-/Mail-Kanal vorhanden). Die
+     Bestätigungsseite im Portal fragt „Ist die Übergabe vollständig abgeschlossen?“ (Ja/Nein);
+     danach zeigt die Zusammenfassung den PDF-Link.
+4. **Datenübernahme** aus U-Protokoll (umgesetzt 25.09.2026, Testdaten): Endpunkt `POST
+   /api/v1/handover/imports/uprotokoll` (Query `mode=preview|apply`) parst einen
+   `mysqldump`-Export (utf8mb4, Schema `database/migrations/001_create_schema.sql` von
+   v3ni94/UProtkoll) ohne SQL auszuführen (`mhvp.handover.uprotokoll_import.parse_dump`,
+   eigener Parser für `INSERT ... VALUES`-Tupel mit Anführungszeichen, Escaping und `NULL`).
+   Vorschau meldet Anzahl je Tabelle, nicht zugeordnete Objekte (Adressabgleich gegen
+   `property`, sonst Freitext-Objekt nach Stufe 1/Teil A) und Duplikate über bereits
+   vorhandene `import_source`. Übernahme legt Protokolle, Beteiligte, Zähler, Räume, Mängel,
+   Schlüssel, Gegenstände und Hinweise an, jede Zeile mit `import_source =
+   "uprotokoll:<Quell-ID>"` (Migration 0054), wodurch ein erneuter Lauf desselben Exports
+   nichts verändert (idempotent). Protokollversionen und E-Mail-Historie aus U-Protokoll
+   werden gezählt, aber nicht als eigene Datensätze angelegt (offener Punkt, siehe unten).
+   Fotos, Unterschriften und das frühere PDF liegen nicht im SQL-Dump: `POST
+   /api/v1/handover/imports/uprotokoll/files?import_run_id=...` nimmt ein ZIP des
+   U-Protokoll-Speicherordners entgegen, gleicht jede Datei über SHA-256 (bevorzugt) oder den
+   gespeicherten Pfad mit den bei der Übernahme hinterlegten `protocol_files`-Metadaten ab und
+   legt sie als Dokument der Dokumentenverwaltung an, verknüpft mit Protokoll, Zähler, Raum,
+   Mangel oder Gegenstand; eine Datei der Art `signature` erzeugt zusätzlich den
+   `handover_signature`-Datensatz. Der Importlauf ist ein `mhvp.ai.models.ImportRun` mit
+   `source="uprotokoll"`, wie jeder andere bestätigte Import der Plattform.
+   Getestet mit einem synthetischen Dump (`tests/unit/test_m30_uprotokoll_import.py`,
+   `tests/integration/test_m30_handover.py::test_uprotokoll_import_preview_apply_and_files`),
+   nicht mit echten Daten (Regel 0.1.9). Offen (M30-03): echter Exportbefehl und Speicherort
+   der Dateien beim Betreiber, Protokollversionen/Vorgänger-Verknüpfung beim Import,
+   E-Mail-Historie (`protocol_emails`) als eigene Ablage, Ablösung von
+   uprotokoll.muellerhv.de.
 
 ## Dateien (Stufe 3)
 
@@ -77,6 +126,34 @@ Postausgang mit Vier-Augen-Freigabe (M20).
 - `apps/api/tests/integration/test_m30_handover.py::test_handover_portal_flow`
 - `apps/web-portal/src/**` (Sitzung, Anmeldung, BFF, Dateiproxy, Liste, Erfassungsseite),
   `apps/web-crm/src/components/handover/PortalAccessBox.tsx`
+
+## Dateien (Stufe 3a: Gehilfenzugänge, manuelles Objekt, 25.09.2026)
+
+- `apps/api/src/mhvp/handover/models.py` (Felder `external_object_number`, `owner_name`,
+  `import_source` je Tabelle), `apps/api/alembic/versions/0053_handover_manual_object.py`,
+  `apps/api/alembic/versions/0054_handover_import_source.py`
+- `apps/api/src/mhvp/handover/routers.py` (`HelperAccessIn`, `create_helper_access`,
+  `list_helper_access`, `revoke_helper_access`, `resend_helper_access`,
+  `prepare_helper_completion_dispatch`, `notify_creator_of_completion`)
+- `apps/api/src/mhvp/handover/portal.py` (`complete` ruft die automatische Zustellung und die
+  interne Benachrichtigung auf)
+- `apps/api/src/mhvp/handover/pdf.py` (externe Objektnummer, Eigentümer/Vermieter)
+- `apps/web-crm/src/components/handover/HandoverCreate.tsx` (Schalter Bestand/manuell),
+  `HandoverEditor.tsx` (neue Felder, `HelperAccessSection`),
+  `HelperAccessSection.tsx` (neu)
+- `apps/web-crm/src/app/api/bff/[...path]/route.ts` (Positivliste `helper-access`)
+- `apps/web-crm/messages/de.json`, `apps/web-portal/messages/de.json`
+- `docs/rules/M30-06.md`, `docs/rules/README.md`
+- `apps/api/tests/integration/test_m30_handover.py::test_helper_access_flow`
+
+## Dateien (Stufe 4: Datenübernahme U-Protokoll, 25.09.2026)
+
+- `apps/api/src/mhvp/handover/uprotokoll_import.py` (Parser, Vorschau, Übernahme)
+- `apps/api/src/mhvp/handover/imports.py` (`/handover/imports/uprotokoll`,
+  `/handover/imports/uprotokoll/files`), Einbindung in `apps/api/src/mhvp/main.py`
+- `apps/api/tests/unit/test_m30_uprotokoll_import.py` (Parser, ohne Datenbank),
+  `apps/api/tests/integration/test_m30_handover.py::test_uprotokoll_import_preview_apply_and_files`
+- `docs/OPEN_QUESTIONS.md` (M30-03, aktualisiert)
 
 ## Dateien (Stufe 1 und 2)
 

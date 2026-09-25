@@ -648,6 +648,52 @@ async def to_ticket(
         return {"ticket_id": ticket.id, "number": ticket.number, "priority": ticket.priority.value}
 
 
+INVOICE_INTAKE = require_permission("accounting:create")
+
+
+@router.post(
+    "/messages/{message_id}/attachments/{attachment_id}/invoice-extraction",
+    status_code=202,
+    summary="Anhang als Rechnung erfassen (KI-Vorschlag)",
+)
+async def invoice_extraction_from_attachment(
+    message_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(INVOICE_INTAKE),
+) -> dict[str, Any]:
+    """Starts extract_invoice on an existing mail attachment document (rule 0.1.6: proposal
+    only, the invoice itself is created only after a confirmed review, see mhvp.ai.imports)."""
+    from mhvp.documents.models import Document
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)
+        if attachment_id not in row.attachment_document_ids:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Anhang gehört nicht zu dieser Nachricht."
+            )
+        document = await session.get(Document, attachment_id)
+        if document is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if document.mime_type != "application/pdf":
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Nur PDF-Anhänge können als Rechnung erfasst werden."
+            )
+    from mhvp.ai.models import AiTask
+    from mhvp.ai.routers import start_extraction_run
+
+    run = await start_extraction_run(
+        request,
+        principal,
+        AiTask.EXTRACT_INVOICE,
+        [attachment_id],
+        "Rechnung aus E-Mail-Anhang erfassen",
+        "invoice",
+        message_id,
+    )
+    return {"run_id": str(run.id), "proposal_id": run.proposal_id}
+
+
 class InvoiceForwardSettingsIn(_In):
     enabled: bool = True
     forward_address: str | None = Field(default=None, max_length=320)

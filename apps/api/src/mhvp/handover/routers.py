@@ -8,8 +8,9 @@ sent, archived or cancelled protocol is immutable; changes go into a new version
 import base64
 import hashlib
 import re
+import secrets
 import uuid
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Annotated, Any
 
@@ -84,6 +85,8 @@ class ProtocolPatch(_In):
     unit_number: str | None = Field(default=None, max_length=50)
     unit_label: str | None = Field(default=None, max_length=100)
     unit_position: str | None = Field(default=None, max_length=100)
+    external_object_number: str | None = Field(default=None, max_length=100)
+    owner_name: str | None = Field(default=None, max_length=200)
     handover_date: date | None = None
     handover_start: time | None = None
     handover_end: time | None = None
@@ -926,11 +929,394 @@ async def prepare_dispatches(
         return {"created": created, "skipped": skipped}
 
 
+async def prepare_helper_completion_dispatch(
+    session: Any, principal: TenantPrincipal, p: HandoverProtocol, helper_contact_id: uuid.UUID
+) -> list[dict[str, Any]]:
+    """Helper finish flow (M30, ported from U-Protokoll): one dispatch draft (M23) per
+    participant with an e-mail address plus the helper, prepared right after the completion
+    triggered from the portal. Still only a draft in the outbox with the four-eyes approval
+    (M20-01); nothing is sent from here."""
+    from mhvp.communication import dispatch as dispatch_module
+    from mhvp.handover.models import HandoverParticipant
+
+    if not p.pdf_document_id:
+        return []
+    rows = (
+        await session.scalars(
+            select(HandoverParticipant).where(HandoverParticipant.protocol_id == p.id)
+        )
+    ).all()
+    contact_ids = {x.contact_id for x in rows if x.contact_id}
+    contact_ids.add(helper_contact_id)
+    created: list[dict[str, Any]] = []
+    for contact_id in contact_ids:
+        try:
+            row = await dispatch_module._create(
+                session,
+                principal,
+                dispatch_module.DispatchIn(
+                    document_id=p.pdf_document_id, contact_id=contact_id, channel="email"
+                ),
+                batch=f"handover:{p.id}",
+            )
+            created.append(dispatch_module._out(row))
+        except ProblemError:
+            continue
+    if created and p.status == "completed":
+        p.status = "sent"
+        await session.flush()
+    return created
+
+
+async def notify_creator_of_completion(
+    session: Any, principal: TenantPrincipal, p: HandoverProtocol
+) -> None:
+    """Internal notification to the staff user who created the protocol; there is no separate
+    push/mail notification channel in the platform yet, so this uses the same event feed as
+    every other internal notice (docs/plans/M30-uebergabeprotokoll.md)."""
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type="handover.portal.helper_finished",
+        entity_type="handover_protocol",
+        entity_id=p.id,
+        actor_user_id=principal.user_id,
+        payload={"number": p.number, "notify_user_id": str(p.created_by) if p.created_by else None},
+    )
+
+
 # Portal access of a participant (M30 stage 3) ------------------------------------------------
 
 
 class PortalAccessIn(_In):
     email: str | None = Field(default=None, min_length=3, max_length=320)
+
+
+# Gehilfenzugang (M30, ported from U-Protokoll "Gehilfenzugänge"): the participant, tenant or
+# owner fills in and signs the protocol themselves. This reuses the existing portal account and
+# access grant (M21) with a scope on exactly this protocol; there is no second, password based
+# authentication next to the portal session (decision of the integrator 25.09.2026). The default
+# expiry mirrors U-Protokoll migration 006 (setting ``helper.access_days = 30``); unrelated to
+# the 14 day read only period after completion (``READ_DAYS`` in mhvp.handover.portal).
+HELPER_KINDS = ("helper", "tenant", "owner")
+DEFAULT_HELPER_EXPIRY_DAYS = 30
+
+
+class HelperAccessIn(_In):
+    name: str = Field(min_length=1, max_length=200)
+    email: str = Field(min_length=3, max_length=320)
+    kind: str = Field(default="helper", pattern="^(" + "|".join(HELPER_KINDS) + ")$")
+    register_as_participant: bool = False
+    participant_role: str | None = Field(default=None, pattern="^(moving_in|moving_out)$")
+    expires_days: int | None = Field(default=None, ge=1, le=365)
+
+
+async def _find_or_create_contact(
+    session: Any, principal: TenantPrincipal, name: str, email: str
+) -> uuid.UUID:
+    """Match an existing contact by e-mail, else create a minimal person contact for the
+    Gehilfenzugang (no CRM contact required to invite a helper)."""
+    from mhvp.contacts.models import Contact, ContactEmail, ContactKind
+
+    existing = await session.scalar(
+        select(ContactEmail.contact_id).where(
+            ContactEmail.tenant_id == principal.tenant_id, ContactEmail.email == email
+        )
+    )
+    if existing is not None:
+        return uuid.UUID(str(existing))
+    parts = name.strip().split(" ", 1)
+    contact = Contact(
+        tenant_id=principal.tenant_id,
+        created_by=principal.user_id,
+        kind=ContactKind.PERSON,
+        first_name=parts[0] or None,
+        last_name=parts[1] if len(parts) > 1 else None,
+        display_name=name.strip() or email,
+    )
+    session.add(contact)
+    await session.flush()
+    session.add(
+        ContactEmail(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            contact_id=contact.id,
+            email=email,
+            is_primary=True,
+        )
+    )
+    await session.flush()
+    return contact.id
+
+
+async def _draft_invitation_mail(
+    session: Any,
+    principal: TenantPrincipal,
+    *,
+    to_email: str,
+    subject: str,
+    body_text: str,
+    contact_id: uuid.UUID | None,
+) -> uuid.UUID | None:
+    """Mail draft in the existing outbox (M20), needs the four-eyes approval before it is sent;
+    None if the tenant has no enabled mailbox, so the caller shows the code once instead."""
+    from mhvp.communication.models import Mailbox, Message
+
+    mailbox_id = await session.scalar(
+        select(Mailbox.id)
+        .where(Mailbox.tenant_id == principal.tenant_id, Mailbox.enabled.is_(True))
+        .limit(1)
+    )
+    if mailbox_id is None:
+        return None
+    draft = Message(
+        tenant_id=principal.tenant_id,
+        created_by=principal.user_id,
+        direction="out",
+        status="draft",
+        mailbox_id=mailbox_id,
+        to_addresses=[to_email],
+        subject=subject[:998],
+        body=body_text,
+        contact_id=contact_id,
+    )
+    session.add(draft)
+    await session.flush()
+    return draft.id
+
+
+@router.get("/protocols/{protocol_id}/helper-access", summary="Gehilfenzugänge auflisten")
+async def list_helper_access(
+    protocol_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    from mhvp.contacts.models import Contact
+    from mhvp.portal.models import AccessGrant, PortalAccount
+
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        rows = (
+            await session.execute(
+                select(AccessGrant, PortalAccount)
+                .join(PortalAccount, PortalAccount.id == AccessGrant.account_id)
+                .where(AccessGrant.scope_type == "handover", AccessGrant.scope_id == p.id)
+                .order_by(AccessGrant.created_at)
+            )
+        ).all()
+        out = []
+        for grant, account in rows:
+            contact = await session.get(Contact, account.contact_id)
+            out.append(
+                {
+                    "grant_id": grant.id,
+                    "account_id": account.id,
+                    "contact_id": account.contact_id,
+                    "name": (
+                        " ".join(x for x in (contact.first_name, contact.last_name) if x)
+                        if contact is not None
+                        else None
+                    ),
+                    "kind": grant.role,
+                    "right": grant.right,
+                    "valid_from": grant.valid_from,
+                    "valid_to": grant.valid_to,
+                    "account_status": account.status,
+                    "activated": account.activated_at is not None,
+                }
+            )
+        return out
+
+
+@router.post(
+    "/protocols/{protocol_id}/helper-access",
+    status_code=201,
+    summary="Gehilfenzugang anlegen (Portalzugang mit eingeschränkter Sicht auf ein Protokoll)",
+)
+async def create_helper_access(
+    protocol_id: uuid.UUID,
+    body: HelperAccessIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    from mhvp.handover.models import HandoverParticipant
+    from mhvp.portal.models import AccessGrant, PortalAccount
+    from mhvp.portal.routers import provision_account
+
+    email = body.email.strip().lower()
+    display_name = body.name.strip()
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        svc.require_unlocked(p)
+        contact_id = await _find_or_create_contact(session, principal, display_name, email)
+        if body.register_as_participant:
+            parts = display_name.split(" ", 1)
+            session.add(
+                HandoverParticipant(
+                    tenant_id=principal.tenant_id,
+                    created_by=principal.user_id,
+                    protocol_id=p.id,
+                    contact_id=contact_id,
+                    role=body.participant_role or "other",
+                    first_name=parts[0] or None,
+                    last_name=parts[1] if len(parts) > 1 else None,
+                    email=email,
+                )
+            )
+        account = await session.scalar(
+            select(PortalAccount).where(PortalAccount.contact_id == contact_id)
+        )
+    token: str | None = None
+    if account is None:
+        created = await provision_account(
+            request, principal, contact_id=contact_id, email=email, display_name=display_name
+        )
+        token = created["invitation_token"]
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        account = await session.scalar(
+            select(PortalAccount).where(PortalAccount.contact_id == contact_id)
+        )
+        if account is None:  # pragma: no cover - created above or found before
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        grant = await session.scalar(
+            select(AccessGrant).where(
+                AccessGrant.account_id == account.id,
+                AccessGrant.scope_type == "handover",
+                AccessGrant.scope_id == p.id,
+            )
+        )
+        valid_to = local_today() + timedelta(days=body.expires_days or DEFAULT_HELPER_EXPIRY_DAYS)
+        if grant is None:
+            grant = AccessGrant(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                account_id=account.id,
+                scope_type="handover",
+                scope_id=p.id,
+                right="edit",
+                legal_basis="handover_helper",
+                role=body.kind,
+                valid_from=local_today(),
+            )
+            session.add(grant)
+        grant.right = "edit"
+        grant.role = body.kind
+        grant.valid_from = local_today()
+        grant.valid_to = valid_to
+        await session.flush()
+        mail_id = None
+        if token is not None:
+            mail_id = await _draft_invitation_mail(
+                session,
+                principal,
+                to_email=email,
+                subject=f"Zugang zum Übergabeprotokoll {p.number}",
+                body_text=(
+                    f"Sehr geehrte/r {display_name},\n\n"
+                    f"für das Übergabeprotokoll {p.number} wurde ein Zugang eingerichtet.\n"
+                    f"Einladungscode: {token}\n\n"
+                    "Bitte melden Sie sich im Portal an, um das Protokoll auszufüllen und "
+                    "abzuschließen."
+                ),
+                contact_id=contact_id,
+            )
+        await _event(
+            session,
+            principal,
+            "handover.helper_access.granted",
+            p,
+            grant_id=str(grant.id),
+            kind=body.kind,
+            invited=token is not None,
+            mail_draft_id=str(mail_id) if mail_id else None,
+        )
+        return {
+            "grant_id": grant.id,
+            "account_id": account.id,
+            "contact_id": contact_id,
+            "kind": grant.role,
+            "valid_to": grant.valid_to,
+            # Shown once, only when no mail draft could be prepared (no mailbox configured).
+            "invitation_token": token if mail_id is None else None,
+            "mail_draft_id": mail_id,
+        }
+
+
+@router.delete(
+    "/protocols/{protocol_id}/helper-access/{grant_id}",
+    status_code=204,
+    summary="Gehilfenzugang beenden",
+)
+async def revoke_helper_access(
+    protocol_id: uuid.UUID,
+    grant_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> Response:
+    from mhvp.portal.models import AccessGrant
+
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        grant = await session.get(AccessGrant, grant_id)
+        if grant is None or grant.scope_type != "handover" or grant.scope_id != p.id:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await session.delete(grant)
+        await session.flush()
+        await _event(
+            session, principal, "handover.helper_access.revoked", p, grant_id=str(grant_id)
+        )
+    return Response(status_code=204)
+
+
+@router.post(
+    "/protocols/{protocol_id}/helper-access/{grant_id}/resend",
+    summary="Zugangsdaten erneut zustellen",
+)
+async def resend_helper_access(
+    protocol_id: uuid.UUID,
+    grant_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    from mhvp.contacts.models import ContactEmail
+    from mhvp.portal.models import AccessGrant, PortalAccount
+    from mhvp.portal.routers import INVITE_DAYS, _hash
+
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        grant = await session.get(AccessGrant, grant_id)
+        if grant is None or grant.scope_type != "handover" or grant.scope_id != p.id:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        account = await session.get(PortalAccount, grant.account_id)
+        if account is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if account.activated_at is not None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Der Zugang wurde bereits aktiviert, ein neuer Einladungscode ist nicht "
+                "nötig.",
+            )
+        secret = secrets.token_urlsafe(32)
+        account.invitation_hash = _hash(secret)
+        account.invitation_expires_at = datetime.now(UTC) + timedelta(days=INVITE_DAYS)
+        token = f"{principal.tenant_id.hex}.{secret}"
+        email = await session.scalar(
+            select(ContactEmail.email).where(
+                ContactEmail.contact_id == account.contact_id, ContactEmail.is_primary.is_(True)
+            )
+        )
+        await session.flush()
+        mail_id = None
+        if email:
+            mail_id = await _draft_invitation_mail(
+                session,
+                principal,
+                to_email=email,
+                subject=f"Zugang zum Übergabeprotokoll {p.number} (erneut)",
+                body_text=f"Ihr Einladungscode: {token}",
+                contact_id=account.contact_id,
+            )
+        await _event(session, principal, "handover.helper_access.resent", p, grant_id=str(grant_id))
+        return {"invitation_token": token if mail_id is None else None, "mail_draft_id": mail_id}
 
 
 async def portal_access_of(

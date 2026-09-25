@@ -1051,7 +1051,16 @@
       "toDraft": "Zurück zu Entwurf",
       "delete": "Löschen",
       "confirmDelete": "Anzeige wirklich löschen?",
-      "onlyDraftDelete": "Nur Anzeigen im Entwurf können gelöscht werden."
+      "onlyDraftDelete": "Nur Anzeigen im Entwurf können gelöscht werden.",
+      "openimmo": {
+        "export": "OpenImmo exportieren",
+        "downloadXml": "XML herunterladen",
+        "checking": "Prüfung läuft…",
+        "complete": "Vollständig für den Export.",
+        "missingTitle": "Fehlende oder unvollständige Angaben:",
+        "error": "Prüfung fehlgeschlagen.",
+        "notice": "Nur lesender Export nach OpenImmo 1.2.7 (M26-02). Kein Versand an ein Portal."
+      }
     },
     "import": {
       "title": "FLOW-Import",
@@ -1604,6 +1613,11 @@
     "openContact": "Kontakt öffnen",
     "openProperty": "Objekt öffnen",
     "attachments": "{count} Anhang/Anhänge",
+    "attachmentInvoice": "Anhang {number}",
+    "captureAsInvoice": "Als Rechnung erfassen",
+    "invoiceExtractionStarted": "Erfassung gestartet, Vorschlag wird geprüft.",
+    "invoiceExtractionFailed": "Rechnungserfassung nicht möglich: {reason}",
+    "openInvoiceReview": "Vorschlag im Rechnungseingang öffnen",
     "approveAndSend": "Freigeben und senden",
     "reject": "Ablehnen",
     "confirmReject": "Ablehnung speichern",
@@ -1761,6 +1775,31 @@
       "unposted": "nicht gebucht",
       "posted": "gebucht",
       "reversed": "storniert"
+    },
+    "extract": {
+      "button": "Aus Dokument erfassen",
+      "cancel": "Abbrechen",
+      "chooseFile": "Beleg auswählen (PDF)",
+      "start": "Erfassung starten",
+      "progress": {
+        "uploading": "Dokument wird hochgeladen …",
+        "queued": "Erfassung eingereiht …",
+        "processing": "Beleg wird ausgewertet …"
+      },
+      "blocked": "Nicht ausgeführt: {reason}",
+      "failed": "Fehlgeschlagen: {reason}",
+      "noProposal": "Kein Vorschlag erstellt.",
+      "reviewTitle": "Vorschlag prüfen und ergänzen",
+      "reviewNotice": "Alle Felder sind ein Vorschlag der KI und werden vor der Anlage geprüft. Die IBAN wird nur maskiert angezeigt; bitte die vollständige IBAN aus dem Original eintragen.",
+      "warnings": "Hinweise",
+      "confidence": "Sicherheit der Erkennung: {value} %",
+      "supplierCandidates": "Erkannte Ausstellerkandidaten",
+      "ibanMasked": "erkannte IBAN (maskiert)",
+      "ibanConfirm": "IBAN aus dem Original eintragen (Pflichtfeld)",
+      "ibanConfirmHint": "Die KI schlägt keine IBAN vor; sie wird nie automatisch übernommen (Vier-Augen-Prinzip).",
+      "currencyBlocked": "Fremdwährung ({currency}) erkannt: wird nicht unterstützt. Die Rechnung kann nicht angelegt werden, bis der Betrag in EUR geprüft ist.",
+      "createDraft": "Als Entwurf anlegen",
+      "propertyGuess": "Objekthinweis aus dem Beleg: {value}"
     }
   },
   "Levy": {
@@ -2522,7 +2561,22 @@
       "noProperty": "Ohne Objektbezug",
       "unit": "Einheit",
       "help": "Adresse, Etage und Einheit werden aus den Stammdaten vorbelegt und bleiben im Protokoll änderbar. Kein Feld ist Pflicht.",
-      "submit": "Anlegen"
+      "submit": "Anlegen",
+      "objectSource": {
+        "portfolio": "Objekt aus dem Bestand",
+        "manual": "Objekt manuell erfassen"
+      },
+      "manual": {
+        "street": "Straße",
+        "houseNumber": "Hausnummer",
+        "postalCode": "Postleitzahl",
+        "city": "Ort",
+        "floor": "Etage / Lage",
+        "unitLabel": "Bezeichnung der Einheit",
+        "externalObjectNumber": "Externe Objektnummer (optional)",
+        "ownerName": "Eigentümer / Vermieter (optional)",
+        "help": "Freie Erfassung für ein Objekt, das nicht im Bestand geführt wird. Alle Angaben bleiben im Protokoll änderbar."
+      }
     },
     "steps": "Abschnitte",
     "tabs": {
@@ -2588,6 +2642,8 @@
       "unit_number": "Einheit",
       "unit_label": "Einheit (Bezeichnung)",
       "unit_position": "Lage",
+      "external_object_number": "Externe Objektnummer",
+      "owner_name": "Eigentümer / Vermieter",
       "handover_date": "Übergabedatum",
       "handover_start": "Beginn",
       "handover_end": "Ende",
@@ -2781,6 +2837,33 @@
     "pdf": {
       "preview": "PDF-Vorschau (Entwurf)",
       "stored": "PDF anzeigen"
+    },
+    "helperAccess": {
+      "title": "Gehilfenzugänge",
+      "help": "Ein Gehilfe (Mieter, Übernehmer oder Eigentümer) füllt das Protokoll selbst im Portal aus. Es ist derselbe Portalzugang wie unter Beteiligte, hier mit Art des Zugangs, Ablauf und optionaler Anmeldung als Beteiligter.",
+      "name": "Name",
+      "email": "E-Mail",
+      "kind": "Art",
+      "kinds": {
+        "helper": "Gehilfe",
+        "tenant": "Mieter",
+        "owner": "Eigentümer"
+      },
+      "status": "Status",
+      "validTo": "Gültig bis",
+      "invited": "Eingeladen",
+      "activated": "Aktiviert",
+      "empty": "Noch kein Gehilfenzugang eingerichtet.",
+      "registerParticipant": "Zusätzlich als Beteiligten anlegen",
+      "movingIn": "Einzug",
+      "movingOut": "Auszug",
+      "create": "Zugang einrichten",
+      "resend": "Erneut zustellen",
+      "revoke": "Zugang beenden",
+      "confirmRevoke": "Zugang wirklich beenden?",
+      "tokenTitle": "Einladungscode",
+      "tokenHelp": "Kein Postfach hinterlegt, daher kein E-Mail-Entwurf möglich. Bitte den Code einmalig an den Gehilfen übermitteln.",
+      "mailDrafted": "Ein E-Mail-Entwurf mit dem Einladungscode wurde im Postausgang angelegt und wartet auf Freigabe."
     },
     "dispatch": {
       "title": "Zustellung an die Beteiligten",

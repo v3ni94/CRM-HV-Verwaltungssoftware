@@ -191,6 +191,12 @@ async def complete(
         grant.right = "read"
         grant.valid_to = local_today() + timedelta(days=READ_DAYS)
         await session.flush()
+        # Helper finish flow (ported from U-Protokoll): one delivery draft per participant with
+        # an e-mail address plus the helper, and an internal notice to the creating staff user.
+        # Both still need staff action (four-eyes approval, reading the event feed); nothing is
+        # sent automatically (M20-01).
+        await crm.prepare_helper_completion_dispatch(session, principal, p, account.contact_id)
+        await crm.notify_creator_of_completion(session, principal, p)
         await crm._event(
             session, principal, "handover.portal.completed", p, valid_to=str(grant.valid_to)
         )

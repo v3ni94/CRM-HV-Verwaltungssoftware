@@ -342,6 +342,85 @@ async def get_conversation(
         )
 
 
+async def start_extraction_run(
+    request: Request,
+    principal: TenantPrincipal,
+    task: AiTask,
+    document_ids: list[uuid.UUID],
+    content: str,
+    context_type: str,
+    context_id: uuid.UUID | None,
+) -> s.RunOut:
+    """Starts an extraction run in a fresh conversation of the acting user (intake actions: mail
+    attachment, Paperless pull). Same path as a chat message (gateway tier escalation, budget and
+    release checks unchanged); the caller enforces its own permission before calling this."""
+    prompt = tasks.prompt(task)
+    async with tenant_tx(request, principal) as session:
+        for document_id in document_ids:
+            await _get(session, Document, document_id)
+        conversation = AiConversation(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            context_type=context_type,
+            context_id=context_id,
+            title=content[:200],
+        )
+        session.add(conversation)
+        await session.flush()
+        context = {
+            "context_type": context_type,
+            "context_id": str(context_id) if context_id else None,
+        }
+        ref = {
+            "instruction": content,
+            "document_ids": [str(d) for d in document_ids],
+            "context": context,
+        }
+        run = AiTaskRun(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            task=task,
+            conversation_id=conversation.id,
+            prompt_version=prompt.version,
+            input_hash=gateway.input_hash(
+                task, prompt.version, content, {**context, "docs": ref["document_ids"]}
+            ),
+            input_ref=ref,
+            status=RunStatus.QUEUED,
+        )
+        session.add(run)
+        await session.flush()
+        session.add(
+            AiMessage(
+                tenant_id=principal.tenant_id,
+                conversation_id=conversation.id,
+                role="user",
+                content=content,
+                document_ids=document_ids,
+                task_run_id=run.id,
+            )
+        )
+        run_id = run.id
+    settings = request.app.state.settings
+    if settings.ai_inline:
+        await jobs.run_and_propose(
+            sessions(request), principal.tenant_id, run_id, BlobStore(settings), principal.user_id
+        )
+    else:
+        from mhvp.worker import get_celery
+
+        get_celery().send_task(
+            "mhvp.ai.run",
+            args=[
+                str(principal.tenant_id),
+                str(run_id),
+                str(principal.user_id) if principal.user_id else None,
+            ],
+            queue="io",
+        )
+    return await get_run(run_id, request, principal)
+
+
 @router.post(
     "/ai/conversations/{conversation_id}/messages", status_code=202, summary="Nachricht senden"
 )
@@ -438,12 +517,25 @@ async def get_run(
 # Proposals and import runs ----------------------------------------------------------------
 
 
+def _masked_proposal(proposal: AiProposal) -> s.ProposalOut:
+    out = s.ProposalOut.model_validate(proposal)
+    if out.entity_type == "invoice":
+        proposed = dict(out.proposed)
+        invoice = dict(proposed.get("invoice") or {})
+        iban = invoice.get("iban")
+        if iban:
+            invoice["iban"] = f"...{iban[-4:]}" if len(iban) > 4 else "..."
+        proposed["invoice"] = invoice
+        out.proposed = proposed
+    return out
+
+
 @router.get("/ai/proposals/{proposal_id}", summary="Vorschlag lesen")
 async def get_proposal(
     proposal_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> s.ProposalOut:
     async with tenant_tx(request, principal) as session:
-        return s.ProposalOut.model_validate(await _get(session, AiProposal, proposal_id))
+        return _masked_proposal(await _get(session, AiProposal, proposal_id))
 
 
 async def _pending(session: Any, proposal_id: uuid.UUID) -> AiProposal:
@@ -478,6 +570,7 @@ async def apply_proposal(
     required = {
         "contacts": {"contacts:create"},
         "property": {"properties:create", "contracts:create", "contacts:create"},
+        "invoice": {"accounting:create"},
     }
     async with tenant_tx(request, principal) as session:
         proposal = await _pending(session, proposal_id)
@@ -501,12 +594,17 @@ async def apply_proposal(
                 session, import_run, principal, proposal.proposed, body.contacts
             )
             modified = any(c.contact is not None or c.action != "create" for c in body.contacts)
-        else:
+        elif proposal.entity_type == "property":
             if body.property is None:
                 raise ProblemError(ErrorCodes.VALIDATION, detail="Angaben zum Objekt fehlen.")
             summary = await imports.apply_property(
                 session, import_run, principal, proposal.proposed, body.property
             )
+            modified = True
+        else:
+            if body.invoice is None:
+                raise ProblemError(ErrorCodes.VALIDATION, detail="Angaben zur Rechnung fehlen.")
+            summary = await imports.apply_invoice(session, import_run, principal, body.invoice)
             modified = True
         import_run.summary = summary
         proposal.decision = Decision.MODIFIED if modified else Decision.ACCEPTED
