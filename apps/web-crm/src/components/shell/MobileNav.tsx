@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { CloseIcon, MenuIcon } from "./icons";
 import type { NavGroup } from "./SideNav";
@@ -51,7 +52,8 @@ export function MobileNav({
     };
   }, [open]);
 
-  const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const active = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>
@@ -65,59 +67,73 @@ export function MobileNav({
       >
         <MenuIcon className="h-5 w-5" />
       </button>
-      {open ? (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            className="fixed inset-0 bg-black/40"
-            aria-hidden="true"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            id="mobile-nav-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-label={label}
-            className="fixed inset-y-0 left-0 flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto bg-rail-bg text-rail-fg shadow-lg"
-            style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-rail-border px-4 py-3">
-              <span className="flex min-w-0 flex-col leading-tight">
-                <span className="truncate text-sm font-semibold">{productName}</span>
-                <span className="mhvp-label text-rail-muted">{area}</span>
-              </span>
-              <button
-                type="button"
-                aria-label={closeLabel}
+      {open && typeof document !== "undefined"
+        ? // Portal: the sticky header uses backdrop blur, which would trap a fixed drawer inside it.
+          createPortal(
+            <div className="fixed inset-0 z-[60] md:hidden">
+              <div
+                className="fixed inset-0 bg-black/40"
+                aria-hidden="true"
                 onClick={() => setOpen(false)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-rail-muted transition duration-150 hover:bg-rail-hover hover:text-rail-fg"
+              />
+              <div
+                id="mobile-nav-drawer"
+                role="dialog"
+                aria-modal="true"
+                aria-label={label}
+                className="fixed inset-y-0 left-0 flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto bg-rail-bg text-rail-fg shadow-lg"
+                style={{
+                  paddingTop: "env(safe-area-inset-top)",
+                  paddingBottom: "env(safe-area-inset-bottom)",
+                }}
               >
-                <CloseIcon className="h-5 w-5" />
-              </button>
-            </div>
-            <nav aria-label={label} className="flex flex-1 flex-col gap-1 px-2 py-3">
-              {groups.map((g) => (
-                <div key={g.label} className="flex flex-col gap-1 pb-2">
-                  <span className="mhvp-label px-3 pb-1 text-rail-muted">{g.label}</span>
-                  {g.items.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-current={active(item.href) ? "page" : undefined}
-                      className={`flex min-h-11 items-center gap-2.5 rounded-md px-3 py-2 text-sm transition duration-150 ${
-                        active(item.href)
-                          ? "bg-rail-active font-medium text-rail-fg"
-                          : "text-rail-muted hover:bg-rail-hover hover:text-rail-fg"
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
+                <div className="flex items-center justify-between gap-3 border-b border-rail-border px-4 py-3">
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <span className="truncate text-sm font-semibold">
+                      {productName}
+                    </span>
+                    <span className="mhvp-label text-rail-muted">{area}</span>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={closeLabel}
+                    onClick={() => setOpen(false)}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-rail-muted transition duration-150 hover:bg-rail-hover hover:text-rail-fg"
+                  >
+                    <CloseIcon className="h-5 w-5" />
+                  </button>
                 </div>
-              ))}
-            </nav>
-          </div>
-        </div>
-      ) : null}
+                <nav
+                  aria-label={label}
+                  className="flex flex-1 flex-col gap-1 px-2 py-3"
+                >
+                  {groups.map((g) => (
+                    <div key={g.label} className="flex flex-col gap-1 pb-2">
+                      <span className="mhvp-label px-3 pb-1 text-rail-muted">
+                        {g.label}
+                      </span>
+                      {g.items.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          aria-current={active(item.href) ? "page" : undefined}
+                          className={`flex min-h-11 items-center gap-2.5 rounded-md px-3 py-2 text-sm transition duration-150 ${
+                            active(item.href)
+                              ? "bg-rail-active font-medium text-rail-fg"
+                              : "text-rail-muted hover:bg-rail-hover hover:text-rail-fg"
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  ))}
+                </nav>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
