@@ -92,7 +92,16 @@ function valueOf(
   if (field.type === "checkbox") return Boolean(v);
   if (v == null) return "";
   if (field.type === "time") return String(v).slice(0, 5);
+  if (field.type === "decimal") return String(v).replace(".", ",");
   return String(v);
+}
+
+/** German input ("1.500,50" or "1500,50") or API format ("1500.50") to an API decimal string. */
+export function parseDecimal(raw: string): string {
+  const text = raw.trim().replace(/\s/g, "");
+  if (text.includes(",")) return text.replace(/\./g, "").replace(",", ".");
+  const dots = text.split(".").length - 1;
+  return dots > 1 ? text.replace(/\./g, "") : text;
 }
 
 function toBody(
@@ -105,8 +114,7 @@ function toBody(
     if (f.type === "checkbox") body[f.name] = Boolean(v);
     else if (v === "" || v === undefined) body[f.name] = null;
     else if (f.type === "number") body[f.name] = Number(v);
-    else if (f.type === "decimal")
-      body[f.name] = String(v).replace(/\./g, "").replace(",", ".");
+    else if (f.type === "decimal") body[f.name] = parseDecimal(String(v));
     else body[f.name] = v;
   }
   return body;

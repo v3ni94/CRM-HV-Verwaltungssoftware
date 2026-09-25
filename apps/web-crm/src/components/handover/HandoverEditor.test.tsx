@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { HandoverEditor } from "./HandoverEditor";
+import { HandoverEditor, parseDecimal } from "./HandoverEditor";
 import type { Full } from "./types";
 
 vi.mock("next/navigation", () => ({
@@ -178,5 +178,42 @@ describe("HandoverEditor", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("Neue Version anlegen")).toBeInTheDocument();
     expect(screen.getByText("Zustellung vorbereiten")).toBeInTheDocument();
+  });
+});
+
+describe("parseDecimal", () => {
+  it("accepts German input and the API format without changing the value", () => {
+    expect(parseDecimal("1.500,50")).toBe("1500.50");
+    expect(parseDecimal("1500,5")).toBe("1500.5");
+    expect(parseDecimal("1500.00")).toBe("1500.00");
+    expect(parseDecimal("12345.678")).toBe("12345.678");
+    expect(parseDecimal("1.234.567")).toBe("1234567");
+  });
+});
+
+describe("HandoverEditor deposit round trip", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("saves an unchanged deposit amount with the same value", async () => {
+    const bodies: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      if (init?.method === "PATCH" && typeof init.body === "string")
+        bodies.push(init.body);
+      return jsonResponse(protocol({ deposit_amount: "1500.00" }));
+    });
+    renderIntl(
+      <HandoverEditor
+        initial={protocol({
+          current_step: "deposit",
+          deposit_amount: "1500.00",
+        })}
+      />,
+    );
+    expect(screen.getByLabelText("Kautionsbetrag (EUR)")).toHaveValue(
+      "1500,00",
+    );
+    await userEvent.click(screen.getByText("Speichern"));
+    await waitFor(() => expect(bodies.length).toBeGreaterThan(0));
+    expect(JSON.parse(bodies[0]!)).toMatchObject({ deposit_amount: "1500.00" });
   });
 });
