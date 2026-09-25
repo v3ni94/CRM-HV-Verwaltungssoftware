@@ -26,6 +26,9 @@ x-app-env: &app-env
   MHVP_MASTER_KEY: ${MHVP_MASTER_KEY:?MHVP_MASTER_KEY must be set (python -m mhvp.core.auth.keys)}
   MHVP_JWT_PRIVATE_KEY: ${MHVP_JWT_PRIVATE_KEY:?MHVP_JWT_PRIVATE_KEY must be set}
   MHVP_JWT_ISSUER: ${MHVP_JWT_ISSUER:-http://api.localhost}
+  # Public URLs: the OIDC discovery advertises ${MHVP_WEB_CRM_URL}/oidc/authorize as browser entry point.
+  MHVP_API_PUBLIC_URL: ${MHVP_API_PUBLIC_URL:-}
+  MHVP_WEB_CRM_URL: ${MHVP_WEB_CRM_URL:-}
   MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS: ${MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS:-false}
   # uvicorn trusts X-Forwarded-* only from these addresses (set to the Traefik network).
   FORWARDED_ALLOW_IPS: ${MHVP_FORWARDED_ALLOW_IPS:-127.0.0.1}
