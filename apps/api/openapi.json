@@ -20630,12 +20630,24 @@
       "TicketMergeIn": {
         "additionalProperties": false,
         "properties": {
+          "target_ticket_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Ticket Id"
+          },
           "ticket_ids": {
             "items": {
               "format": "uuid",
               "type": "string"
             },
-            "minItems": 2,
+            "minItems": 1,
             "title": "Ticket Ids",
             "type": "array"
           },
@@ -47294,6 +47306,56 @@
             }
           },
           {
+            "description": "Nummer oder Titel",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nummer oder Titel",
+              "title": "Q"
+            }
+          },
+          {
+            "description": "Zusammengeführte Tickets zeigen",
+            "in": "query",
+            "name": "include_merged",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Zusammengeführte Tickets zeigen",
+              "title": "Include Merged",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Quelltickets eines Ziels",
+            "in": "query",
+            "name": "merged_into",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Quelltickets eines Ziels",
+              "title": "Merged Into"
+            }
+          },
+          {
             "in": "query",
             "name": "limit",
             "required": false,
@@ -47425,6 +47487,7 @@
     },
     "/api/v1/tickets/merge": {
       "post": {
+        "description": "Without ``target_ticket_id`` the sources merge into a new ticket with a new number (M6).\nWith it (M36) the sources merge into that existing ticket, which keeps its number, status,\npriority and assignment. Either way comments, messages and history entries move to the\ntarget, every source gets a ``merged_into`` entry and is closed, its SLA clock is resolved,\nand the target records the origin of every source in a ``merged_from`` entry.",
         "operationId": "merge_tickets_api_v1_tickets_merge_post",
         "requestBody": {
           "content": {

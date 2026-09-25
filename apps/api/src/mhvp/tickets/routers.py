@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +18,7 @@ from mhvp.core.events import emit
 from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.tickets.competences import is_known_code
+from mhvp.tickets.merge import assert_mergeable, assignees_to_carry, origin_data
 from mhvp.tickets.models import (
     OrderStatus,
     Priority,
@@ -231,8 +232,19 @@ class OrderStep(_In):
 
 
 class TicketMergeIn(_In):
-    ticket_ids: list[uuid.UUID] = Field(min_length=2)
+    ticket_ids: list[uuid.UUID] = Field(min_length=1)
     title: str | None = Field(default=None, max_length=300)
+    # M36: merge the sources into this existing ticket instead of creating a new one.
+    target_ticket_id: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def _check_counts(self) -> "TicketMergeIn":
+        distinct = set(self.ticket_ids)
+        if self.target_ticket_id is None and len(distinct) < 2:
+            raise ValueError("Mindestens zwei Tickets oder ein Zielticket angeben.")
+        if self.target_ticket_id is not None and self.target_ticket_id in distinct:
+            raise ValueError("Das Zielticket darf nicht unter den Quelltickets sein.")
+        return self
 
 
 def _ticket_out(t: Ticket) -> dict[str, Any]:
@@ -268,6 +280,19 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             t.sla_due_at and not t.resolved_at and datetime.now(UTC) > t.sla_due_at
         )
     }
+
+
+def _escape_like(term: str) -> str:
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _assert_not_merged(ticket: Ticket) -> None:
+    """A merged source is read only (M36); work continues on the target."""
+    if ticket.merged_into_ticket_id is not None:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Ticket ist zusammengeführt und kann nicht mehr bearbeitet werden.",
+        )
 
 
 async def _assert_known_topic(
@@ -578,107 +603,154 @@ async def create_ticket(
 async def merge_tickets(
     body: TicketMergeIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> dict[str, Any]:
+    """Without ``target_ticket_id`` the sources merge into a new ticket with a new number (M6).
+    With it (M36) the sources merge into that existing ticket, which keeps its number, status,
+    priority and assignment. Either way comments, messages and history entries move to the
+    target, every source gets a ``merged_into`` entry and is closed, its SLA clock is resolved,
+    and the target records the origin of every source in a ``merged_from`` entry."""
+    from sqlalchemy import func
+
     from mhvp.communication.models import Message
+    from mhvp.sla.models import SlaClock
+    from mhvp.sla.service import mark_resolved, start_clock
 
     ids = list(dict.fromkeys(body.ticket_ids))
+    lock_ids = ids + ([body.target_ticket_id] if body.target_ticket_id else [])
     async with tenant_tx(request, principal) as session:
-        sources = (
-            await session.scalars(select(Ticket).where(Ticket.id.in_(ids)).with_for_update())
+        rows = (
+            await session.scalars(select(Ticket).where(Ticket.id.in_(lock_ids)).with_for_update())
         ).all()
-        if len(sources) != len(ids):
+        by_id = {t.id: t for t in rows}
+        if any(i not in by_id for i in lock_ids):
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Ticket nicht gefunden.")
-        by_id = {t.id: t for t in sources}
         sources = [by_id[i] for i in ids]
-        if len({t.tenant_id for t in sources}) != 1:
-            raise ProblemError(
-                ErrorCodes.VALIDATION, detail="Tickets gehören zu unterschiedlichen Mandanten."
-            )
-        for t in sources:
-            if t.status is TicketStatus.CLOSED or t.merged_into_ticket_id is not None:
-                raise ProblemError(
-                    ErrorCodes.CONFLICT,
-                    detail=f"Ticket {t.number} ist bereits geschlossen oder zusammengeführt.",
-                )
-        oldest = min(sources, key=lambda t: t.created_at)
-        priority = max((t.priority for t in sources), key=list(Priority).index)
-        due_candidates = [t.sla_due_at for t in sources if t.sla_due_at is not None]
-        sla_due_at = min(due_candidates) if due_candidates else None
+        target = by_id[body.target_ticket_id] if body.target_ticket_id else None
+        assert_mergeable(sources, target)
 
-        def _first(field: str) -> Any:
-            value = getattr(oldest, field)
-            if value is not None:
-                return value
-            for t in sources:
-                value = getattr(t, field)
+        if target is None:
+            everything = sources
+            oldest = min(everything, key=lambda t: t.created_at)
+            priority = max((t.priority for t in everything), key=list(Priority).index)
+            due_candidates = [t.sla_due_at for t in everything if t.sla_due_at is not None]
+
+            def _first(field: str) -> Any:
+                value = getattr(oldest, field)
                 if value is not None:
                     return value
-            return None
+                for t in everything:
+                    value = getattr(t, field)
+                    if value is not None:
+                        return value
+                return None
 
-        merged = Ticket(
-            tenant_id=principal.tenant_id,
-            created_by=principal.user_id,
-            number=await next_number(session, principal.tenant_id, "ticket"),
-            property_id=_first("property_id"),
-            unit_id=_first("unit_id"),
-            template_id=_first("template_id"),
-            category=_first("category"),
-            title=body.title or oldest.title,
-            public_description=_first("public_description"),
-            internal_description=_first("internal_description"),
-            status=TicketStatus.NEW,
-            priority=priority,
-            assignee_user_id=_first("assignee_user_id"),
-            team_id=_first("team_id"),
-            initiator_contact_id=_first("initiator_contact_id"),
-            source=oldest.source,
-            # Union: whoever could see any source must still see the merged ticket.
-            visible_for=sorted({v for t in sources for v in t.visible_for}),
-            sla_due_at=sla_due_at,
-        )
-        session.add(merged)
-        await session.flush()
+            target = Ticket(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                number=await next_number(session, principal.tenant_id, "ticket"),
+                property_id=_first("property_id"),
+                unit_id=_first("unit_id"),
+                contact_id=_first("contact_id"),
+                template_id=_first("template_id"),
+                category=_first("category"),
+                topic=_first("topic"),
+                title=body.title or oldest.title,
+                public_description=_first("public_description"),
+                internal_description=_first("internal_description"),
+                status=TicketStatus.NEW,
+                priority=priority,
+                assignee_user_id=_first("assignee_user_id"),
+                team_id=_first("team_id"),
+                initiator_contact_id=_first("initiator_contact_id"),
+                source=oldest.source,
+                # Union: whoever could see any source must still see the merged ticket.
+                visible_for=sorted({v for t in everything for v in t.visible_for}),
+                sla_due_at=min(due_candidates) if due_candidates else None,
+            )
+            session.add(target)
+            await session.flush()
+            await start_clock(session, principal.tenant_id, target.id, target.priority)
+        else:
+            target.visible_for = sorted(
+                {*target.visible_for, *(v for t in sources for v in t.visible_for)}
+            )
+
+        existing = (
+            await session.scalars(
+                select(TicketAssignee.user_id).where(TicketAssignee.ticket_id == target.id)
+            )
+        ).all()
+        source_assignee_ids: list[uuid.UUID | None] = []
+        for t in sources:
+            source_assignee_ids.append(t.assignee_user_id)
+            source_assignee_ids.extend(
+                (
+                    await session.scalars(
+                        select(TicketAssignee.user_id)
+                        .where(TicketAssignee.ticket_id == t.id)
+                        .order_by(TicketAssignee.created_at)
+                    )
+                ).all()
+            )
+        skip = [*existing, *([target.assignee_user_id] if target.assignee_user_id else [])]
+        for carry in assignees_to_carry(skip, source_assignee_ids):
+            session.add(
+                TicketAssignee(
+                    tenant_id=target.tenant_id,
+                    ticket_id=target.id,
+                    user_id=carry.user_id,
+                    reason=carry.reason,
+                )
+            )
 
         for t in sources:
-            await session.execute(
-                update(TicketComment)
-                .where(TicketComment.ticket_id == t.id)
-                .values(ticket_id=merged.id)
-            )
-            await session.execute(
-                update(TicketEvent).where(TicketEvent.ticket_id == t.id).values(ticket_id=merged.id)
-            )
-            await session.execute(
-                update(Message).where(Message.ticket_id == t.id).values(ticket_id=merged.id)
-            )
+            counts = {}
+            for model in (TicketComment, Message, TicketEvent):
+                counts[model] = int(
+                    await session.scalar(
+                        select(func.count()).select_from(model).where(model.ticket_id == t.id)
+                    )
+                    or 0
+                )
+                await session.execute(
+                    update(model).where(model.ticket_id == t.id).values(ticket_id=target.id)
+                )
             await _event(
                 session,
-                merged,
+                target,
                 "merged_from",
                 principal.user_id,
-                {"ticket_id": str(t.id), "number": t.number},
+                origin_data(
+                    t,
+                    comments=counts[TicketComment],
+                    messages=counts[Message],
+                    events=counts[TicketEvent],
+                ),
             )
             await _event(
                 session,
                 t,
                 "merged_into",
                 principal.user_id,
-                {"ticket_id": str(merged.id), "number": merged.number},
+                {"ticket_id": str(target.id), "number": target.number},
             )
             t.status = TicketStatus.CLOSED
             t.resolved_at = datetime.now(UTC)
-            t.merged_into_ticket_id = merged.id
+            t.merged_into_ticket_id = target.id
+            clock = await session.scalar(select(SlaClock).where(SlaClock.ticket_id == t.id))
+            if clock is not None:
+                await mark_resolved(session, clock)
 
         await emit(
             session,
             tenant_id=principal.tenant_id,
             type="ticket.merged",
             entity_type="ticket",
-            entity_id=merged.id,
+            entity_id=target.id,
             actor_user_id=principal.user_id,
-            payload={"number": merged.number, "source_ticket_ids": [str(t.id) for t in sources]},
+            payload={"number": target.number, "source_ticket_ids": [str(t.id) for t in sources]},
         )
         await session.flush()
-        return _ticket_out(merged) | {"merged_ticket_ids": [t.id for t in sources]}
+        return _ticket_out(target) | {"merged_ticket_ids": [t.id for t in sources]}
 
 
 @router.get("/tickets", summary="Tickets")
@@ -689,11 +761,24 @@ async def list_tickets(
     unit_id: uuid.UUID | None = None,
     contact_id: uuid.UUID | None = None,
     mine: bool = False,
+    q: str | None = Query(default=None, max_length=300, description="Nummer oder Titel"),
+    include_merged: bool = Query(default=True, description="Zusammengeführte Tickets zeigen"),
+    merged_into: uuid.UUID | None = Query(default=None, description="Quelltickets eines Ziels"),
     limit: int = Query(default=100, ge=1, le=500),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         query = select(Ticket).order_by(Ticket.number.desc())
+        term = (q or "").strip().lstrip("#")
+        if term:
+            title_match = Ticket.title.ilike(f"%{_escape_like(term)}%", escape="\\")
+            query = query.where(
+                (Ticket.number == int(term)) | title_match if term.isdigit() else title_match
+            )
+        if not include_merged:
+            query = query.where(Ticket.merged_into_ticket_id.is_(None))
+        if merged_into:
+            query = query.where(Ticket.merged_into_ticket_id == merged_into)
         if status:
             query = query.where(Ticket.status == status)
         if property_id:
@@ -807,6 +892,7 @@ async def patch_ticket(
         ticket = await session.get(Ticket, ticket_id, with_for_update=True)
         if ticket is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        _assert_not_merged(ticket)
         if body.checklist_done is not None:
             ticket.checklist = [
                 {**c, "done": i in body.checklist_done} for i, c in enumerate(ticket.checklist)
@@ -899,6 +985,7 @@ async def toggle_checklist_item(
         ticket = await session.get(Ticket, ticket_id, with_for_update=True)
         if ticket is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        _assert_not_merged(ticket)
         found = False
         now = datetime.now(UTC)
         checklist = []
@@ -1003,6 +1090,7 @@ async def comment(
         ticket = await session.get(Ticket, ticket_id)
         if ticket is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        _assert_not_merged(ticket)
         row = TicketComment(
             tenant_id=principal.tenant_id,
             ticket_id=ticket.id,
@@ -1046,6 +1134,16 @@ async def get_ticket(
                 .order_by(TicketAssignee.created_at)
             )
         ).all()
+        from sqlalchemy import func
+
+        from mhvp.communication.models import Message
+
+        message_count = int(
+            await session.scalar(
+                select(func.count()).select_from(Message).where(Message.ticket_id == ticket.id)
+            )
+            or 0
+        )
         return _ticket_out(ticket) | {
             "comments": [
                 {"body": c.body, "internal": c.internal, "created_at": c.created_at}
@@ -1054,6 +1152,7 @@ async def get_ticket(
             "events": [{"kind": e.kind, "data": e.data, "at": e.created_at} for e in events],
             "work_orders": [_order_out(o) for o in orders],
             "assignees": [_assignee_out(a) for a in assignees],
+            "message_count": message_count,
         }
 
 

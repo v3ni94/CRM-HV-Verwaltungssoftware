@@ -7165,7 +7165,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Tickets zusammenführen */
+        /**
+         * Tickets zusammenführen
+         * @description Without ``target_ticket_id`` the sources merge into a new ticket with a new number (M6).
+         *     With it (M36) the sources merge into that existing ticket, which keeps its number, status,
+         *     priority and assignment. Either way comments, messages and history entries move to the
+         *     target, every source gets a ``merged_into`` entry and is closed, its SLA clock is resolved,
+         *     and the target records the origin of every source in a ``merged_from`` entry.
+         */
         post: operations["merge_tickets_api_v1_tickets_merge_post"];
         delete?: never;
         options?: never;
@@ -14146,6 +14153,8 @@ export interface components {
         };
         /** TicketMergeIn */
         TicketMergeIn: {
+            /** Target Ticket Id */
+            target_ticket_id?: string | null;
             /** Ticket Ids */
             ticket_ids: string[];
             /** Title */
@@ -31034,6 +31043,12 @@ export interface operations {
                 unit_id?: string | null;
                 contact_id?: string | null;
                 mine?: boolean;
+                /** @description Nummer oder Titel */
+                q?: string | null;
+                /** @description Zusammengeführte Tickets zeigen */
+                include_merged?: boolean;
+                /** @description Quelltickets eines Ziels */
+                merged_into?: string | null;
                 limit?: number;
             };
             header?: never;
