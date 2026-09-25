@@ -15,8 +15,10 @@ if TYPE_CHECKING:
     pass
 
 # Grants that are not derived from contracts and therefore survive a resync: the handover
-# protocol access of a participant (M30 stage 3, docs/rules/M30-01.md).
-MANUAL_BASES = frozenset({"handover_participant"})
+# protocol access of a participant (M30 stage 3, docs/rules/M30-01.md) and the mandatory
+# tenant wide staff grant (M2-08 entschieden, docs/rules/M2-07.md).
+MANUAL_BASES = frozenset({"handover_participant", "staff_access"})
+STAFF_ACCESS_LEGAL_BASIS = "staff_access"
 
 
 async def sync_grants(session: AsyncSession, account: PortalAccount) -> int:
@@ -74,6 +76,33 @@ async def sync_grants(session: AsyncSession, account: PortalAccount) -> int:
     return len(rows)
 
 
+async def has_staff_grant(session: AsyncSession, account_id: uuid.UUID) -> bool:
+    """True if the account holds the tenant wide staff grant (M2-08 entschieden)."""
+    return (
+        await session.scalar(
+            select(AccessGrant.id).where(
+                AccessGrant.account_id == account_id,
+                AccessGrant.legal_basis == STAFF_ACCESS_LEGAL_BASIS,
+            )
+        )
+    ) is not None
+
+
+async def has_external_grant(session: AsyncSession, account_id: uuid.UUID) -> bool:
+    """True if the account holds any access grant other than the staff grant, i.e. an
+    external legal basis (owner, tenant, provider, handover participant, ...). Used to keep
+    a staff portal account from also carrying external visibility (Sicherheitsreview
+    2026-09-25, Befund 1)."""
+    return (
+        await session.scalar(
+            select(AccessGrant.id).where(
+                AccessGrant.account_id == account_id,
+                AccessGrant.legal_basis != STAFF_ACCESS_LEGAL_BASIS,
+            )
+        )
+    ) is not None
+
+
 async def grants(session: AsyncSession, account: PortalAccount, today: date) -> list[AccessGrant]:
     return list(
         (
@@ -99,11 +128,59 @@ def roles(active: list[AccessGrant], is_provider: bool) -> set[str]:
     return out
 
 
+async def staff_permissions(session: AsyncSession, account: PortalAccount) -> frozenset[str]:
+    """The staff portal permission set of this account's tenant member, or an empty set when
+    the account holds no tenant wide staff grant (an external portal user)."""
+    from mhvp.platform.models import (
+        Membership,
+        MembershipRole,
+        Role,
+        TenantSettings,
+    )
+    from mhvp.portal.staff_access import effective_permissions_for_role_codes
+
+    has_staff_grant = await session.scalar(
+        select(AccessGrant.id).where(
+            AccessGrant.account_id == account.id,
+            AccessGrant.legal_basis == STAFF_ACCESS_LEGAL_BASIS,
+        )
+    )
+    if has_staff_grant is None:
+        return frozenset()
+    role_codes = list(
+        await session.scalars(
+            select(Role.code)
+            .join(MembershipRole, MembershipRole.role_id == Role.id)
+            .join(Membership, Membership.id == MembershipRole.membership_id)
+            .where(
+                Membership.tenant_id == account.tenant_id, Membership.user_id == account.user_id
+            )
+        )
+    )
+    settings = await session.scalar(
+        select(TenantSettings.portal_role_permissions).where(
+            TenantSettings.tenant_id == account.tenant_id
+        )
+    )
+    return effective_permissions_for_role_codes(settings or {}, role_codes)
+
+
 async def visible_documents(
     session: AsyncSession, account: PortalAccount, today: date
 ) -> list[Any]:
-    """Documents linked to a granted scope and released for the role of that grant."""
+    """Documents linked to a granted scope and released for the role of that grant. A staff
+    account with "documents:read" (M2-08 entschieden) sees every document of the tenant instead,
+    since the tenant wide grant is not scoped to individual entities."""
     from mhvp.documents.models import Document, DocumentLink
+
+    staff_perms = await staff_permissions(session, account)
+    if "documents:read" in staff_perms:
+        query = (
+            select(Document)
+            .where(Document.tenant_id == account.tenant_id)
+            .order_by(Document.created_at.desc())
+        )
+        return list((await session.scalars(query)).all())
 
     active = await grants(session, account, today)
     scopes: dict[tuple[str, uuid.UUID], set[str]] = {}

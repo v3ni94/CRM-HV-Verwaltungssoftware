@@ -134,8 +134,28 @@ async def provision_account(
     factory = sessions(request)
     async with platform_transaction(factory) as session:
         email = email.strip().lower()
-        if await session.scalar(select(User.id).where(User.email == email)):
-            raise ProblemError(ErrorCodes.CONFLICT, detail="E-Mail-Adresse bereits registriert.")
+        existing_user_id = await session.scalar(select(User.id).where(User.email == email))
+    if existing_user_id is not None:
+        async with tenant_tx(request, principal) as session:
+            existing_account = await session.scalar(
+                select(PortalAccount).where(
+                    PortalAccount.tenant_id == principal.tenant_id,
+                    PortalAccount.user_id == existing_user_id,
+                )
+            )
+            if existing_account is not None and await access.has_staff_grant(
+                session, existing_account.id
+            ):
+                raise ProblemError(
+                    ErrorCodes.CONFLICT,
+                    detail=(
+                        "Für dieses Konto besteht bereits ein interner Mitarbeiterzugang. "
+                        "Externe Portalrechte (Eigentümer, Mieter, Dienstleister) können "
+                        "diesem Konto nicht zusätzlich zugewiesen werden."
+                    ),
+                )
+        raise ProblemError(ErrorCodes.CONFLICT, detail="E-Mail-Adresse bereits registriert.")
+    async with platform_transaction(factory) as session:
         user = User(email=email, display_name=display_name, password_hash=None)
         session.add(user)
         await session.flush()
@@ -388,6 +408,7 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
             if contract_ids
             else []
         )
+        permissions = await access.staff_permissions(session, account)
         return {
             "contact_id": account.contact_id,
             "roles": sorted({g.role for g in active} | ({"provider"} if is_provider else set())),
@@ -402,6 +423,7 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
                 }
                 for c in contracts
             ],
+            "permissions": sorted(permissions),
         }
 
 
@@ -518,13 +540,13 @@ async def tickets(request: Request, ctx: Portal = Depends(portal_user)) -> list[
 
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
-        rows = (
-            await session.scalars(
-                select(Ticket)
-                .where(Ticket.initiator_contact_id == account.contact_id)
-                .order_by(Ticket.number.desc())
-            )
-        ).all()
+        staff_perms = await access.staff_permissions(session, account)
+        query = select(Ticket).order_by(Ticket.number.desc())
+        # Staff with "tickets:read" (M2-08 entschieden) see every ticket of the tenant, not
+        # only their own reports.
+        if "tickets:read" not in staff_perms:
+            query = query.where(Ticket.initiator_contact_id == account.contact_id)
+        rows = (await session.scalars(query)).all()
         out = []
         for t in rows:
             comments = (
@@ -722,11 +744,12 @@ async def work_orders(request: Request, ctx: Portal = Depends(portal_user)) -> l
 
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
-        rows = await session.scalars(
-            select(WorkOrder)
-            .where(WorkOrder.provider_contact_id == account.contact_id)
-            .order_by(WorkOrder.created_at.desc())
-        )
+        staff_perms = await access.staff_permissions(session, account)
+        query = select(WorkOrder).order_by(WorkOrder.created_at.desc())
+        # Staff with "work_orders:read" (M2-08 entschieden) see every work order of the tenant.
+        if "work_orders:read" not in staff_perms:
+            query = query.where(WorkOrder.provider_contact_id == account.contact_id)
+        rows = await session.scalars(query)
         return [_order(o) for o in rows.all()]
 
 

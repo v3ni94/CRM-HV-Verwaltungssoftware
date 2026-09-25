@@ -3,7 +3,7 @@
 import secrets
 import uuid
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from sqlalchemy import select, update
@@ -46,6 +46,7 @@ from mhvp.platform.models import (
     Role,
     RolePermission,
     Tenant,
+    TenantBillingSettings,
     TenantSettings,
     User,
 )
@@ -74,6 +75,8 @@ from mhvp.platform.schemas import (
     RoleCreate,
     RoleOut,
     RolePermissions,
+    TenantBillingSettingsOut,
+    TenantBillingSettingsPatch,
     TenantCreate,
     TenantOut,
     TenantSettingsOut,
@@ -288,6 +291,120 @@ async def patch_settings(
         return _settings_out(row)
 
 
+@tenant_router.get("/portal-role-permissions", summary="Portalrechte je Rolle")
+async def get_portal_role_permissions(
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:read")),
+) -> dict[str, Any]:
+    from mhvp.portal.staff_access import PORTAL_STAFF_PERMISSIONS, role_matrix
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings))
+        if row is None:
+            raise _not_found()
+        return {
+            "catalogue": list(PORTAL_STAFF_PERMISSIONS),
+            "roles": role_matrix(row.portal_role_permissions),
+        }
+
+
+@tenant_router.put("/portal-role-permissions", summary="Portalrechte je Rolle ändern")
+async def put_portal_role_permissions(
+    body: dict[str, list[str]],
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> dict[str, Any]:
+    """Replaces the tenant's overrides (a role code missing from ``body`` falls back to the
+    built in default). Operator decision 25.09.2026 (M2-08 entschieden)."""
+    from mhvp.portal.staff_access import (
+        EXEMPT_ROLE_CODES,
+        PORTAL_STAFF_PERMISSIONS,
+        role_matrix,
+    )
+
+    catalogue = frozenset(PORTAL_STAFF_PERMISSIONS)
+    cleaned: dict[str, list[str]] = {}
+    for code, perms in body.items():
+        if code in EXEMPT_ROLE_CODES:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail=f"Rolle {code} erhält keinen Portalzugang."
+            )
+        unknown = sorted(set(perms) - catalogue)
+        if unknown:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail=f"Unbekannte Portalrechte: {', '.join(unknown)}."
+            )
+        cleaned[code] = sorted(set(perms))
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise _not_found()
+        before = row.portal_role_permissions
+        row.portal_role_permissions = cleaned
+        row.version += 1
+        row.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=row.tenant_id,
+            type="tenant_settings.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"fields": ["portal_role_permissions"]},
+            changes=diff({"portal_role_permissions": before}, {"portal_role_permissions": cleaned}),
+        )
+        return {"roles": role_matrix(row.portal_role_permissions)}
+
+
+@tenant_router.post(
+    "/portal-role-permissions/resync", summary="Portalrechte auf bestehende Zugänge anwenden"
+)
+async def resync_portal_role_permissions(
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> dict[str, int]:
+    """Applies the current matrix to every existing staff access grant of the tenant; grants of
+    external portal users (tenants, owners, providers, handover participants) are untouched,
+    since only ``legal_basis == "staff_access"`` accounts are considered. Also creates the
+    missing staff grant for a member who has none yet (e.g. a role change out of the exempt
+    set). Operator decision 25.09.2026 (M2-08 entschieden)."""
+    from mhvp.portal.staff_access import is_staff_role_exempt
+
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.execute(
+                select(Membership.id, Membership.contact_id, User.email, User.display_name)
+                .join(User, User.id == Membership.user_id)
+                .where(Membership.tenant_id == principal.tenant_id)
+            )
+        ).all()
+        role_rows = (
+            await session.execute(
+                select(MembershipRole.membership_id, Role.code).join(
+                    Role, Role.id == MembershipRole.role_id
+                )
+            )
+        ).all()
+    roles_by_membership: dict[uuid.UUID, list[str]] = {}
+    for r in role_rows:
+        roles_by_membership.setdefault(r.membership_id, []).append(r.code)
+    applied = 0
+    for member in rows:
+        role_codes = roles_by_membership.get(member.id, [])
+        if member.contact_id is None or is_staff_role_exempt(role_codes):
+            continue
+        await ensure_staff_portal_access(
+            request,
+            principal=principal,
+            contact_id=member.contact_id,
+            email=member.email,
+            display_name=member.display_name,
+            role_codes=role_codes,
+        )
+        applied += 1
+    return {"members": applied}
+
+
 @tenant_router.get("/branding", summary="Branding des Mandanten (White-Label)")
 async def branding(request: Request) -> BrandingOut:
     """Public for portals: resolved from the Host header (3.3); with a token from its tenant."""
@@ -307,6 +424,91 @@ async def branding(request: Request) -> BrandingOut:
     return BrandingOut(
         tenant_id=tenant_id, name=tenant.name, branding=Branding.model_validate(row.branding)
     )
+
+
+# Rechnungsstellung und Steuer (operator decision 25.09.2026, M13-04/M18-01) -------------
+
+from mhvp.platform.schemas import _mask  # noqa: E402
+
+
+def _billing_out(row: TenantBillingSettings) -> TenantBillingSettingsOut:
+    return TenantBillingSettingsOut(
+        tenant_id=row.tenant_id,
+        invoice_prefix=row.invoice_prefix,
+        vat_status=row.vat_status.value,
+        vat_id_masked=_mask(row.vat_id),
+        tax_number_masked=_mask(row.tax_number),
+        leitweg_id=row.leitweg_id,
+        kleinunternehmer_note=row.kleinunternehmer_note,
+        datev_consultant_number=row.datev_consultant_number,
+        datev_client_number=row.datev_client_number,
+        datev_chart_of_accounts=row.datev_chart_of_accounts.value,
+        datev_account_length=row.datev_account_length,
+        datev_fiscal_year_start_month=row.datev_fiscal_year_start_month,
+        version=row.version,
+    )
+
+
+@tenant_router.get("/billing-settings", summary="Rechnungsstellung und Steuer")
+async def get_billing_settings(
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:read")),
+) -> TenantBillingSettingsOut:
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(TenantBillingSettings).where(
+                TenantBillingSettings.tenant_id == principal.tenant_id
+            )
+        )
+        if row is None:
+            row = TenantBillingSettings(tenant_id=principal.tenant_id)
+            session.add(row)
+            await session.flush()
+        response.headers["ETag"] = f'"{row.version}"'
+        return _billing_out(row)
+
+
+@tenant_router.patch("/billing-settings", summary="Rechnungsstellung und Steuer ändern")
+async def patch_billing_settings(
+    body: TenantBillingSettingsPatch,
+    request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> TenantBillingSettingsOut:
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(TenantBillingSettings)
+            .where(TenantBillingSettings.tenant_id == principal.tenant_id)
+            .with_for_update()
+        )
+        if row is None:
+            row = TenantBillingSettings(tenant_id=principal.tenant_id)
+            session.add(row)
+            await session.flush()
+        if if_match is not None and if_match.strip('"') != str(row.version):
+            raise ProblemError(ErrorCodes.VERSION_CONFLICT)
+        fields = body.model_dump(exclude_unset=True)
+        changed: set[str] = set()
+        for name, value in fields.items():
+            if getattr(row, name) != value:
+                setattr(row, name, value)
+                changed.add(name)
+        if changed:
+            row.version += 1
+            row.updated_by = principal.user_id
+            await emit(
+                session,
+                tenant_id=row.tenant_id,
+                type="tenant_billing_settings.updated",
+                entity_type="tenant_billing_settings",
+                entity_id=row.id,
+                actor_user_id=principal.user_id,
+                payload={"fields": sorted(changed - {"vat_id", "tax_number"})},
+            )
+        response.headers["ETag"] = f'"{row.version}"'
+        return _billing_out(row)
 
 
 # Roles and members ---------------------------------------------------------------------
@@ -488,8 +690,6 @@ async def invite_member(
 ) -> MemberOut:
     """Creates the account when the e-mail is new (start password required), otherwise adds
     the existing account to the tenant. Every user is also kept as a contact of the tenant."""
-    from mhvp.contacts.models import Contact, ContactEmail, ContactKind
-
     email = body.email.strip().lower()
     async with platform_transaction(sessions(request)) as session:
         user_id = await session.scalar(select(User.id).where(User.email == email))
@@ -508,40 +708,198 @@ async def invite_member(
         role_codes=body.role_codes,
         actor_user_id=principal.user_id,
     )
+    portal_access = await ensure_manager_contact_and_portal_access(
+        request,
+        principal=principal,
+        membership_id=membership_id,
+        email=email,
+        display_name=body.display_name.strip(),
+        role_codes=body.role_codes,
+    )
+    members = await list_members(request, principal)
+    member = next(m for m in members if m.membership_id == membership_id)
+    member.portal_access = portal_access
+    if portal_access == "conflict":
+        member.portal_access_reason = (
+            "Kontakt hält bereits eine externe Portalfreigabe (Eigentümer, Mieter, "
+            "Dienstleister oder Übergabeteilnehmer); der Mitarbeiterzugang wurde nicht "
+            "vergeben."
+        )
+    return member
+
+
+async def ensure_manager_contact_and_portal_access(
+    request: Request,
+    *,
+    principal: TenantPrincipal,
+    membership_id: uuid.UUID,
+    email: str,
+    display_name: str,
+    role_codes: list[str],
+) -> str:
+    """Operator decision 25.09.2026 (docs/rules/M2-07.md, M2-08 entschieden): every staff
+    membership (add_member and invite acceptance alike, both go through ``add_member``) gets
+    (a) a linked CRM contact with contact role "Verwalter", reusing a contact of the same
+    tenant and e-mail if one exists, and (b) a mandatory portal access grant with the tenant's
+    configured portal permission set for the member's CRM roles, unless the member holds only
+    exempt roles (``portal_user``, ``read_only``, ``read_only_master_data``, ``tax_advisor``,
+    ``insurance_broker``). Idempotent: re-invite or re-sync never duplicates the contact or the
+    grant.
+
+    Returns ``"granted"``, ``"exempt"`` or ``"conflict"`` (see ``ensure_staff_portal_access``,
+    Sicherheitsreview 2026-09-25, Befund 1)."""
+    from mhvp.contacts.models import Contact, ContactEmail, ContactKind, ContactRoleCode
+
     async with platform_transaction(sessions(request)) as session:
         membership = await session.get(Membership, membership_id)
-        assert membership is not None  # noqa: S101 - just created
+        assert membership is not None  # noqa: S101
         contact_id = membership.contact_id
     if contact_id is None:
-        first, _, last = body.display_name.strip().rpartition(" ")
         async with tenant_tx(request, principal) as session:
-            contact = Contact(
-                tenant_id=principal.tenant_id,
-                created_by=principal.user_id,
-                kind=ContactKind.PERSON,
-                first_name=first or None,
-                last_name=last or body.display_name.strip(),
-                display_name=body.display_name.strip(),
-                search_text=f"{body.display_name} {email}".lower(),
-            )
-            session.add(contact)
-            await session.flush()
-            session.add(
-                ContactEmail(
-                    tenant_id=principal.tenant_id,
-                    contact_id=contact.id,
-                    label="work",
-                    email=email,
-                    is_primary=True,
+            existing_contact_id = await session.scalar(
+                select(ContactEmail.contact_id)
+                .join(Contact, Contact.id == ContactEmail.contact_id)
+                .where(
+                    ContactEmail.tenant_id == principal.tenant_id,
+                    ContactEmail.email == email,
+                    Contact.deleted_at.is_(None),
                 )
+                .limit(1)
             )
-            contact_id = contact.id
+            if existing_contact_id is not None:
+                contact_id = existing_contact_id
+            else:
+                first, _, last = display_name.rpartition(" ")
+                contact = Contact(
+                    tenant_id=principal.tenant_id,
+                    created_by=principal.user_id,
+                    kind=ContactKind.PERSON,
+                    first_name=first or None,
+                    last_name=last or display_name,
+                    display_name=display_name,
+                    search_text=f"{display_name} {email}".lower(),
+                )
+                session.add(contact)
+                await session.flush()
+                session.add(
+                    ContactEmail(
+                        tenant_id=principal.tenant_id,
+                        contact_id=contact.id,
+                        label="work",
+                        email=email,
+                        is_primary=True,
+                    )
+                )
+                contact_id = contact.id
         async with platform_transaction(sessions(request)) as session:
             membership = await session.get(Membership, membership_id)
             assert membership is not None  # noqa: S101
             membership.contact_id = contact_id
-    members = await list_members(request, principal)
-    return next(m for m in members if m.membership_id == membership_id)
+    async with tenant_tx(request, principal) as session:
+        contact_row = await session.get(Contact, contact_id)
+        assert contact_row is not None  # noqa: S101
+        if ContactRoleCode.VERWALTER.value not in (contact_row.roles or []):
+            contact_row.roles = [*contact_row.roles, ContactRoleCode.VERWALTER.value]
+    return await ensure_staff_portal_access(
+        request,
+        principal=principal,
+        contact_id=contact_id,
+        email=email,
+        display_name=display_name,
+        role_codes=role_codes,
+    )
+
+
+async def ensure_staff_portal_access(
+    request: Request,
+    *,
+    principal: TenantPrincipal,
+    contact_id: uuid.UUID,
+    email: str,
+    display_name: str,
+    role_codes: list[str],
+) -> str:
+    """Mandatory portal access for staff (M2-08 entschieden, docs/rules/M2-07.md): every staff
+    membership except the exempt roles gets a portal account, active without an invitation
+    step, and a tenant wide access grant. Idempotent: reuses an existing account for the
+    contact or the user.
+
+    Sicherheitsreview 2026-09-25, Befund 1: a portal account must never hold the tenant wide
+    staff grant together with an external grant (owner, tenant, provider, handover
+    participant). When the account found by ``contact_id`` or ``user_id`` already holds such
+    an external grant, the staff grant is refused, the conflict is logged as an audit event,
+    and ``"conflict"`` is returned instead of silently widening that account's visibility.
+    Returns ``"granted"``, ``"exempt"`` or ``"conflict"``."""
+    from mhvp.portal import access
+    from mhvp.portal.access import STAFF_ACCESS_LEGAL_BASIS
+    from mhvp.portal.models import AccessGrant, PortalAccount
+    from mhvp.portal.staff_access import is_staff_role_exempt
+
+    if is_staff_role_exempt(role_codes):
+        return "exempt"
+    async with platform_transaction(sessions(request)) as session:
+        user_id = await session.scalar(select(User.id).where(User.email == email))
+    assert user_id is not None  # noqa: S101 - the membership was just ensured
+    async with tenant_tx(request, principal) as session:
+        account = await session.scalar(
+            select(PortalAccount).where(
+                PortalAccount.tenant_id == principal.tenant_id,
+                (PortalAccount.contact_id == contact_id) | (PortalAccount.user_id == user_id),
+            )
+        )
+        if account is None:
+            account = PortalAccount(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                user_id=user_id,
+                contact_id=contact_id,
+                status="active",
+                activated_at=datetime.now(UTC),
+            )
+            session.add(account)
+            await session.flush()
+        elif await access.has_external_grant(session, account.id):
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="portal_account.staff_grant_conflict",
+                entity_type="portal_account",
+                entity_id=account.id,
+                actor_user_id=principal.user_id,
+                payload={
+                    "contact_id": str(contact_id),
+                    "reason": (
+                        "Konto hält bereits eine externe Portalfreigabe (Eigentümer, "
+                        "Mieter, Dienstleister oder Übergabeteilnehmer); der "
+                        "Mitarbeiterzugang wurde nicht vergeben."
+                    ),
+                },
+            )
+            return "conflict"
+        elif account.status != "active":
+            account.status = "active"
+            account.activated_at = account.activated_at or datetime.now(UTC)
+        existing = await session.scalar(
+            select(AccessGrant.id).where(
+                AccessGrant.account_id == account.id,
+                AccessGrant.legal_basis == STAFF_ACCESS_LEGAL_BASIS,
+            )
+        )
+        if existing is None:
+            session.add(
+                AccessGrant(
+                    tenant_id=principal.tenant_id,
+                    created_by=principal.user_id,
+                    account_id=account.id,
+                    scope_type="tenant",
+                    scope_id=principal.tenant_id,
+                    right="read",
+                    legal_basis=STAFF_ACCESS_LEGAL_BASIS,
+                    role="staff",
+                    valid_from=datetime.now(UTC).date(),
+                )
+            )
+    return "granted"
 
 
 async def _tenant_membership(

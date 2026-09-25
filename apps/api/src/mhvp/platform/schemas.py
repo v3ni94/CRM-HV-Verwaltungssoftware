@@ -86,6 +86,53 @@ class TenantSettingsPatch(BaseModel):
     branding: Branding | None = None
 
 
+def _mask(value: str | None) -> str | None:
+    if not value:
+        return None
+    return f"…{value[-4:]}" if len(value) > 4 else "…" + value
+
+
+class TenantBillingSettingsOut(BaseModel):
+    """Secrets are write only: vat_id and tax_number are returned masked (last 4 chars)."""
+
+    tenant_id: uuid.UUID
+    invoice_prefix: str | None
+    vat_status: str
+    vat_id_masked: str | None
+    tax_number_masked: str | None
+    leitweg_id: str | None
+    kleinunternehmer_note: str | None
+    datev_consultant_number: str | None
+    datev_client_number: str | None
+    datev_chart_of_accounts: str
+    datev_account_length: int | None
+    datev_fiscal_year_start_month: int
+    version: int
+
+
+class TenantBillingSettingsPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    invoice_prefix: str | None = Field(default=None, min_length=1, max_length=16)
+    vat_status: Literal["unset", "regelbesteuert", "kleinunternehmer"] | None = None
+    vat_id: str | None = Field(default=None, max_length=32)
+    tax_number: str | None = Field(default=None, max_length=32)
+    leitweg_id: str | None = Field(default=None, max_length=64)
+    kleinunternehmer_note: str | None = Field(default=None, max_length=2000)
+    datev_consultant_number: str | None = Field(default=None, max_length=32)
+    datev_client_number: str | None = Field(default=None, max_length=32)
+    datev_chart_of_accounts: Literal["unset", "skr03", "skr04"] | None = None
+    datev_account_length: int | None = Field(default=None, ge=4, le=8)
+    datev_fiscal_year_start_month: int | None = Field(default=None, ge=1, le=12)
+
+    @field_validator("invoice_prefix")
+    @classmethod
+    def _prefix(cls, value: str | None) -> str | None:
+        if value is not None and not re.fullmatch(r"[A-Z0-9]{2,16}", value):
+            raise ValueError("invoice_prefix must be 2-16 uppercase letters or digits")
+        return value
+
+
 class BrandingOut(BaseModel):
     tenant_id: uuid.UUID
     name: str
@@ -135,6 +182,8 @@ class MemberOut(BaseModel):
     contact_id: uuid.UUID | None = None
     last_login_at: datetime | None = None
     mobile_phone: str | None = None
+    portal_access: str | None = None
+    portal_access_reason: str | None = None
 
 
 class MemberMobilePhone(BaseModel):

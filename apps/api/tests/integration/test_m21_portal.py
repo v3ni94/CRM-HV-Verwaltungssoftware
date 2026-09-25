@@ -17,6 +17,7 @@ from moto import mock_aws
 
 from mhvp.main import create_app
 from mhvp.platform import services
+from mhvp.portal.staff_access import DEFAULT_STAFF_PORTAL_PERMISSIONS
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m5_contracts import _party, _unit
@@ -455,3 +456,73 @@ def test_portal_access_matrix(client: TestClient, world: World) -> None:
     )
     assert sub["kind"] == "invoice_submission"
     assert client.get("/api/v1/tickets", headers=pv).status_code == 403
+
+
+def test_staff_portal_sees_tenant_wide_data_per_matrix(client: TestClient, world: World) -> None:
+    """Operator decision 25.09.2026 (M2-08 entschieden, docs/rules/M2-07.md): a staff member
+    (CRM role "standard") automatically gets portal access and sees every document and ticket
+    of the tenant, not only ones linked to a contract of their own, because the portal
+    permission matrix grants "documents:read" and "tickets:read" to that role by default."""
+    h = bearer(login(client, world, "m21admin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "899", "name": "Staff-Test", "management_type": "rental"},
+            headers=h,
+        ),
+        201,
+    )
+    doc_id = _doc(client, h, "Interne Notiz", "property", prop["id"], ["owner", "tenant"])
+    ticket = _ok(
+        client.post(
+            "/api/v1/tickets",
+            json={"title": "Heizung defekt", "priority": "normal"},
+            headers=h,
+        ),
+        201,
+    )
+    email = f"m21staff-{RUN}@example.org"
+    _ok(
+        client.post(
+            "/api/v1/tenant/members",
+            json={
+                "email": email,
+                "display_name": "M21 Staff",
+                "password": PASSWORD,
+                "role_codes": ["standard"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    login_step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+    assert login_step.status_code == 200, login_step.text
+    staff = {"Authorization": f"Bearer {login_step.json()['access_token']}"}
+    docs = _ok(client.get(f"{P}/documents", headers=staff))
+    assert any(d["id"] == doc_id for d in docs)
+    tickets = _ok(client.get(f"{P}/tickets", headers=staff))
+    assert any(t["id"] == ticket["id"] for t in tickets)
+    me = _ok(client.get(f"{P}/me", headers=staff))
+    assert me["roles"] == ["staff"]
+    assert me["contracts"] == []
+    assert me["permissions"] == sorted(DEFAULT_STAFF_PORTAL_PERMISSIONS["standard"])
+
+
+def test_me_never_500_for_bare_contact_without_grants(client: TestClient, world: World) -> None:
+    """A portal account with a contact but no contract and no access grant (a bare contact
+    invited by mistake, or one whose contract ended and whose grants expired) must still get
+    a plain empty answer from /me, never a 500 (Playwright finding, 2026-09-25)."""
+    h = bearer(login(client, world, "m21admin"))
+    contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={"kind": "person", "first_name": "Bare", "last_name": f"Contact-{RUN}"},
+            headers=h,
+        ),
+        201,
+    )
+    bare = _portal_user(client, h, world, "m21bare", contact["id"])
+    me = _ok(client.get(f"{P}/me", headers=bare))
+    assert me["roles"] == []
+    assert me["contracts"] == []
+    assert me["permissions"] == []

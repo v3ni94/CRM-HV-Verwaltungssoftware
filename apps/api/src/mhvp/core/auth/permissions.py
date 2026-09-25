@@ -58,19 +58,16 @@ def _r(resource: str) -> frozenset[str]:
     return frozenset({f"{resource}:read"})
 
 
-_TICKETS = _rw("tickets", delete=True) | {"tickets:approve"} | _rw("communication")
+_TICKETS = _rw("tickets") | {"tickets:approve"} | _rw("communication")
 # SLA und Bereitschaft (M21 Übernahme aus dem Immoware Hub): Regeln, Eskalation, Bereitschaft und
 # Kalender teilen sich sla:update ("verwalten"), Uhren/Alarme lesen und quittieren sla:read.
 _SLA_MANAGE = _rw("sla") | {"sla:approve"}
 
-_MASTER_RWD = (
-    _rw("contacts", delete=True)
-    | _rw("properties", delete=True)
-    | _rw("contracts", delete=True)
-    | _rw("documents", delete=True)
-    | _rw("ai", delete=True)
-)
+# Rule "Löschen nur Administrator" (docs/rules/M2-07.md, Produktschutz): only tenant_admin
+# (and platform admin via ALL_PERMISSIONS) hold `*:delete`. Non admin system roles keep the
+# former name `_MASTER_RWD` for a minimal diff, but it no longer grants delete.
 _MASTER_RW = _rw("contacts") | _rw("properties") | _rw("contracts") | _rw("documents") | _rw("ai")
+_MASTER_RWD = _MASTER_RW
 _MASTER_R = _r("contacts") | _r("properties") | _r("contracts") | _r("documents")
 
 # Accounting (M10): postings in non-leading ledgers; approve = Festschreibung, opening balances.

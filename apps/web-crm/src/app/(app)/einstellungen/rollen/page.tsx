@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { PortalRolePermissions } from "@/components/settings/PortalRolePermissions";
 import { RolesAdmin } from "@/components/settings/RolesAdmin";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -15,10 +16,20 @@ export default async function RolesPage() {
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
   if (!can("roles:read")) notFound();
   const roles = await api.GET("/api/v1/tenant/roles");
+  const portalMatrix = can("tenant_settings:read")
+    ? await api.GET("/api/v1/tenant/portal-role-permissions")
+    : null;
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
       <RolesAdmin initialRoles={roles.data ?? []} canUpdate={can("roles:update")} />
+      {portalMatrix?.data ? (
+        <PortalRolePermissions
+          catalogue={portalMatrix.data.catalogue as string[]}
+          initialRoles={portalMatrix.data.roles as Record<string, string[]>}
+          canUpdate={can("tenant_settings:update")}
+        />
+      ) : null}
     </div>
   );
 }

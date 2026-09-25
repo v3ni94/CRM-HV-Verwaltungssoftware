@@ -8,7 +8,15 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-export function ContactActions({ id, name }: { id: string; name: string }) {
+export function ContactActions({
+  id,
+  name,
+  canDelete = true,
+}: {
+  id: string;
+  name: string;
+  canDelete?: boolean;
+}) {
   const t = useTranslations("Contacts");
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -57,9 +65,11 @@ export function ContactActions({ id, name }: { id: string; name: string }) {
         <button type="button" className={ui.button} onClick={() => void exportData()}>
           {t("export")}
         </button>
-        <button type="button" className={ui.danger} onClick={() => setConfirming(true)}>
-          {t("delete")}
-        </button>
+        {canDelete ? (
+          <button type="button" className={ui.danger} onClick={() => setConfirming(true)}>
+            {t("delete")}
+          </button>
+        ) : null}
       </div>
       {confirming ? (
         <div role="alertdialog" aria-labelledby="del-q" className={`${ui.card} max-w-md`}>

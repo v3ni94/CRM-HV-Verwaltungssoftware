@@ -965,3 +965,243 @@ def test_tenant_admin_manages_members_and_users_change_password(
         f"/api/v1/tenant/members/{me['membership_id']}", json={"status": "disabled"}, headers=admin
     )
     assert own.status_code == 422, own.text
+
+
+def test_new_member_gets_manager_contact_and_portal_access_idempotently(
+    client: TestClient, world: World
+) -> None:
+    """Operator decision 25.09.2026 (M2-08 entschieden, docs/rules/M2-07.md): adding a staff
+    member creates or links a CRM contact with contact role "Verwalter" and a mandatory tenant
+    wide portal access, both idempotent on a second call with the same e-mail."""
+    admin = bearer(login(client, world, "admin"))
+    email = f"verwalter-{RUN}@example.org"
+    created = client.post(
+        "/api/v1/tenant/members",
+        json={
+            "email": email,
+            "display_name": f"Verwalter Person {RUN}",
+            "password": PASSWORD,
+            "role_codes": ["standard"],
+        },
+        headers=admin,
+    )
+    assert created.status_code == 201, created.text
+    member = created.json()
+    contact = client.get(f"/api/v1/contacts/{member['contact_id']}", headers=admin).json()
+    assert "verwalter" in contact["roles"]
+
+    # Staff (not exempt) logs in without TOTP (only administrators need it) and can already use
+    # the portal, no separate invitation step.
+    login_step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+    assert login_step.status_code == 200, login_step.text
+    staff = {"Authorization": f"Bearer {login_step.json()['access_token']}"}
+    me = client.get("/api/v1/portal/me", headers=staff)
+    assert me.status_code == 200, me.text
+
+    # Re-invite (same e-mail, membership already exists) stays idempotent: no duplicate
+    # contact, no duplicate portal account or access grant.
+    again = client.post(
+        "/api/v1/tenant/members",
+        json={"email": email, "display_name": "Verwalter Person", "role_codes": ["standard"]},
+        headers=admin,
+    )
+    assert again.status_code == 201, again.text
+    assert again.json()["contact_id"] == member["contact_id"]
+    contacts = client.get("/api/v1/contacts", params={"q": email}, headers=admin).json()
+    matching = [c for c in contacts["items"] if c["id"] == member["contact_id"]]
+    assert len(matching) == 1
+
+
+def test_portal_role_permissions_matrix_and_resync(client: TestClient, world: World) -> None:
+    """Operator decision 25.09.2026 (M2-08 entschieden): the portal permission matrix is
+    editable only with `tenant_settings:update`, and resync applies the current matrix to
+    existing staff grants without touching external portal users."""
+    admin = bearer(login(client, world, "admin"))
+    reader = bearer(login(client, world, "reader"))
+
+    listed = client.get("/api/v1/tenant/portal-role-permissions", headers=admin)
+    assert listed.status_code == 200, listed.text
+    assert "documents:read" in listed.json()["roles"]["standard"]
+    assert "read_only" not in listed.json()["roles"]
+
+    # A read only user (no tenant_settings:update) may not edit the matrix.
+    forbidden = client.put(
+        "/api/v1/tenant/portal-role-permissions", json={"standard": []}, headers=reader
+    )
+    assert forbidden.status_code == 403, forbidden.text
+
+    email = f"resync-{RUN}@example.org"
+    client.post(
+        "/api/v1/tenant/members",
+        json={
+            "email": email,
+            "display_name": "Resync Person",
+            "password": PASSWORD,
+            "role_codes": ["standard"],
+        },
+        headers=admin,
+    )
+    staff_login = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+    staff = {"Authorization": f"Bearer {staff_login.json()['access_token']}"}
+    before = client.get("/api/v1/portal/tickets", headers=staff)
+    assert before.status_code == 200, before.text
+
+    # Take "tickets:read" away from "standard"; a resync must apply it to the existing grant.
+    updated = client.put(
+        "/api/v1/tenant/portal-role-permissions",
+        json={"standard": ["documents:read"]},
+        headers=admin,
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["roles"]["standard"] == ["documents:read"]
+    resynced = client.post("/api/v1/tenant/portal-role-permissions/resync", headers=admin)
+    assert resynced.status_code == 200, resynced.text
+    assert resynced.json()["members"] >= 1
+    # A read only role (tenant_settings:update is the required permission, unaffected here) may
+    # not trigger the resync either.
+    assert (
+        client.post("/api/v1/tenant/portal-role-permissions/resync", headers=reader).status_code
+        == 403
+    )
+
+    # Restore the default so other tests in this module are unaffected.
+    restore = client.put("/api/v1/tenant/portal-role-permissions", json={}, headers=admin)
+    assert restore.status_code == 200, restore.text
+    client.post("/api/v1/tenant/portal-role-permissions/resync", headers=admin)
+
+
+def test_staff_invite_conflicts_with_existing_external_portal_account(
+    client: TestClient, world: World
+) -> None:
+    """Sicherheitsreview 2026-09-25, Befund 1: a contact who already holds an external portal
+    account (owner, tenant, provider, handover participant) must never also receive the tenant
+    wide staff grant on the same account. Adding that contact as a staff member reports the
+    conflict instead of silently widening the account's visibility."""
+    admin = bearer(login(client, world, "admin"))
+    email = f"extern-{RUN}@example.org"
+    contact = client.post(
+        "/api/v1/contacts",
+        json={"kind": "person", "first_name": "Extern", "last_name": RUN},
+        headers=admin,
+    )
+    assert contact.status_code == 201, contact.text
+    contact_id = contact.json()["id"]
+    party = client.post(
+        "/api/v1/parties", json={"members": [{"contact_id": contact_id}]}, headers=admin
+    )
+    assert party.status_code == 201, party.text
+    weg = client.post(
+        "/api/v1/properties",
+        json={"number": "911", "name": f"Konflikt-WEG {RUN}", "management_type": "hoa"},
+        headers=admin,
+    )
+    assert weg.status_code == 201, weg.text
+    building = client.post(
+        f"/api/v1/properties/{weg.json()['id']}/buildings", json={"name": "Haus"}, headers=admin
+    )
+    assert building.status_code == 201, building.text
+    unit = client.post(
+        f"/api/v1/properties/{weg.json()['id']}/units",
+        json={
+            "building_id": building.json()["id"],
+            "number": "01",
+            "label": "WE 01",
+            "unit_type": "apartment",
+        },
+        headers=admin,
+    )
+    assert unit.status_code == 201, unit.text
+    contract = client.post(
+        "/api/v1/contracts",
+        json={
+            "kind": "ownership",
+            "unit_id": unit.json()["id"],
+            "party_id": party.json()["id"],
+            "start_date": "2020-01-01",
+            "title_transfer_date": "2020-01-01",
+            "acquisition_kind": "first_acquisition",
+        },
+        headers=admin,
+    )
+    assert contract.status_code == 201, contract.text
+
+    # The account this contact receives on portal provisioning derives an owner (hoa_member_
+    # right) grant from that contract, so it already holds an external grant when the staff
+    # invite below reuses it.
+    provisioned = client.post(
+        "/api/v1/portal-admin/accounts",
+        json={"contact_id": contact_id, "email": email, "display_name": f"Extern {RUN}"},
+        headers=admin,
+    )
+    assert provisioned.status_code == 201, provisioned.text
+
+    invited = client.post(
+        "/api/v1/tenant/members",
+        json={
+            "email": email,
+            "display_name": f"Extern {RUN}",
+            "password": PASSWORD,
+            "role_codes": ["standard"],
+        },
+        headers=admin,
+    )
+    assert invited.status_code == 201, invited.text
+    member = invited.json()
+    assert member["portal_access"] == "conflict"
+    assert member["portal_access_reason"]
+
+    # The other, common branch (no conflict) still grants staff access normally.
+    fresh_email = f"granted-{RUN}@example.org"
+    granted = client.post(
+        "/api/v1/tenant/members",
+        json={
+            "email": fresh_email,
+            "display_name": f"Granted {RUN}",
+            "password": PASSWORD,
+            "role_codes": ["standard"],
+        },
+        headers=admin,
+    )
+    assert granted.status_code == 201, granted.text
+    assert granted.json()["portal_access"] == "granted"
+
+
+def test_external_portal_grant_refused_for_staff_account(
+    client: TestClient, world: World
+) -> None:
+    """Converse of the check above (Sicherheitsreview 2026-09-25, Befund 1): a staff member's
+    account must never additionally receive an external grant, even for a different contact
+    sharing the same e-mail."""
+    admin = bearer(login(client, world, "admin"))
+    email = f"staff-{RUN}@example.org"
+    staff_invite = client.post(
+        "/api/v1/tenant/members",
+        json={
+            "email": email,
+            "display_name": f"Staff {RUN}",
+            "password": PASSWORD,
+            "role_codes": ["standard"],
+        },
+        headers=admin,
+    )
+    assert staff_invite.status_code == 201, staff_invite.text
+    assert staff_invite.json()["portal_access"] == "granted"
+
+    other_contact = client.post(
+        "/api/v1/contacts",
+        json={"kind": "person", "first_name": "Andere", "last_name": RUN},
+        headers=admin,
+    )
+    assert other_contact.status_code == 201, other_contact.text
+
+    refused = client.post(
+        "/api/v1/portal-admin/accounts",
+        json={
+            "contact_id": other_contact.json()["id"],
+            "email": email,
+            "display_name": f"Andere {RUN}",
+        },
+        headers=admin,
+    )
+    assert refused.status_code == 409, refused.text
+    assert "Mitarbeiterzugang" in refused.json()["detail"]

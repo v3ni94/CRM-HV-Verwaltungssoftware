@@ -275,7 +275,89 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     invoice_forwarding: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
+    # M7 fast table import (operator 25.09.2026, docs/rules/M7-06.md): CSV/XLSX contact imports
+    # first run one small "map_columns" call, then process rows deterministically instead of
+    # sending every row through the LLM. Default on; falls back to the chunked LLM path per run
+    # when the mapping has low confidence or no header. Product safeguard, not a legal duty.
+    ai_fast_table_import: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    # Portalrechte je CRM-Rolle (Betreiberentscheidung 25.09.2026, M2-08 entschieden,
+    # docs/rules/M2-07.md): Überschreibungen der eingebauten Grundeinstellung
+    # (``mhvp.portal.staff_access.DEFAULT_STAFF_PORTAL_PERMISSIONS``). Shape:
+    # {"<role_code>": ["documents:read", ...]}. Fehlende Rollen nutzen die Grundeinstellung.
+    portal_role_permissions: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    # M35 Stufe 3 (docs/plans/M35-objektakte-uebernahme.md, rule stage,
+    # docs/rules/M35-02.md): {"auto_apply_threshold": float 0..1}. Missing key falls back to
+    # `mhvp.objektakte.classification.DEFAULT_AUTO_APPLY_THRESHOLD`.
+    objektakte_classification: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+
+class VatStatus(StrEnum):
+    UNSET = "unset"
+    REGELBESTEUERT = "regelbesteuert"
+    KLEINUNTERNEHMER = "kleinunternehmer"
+
+
+class ChartOfAccountsKind(StrEnum):
+    UNSET = "unset"
+    SKR03 = "skr03"
+    SKR04 = "skr04"
+
+
+class TenantBillingSettings(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Rechnungsstellung und Steuer je Mandant (operator decision 25.09.2026, M13-04/M18-01).
+
+    The invoicing entity is always the tenant the user is logged in as. Everything here is
+    nullable/unset by default; no value is invented. Numbering is allocated gapless per
+    ``invoice_prefix`` and calendar year via ``mhvp.accounting.numbering.allocate_invoice_number``
+    (row locked counter, mirroring ``JournalNumberCounter``).
+    """
+
+    __tablename__ = "tenant_billing_settings"
+    __table_args__ = (UniqueConstraint("tenant_id"),)
+
+    invoice_prefix: Mapped[str | None] = mapped_column(String(16))
+    vat_status: Mapped[VatStatus] = mapped_column(
+        _enum(VatStatus, "tenant_vat_status"), nullable=False, default=VatStatus.UNSET
+    )
+    # Encrypted at rest (EncryptedText); only the last 4 characters are ever returned by the API.
+    vat_id: Mapped[str | None] = mapped_column(EncryptedText())
+    tax_number: Mapped[str | None] = mapped_column(EncryptedText())
+    # Leitweg-ID for XRechnung to public sector recipients (optional, not a secret).
+    leitweg_id: Mapped[str | None] = mapped_column(String(64))
+    # Mandatory note for Kleinunternehmer invoices (§ 19 UStG); the operator enters the wording.
+    kleinunternehmer_note: Mapped[str | None] = mapped_column(Text)
+    # DATEV Buchungsstapel export parameters (M18-01); export stays blocked until all three of
+    # consultant_number, client_number and chart_of_accounts are set.
+    datev_consultant_number: Mapped[str | None] = mapped_column(String(32))
+    datev_client_number: Mapped[str | None] = mapped_column(String(32))
+    datev_chart_of_accounts: Mapped[ChartOfAccountsKind] = mapped_column(
+        _enum(ChartOfAccountsKind, "tenant_chart_of_accounts_kind"),
+        nullable=False,
+        default=ChartOfAccountsKind.UNSET,
+    )
+    datev_account_length: Mapped[int | None] = mapped_column(Integer)
+    datev_fiscal_year_start_month: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+
+class InvoiceNumberCounter(IdMixin, TenantMixin, Base):
+    """Gapless outgoing invoice numbering per tenant/prefix/year (operator decision 25.09.2026):
+    format PREFIX-JJJJ-000001. The row is locked while a number is allocated, mirroring
+    ``mhvp.accounting.models.JournalNumberCounter``."""
+
+    __tablename__ = "invoice_number_counter"
+    __table_args__ = (UniqueConstraint("tenant_id", "prefix", "year"),)
+
+    prefix: Mapped[str] = mapped_column(String(16), nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    last_number: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class ApiKey(IdMixin, TimestampMixin, TenantMixin, Base):

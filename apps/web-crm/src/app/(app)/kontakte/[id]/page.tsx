@@ -52,6 +52,8 @@ export default async function ContactDetailPage({
   const tab: Tab = (TABS as readonly string[]).includes(sp.tab ?? "") ? (sp.tab as Tab) : "stammdaten";
   const contact = await loadContact(id);
   const api = serverApi();
+  const me = await api.GET("/api/v1/auth/me");
+  const canDelete = me.data?.permissions.includes("contacts:delete") ?? false;
   const notes =
     tab === "notizen"
       ? ((await api.GET("/api/v1/contacts/{contact_id}/notes", { params: { path: { contact_id: id } } })).data ?? [])
@@ -88,7 +90,7 @@ export default async function ContactDetailPage({
           </p>
         </div>
         <div className="ml-auto">
-          <ContactActions id={contact.id} name={contact.display_name} />
+          <ContactActions id={contact.id} name={contact.display_name} canDelete={canDelete} />
         </div>
       </div>
 
