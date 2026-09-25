@@ -284,3 +284,50 @@ def test_ticket_to_order_to_invoice(client: TestClient, world: World) -> None:
         o["status"] for o in full["work_orders"]
     ) == ["accepted", "quoted"]
     assert [e["kind"] for e in full["events"]][:2] == ["created", "status"]
+
+
+def test_every_closing_status_triggers_mail_archiving(
+    client: TestClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Operator rule 25.09.2026: done, closed and rejected archive the ticket's mails."""
+    from mhvp.communication import services as comm_services
+
+    calls: list[str] = []
+
+    async def _fake(session: Any, settings: Any, tenant_id: Any, ticket_id: Any) -> None:
+        calls.append(str(ticket_id))
+
+    monkeypatch.setattr(comm_services, "enqueue_archive_for_ticket", _fake)
+    h = bearer(login(client, world, "m19admin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "792", "name": "Archivhaus", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    ids = []
+    for _ in range(3):
+        ids.append(
+            _ok(
+                client.post(
+                    "/api/v1/tickets",
+                    json={
+                        "category": "Sonstiges",
+                        "title": "Archivtest",
+                        "property_id": prop["id"],
+                        "public_description": "Archivtest",
+                        "source": "phone",
+                    },
+                    headers=h,
+                ),
+                201,
+            )["id"]
+        )
+    for ticket_id, status in zip(ids, ("done", "rejected", "done"), strict=True):
+        _ok(client.patch(f"/api/v1/tickets/{ticket_id}", json={"status": status}, headers=h))
+    _ok(client.patch(f"/api/v1/tickets/{ids[2]}", json={"status": "closed"}, headers=h))
+    assert calls.count(ids[0]) == 1
+    assert calls.count(ids[1]) == 1  # rejected archives as well
+    assert calls.count(ids[2]) == 2  # done, then closed

@@ -277,7 +277,7 @@ async def enqueue_archive_for_ticket(
     session: AsyncSession, settings: Settings, tenant_id: uuid.UUID, ticket_id: uuid.UUID
 ) -> None:
     """ "Erledigt archiviert Mail" (M20-03, operator 25.09.2026): beim Setzen eines Tickets auf
-    erledigt/geschlossen werden dessen Gmail-Nachrichten archiviert. Läuft synchron (Tests,
+    erledigt, geschlossen oder abgelehnt werden dessen Gmail-Nachrichten archiviert. Läuft synchron (Tests,
     ``ai_inline`` wird hier als "ohne Worker" gelesen) oder über die Queue ``mail``; ein Fehler
     beim Anstoßen darf den Statuswechsel nie stören."""
     if settings.ai_inline:

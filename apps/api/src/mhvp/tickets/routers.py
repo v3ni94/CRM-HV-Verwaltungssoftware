@@ -76,6 +76,9 @@ TICKET_FLOW = {
     TicketStatus.CLOSED: set(),
     TicketStatus.REJECTED: {TicketStatus.IN_PROGRESS},
 }
+
+# Statuses that end a ticket; they set resolved_at and trigger mail archiving.
+CLOSING_STATUSES = frozenset({TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED})
 ORDER_FLOW = {
     OrderStatus.DRAFT: {OrderStatus.REQUESTED, OrderStatus.CANCELLED},
     OrderStatus.REQUESTED: {
@@ -836,13 +839,12 @@ async def patch_ticket(
                 {"from": ticket.status.value, "to": body.status.value},
             )
             ticket.status = body.status
-            ticket.resolved_at = (
-                datetime.now(UTC)
-                if body.status in (TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED)
-                else None
-            )
+            ticket.resolved_at = datetime.now(UTC) if body.status in CLOSING_STATUSES else None
             if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
                 await _queue_learn_playbook(session, request.app.state.settings, ticket)
+            if body.status in CLOSING_STATUSES:
+                # Operator rule: every closing status (done, closed, rejected) archives the
+                # linked mails in the mailbox; the mailbox flag archive_on_ticket_done applies.
                 from mhvp.communication.services import enqueue_archive_for_ticket
 
                 await enqueue_archive_for_ticket(
@@ -972,13 +974,12 @@ async def bulk_status(
                 {"from": ticket.status.value, "to": body.status.value, "bulk": True},
             )
             ticket.status = body.status
-            ticket.resolved_at = (
-                datetime.now(UTC)
-                if body.status in (TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED)
-                else None
-            )
+            ticket.resolved_at = datetime.now(UTC) if body.status in CLOSING_STATUSES else None
             if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
                 await _queue_learn_playbook(session, request.app.state.settings, ticket)
+            if body.status in CLOSING_STATUSES:
+                # Operator rule: every closing status (done, closed, rejected) archives the
+                # linked mails in the mailbox; the mailbox flag archive_on_ticket_done applies.
                 from mhvp.communication.services import enqueue_archive_for_ticket
 
                 await enqueue_archive_for_ticket(
