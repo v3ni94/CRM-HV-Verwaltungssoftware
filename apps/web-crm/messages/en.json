@@ -35,7 +35,8 @@
     "navCollapse": "Collapse sidebar",
     "navExpand": "Expand sidebar",
     "openNav": "Open navigation",
-    "dms": "DMS"
+    "dms": "DMS",
+    "immoware": "Immoware24"
   },
   "Hoa": {
     "title": "HOA management",
@@ -963,6 +964,10 @@
     "dms": {
       "title": "DMS connection",
       "description": "Manage Paperless credentials and field IDs, view Google Drive."
+    },
+    "immoware": {
+      "title": "Immoware24 connection",
+      "description": "Set up the connection to Immoware24 over WebDAV, CardDAV and CalDAV and trigger fetches."
     }
   },
   "MailPlaybooks": {
@@ -1170,5 +1175,107 @@
     "secretMissing": "not stored",
     "secretHint": "The client secret and refresh token are write only and never shown again. Leave empty to keep the stored credentials.",
     "secretPairRequired": "Enter the client secret and refresh token together."
+  },
+  "ImmowareSettings": {
+    "title": "Immoware24 connection",
+    "intro": "Immoware24 stays the master system. The hub only reads over WebDAV, CardDAV and CalDAV; there is no write path towards Immoware24.",
+    "connectionTitle": "Connection",
+    "hint": "Credentials of the Immoware24 tenant for read access over DAV.",
+    "enabled": "Active",
+    "baseUrl": "Base URL (WebDAV)",
+    "carddavUrl": "CardDAV URL",
+    "caldavUrl": "CalDAV URL",
+    "username": "User",
+    "password": "Password",
+    "passwordStored": "Password stored",
+    "passwordMissing": "No password stored",
+    "verifyTls": "Verify TLS",
+    "pollMinutes": "Poll interval (minutes)",
+    "save": "Save",
+    "check": "Check connection",
+    "saved": "Saved.",
+    "lastCheck": "Last check: {at}",
+    "checkOk": "Successful",
+    "checkFailed": "Failed",
+    "noCheckYet": "Not checked yet.",
+    "syncTitle": "Fetch",
+    "fetchNow": {
+      "webdav": "Fetch documents now",
+      "carddav": "Fetch contacts now",
+      "caldav": "Fetch events now"
+    },
+    "runsTitle": "Recent runs",
+    "runsEmpty": "No runs yet.",
+    "columns": {
+      "kind": "Kind",
+      "started": "Started",
+      "finished": "Finished",
+      "status": "Status",
+      "seen": "Seen",
+      "added": "Added",
+      "changed": "Changed",
+      "removed": "Removed",
+      "error": "Error"
+    },
+    "status": {
+      "success": "Successful",
+      "error": "Error",
+      "running": "Running"
+    }
+  },
+  "Immoware": {
+    "title": "Immoware24",
+    "intro": "Mirrored documents, contacts and events from Immoware24, read over WebDAV, CardDAV and CalDAV.",
+    "loading": "Loading...",
+    "errors": {
+      "notConfigured": "Immoware24 is not set up.",
+      "unreachable": "Immoware24 is not reachable."
+    },
+    "tabs": {
+      "documents": "Documents",
+      "contacts": "Contacts",
+      "events": "Events"
+    },
+    "documents": {
+      "breadcrumb": "Path",
+      "searchPlaceholder": "Search documents",
+      "empty": "No documents found.",
+      "columns": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified",
+        "actions": "Actions"
+      },
+      "download": "Download"
+    },
+    "contacts": {
+      "searchPlaceholder": "Search contacts",
+      "onlyUnmatched": "Only unmatched",
+      "empty": "No contacts found.",
+      "columns": {
+        "name": "Name",
+        "org": "Organization",
+        "email": "Email",
+        "phone": "Phone",
+        "matched": "Match",
+        "actions": "Actions"
+      },
+      "matched": "Matched",
+      "unmatched": "Unmatched",
+      "match": "Match",
+      "createContact": "Create as contact",
+      "matchPlaceholder": "Search contact",
+      "search": "Search"
+    },
+    "events": {
+      "from": "From",
+      "to": "To",
+      "empty": "No events in this period."
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page}"
+    }
   }
 }

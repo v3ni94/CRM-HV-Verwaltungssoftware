@@ -88,7 +88,8 @@
     "navCollapse": "Leiste einklappen",
     "navExpand": "Leiste ausklappen",
     "dms": "DMS",
-    "openNav": "Navigation öffnen"
+    "openNav": "Navigation öffnen",
+    "immoware": "Immoware24"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -1703,6 +1704,10 @@
     "dms": {
       "title": "DMS-Anbindung",
       "description": "Paperless-Zugangsdaten und Feld-IDs pflegen, Google Drive anzeigen."
+    },
+    "immoware": {
+      "title": "Immoware24-Anbindung",
+      "description": "Verbindung zu Immoware24 per WebDAV, CardDAV und CalDAV einrichten und Abholung anstossen."
     }
   },
   "Members": {
@@ -2068,5 +2073,107 @@
     "secretMissing": "nicht hinterlegt",
     "secretHint": "Client-Secret und Refresh-Token werden nur geschrieben und nie wieder angezeigt. Leer lassen, um die hinterlegten Zugangsdaten zu behalten.",
     "secretPairRequired": "Client-Secret und Refresh-Token zusammen eintragen."
+  },
+  "ImmowareSettings": {
+    "title": "Immoware24-Anbindung",
+    "intro": "Immoware24 bleibt Master. Der Hub liest ausschliesslich per WebDAV, CardDAV und CalDAV, es gibt keinen Schreibpfad Richtung Immoware24.",
+    "connectionTitle": "Verbindung",
+    "hint": "Zugangsdaten des Immoware24-Mandanten fuer den Lesezugriff per DAV.",
+    "enabled": "Aktiv",
+    "baseUrl": "Basis-URL (WebDAV)",
+    "carddavUrl": "CardDAV-URL",
+    "caldavUrl": "CalDAV-URL",
+    "username": "Benutzer",
+    "password": "Passwort",
+    "passwordStored": "Passwort hinterlegt",
+    "passwordMissing": "Kein Passwort hinterlegt",
+    "verifyTls": "TLS pruefen",
+    "pollMinutes": "Abrufintervall (Minuten)",
+    "save": "Speichern",
+    "check": "Verbindung pruefen",
+    "saved": "Gespeichert.",
+    "lastCheck": "Letzte Pruefung: {at}",
+    "checkOk": "Erfolgreich",
+    "checkFailed": "Fehlgeschlagen",
+    "noCheckYet": "Noch nicht geprueft.",
+    "syncTitle": "Abholung",
+    "fetchNow": {
+      "webdav": "Dokumente jetzt abrufen",
+      "carddav": "Kontakte jetzt abrufen",
+      "caldav": "Termine jetzt abrufen"
+    },
+    "runsTitle": "Letzte Laeufe",
+    "runsEmpty": "Noch keine Laeufe.",
+    "columns": {
+      "kind": "Art",
+      "started": "Start",
+      "finished": "Ende",
+      "status": "Status",
+      "seen": "Gesehen",
+      "added": "Neu",
+      "changed": "Geaendert",
+      "removed": "Entfernt",
+      "error": "Fehler"
+    },
+    "status": {
+      "success": "Erfolgreich",
+      "error": "Fehler",
+      "running": "Laeuft"
+    }
+  },
+  "Immoware": {
+    "title": "Immoware24",
+    "intro": "Gespiegelte Dokumente, Kontakte und Termine aus Immoware24, gelesen per WebDAV, CardDAV und CalDAV.",
+    "loading": "Wird geladen...",
+    "errors": {
+      "notConfigured": "Immoware24 ist nicht eingerichtet.",
+      "unreachable": "Immoware24 ist nicht erreichbar."
+    },
+    "tabs": {
+      "documents": "Dokumente",
+      "contacts": "Kontakte",
+      "events": "Termine"
+    },
+    "documents": {
+      "breadcrumb": "Pfad",
+      "searchPlaceholder": "Dokumente durchsuchen",
+      "empty": "Keine Dokumente gefunden.",
+      "columns": {
+        "name": "Name",
+        "size": "Groesse",
+        "modified": "Geaendert",
+        "actions": "Aktionen"
+      },
+      "download": "Herunterladen"
+    },
+    "contacts": {
+      "searchPlaceholder": "Kontakte durchsuchen",
+      "onlyUnmatched": "Nur nicht zugeordnete",
+      "empty": "Keine Kontakte gefunden.",
+      "columns": {
+        "name": "Name",
+        "org": "Organisation",
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "matched": "Zuordnung",
+        "actions": "Aktionen"
+      },
+      "matched": "Zugeordnet",
+      "unmatched": "Nicht zugeordnet",
+      "match": "Zuordnen",
+      "createContact": "Als Kontakt anlegen",
+      "matchPlaceholder": "Kontakt suchen",
+      "search": "Suchen"
+    },
+    "events": {
+      "from": "Von",
+      "to": "Bis",
+      "empty": "Keine Termine im Zeitraum."
+    },
+    "pagination": {
+      "previous": "Zurueck",
+      "next": "Weiter",
+      "page": "Seite {page}"
+    }
   }
 }
