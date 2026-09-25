@@ -114,6 +114,18 @@ class ErrorCodes:
         "Briefbogen unvollständig",
         "Mandatory company data of the tenant is missing (tenant settings).",
     )
+    DMS_NOT_CONFIGURED = ErrorCode(
+        "MHVP-DOC-0005",
+        502,
+        "Paperless ist nicht eingerichtet",
+        "No enabled Paperless DmsConnection with base_url and token for this tenant.",
+    )
+    DMS_UNAVAILABLE = ErrorCode(
+        "MHVP-DOC-0006",
+        503,
+        "Paperless nicht erreichbar",
+        "Paperless request failed or timed out.",
+    )
     ACC_UNBALANCED = ErrorCode(
         "MHVP-ACC-0001",
         422,

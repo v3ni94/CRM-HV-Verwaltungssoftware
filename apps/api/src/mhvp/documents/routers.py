@@ -9,6 +9,7 @@ from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -32,6 +33,11 @@ from mhvp.documents.models import (
     MirrorStatus,
     RetentionProfile,
     StorageKind,
+)
+from mhvp.documents.paperless_search import (
+    PaperlessDocument,
+    PaperlessSearch,
+    PaperlessSearchError,
 )
 
 router = APIRouter(tags=["Dokumente"])
@@ -775,3 +781,137 @@ async def serial_letter(
             assert document is not None  # noqa: S101 - store=True
             documents.append(await _out(session, document))
         return s.SerialLetterOut(documents=documents)
+
+
+# Paperless-Dokumente in Ticket- und Objektansicht (M31) -----------------------------------
+
+
+async def _paperless_client(session: Any) -> PaperlessSearch:
+    connection = await session.scalar(
+        select(DmsConnection).where(
+            DmsConnection.kind == StorageKind.PAPERLESS, DmsConnection.enabled.is_(True)
+        )
+    )
+    if connection is None or not connection.base_url or not connection.secret:
+        raise ProblemError(ErrorCodes.DMS_NOT_CONFIGURED)
+    options = connection.options or {}
+    object_field_id = options.get("object_field_id")
+    company_field_id = options.get("company_field_id")
+    return PaperlessSearch(
+        base_url=connection.base_url,
+        token=connection.secret,
+        object_field_id=int(object_field_id) if object_field_id else None,
+        company_field_id=int(company_field_id) if company_field_id else None,
+    )
+
+
+def _document_out(request: Request, doc: PaperlessDocument) -> s.DmsDocumentOut:
+    base = str(request.url_for("dms_document_file", paperless_id=doc.id))
+    return s.DmsDocumentOut(
+        id=doc.id,
+        title=doc.title,
+        created=doc.created,
+        added=doc.added,
+        correspondent=doc.correspondent,
+        document_type=doc.document_type,
+        tags=doc.tags,
+        page_count=doc.page_count,
+        original_file_name=doc.original_file_name,
+        preview_url=f"{base}?kind=preview",
+        download_url=f"{base}?kind=download",
+    )
+
+
+@router.get(
+    "/properties/{property_id}/dms-documents", summary="Paperless-Dokumente eines Objekts"
+)
+async def property_dms_documents(
+    property_id: uuid.UUID,
+    request: Request,
+    page: Page = 1,
+    page_size: PageSize = 25,
+    principal: TenantPrincipal = Depends(READ),
+) -> s.DmsDocumentPage:
+    from mhvp.properties.models import Property
+
+    async with tenant_tx(request, principal) as session:
+        prop = await _get(session, Property, property_id)
+        client = await _paperless_client(session)
+        try:
+            found = await client.list_by_object_number(prop.number, page=page, page_size=page_size)
+        except PaperlessSearchError as exc:
+            raise ProblemError(ErrorCodes.DMS_UNAVAILABLE, detail=str(exc)) from None
+        finally:
+            await client.aclose()
+        return s.DmsDocumentPage(
+            data=[_document_out(request, d) for d in found.items],
+            meta=s.DmsDocumentPageMeta(page=page, per_page=page_size, total=found.total),
+        )
+
+
+@router.get("/tickets/{ticket_id}/dms-documents", summary="Paperless-Dokumente eines Tickets")
+async def ticket_dms_documents(
+    ticket_id: uuid.UUID,
+    request: Request,
+    page: Page = 1,
+    page_size: PageSize = 25,
+    principal: TenantPrincipal = Depends(READ),
+) -> s.DmsDocumentPage:
+    from mhvp.properties.models import Property
+    from mhvp.tickets.models import Ticket
+
+    async with tenant_tx(request, principal) as session:
+        ticket = await _get(session, Ticket, ticket_id)
+        client = await _paperless_client(session)
+        try:
+            by_number: dict[int, PaperlessDocument] = {}
+            if ticket.property_id is not None:
+                prop = await session.get(Property, ticket.property_id)
+                if prop is not None:
+                    for d in (
+                        await client.list_by_object_number(prop.number, page=1, page_size=page_size)
+                    ).items:
+                        by_number[d.id] = d
+            for d in (
+                await client.list_by_ticket(ticket.number, page=1, page_size=page_size)
+            ).items:
+                by_number.setdefault(d.id, d)
+        except PaperlessSearchError as exc:
+            raise ProblemError(ErrorCodes.DMS_UNAVAILABLE, detail=str(exc)) from None
+        finally:
+            await client.aclose()
+        items = sorted(by_number.values(), key=lambda d: d.created or "", reverse=True)
+        total = len(items)
+        start = (page - 1) * page_size
+        page_items = items[start : start + page_size]
+        return s.DmsDocumentPage(
+            data=[_document_out(request, d) for d in page_items],
+            meta=s.DmsDocumentPageMeta(page=page, per_page=page_size, total=total),
+        )
+
+
+@router.get(
+    "/dms-documents/{paperless_id}/file",
+    name="dms_document_file",
+    summary="Paperless-Datei laden (Proxy, Token bleibt serverseitig)",
+)
+async def dms_document_file(
+    paperless_id: int,
+    request: Request,
+    kind: str = Query("download", pattern="^(download|preview|thumb)$"),
+    principal: TenantPrincipal = Depends(READ),
+) -> StreamingResponse:
+    async with tenant_tx(request, principal) as session:
+        client = await _paperless_client(session)
+        try:
+            file = await client.fetch_file(paperless_id, kind)  # type: ignore[arg-type]
+        except PaperlessSearchError as exc:
+            raise ProblemError(ErrorCodes.DMS_UNAVAILABLE, detail=str(exc)) from None
+        finally:
+            await client.aclose()
+        headers = {}
+        if kind == "download" and file.filename:
+            headers["Content-Disposition"] = f'attachment; filename="{quote(file.filename)}"'
+        return StreamingResponse(
+            iter([file.content]), media_type=file.content_type, headers=headers
+        )

@@ -141,6 +141,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^tickets$/ },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/comments$`) },
+  // Paperless-Dokumente in Ticket- und Objektansicht (M31).
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/dms-documents$`) },
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}/dms-documents$`) },
+  { method: "GET", pattern: /^dms-documents\/[0-9]+\/file$/ },
   // SLA und Bereitschaft (M21 Übernahme aus dem Immoware Hub).
   { method: "GET", pattern: /^sla\/(rules|clocks|on-call|on-call\/current|alerts|calendar)$/ },
   { method: "GET", pattern: new RegExp(`^sla/rules/${ID}/steps$`) },
