@@ -118,6 +118,18 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^letting/listings/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^letting/listings/${ID}$`) },
   // Makler (M28-01): property and unit pickers for the listing creation form.
+  // Übergabeprotokolle (M30): protocol, sub records, photos, signatures, completion, versions.
+  { method: "GET", pattern: /^handover\/protocols$/ },
+  { method: "GET", pattern: /^handover\/protocols\/prefill$/ },
+  { method: "POST", pattern: /^handover\/protocols$/ },
+  { method: "GET", pattern: new RegExp(`^handover/protocols/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^handover/protocols/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^handover/protocols/${ID}/hints$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(documents|signatures|complete|versions|status|dispatches)$`) },
+  { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(documents|signatures)/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)(/order)?$`) },
+  { method: "PATCH", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
   { method: "GET", pattern: /^properties$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/units$`) },
   // Makler (M28 stage 4, docs/rules/M28-01.md): FLOW SQL dump import preview and apply.
@@ -142,7 +154,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
-const MULTIPART = /^(documents|letting\/flow-import\/preview)$/;
+const MULTIPART = new RegExp(`^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents)$`);
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
