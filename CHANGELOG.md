@@ -13,6 +13,10 @@ unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge ob
 - Protokollnummern UP-JJJJMMTT-NNN aus der Nummernfolge je Mandant und Tag
 - Migration 0043 (Tabellen handover_*), Regel M30-01, Plan docs/plans/M30-uebergabeprotokoll.md, offene Fragen M30-01 bis M30-04 (Gehilfenzugang über das Portal folgt als Stufe 3)
 
+## 1.6.1 (25.09.2026) Google Drive auf der DMS-Seite einrichtbar
+
+- Google-Drive-Anbindung wird auf der Seite DMS-Anbindung eingerichtet: Wurzelordner, OAuth-Client, Zugangsdaten
+
 ## 1.6.0 (25.09.2026) Einstellungsseite DMS-Anbindung
 
 - Neue Einstellungsseite DMS-Anbindung: Paperless-Basis-URL, API-Token und die Feld-IDs Objektnummer und Gesellschaft im Browser pflegbar

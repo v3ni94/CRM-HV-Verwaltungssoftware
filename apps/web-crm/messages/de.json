@@ -2045,7 +2045,7 @@
     "intro": "Verbindung des CRM zum Dokumentenmanagement. Immoware24 bleibt Master der Stammdaten.",
     "paperlessTitle": "Paperless",
     "googleDriveTitle": "Google Drive",
-    "googleDriveHint": "Nur zur Anzeige. Die Anbindung wird nicht über diese Seite eingerichtet.",
+    "googleDriveHint": "Google Drive wird über dieses Formular eingerichtet. OAuth-Client in der Google Cloud Console anlegen, Drive-API aktivieren, Refresh-Token einmalig per OAuth-Playground oder gcloud erzeugen.",
     "enabled": "Aktiv",
     "baseUrl": "Basis-URL",
     "baseUrlHint": "Nur https zulässig.",
@@ -2059,7 +2059,16 @@
     "saved": "Gespeichert.",
     "yes": "Ja",
     "no": "Nein",
-    "notSet": "nicht hinterlegt"
+    "notSet": "nicht hinterlegt",
+    "rootFolderId": "Ordner-ID des Wurzelordners",
+    "rootFolderIdHint": "Die ID aus der Drive-URL des Ordners.",
+    "clientId": "OAuth Client-ID",
+    "clientSecret": "Client-Secret",
+    "refreshToken": "Refresh-Token",
+    "secretStored": "Zugangsdaten hinterlegt",
+    "secretMissing": "nicht hinterlegt",
+    "secretHint": "Client-Secret und Refresh-Token werden nur geschrieben und nie wieder angezeigt. Leer lassen, um die hinterlegten Zugangsdaten zu behalten.",
+    "secretPairRequired": "Client-Secret und Refresh-Token zusammen eintragen."
   },
   "Handover": {
     "title": "Übergabeprotokolle",

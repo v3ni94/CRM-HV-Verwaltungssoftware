@@ -1146,7 +1146,7 @@
     "intro": "Connection between the CRM and document management. Immoware24 remains the master of record.",
     "paperlessTitle": "Paperless",
     "googleDriveTitle": "Google Drive",
-    "googleDriveHint": "Read only. This connection is not configured on this page.",
+    "googleDriveHint": "Google Drive is configured through this form. Create an OAuth client in the Google Cloud Console, enable the Drive API, generate a refresh token once via OAuth Playground or gcloud.",
     "enabled": "Active",
     "baseUrl": "Base URL",
     "baseUrlHint": "Only https is allowed.",
@@ -1160,6 +1160,15 @@
     "saved": "Saved.",
     "yes": "Yes",
     "no": "No",
-    "notSet": "not set"
+    "notSet": "not set",
+    "rootFolderId": "Root folder ID",
+    "rootFolderIdHint": "The ID from the folder's Drive URL.",
+    "clientId": "OAuth client ID",
+    "clientSecret": "Client secret",
+    "refreshToken": "Refresh token",
+    "secretStored": "Credentials stored",
+    "secretMissing": "not stored",
+    "secretHint": "The client secret and refresh token are write only and never shown again. Leave empty to keep the stored credentials.",
+    "secretPairRequired": "Enter the client secret and refresh token together."
   }
 }
