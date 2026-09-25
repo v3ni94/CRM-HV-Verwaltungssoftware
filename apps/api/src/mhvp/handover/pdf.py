@@ -409,7 +409,7 @@ def render(
                         ]
                         for d in rd
                     ],
-                    [40 * mm, 64 * mm, 20 * mm, 30 * mm, 20 * mm],
+                    [36 * mm, 58 * mm, 20 * mm, 30 * mm, 30 * mm],
                 )
             )
         block += _photos(photos.get(str(room.id), []))
@@ -433,7 +433,7 @@ def render(
                     ]
                     for d in loose
                 ],
-                [40 * mm, 64 * mm, 20 * mm, 30 * mm, 20 * mm],
+                [36 * mm, 58 * mm, 20 * mm, 30 * mm, 30 * mm],
             )
         )
         for d in loose:
@@ -484,7 +484,7 @@ def render(
                 for x in full["notes"]
                 if not x.is_internal
             ],
-            [30 * mm, 74 * mm, 30 * mm, 20 * mm, 20 * mm],
+            [28 * mm, 66 * mm, 30 * mm, 26 * mm, 24 * mm],
         )
     )
     if p.general_note:

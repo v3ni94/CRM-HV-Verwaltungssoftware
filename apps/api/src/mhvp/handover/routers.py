@@ -229,7 +229,7 @@ class StatusIn(_In):
     action: str = Field(pattern="^(cancel|archive|unarchive)$")
 
 
-class DispatchIn(_In):
+class HandoverDispatchIn(_In):
     participant_ids: list[uuid.UUID] | None = None
     channel: str = Field(default="email", pattern="^(email|portal|post)$")
 
@@ -878,7 +878,7 @@ async def _was_sent(session: Any, p: HandoverProtocol) -> bool:
 )
 async def prepare_dispatches(
     protocol_id: uuid.UUID,
-    body: DispatchIn,
+    body: HandoverDispatchIn,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:

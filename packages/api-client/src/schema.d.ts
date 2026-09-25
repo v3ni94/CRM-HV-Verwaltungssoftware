@@ -7789,6 +7789,21 @@ export interface components {
             /** Valid To */
             valid_to: string | null;
         };
+        /** DispatchIn */
+        DispatchIn: {
+            /** Channel */
+            channel?: string | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+        };
         /** DmsConnectionIn */
         DmsConnectionIn: {
             /** Base Url */
@@ -8298,6 +8313,16 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HandoverDispatchIn */
+        HandoverDispatchIn: {
+            /**
+             * Channel
+             * @default email
+             */
+            channel: string;
+            /** Participant Ids */
+            participant_ids?: string[] | null;
         };
         /** HealthReport */
         HealthReport: {
@@ -11231,7 +11256,7 @@ export interface components {
         /** SerialDispatchIn */
         SerialDispatchIn: {
             /** Items */
-            items: components["schemas"]["mhvp__communication__dispatch__DispatchIn"][];
+            items: components["schemas"]["DispatchIn"][];
         };
         /** SerialLetterIn */
         SerialLetterIn: {
@@ -12094,21 +12119,6 @@ export interface components {
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
         };
-        /** DispatchIn */
-        mhvp__communication__dispatch__DispatchIn: {
-            /** Channel */
-            channel?: string | null;
-            /**
-             * Contact Id
-             * Format: uuid
-             */
-            contact_id: string;
-            /**
-             * Document Id
-             * Format: uuid
-             */
-            document_id: string;
-        };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
             /** Bank Name */
@@ -12163,16 +12173,6 @@ export interface components {
             id: string;
             /** Name */
             name: string;
-        };
-        /** DispatchIn */
-        mhvp__handover__routers__DispatchIn: {
-            /**
-             * Channel
-             * @default email
-             */
-            channel: string;
-            /** Participant Ids */
-            participant_ids?: string[] | null;
         };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
@@ -16788,7 +16788,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__communication__dispatch__DispatchIn"];
+                "application/json": components["schemas"]["DispatchIn"];
             };
         };
         responses: {
@@ -17636,7 +17636,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__handover__routers__DispatchIn"];
+                "application/json": components["schemas"]["HandoverDispatchIn"];
             };
         };
         responses: {

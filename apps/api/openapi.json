@@ -5716,6 +5716,39 @@
         "title": "DepositOut",
         "type": "object"
       },
+      "DispatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "pattern": "^(post|email|portal)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "contact_id"
+        ],
+        "title": "DispatchIn",
+        "type": "object"
+      },
       "DmsConnectionIn": {
         "additionalProperties": false,
         "properties": {
@@ -7231,6 +7264,34 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HandoverDispatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "default": "email",
+            "pattern": "^(email|portal|post)$",
+            "title": "Channel",
+            "type": "string"
+          },
+          "participant_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant Ids"
+          }
+        },
+        "title": "HandoverDispatchIn",
         "type": "object"
       },
       "HealthReport": {
@@ -16639,7 +16700,7 @@
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/mhvp__communication__dispatch__DispatchIn"
+              "$ref": "#/components/schemas/DispatchIn"
             },
             "maxItems": 2000,
             "minItems": 1,
@@ -19396,39 +19457,6 @@
         "title": "ProviderOut",
         "type": "object"
       },
-      "mhvp__communication__dispatch__DispatchIn": {
-        "additionalProperties": false,
-        "properties": {
-          "channel": {
-            "anyOf": [
-              {
-                "pattern": "^(post|email|portal)$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Channel"
-          },
-          "contact_id": {
-            "format": "uuid",
-            "title": "Contact Id",
-            "type": "string"
-          },
-          "document_id": {
-            "format": "uuid",
-            "title": "Document Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "document_id",
-          "contact_id"
-        ],
-        "title": "DispatchIn",
-        "type": "object"
-      },
       "mhvp__contacts__schemas__BankAccountIn": {
         "additionalProperties": false,
         "properties": {
@@ -19613,34 +19641,6 @@
           "name"
         ],
         "title": "TenantOut",
-        "type": "object"
-      },
-      "mhvp__handover__routers__DispatchIn": {
-        "additionalProperties": false,
-        "properties": {
-          "channel": {
-            "default": "email",
-            "pattern": "^(email|portal|post)$",
-            "title": "Channel",
-            "type": "string"
-          },
-          "participant_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Participant Ids"
-          }
-        },
-        "title": "DispatchIn",
         "type": "object"
       },
       "mhvp__platform__schemas__TenantOut": {
@@ -26887,7 +26887,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__communication__dispatch__DispatchIn"
+                "$ref": "#/components/schemas/DispatchIn"
               }
             }
           },
@@ -28223,7 +28223,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__handover__routers__DispatchIn"
+                "$ref": "#/components/schemas/HandoverDispatchIn"
               }
             }
           },
