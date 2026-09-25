@@ -86,6 +86,13 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "schedule": crontab(hour=6, minute=0),
                 "options": {"queue": "io"},
             },
+            # finAPI Stage 2: opt-in per tenant only (`FinApiTenantConfig.auto_fetch_enabled`,
+            # default off); the task itself queues nothing for a tenant that has not opted in.
+            "banking-finapi-scheduled-fetch": {
+                "task": "mhvp.banking.finapi_scheduled_fetch",
+                "schedule": crontab(hour=6, minute=30),
+                "options": {"queue": "io"},
+            },
             # Dunning previews on the 5th (15.1); approval and sending stay manual.
             "accounting-dunning-run": {
                 "task": "mhvp.accounting.dunning_run",

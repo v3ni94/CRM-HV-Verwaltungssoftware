@@ -21,10 +21,19 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 import httpx
 
+from mhvp.banking.camt import RawTransaction
+from mhvp.banking.connectors import (
+    BankAccountInfo,
+    BankSearchResult,
+    ConnectionResult,
+    WebFormHandle,
+)
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 # API version this client was written against (docs/integrations/finapi.md, retrieved
@@ -278,4 +287,120 @@ def _raise_for_status(response: httpx.Response, action: str) -> None:
             ErrorCodes.FINAPI_UNAVAILABLE,
             detail=f"{action} bei finAPI fehlgeschlagen (HTTP {response.status_code}).",
             developer_message=response.text[:500],
+        )
+
+
+def _finapi_transaction_to_raw(t: FinApiTransaction) -> RawTransaction:
+    """Shared mapping finAPI -> `RawTransaction` (6.9.7): the finAPI transaction id becomes the
+    ``bank_reference`` prefixed with ``finapi:`` so dedup (`mhvp.banking.services`, D05) works
+    the same way as for a file import. Nothing here is synthesized: a field the provider did
+    not send stays `None`."""
+    return RawTransaction(
+        bank_reference=f"finapi:{t.transaction_id}",
+        booking_date=datetime.fromisoformat(t.booking_date).date(),
+        value_date=datetime.fromisoformat(t.value_date).date() if t.value_date else None,
+        amount=Decimal(t.amount),
+        currency=t.currency,
+        counterpart_name=t.counterpart_name,
+        counterpart_iban=t.counterpart_iban,
+        counterpart_bic=t.counterpart_bic,
+        purpose=t.purpose,
+        end_to_end_id=t.end_to_end_id,
+        mandate_reference=t.mandate_reference,
+        creditor_id=t.creditor_id,
+        transaction_code=None,
+        raw={"finapi_transaction_id": t.transaction_id},
+    )
+
+
+class FinApiConnector:
+    """`mhvp.banking.connectors.BankConnector` implementation on top of `FinApiClient`
+    (Stage 1, M11-finapi rebuild). Read only PSD2/XS2A via the finAPI aggregator; no PIN or
+    TAN ever passes through here (see module docstring and
+    `docs/rules/M11-04-no-credentials-in-crm.md`)."""
+
+    def __init__(self, client: FinApiClient) -> None:
+        self._client = client
+
+    def search_bank(self, query: str) -> list[BankSearchResult]:
+        """Not verified: `docs/integrations/finapi.md` documents no separate bank search
+        endpoint for the WebForm 2.0 model. Bank selection (by name, IBAN or BIC) happens
+        inside the finAPI WebForm itself once `start_connection` opens it, not via a call from
+        this backend, so this method raises instead of guessing an endpoint (rule 0.1.3)."""
+        raise FinApiNotVerifiedError("Eine serverseitige Banksuche")
+
+    def start_connection(self, bank: BankSearchResult) -> WebFormHandle:
+        """`bank.external_ref` is only descriptive here (no verified bank-selection endpoint,
+        see `search_bank`); the operator picks the bank inside the WebForm that opens."""
+        web_form = self._client.create_bank_connection_import_web_form()
+        return WebFormHandle(
+            external_ref=web_form.web_form_id, url=web_form.url, status=web_form.status
+        )
+
+    def complete_connection(self, external_ref: str) -> ConnectionResult:
+        """Re-checks the WebForm and, once finished, the bank connection with the tenant's own
+        credentials (master prompt section 6): a browser return from the WebForm alone is
+        never trusted as proof of success."""
+        web_form = self._client.get_web_form(external_ref)
+        if web_form.status != "FINISHED" or not web_form.finapi_bank_connection_id:
+            return ConnectionResult(
+                status=web_form.status, connection_ref=None, consent_valid_until=None
+            )
+        details = self._client.get_bank_connection(web_form.finapi_bank_connection_id)
+        error = details.get("errorMessage")
+        return ConnectionResult(
+            status=str(details.get("status") or web_form.status),
+            connection_ref=web_form.finapi_bank_connection_id,
+            consent_valid_until=None,  # not verified: no consent-expiry field confirmed yet
+            error_message=error,
+        )
+
+    def list_accounts(self, connection_ref: str | None = None) -> list[BankAccountInfo]:
+        accounts = self._client.list_accounts(bank_connection_id=connection_ref)
+        return [
+            BankAccountInfo(
+                iban=a.iban or "",
+                currency=a.balance_currency or "EUR",
+                external_account_id=a.account_id,
+                account_holder_name=a.account_holder_name,
+                account_type=a.account_type,
+                account_name=a.account_name,
+                balance_booked=a.balance_booked,
+                balance_available=a.balance_available,
+                balance_currency=a.balance_currency,
+                balance_as_of=a.balance_as_of,
+            )
+            for a in accounts
+        ]
+
+    def fetch_transactions(
+        self, account: BankAccountInfo, since: date, until: date
+    ) -> list[RawTransaction]:
+        """Fetches every page finAPI returns for this account and stores it as delivered; the
+        `since`/`until` window is not filtered here because the verified `/transactions`
+        endpoint documents no confirmed date parameter (see docs/integrations/finapi.md,
+        "zu prüfen") -- filtering by date happens by the caller on the returned rows, nothing
+        is synthesized to fill a gap the provider does not cover (rule 0.1.3)."""
+        if account.external_account_id is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Konto ohne finAPI-Kontoreferenz.")
+        page = 1
+        out: list[RawTransaction] = []
+        while True:
+            items, has_more = self._client.list_transactions(
+                account_ids=[account.external_account_id], page=page
+            )
+            out.extend(_finapi_transaction_to_raw(t) for t in items if not t.is_removed)
+            if not has_more:
+                break
+            page += 1
+        return out
+
+    def refresh_consent(self, connection_ref: str) -> WebFormHandle:
+        """Re-authorization is only reachable through a fresh WebForm (docs/integrations/
+        finapi.md, "Update a Bank Connection" is not verified); `connection_ref` (the finAPI
+        bank connection id) is accepted for interface symmetry but the new WebForm is not tied
+        to it beyond what the operator does inside it."""
+        web_form = self._client.create_bank_connection_import_web_form()
+        return WebFormHandle(
+            external_ref=web_form.web_form_id, url=web_form.url, status=web_form.status
         )

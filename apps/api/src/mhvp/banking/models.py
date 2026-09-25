@@ -275,6 +275,9 @@ class FinApiTenantConfig(IdMixin, TimestampMixin, TenantMixin, Base):
     mandator_id: Mapped[str | None] = mapped_column(String(64))
     base_url: Mapped[str] = mapped_column(String(300), nullable=False)
     sandbox: Mapped[bool] = mapped_column(nullable=False, default=True)
+    # M11-finapi Stage 2: scheduled daily fetch, per tenant, default off (operator decision
+    # 25.09.2026). A manual click (POST .../fetch) is unaffected by this flag.
+    auto_fetch_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
 
 
 class FinApiConnection(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -297,6 +300,37 @@ class FinApiConnection(IdMixin, TimestampMixin, TenantMixin, Base):
     auto_update_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
     consent_valid_until: Mapped[date | None] = mapped_column(Date)
     last_error: Mapped[str | None] = mapped_column(Text)
+
+
+class InvoiceMatchBasis(StrEnum):
+    AMOUNT_AND_NUMBER = "amount_and_number"
+    AMOUNT_AND_IBAN = "amount_and_iban"
+
+
+class InvoiceBankTransactionLink(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Evidence that a bank transaction settles a payable invoice (M11-finapi Stage 3,
+    section 4 of the operator's rebuild prompt). Never posts anything by itself: booking still
+    goes through `mhvp.banking.matching.book_payment`/`mhvp.banking.payments.record_execution`
+    (four-eyes/gate rules unchanged); this table only records the automatic *finding* so a
+    person can review and book it (rule 0.1.6, AI/automation proposes, never posts alone)."""
+
+    __tablename__ = "invoice_bank_transaction_link"
+    __table_args__ = (
+        Index(
+            "uq_invoice_bank_transaction_link",
+            "tenant_id",
+            "invoice_id",
+            "bank_transaction_id",
+            unique=True,
+        ),
+    )
+
+    invoice_id: Mapped[uuid.UUID] = _fk("invoice.id")
+    bank_transaction_id: Mapped[uuid.UUID] = _fk("bank_transaction.id")
+    match_basis: Mapped[InvoiceMatchBasis] = mapped_column(
+        _enum(InvoiceMatchBasis, "invoice_match_basis"), nullable=False
+    )
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
 
 
 class FinApiAccountLink(IdMixin, TimestampMixin, TenantMixin, Base):

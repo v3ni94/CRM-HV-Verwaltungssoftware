@@ -1103,6 +1103,100 @@ async def toggle_checklist_item(
         return _ticket_out(ticket)
 
 
+class AttachInvoiceIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    invoice_id: uuid.UUID
+
+
+@router.post(
+    "/tickets/{ticket_id}/attach-invoice",
+    summary="Rechnung zuordnen (Kategorie Rechnung, Jahresablage im Objektordner)",
+)
+async def attach_invoice(
+    ticket_id: uuid.UUID,
+    body: AttachInvoiceIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """M11-finapi Stage 3: marks this ticket as an invoice ticket (`category = "invoice"`) and
+    files the invoice's original document into the property's Google Drive year folder
+    (`mhvp.documents.property_filing`, "<Objektordner>/<Jahr>"). Requires the ticket's own
+    property and the invoice's original document; nothing is invented when either is
+    missing. Idempotent: a repeated call with the same invoice does not re-upload the
+    document, only re-confirms the link."""
+    from mhvp.accounting.models import Invoice
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.documents.dms import DmsError
+    from mhvp.documents.models import Document
+    from mhvp.documents.property_filing import file_document_in_property_year_folder
+    from mhvp.properties.models import Property
+
+    async with tenant_tx(request, principal) as session:
+        ticket = await session.get(Ticket, ticket_id, with_for_update=True)
+        if ticket is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        _assert_not_merged(ticket)
+        invoice = await session.get(Invoice, body.invoice_id)
+        if invoice is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Rechnung nicht gefunden.")
+        if ticket.property_id is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Das Ticket hat kein zugeordnetes Objekt."
+            )
+        if invoice.document_id is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Die Rechnung hat keinen Originalbeleg."
+            )
+        property_ = await session.get(Property, ticket.property_id)
+        document = await session.get(Document, invoice.document_id)
+        if property_ is None or document is None:  # pragma: no cover - FK integrity
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+
+        already_filed = ticket.extra_fields.get("invoice_drive_file_ref")
+        if str(ticket.extra_fields.get("invoice_id")) != str(invoice.id) or not already_filed:
+            import httpx
+
+            tenant_slug = await _tenant_slug(session, principal.tenant_id)
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                try:
+                    result = await file_document_in_property_year_folder(
+                        session,
+                        tenant_slug=tenant_slug,
+                        document=document,
+                        property_=property_,
+                        year=invoice.invoice_date.year,
+                        blobs=BlobStore(request.app.state.settings),
+                        client=client,
+                    )
+                except DmsError as exc:
+                    raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+            already_filed = result.drive_file_ref
+
+        ticket.category = "invoice"
+        ticket.extra_fields = {
+            **ticket.extra_fields,
+            "invoice_id": str(invoice.id),
+            "invoice_drive_file_ref": already_filed,
+            "invoice_drive_year": invoice.invoice_date.year,
+        }
+        await _event(
+            session,
+            ticket,
+            "invoice_attached",
+            principal.user_id,
+            {"invoice_id": str(invoice.id), "drive_file_ref": already_filed},
+        )
+        await session.flush()
+        return _ticket_out(ticket)
+
+
+async def _tenant_slug(session: AsyncSession, tenant_id: uuid.UUID) -> str:
+    from mhvp.platform.models import Tenant
+
+    tenant = await session.get(Tenant, tenant_id)
+    return tenant.slug if tenant is not None else str(tenant_id)
+
+
 @router.post("/tickets/bulk-status", summary="Status mehrerer Tickets ändern")
 async def bulk_status(
     body: BulkStatusIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)

@@ -979,6 +979,8 @@ class FinApiConfigIn(_In):
     mandator_id: str | None = Field(default=None, max_length=64)
     base_url: str = Field(min_length=8, max_length=300)
     sandbox: bool = True
+    # M11-finapi Stage 2: scheduled daily fetch, default off; omitted keeps the current value.
+    auto_fetch_enabled: bool | None = None
 
 
 class FinApiConfigOut(BaseModel):
@@ -986,6 +988,7 @@ class FinApiConfigOut(BaseModel):
     base_url: str | None = None
     mandator_id: str | None = None
     sandbox: bool | None = None
+    auto_fetch_enabled: bool = False
 
 
 class FinApiAccountOut(BaseModel):
@@ -1087,6 +1090,8 @@ async def set_finapi_config(
         cfg.mandator_id = body.mandator_id
         cfg.base_url = body.base_url.rstrip("/")
         cfg.sandbox = body.sandbox
+        if body.auto_fetch_enabled is not None:
+            cfg.auto_fetch_enabled = body.auto_fetch_enabled
         cfg.updated_by = principal.user_id
         await emit(
             session,
@@ -1095,11 +1100,19 @@ async def set_finapi_config(
             entity_type="finapi_tenant_config",
             entity_id=cfg.id,
             actor_user_id=principal.user_id,
-            payload={"base_url": cfg.base_url, "sandbox": cfg.sandbox},
+            payload={
+                "base_url": cfg.base_url,
+                "sandbox": cfg.sandbox,
+                "auto_fetch_enabled": cfg.auto_fetch_enabled,
+            },
         )
         await session.flush()
         return FinApiConfigOut(
-            configured=True, base_url=cfg.base_url, mandator_id=cfg.mandator_id, sandbox=cfg.sandbox
+            configured=True,
+            base_url=cfg.base_url,
+            mandator_id=cfg.mandator_id,
+            sandbox=cfg.sandbox,
+            auto_fetch_enabled=cfg.auto_fetch_enabled,
         )
 
 
@@ -1112,7 +1125,11 @@ async def get_finapi_config(
         if cfg is None:
             return FinApiConfigOut(configured=False)
         return FinApiConfigOut(
-            configured=True, base_url=cfg.base_url, mandator_id=cfg.mandator_id, sandbox=cfg.sandbox
+            configured=True,
+            base_url=cfg.base_url,
+            mandator_id=cfg.mandator_id,
+            sandbox=cfg.sandbox,
+            auto_fetch_enabled=cfg.auto_fetch_enabled,
         )
 
 
@@ -1392,14 +1409,81 @@ async def assign_finapi_account(
         return out
 
 
+class FetchRangeIn(_In):
+    """Optional date range for a manual fetch (Stage 2). The provider is never asked to
+    filter by date (docs/integrations/finapi.md, "zu prüfen"); the range only bounds what is
+    kept from the rows finAPI actually returned -- nothing is synthesized for a gap the
+    provider does not cover."""
+
+    since: date | None = None
+    until: date | None = None
+
+
+_EMPTY_FETCH_RANGE = FetchRangeIn()
+
+
+async def _queue_finapi_fetch(
+    session: Any,
+    *,
+    principal: TenantPrincipal,
+    link: FinApiAccountLink,
+    conn: BankConnection,
+    body: FetchRangeIn,
+) -> BankSyncRun:
+    run = BankSyncRun(
+        tenant_id=principal.tenant_id,
+        created_by=principal.user_id,
+        connection_id=conn.id,
+        property_bank_account_id=link.property_bank_account_id,
+        source="aggregator_finapi",
+        status="queued",
+        counts={},
+    )
+    session.add(run)
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type="bank_sync_run.queued",
+        entity_type="bank_sync_run",
+        entity_id=run.id,
+        actor_user_id=principal.user_id,
+        payload={
+            "trigger": "user_click",
+            "finapi_account_link_id": str(link.id),
+            "since": body.since.isoformat() if body.since else None,
+            "until": body.until.isoformat() if body.until else None,
+        },
+    )
+    await session.flush()
+    return run
+
+
+def _fetch_ready_or_raise(
+    fa: FinApiConnection | None, conn: BankConnection | None
+) -> tuple[FinApiConnection, BankConnection]:
+    if (
+        fa is None
+        or conn is None
+        or conn.status not in (ConnectionStatus.ACTIVE, ConnectionStatus.ERROR)
+    ):
+        raise ProblemError(ErrorCodes.FINAPI_STATE, detail="Bankverbindung ist nicht abrufbereit.")
+    return fa, conn
+
+
 @finapi_router.post(
-    "/accounts/{link_id}/fetch", summary="Umsätze abrufen (asynchron, nur auf Klick)"
+    "/accounts/{link_id}/fetch", summary="Umsätze abrufen (asynchron, nur auf Klick, mit Zeitraum)"
 )
 async def fetch_finapi_transactions(
-    link_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+    link_id: uuid.UUID,
+    request: Request,
+    body: FetchRangeIn = _EMPTY_FETCH_RANGE,
+    principal: TenantPrincipal = Depends(UPDATE),
 ) -> SyncRunOut:
-    """A real click only: this never runs on a schedule (master prompt section 2). The fetch
-    itself completes asynchronously in the existing Celery worker (`banking.finapi_fetch`)."""
+    """A real click only: this never runs on a schedule by itself (master prompt section 2;
+    the tenant-wide scheduled fetch, Stage 2, is a separate opt-in flag, see `/config`). The
+    fetch itself completes asynchronously in the existing Celery worker
+    (`banking.finapi_fetch`); `body.since`/`body.until` bound what is kept, also historical,
+    as far as the provider actually delivers (rule 0.1.3)."""
     from mhvp.banking.tasks import finapi_fetch
 
     async with tenant_tx(request, principal) as session:
@@ -1412,42 +1496,20 @@ async def fetch_finapi_transactions(
             )
         fa = await session.get(FinApiConnection, link.finapi_connection_id)
         conn = await session.get(BankConnection, fa.bank_connection_id) if fa else None
-        if (
-            fa is None
-            or conn is None
-            or conn.status
-            not in (
-                ConnectionStatus.ACTIVE,
-                ConnectionStatus.ERROR,
-            )
-        ):
-            raise ProblemError(
-                ErrorCodes.FINAPI_STATE, detail="Bankverbindung ist nicht abrufbereit."
-            )
-        run = BankSyncRun(
-            tenant_id=principal.tenant_id,
-            created_by=principal.user_id,
-            connection_id=conn.id,
-            property_bank_account_id=link.property_bank_account_id,
-            source="aggregator_finapi",
-            status="queued",
-            counts={},
+        _, conn = _fetch_ready_or_raise(fa, conn)
+        run = await _queue_finapi_fetch(
+            session, principal=principal, link=link, conn=conn, body=body
         )
-        session.add(run)
-        await emit(
-            session,
-            tenant_id=principal.tenant_id,
-            type="bank_sync_run.queued",
-            entity_type="bank_sync_run",
-            entity_id=run.id,
-            actor_user_id=principal.user_id,
-            payload={"trigger": "user_click", "finapi_account_link_id": str(link.id)},
-        )
-        await session.flush()
         run_id = run.id
         tenant_id = principal.tenant_id
         bank_account_id = link.property_bank_account_id
-    finapi_fetch.delay(str(tenant_id), str(run_id), str(link_id))
+    finapi_fetch.delay(
+        str(tenant_id),
+        str(run_id),
+        str(link_id),
+        body.since.isoformat() if body.since else None,
+        body.until.isoformat() if body.until else None,
+    )
     return SyncRunOut(
         id=run_id,
         source="aggregator_finapi",
@@ -1457,6 +1519,62 @@ async def fetch_finapi_transactions(
         property_bank_account_id=bank_account_id,
         document_id=None,
     )
+
+
+@finapi_router.post(
+    "/connections/{finapi_connection_id}/fetch",
+    summary="Umsätze für alle zugeordneten Konten dieser Bank abrufen",
+)
+async def fetch_finapi_connection_transactions(
+    finapi_connection_id: uuid.UUID,
+    request: Request,
+    body: FetchRangeIn = _EMPTY_FETCH_RANGE,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> list[SyncRunOut]:
+    """Per bank fetch (Stage 2): queues one run per account already assigned to a Buchungskreis
+    under this connection; unassigned accounts are skipped (nothing to post transactions to
+    yet), same date-range semantics as the per-account endpoint."""
+    from mhvp.banking.tasks import finapi_fetch
+
+    async with tenant_tx(request, principal) as session:
+        fa = await session.get(FinApiConnection, finapi_connection_id)
+        conn = await session.get(BankConnection, fa.bank_connection_id) if fa else None
+        fa, conn = _fetch_ready_or_raise(fa, conn)
+        links = (
+            await session.scalars(
+                select(FinApiAccountLink).where(
+                    FinApiAccountLink.finapi_connection_id == fa.id,
+                    FinApiAccountLink.property_bank_account_id.is_not(None),
+                )
+            )
+        ).all()
+        queued: list[tuple[uuid.UUID, uuid.UUID, uuid.UUID]] = []
+        for link in links:
+            run = await _queue_finapi_fetch(
+                session, principal=principal, link=link, conn=conn, body=body
+            )
+            queued.append((run.id, link.id, link.property_bank_account_id))  # type: ignore[arg-type]
+        tenant_id = principal.tenant_id
+    for run_id, link_id, _bank_account_id in queued:
+        finapi_fetch.delay(
+            str(tenant_id),
+            str(run_id),
+            str(link_id),
+            body.since.isoformat() if body.since else None,
+            body.until.isoformat() if body.until else None,
+        )
+    return [
+        SyncRunOut(
+            id=run_id,
+            source="aggregator_finapi",
+            status="queued",
+            counts={},
+            errors=[],
+            property_bank_account_id=bank_account_id,
+            document_id=None,
+        )
+        for run_id, _link_id, bank_account_id in queued
+    ]
 
 
 @finapi_router.post("/connections/{finapi_connection_id}/disconnect", summary="Verbindung trennen")
@@ -1492,3 +1610,124 @@ async def disconnect_finapi_connection(
         )
         await session.flush()
         return await _finapi_connection_out(session, fa, conn, principal)
+
+
+# --- Invoice to transaction matching (M11-finapi Stage 3) -------------------------------
+
+
+class InvoiceMatchOut(BaseModel):
+    id: uuid.UUID
+    bank_transaction_id: uuid.UUID
+    match_basis: str
+    amount: Decimal
+
+
+class ProposePaymentIn(_In):
+    """Only used when `match` found no candidate transaction; creates a draft `PaymentOrder`
+    (gate G2 stays closed, "vorbereitet, nicht ausgeführt")."""
+
+    bank_account_id: uuid.UUID
+    execution_date: date
+
+
+class InvoiceMatchResultOut(BaseModel):
+    invoice_id: uuid.UUID
+    matches: list[InvoiceMatchOut]
+    proposal: OrderOut | None = None
+    proposal_note: str | None = None
+
+
+@router.post(
+    "/invoice-matching/{invoice_id}/match",
+    summary="Rechnung mit Bankumsätzen abgleichen (Betrag + Rechnungsnummer/IBAN)",
+)
+async def match_invoice_transactions(
+    invoice_id: uuid.UUID,
+    request: Request,
+    body: ProposePaymentIn | None = None,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> InvoiceMatchResultOut:
+    """Finds and links matching imported bank transactions (evidence only, never books by
+    itself). When nothing matches and `body` names a bank account and execution date, a draft
+    payment PROPOSAL is created via the existing `mhvp.banking.payments.order_from_invoice`;
+    gate G2 stays closed, so this never submits or initiates a payment (rule 0.1.6)."""
+    from mhvp.accounting.models import Invoice
+    from mhvp.banking import invoice_matching
+
+    async with tenant_tx(request, principal) as session:
+        invoice = await session.get(Invoice, invoice_id)
+        if invoice is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Rechnung nicht gefunden.")
+        created = await invoice_matching.match_invoice(
+            session, invoice=invoice, user_id=principal.user_id
+        )
+        all_links = await invoice_matching.existing_links(session, invoice_id)
+        matches = [
+            InvoiceMatchOut(
+                id=row.id,
+                bank_transaction_id=row.bank_transaction_id,
+                match_basis=row.match_basis.value,
+                amount=row.amount,
+            )
+            for row in all_links
+        ]
+        proposal_out = None
+        proposal_note = None
+        if not all_links:
+            if body is not None:
+                order = await invoice_matching.propose_payment(
+                    session,
+                    invoice=invoice,
+                    bank_account_id=body.bank_account_id,
+                    execution_date=body.execution_date,
+                    user_id=principal.user_id,
+                )
+                proposal_out = await _order_out(session, order)
+                proposal_note = "vorbereitet, nicht ausgeführt"
+            else:
+                proposal_note = (
+                    "Kein passender Bankumsatz gefunden; für einen Zahlungsvorschlag "
+                    "bank_account_id und execution_date angeben."
+                )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="invoice.matched",
+            entity_type="invoice",
+            entity_id=invoice_id,
+            actor_user_id=principal.user_id,
+            payload={
+                "new_links": len(created),
+                "total_links": len(all_links),
+                "proposal_created": proposal_out is not None,
+            },
+        )
+        await session.flush()
+        return InvoiceMatchResultOut(
+            invoice_id=invoice_id,
+            matches=matches,
+            proposal=proposal_out,
+            proposal_note=proposal_note,
+        )
+
+
+@router.get(
+    "/invoice-matching/{invoice_id}",
+    summary="Verknüpfte Bankumsätze einer Rechnung (nur lesen)",
+)
+async def get_invoice_matches(
+    invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[InvoiceMatchOut]:
+    from mhvp.banking import invoice_matching
+
+    async with tenant_tx(request, principal) as session:
+        rows = await invoice_matching.existing_links(session, invoice_id)
+        return [
+            InvoiceMatchOut(
+                id=row.id,
+                bank_transaction_id=row.bank_transaction_id,
+                match_basis=row.match_basis.value,
+                amount=row.amount,
+            )
+            for row in rows
+        ]

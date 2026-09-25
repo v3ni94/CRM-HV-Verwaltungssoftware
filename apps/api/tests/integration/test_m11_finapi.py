@@ -302,6 +302,214 @@ def test_unassigned_accounts_hidden_without_banking_approve(
     assert forbidden.status_code == 403
 
 
+def test_fetch_with_date_range_keeps_only_rows_in_range(client: TestClient, world: World) -> None:
+    """Stage 2: `since`/`until` bound what is kept from what the fake provider actually
+    returned (both real 700 EUR transactions are booked 2026-02-01); nothing is asked of the
+    provider that is not verified, and nothing outside the delivered rows is invented."""
+    h = bearer(login(client, world, "fa-admin"))
+    _configure(client, h)
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "802", "name": "Zeitraumweg", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    account = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": "DE72120300000000202052",
+                "holder": "GdWE Zeitraumweg",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    checked = _connect_and_check(client, h)
+    ok_link = next(a for a in checked["accounts"] if a["finapi_account_id"] == ACCOUNT_OK)
+    _ok(
+        client.post(
+            f"{B}/accounts/{ok_link['id']}/assign",
+            json={"property_bank_account_id": account},
+            headers=h,
+        )
+    )
+
+    # Outside the range: nothing is kept, but nothing errors either.
+    _ok(
+        client.post(
+            f"{B}/accounts/{ok_link['id']}/fetch",
+            json={"since": "2026-03-01", "until": "2026-03-31"},
+            headers=h,
+        )
+    )
+    none_yet = _ok(
+        client.get("/api/v1/banking/transactions", params={"bank_account_id": account}, headers=h)
+    )
+    assert none_yet == []
+
+    # Inside the range: both real transactions of 2026-02-01 are kept.
+    _ok(
+        client.post(
+            f"{B}/accounts/{ok_link['id']}/fetch",
+            json={"since": "2026-01-01", "until": "2026-02-28"},
+            headers=h,
+        )
+    )
+    kept = _ok(
+        client.get("/api/v1/banking/transactions", params={"bank_account_id": account}, headers=h)
+    )
+    assert len(kept) == 2
+
+
+def test_fetch_per_bank_queues_every_assigned_account(client: TestClient, world: World) -> None:
+    """Stage 2: the per-bank fetch endpoint queues one run per assigned account of that
+    connection; no body is required (defaults to no date range)."""
+    h = bearer(login(client, world, "fa-admin"))
+    _configure(client, h)
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "803", "name": "Bankweg", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    account = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": "DE45120300000000202053",
+                "holder": "GdWE Bankweg",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    checked = _connect_and_check(client, h)
+    ok_link = next(a for a in checked["accounts"] if a["finapi_account_id"] == ACCOUNT_OK)
+    _ok(
+        client.post(
+            f"{B}/accounts/{ok_link['id']}/assign",
+            json={"property_bank_account_id": account},
+            headers=h,
+        )
+    )
+    runs = _ok(client.post(f"{B}/connections/{checked['id']}/fetch", headers=h))
+    assert len(runs) == 1
+    assert runs[0]["property_bank_account_id"] == account
+
+
+def test_auto_fetch_flag_defaults_off_and_is_settable(client: TestClient, world: World) -> None:
+    """Stage 2: the scheduled daily fetch is a per-tenant opt-in, default off. (This tenant may
+    already be configured by an earlier test in this module; the point asserted here is that
+    `auto_fetch_enabled` itself starts/stays off until explicitly set, not the configured
+    flag, which other tests in this file legitimately flip.)"""
+    h = bearer(login(client, world, "fa-admin"))
+    _configure(client, h)
+    after_configure = _ok(client.get(f"{B}/config", headers=h))
+    assert after_configure["auto_fetch_enabled"] is False
+
+    enabled = _ok(
+        client.put(
+            f"{B}/config",
+            json={
+                "client_id": "cid",
+                "client_secret": "csecret",
+                "base_url": "https://sandbox.finapi.io",
+                "sandbox": True,
+                "auto_fetch_enabled": True,
+            },
+            headers=h,
+        )
+    )
+    assert enabled["auto_fetch_enabled"] is True
+
+
+def test_scheduled_fetch_only_runs_for_opted_in_tenant(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """Stage 2: `mhvp.banking.tasks._finapi_scheduled_fetch_once` (the per-tenant half of the
+    scheduled beat job, isolated here from every other tenant that may exist in this shared
+    test database) queues nothing for a tenant that has not opted in, and `sync_all_once`
+    does not clobber an active finAPI connection's status (regression for the pre-Stage-2
+    `sync_tenant` bug that routed every non-file connector, including finAPI, through
+    `UnconfiguredConnector`)."""
+    import asyncio
+
+    from mhvp.banking import tasks as banking_tasks
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from tests.integration.test_m8_import import _settings
+
+    h = bearer(login(client, world, "fa-admin"))
+    _configure(client, h)
+    # Explicitly off: an earlier test in this module may have opted this tenant in.
+    _ok(
+        client.put(
+            f"{B}/config",
+            json={
+                "client_id": "cid",
+                "client_secret": "csecret",
+                "base_url": "https://sandbox.finapi.io",
+                "sandbox": True,
+                "auto_fetch_enabled": False,
+            },
+            headers=h,
+        )
+    )
+    checked = _connect_and_check(client, h)
+    assert checked["status"] == "active"
+
+    settings = _settings(database, redis_url)
+
+    async def _run_for_this_tenant() -> tuple[dict[str, int], int]:
+        engine = create_app_engine(settings)
+        try:
+            factory = create_session_factory(engine)
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                counts, queued = await banking_tasks._finapi_scheduled_fetch_once(
+                    session, world.tenant_a
+                )
+            return counts, len(queued)
+        finally:
+            await engine.dispose()
+
+    counts, queued_len = asyncio.run(_run_for_this_tenant())
+    assert counts["tenants_enabled"] == 0
+    assert counts["queued"] == 0
+    assert queued_len == 0
+
+    still_active = _ok(client.get(f"{B}/connections", headers=h))
+    conn = next(c for c in still_active if c["id"] == checked["id"])
+    assert conn["status"] == "active"  # not clobbered to "not_configured" by the daily sync
+
+    async def _sync_this_tenant() -> dict[str, int]:
+        engine = create_app_engine(settings)
+        try:
+            factory = create_session_factory(engine)
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                return await banking_tasks.sync_tenant(session, world.tenant_a)
+        finally:
+            await engine.dispose()
+
+    sync_counts = asyncio.run(_sync_this_tenant())
+    assert sync_counts["not_configured"] == 0
+    still_active_after_sync = _ok(client.get(f"{B}/connections", headers=h))
+    conn_after_sync = next(c for c in still_active_after_sync if c["id"] == checked["id"])
+    assert conn_after_sync["status"] == "active"
+
+
 def test_reauthorize_sets_update_required_and_new_webform(client: TestClient, world: World) -> None:
     """Cases 4/5/6: re-authorization opens a fresh WebForm on the same connection; the
     account link is untouched, nothing is deleted on an aborted WebForm."""

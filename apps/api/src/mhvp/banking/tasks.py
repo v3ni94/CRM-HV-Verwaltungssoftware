@@ -3,7 +3,7 @@ reminder 10 days before expiry."""
 
 import asyncio
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from celery import shared_task
@@ -22,11 +22,49 @@ from mhvp.workspace.services import local_today, notify
 CONSENT_WARN_DAYS = 10
 
 
+async def _warn_consent_expiry(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    conn: BankConnection,
+    today: date,
+    counts: dict[str, int],
+) -> None:
+    if not (
+        conn.consent_valid_until
+        and conn.consent_valid_until <= today + timedelta(days=CONSENT_WARN_DAYS)
+    ):
+        return
+    if conn.consent_valid_until < today:
+        conn.status = ConnectionStatus.CONSENT_EXPIRED
+    if conn.created_by is not None:
+        created = await notify(
+            session,
+            tenant_id=tenant_id,
+            user_id=conn.created_by,
+            kind="bank_consent_expiring",
+            title=(
+                f"Bankzustimmung {conn.bank_name} läuft am {conn.consent_valid_until:%d.%m.%Y} ab"
+            ),
+            entity_type="bank_connection",
+            entity_id=conn.id,
+        )
+        counts["consent_warnings"] += int(created is not None)
+
+
 async def sync_tenant(session: AsyncSession, tenant_id: uuid.UUID) -> dict[str, int]:
     counts = {"connections": 0, "not_configured": 0, "consent_warnings": 0}
     today = local_today()
     for conn in (await session.scalars(select(BankConnection))).all():
         if conn.connector is Connector.FILE_IMPORT or conn.status is ConnectionStatus.DISABLED:
+            continue
+        if conn.connector is Connector.AGGREGATOR_FINAPI:
+            # finAPI has its own real connector (`mhvp.banking.finapi.FinApiConnector`,
+            # `mhvp.banking.routers`/`tasks.finapi_scheduled_fetch`); it must never be routed
+            # through the generic `UnconfiguredConnector` placeholder below, which would
+            # overwrite an active connection's status with "not_configured" every run. The
+            # consent-expiry reminder still applies to it.
+            counts["connections"] += 1
+            await _warn_consent_expiry(session, tenant_id, conn, today, counts)
             continue
         counts["connections"] += 1
         run = BankSyncRun(
@@ -41,25 +79,7 @@ async def sync_tenant(session: AsyncSession, tenant_id: uuid.UUID) -> dict[str, 
             counts["not_configured"] += 1
         conn.last_sync_at = datetime.now(UTC)
         session.add(run)
-        if conn.consent_valid_until and conn.consent_valid_until <= today + timedelta(
-            days=CONSENT_WARN_DAYS
-        ):
-            if conn.consent_valid_until < today:
-                conn.status = ConnectionStatus.CONSENT_EXPIRED
-            if conn.created_by is not None:
-                created = await notify(
-                    session,
-                    tenant_id=tenant_id,
-                    user_id=conn.created_by,
-                    kind="bank_consent_expiring",
-                    title=(
-                        f"Bankzustimmung {conn.bank_name} läuft am "
-                        f"{conn.consent_valid_until:%d.%m.%Y} ab"
-                    ),
-                    entity_type="bank_connection",
-                    entity_id=conn.id,
-                )
-                counts["consent_warnings"] += int(created is not None)
+        await _warn_consent_expiry(session, tenant_id, conn, today, counts)
     await session.flush()
     return counts
 
@@ -90,13 +110,26 @@ def sync_all() -> dict[str, int]:
 
 
 async def _finapi_fetch_once(
-    settings: Settings, tenant_id: uuid.UUID, run_id: uuid.UUID, link_id: uuid.UUID
+    settings: Settings,
+    tenant_id: uuid.UUID,
+    run_id: uuid.UUID,
+    link_id: uuid.UUID,
+    since: str | None = None,
+    until: str | None = None,
 ) -> dict[str, int]:
-    """Runs the update that a user click queued (M11-finapi, master prompt sections 7 to 9).
+    """Runs the update that a user click (or, Stage 2, the tenant's own opt-in scheduled
+    fetch) queued (M11-finapi, master prompt sections 7 to 9).
 
-    Never runs on a schedule; `create_finapi_connection`/`fetch_finapi_transactions` in
-    `mhvp.banking.routers` are its only callers.
+    Callers: `create_finapi_connection`/`fetch_finapi_transactions`/
+    `fetch_finapi_connection_transactions` in `mhvp.banking.routers` (manual), and
+    `finapi_scheduled_fetch` below (only when `FinApiTenantConfig.auto_fetch_enabled` is set).
+    `since`/`until` only bound what is *kept* from what finAPI returned; the provider's
+    `/transactions` endpoint documents no confirmed date filter (docs/integrations/finapi.md,
+    "zu prüfen"), so nothing is asked of the provider that is not verified, and nothing is
+    synthesized to fill a gap it does not cover (rule 0.1.3).
     """
+    from datetime import date as _date
+
     from mhvp.banking import finapi as finapi_client
     from mhvp.banking import services as svc
     from mhvp.banking.camt import RawTransaction
@@ -107,6 +140,9 @@ async def _finapi_fetch_once(
         FinApiTenantConfig,
     )
     from mhvp.properties.models import PropertyBankAccount
+
+    since_date = _date.fromisoformat(since) if since else None
+    until_date = _date.fromisoformat(until) if until else None
 
     engine = create_async_engine(
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
@@ -174,6 +210,10 @@ async def _finapi_fetch_once(
                         for t in items
                         if not t.is_removed
                     ]
+                    if since_date is not None:
+                        raw = [r for r in raw if r.booking_date >= since_date]
+                    if until_date is not None:
+                        raw = [r for r in raw if r.booking_date <= until_date]
                     page_counts = await svc.import_finapi_transactions(
                         session,
                         tenant_id=tenant_id,
@@ -200,9 +240,100 @@ async def _finapi_fetch_once(
 
 
 @shared_task(name="mhvp.banking.finapi_fetch")
-def finapi_fetch(tenant_id: str, run_id: str, link_id: str) -> dict[str, int]:
+def finapi_fetch(
+    tenant_id: str,
+    run_id: str,
+    link_id: str,
+    since: str | None = None,
+    until: str | None = None,
+) -> dict[str, int]:
     return asyncio.run(
         _finapi_fetch_once(
-            get_settings(), uuid.UUID(tenant_id), uuid.UUID(run_id), uuid.UUID(link_id)
+            get_settings(),
+            uuid.UUID(tenant_id),
+            uuid.UUID(run_id),
+            uuid.UUID(link_id),
+            since,
+            until,
         )
     )
+
+
+async def _finapi_scheduled_fetch_once(
+    session: AsyncSession, tenant_id: uuid.UUID
+) -> tuple[dict[str, int], list[tuple[uuid.UUID, uuid.UUID]]]:
+    """Stage 2: queues a fetch for every assigned finAPI account of this tenant, but only when
+    the tenant has explicitly opted in (`FinApiTenantConfig.auto_fetch_enabled`, default
+    off). Reuses the same `finapi_fetch` task and the same idempotent import as a manual
+    click, so a scheduled and a manual fetch on the same day never double count a
+    transaction (dedup by provider transaction id, D05). Returns the queued (run_id, link_id)
+    pairs separately so the Celery `.delay(...)` calls only happen after this transaction has
+    committed, same as the manual-click endpoints in `mhvp.banking.routers`."""
+    from mhvp.banking.models import (
+        BankConnection,
+        BankSyncRun,
+        ConnectionStatus,
+        FinApiAccountLink,
+        FinApiConnection,
+        FinApiTenantConfig,
+    )
+
+    counts = {"tenants_enabled": 0, "queued": 0}
+    queued: list[tuple[uuid.UUID, uuid.UUID]] = []
+    cfg = await session.scalar(select(FinApiTenantConfig))
+    if cfg is None or not cfg.auto_fetch_enabled:
+        return counts, queued
+    counts["tenants_enabled"] = 1
+    links = (
+        await session.scalars(
+            select(FinApiAccountLink).where(FinApiAccountLink.property_bank_account_id.is_not(None))
+        )
+    ).all()
+    for link in links:
+        fa = await session.get(FinApiConnection, link.finapi_connection_id)
+        conn = await session.get(BankConnection, fa.bank_connection_id) if fa else None
+        if conn is None or conn.status not in (ConnectionStatus.ACTIVE, ConnectionStatus.ERROR):
+            continue
+        run = BankSyncRun(
+            tenant_id=tenant_id,
+            connection_id=conn.id,
+            property_bank_account_id=link.property_bank_account_id,
+            source="aggregator_finapi",
+            status="queued",
+            counts={},
+        )
+        session.add(run)
+        await session.flush()
+        queued.append((run.id, link.id))
+        counts["queued"] += 1
+    return counts, queued
+
+
+@shared_task(name="mhvp.banking.finapi_scheduled_fetch")
+def finapi_scheduled_fetch() -> dict[str, int]:
+    """Celery beat entry (opt-in per tenant, never a global override, ADR 0003). Only tenants
+    with `FinApiTenantConfig.auto_fetch_enabled = true` get anything queued."""
+    return asyncio.run(_finapi_scheduled_fetch_all(get_settings()))
+
+
+async def _finapi_scheduled_fetch_all(settings: Settings) -> dict[str, int]:
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    totals = {"tenants_enabled": 0, "queued": 0}
+    try:
+        async with platform_transaction(factory) as session:
+            ids = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            async with tenant_transaction(factory, tenant_id) as session:
+                tenant_counts, queued = await _finapi_scheduled_fetch_once(session, tenant_id)
+            for key, value in tenant_counts.items():
+                totals[key] += value
+            for run_id, link_id in queued:
+                finapi_fetch.delay(str(tenant_id), str(run_id), str(link_id), None, None)
+    finally:
+        await engine.dispose()
+    return totals

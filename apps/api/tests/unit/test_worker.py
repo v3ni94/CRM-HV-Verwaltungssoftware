@@ -19,6 +19,7 @@ def test_queues_and_reliability_settings(settings: Settings) -> None:
         "documents-mirror",
         "workspace-reminders",
         "banking-sync-all",
+        "banking-finapi-scheduled-fetch",
         "accounting-dunning-run",
         "letting-purge-prospects",
         "platform-usage-all",
