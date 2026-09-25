@@ -732,6 +732,14 @@ async def approve(
                     user_id=principal.user_id,
                 )
             )
+            from mhvp.sla.models import SlaClock
+            from mhvp.sla.service import mark_first_response
+
+            clock = await session.scalar(
+                select(SlaClock).where(SlaClock.ticket_id == row.ticket_id)
+            )
+            if clock is not None:
+                await mark_first_response(session, clock)
             await session.flush()
         await emit(
             session,

@@ -17,6 +17,7 @@ from mhvp.platform import licensing as licensing_models
 from mhvp.platform import models as platform_models
 from mhvp.portal import models as portal_models
 from mhvp.properties import models as property_models
+from mhvp.sla import models as sla_models
 from mhvp.tickets import models as ticket_models
 from mhvp.workspace import models as workspace_models
 
@@ -39,6 +40,7 @@ __all__ = [
     "portal_models",
     "property_models",
     "rentlaw_models",
+    "sla_models",
     "ticket_models",
     "webhooks",
     "workspace_models",

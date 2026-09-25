@@ -272,6 +272,9 @@ async def create_ticket(
         )
         session.add(ticket)
         await session.flush()
+        from mhvp.sla.service import start_clock
+
+        await start_clock(session, principal.tenant_id, ticket.id, ticket.priority)
         await _event(
             session,
             ticket,

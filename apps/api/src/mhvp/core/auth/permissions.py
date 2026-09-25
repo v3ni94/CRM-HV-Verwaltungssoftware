@@ -29,6 +29,7 @@ RESOURCES: tuple[str, ...] = (
     "webhooks",
     "audit",
     "release_gates",
+    "sla",
 )
 ALL_PERMISSIONS: frozenset[str] = frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS)
 READ_ALL: frozenset[str] = frozenset(f"{r}:read" for r in RESOURCES)
@@ -56,6 +57,9 @@ def _r(resource: str) -> frozenset[str]:
 
 
 _TICKETS = _rw("tickets", delete=True) | {"tickets:approve"} | _rw("communication")
+# SLA und Bereitschaft (M21 Übernahme aus dem Immoware Hub): Regeln, Eskalation, Bereitschaft und
+# Kalender teilen sich sla:update ("verwalten"), Uhren/Alarme lesen und quittieren sla:read.
+_SLA_MANAGE = _rw("sla") | {"sla:approve"}
 
 _MASTER_RWD = (
     _rw("contacts", delete=True)
@@ -74,7 +78,9 @@ _ACC_APPROVE = _ACC_RW | {"accounting:approve", "accounting:export"}
 SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole("tenant_admin", "Mandantenadministrator", _ADMIN),
     SystemRole("administrator", "Administrator", _ADMIN),
-    SystemRole("standard", "Standard", _SETTINGS_R | _MASTER_RWD | _ACC_RW | _TICKETS),
+    SystemRole(
+        "standard", "Standard", _SETTINGS_R | _MASTER_RWD | _ACC_RW | _TICKETS | _SLA_MANAGE
+    ),
     SystemRole("read_only", "Nur Lesezugriff", READ_ALL),
     SystemRole("read_only_master_data", "Nur Lesezugriff Stammdaten", _SETTINGS_R | _MASTER_R),
     SystemRole(
@@ -85,7 +91,7 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole(
         "clerk_no_accounting",
         "Sachbearbeiter ohne Buchhaltung",
-        _SETTINGS_R | _MASTER_RWD | _TICKETS,
+        _SETTINGS_R | _MASTER_RWD | _TICKETS | _SLA_MANAGE,
     ),
     SystemRole(
         "accountant_no_banking",
