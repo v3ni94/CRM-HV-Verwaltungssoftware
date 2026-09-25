@@ -32,7 +32,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^mail\/playbooks$/ },
   { method: "PATCH", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
-  { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters)$/ },
+  { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters|dashboard\/stats)$/ },
   { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|bulk)$/ },
   { method: "PUT", pattern: /^workspace\/filters$/ },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
@@ -160,6 +160,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^tickets$/ },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/comments$`) },
+  // Ticketvorlagen (Checkliste, Zusatzfelder inkl. IBAN) und Sammelstatuswechsel (M19-02).
+  { method: "GET", pattern: /^tickets\/templates$/ },
+  { method: "POST", pattern: /^tickets\/templates$/ },
+  { method: "GET", pattern: new RegExp(`^tickets/templates/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^tickets/templates/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^tickets/${ID}/checklist/[a-zA-Z0-9_-]{1,64}$`) },
+  { method: "POST", pattern: /^tickets\/bulk-status$/ },
   // Paperless-Dokumente in Ticket- und Objektansicht (M31).
   { method: "GET", pattern: new RegExp(`^properties/${ID}/dms-documents$`) },
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/dms-documents$`) },

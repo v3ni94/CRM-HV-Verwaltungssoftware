@@ -21,6 +21,7 @@ describe("MobileNav", () => {
     expect(dialog).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Kontakte" })).toHaveAttribute("href", "/kontakte");
     expect(document.body.style.overflow).toBe("hidden");
+    expect(dialog.className).toContain("z-[100]");
     await userEvent.click(screen.getByRole("button", { name: "Schließen" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(document.body.style.overflow).toBe("");

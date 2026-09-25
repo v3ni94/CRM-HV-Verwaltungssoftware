@@ -69,8 +69,8 @@ async def check_connection(
             headers={"Depth": "0", "Content-Type": "application/xml; charset=utf-8"},
         )
         connection.last_check_ok = response.status_code < 400
-        connection.last_error = None if connection.last_check_ok else sanitize_error(
-            f"HTTP {response.status_code}"
+        connection.last_error = (
+            None if connection.last_check_ok else sanitize_error(f"HTTP {response.status_code}")
         )
     except Exception as exc:
         connection.last_check_ok = False

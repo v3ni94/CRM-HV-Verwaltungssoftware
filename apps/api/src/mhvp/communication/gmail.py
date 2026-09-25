@@ -173,9 +173,7 @@ def redirect_uri(settings: Settings) -> str:
     return f"{base}/api/v1/mail/oauth/google/callback"
 
 
-def authorization_url(
-    client_id: str, settings: Settings, state: str, purpose: str = "mail"
-) -> str:
+def authorization_url(client_id: str, settings: Settings, state: str, purpose: str = "mail") -> str:
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri(settings),

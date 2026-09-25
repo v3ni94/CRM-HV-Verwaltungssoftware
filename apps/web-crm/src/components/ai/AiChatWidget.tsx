@@ -48,6 +48,8 @@ type Entry =
   | { kind: "proposal"; proposal: Proposal }
   | { kind: "result"; importRun: ImportRun };
 
+type Stage = "idle" | "uploading" | "queued" | "processing" | "done";
+
 type Flow =
   | { step: "idle" }
   | { step: "ask_question" }
@@ -70,6 +72,7 @@ export function AiChatWidget() {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -125,12 +128,15 @@ export function AiChatWidget() {
 
   const waitForRun = async (run: Run): Promise<Run> => {
     let current = run;
+    setStage(current.status === "running" ? "processing" : "queued");
     while (isRunPending(current)) {
       await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
       const res = await bff<Run>(`/api/bff/ai/runs/${current.id}`);
       if (!res.ok) throw new Error(res.message);
       current = res.data;
+      if (isRunPending(current)) setStage(current.status === "running" ? "processing" : "queued");
     }
+    setStage("done");
     return current;
   };
 
@@ -212,17 +218,20 @@ export function AiChatWidget() {
   const guarded = async (fn: () => Promise<void>) => {
     setBusy(true);
     setError(null);
+    setStage("idle");
     try {
       await fn();
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setBusy(false);
+      setStage("idle");
     }
   };
 
   const extract = (task: "extract_contacts" | "extract_property", content: string, list: File[]) =>
     guarded(async () => {
+      setStage("uploading");
       const ids = await upload(list);
       say(t("working"));
       const run = await runTask(task, content, ids);
@@ -341,6 +350,7 @@ export function AiChatWidget() {
       case "summarize":
         if (list.length === 0) return say(t("needFile"));
         return guarded(async () => {
+          setStage("uploading");
           const ids = await upload(list);
           say(t("working"));
           const run = await runTask("summarize", content || t("summarizeText"), ids);
@@ -372,6 +382,7 @@ export function AiChatWidget() {
       default:
         // Free question (with optional documents), on every page.
         return guarded(async () => {
+          if (list.length) setStage("uploading");
           const ids = list.length ? await upload(list) : [];
           say(t("working"));
           const run = await runTask("answer_question", [t("pageHint", { page: t(`area.${ctx.area}`) }), content].join(" "), ids);
@@ -387,27 +398,36 @@ export function AiChatWidget() {
 
   return (
     <>
-      <button
-        type="button"
-        aria-label={open ? t("close") : t("open")}
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-lg transition duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-gold/60"
-      >
-        <span aria-hidden className="text-xl">
-          {open ? "×" : "✦"}
-        </span>
-      </button>
+      <div className="fixed bottom-5 right-5 z-40 h-14 w-14">
+        {busy ? (
+          <span
+            aria-hidden
+            data-testid="ai-chat-pulse"
+            className="absolute inset-0 animate-ping rounded-full bg-gold/50"
+          />
+        ) : null}
+        <button
+          type="button"
+          aria-label={open ? t("close") : t("open")}
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-lg transition duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-gold/60"
+        >
+          <span aria-hidden className="text-xl">
+            {open ? "×" : "✦"}
+          </span>
+        </button>
+      </div>
       {open ? (
         <section
           aria-label={t("title")}
-          className="fixed inset-0 z-40 flex flex-col overflow-hidden border border-border bg-bg shadow-lg sm:inset-auto sm:bottom-20 sm:right-5 sm:h-[32rem] sm:w-[min(26rem,calc(100vw-2.5rem))] sm:rounded-2xl"
+          className="fixed inset-0 z-40 flex flex-col overflow-hidden border-2 border-gold/30 bg-surface shadow-2xl sm:inset-auto sm:bottom-20 sm:right-5 sm:h-[32rem] sm:w-[min(26rem,calc(100vw-2.5rem))] sm:rounded-2xl"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          <header className="flex items-center justify-between border-b border-border-soft bg-surface px-4 py-3">
+          <header className="flex items-center justify-between border-b border-rail-border bg-rail-bg px-4 py-3 text-rail-fg">
             <div>
               <p className="text-sm font-semibold">{t("title")}</p>
-              <p className="mhvp-label">{t("onPage", { page: t(`area.${ctx.area}`) })}</p>
+              <p className="mhvp-label text-rail-muted">{t("onPage", { page: t(`area.${ctx.area}`) })}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-gold" aria-hidden />
@@ -415,7 +435,7 @@ export function AiChatWidget() {
                 type="button"
                 aria-label={t("close")}
                 onClick={() => setOpen(false)}
-                className="flex h-11 w-11 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg sm:hidden"
+                className="flex h-11 w-11 items-center justify-center rounded-md text-rail-muted hover:bg-rail-hover hover:text-rail-fg sm:hidden"
               >
                 <span aria-hidden>×</span>
               </button>
@@ -425,7 +445,7 @@ export function AiChatWidget() {
             {entries.map((e, i) => {
               if (e.kind === "user") {
                 return (
-                  <li key={i} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-accent px-3.5 py-2 text-accent-fg">
+                  <li key={i} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-anthracite-soft px-3.5 py-2 text-fg">
                     {e.text}
                   </li>
                 );
@@ -446,7 +466,7 @@ export function AiChatWidget() {
               }
               const last = i === entries.length - 1;
               return (
-                <li key={i} className="max-w-[92%] self-start rounded-2xl rounded-bl-md bg-surface px-3.5 py-2">
+                <li key={i} className="max-w-[92%] self-start rounded-2xl rounded-bl-md bg-gold-soft px-3.5 py-2 text-fg">
                   <p className="whitespace-pre-wrap">{e.text}</p>
                   {last && e.chips?.length && !busy ? (
                     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -465,7 +485,19 @@ export function AiChatWidget() {
                 </li>
               );
             })}
-            {busy ? <li className="self-start text-xs text-muted">{t("thinking")}</li> : null}
+            {busy && stage !== "idle" ? (
+              <li
+                role="status"
+                aria-live="polite"
+                data-testid="ai-chat-progress"
+                className="flex max-w-[92%] flex-col gap-1.5 self-start rounded-2xl rounded-bl-md bg-gold-soft px-3.5 py-2"
+              >
+                <span className="text-xs font-medium text-muted">{t(`progress.${stage}`)}</span>
+                <div className="h-1.5 w-40 max-w-full overflow-hidden rounded-full bg-border">
+                  <div className="h-full w-1/3 animate-[ai-chat-progress_1.2s_ease-in-out_infinite] rounded-full bg-gold" />
+                </div>
+              </li>
+            ) : null}
             {error ? (
               <li role="alert" className={ui.alert}>
                 {error}

@@ -136,6 +136,20 @@ const icons: Record<string, IconComponent> = {
       <path d="M10 3.5v2M10 14.5v2M16.5 10h-2M5.5 10h-2M14.6 5.4l-1.4 1.4M6.8 13.2l-1.4 1.4M14.6 14.6l-1.4-1.4M6.8 6.8 5.4 5.4" />
     </Base>
   ),
+  flowImport: (p) => (
+    <Base {...p}>
+      <path d="M4 6h8M4 10h8M4 14h5" />
+      <path d="M13.5 4.5 17 8l-3.5 3.5" />
+      <path d="M17 8H9" />
+    </Base>
+  ),
+  handover: (p) => (
+    <Base {...p}>
+      <path d="M4 14V7l6-3.5L16 7v7" />
+      <path d="M8 17v-4h4v4" />
+      <path d="M7 10.5h6" />
+    </Base>
+  ),
   platform: (p) => (
     <Base {...p}>
       <ellipse cx="10" cy="6" rx="6" ry="2.5" />

@@ -78,9 +78,13 @@
     "group": {
       "overview": "Übersicht",
       "management": "Verwaltung",
+      "broker": "Makler",
       "finance": "Finanzen",
       "system": "System"
     },
+    "brokerListings": "Anzeigen",
+    "brokerFlowImport": "FLOW-Import",
+    "brokerHandover": "Übergabeprotokoll",
     "rental": "Mietverwaltung",
     "sev": "SEV",
     "settings": "Einstellungen",
@@ -461,7 +465,7 @@
     "undo": "Rückgängig",
     "undoConfirm": "Import wirklich zurücknehmen? Datensätze, auf die spätere Daten aufbauen, bleiben erhalten.",
     "undoneAt": "Zurückgenommen am {at}",
-    "immoware24Link": "Importassistent Immoware24 öffnen"
+    "immoware24Link": "Importassistent öffnen"
   },
   "AiSettings": {
     "title": "KI-Einstellungen",
@@ -528,7 +532,7 @@
     }
   },
   "Immoware24": {
-    "title": "Importassistent Immoware24",
+    "title": "Importassistent",
     "intro": "Berichte aus Immoware24 hochladen, Spalten zuordnen, prüfen, testen und übernehmen. Jede Übernahme erzeugt einen Importlauf, der sich zurücknehmen lässt.",
     "backToImports": "Zurück zu den Importen",
     "overviewTitle": "Bestand in der Plattform",
@@ -677,7 +681,47 @@
     "bulkDone": "{changed} geändert.",
     "select": "Auswählen",
     "greetingLabel": "Übersicht",
-    "open": "Öffnen"
+    "open": "Öffnen",
+    "analytics": {
+      "title": "Auswertungen",
+      "kpi": {
+        "open": "Offen",
+        "in_progress": "In Bearbeitung",
+        "done_in_range": "Erledigt im Zeitraum",
+        "created_in_range": "Neu im Zeitraum"
+      },
+      "range": {
+        "label": "Zeitraum",
+        "day": "Tag",
+        "week": "Woche",
+        "month": "Monat",
+        "quarter": "Quartal",
+        "year": "Jahr"
+      },
+      "user": {
+        "label": "Bearbeiter",
+        "all": "Gesamter Mandant"
+      },
+      "chartTitle": "Erstellt und erledigt je Zeitraum",
+      "chartCreated": "Erstellt",
+      "chartResolved": "Erledigt",
+      "tableView": "Als Tabelle anzeigen",
+      "chartView": "Als Diagramm anzeigen",
+      "bucket": "Zeitraum",
+      "empty": "Keine Tickets im gewählten Zeitraum.",
+      "assigneeTitle": "Bearbeiter im Vergleich",
+      "assigneeName": "Bearbeiter",
+      "assigneeOpen": "Offen",
+      "assigneeResolved": "Erledigt im Zeitraum",
+      "assigneeAvgHours": "Ø Bearbeitungszeit (Std.)",
+      "assigneeUnassigned": "Ohne Zuordnung",
+      "compare": "Vergleichen",
+      "compareHint": "Zwei Bearbeiter auswählen, um sie nebeneinander zu vergleichen.",
+      "compareClear": "Vergleich aufheben",
+      "loadError": "Die Auswertung ist derzeit nicht verfügbar.",
+      "hours": "{hours} Std.",
+      "noHours": "keine Angabe"
+    }
   },
   "Accounting": {
     "title": "Buchhaltung",
@@ -750,6 +794,8 @@
   "Hoa": {
     "title": "WEG-Verwaltung",
     "gateNotice": "Ausgabe und Buchung von WEG-Abrechnungen sind bis zur Freigabestufe G4 gesperrt.",
+    "objectsHint": "WEG-Objekte und WEG-Verwaltung gehören zusammen: hier die laufende Verwaltung, in der Objektliste die Stammdaten der Gemeinschaften.",
+    "objectsLink": "WEG-Objekte öffnen",
     "empty": "Keine WEG-Objekte erfasst.",
     "collection": "Beschluss-Sammlung",
     "noEntity": "Für dieses Objekt ist keine Gemeinschaft angelegt.",
@@ -1371,7 +1417,57 @@
       "high": "hoch",
       "urgent": "dringend",
       "immediate": "sofort"
-    }
+    },
+    "template": "Vorlage",
+    "noTemplate": "Keine Vorlage",
+    "checklist": "Checkliste",
+    "checklistIncomplete": "Checkliste unvollständig",
+    "extraFields": "Zusatzfelder",
+    "selectAll": "Alle auswählen",
+    "selected": "ausgewählt",
+    "bulkStatusApply": "Status anwenden",
+    "bulkLimitHint": "Ohne Freigaberecht sind höchstens 10 Tickets je Aufruf möglich.",
+    "bulkFailed": "Fehlgeschlagen",
+    "bulkChanged": "Geändert",
+    "saveField": "Speichern",
+    "selectRow": "Ticket auswählen"
+  },
+  "TicketTemplates": {
+    "title": "Ticketvorlagen",
+    "description": "Checklisten und Zusatzfelder für wiederkehrende Vorgänge, zum Beispiel Vermietung oder Kaution.",
+    "newTemplate": "Neue Vorlage",
+    "category": "Kategorie",
+    "titleField": "Titel",
+    "description2": "Beschreibung",
+    "defaultPriority": "Standardpriorität",
+    "checklist": "Checkliste",
+    "extraFields": "Zusatzfelder",
+    "required": "Pflicht",
+    "remove": "Entfernen",
+    "add": "Hinzufügen",
+    "newChecklistItem": "Neuer Checklistenpunkt",
+    "newFieldLabel": "Neues Feld",
+    "fieldTypes": {
+      "text": "Text",
+      "iban": "IBAN",
+      "date": "Datum",
+      "number": "Zahl",
+      "select": "Auswahl"
+    },
+    "priorities": {
+      "low": "niedrig",
+      "normal": "normal",
+      "high": "hoch",
+      "urgent": "dringend",
+      "immediate": "sofort"
+    },
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "activate": "Aktivieren",
+    "deactivate": "Deaktivieren",
+    "activeState": "aktiv",
+    "inactiveState": "inaktiv"
   },
   "Mail": {
     "title": "Mail",
@@ -1380,6 +1476,7 @@
     "noAddress": "ohne Adresse",
     "noSubject": "ohne Betreff",
     "selectMessage": "Nachricht auswählen.",
+    "backToList": "Zurück zur Liste",
     "refresh": "Aktualisieren",
     "searchPlaceholder": "Suche",
     "ticketBadge": "Ticket",
@@ -1733,6 +1830,12 @@
     "needFile": "Dafür brauche ich eine Datei. Bitte über die Büroklammer anhängen.",
     "working": "Ich lese die Daten und prüfe sie. Das kann einen Moment dauern.",
     "thinking": "Der Assistent arbeitet …",
+    "progress": {
+      "uploading": "Hochladen",
+      "queued": "Eingereiht",
+      "processing": "Verarbeitung",
+      "done": "Fertig"
+    },
     "roleText": {
       "owner": "Importiere diese Kontakte. Es handelt sich ausschließlich um Eigentümer.",
       "tenant": "Importiere diese Kontakte. Es handelt sich ausschließlich um Mieter.",
@@ -1801,6 +1904,10 @@
     "dms": {
       "title": "DMS-Anbindung",
       "description": "Paperless-Zugangsdaten und Feld-IDs pflegen, Google Drive anzeigen."
+    },
+    "ticketTemplates": {
+      "title": "Ticketvorlagen",
+      "description": "Checklisten und Zusatzfelder für wiederkehrende Vorgänge (z. B. Vermietung, Kaution)."
     },
     "immoware": {
       "title": "Immoware24-Anbindung",

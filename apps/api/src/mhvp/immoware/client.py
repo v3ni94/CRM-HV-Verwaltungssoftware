@@ -39,9 +39,7 @@ class ReadOnlyDavClient:
         try:
             return await self._client.request(method, url, **kwargs)  # type: ignore[arg-type]
         except httpx.HTTPError as exc:
-            raise ProblemError(
-                ErrorCodes.IMW_UNAVAILABLE, detail=sanitize_error(str(exc))
-            ) from exc
+            raise ProblemError(ErrorCodes.IMW_UNAVAILABLE, detail=sanitize_error(str(exc))) from exc
 
     async def aclose(self) -> None:
         await self._client.aclose()

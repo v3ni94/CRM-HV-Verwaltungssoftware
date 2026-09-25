@@ -94,13 +94,23 @@ class TicketTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
 
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
-    checklist: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    description: Mapped[str | None] = mapped_column(Text)
+    # Checklist item shape: {"key": str, "label": str, "required": bool}. Extra field shape:
+    # {"key": str, "label": str, "type": "text|iban|date|number|select", "required": bool,
+    # "options": list[str] | None} (M19 ticket templates with checklists, 25.09.2026).
+    checklist: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    extra_fields: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
     default_priority: Mapped[Priority] = mapped_column(
         _enum(Priority, "ticket_priority"), nullable=False, default=Priority.NORMAL
     )
     default_team_id: Mapped[uuid.UUID | None] = _fk("team.id")
     default_assignee_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     sla_hours: Mapped[int | None] = mapped_column(Integer)
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
 
 
 class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -128,7 +138,12 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(TicketSource, "ticket_source"), nullable=False, default=TicketSource.MANUAL
     )
     visible_for: Mapped[list[str]] = mapped_column(ARRAY(String(16)), nullable=False, default=list)
+    # Checklist item shape: {"key", "label", "required", "done", "done_by", "done_at"}.
     checklist: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    # Extra field values keyed by the template's field key, e.g. {"iban": "DE..."}.
+    extra_fields: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     sla_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     time_spent_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

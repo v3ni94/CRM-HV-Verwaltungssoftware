@@ -179,3 +179,21 @@ body {
     transform: none;
   }
 }
+
+/* Indeterminate progress bar of the AI chat widget (queued/running, no percent implied). */
+@keyframes ai-chat-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(120%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[ai-chat-progress_1\.2s_ease-in-out_infinite\] {
+    animation: none;
+  }
+}

@@ -25,9 +25,13 @@
     "group": {
       "overview": "Overview",
       "management": "Management",
+      "broker": "Broker",
       "finance": "Finance",
       "system": "System"
     },
+    "brokerListings": "Listings",
+    "brokerFlowImport": "FLOW import",
+    "brokerHandover": "Handover protocol",
     "rental": "Rental",
     "sev": "SEV",
     "settings": "Settings",

@@ -6468,6 +6468,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tickets/bulk-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Status mehrerer Tickets ändern */
+        post: operations["bulk_status_api_v1_tickets_bulk_status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tickets/merge": {
         parameters: {
             query?: never;
@@ -6483,6 +6500,42 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ticketvorlagen */
+        get: operations["list_templates_api_v1_tickets_templates_get"];
+        put?: never;
+        /** Ticketvorlage anlegen */
+        post: operations["create_template_v2_api_v1_tickets_templates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ticketvorlage */
+        get: operations["get_template_api_v1_tickets_templates__template_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Ticketvorlage bearbeiten */
+        patch: operations["patch_template_api_v1_tickets_templates__template_id__patch"];
         trace?: never;
     };
     "/api/v1/tickets/{ticket_id}": {
@@ -6501,6 +6554,23 @@ export interface paths {
         head?: never;
         /** Status, Zuweisung, Checkliste */
         patch: operations["patch_ticket_api_v1_tickets__ticket_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/checklist/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Checklistenpunkt abhaken */
+        patch: operations["toggle_checklist_item_api_v1_tickets__ticket_id__checklist__key__patch"];
         trace?: never;
     };
     "/api/v1/tickets/{ticket_id}/comments": {
@@ -6705,6 +6775,23 @@ export interface paths {
         };
         /** Kennzahlen und Aufgaben der Startseite */
         get: operations["dashboard_api_v1_workspace_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/dashboard/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ticket-Auswertung der Startseite (Zeitraum, je Bearbeiter) */
+        get: operations["dashboard_stats_api_v1_workspace_dashboard_stats_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7589,6 +7676,12 @@ export interface components {
              */
             transaction_id: string;
         };
+        /** BulkStatusIn */
+        BulkStatusIn: {
+            status: components["schemas"]["TicketStatus"];
+            /** Ticket Ids */
+            ticket_ids: string[];
+        };
         /** CalendarEntryIn */
         CalendarEntryIn: {
             /**
@@ -7791,6 +7884,26 @@ export interface components {
          * @enum {string}
          */
         CheckStatus: "ok" | "fail";
+        /** ChecklistItemIn */
+        ChecklistItemIn: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+        };
+        /** ChecklistTogglePatch */
+        ChecklistTogglePatch: {
+            /**
+             * Done
+             * @default true
+             */
+            done: boolean;
+        };
         /** CircularIn */
         CircularIn: {
             /** Consents */
@@ -9065,6 +9178,25 @@ export interface components {
             occurred_at?: string | null;
             /** Status */
             status: string;
+        };
+        /** ExtraFieldIn */
+        ExtraFieldIn: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options?: string[] | null;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Type
+             * @default text
+             */
+            type: string;
         };
         /** FeeIn */
         FeeIn: {
@@ -12267,10 +12399,20 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Input Stats */
+            input_stats?: {
+                [key: string]: number;
+            };
             /** Model */
             model: string | null;
+            /** Model Tier Reason */
+            model_tier_reason?: string | null;
             /** Output */
             output: {
+                [key: string]: unknown;
+            } | null;
+            /** Progress */
+            progress?: {
                 [key: string]: unknown;
             } | null;
             /** Prompt Version */
@@ -12284,6 +12426,8 @@ export interface components {
             tokens_in: number;
             /** Tokens Out */
             tokens_out: number;
+            /** Warnings */
+            warnings?: string[];
         };
         /** RunReverseIn */
         RunReverseIn: {
@@ -12711,6 +12855,8 @@ export interface components {
             public_description?: string | null;
             /** @default manual */
             source: components["schemas"]["TicketSource"];
+            /** Template Id */
+            template_id?: string | null;
             /** Title */
             title?: string | null;
             /** Unit Id */
@@ -12731,6 +12877,10 @@ export interface components {
             assignee_user_id?: string | null;
             /** Checklist Done */
             checklist_done?: number[] | null;
+            /** Extra Fields */
+            extra_fields?: {
+                [key: string]: unknown;
+            } | null;
             priority?: components["schemas"]["Priority"] | null;
             status?: components["schemas"]["TicketStatus"] | null;
             /** Team Id */
@@ -12750,20 +12900,49 @@ export interface components {
         TicketStatus: "new" | "in_progress" | "waiting" | "done" | "closed" | "rejected";
         /** TicketTemplateIn */
         TicketTemplateIn: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
             /** Category */
             category: string;
             /** Checklist */
-            checklist?: string[];
+            checklist?: components["schemas"]["ChecklistItemIn"][];
             /** Default Assignee User Id */
             default_assignee_user_id?: string | null;
             /** @default normal */
             default_priority: components["schemas"]["Priority"];
             /** Default Team Id */
             default_team_id?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Extra Fields */
+            extra_fields?: components["schemas"]["ExtraFieldIn"][];
             /** Sla Hours */
             sla_hours?: number | null;
             /** Title */
             title: string;
+        };
+        /** TicketTemplatePatch */
+        TicketTemplatePatch: {
+            /** Active */
+            active?: boolean | null;
+            /** Checklist */
+            checklist?: components["schemas"]["ChecklistItemIn"][] | null;
+            /** Default Assignee User Id */
+            default_assignee_user_id?: string | null;
+            default_priority?: components["schemas"]["Priority"] | null;
+            /** Default Team Id */
+            default_team_id?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Extra Fields */
+            extra_fields?: components["schemas"]["ExtraFieldIn"][] | null;
+            /** Sla Hours */
+            sla_hours?: number | null;
+            /** Title */
+            title?: string | null;
         };
         /** TierModel */
         TierModel: {
@@ -28199,6 +28378,41 @@ export interface operations {
             };
         };
     };
+    bulk_status_api_v1_tickets_bulk_status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkStatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     merge_tickets_api_v1_tickets_merge_post: {
         parameters: {
             query?: never;
@@ -28214,6 +28428,144 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_templates_api_v1_tickets_templates_get: {
+        parameters: {
+            query?: {
+                active?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_template_v2_api_v1_tickets_templates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketTemplateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_template_api_v1_tickets_templates__template_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_template_api_v1_tickets_templates__template_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketTemplatePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -28279,6 +28631,44 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TicketPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    toggle_checklist_item_api_v1_tickets__ticket_id__checklist__key__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChecklistTogglePatch"];
             };
         };
         responses: {
@@ -28785,6 +29175,40 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    dashboard_stats_api_v1_workspace_dashboard_stats_get: {
+        parameters: {
+            query?: {
+                range?: string;
+                user_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -70,9 +70,9 @@ export function MobileNav({
       {open && typeof document !== "undefined"
         ? // Portal: the sticky header uses backdrop blur, which would trap a fixed drawer inside it.
           createPortal(
-            <div className="fixed inset-0 z-[60] md:hidden">
+            <div className="fixed inset-0 md:hidden">
               <div
-                className="fixed inset-0 bg-black/40"
+                className="fixed inset-0 z-[99] bg-black/40"
                 aria-hidden="true"
                 onClick={() => setOpen(false)}
               />
@@ -81,7 +81,7 @@ export function MobileNav({
                 role="dialog"
                 aria-modal="true"
                 aria-label={label}
-                className="fixed inset-y-0 left-0 flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto bg-rail-bg text-rail-fg shadow-lg"
+                className="fixed inset-y-0 left-0 z-[100] flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto bg-rail-bg text-rail-fg shadow-lg"
                 style={{
                   paddingTop: "env(safe-area-inset-top)",
                   paddingBottom: "env(safe-area-inset-bottom)",

@@ -1,38 +1,22 @@
 import { getTranslations } from "next-intl/server";
-import Link from "next/link";
 
 import { TicketCreate } from "@/components/tickets/TicketForms";
+import { TicketsList } from "@/components/tickets/TicketsList";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
-import { formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_VARIANT: Record<string, StatusPillVariant> = {
-  new: "gold",
-  in_progress: "warning",
-  waiting: "neutral",
-  done: "success",
-  closed: "neutral",
-  rejected: "danger",
-};
-
-const PRIORITY_VARIANT: Record<string, StatusPillVariant> = {
-  low: "neutral",
-  normal: "neutral",
-  high: "warning",
-  urgent: "danger",
-  immediate: "danger",
-};
-
 export default async function TicketsPage() {
   const t = await getTranslations("Tickets");
-  const { data, error, response } = await serverApi().GET("/api/v1/tickets");
+  const api = serverApi();
+  const { data, error, response } = await api.GET("/api/v1/tickets");
   redirectIfUnauthenticated(response);
+  const me = await api.GET("/api/v1/auth/me");
+  const canApprove = me.data?.permissions.includes("tickets:approve") ?? false;
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
@@ -44,66 +28,18 @@ export default async function TicketsPage() {
       ) : data.length === 0 ? (
         <EmptyState title={t("empty")} />
       ) : (
-        <>
-          <ul className="flex flex-col gap-2 sm:hidden" data-testid="tickets-cards">
-            {data.map((tk) => (
-              <li key={String(tk.id)} className={ui.cardLink} data-testid="ticket-card">
-                <Link href={`/tickets/${String(tk.id)}`} className="flex flex-col gap-1.5">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="font-medium">
-                      #{String(tk.number)} {String(tk.title ?? "")}
-                    </span>
-                  </span>
-                  <span className="flex flex-wrap gap-1.5">
-                    <StatusPill variant={PRIORITY_VARIANT[String(tk.priority)] ?? "neutral"} label={t(`priorities.${String(tk.priority)}`)} />
-                    <StatusPill variant={STATUS_VARIANT[String(tk.status)] ?? "neutral"} label={t(`statuses.${String(tk.status)}`)} />
-                  </span>
-                  {tk.sla_due_at ? (
-                    <span className="text-sm text-muted">
-                      {formatDateTime(String(tk.sla_due_at))}
-                      {tk.sla_breached ? <span className="ml-1 text-danger-fg">{t("breached")}</span> : null}
-                    </span>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <div className="hidden overflow-x-auto sm:block">
-            <table className="mhvp-table">
-              <thead>
-                <tr>
-                  <th>{t("number")}</th>
-                  <th>{t("titleField")}</th>
-                  <th>{t("priority")}</th>
-                  <th>{t("status")}</th>
-                  <th>{t("sla")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((tk) => (
-                  <tr key={String(tk.id)}>
-                    <td className="tabular-nums">{String(tk.number)}</td>
-                    <td>
-                      <Link href={`/tickets/${String(tk.id)}`} className="font-medium hover:underline">
-                        {String(tk.title ?? "")}
-                      </Link>
-                    </td>
-                    <td>
-                      <StatusPill variant={PRIORITY_VARIANT[String(tk.priority)] ?? "neutral"} label={t(`priorities.${String(tk.priority)}`)} />
-                    </td>
-                    <td>
-                      <StatusPill variant={STATUS_VARIANT[String(tk.status)] ?? "neutral"} label={t(`statuses.${String(tk.status)}`)} />
-                    </td>
-                    <td>
-                      {tk.sla_due_at ? formatDateTime(String(tk.sla_due_at)) : ""}
-                      {tk.sla_breached ? <span className="ml-1 text-danger-fg">{t("breached")}</span> : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
+        <TicketsList
+          initialTickets={data.map((tk) => ({
+            id: String(tk.id),
+            number: Number(tk.number),
+            title: tk.title ? String(tk.title) : null,
+            priority: String(tk.priority),
+            status: String(tk.status),
+            sla_due_at: tk.sla_due_at ? String(tk.sla_due_at) : null,
+            sla_breached: Boolean(tk.sla_breached),
+          }))}
+          canApprove={canApprove}
+        />
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { SlaBadge } from "@/components/tickets/SlaBadge";
+import { TicketChecklist } from "@/components/tickets/TicketChecklist";
 import { TicketEdit } from "@/components/tickets/TicketForms";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -26,6 +27,15 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   const canManageSla = me.data?.permissions.includes("sla:update") ?? false;
   const comments = (data.comments ?? []) as Comment[];
   const events = (data.events ?? []) as Event[];
+  const checklist = (data.checklist ?? []) as { key: string; label: string; required: boolean; done: boolean }[];
+  const extraFieldValues = (data.extra_fields ?? {}) as Record<string, unknown>;
+  let extraFieldDefs: { key: string; label: string; type: string; required: boolean }[] = [];
+  if (data.template_id) {
+    const tpl = await serverApi().GET("/api/v1/tickets/templates/{template_id}", {
+      params: { path: { template_id: String(data.template_id) } },
+    });
+    extraFieldDefs = (tpl.data?.extra_fields ?? []) as typeof extraFieldDefs;
+  }
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -35,6 +45,12 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
       />
       <SlaBadge ticketId={ticketId} canManage={canManageSla} />
       <TicketEdit id={ticketId} status={String(data.status)} priority={String(data.priority)} />
+      <TicketChecklist
+        ticketId={ticketId}
+        checklist={checklist}
+        extraFieldDefs={extraFieldDefs}
+        extraFieldValues={extraFieldValues}
+      />
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("comments")}</h2>
         <ul className="flex flex-col gap-2 text-sm">

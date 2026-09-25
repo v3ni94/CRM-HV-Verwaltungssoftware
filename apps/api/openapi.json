@@ -2722,6 +2722,30 @@
         "title": "BulkItem",
         "type": "object"
       },
+      "BulkStatusIn": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus"
+          },
+          "ticket_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Ticket Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ticket_ids",
+          "status"
+        ],
+        "title": "BulkStatusIn",
+        "type": "object"
+      },
       "CalendarEntryIn": {
         "additionalProperties": false,
         "properties": {
@@ -3267,6 +3291,46 @@
         ],
         "title": "CheckStatus",
         "type": "string"
+      },
+      "ChecklistItemIn": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "ChecklistItemIn",
+        "type": "object"
+      },
+      "ChecklistTogglePatch": {
+        "additionalProperties": false,
+        "properties": {
+          "done": {
+            "default": true,
+            "title": "Done",
+            "type": "boolean"
+          }
+        },
+        "title": "ChecklistTogglePatch",
+        "type": "object"
       },
       "CircularIn": {
         "additionalProperties": false,
@@ -7150,6 +7214,53 @@
           "status"
         ],
         "title": "EvidenceIn",
+        "type": "object"
+      },
+      "ExtraFieldIn": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "type": {
+            "default": "text",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "ExtraFieldIn",
         "type": "object"
       },
       "FeeIn": {
@@ -17402,6 +17513,13 @@
             "title": "Id",
             "type": "string"
           },
+          "input_stats": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Input Stats",
+            "type": "object"
+          },
           "model": {
             "anyOf": [
               {
@@ -17412,6 +17530,17 @@
               }
             ],
             "title": "Model"
+          },
+          "model_tier_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Tier Reason"
           },
           "output": {
             "anyOf": [
@@ -17424,6 +17553,18 @@
               }
             ],
             "title": "Output"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
           },
           "prompt_version": {
             "title": "Prompt Version",
@@ -17464,6 +17605,13 @@
           "tokens_out": {
             "title": "Tokens Out",
             "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -18678,6 +18826,18 @@
             "$ref": "#/components/schemas/TicketSource",
             "default": "manual"
           },
+          "template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
           "title": {
             "anyOf": [
               {
@@ -18773,6 +18933,18 @@
             ],
             "title": "Checklist Done"
           },
+          "extra_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Fields"
+          },
           "priority": {
             "anyOf": [
               {
@@ -18849,6 +19021,11 @@
       "TicketTemplateIn": {
         "additionalProperties": false,
         "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
           "category": {
             "maxLength": 100,
             "minLength": 1,
@@ -18857,7 +19034,7 @@
           },
           "checklist": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/ChecklistItemIn"
             },
             "maxItems": 50,
             "title": "Checklist",
@@ -18891,6 +19068,26 @@
             ],
             "title": "Default Team Id"
           },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "extra_fields": {
+            "items": {
+              "$ref": "#/components/schemas/ExtraFieldIn"
+            },
+            "maxItems": 50,
+            "title": "Extra Fields",
+            "type": "array"
+          },
           "sla_hours": {
             "anyOf": [
               {
@@ -18916,6 +19113,126 @@
           "title"
         ],
         "title": "TicketTemplateIn",
+        "type": "object"
+      },
+      "TicketTemplatePatch": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "checklist": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChecklistItemIn"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist"
+          },
+          "default_assignee_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Assignee User Id"
+          },
+          "default_priority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Priority"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "default_team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Team Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "extra_fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ExtraFieldIn"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Fields"
+          },
+          "sla_hours": {
+            "anyOf": [
+              {
+                "maximum": 8760.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sla Hours"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "TicketTemplatePatch",
         "type": "object"
       },
       "TierModel": {
@@ -43045,6 +43362,49 @@
         ]
       }
     },
+    "/api/v1/tickets/bulk-status": {
+      "post": {
+        "operationId": "bulk_status_api_v1_tickets_bulk_status_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkStatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Bulk Status Api V1 Tickets Bulk Status Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Status mehrerer Tickets ändern",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
     "/api/v1/tickets/merge": {
       "post": {
         "operationId": "merge_tickets_api_v1_tickets_merge_post",
@@ -43083,6 +43443,199 @@
           }
         },
         "summary": "Tickets zusammenführen",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/templates": {
+      "get": {
+        "operationId": "list_templates_api_v1_tickets_templates_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Templates Api V1 Tickets Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ticketvorlagen",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      },
+      "post": {
+        "operationId": "create_template_v2_api_v1_tickets_templates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketTemplateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Template V2 Api V1 Tickets Templates Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ticketvorlage anlegen",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/templates/{template_id}": {
+      "get": {
+        "operationId": "get_template_api_v1_tickets_templates__template_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Template Api V1 Tickets Templates  Template Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ticketvorlage",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_template_api_v1_tickets_templates__template_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketTemplatePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Template Api V1 Tickets Templates  Template Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ticketvorlage bearbeiten",
         "tags": [
           "Tickets und Aufträge"
         ]
@@ -43181,6 +43734,70 @@
           }
         },
         "summary": "Status, Zuweisung, Checkliste",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/checklist/{key}": {
+      "patch": {
+        "operationId": "toggle_checklist_item_api_v1_tickets__ticket_id__checklist__key__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistTogglePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Toggle Checklist Item Api V1 Tickets  Ticket Id  Checklist  Key  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Checklistenpunkt abhaken",
         "tags": [
           "Tickets und Aufträge"
         ]
@@ -43897,6 +44514,69 @@
           }
         },
         "summary": "Kennzahlen und Aufgaben der Startseite",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/dashboard/stats": {
+      "get": {
+        "operationId": "dashboard_stats_api_v1_workspace_dashboard_stats_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "default": "week",
+              "pattern": "^(day|week|month|quarter|year)$",
+              "title": "Range",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dashboard Stats Api V1 Workspace Dashboard Stats Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ticket-Auswertung der Startseite (Zeitraum, je Bearbeiter)",
         "tags": [
           "Arbeitsplatz"
         ]

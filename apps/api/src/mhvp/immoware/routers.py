@@ -40,9 +40,7 @@ async def _event(
         entity_type="immoware",
         entity_id=entity_id,
         actor_user_id=principal.user_id,
-        payload={
-            k: v if isinstance(v, int | bool | None) else str(v) for k, v in payload.items()
-        },
+        payload={k: v if isinstance(v, int | bool | None) else str(v) for k, v in payload.items()},
     )
 
 
@@ -103,9 +101,7 @@ async def put_connection(
         row.verify_tls = body.verify_tls
         row.poll_minutes = body.poll_minutes
         await session.flush()
-        await _event(
-            session, principal, "immoware.connection_updated", row.id, enabled=row.enabled
-        )
+        await _event(session, principal, "immoware.connection_updated", row.id, enabled=row.enabled)
         return _connection_out(row)
 
 

@@ -88,7 +88,14 @@ def test_ticket_to_order_to_invoice(client: TestClient, world: World) -> None:
             json={
                 "category": "Heizungsausfall",
                 "title": "Heizung ausgefallen",
-                "checklist": ["Mieter kontaktiert", "Dienstleister beauftragt"],
+                "checklist": [
+                    {"key": "mieter", "label": "Mieter kontaktiert", "required": False},
+                    {
+                        "key": "dienstleister",
+                        "label": "Dienstleister beauftragt",
+                        "required": False,
+                    },
+                ],
                 "default_priority": "urgent",
                 "default_team_id": team["id"],
                 "default_assignee_user_id": str(world.users["m19tech"]),

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, func, or_, select, update
 
-from mhvp.core.auth.principal import TenantPrincipal, get_principal, tenant_tx
+from mhvp.core.auth.principal import TenantPrincipal, get_principal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace import services
@@ -20,6 +20,8 @@ router = APIRouter(prefix="/workspace", tags=["Arbeitsplatz"])
 FILTER_RESOURCES = ("contacts", "properties", "units", "contracts", "documents", "imports")
 MAX_BULK = 500
 MAX_RANGE_DAYS = 400
+STATS_READ = require_permission("tickets:read")
+STATS_RANGES = ("day", "week", "month", "quarter", "year")
 
 
 async def member(request: Request) -> TenantPrincipal:
@@ -162,6 +164,121 @@ async def dashboard(
         upcoming.sort(key=lambda i: i["date"])
         # Money figures stay out until the ledger is released (G1).
         return {"tiles": tiles, "upcoming": upcoming[:10], "accounting": "locked_until_g1"}
+
+
+def _stats_bounds(range_key: str, today: date) -> tuple[date, date]:
+    """Rolling window ending today, inclusive (orientation only, no legal cut-off date)."""
+    days = {"day": 0, "week": 6, "month": 29, "quarter": 89, "year": 364}[range_key]
+    return today - timedelta(days=days), today
+
+
+def _bucket_key(d: date, range_key: str) -> str:
+    """day/week/month range -> day bucket; quarter -> week bucket; year -> month bucket."""
+    if range_key == "quarter":
+        iso = d.isocalendar()
+        return f"{iso.year}-W{iso.week:02d}"
+    if range_key == "year":
+        return f"{d.year}-{d.month:02d}"
+    return d.isoformat()
+
+
+def _bucket_series(start: date, end: date, range_key: str) -> list[str]:
+    keys: list[str] = []
+    step = timedelta(days=1)
+    cursor = start
+    seen: set[str] = set()
+    while cursor <= end:
+        key = _bucket_key(cursor, range_key)
+        if key not in seen:
+            seen.add(key)
+            keys.append(key)
+        cursor += step
+    return keys
+
+
+@router.get(
+    "/dashboard/stats",
+    summary="Ticket-Auswertung der Startseite (Zeitraum, je Bearbeiter)",
+)
+async def dashboard_stats(
+    request: Request,
+    range: str = Query(default="week", pattern="^(" + "|".join(STATS_RANGES) + ")$"),
+    user_id: uuid.UUID | None = None,
+    principal: TenantPrincipal = Depends(STATS_READ),
+) -> dict[str, Any]:
+    from mhvp.tickets.models import Ticket, TicketStatus
+
+    today = services.local_today()
+    start, end = _stats_bounds(range, today)
+    start_dt = datetime.combine(start, dt.time.min, tzinfo=UTC)
+    end_dt = datetime.combine(end + timedelta(days=1), dt.time.min, tzinfo=UTC)
+    async with tenant_tx(request, principal) as session:
+        base = select(Ticket)
+        if user_id is not None:
+            base = base.where(Ticket.assignee_user_id == user_id)
+        tickets = (await session.scalars(base)).all()
+
+        resolved_statuses = {TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED}
+        open_count = sum(1 for t in tickets if t.status not in resolved_statuses)
+        in_progress_count = sum(1 for t in tickets if t.status == TicketStatus.IN_PROGRESS)
+        created_in_range = [t for t in tickets if start_dt <= t.created_at < end_dt]
+        done_in_range = [
+            t for t in tickets if t.resolved_at is not None and start_dt <= t.resolved_at < end_dt
+        ]
+
+        bucket_order = _bucket_series(start, end, range)
+        buckets: dict[str, dict[str, int]] = {
+            k: {"created": 0, "resolved": 0} for k in bucket_order
+        }
+        for t in created_in_range:
+            key = _bucket_key(t.created_at.date(), range)
+            buckets.setdefault(key, {"created": 0, "resolved": 0})["created"] += 1
+        for t in done_in_range:
+            resolved_at = t.resolved_at
+            if resolved_at is None:
+                continue
+            key = _bucket_key(resolved_at.date(), range)
+            buckets.setdefault(key, {"created": 0, "resolved": 0})["resolved"] += 1
+
+        by_assignee: dict[uuid.UUID, dict[str, Any]] = {}
+        for t in tickets:
+            if t.assignee_user_id is None:
+                continue
+            row = by_assignee.setdefault(
+                t.assignee_user_id, {"open": 0, "resolved_in_range": 0, "_hours": []}
+            )
+            if t.status not in resolved_statuses:
+                row["open"] += 1
+        for t in done_in_range:
+            if t.assignee_user_id is None:
+                continue
+            row = by_assignee.setdefault(
+                t.assignee_user_id, {"open": 0, "resolved_in_range": 0, "_hours": []}
+            )
+            row["resolved_in_range"] += 1
+            resolved_at = t.resolved_at
+            if resolved_at is not None:
+                row["_hours"].append((resolved_at - t.created_at).total_seconds() / 3600)
+
+        assignees = []
+        for uid, row in sorted(by_assignee.items(), key=lambda kv: str(kv[0])):
+            hours = row.pop("_hours")
+            row["average_resolution_hours"] = round(sum(hours) / len(hours), 1) if hours else None
+            assignees.append({"user_id": uid, **row})
+
+        return {
+            "range": range,
+            "start": start,
+            "end": end,
+            "totals": {
+                "open": open_count,
+                "in_progress": in_progress_count,
+                "done_in_range": len(done_in_range),
+                "created_in_range": len(created_in_range),
+            },
+            "buckets": [{"key": k, **buckets[k]} for k in bucket_order],
+            "assignees": assignees,
+        }
 
 
 # Global search -------------------------------------------------------------------------

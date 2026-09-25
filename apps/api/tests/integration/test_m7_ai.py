@@ -372,6 +372,49 @@ def test_contact_list_to_contacts_and_undo(
     assert usage["blocked"] is False
 
 
+def test_large_spreadsheet_is_chunked_not_blocked(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
+    """A synthetic (never real tenant data) contact list large enough to raise ~700k characters
+    of table text used to be blocked outright ("zu umfangreich"); it must now be split into row
+    chunks and processed with one provider call per chunk instead."""
+    admin = _setup_provider(client, world)
+    header = ["Name", "Vorname", "Straße", "PLZ", "Ort", "Telefon", "E-Mail", "IBAN"]
+
+    def _row(n: int) -> list[Any]:
+        return [
+            f"Nachname{n}",
+            f"Vorname{n}",
+            f"Musterstraße {n}",
+            "40789",
+            "Monheim am Rhein",
+            "0171 0000000",
+            f"kontakt{n}@example.org",
+            None,
+        ]
+
+    # One row rendered ("Zeile n: ...") is about 90 characters; 8_500 rows comfortably clears
+    # 700_000 characters of table text without rebuilding the workbook on every row.
+    rows = [header, *[_row(n) for n in range(1, 8_501)]]
+    sheet = _xlsx(rows)
+    raw_text = gateway.spreadsheet_text(sheet)
+    assert len(raw_text) > 700_000
+    expected_chunks = len(gateway._chunk_table_body(raw_text))
+    assert expected_chunks > 1
+
+    doc = _upload(client, admin, "kontakte.xlsx", sheet, XLSX)
+    fake.queue.extend([{"contacts": [], "questions": []}] * expected_chunks)
+    run = _chat(client, admin, "extract_contacts", "Kontakte anlegen", [doc])
+    assert run["status"] == "succeeded", run
+    assert len(fake.calls) == expected_chunks
+    assert run["input_stats"]["kontakte.xlsx"] == len(raw_text)
+    assert run["progress"] == {
+        "stage": "Fertig",
+        "current": expected_chunks,
+        "total": expected_chunks,
+    }
+
+
 def _unit(**values: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "number": "01",
