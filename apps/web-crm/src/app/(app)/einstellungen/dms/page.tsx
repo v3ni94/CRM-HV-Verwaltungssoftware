@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
 
-/** DMS-Anbindung (Einstellungen): Paperless-Zugangsdaten pflegen, Google Drive nur anzeigen.
+/** DMS-Anbindung (Einstellungen): Paperless- und Google-Drive-Zugangsdaten pflegen.
  *  Immoware24 bleibt Master; hier wird ausschließlich die Anbindung des CRM an das
  *  Dokumentenmanagement konfiguriert. */
 export default async function DmsSettingsPage() {

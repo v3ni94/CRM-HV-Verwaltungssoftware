@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.6.1",
+    date: "25.09.2026",
+    title: "Google Drive auf der DMS-Seite einrichtbar",
+    changes: [
+      "Google-Drive-Anbindung wird auf der Seite DMS-Anbindung eingerichtet: Wurzelordner, OAuth-Client, Zugangsdaten",
+    ],
+  },
+  {
     version: "1.6.0",
     date: "25.09.2026",
     title: "Einstellungsseite DMS-Anbindung",

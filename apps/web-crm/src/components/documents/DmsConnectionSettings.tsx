@@ -16,8 +16,10 @@ export type DmsConnection = {
 
 const OBJECT_FIELD_KEY = "object_field_id";
 const COMPANY_FIELD_KEY = "company_field_id";
+const ROOT_FOLDER_KEY = "root_folder_id";
+const CLIENT_ID_KEY = "client_id";
 
-/** DMS-Anbindung (Einstellungen): Paperless-Zugangsdaten pflegbar, Google Drive nur lesend.
+/** DMS-Anbindung (Einstellungen): Paperless- und Google-Drive-Zugangsdaten pflegbar.
  *  Immoware24 bleibt Master der Stammdaten; hier wird nur die Anbindung des CRM an das
  *  Dokumentenmanagement konfiguriert. */
 export function DmsConnectionSettings({
@@ -37,6 +39,16 @@ export function DmsConnectionSettings({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const [gdSaved, setGdSaved] = useState<DmsConnection | null>(googleDrive);
+  const [gdEnabled, setGdEnabled] = useState(googleDrive?.enabled ?? false);
+  const [rootFolderId, setRootFolderId] = useState(googleDrive?.options?.[ROOT_FOLDER_KEY] ?? "");
+  const [clientId, setClientId] = useState(googleDrive?.options?.[CLIENT_ID_KEY] ?? "");
+  const [clientSecret, setClientSecret] = useState("");
+  const [refreshToken, setRefreshToken] = useState("");
+  const [gdError, setGdError] = useState<string | null>(null);
+  const [gdMessage, setGdMessage] = useState<string | null>(null);
+  const [gdBusy, setGdBusy] = useState(false);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +75,42 @@ export function DmsConnectionSettings({
     setSaved(res.data);
     setToken("");
     setMessage(t("saved"));
+  };
+
+  const saveGoogleDrive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGdMessage(null);
+    setGdError(null);
+    if (Boolean(clientSecret.trim()) !== Boolean(refreshToken.trim())) {
+      setGdError(t("secretPairRequired"));
+      return;
+    }
+    const options: Record<string, string> = { ...(gdSaved?.options ?? {}) };
+    if (rootFolderId.trim()) options[ROOT_FOLDER_KEY] = rootFolderId.trim();
+    else delete options[ROOT_FOLDER_KEY];
+    if (clientId.trim()) options[CLIENT_ID_KEY] = clientId.trim();
+    else delete options[CLIENT_ID_KEY];
+    const secret =
+      clientSecret.trim() && refreshToken.trim()
+        ? JSON.stringify({ client_secret: clientSecret.trim(), refresh_token: refreshToken.trim() })
+        : null;
+    const body = {
+      enabled: gdEnabled,
+      base_url: null,
+      options,
+      ...(secret ? { secret } : {}),
+    };
+    setGdBusy(true);
+    const res = await bff<DmsConnection>("/api/bff/dms-connections/google_drive", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    setGdBusy(false);
+    if (!res.ok) return setGdError(res.message);
+    setGdSaved(res.data);
+    setClientSecret("");
+    setRefreshToken("");
+    setGdMessage(t("saved"));
   };
 
   return (
@@ -147,18 +195,89 @@ export function DmsConnectionSettings({
         </div>
       </form>
 
-      <div className={`${ui.card} flex flex-col gap-2`} aria-label={t("googleDriveTitle")}>
+      <form
+        onSubmit={saveGoogleDrive}
+        className={`${ui.card} flex flex-col gap-4`}
+        aria-label={t("googleDriveTitle")}
+      >
         <h2 className={ui.h2}>{t("googleDriveTitle")}</h2>
         <p className="text-sm text-muted">{t("googleDriveHint")}</p>
-        <dl className="grid gap-1 text-sm sm:grid-cols-2">
-          <dt className="text-muted">{t("enabled")}</dt>
-          <dd>{googleDrive?.enabled ? t("yes") : t("no")}</dd>
-          <dt className="text-muted">{t("baseUrl")}</dt>
-          <dd>{googleDrive?.base_url ?? t("notSet")}</dd>
-          <dt className="text-muted">{t("token")}</dt>
-          <dd>{googleDrive?.has_secret ? t("tokenStored") : t("tokenMissing")}</dd>
-        </dl>
-      </div>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={gdEnabled} onChange={(e) => setGdEnabled(e.target.checked)} />
+          {t("enabled")}
+        </label>
+
+        <div>
+          <label htmlFor="dms-gd-root-folder" className={ui.label}>
+            {t("rootFolderId")}
+          </label>
+          <input
+            id="dms-gd-root-folder"
+            className={ui.input}
+            value={rootFolderId}
+            onChange={(e) => setRootFolderId(e.target.value)}
+          />
+          <p className={ui.help}>{t("rootFolderIdHint")}</p>
+        </div>
+
+        <div>
+          <label htmlFor="dms-gd-client-id" className={ui.label}>
+            {t("clientId")}
+          </label>
+          <input
+            id="dms-gd-client-id"
+            className={ui.input}
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+          />
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div>
+            <label htmlFor="dms-gd-client-secret" className={ui.label}>
+              {t("clientSecret")}
+            </label>
+            <input
+              id="dms-gd-client-secret"
+              type="password"
+              autoComplete="off"
+              className={ui.input}
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+              placeholder={gdSaved?.has_secret ? t("secretStored") : t("secretMissing")}
+            />
+          </div>
+          <div>
+            <label htmlFor="dms-gd-refresh-token" className={ui.label}>
+              {t("refreshToken")}
+            </label>
+            <input
+              id="dms-gd-refresh-token"
+              type="password"
+              autoComplete="off"
+              className={ui.input}
+              value={refreshToken}
+              onChange={(e) => setRefreshToken(e.target.value)}
+              placeholder={gdSaved?.has_secret ? t("secretStored") : t("secretMissing")}
+            />
+          </div>
+        </div>
+        <p className={ui.help}>{t("secretHint")}</p>
+
+        {gdError ? (
+          <p role="alert" className={ui.alert}>
+            {gdError}
+          </p>
+        ) : null}
+        {gdMessage ? <p className={ui.success}>{gdMessage}</p> : null}
+
+        <div className={ui.formActions}>
+          <button type="submit" className={`${ui.primary} ${ui.actionFull}`} disabled={gdBusy}>
+            {t("save")}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
