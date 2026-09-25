@@ -5,6 +5,10 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.14.2 (25.09.2026) Mail-Archivierung bei jedem Ticketabschluss
+
+- Tickets: jeder Abschlussstatus (erledigt, abgeschlossen, abgelehnt) archiviert die zugehörigen Mails im Postfach; bisher nur erledigt und abgeschlossen. Die Postfach-Einstellung zur Archivierung bleibt maßgeblich
+
 ## 1.14.1 (25.09.2026) Abschaltplan Immoware Hub
 
 - Runbook `docs/runbooks/hub-abschaltung.md`: vierstufige Abschaltung des Immoware Hub mit Rückweg je Schritt, Voraussetzungen, Aufbewahrungsfristen und Hinweis zur Domain mail.mueller-holding.ag

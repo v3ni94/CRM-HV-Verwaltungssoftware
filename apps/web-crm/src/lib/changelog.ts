@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.14.2",
+    date: "25.09.2026",
+    title: "Mail-Archivierung bei jedem Ticketabschluss",
+    changes: [
+      "Tickets: jeder Abschlussstatus (erledigt, abgeschlossen, abgelehnt) archiviert die zugehörigen Mails im Postfach; bisher nur erledigt und abgeschlossen. Die Postfach-Einstellung zur Archivierung bleibt maßgeblich",
+    ],
+  },
+  {
     version: "1.14.1",
     date: "25.09.2026",
     title: "Abschaltplan Immoware Hub",
