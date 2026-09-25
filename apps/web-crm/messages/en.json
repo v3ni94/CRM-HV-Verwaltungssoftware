@@ -1268,6 +1268,18 @@
       "test": "Send test message",
       "testOk": "The Cloud API accepted the test message.",
       "testFailed": "Test failed: {error}"
+    },
+    "channelEditor": {
+      "title": "Channels per escalation level",
+      "level": "Level",
+      "levelN": "Level {level}",
+      "internal": "Internal",
+      "email": "Email",
+      "sms": "SMS",
+      "checkbox": "Level {level}: {channel}",
+      "smsHint": "SMS is only delivered when the SMS gateway is active and the recipient has a mobile number.",
+      "save": "Save channels",
+      "saved": "Saved"
     }
   },
   "Version": {

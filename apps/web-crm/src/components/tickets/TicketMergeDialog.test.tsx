@@ -42,7 +42,7 @@ function mockApi() {
         message_count: 3,
         comments: [{}],
       });
-    if (url === `/api/bff/contacts/${CONTACT_ID}`) return jsonResponse({ display_name: "Max Mieter" });
+    if (url === `/api/bff/contacts/${CONTACT_ID}/name`) return jsonResponse({ display_name: "Max Mieter" });
     if (url === "/api/bff/tickets/merge" && init?.method === "POST") return jsonResponse({ id: TARGET_ID }, 201);
     return jsonResponse({}, 404);
   });

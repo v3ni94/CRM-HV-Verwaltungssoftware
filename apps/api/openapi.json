@@ -4469,6 +4469,26 @@
         "title": "ContactMandateStatus",
         "type": "string"
       },
+      "ContactName": {
+        "description": "Minimal view for previews (ticket merge): only the display name, no contact details.",
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "ContactName",
+        "type": "object"
+      },
       "ContactOut": {
         "properties": {
           "addresses": {
@@ -30064,6 +30084,50 @@
         "summary": "Kommunikationshistorie des Kontakts",
         "tags": [
           "Kommunikation"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/name": {
+      "get": {
+        "description": "Data minimisation: previews (e.g. ticket merge) only need the name, not the record.",
+        "operationId": "get_contact_name_api_v1_contacts__contact_id__name_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactName"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anzeigename eines Kontakts (nur Name)",
+        "tags": [
+          "Kontakte"
         ]
       }
     },

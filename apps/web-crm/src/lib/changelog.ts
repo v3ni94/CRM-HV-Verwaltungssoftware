@@ -17,6 +17,39 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.17.5",
+    date: "25.09.2026",
+    title: "SLA: Kanäle je Eskalationsstufe in der Oberfläche",
+    changes: [
+      "SLA-Einstellungen: je Regel Tabelle Stufe 1 bis 3 mit Intern, E-Mail und SMS, vorbelegt mit dem Standard; Hinweis, dass SMS nur mit aktivem Gateway und Mobilnummer greift",
+      "Korrektur: Bearbeiten einer Regel im Formular setzt die Kanalwahl nicht mehr auf Standard zurück",
+    ],
+  },
+  {
+    version: "1.17.4",
+    date: "25.09.2026",
+    title: "Google-Verbindung ohne Abmeldung",
+    changes: [
+      "Google-Verbindung (DMS und Postfächer): die Rückleitung von Google landet auf einer same-site Zwischenseite, damit die Sitzung erhalten bleibt; bisher erschien nach dem Google-Login die Anmeldeseite des CRM, obwohl die Verbindung gespeichert war",
+    ],
+  },
+  {
+    version: "1.17.3",
+    date: "25.09.2026",
+    title: "Datenschutz: Ticket-Vorschau lädt nur den Kontaktnamen",
+    changes: [
+      "Neuer Endpunkt für den Anzeigenamen eines Kontakts; die Vorschau beim Zusammenführen von Tickets lädt damit nicht mehr den vollständigen Kontakt (Datenminimierung)",
+    ],
+  },
+  {
+    version: "1.17.2",
+    date: "25.09.2026",
+    title: "Worker: KI-Clients sauber schließen",
+    changes: [
+      "Die HTTP-Clients der KI-Anbieter werden nach jedem Anbieterschritt geschlossen, der Worker meldet nach KI-Läufen kein \"Event loop is closed\" mehr",
+    ],
+  },
+  {
     version: "1.17.1",
     date: "25.09.2026",
     title: "KI-Import: parallele Verarbeitung der Teile",

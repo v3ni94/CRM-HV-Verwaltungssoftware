@@ -49,6 +49,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^contacts$/ },
   { method: "GET", pattern: /^contacts\/duplicates$/ },
   { method: "GET", pattern: new RegExp(`^contacts/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^contacts/${ID}/name$`) },
   { method: "PUT", pattern: new RegExp(`^contacts/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^contacts/${ID}$`) },
   {
