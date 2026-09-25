@@ -12,6 +12,7 @@ import { ui } from "@/lib/ui";
 
 import { DraftEditor } from "./DraftEditor";
 import type { Message } from "./MailWorkspace";
+import { SuggestionCard } from "./SuggestionCard";
 
 type Member = { user_id: string; display_name: string; email: string };
 
@@ -152,6 +153,8 @@ export function MailDetail({
           {message.attachment_document_ids.length > 0 ? <span>{t("attachments", { count: message.attachment_document_ids.length })}</span> : null}
         </div>
       </div>
+
+      {message.direction === "in" ? <SuggestionCard message={message} onUpdated={onUpdated} onDraftCreated={onCreated} /> : null}
 
       {message.status === "draft" ? (
         <DraftEditor message={message} onUpdated={onUpdated} />

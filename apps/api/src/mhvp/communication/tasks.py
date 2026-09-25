@@ -1,4 +1,5 @@
-"""Celery job: incremental Gmail sync of all enabled mailboxes (M20-01)."""
+"""Celery jobs: incremental Gmail sync of all enabled mailboxes (M20-01), mail suggestions and
+playbook learning (M20 Übernahme aus dem Immoware Hub, queue ``ai``)."""
 
 import asyncio
 import logging
@@ -61,3 +62,72 @@ async def gmail_sync_all_once(settings: Settings) -> dict[str, int]:
 @shared_task(name="mhvp.communication.gmail_sync_all")
 def gmail_sync_all() -> dict[str, int]:
     return asyncio.run(gmail_sync_all_once(get_settings()))
+
+
+async def suggest_message_once(
+    settings: Settings, tenant_id: uuid.UUID, message_id: uuid.UUID
+) -> str:
+    """Berechnet den KI-Vorschlag einer Mail und trägt ihn ein. Ein Fehler bleibt lokal
+    (``suggestion_status`` wird ``failed``); er verlässt diese Funktion nie als Exception."""
+    from mhvp.communication import suggest
+    from mhvp.communication.models import Message
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    try:
+        factory = create_session_factory(engine)
+        async with tenant_transaction(factory, tenant_id) as session:
+            message = await session.get(Message, message_id, with_for_update=True)
+            if message is None:
+                return "not_found"
+            try:
+                result = await suggest.suggest_for_message(session, settings, message)
+            except Exception as exc:
+                log.warning("mail suggestion failed", extra={"message_id": str(message_id)})
+                message.suggestion, message.suggestion_status = {"reason": str(exc)[:500]}, "failed"
+                return "failed"
+            status = str(result.pop("status"))
+            message.suggestion, message.suggestion_status = result, status
+            return status
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.communication.suggest_message")
+def suggest_message(tenant_id: str, message_id: str) -> str:
+    return asyncio.run(
+        suggest_message_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(message_id))
+    )
+
+
+async def learn_playbook_once(
+    settings: Settings, tenant_id: uuid.UUID, ticket_id: uuid.UUID
+) -> str:
+    from mhvp.communication import suggest
+    from mhvp.tickets.models import Ticket
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    try:
+        factory = create_session_factory(engine)
+        async with tenant_transaction(factory, tenant_id) as session:
+            ticket = await session.get(Ticket, ticket_id)
+            if ticket is None:
+                return "not_found"
+            try:
+                draft = await suggest.learn_playbook_from_ticket(session, settings, ticket)
+            except Exception:
+                log.warning("playbook learning failed", extra={"ticket_id": str(ticket_id)})
+                return "failed"
+            return "created" if draft is not None else "skipped"
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.communication.learn_playbook")
+def learn_playbook(tenant_id: str, ticket_id: str) -> str:
+    return asyncio.run(
+        learn_playbook_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(ticket_id))
+    )

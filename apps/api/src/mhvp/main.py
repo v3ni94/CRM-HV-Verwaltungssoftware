@@ -47,6 +47,7 @@ from mhvp.platform.routers import platform_router, tenant_router
 from mhvp.portal.routers import admin as portal_admin_router
 from mhvp.portal.routers import router as portal_router
 from mhvp.properties.routers import router as properties_router
+from mhvp.sla.routers import router as sla_router
 from mhvp.tickets.routers import router as tickets_router
 from mhvp.workspace.ops import router as ops_router
 from mhvp.workspace.routers import router as workspace_router
@@ -155,6 +156,7 @@ def create_app(
     app.include_router(rentlaw_platform_router, prefix=API_PREFIX)
     app.include_router(licensing_router, prefix=API_PREFIX)
     app.include_router(tickets_router, prefix=API_PREFIX)
+    app.include_router(sla_router, prefix=API_PREFIX)
     app.include_router(mail_router, prefix=API_PREFIX)
     app.include_router(dispatch_router, prefix=API_PREFIX)
     app.include_router(portal_router, prefix=API_PREFIX)

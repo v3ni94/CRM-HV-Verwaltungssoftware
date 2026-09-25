@@ -131,6 +131,16 @@ checks.
   (annex C), acceptance case (annex D), change reason.
 - Errors per ADR 0004 with codes registered in `mhvp.core.problems`.
 
+### Versionierung (verbindlich)
+
+- Semantische Version in `VERSION`, `CHANGELOG.md` und `apps/web-crm/src/lib/changelog.ts`
+  (erster Eintrag = aktuelle Version, im Footer und unter `/version` sichtbar).
+- Schema: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zweite Stelle (1.1, 1.2) für neue
+  Funktionen oder Module, dritte Stelle (1.2.1, 1.2.2) für kleine Korrekturen.
+- Jeder Commit, der ausgeliefert wird, erhöht die Version und ergänzt einen Eintrag mit Datum
+  (TT.MM.JJJJ) und einer Liste dessen, was genau geändert wurde, in allen drei Dateien. Das
+  Protokoll wird laufend fortgeschrieben, nie rückwirkend geändert.
+
 ## 11. Per task workflow
 
 Rule 0.1.12 and section 17:

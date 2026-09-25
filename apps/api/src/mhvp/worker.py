@@ -36,6 +36,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.accounting.tasks",
             "mhvp.letting.tasks",
             "mhvp.platform.licensing",
+            "mhvp.sla.tasks",
         ],
     )
     app.conf.update(
@@ -98,6 +99,11 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "workspace-reminders": {
                 "task": "mhvp.workspace.reminders",
                 "schedule": 3600.0,
+            },
+            # SLA-Ampel und Eskalation (M21 Übernahme aus dem Immoware Hub), alle 5 Minuten.
+            "sla-check-clocks": {
+                "task": "mhvp.sla.check_clocks",
+                "schedule": 300.0,
             },
         },
     )

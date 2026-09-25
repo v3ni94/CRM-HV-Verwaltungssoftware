@@ -126,17 +126,44 @@ class SummaryResult(_Out):
     open_points: list[str]
 
 
+class MailSuggestion(_Out):
+    """Vorschlag je eingehender Mail (M20 Übernahme aus dem Immoware Hub); nur Vorschlag,
+    nichts wird automatisch geschrieben oder versendet."""
+
+    category: str | None = Field(description="passendste bekannte Ticketkategorie, sonst null")
+    urgency: Literal["low", "normal", "high", "emergency"] | None
+    summary: str = Field(description="ein bis drei Sätze, was die Mail möchte")
+    property_number: str | None = Field(description="dreistellige Objektnummer, falls erkennbar")
+    contact_name: str | None = Field(description="Name des Absenders, falls aus dem Text erkennbar")
+    reply_draft: str | None = Field(description="kurzer, sachlicher Antwortentwurf auf Deutsch")
+
+
+class PlaybookDraft(_Out):
+    """Entwurf eines Playbooks aus einem abgeschlossenen Ticket."""
+
+    title: str = Field(max_length=200)
+    category: str | None
+    keywords: list[str] = Field(description="vier bis zehn charakteristische Stichworte")
+    summary: str
+    steps: list[str] = Field(description="Arbeitsschritte in Reihenfolge, als Sätze")
+    reply_template: str | None = Field(description="Antwortvorlage mit Platzhaltern, sonst null")
+
+
 SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.EXTRACT_CONTACTS: ContactsResult,
     AiTask.EXTRACT_PROPERTY: PropertyResult,
     AiTask.ANSWER_QUESTION: AnswerResult,
     AiTask.SUMMARIZE: SummaryResult,
+    AiTask.CLASSIFY_EMAIL: MailSuggestion,
+    AiTask.DRAFT_REPLY: PlaybookDraft,
 }
 DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.EXTRACT_CONTACTS: "large",
     AiTask.EXTRACT_PROPERTY: "large",
     AiTask.ANSWER_QUESTION: "small",
     AiTask.SUMMARIZE: "small",
+    AiTask.CLASSIFY_EMAIL: "small",
+    AiTask.DRAFT_REPLY: "small",
 }
 
 

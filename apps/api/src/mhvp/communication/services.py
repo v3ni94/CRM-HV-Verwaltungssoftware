@@ -5,6 +5,7 @@ ticket, unless it is a reply within a known thread; then it is attached to that 
 A re-imported message (same Message-ID) never creates a second message or ticket.
 """
 
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -19,6 +20,8 @@ from mhvp.core.events import emit
 from mhvp.core.problems import ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.workspace.services import local_today
+
+log = logging.getLogger(__name__)
 
 
 async def ingest_parsed(
@@ -134,7 +137,38 @@ async def ingest_parsed(
         await attach_to_ticket(session, row, parent.ticket_id, actor_user_id)
     elif auto_ticket:
         await create_ticket(session, row, actor_user_id)
+    if row.ticket_id is not None:
+        await _queue_suggestion(session, settings, tenant_id, row)
     return row, True
+
+
+async def _queue_suggestion(
+    session: AsyncSession, settings: Settings, tenant_id: uuid.UUID, row: Message
+) -> None:
+    """Vorschlag je Mail (M20 Übernahme aus dem Immoware Hub): synchron in Tests und
+    Entwicklung (``ai_inline``, wie der Assistent in ``mhvp.ai.routers``), sonst über die Queue
+    ``ai``. Ein Fehler beim Vorschlag darf die Mailaufnahme nie stören."""
+    if settings.ai_inline:
+        from mhvp.communication import suggest
+
+        try:
+            result = await suggest.suggest_for_message(session, settings, row)
+        except Exception as exc:
+            row.suggestion, row.suggestion_status = {"reason": str(exc)[:500]}, "failed"
+            return
+        status = result.pop("status")
+        row.suggestion, row.suggestion_status = result, status
+    else:
+        try:
+            from mhvp.worker import get_celery
+
+            get_celery().send_task(
+                "mhvp.communication.suggest_message",
+                args=[str(tenant_id), str(row.id)],
+                queue="ai",
+            )
+        except Exception:
+            log.warning("could not queue mail suggestion", extra={"message_id": str(row.id)})
 
 
 async def ingest_raw(

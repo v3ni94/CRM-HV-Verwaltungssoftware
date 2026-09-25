@@ -3661,6 +3661,23 @@ export interface paths {
         patch: operations["assign_api_v1_mail_messages__message_id__patch"];
         trace?: never;
     };
+    "/api/v1/mail/messages/{message_id}/apply-playbook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Antwortentwurf aus Playbook */
+        post: operations["apply_playbook_api_v1_mail_messages__message_id__apply_playbook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/messages/{message_id}/appointment": {
         parameters: {
             query?: never;
@@ -3763,6 +3780,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/messages/{message_id}/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** KI-Vorschlag neu berechnen */
+        post: operations["recompute_suggestion_api_v1_mail_messages__message_id__suggest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/messages/{message_id}/thread": {
         parameters: {
             query?: never;
@@ -3830,6 +3864,42 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/playbooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Playbooks */
+        get: operations["list_playbooks_api_v1_mail_playbooks_get"];
+        put?: never;
+        /** Playbook anlegen */
+        post: operations["create_playbook_api_v1_mail_playbooks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/playbooks/{playbook_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Playbook löschen */
+        delete: operations["delete_playbook_api_v1_mail_playbooks__playbook_id__delete"];
+        options?: never;
+        head?: never;
+        /** Playbook ändern oder freigeben */
+        patch: operations["patch_playbook_api_v1_mail_playbooks__playbook_id__patch"];
         trace?: never;
     };
     "/api/v1/meters/{meter_id}/readings": {
@@ -6119,6 +6189,14 @@ export interface components {
             /** Contacts */
             contacts?: components["schemas"]["ContactChoice"][] | null;
             property?: components["schemas"]["PropertyChoice"] | null;
+        };
+        /** ApplyPlaybookIn */
+        ApplyPlaybookIn: {
+            /**
+             * Playbook Id
+             * Format: uuid
+             */
+            playbook_id: string;
         };
         /** AttendanceIn */
         AttendanceIn: {
@@ -9916,6 +9994,46 @@ export interface components {
             start_date: string;
             /** Text */
             text: string;
+        };
+        /** PlaybookIn */
+        PlaybookIn: {
+            /** Category */
+            category?: string | null;
+            /** Keywords */
+            keywords?: string[];
+            /** Reply Template */
+            reply_template?: string | null;
+            /**
+             * Status
+             * @default draft
+             */
+            status: string;
+            /** Steps */
+            steps?: string[];
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+            /** Title */
+            title: string;
+        };
+        /** PlaybookPatchIn */
+        PlaybookPatchIn: {
+            /** Category */
+            category?: string | null;
+            /** Keywords */
+            keywords?: string[] | null;
+            /** Reply Template */
+            reply_template?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Steps */
+            steps?: string[] | null;
+            /** Summary */
+            summary?: string | null;
+            /** Title */
+            title?: string | null;
         };
         /** PortalAcceptIn */
         PortalAcceptIn: {
@@ -20148,6 +20266,43 @@ export interface operations {
             };
         };
     };
+    apply_playbook_api_v1_mail_messages__message_id__apply_playbook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyPlaybookIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     take_appointment_api_v1_mail_messages__message_id__appointment_post: {
         parameters: {
             query?: never;
@@ -20362,6 +20517,39 @@ export interface operations {
             };
         };
     };
+    recompute_suggestion_api_v1_mail_messages__message_id__suggest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     message_thread_api_v1_mail_messages__message_id__thread_get: {
         parameters: {
             query?: never;
@@ -20503,6 +20691,141 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    list_playbooks_api_v1_mail_playbooks_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                q?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_playbook_api_v1_mail_playbooks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaybookIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_playbook_api_v1_mail_playbooks__playbook_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playbook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_playbook_api_v1_mail_playbooks__playbook_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playbook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaybookPatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

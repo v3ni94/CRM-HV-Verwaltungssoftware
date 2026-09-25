@@ -1,5 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
+import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
+import { SlaBadge } from "@/components/tickets/SlaBadge";
 import { TicketEdit } from "@/components/tickets/TicketForms";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -20,6 +22,8 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   });
   redirectIfUnauthenticated(response);
   if (!data) return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
+  const me = await serverApi().GET("/api/v1/auth/me");
+  const canManageSla = me.data?.permissions.includes("sla:update") ?? false;
   const comments = (data.comments ?? []) as Comment[];
   const events = (data.events ?? []) as Event[];
   return (
@@ -29,6 +33,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
         title={`#${String(data.number)} ${String(data.title ?? "")}`}
         description={data.public_description ? String(data.public_description) : undefined}
       />
+      <SlaBadge ticketId={ticketId} canManage={canManageSla} />
       <TicketEdit id={ticketId} status={String(data.status)} priority={String(data.priority)} />
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("comments")}</h2>
@@ -53,6 +58,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           ))}
         </ul>
       </section>
+      <DmsDocumentsPanel entity="ticket" id={ticketId} />
     </div>
   );
 }

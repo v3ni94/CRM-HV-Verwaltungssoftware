@@ -20,7 +20,8 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 FROM deps AS build
 ARG MHVP_APP_VERSION=0.0.0-dev
-ENV MHVP_APP_VERSION=${MHVP_APP_VERSION}
+ARG MHVP_BUILD=
+ENV MHVP_APP_VERSION=${MHVP_APP_VERSION} MHVP_BUILD=${MHVP_BUILD}
 COPY packages packages
 COPY apps/web-crm apps/web-crm
 RUN pnpm --filter @mhvp/web-crm build
@@ -33,8 +34,9 @@ RUN apk upgrade --no-cache \
        /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn* \
        /usr/local/bin/yarn /usr/local/bin/yarnpkg
 ARG MHVP_APP_VERSION=0.0.0-dev
+ARG MHVP_BUILD=
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 \
-    HOSTNAME=0.0.0.0 PORT=3000 MHVP_APP_VERSION=${MHVP_APP_VERSION}
+    HOSTNAME=0.0.0.0 PORT=3000 MHVP_APP_VERSION=${MHVP_APP_VERSION} MHVP_BUILD=${MHVP_BUILD}
 WORKDIR /app
 COPY --from=build --chown=node:node /repo/apps/web-crm/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/web-crm/.next/static ./apps/web-crm/.next/static

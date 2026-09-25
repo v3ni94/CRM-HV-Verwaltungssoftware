@@ -24,3 +24,13 @@ with user name, message count and last message; filters `user_id`, `date_from`, 
 (`scope=own`). Holders of `audit:read` may read any chat by id but cannot send messages into
 another person's chat. The CRM page `/assistent` is this audit trail; new requests start in
 the chat bubble on every page.
+
+## Mail suggestions and playbooks (M20 take-over, 25.09.2026)
+
+Two task types added for `mhvp.communication.suggest` (see `mhvp/communication/README.md`):
+`classify_email` (`MailSuggestion`: category, urgency, summary, property number, contact name,
+reply draft) for the suggestion on an inbound mail, and `draft_reply` (`PlaybookDraft`: title,
+category, keywords, summary, steps, reply template) for a playbook draft learned from a closed
+ticket. Both run through the same gateway as the assistant chat (release, budget, audit); a
+missing release or an exhausted budget never raises an exception, the caller stores the
+gateway's reason as the suggestion's skip reason (`Message.suggestion_status = "skipped"`).

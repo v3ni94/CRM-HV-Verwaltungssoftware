@@ -147,6 +147,33 @@ class DmsConnectionOut(_Out):
     options: dict[str, str]
 
 
+class DmsDocumentOut(_Out):
+    """Ein Paperless-Dokument in der Ticket- oder Objektansicht (M31)."""
+
+    id: int
+    title: str
+    created: str | None
+    added: str | None
+    correspondent: str | None
+    document_type: str | None
+    tags: list[str]
+    page_count: int | None
+    original_file_name: str | None
+    preview_url: str
+    download_url: str
+
+
+class DmsDocumentPageMeta(_Out):
+    page: int
+    per_page: int
+    total: int
+
+
+class DmsDocumentPage(_Out):
+    data: list[DmsDocumentOut]
+    meta: DmsDocumentPageMeta
+
+
 class TemplateIn(_In):
     code: str = Field(pattern=r"^[a-z0-9_]{2,63}$")
     name: str = Field(min_length=1, max_length=200)

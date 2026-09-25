@@ -1329,6 +1329,32 @@
       "draft": "Entwurf",
       "pending": "wartet auf Freigabe",
       "sent": "gesendet"
+    },
+    "suggestion": {
+      "title": "KI-Vorschlag",
+      "recompute": "Neu berechnen",
+      "category": "Kategorie",
+      "urgency": "Dringlichkeit",
+      "urgencyLevel": {
+        "low": "niedrig",
+        "normal": "normal",
+        "high": "hoch",
+        "emergency": "Notfall"
+      },
+      "summary": "Zusammenfassung",
+      "property": "Objekt",
+      "contact": "Kontakt",
+      "playbook": "Passendes Playbook",
+      "playbookScore": "Übereinstimmung {percent}%",
+      "useReply": "Antwort aus Vorschlag",
+      "applyPlaybook": "Playbook anwenden",
+      "status": {
+        "none": "Noch kein Vorschlag.",
+        "pending": "Wird berechnet...",
+        "ready": "Vorschlag bereit",
+        "failed": "Vorschlag fehlgeschlagen: {reason}",
+        "skipped": "Kein Vorschlag: {reason}"
+      }
     }
   },
   "Platform": {
@@ -1669,6 +1695,14 @@
     "mail": {
       "title": "Postfächer",
       "description": "Google OAuth, Postfächer verbinden, Standardpostfach und Freigaben."
+    },
+    "sla": {
+      "title": "SLA und Bereitschaft",
+      "description": "Regeln, Eskalationsstufen, Bereitschaftsplan, Kalender und Notfallalarme."
+    },
+    "dms": {
+      "title": "DMS-Anbindung",
+      "description": "Paperless-Zugangsdaten und Feld-IDs pflegen, Google Drive anzeigen."
     }
   },
   "Members": {
@@ -1828,5 +1862,211 @@
     "searchObject": "Akte {number} suchen",
     "empty": "Keine Objekte vorhanden.",
     "hint": "Der Absprung öffnet die Suche der Objektübernahme mit der Objektnummer. Eine direkte Verknüpfung je Akte folgt mit Stufe 3."
+  },
+  "MailPlaybooks": {
+    "title": "Playbooks",
+    "empty": "Keine Playbooks.",
+    "new": "Playbook anlegen",
+    "titleLabel": "Titel",
+    "category": "Kategorie",
+    "keywords": "Schlagwörter (kommagetrennt)",
+    "summary": "Zusammenfassung",
+    "steps": "Arbeitsschritte (eine Zeile je Schritt)",
+    "replyTemplate": "Antwortvorlage",
+    "status": {
+      "draft": "Entwurf",
+      "active": "aktiv",
+      "archived": "archiviert"
+    },
+    "save": "Speichern",
+    "delete": "Löschen",
+    "activate": "Freigeben",
+    "usageCount": "{count}x verwendet",
+    "backToMail": "Zurück zur Mail"
+  },
+  "Sla": {
+    "title": "SLA und Bereitschaft",
+    "intro": "Reaktions- und Lösungszeiten je Priorität, Eskalationsstufen, Bereitschaftsplan, Geschäftszeitenkalender und Notfallalarme.",
+    "tabs": {
+      "rules": "Regeln",
+      "onCall": "Bereitschaft",
+      "calendar": "Kalender",
+      "alerts": "Alarme"
+    },
+    "priorities": {
+      "low": "niedrig",
+      "normal": "normal",
+      "high": "hoch",
+      "urgent": "dringend",
+      "immediate": "sofort"
+    },
+    "clockTypes": {
+      "business": "Geschäftszeit",
+      "calendar": "Kalenderzeit"
+    },
+    "channels": {
+      "email": "E-Mail",
+      "internal": "intern"
+    },
+    "channel": "Kanal",
+    "colors": {
+      "green": "im Rahmen",
+      "yellow": "kritisch",
+      "red": "verletzt"
+    },
+    "clockStates": {
+      "running": "läuft",
+      "paused": "pausiert",
+      "breached": "verletzt",
+      "done": "erledigt"
+    },
+    "rules": {
+      "title": "SLA-Regeln",
+      "empty": "Noch keine Regel angelegt.",
+      "create": "Regel anlegen",
+      "name": "Name",
+      "priority": "Priorität",
+      "responseMinutes": "Reaktionszeit (Minuten)",
+      "resolutionMinutes": "Lösungszeit (Minuten)",
+      "clockType": "Uhrtyp",
+      "active": "Aktiv",
+      "inactive": "inaktiv",
+      "save": "Speichern",
+      "cancelEdit": "Abbrechen",
+      "edit": "Bearbeiten",
+      "activate": "Aktivieren",
+      "deactivate": "Deaktivieren",
+      "responseSummary": "Reaktion {minutes} Min.",
+      "resolutionSummary": "Lösung {minutes} Min."
+    },
+    "escalation": {
+      "show": "Eskalationsstufen anzeigen",
+      "title": "Eskalationsstufen",
+      "empty": "Noch keine Eskalationsstufe angelegt.",
+      "step": "Stufe {step}",
+      "after": "nach {minutes} Min.",
+      "role": "Rolle {role}",
+      "noTarget": "kein Ziel hinterlegt",
+      "remove": "Entfernen",
+      "stepNo": "Stufe",
+      "afterMinutes": "Nach Minuten",
+      "notifyUser": "Benutzer",
+      "noUser": "kein Benutzer",
+      "notifyRole": "Rolle",
+      "add": "Stufe anlegen"
+    },
+    "onCall": {
+      "title": "Bereitschaftsplan",
+      "current": "Aktuell in Bereitschaft: {name}",
+      "none": "Aktuell ist niemand in Bereitschaft eingetragen.",
+      "empty": "Noch kein Bereitschaftszeitraum angelegt.",
+      "remove": "Löschen",
+      "user": "Benutzer",
+      "startsAt": "Von",
+      "endsAt": "Bis",
+      "phone": "Telefon",
+      "note": "Notiz",
+      "add": "Bereitschaft eintragen"
+    },
+    "calendar": {
+      "title": "Geschäftszeitenkalender",
+      "weekdays": "Werktage",
+      "day": {
+        "0": "Montag",
+        "1": "Dienstag",
+        "2": "Mittwoch",
+        "3": "Donnerstag",
+        "4": "Freitag",
+        "5": "Samstag",
+        "6": "Sonntag"
+      },
+      "opensAt": "Öffnungszeit von",
+      "closesAt": "Öffnungszeit bis",
+      "timezone": "Zeitzone {timezone}",
+      "holidays": "Feiertage",
+      "noHolidays": "Noch kein Feiertag hinterlegt.",
+      "holidayDate": "Datum",
+      "addHoliday": "Feiertag hinzufügen",
+      "save": "Speichern",
+      "saved": "Gespeichert."
+    },
+    "alerts": {
+      "title": "Notfallalarme",
+      "empty": "Keine offenen Notfallalarme.",
+      "level": "Stufe {level}",
+      "acked": "quittiert",
+      "ack": "Quittieren"
+    },
+    "badge": {
+      "responseRemaining": "Reaktion in {minutes} Min. fällig",
+      "responseOverdue": "Reaktion seit {minutes} Min. überfällig",
+      "resolutionRemaining": "Lösung in {minutes} Min. fällig",
+      "resolutionOverdue": "Lösung seit {minutes} Min. überfällig",
+      "resolvedAt": "Gelöst am {at}",
+      "pause": "Pausieren",
+      "resume": "Fortsetzen"
+    }
+  },
+  "Version": {
+    "title": "Versionsverlauf",
+    "description": "Was wurde in welcher Version geändert.",
+    "current": "Aktuelle Version {version}",
+    "scheme": "Schema: erste Stelle für grundlegende Umbauten, zweite Stelle für neue Funktionen, dritte Stelle für kleine Korrekturen."
+  },
+  "DmsDocuments": {
+    "title": "Dokumente (Paperless)",
+    "loading": "Dokumente werden geladen...",
+    "empty": "Keine Dokumente vorhanden.",
+    "columns": {
+      "title": "Titel",
+      "date": "Datum",
+      "correspondent": "Korrespondent",
+      "documentType": "Dokumenttyp",
+      "tags": "Tags",
+      "actions": "Aktionen"
+    },
+    "actions": {
+      "preview": "Vorschau",
+      "download": "Download"
+    },
+    "pagination": {
+      "previous": "Zurück",
+      "next": "Weiter",
+      "page": "Seite {page}"
+    },
+    "errors": {
+      "unreachable": "Paperless nicht erreichbar",
+      "notConfigured": "Paperless nicht eingerichtet"
+    }
+  },
+  "DmsSettings": {
+    "title": "DMS-Anbindung",
+    "intro": "Verbindung des CRM zum Dokumentenmanagement. Immoware24 bleibt Master der Stammdaten.",
+    "paperlessTitle": "Paperless",
+    "googleDriveTitle": "Google Drive",
+    "googleDriveHint": "Google Drive wird über dieses Formular eingerichtet. OAuth-Client in der Google Cloud Console anlegen, Drive-API aktivieren, Refresh-Token einmalig per OAuth-Playground oder gcloud erzeugen.",
+    "enabled": "Aktiv",
+    "baseUrl": "Basis-URL",
+    "baseUrlHint": "Nur https zulässig.",
+    "token": "API-Token",
+    "tokenStored": "Token hinterlegt, zum Ändern neu eingeben",
+    "tokenMissing": "nicht hinterlegt",
+    "tokenHint": "Der Token wird nur geschrieben und nie wieder angezeigt. Leer lassen, um den hinterlegten Token zu behalten.",
+    "objectFieldId": "Feld-ID Objektnummer",
+    "companyFieldId": "Feld-ID Gesellschaft",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "yes": "Ja",
+    "no": "Nein",
+    "notSet": "nicht hinterlegt",
+    "rootFolderId": "Ordner-ID des Wurzelordners",
+    "rootFolderIdHint": "Die ID aus der Drive-URL des Ordners.",
+    "clientId": "OAuth Client-ID",
+    "clientSecret": "Client-Secret",
+    "refreshToken": "Refresh-Token",
+    "secretStored": "Zugangsdaten hinterlegt",
+    "secretMissing": "nicht hinterlegt",
+    "secretHint": "Client-Secret und Refresh-Token werden nur geschrieben und nie wieder angezeigt. Leer lassen, um die hinterlegten Zugangsdaten zu behalten.",
+    "secretPairRequired": "Client-Secret und Refresh-Token zusammen eintragen."
   }
 }

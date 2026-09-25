@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -162,6 +163,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
           )}
         </section>
       </div>
+
+      <DmsDocumentsPanel entity="property" id={propertyId} />
     </div>
   );
 }
