@@ -14,6 +14,7 @@ Cross-cutting infrastructure used by every domain package.
 | `health.py` | Liveness and readiness, runtime check of the database role | M1 acceptance |
 | `storage.py`, `storage_bootstrap.py` | S3 client, bucket bootstrap job | ADR 0005 |
 | `tasks.py` | Core Celery tasks (`mhvp.core.ping`) | section 3.2 |
+| `auth/oidc.py`, `auth/oidc_clients.py` | OIDC provider for other tools (discovery, code flow with PKCE) and the operator CLI to register relying parties | ADR 0006 Nr. 7, docs/plans/M30-sso.md |
 
 Rules for new tenant tables: column `tenant_id UUID NOT NULL`, leading index column, and the
 statements of `db.rls.tenant_rls_statements()` in the same migration. The integration test

@@ -66,7 +66,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   }
 
   let response: NextResponse;
-  if (!ctx.tenantId && pathname !== "/mandant" && !pathname.startsWith("/api/")) {
+  // The OIDC bridge (/oidc/authorize) works without a selected tenant: relying parties only
+  // need the user identity, and a detour via /mandant would drop their request.
+  const needsTenant = !pathname.startsWith("/api/") && !pathname.startsWith("/oidc/");
+  if (!ctx.tenantId && pathname !== "/mandant" && needsTenant) {
     response = NextResponse.redirect(new URL("/mandant", request.url));
   } else {
     response = NextResponse.next({ request: { headers: forward() } });

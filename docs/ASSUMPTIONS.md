@@ -422,6 +422,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | W09 |
 | Datum | 23.09.2026 |
 
+## A-039
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Jeder aktive Benutzer des CRM darf sich über den Plattform-OIDC-Anbieter bei einer registrierten Relying Party (zum Beispiel der Statusseite) anmelden. Die Relying Party erhält Identität (sub, email, name) und den gewählten Mandanten, keine Rollen. Eine Freigabe je Benutzer oder Rolle ist nicht vorgesehen. |
+| Begründung | Auftrag 25.09.2026 (Statusseite für alle CRM-Benutzer sichtbar); Relying Parties sind interne Werkzeuge des Betreibers |
+| Kennzeichnung | unkritisch, bei Anbindung externer Dienste mit Kundendaten zu überprüfen |
+| Betroffene Bereiche | Plattform, Anmeldung |
+| Überprüfung spätestens bei Meilenstein | M30 Folgeausbau |
+| Datum | 25.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

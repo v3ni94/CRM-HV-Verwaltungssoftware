@@ -1,7 +1,10 @@
 """OIDC provider for single sign-on of existing tools (section 3.4).
 
-Authorization code flow with mandatory PKCE (S256). The authorize endpoint requires an
-authenticated user (bearer); the browser login page follows with the CRM UI (M9).
+Authorization code flow with mandatory PKCE (S256). The API authorize endpoint requires an
+authenticated user (bearer). Browsers reach it through the CRM UI bridge ``/oidc/authorize``
+(web-crm, M30), which turns the session cookie into the bearer call; discovery therefore
+advertises the bridge as ``authorization_endpoint`` whenever ``web_crm_url`` is configured.
+Relying parties are registered with ``python -m mhvp.core.auth.oidc_clients``.
 """
 
 import base64
@@ -46,13 +49,20 @@ def pkce_challenge(verifier: str) -> str:
     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
 
 
+def authorization_endpoint(settings: Settings) -> str:
+    """Browser entry point: the CRM UI bridge when configured, else the bearer API endpoint."""
+    if settings.web_crm_url:
+        return f"{settings.web_crm_url.rstrip('/')}/oidc/authorize"
+    return f"{settings.jwt_issuer.rstrip('/')}/api/v1/oidc/authorize"
+
+
 @well_known.get("/.well-known/openid-configuration", summary="OIDC Discovery")
 async def discovery(request: Request) -> dict[str, Any]:
     settings: Settings = request.app.state.settings
     base = settings.jwt_issuer.rstrip("/")
     return {
         "issuer": settings.jwt_issuer,
-        "authorization_endpoint": f"{base}/api/v1/oidc/authorize",
+        "authorization_endpoint": authorization_endpoint(settings),
         "token_endpoint": f"{base}/api/v1/oidc/token",
         "userinfo_endpoint": f"{base}/api/v1/oidc/userinfo",
         "jwks_uri": f"{base}/api/v1/oidc/jwks",
