@@ -9,6 +9,7 @@ from mhvp.contacts import models as contact_models
 from mhvp.contracts import models as contract_models
 from mhvp.core import events, numbering, webhooks
 from mhvp.documents import models as document_models
+from mhvp.handover import models as handover_models
 from mhvp.hoa import models as hoa_models
 from mhvp.immoware import models as immoware_models
 from mhvp.imports import models as import_models
@@ -32,6 +33,7 @@ __all__ = [
     "contract_models",
     "document_models",
     "events",
+    "handover_models",
     "hoa_models",
     "immoware_models",
     "import_models",

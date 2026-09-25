@@ -62,7 +62,7 @@ im Regelbetrieb sollte dieser Code nie auftreten, da der Client keine Schreibmet
 
 `immoware_connection` (eine Zeile je Tenant), `immoware_dav_document`, `immoware_dav_contact`
 (mit `matched_contact_id` als FK auf `contact`), `immoware_dav_event`, `immoware_sync_run`.
-Migration `alembic/versions/0043_immoware_dav.py` (RLS ueber `tenant_rls_statements`).
+Migration `alembic/versions/0044_immoware_dav.py` (RLS ueber `tenant_rls_statements`).
 
 ## Sicherheitsregeln (Zusammenfassung)
 

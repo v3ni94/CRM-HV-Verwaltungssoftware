@@ -106,29 +106,37 @@ def _hash(secret: str) -> str:
 # Management -----------------------------------------------------------------------------
 
 
-@admin.post("/accounts", status_code=201, summary="Portalzugang einladen")
-async def invite(
-    body: PortalInviteIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+async def provision_account(
+    request: Request,
+    principal: TenantPrincipal,
+    *,
+    contact_id: uuid.UUID,
+    email: str,
+    display_name: str,
 ) -> dict[str, Any]:
+    """Create the platform user (role portal_user), the portal account and the derived grants.
+
+    Shared by the invitation endpoint and the handover participant access (M30 stage 3). The
+    invitation token is returned once; it goes into the invitation letter or mail (M23)."""
     from mhvp.contacts.models import Contact
     from mhvp.platform import services as platform
     from mhvp.platform.models import User
 
     async with tenant_tx(request, principal) as session:
-        if await session.get(Contact, body.contact_id) is None:
+        if await session.get(Contact, contact_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         if await session.scalar(
-            select(PortalAccount.id).where(PortalAccount.contact_id == body.contact_id)
+            select(PortalAccount.id).where(PortalAccount.contact_id == contact_id)
         ):
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Für den Kontakt besteht bereits ein Portalzugang."
             )
     factory = sessions(request)
     async with platform_transaction(factory) as session:
-        email = body.email.strip().lower()
+        email = email.strip().lower()
         if await session.scalar(select(User.id).where(User.email == email)):
             raise ProblemError(ErrorCodes.CONFLICT, detail="E-Mail-Adresse bereits registriert.")
-        user = User(email=email, display_name=body.display_name, password_hash=None)
+        user = User(email=email, display_name=display_name, password_hash=None)
         session.add(user)
         await session.flush()
         user_id = user.id
@@ -145,7 +153,7 @@ async def invite(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
             user_id=user_id,
-            contact_id=body.contact_id,
+            contact_id=contact_id,
             invitation_hash=_hash(secret),
             invitation_expires_at=datetime.now(UTC) + timedelta(days=INVITE_DAYS),
         )
@@ -161,13 +169,25 @@ async def invite(
             actor_user_id=principal.user_id,
             payload={"grants": grants},
         )
-        # The token goes into the invitation letter or mail (M23); it is shown once here.
         return {
             "id": account.id,
             "user_id": user_id,
             "grants": grants,
             "invitation_token": f"{principal.tenant_id.hex}.{secret}",
         }
+
+
+@admin.post("/accounts", status_code=201, summary="Portalzugang einladen")
+async def invite(
+    body: PortalInviteIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> dict[str, Any]:
+    return await provision_account(
+        request,
+        principal,
+        contact_id=body.contact_id,
+        email=body.email,
+        display_name=body.display_name,
+    )
 
 
 @admin.post("/accounts/{account_id}/sync-grants", summary="Zugriffsrechte neu ableiten")

@@ -1,7 +1,10 @@
 # @mhvp/web-portal
 
-Next.js 15 (App Router) app of the MH Verwaltungsplattform: portals for tenants, owners and service providers (production hosts `portal.muellerhv.de`, `portal.mueller-holding.ag`). Milestone M1 delivers only
-the skeleton; domain functions follow from M2 (see `docs/plans/`).
+Next.js 15 (App Router) app of the MH Verwaltungsplattform: portals for tenants, owners and service providers (production hosts `portal.muellerhv.de`, `portal.mueller-holding.ag`). Delivered so far: the skeleton (M1) and the
+handover protocols of a participant (M30 stage 3, `docs/plans/M30-uebergabeprotokoll.md`): sign-in with
+password and second factor (`/anmelden`, same httpOnly cookie session as the CRM app, `src/lib/session.ts`),
+`/uebergabe` (own protocols), `/uebergabe/[id]` (sections, photos, signature, completion). JSON calls go
+through `/api/bff/[...path]` (allowlist of `/api/v1/portal/handover*`), binaries through `/api/portal-files`.
 
 ## Commands
 

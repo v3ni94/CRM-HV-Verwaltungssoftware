@@ -17,13 +17,36 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.7.0",
+    version: "1.9.0",
     date: "25.09.2026",
     title: "Immoware24-Lesezugriff per DAV",
     changes: [
       "Neues Paket mhvp.immoware: Spiegel von Immoware24 per WebDAV, CardDAV und CalDAV, strikt lesend",
       "Anbindung je Tenant mit Verbindungstest, manueller und automatischer Abholung alle 15 Minuten",
       "Dokumentbaum, Adressbuch (Zuordnung oder Anlage als CRM-Kontakt) und Kalender als Spiegeltabellen",
+    ],
+  },
+  {
+    version: "1.8.0",
+    date: "25.09.2026",
+    title: "Gehilfenzugang für Übergabeprotokolle über das Portal",
+    changes: [
+      "Makler, Übergabeprotokolle: Portalzugang je Beteiligtem mit CRM-Kontakt einrichten und beenden; Portalkonto wird bei Bedarf angelegt, Einladungscode einmalig angezeigt",
+      "Portal: Anmeldung mit Passwort und zweitem Faktor, Liste der eigenen Übergabeprotokolle, Ausfüllen der Abschnitte, Fotos, Unterschrift, Abschluss; interne Vermerke bleiben verborgen",
+      "Nach dem Abschluss durch den Beteiligten bleibt das PDF im Portal 14 Tage lesbar, danach erlischt der Zugang; Zustellung weiterhin nur über den Postausgang",
+      "Portal-API /api/v1/portal/handover, Regel M30-01 ergänzt, offene Fragen M30-01 und M30-05",
+    ],
+  },
+  {
+    version: "1.7.0",
+    date: "25.09.2026",
+    title: "Übergabeprotokolle im Bereich Makler",
+    changes: [
+      "Neuer Unterpunkt Makler, Übergabeprotokolle: Anlage mit Vorbelegung aus Objekt und Einheit, Beteiligte aus den Kontakten, Zähler, Räume, Mängel, Schlüssel, Gegenstände, Bemerkungen, Fotos und Anhänge als Dokumente",
+      "Unterschriften per Canvas mit Prüfsumme, Hinweise vor dem Abschluss, Abschluss mit PDF auf dem Briefbogen, Festschreibung, neue Versionen ohne Dateiduplikate, Stornierung, Archivierung",
+      "Zustellung an die Beteiligten als E-Mail-Entwurf im Postausgang (Vier-Augen-Freigabe), kein automatischer Versand",
+      "Protokollnummern UP-JJJJMMTT-NNN aus der Nummernfolge je Mandant und Tag",
+      "Migration 0043 (Tabellen handover_*), Regel M30-01, Plan M30; Gehilfenzugang über das Portal folgt als Stufe 3",
     ],
   },
   {
