@@ -152,6 +152,8 @@ class GmailClient:
 
 OAUTH_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send"
+# Drive: nur Dateien, die das CRM selbst anlegt (kein Zugriff auf den restlichen Drive-Inhalt).
+DRIVE_SCOPES = "https://www.googleapis.com/auth/drive.file openid email"
 
 
 async def oauth_client(session: AsyncSession, settings: Settings) -> tuple[str, str]:
@@ -171,12 +173,14 @@ def redirect_uri(settings: Settings) -> str:
     return f"{base}/api/v1/mail/oauth/google/callback"
 
 
-def authorization_url(client_id: str, settings: Settings, state: str) -> str:
+def authorization_url(
+    client_id: str, settings: Settings, state: str, purpose: str = "mail"
+) -> str:
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri(settings),
         "response_type": "code",
-        "scope": SCOPES,
+        "scope": DRIVE_SCOPES if purpose == "drive" else SCOPES,
         "access_type": "offline",
         "prompt": "consent",
         "state": state,

@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import type { OAuthStatus } from "@/components/mail/MailboxSettings";
 import { ui } from "@/lib/ui";
 
 export type DmsConnection = {
@@ -25,9 +27,11 @@ const CLIENT_ID_KEY = "client_id";
 export function DmsConnectionSettings({
   paperless,
   googleDrive,
+  oauth,
 }: {
   paperless: DmsConnection | null;
   googleDrive: DmsConnection | null;
+  oauth: OAuthStatus;
 }) {
   const t = useTranslations("DmsSettings");
   const [saved, setSaved] = useState<DmsConnection | null>(paperless);
@@ -49,6 +53,23 @@ export function DmsConnectionSettings({
   const [gdError, setGdError] = useState<string | null>(null);
   const [gdMessage, setGdMessage] = useState<string | null>(null);
   const [gdBusy, setGdBusy] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [connectBusy, setConnectBusy] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+
+  const connectGoogle = async () => {
+    setConnectBusy(true);
+    setConnectError(null);
+    const res = await bff<{ url: string }>("/api/bff/mail/oauth/google/start", {
+      method: "POST",
+      body: JSON.stringify({ purpose: "drive" }),
+    });
+    if (res.ok) window.location.assign(res.data.url);
+    else {
+      setConnectBusy(false);
+      setConnectError(res.message);
+    }
+  };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,11 +224,6 @@ export function DmsConnectionSettings({
         <h2 className={ui.h2}>{t("googleDriveTitle")}</h2>
         <p className="text-sm text-muted">{t("googleDriveHint")}</p>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={gdEnabled} onChange={(e) => setGdEnabled(e.target.checked)} />
-          {t("enabled")}
-        </label>
-
         <div>
           <label htmlFor="dms-gd-root-folder" className={ui.label}>
             {t("rootFolderId")}
@@ -219,51 +235,95 @@ export function DmsConnectionSettings({
             onChange={(e) => setRootFolderId(e.target.value)}
           />
           <p className={ui.help}>{t("rootFolderIdHint")}</p>
+          <p className={ui.help}>{t("rootFolderIdBeforeConnectHint")}</p>
         </div>
 
-        <div>
-          <label htmlFor="dms-gd-client-id" className={ui.label}>
-            {t("clientId")}
-          </label>
-          <input
-            id="dms-gd-client-id"
-            className={ui.input}
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-          />
-        </div>
+        {oauth.configured ? (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              className={ui.primary}
+              disabled={connectBusy}
+              onClick={() => void connectGoogle()}
+            >
+              {t("connectGoogleDrive")}
+            </button>
+            <p className={ui.help}>{t("connectGoogleDriveHint")}</p>
+            {connectError ? (
+              <p role="alert" className={ui.alert}>
+                {connectError}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className={ui.notice}>
+            {t("oauthClientMissing")} {t("oauthClientMissingHint")}{" "}
+            <Link href="/einstellungen/postfaecher" className="underline">
+              {t("oauthClientMissingLink")}
+            </Link>
+          </p>
+        )}
 
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <label htmlFor="dms-gd-client-secret" className={ui.label}>
-              {t("clientSecret")}
-            </label>
-            <input
-              id="dms-gd-client-secret"
-              type="password"
-              autoComplete="off"
-              className={ui.input}
-              value={clientSecret}
-              onChange={(e) => setClientSecret(e.target.value)}
-              placeholder={gdSaved?.has_secret ? t("secretStored") : t("secretMissing")}
-            />
-          </div>
-          <div>
-            <label htmlFor="dms-gd-refresh-token" className={ui.label}>
-              {t("refreshToken")}
-            </label>
-            <input
-              id="dms-gd-refresh-token"
-              type="password"
-              autoComplete="off"
-              className={ui.input}
-              value={refreshToken}
-              onChange={(e) => setRefreshToken(e.target.value)}
-              placeholder={gdSaved?.has_secret ? t("secretStored") : t("secretMissing")}
-            />
-          </div>
-        </div>
-        <p className={ui.help}>{t("secretHint")}</p>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={gdEnabled} onChange={(e) => setGdEnabled(e.target.checked)} />
+          {t("enabled")}
+        </label>
+
+        <button
+          type="button"
+          className="self-start text-sm underline text-muted"
+          onClick={() => setManualOpen((v) => !v)}
+        >
+          {t("manualEntryToggle")}
+        </button>
+
+        {manualOpen ? (
+          <>
+            <div>
+              <label htmlFor="dms-gd-client-id" className={ui.label}>
+                {t("clientId")}
+              </label>
+              <input
+                id="dms-gd-client-id"
+                className={ui.input}
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div>
+                <label htmlFor="dms-gd-client-secret" className={ui.label}>
+                  {t("clientSecret")}
+                </label>
+                <input
+                  id="dms-gd-client-secret"
+                  type="password"
+                  autoComplete="off"
+                  className={ui.input}
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                  placeholder={gdSaved?.has_secret ? t("secretStored") : t("secretMissing")}
+                />
+              </div>
+              <div>
+                <label htmlFor="dms-gd-refresh-token" className={ui.label}>
+                  {t("refreshToken")}
+                </label>
+                <input
+                  id="dms-gd-refresh-token"
+                  type="password"
+                  autoComplete="off"
+                  className={ui.input}
+                  value={refreshToken}
+                  onChange={(e) => setRefreshToken(e.target.value)}
+                  placeholder={gdSaved?.has_secret ? t("secretStored") : t("secretMissing")}
+                />
+              </div>
+            </div>
+            <p className={ui.help}>{t("secretHint")}</p>
+          </>
+        ) : null}
 
         {gdError ? (
           <p role="alert" className={ui.alert}>

@@ -17,6 +17,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.9.1",
+    date: "25.09.2026",
+    title: "Google Drive per OAuth verbinden",
+    changes: [
+      "Auf der DMS-Seite verbindet ein Klick auf Mit Google verbinden das Drive-Konto, Client-Secret und Refresh-Token werden automatisch hinterlegt",
+      "Manuelle Eingabe bleibt als Alternative erhalten",
+    ],
+  },
+  {
     version: "1.9.0",
     date: "25.09.2026",
     title: "Immoware24-Lesezugriff per DAV",

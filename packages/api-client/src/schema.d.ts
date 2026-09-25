@@ -4350,7 +4350,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Google-Postfach verbinden (Consent-URL) */
+        /** Google-Konto verbinden (Consent-URL) */
         post: operations["start_oauth_api_v1_mail_oauth_google_start_post"];
         delete?: never;
         options?: never;
@@ -10837,6 +10837,14 @@ export interface components {
             client_id: string;
             /** Client Secret */
             client_secret?: string | null;
+        };
+        /** OAuthStartIn */
+        OAuthStartIn: {
+            /**
+             * Purpose
+             * @default mail
+             */
+            purpose: string;
         };
         /** OccupancyRow */
         OccupancyRow: {
@@ -23215,7 +23223,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OAuthStartIn"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -23226,6 +23238,15 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

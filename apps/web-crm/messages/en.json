@@ -1174,7 +1174,17 @@
     "secretStored": "Credentials stored",
     "secretMissing": "not stored",
     "secretHint": "The client secret and refresh token are write only and never shown again. Leave empty to keep the stored credentials.",
-    "secretPairRequired": "Enter the client secret and refresh token together."
+    "secretPairRequired": "Enter the client secret and refresh token together.",
+    "connectGoogleDrive": "Connect with Google",
+    "connectGoogleDriveHint": "Connects the Google account via OAuth; client secret and refresh token are stored automatically.",
+    "oauthClientMissing": "No OAuth client configured.",
+    "oauthClientMissingHint": "First configure the OAuth client under Settings, Mailboxes.",
+    "oauthClientMissingLink": "Go to Settings, Mailboxes",
+    "manualEntryToggle": "Enter manually",
+    "connected": "Google account {account} connected.",
+    "connectedNeedsRootFolder": "Google account {account} connected. Enter the root folder ID and save to activate the connection.",
+    "oauthFailed": "Connection failed: {reason}",
+    "rootFolderIdBeforeConnectHint": "Save this before connecting so the connection can activate right after the OAuth flow."
   },
   "ImmowareSettings": {
     "title": "Immoware24 connection",

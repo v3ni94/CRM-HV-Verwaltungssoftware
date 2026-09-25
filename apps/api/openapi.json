@@ -12727,6 +12727,19 @@
         "title": "OAuthClientIn",
         "type": "object"
       },
+      "OAuthStartIn": {
+        "additionalProperties": false,
+        "properties": {
+          "purpose": {
+            "default": "mail",
+            "pattern": "^(mail|drive)$",
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "title": "OAuthStartIn",
+        "type": "object"
+      },
       "OccupancyRow": {
         "properties": {
           "owner_party": {
@@ -35731,6 +35744,23 @@
     "/api/v1/mail/oauth/google/start": {
       "post": {
         "operationId": "start_oauth_api_v1_mail_oauth_google_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/OAuthStartIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -35745,9 +35775,19 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
-        "summary": "Google-Postfach verbinden (Consent-URL)",
+        "summary": "Google-Konto verbinden (Consent-URL)",
         "tags": [
           "Postfach"
         ]

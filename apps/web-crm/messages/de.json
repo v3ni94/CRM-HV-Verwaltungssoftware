@@ -2073,7 +2073,17 @@
     "secretStored": "Zugangsdaten hinterlegt",
     "secretMissing": "nicht hinterlegt",
     "secretHint": "Client-Secret und Refresh-Token werden nur geschrieben und nie wieder angezeigt. Leer lassen, um die hinterlegten Zugangsdaten zu behalten.",
-    "secretPairRequired": "Client-Secret und Refresh-Token zusammen eintragen."
+    "secretPairRequired": "Client-Secret und Refresh-Token zusammen eintragen.",
+    "connectGoogleDrive": "Mit Google verbinden",
+    "connectGoogleDriveHint": "Verbindet das Google-Konto per OAuth, Client-Secret und Refresh-Token werden automatisch hinterlegt.",
+    "oauthClientMissing": "Kein OAuth-Client hinterlegt.",
+    "oauthClientMissingHint": "Zuerst unter Einstellungen, Postfächer den OAuth-Client hinterlegen.",
+    "oauthClientMissingLink": "Zu Einstellungen, Postfächer",
+    "manualEntryToggle": "Manuell hinterlegen",
+    "connected": "Google-Konto {account} verbunden.",
+    "connectedNeedsRootFolder": "Google-Konto {account} verbunden. Wurzelordner-ID eintragen und speichern, um die Anbindung zu aktivieren.",
+    "oauthFailed": "Verbindung fehlgeschlagen: {reason}",
+    "rootFolderIdBeforeConnectHint": "Vor dem Verbinden speichern, damit die Anbindung nach dem OAuth-Vorgang sofort aktiv werden kann."
   },
   "Handover": {
     "title": "Übergabeprotokolle",

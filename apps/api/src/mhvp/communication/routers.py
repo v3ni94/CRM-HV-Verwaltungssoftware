@@ -214,6 +214,10 @@ class OAuthClientIn(_In):
     client_secret: str | None = Field(default=None, max_length=200)
 
 
+class OAuthStartIn(_In):
+    purpose: str = Field(default="mail", pattern="^(mail|drive)$")
+
+
 async def _mailbox_users(session: AsyncSession) -> dict[uuid.UUID, list[uuid.UUID]]:
     grants: dict[uuid.UUID, list[uuid.UUID]] = {}
     for mailbox_id, user_id in await session.execute(
@@ -343,14 +347,17 @@ async def put_oauth_client(
     }
 
 
-@router.post("/oauth/google/start", summary="Google-Postfach verbinden (Consent-URL)")
+@router.post("/oauth/google/start", summary="Google-Konto verbinden (Consent-URL)")
 async def start_oauth(
-    request: Request, principal: TenantPrincipal = Depends(ADMIN)
+    request: Request,
+    body: OAuthStartIn | None = None,
+    principal: TenantPrincipal = Depends(ADMIN),
 ) -> dict[str, str]:
     import secrets
 
     from mhvp.communication import gmail
 
+    purpose = (body or OAuthStartIn()).purpose
     settings = request.app.state.settings
     async with tenant_tx(request, principal) as session:
         try:
@@ -359,9 +366,11 @@ async def start_oauth(
             raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
     state = secrets.token_urlsafe(32)
     await request.app.state.resources.redis.set(
-        f"mail:oauth:{state}", f"{principal.tenant_id}:{principal.user_id}", ex=OAUTH_STATE_TTL
+        f"mail:oauth:{state}",
+        f"{principal.tenant_id}:{principal.user_id}:{purpose}",
+        ex=OAUTH_STATE_TTL,
     )
-    return {"url": gmail.authorization_url(client_id, settings, state)}
+    return {"url": gmail.authorization_url(client_id, settings, state, purpose=purpose)}
 
 
 @router.get("/oauth/google/callback", summary="Google OAuth-Rückruf", include_in_schema=False)
@@ -385,35 +394,91 @@ async def oauth_callback(
     stored = await redis.getdel(f"mail:oauth:{state}")
     if not stored:
         return _oauth_result(settings, error="Der Verbindungsversuch ist abgelaufen.")
-    tenant_id, user_id = (uuid.UUID(x) for x in stored.decode().split(":"))
+    parts = stored.decode().split(":")
+    tenant_id, user_id = uuid.UUID(parts[0]), uuid.UUID(parts[1])
+    # Alte Redis-Werte ohne dritten Teil stammen aus dem Postfach-Ablauf (mail).
+    purpose = parts[2] if len(parts) > 2 else "mail"
     if error or not code:
-        return _oauth_result(settings, error="Google hat den Zugriff nicht erteilt.")
+        return _oauth_result(
+            settings, error="Google hat den Zugriff nicht erteilt.", purpose=purpose
+        )
     try:
         async with tenant_transaction(sessions(request), tenant_id) as session:
             client_id, client_secret = await gmail.oauth_client(session, settings)
             refresh, address = await gmail.exchange_code(client_id, client_secret, code, settings)
-            box = await session.scalar(
-                select(Mailbox).where(Mailbox.address == address).with_for_update()
-            )
-            if box is None:
-                box = Mailbox(tenant_id=tenant_id, created_by=user_id, address=address)
-                session.add(box)
-            box.kind, box.secret, box.enabled, box.last_error = "gmail", refresh, True, None
-            box.gmail_history_id = None
+            if purpose == "drive":
+                await _store_drive_connection(
+                    session, tenant_id, user_id, client_id, client_secret, refresh
+                )
+            else:
+                box = await session.scalar(
+                    select(Mailbox).where(Mailbox.address == address).with_for_update()
+                )
+                if box is None:
+                    box = Mailbox(tenant_id=tenant_id, created_by=user_id, address=address)
+                    session.add(box)
+                box.kind, box.secret, box.enabled, box.last_error = "gmail", refresh, True, None
+                box.gmail_history_id = None
             await session.flush()
     except gmail.GmailError as exc:
-        return _oauth_result(settings, error=str(exc))
-    return _oauth_result(settings, address=address)
+        return _oauth_result(settings, error=str(exc), purpose=purpose)
+    return _oauth_result(settings, address=address, purpose=purpose)
 
 
-def _oauth_result(settings: Any, address: str | None = None, error: str | None = None) -> Any:
+async def _store_drive_connection(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    client_id: str,
+    client_secret: str,
+    refresh_token: str,
+) -> None:
+    """Speichert das Drive-Refresh-Token als DMS-Anbindung (Google Drive ist Ziel des
+    Dokumentenmoduls; Zugriff hier ausschließlich über dessen Model, nicht dessen Router)."""
+    import json
+
+    from mhvp.documents.models import DmsConnection, StorageKind
+
+    row = await session.scalar(
+        select(DmsConnection).where(DmsConnection.kind == StorageKind.GOOGLE_DRIVE)
+    )
+    if row is None:
+        row = DmsConnection(tenant_id=tenant_id, kind=StorageKind.GOOGLE_DRIVE)
+        session.add(row)
+    row.secret = json.dumps({"client_secret": client_secret, "refresh_token": refresh_token})
+    options = dict(row.options or {})
+    options["client_id"] = client_id
+    row.options = options
+    if options.get("root_folder_id"):
+        row.enabled = True
+    await session.flush()
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="dms_connection.updated",
+        entity_type="dms_connection",
+        entity_id=row.id,
+        actor_user_id=user_id,
+        payload={"kind": "google_drive", "enabled": row.enabled},
+    )
+
+
+def _oauth_result(
+    settings: Any, address: str | None = None, error: str | None = None, purpose: str = "mail"
+) -> Any:
     from urllib.parse import urlencode
 
+    target = "postfaecher" if purpose == "mail" else "dms"
     if settings.web_crm_url:
-        query = {"connected": address} if address else {"oauth_error": error or ""}
+        if address and purpose == "mail":
+            query = {"connected": address}
+        elif address:
+            query = {"connected": "drive", "account": address}
+        else:
+            query = {"oauth_error": error or ""}
         base = settings.web_crm_url.rstrip("/")
-        return RedirectResponse(f"{base}/einstellungen/postfaecher?{urlencode(query)}", 302)
-    text = f"Postfach {address} verbunden." if address else f"Fehler: {error}"
+        return RedirectResponse(f"{base}/einstellungen/{target}?{urlencode(query)}", 302)
+    text = f"Konto {address} verbunden." if address else f"Fehler: {error}"
     return HTMLResponse(f"<p>{text}</p>", status_code=200 if address else 400)
 
 
