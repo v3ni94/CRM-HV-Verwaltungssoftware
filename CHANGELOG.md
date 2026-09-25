@@ -5,14 +5,14 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
-## 1.17.4 (25.09.2026) Google-Verbindung ohne Abmeldung
-
-- Google-Verbindung (DMS und Postfächer): die Rückleitung von Google landet auf einer same-site Zwischenseite, damit die Sitzung erhalten bleibt; bisher erschien nach dem Google-Login die Anmeldeseite des CRM, obwohl die Verbindung gespeichert war
-
-## 1.17.4 (25.09.2026) SLA: Kanäle je Eskalationsstufe in der Oberfläche
+## 1.17.5 (25.09.2026) SLA: Kanäle je Eskalationsstufe in der Oberfläche
 
 - SLA-Einstellungen: je Regel Tabelle Stufe 1 bis 3 mit Intern, E-Mail und SMS, vorbelegt mit dem Standard (M35), Speichern über die bestehende Regeländerung; Hinweis, dass SMS nur mit aktivem Gateway und Mobilnummer greift
 - Korrektur: Bearbeiten einer Regel im Formular setzt channels_by_level nicht mehr auf Standard zurück
+
+## 1.17.4 (25.09.2026) Google-Verbindung ohne Abmeldung
+
+- Google-Verbindung (DMS und Postfächer): die Rückleitung von Google landet auf einer same-site Zwischenseite, damit die Sitzung erhalten bleibt; bisher erschien nach dem Google-Login die Anmeldeseite des CRM, obwohl die Verbindung gespeichert war
 
 ## 1.17.3 (25.09.2026) Datenschutz: Ticket-Vorschau lädt nur den Kontaktnamen
 
