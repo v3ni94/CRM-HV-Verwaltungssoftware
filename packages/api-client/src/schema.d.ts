@@ -7789,7 +7789,7 @@ export interface components {
          * AlertChannel
          * @enum {string}
          */
-        AlertChannel: "email" | "internal";
+        AlertChannel: "email" | "internal" | "sms";
         /**
          * AllocationCategory
          * @enum {string}

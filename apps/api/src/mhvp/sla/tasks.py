@@ -45,7 +45,7 @@ async def check_clocks_once(settings: Settings) -> dict[str, int]:
                     for clock in clocks:
                         totals["clocks"] += 1
                         before = list(clock.escalated_steps)
-                        await check_and_escalate(session, clock)
+                        await check_and_escalate(session, clock, settings)
                         if clock.escalated_steps != before:
                             totals["escalated"] += 1
             except Exception:

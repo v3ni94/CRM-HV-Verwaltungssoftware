@@ -624,7 +624,8 @@
       "AlertChannel": {
         "enum": [
           "email",
-          "internal"
+          "internal",
+          "sms"
         ],
         "title": "AlertChannel",
         "type": "string"
