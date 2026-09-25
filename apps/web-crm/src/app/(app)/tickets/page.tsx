@@ -2,33 +2,84 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { TicketCreate } from "@/components/tickets/TicketForms";
+import { TicketFilters } from "@/components/tickets/TicketFilters";
 import { TicketsList } from "@/components/tickets/TicketsList";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function TicketsPage({ searchParams }: { searchParams: Promise<{ merged?: string }> }) {
+type SearchParams = Record<string, string | undefined>;
+
+// Filters this page forwards to GET /tickets unchanged (operator 25.09.2026, Tickets Suche und
+// Filter): additive query params, see apps/api/src/mhvp/tickets/routers.py list_tickets.
+const FORWARDED_KEYS = [
+  "q",
+  "assignee_user_id",
+  "property_id",
+  "unit_id",
+  "contact_id",
+  "contact_role",
+  "status",
+  "priority",
+  "category",
+  "team_id",
+  "created_from",
+  "created_to",
+  "mine",
+] as const;
+
+type Ticket = {
+  id: string;
+  number: number;
+  title: string | null;
+  priority: string;
+  status: string;
+  sla_due_at: string | null;
+  sla_breached: boolean;
+};
+
+export default async function TicketsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const t = await getTranslations("Tickets");
-  const api = serverApi();
+  const params = await searchParams;
   // M36: merged source tickets stay hidden unless the filter is switched on.
-  const showMerged = (await searchParams).merged === "1";
-  const { data, error, response } = await api.GET("/api/v1/tickets", {
-    params: { query: { include_merged: showMerged } },
-  });
+  const showMerged = params.merged === "1";
+
+  const query = new URLSearchParams();
+  query.set("include_merged", String(showMerged));
+  for (const key of FORWARDED_KEYS) {
+    const value = params[key];
+    if (value) query.set(key, value);
+  }
+
+  const response = await serverFetch(`/api/v1/tickets?${query.toString()}`);
   redirectIfUnauthenticated(response);
+  const data = response.ok ? ((await response.json()) as Record<string, unknown>[]) : null;
+  const error = response.ok ? null : ((await response.json().catch(() => null)) as Problem | null);
+
+  const api = serverApi();
   const me = await api.GET("/api/v1/auth/me");
   const canApprove = me.data?.permissions.includes("tickets:approve") ?? false;
+  const meUserId = me.data?.user_id ? String(me.data.user_id) : null;
+
+  const mergedToggleQuery = new URLSearchParams();
+  for (const key of FORWARDED_KEYS) {
+    const value = params[key];
+    if (value) mergedToggleQuery.set(key, value);
+  }
+  if (!showMerged) mergedToggleQuery.set("merged", "1");
+
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
       <TicketCreate />
+      <TicketFilters meUserId={meUserId} />
       <div className="flex items-center gap-2 text-sm">
         <Link
-          href={showMerged ? "/tickets" : "/tickets?merged=1"}
+          href={`/tickets${mergedToggleQuery.toString() ? `?${mergedToggleQuery.toString()}` : ""}`}
           role="checkbox"
           aria-checked={showMerged}
           className="inline-flex items-center gap-2 hover:underline"
@@ -48,15 +99,17 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         <EmptyState title={t("empty")} />
       ) : (
         <TicketsList
-          initialTickets={data.map((tk) => ({
-            id: String(tk.id),
-            number: Number(tk.number),
-            title: tk.title ? String(tk.title) : null,
-            priority: String(tk.priority),
-            status: String(tk.status),
-            sla_due_at: tk.sla_due_at ? String(tk.sla_due_at) : null,
-            sla_breached: Boolean(tk.sla_breached),
-          }))}
+          initialTickets={data.map(
+            (tk): Ticket => ({
+              id: String(tk.id),
+              number: Number(tk.number),
+              title: tk.title ? String(tk.title) : null,
+              priority: String(tk.priority),
+              status: String(tk.status),
+              sla_due_at: tk.sla_due_at ? String(tk.sla_due_at) : null,
+              sla_breached: Boolean(tk.sla_breached),
+            }),
+          )}
           canApprove={canApprove}
         />
       )}

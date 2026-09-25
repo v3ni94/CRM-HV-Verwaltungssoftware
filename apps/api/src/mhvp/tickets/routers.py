@@ -753,34 +753,82 @@ async def merge_tickets(
         return _ticket_out(target) | {"merged_ticket_ids": [t.id for t in sources]}
 
 
+def _parse_status_filter(raw: str | None) -> list[TicketStatus]:
+    """``status`` accepts one value (unchanged) or several, comma-separated, e.g.
+    ``status=new,in_progress`` (M19 list filters, operator 25.09.2026: repeated query params
+    are not forwarded reliably by all clients, so comma-separated is the documented form)."""
+    if not raw:
+        return []
+    values = [part.strip() for part in raw.split(",") if part.strip()]
+    try:
+        return [TicketStatus(v) for v in values]
+    except ValueError as exc:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=f"Unbekannter Status: {exc}") from exc
+
+
 @router.get("/tickets", summary="Tickets")
 async def list_tickets(
     request: Request,
-    status: TicketStatus | None = None,
+    status: str | None = Query(
+        default=None, description="Ein Status oder mehrere, kommagetrennt (z. B. new,in_progress)"
+    ),
     property_id: uuid.UUID | None = None,
     unit_id: uuid.UUID | None = None,
     contact_id: uuid.UUID | None = None,
+    contact_role: str | None = Query(
+        default=None, description="Rolle des verknüpften Kontakts zur Einheit: owner oder tenant"
+    ),
+    assignee_user_id: uuid.UUID | None = Query(
+        default=None, description="Bearbeiter, primär oder zusätzlich zugewiesen"
+    ),
+    team_id: uuid.UUID | None = None,
+    category: str | None = Query(default=None, max_length=100),
+    priority: Priority | None = None,
+    created_from: datetime | None = Query(default=None, description="Erstellt ab (inklusive)"),
+    created_to: datetime | None = Query(default=None, description="Erstellt bis (inklusive)"),
     mine: bool = False,
-    q: str | None = Query(default=None, max_length=300, description="Nummer oder Titel"),
+    q: str | None = Query(
+        default=None,
+        max_length=300,
+        description="Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse",
+    ),
     include_merged: bool = Query(default=True, description="Zusammengeführte Tickets zeigen"),
     merged_into: uuid.UUID | None = Query(default=None, description="Quelltickets eines Ziels"),
     limit: int = Query(default=100, ge=1, le=500),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
+    from mhvp.contacts.models import Contact, PartyMember
+    from mhvp.contracts.models import Contract, ContractKind
+    from mhvp.properties.models import Property
+
     async with tenant_tx(request, principal) as session:
         query = select(Ticket).order_by(Ticket.number.desc())
         term = (q or "").strip().lstrip("#")
         if term:
-            title_match = Ticket.title.ilike(f"%{_escape_like(term)}%", escape="\\")
+            escaped = f"%{_escape_like(term)}%"
+            title_match = Ticket.title.ilike(escaped, escape="\\")
+            description_match = Ticket.public_description.ilike(escaped, escape="\\")
+            contact_name_match = Ticket.contact_id.in_(
+                select(Contact.id).where(Contact.display_name.ilike(escaped, escape="\\"))
+            )
+            property_match = Ticket.property_id.in_(
+                select(Property.id).where(
+                    (Property.street.ilike(escaped, escape="\\"))
+                    | (Property.city.ilike(escaped, escape="\\"))
+                    | (Property.house_number.ilike(escaped, escape="\\"))
+                )
+            )
+            text_match = title_match | description_match | contact_name_match | property_match
             query = query.where(
-                (Ticket.number == int(term)) | title_match if term.isdigit() else title_match
+                (Ticket.number == int(term)) | text_match if term.isdigit() else text_match
             )
         if not include_merged:
             query = query.where(Ticket.merged_into_ticket_id.is_(None))
         if merged_into:
             query = query.where(Ticket.merged_into_ticket_id == merged_into)
-        if status:
-            query = query.where(Ticket.status == status)
+        statuses = _parse_status_filter(status)
+        if statuses:
+            query = query.where(Ticket.status.in_(statuses))
         if property_id:
             query = query.where(Ticket.property_id == property_id)
         if unit_id:
@@ -789,6 +837,52 @@ async def list_tickets(
             query = query.where(
                 (Ticket.contact_id == contact_id) | (Ticket.initiator_contact_id == contact_id)
             )
+        if contact_role:
+            if contact_role not in ("owner", "tenant"):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="contact_role muss owner oder tenant sein."
+                )
+            kind = ContractKind.OWNERSHIP if contact_role == "owner" else ContractKind.TENANCY
+            # Role of the ticket's linked contact (or, if also filtering by contact_id, that
+            # contact) as owner or tenant of the ticket's unit (operator 25.09.2026):
+            # Contract.unit_id == Ticket.unit_id, Contract.party_id via PartyMember.contact_id.
+            role_contact = contact_id if contact_id is not None else Ticket.contact_id
+            role_conditions = [Ticket.unit_id.is_not(None)]
+            if contact_id is None:
+                role_conditions.append(Ticket.contact_id.is_not(None))
+            role_conditions.append(
+                Ticket.id.in_(
+                    select(Ticket.id).where(
+                        Contract.unit_id == Ticket.unit_id,
+                        Contract.kind == kind,
+                        Contract.party_id.in_(
+                            select(PartyMember.party_id).where(
+                                PartyMember.contact_id == role_contact
+                            )
+                        ),
+                    )
+                )
+            )
+            query = query.where(*role_conditions)
+        if assignee_user_id:
+            query = query.where(
+                (Ticket.assignee_user_id == assignee_user_id)
+                | Ticket.id.in_(
+                    select(TicketAssignee.ticket_id).where(
+                        TicketAssignee.user_id == assignee_user_id
+                    )
+                )
+            )
+        if team_id:
+            query = query.where(Ticket.team_id == team_id)
+        if category:
+            query = query.where(Ticket.category == category)
+        if priority:
+            query = query.where(Ticket.priority == priority)
+        if created_from:
+            query = query.where(Ticket.created_at >= created_from)
+        if created_to:
+            query = query.where(Ticket.created_at <= created_to)
         if mine:
             query = query.where(Ticket.assignee_user_id == principal.user_id)
         return [_ticket_out(t) for t in (await session.scalars(query.limit(limit))).all()]
