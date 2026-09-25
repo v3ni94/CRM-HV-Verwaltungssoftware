@@ -17,7 +17,13 @@ export async function POST(request: Request): Promise<Response> {
   const tenantId = str(parsed.body.tenant_id) || null;
   try {
     const { data, error, response } = await publicApi().POST("/api/v1/auth/mfa/verify", {
-      body: { mfa_token: mfaToken, code: str(parsed.body.code).trim(), tenant_id: tenantId },
+      body: {
+        mfa_token: mfaToken,
+        code: str(parsed.body.code).trim(),
+        tenant_id: tenantId,
+        // Portal accounts never keep a trusted device (Produktschutz: no 2FA bypass for third parties).
+        remember_device: false,
+      },
       headers: { "user-agent": request.headers.get("user-agent") ?? "" },
     });
     if (!data) return relayProblem(response.status, error);

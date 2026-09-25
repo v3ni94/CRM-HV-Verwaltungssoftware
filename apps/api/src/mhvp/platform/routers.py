@@ -10,6 +10,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.core.auth import passwords, tokens
+from mhvp.core.auth import service as auth_service
 from mhvp.core.auth.permissions import ALL_PERMISSIONS, validate_permission
 from mhvp.core.auth.principal import (
     Principal,
@@ -62,6 +63,7 @@ from mhvp.platform.schemas import (
     GateRequestCreate,
     GateRequestOut,
     GateStateOut,
+    MemberCompetences,
     MemberCreate,
     MemberInvite,
     MemberOut,
@@ -438,6 +440,7 @@ async def list_members(
                     Membership.user_id,
                     Membership.status,
                     Membership.contact_id,
+                    Membership.competences,
                     User.email,
                     User.display_name,
                     User.last_login_at,
@@ -466,6 +469,7 @@ async def list_members(
             display_name=r.display_name,
             status=r.status.value,
             roles=sorted(roles.get(r.id, [])),
+            competences=list(r.competences or []),
             contact_id=r.contact_id,
             last_login_at=r.last_login_at,
         )
@@ -614,6 +618,9 @@ async def reset_member_password(
             .where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
             .values(revoked_at=datetime.now(UTC))
         )
+    # A password reset by an admin revokes every trusted device of that user too (operator
+    # 25.09.2026, ADR 0006 addendum): the device would otherwise still skip TOTP.
+    await auth_service.revoke_all_trusted_devices(sessions(request), membership.user_id)
     async with tenant_tx(request, principal) as session:
         await emit(
             session,
@@ -647,6 +654,67 @@ async def put_member_roles(
         role_codes=body.role_codes,
         actor_user_id=principal.user_id,
     )
+    return Response(status_code=204)
+
+
+@tenant_router.get("/competence-catalogue", summary="Kompetenzkatalog (Basis und Mandant)")
+async def get_competence_catalogue(
+    request: Request, principal: TenantPrincipal = Depends(require_permission("members:read"))
+) -> list[dict[str, str]]:
+    from mhvp.platform.models import TenantSettings
+    from mhvp.tickets.competences import full_catalogue
+
+    async with tenant_tx(request, principal) as session:
+        extra = await session.scalar(
+            select(TenantSettings.competence_catalogue_extra).where(
+                TenantSettings.tenant_id == principal.tenant_id
+            )
+        )
+    return [{"code": c["code"], "label": c["label"]} for c in full_catalogue(list(extra or []))]
+
+
+@tenant_router.put(
+    "/members/{membership_id}/competences",
+    status_code=204,
+    summary="Kompetenzen eines Mitglieds setzen",
+)
+async def put_member_competences(
+    membership_id: uuid.UUID,
+    body: MemberCompetences,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("members:update")),
+) -> Response:
+    from mhvp.platform.models import TenantSettings
+    from mhvp.tickets.competences import is_known_code
+
+    async with tenant_tx(request, principal) as session:
+        extra = await session.scalar(
+            select(TenantSettings.competence_catalogue_extra).where(
+                TenantSettings.tenant_id == principal.tenant_id
+            )
+        )
+    unknown = [c for c in body.competence_codes if not is_known_code(c, list(extra or []))]
+    if unknown:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail=f"Unbekannte Kompetenzen: {', '.join(unknown)}."
+        )
+    async with platform_transaction(sessions(request)) as session:
+        membership = await session.get(Membership, membership_id)
+        if membership is None or membership.tenant_id != principal.tenant_id:
+            raise _not_found()
+        before = sorted(membership.competences)
+        membership.competences = sorted(dict.fromkeys(body.competence_codes))
+        membership.updated_by = principal.user_id
+    async with tenant_tx(request, principal) as session:
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="membership.competences_changed",
+            entity_type="membership",
+            entity_id=membership_id,
+            actor_user_id=principal.user_id,
+            changes={"competences": {"old": before, "new": sorted(membership.competences)}},
+        )
     return Response(status_code=204)
 
 

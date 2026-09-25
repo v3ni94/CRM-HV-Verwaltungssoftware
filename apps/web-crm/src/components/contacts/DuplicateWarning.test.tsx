@@ -15,6 +15,7 @@ const candidate: DuplicateCandidate = {
     primary_phone: null,
     tags: [],
     types: [],
+    roles: [],
     blocked: false,
     deleted: false,
     completeness: "complete",

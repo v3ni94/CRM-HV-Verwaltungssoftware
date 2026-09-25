@@ -24,3 +24,9 @@ def test_authorization_url_drive_purpose_uses_drive_file_scope() -> None:
 def test_mail_scopes_unchanged() -> None:
     assert "gmail.readonly" in SCOPES
     assert "gmail.send" in SCOPES
+
+
+def test_mail_scopes_include_modify_for_archive_on_done() -> None:
+    # M20-03 "Erledigt archiviert Mail" (operator 25.09.2026): gmail.readonly allein kann keine
+    # Labels ändern, daher muss gmail.modify im Consent enthalten sein.
+    assert "gmail.modify" in SCOPES

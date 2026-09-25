@@ -17,6 +17,7 @@ export function MfaForm({ setup, next }: { setup: boolean; next?: string }) {
   const [data, setData] = useState<Setup | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  const [rememberDevice, setRememberDevice] = useState(false);
   const [busy, setBusy] = useState(false);
   const started = useRef(false);
 
@@ -40,7 +41,7 @@ export function MfaForm({ setup, next }: { setup: boolean; next?: string }) {
     setBusy(true);
     const result = await bff<Verified>("/api/session/mfa/verify", {
       method: "POST",
-      body: JSON.stringify({ code: code.trim() }),
+      body: JSON.stringify({ code: code.trim(), remember_device: rememberDevice }),
     });
     setBusy(false);
     if (!result.ok) {
@@ -96,6 +97,14 @@ export function MfaForm({ setup, next }: { setup: boolean; next?: string }) {
             onChange={(e) => setCode(e.target.value)}
           />
         </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={rememberDevice}
+            onChange={(e) => setRememberDevice(e.target.checked)}
+          />
+          {t("rememberDevice")}
+        </label>
         <button type="submit" className={ui.primary} disabled={busy}>
           {busy ? t("submitting") : t("verify")}
         </button>

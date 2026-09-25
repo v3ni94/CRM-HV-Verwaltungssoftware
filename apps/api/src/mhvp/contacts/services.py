@@ -17,6 +17,7 @@ from mhvp.contacts.models import (
     ContactEmail,
     ContactIdentifier,
     ContactKind,
+    ContactMandateStatus,
     ContactNote,
     ContactPhone,
     ContactRelation,
@@ -92,7 +93,32 @@ def _single_primary(items: list[Any]) -> None:
 
 async def write_children(
     session: AsyncSession, tenant_id: uuid.UUID, contact_id: uuid.UUID, data: schemas.ContactIn
-) -> None:
+) -> list[str]:
+    """Returns mandate reference values for which the IBAN changed while the mandate was
+    still active, so the caller can add a note and emit an event (M3-02)."""
+    changed_mandate_references: list[str] = []
+    if data.bank_accounts is not None:
+        previous = (
+            await session.execute(
+                select(
+                    ContactBankAccount.mandate_reference,
+                    ContactBankAccount.iban_fingerprint,
+                ).where(
+                    ContactBankAccount.contact_id == contact_id,
+                    ContactBankAccount.sepa_enabled.is_(True),
+                    ContactBankAccount.mandate_status == ContactMandateStatus.ACTIVE,
+                    ContactBankAccount.mandate_reference.is_not(None),
+                )
+            )
+        ).all()
+        previous_fingerprints = {row.mandate_reference: row.iban_fingerprint for row in previous}
+        for account in data.bank_accounts:
+            if not account.sepa_enabled or not account.mandate_reference:
+                continue
+            old_fingerprint = previous_fingerprints.get(account.mandate_reference)
+            new_fingerprint = crypto.fingerprint(account.iban)
+            if old_fingerprint is not None and old_fingerprint != new_fingerprint:
+                changed_mandate_references.append(account.mandate_reference)
     for model in _CHILDREN:
         if model is ContactBankAccount and data.bank_accounts is None:
             continue  # omitted: bank accounts stay as they are (ids referenced by mandates)
@@ -126,6 +152,7 @@ async def write_children(
     for tag_id in await _tag_ids(session, tenant_id, data.tags):
         session.add(ContactTagLink(**common, tag_id=tag_id))
     await session.flush()
+    return changed_mandate_references
 
 
 async def _check_accounts_unreferenced(session: AsyncSession, contact_id: uuid.UUID) -> None:
@@ -158,12 +185,37 @@ def apply_fields(
     contact: Contact, data: schemas.ContactIn, suffixes: list[str] | None = None
 ) -> None:
     fields = data.model_dump(
-        exclude={"addresses", "phones", "emails", "identifiers", "bank_accounts", "types", "tags"}
+        exclude={
+            "addresses",
+            "phones",
+            "emails",
+            "identifiers",
+            "bank_accounts",
+            "types",
+            "roles",
+            "tags",
+        }
     )
     for key, value in fields.items():
         setattr(contact, key, value)
     contact.display_name = display_name(data)
     contact.search_text = build_search_text(data, suffixes)
+    # Full replacement per the update semantics of this endpoint (rule 0.1.7 style updates
+    # apply everywhere): the client always sends the roles it wants kept, including any
+    # derived ones it saw in the previous GET. See recompute_derived_roles for how derived
+    # roles are added automatically when a contract exists.
+    contact.roles = sorted({r.value for r in data.roles})
+
+
+async def recompute_derived_roles(session: AsyncSession, contact: Contact) -> None:
+    """Derive eigentuemer/mieter from ownership/tenancy contracts (6.9, task M3-01).
+
+    No contract module referencing `party` exists yet in this codebase (rental and WEG
+    contracts land in a later milestone per section 18); this is a no-op placeholder until
+    then, kept so the derivation hook has one call site. Manually set roles are never
+    touched here.
+    """
+    return None
 
 
 async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactOut | None:
@@ -232,10 +284,20 @@ async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactO
                 holder=b.holder,
                 valid_from=b.valid_from,
                 valid_to=b.valid_to,
+                sepa_enabled=b.sepa_enabled,
+                mandate_reference=b.mandate_reference,
+                mandate_signed_on=b.mandate_signed_on,
+                mandate_granted_via=b.mandate_granted_via,
+                mandate_note=b.mandate_note,
+                mandate_document_id=b.mandate_document_id,
+                mandate_scheme=b.mandate_scheme,
+                mandate_status=b.mandate_status,
+                mandate_revoked_on=b.mandate_revoked_on,
             )
             for b in await rows(ContactBankAccount)
         ],
         types=sorted(t.type for t in await rows(ContactType)),
+        roles=sorted(contact.roles),
         tags=tags,
         version=contact.version,
         created_at=contact.created_at,
@@ -306,6 +368,7 @@ async def summaries(session: AsyncSession, contacts: list[Contact]) -> list[sche
             blocked=c.blocked,
             tags=sorted(tags.get(c.id, [])),
             types=sorted(types.get(c.id, [])),
+            roles=sorted(c.roles),
             deleted=c.deleted_at is not None,
         )
         for c in contacts

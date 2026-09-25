@@ -125,6 +125,15 @@ class RunOut(_Out):
     proposal_id: uuid.UUID | None = None
     # Providers skipped before the answering one (budget exhausted or provider error, M7-02).
     fallback: list[str] = Field(default_factory=list)
+    # Character count per document that entered the run (debug: why a run was too large).
+    input_stats: dict[str, int] = Field(default_factory=dict)
+    # Current worker progress; updated per chunk (stage text plus i/n).
+    progress: dict[str, Any] | None = None
+    # Set when the "large" tier was chosen automatically because the input would not fit the
+    # configured tier's context window ("Großes Modell wegen Umfang gewählt").
+    model_tier_reason: str | None = None
+    # Non fatal notices, e.g. a chunk that could not be processed or a row/result count mismatch.
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ProposalOut(_Out):

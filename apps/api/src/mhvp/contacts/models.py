@@ -7,7 +7,9 @@ from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import (
+    ARRAY,
     Boolean,
+    CheckConstraint,
     Computed,
     Date,
     DateTime,
@@ -19,6 +21,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -71,6 +74,36 @@ class IdentifierKind(StrEnum):
     CUSTOMER_NUMBER = "customer_number"
 
 
+class ContactRoleCode(StrEnum):
+    """Operator classification, multiple values allowed (task M3-02). Distinct from `kind`
+    (person/organisation) and from `ContactTypeCode` (process derived contact types)."""
+
+    EIGENTUEMER = "eigentuemer"
+    MIETER = "mieter"
+    VERWALTER = "verwalter"
+    DIENSTLEISTER = "dienstleister"
+    BANK = "bank"
+    SONSTIGES = "sonstiges"
+
+
+class MandateGrantedVia(StrEnum):
+    TELEFON = "telefon"
+    BRIEF = "brief"
+    EMAIL = "email"
+    PORTAL = "portal"
+    PERSOENLICH = "persoenlich"
+
+
+class MandateScheme(StrEnum):
+    CORE = "core"
+    B2B = "b2b"
+
+
+class ContactMandateStatus(StrEnum):
+    ACTIVE = "active"
+    REVOKED = "revoked"
+
+
 class ContactTypeCode(StrEnum):
     TENANT = "tenant"
     PROSPECT = "prospect"
@@ -118,6 +151,12 @@ class Contact(IdMixin, TimestampMixin, TenantMixin, Base):
             postgresql_using="gin",
             postgresql_ops={"search_text": "gin_trgm_ops"},
         ),
+        Index("ix_contact_roles", "roles", postgresql_using="gin"),
+        CheckConstraint(
+            "roles <@ ARRAY['eigentuemer', 'mieter', 'verwalter', 'dienstleister', 'bank', "
+            "'sonstiges']::text[]",
+            name="ck_contact_roles_values",
+        ),
     )
 
     kind: Mapped[ContactKind] = mapped_column(_enum(ContactKind, "contact_kind"), nullable=False)
@@ -141,6 +180,11 @@ class Contact(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(Completeness, "contact_completeness"), nullable=False, default=Completeness.COMPLETE
     )
     display_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    # Operator classification (multiple values allowed); derived where contracts exist,
+    # manual additions are kept. Values are constrained by ck_contact_roles_values.
+    roles: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), nullable=False, default=list, server_default=text("'{}'")
+    )
     # Maintained by the service: names, company, e-mails, phones, IBAN suffixes (6.1).
     search_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     search_vector: Mapped[str] = mapped_column(
@@ -208,6 +252,13 @@ class ContactBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "contact_bank_account"
     __table_args__ = (
         Index("ix_contact_bank_account_tenant_id_iban_suffix", "tenant_id", "iban_suffix"),
+        Index(
+            "ux_contact_bank_account_tenant_mandate_reference",
+            "tenant_id",
+            "mandate_reference",
+            unique=True,
+            postgresql_where=text("mandate_reference IS NOT NULL"),
+        ),
     )
 
     contact_id: Mapped[uuid.UUID] = _contact_fk()
@@ -221,6 +272,35 @@ class ContactBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     holder: Mapped[str | None] = mapped_column(String(200))
     valid_from: Mapped[date] = mapped_column(Date, nullable=False)
     valid_to: Mapped[date | None] = mapped_column(Date)
+    # SEPA mandate record on the contact's own bank account (M3-02). Distinct from
+    # mhvp.contracts.models.SepaMandate, which ties a mandate to a legal entity and
+    # creditor id for actual collection (locked until gate G2); this is bookkeeping of the
+    # contact's mandate evidence, no payment function.
+    sepa_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    mandate_reference: Mapped[str | None] = mapped_column(String(35))
+    mandate_signed_on: Mapped[date | None] = mapped_column(Date)
+    mandate_granted_via: Mapped[MandateGrantedVia | None] = mapped_column(
+        _enum(MandateGrantedVia, "mandate_granted_via")
+    )
+    mandate_note: Mapped[str | None] = mapped_column(Text)
+    mandate_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document.id", ondelete="SET NULL")
+    )
+    mandate_scheme: Mapped[MandateScheme] = mapped_column(
+        _enum(MandateScheme, "contact_mandate_scheme"),
+        nullable=False,
+        default=MandateScheme.CORE,
+        server_default="core",
+    )
+    mandate_status: Mapped[ContactMandateStatus] = mapped_column(
+        _enum(ContactMandateStatus, "contact_mandate_status"),
+        nullable=False,
+        default=ContactMandateStatus.ACTIVE,
+        server_default="active",
+    )
+    mandate_revoked_on: Mapped[date | None] = mapped_column(Date)
 
 
 class ContactType(IdMixin, TimestampMixin, TenantMixin, Base):

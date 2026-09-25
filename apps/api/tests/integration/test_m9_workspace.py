@@ -170,7 +170,7 @@ def test_workspace_flow(
         ),
         201,
     )
-    cal = _ok(client.get(f"{W}/calendar", params={"start": start, "end": end}, headers=h))
+    cal = _ok(client.get(f"{W}/calendar", params={"start": start, "end": end}, headers=h))["items"]
     titles = {c["title"] for c in cal}
     assert {"Begehung", "Teamtermin"} <= titles
     assert "Privat" not in titles
@@ -188,7 +188,10 @@ def test_workspace_flow(
     )
     assert bad_entry.status_code == 422
     assert (
-        _ok(client.get(f"{W}/calendar", params={"start": start, "end": end}, headers=other)) == []
+        _ok(client.get(f"{W}/calendar", params={"start": start, "end": end}, headers=other))[
+            "items"
+        ]
+        == []
     )
 
     # Saved filters: per user, same name replaces.

@@ -39,9 +39,7 @@ class ReadOnlyDavClient:
         try:
             return await self._client.request(method, url, **kwargs)  # type: ignore[arg-type]
         except httpx.HTTPError as exc:
-            raise ProblemError(
-                ErrorCodes.IMW_UNAVAILABLE, detail=sanitize_error(str(exc))
-            ) from exc
+            raise ProblemError(ErrorCodes.IMW_UNAVAILABLE, detail=sanitize_error(str(exc))) from exc
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -54,9 +52,13 @@ def build_httpx_client(
     return httpx.AsyncClient(auth=auth, verify=verify_tls, timeout=timeout, follow_redirects=True)
 
 
-def derive_carddav_url(base_url: str) -> str:
-    return base_url.rstrip("/") + "/addressbooks/"
+def derive_carddav_url(base_url: str, username: str | None = None) -> str:
+    """Adressbuch-Heimat; bei bekanntem Login der Benutzerpfad nach SabreDAV-Muster."""
+    root = base_url.rstrip("/")
+    return f"{root}/addressbooks/users/{username}/" if username else root + "/addressbooks/"
 
 
-def derive_caldav_url(base_url: str) -> str:
-    return base_url.rstrip("/") + "/calendars/"
+def derive_caldav_url(base_url: str, username: str | None = None) -> str:
+    """Kalender-Heimat; die Kalender darunter ermittelt ``caldav.discover_calendars``."""
+    root = base_url.rstrip("/")
+    return f"{root}/calendars/users/{username}/" if username else root + "/calendars/"

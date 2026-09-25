@@ -49,6 +49,25 @@ class Mailbox(IdMixin, TimestampMixin, TenantMixin, Base):
     is_default: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # "Erledigt archiviert Mail" (operator 25.09.2026, M20): beim Setzen eines verknüpften
+    # Tickets auf erledigt/geschlossen werden dessen Gmail-Nachrichten aus dem Posteingang
+    # archiviert (Job in ``mhvp.communication.tasks``). Nur für ``kind == "gmail"`` wirksam.
+    archive_on_ticket_done: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    # Fehlt dem gespeicherten Google-Consent der Bereich ``gmail.modify`` (nur bei älteren
+    # Verbindungen), wird hier ein Hinweis vermerkt statt den Archivierungsjob scheitern zu
+    # lassen; die Verbindung ist dann unter Einstellungen, Postfächer neu herzustellen.
+    archive_scope_missing: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # Google Calendar (M23-02): reuses the mailbox's Google OAuth refresh token (`secret`).
+    calendar_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    calendar_id: Mapped[str] = mapped_column(
+        String(320), nullable=False, default="primary", server_default="primary"
+    )
 
 
 class MailboxUser(IdMixin, TenantMixin, Base):

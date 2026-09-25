@@ -94,13 +94,26 @@ class TicketTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
 
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
-    checklist: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    description: Mapped[str | None] = mapped_column(Text)
+    # Checklist item shape: {"key": str, "label": str, "required": bool}. Extra field shape:
+    # {"key": str, "label": str, "type": "text|iban|date|number|select", "required": bool,
+    # "options": list[str] | None} (M19 ticket templates with checklists, 25.09.2026).
+    checklist: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    extra_fields: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
     default_priority: Mapped[Priority] = mapped_column(
         _enum(Priority, "ticket_priority"), nullable=False, default=Priority.NORMAL
     )
+    # Thema der Vorlage (operator 25.09.2026): ein Code aus dem Kompetenzkatalog
+    # (``mhvp.tickets.competences``). Steuert die Zusatz-Zuweisung nach Kompetenz.
+    topic: Mapped[str | None] = mapped_column(String(32))
     default_team_id: Mapped[uuid.UUID | None] = _fk("team.id")
     default_assignee_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     sla_hours: Mapped[int | None] = mapped_column(Integer)
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
 
 
 class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -109,8 +122,14 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
     number: Mapped[int] = mapped_column(Integer, nullable=False)
     property_id: Mapped[uuid.UUID | None] = _fk("property.id")
     unit_id: Mapped[uuid.UUID | None] = _fk("unit.id")
+    # Kontakt-Link (operator 25.09.2026): Sichtbarkeit unter Kontakte/{id}; wird beim
+    # Mail-Ingest aus dem Absender gesetzt, im Ticket änderbar. Bewusst getrennt vom
+    # ``initiator_contact_id`` (der Ersteller bleibt unverändert, auch nach einer Korrektur).
+    contact_id: Mapped[uuid.UUID | None] = _fk("contact.id")
     template_id: Mapped[uuid.UUID | None] = _fk("ticket_template.id")
     category: Mapped[str | None] = mapped_column(String(100))
+    # Thema (operator 25.09.2026): Code aus dem Kompetenzkatalog, s. TicketTemplate.topic.
+    topic: Mapped[str | None] = mapped_column(String(32))
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     public_description: Mapped[str | None] = mapped_column(Text)
     internal_description: Mapped[str | None] = mapped_column(Text)
@@ -128,11 +147,37 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(TicketSource, "ticket_source"), nullable=False, default=TicketSource.MANUAL
     )
     visible_for: Mapped[list[str]] = mapped_column(ARRAY(String(16)), nullable=False, default=list)
+    # Checklist item shape: {"key", "label", "required", "done", "done_by", "done_at"}.
     checklist: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    # Extra field values keyed by the template's field key, e.g. {"iban": "DE..."}.
+    extra_fields: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     sla_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     time_spent_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     merged_into_ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id")
+
+
+class TicketAssignee(IdMixin, TenantMixin, Base):
+    """Additional assignee of a ticket (operator 25.09.2026, mail auto assignment M20): the
+    primary assignee stays ``Ticket.assignee_user_id``; every user added here or as primary
+    keeps the reason it was assigned for ("Anschrift", "Signatur", "Kompetenz <Thema>",
+    "Verlauf", "manuell"), shown on the ticket. Never assigns the operator globally by
+    default; a rule only ever names a concrete member."""
+
+    __tablename__ = "ticket_assignee"
+    __table_args__ = (UniqueConstraint("ticket_id", "user_id", name="uq_ticket_assignee"),)
+
+    ticket_id: Mapped[uuid.UUID] = _fk("ticket.id", nullable=False, ondelete="CASCADE")
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    primary: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    reason: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
 
 
 class TicketComment(IdMixin, TimestampMixin, TenantMixin, Base):

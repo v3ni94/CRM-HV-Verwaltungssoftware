@@ -43,6 +43,10 @@ class ConnectionStatus(StrEnum):
     ERROR = "error"
     CONSENT_EXPIRED = "consent_expired"
     DISABLED = "disabled"
+    # finAPI (M11-finapi): a WebForm is open (created / web_form_pending), or a re-authorization
+    # is required (update_required). "active" doubles as the connector agnostic "connected".
+    WEB_FORM_PENDING = "web_form_pending"
+    UPDATE_REQUIRED = "update_required"
 
 
 class TransactionStatus(StrEnum):
@@ -255,3 +259,72 @@ class PaymentApproval(IdMixin, TenantMixin, Base):
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
     invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# --- finAPI (M11-finapi, read only) ----------------------------------------------------
+
+
+class FinApiTenantConfig(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Provider credentials of one tenant (docs/integrations/finapi.md). One row per tenant."""
+
+    __tablename__ = "finapi_tenant_config"
+    __table_args__ = (Index("uq_finapi_tenant_config_tenant", "tenant_id", unique=True),)
+
+    client_id: Mapped[str] = mapped_column(EncryptedText(), nullable=False)
+    client_secret: Mapped[str] = mapped_column(EncryptedText(), nullable=False)
+    mandator_id: Mapped[str | None] = mapped_column(String(64))
+    base_url: Mapped[str] = mapped_column(String(300), nullable=False)
+    sandbox: Mapped[bool] = mapped_column(nullable=False, default=True)
+
+
+class FinApiConnection(IdMixin, TimestampMixin, TenantMixin, Base):
+    """finAPI specific state of one bank_connection (state machine, docs/integrations/finapi.md)."""
+
+    __tablename__ = "finapi_connection"
+    __table_args__ = (
+        Index("uq_finapi_connection_bank_connection", "bank_connection_id", unique=True),
+    )
+
+    bank_connection_id: Mapped[uuid.UUID] = _fk("bank_connection.id")
+    responsible_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    finapi_user_id: Mapped[str | None] = mapped_column(EncryptedText())
+    finapi_bank_connection_id: Mapped[str | None] = mapped_column(String(64))
+    web_form_id: Mapped[str | None] = mapped_column(String(64))
+    web_form_url: Mapped[str | None] = mapped_column(Text)
+    web_form_status: Mapped[str | None] = mapped_column(String(32))
+    last_update_task_id: Mapped[str | None] = mapped_column(String(64))
+    last_update_status: Mapped[str | None] = mapped_column(String(32))
+    auto_update_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
+    consent_valid_until: Mapped[date | None] = mapped_column(Date)
+    last_error: Mapped[str | None] = mapped_column(Text)
+
+
+class FinApiAccountLink(IdMixin, TimestampMixin, TenantMixin, Base):
+    """External finAPI account reference linked to at most one internal bank account (6.9.7)."""
+
+    __tablename__ = "finapi_account_link"
+    __table_args__ = (
+        Index(
+            "uq_finapi_account_link_ref",
+            "tenant_id",
+            "finapi_connection_id",
+            "finapi_account_id",
+            unique=True,
+        ),
+    )
+
+    finapi_connection_id: Mapped[uuid.UUID] = _fk("finapi_connection.id")
+    finapi_account_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    property_bank_account_id: Mapped[uuid.UUID | None] = _fk(
+        "property_bank_account.id", nullable=True
+    )
+    iban_fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
+    account_holder_name: Mapped[str | None] = mapped_column(String(200))
+    account_type: Mapped[str | None] = mapped_column(String(64))
+    account_name: Mapped[str | None] = mapped_column(String(200))
+    balance_booked: Mapped[Decimal | None] = mapped_column(MONEY)
+    balance_available: Mapped[Decimal | None] = mapped_column(MONEY)
+    balance_currency: Mapped[str | None] = mapped_column(String(3))
+    balance_as_of: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    balance_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_transactions_fetch_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

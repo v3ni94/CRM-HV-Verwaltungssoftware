@@ -421,7 +421,12 @@ async def get_run(
     async with tenant_tx(request, principal) as session:
         run = await _get(session, AiTaskRun, run_id)
         out = s.RunOut.model_validate(run)
-        out.fallback = list((run.input_ref or {}).get("fallback") or [])
+        ref = run.input_ref or {}
+        out.fallback = list(ref.get("fallback") or [])
+        out.input_stats = dict(ref.get("input_stats") or {})
+        out.progress = ref.get("progress")
+        out.model_tier_reason = ref.get("model_tier_reason")
+        out.warnings = list(ref.get("warnings") or [])
         out.proposal_id = await session.scalar(
             select(AiProposal.id).where(AiProposal.task_run_id == run.id)
         )

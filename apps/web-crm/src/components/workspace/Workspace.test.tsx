@@ -33,10 +33,39 @@ describe("CalendarView", () => {
       Promise.resolve(
         init?.method === "DELETE"
           ? new Response(null, { status: 204 })
-          : jsonResponse([
-              { kind: "maintenance", title: "Prüfung Aufzug", date: "2026-09-30", ends_on: null, entity_type: "maintenance_item", entity_id: ID, editable: false },
-              { kind: "appointment", title: "Begehung", date: "2026-09-10", ends_on: null, entity_type: "calendar_entry", entity_id: ID, editable: true },
-            ]),
+          : jsonResponse({
+              items: [
+                {
+                  kind: "maintenance",
+                  title: "Prüfung Aufzug",
+                  date: "2026-09-30",
+                  ends_on: null,
+                  entity_type: "maintenance_item",
+                  entity_id: ID,
+                  property_id: null,
+                  editable: false,
+                  source: "internal",
+                  calendar_label: null,
+                  google_event_id: null,
+                  mailbox_id: null,
+                },
+                {
+                  kind: "appointment",
+                  title: "Begehung",
+                  date: "2026-09-10",
+                  ends_on: null,
+                  entity_type: "calendar_entry",
+                  entity_id: ID,
+                  property_id: null,
+                  editable: true,
+                  source: "internal",
+                  calendar_label: null,
+                  google_event_id: null,
+                  mailbox_id: null,
+                },
+              ],
+              notices: [],
+            }),
       ),
     );
     renderIntl(<CalendarView initialYear={2026} initialMonth={8} />);

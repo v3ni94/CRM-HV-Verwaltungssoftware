@@ -125,3 +125,112 @@ def test_table_text_skips_formatted_empty_area(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(gateway, "MAX_TABLE_ROWS", 1)
     text = gateway._table_text([["a"], ["b"], ["c"]])
     assert text == "Zeile 1: a\n[gekürzt: weitere Zeilen ab Zeile 2 nicht übernommen]"
+
+
+def test_chunk_table_body_repeats_header() -> None:
+    """Expected by hand: 5 rows, 2 rows per chunk. The first row is the header ("Zeile 1", the
+    column titles); it is repeated at the top of every later chunk so each chunk stands alone."""
+    body = (
+        "Tabellenblatt Blatt1\n"
+        "Zeile 1: Name | Ort\n"
+        "Zeile 2: A | X\n"
+        "Zeile 3: B | Y\n"
+        "Zeile 4: C | Z\n"
+        "Zeile 5: D | W"
+    )
+    chunks = gateway._chunk_table_body(body, chunk_chars=10_000, chunk_rows=2)
+    assert chunks == [
+        "Tabellenblatt Blatt1\nZeile 1: Name | Ort\nZeile 2: A | X",
+        "Zeile 1: Name | Ort\nZeile 3: B | Y\nZeile 4: C | Z",
+        "Zeile 1: Name | Ort\nZeile 5: D | W",
+    ]
+
+
+def test_chunk_table_body_splits_on_char_limit_too() -> None:
+    """Expected by hand: chunk_rows is large (10) but chunk_chars (60) forces the split. Line
+    lengths plus their newline: header 20, row2 15, row3 15 (sum 50, fits), row4 15 more would
+    reach 65 (over 60), so row4 starts a new chunk with the header repeated."""
+    body = "Zeile 1: Name | Ort\nZeile 2: A | X\nZeile 3: B | Y\nZeile 4: C | Z"
+    chunks = gateway._chunk_table_body(body, chunk_chars=60, chunk_rows=10)
+    assert chunks == [
+        "Zeile 1: Name | Ort\nZeile 2: A | X\nZeile 3: B | Y",
+        "Zeile 1: Name | Ort\nZeile 4: C | Z",
+    ]
+
+
+def test_split_chunk_in_half() -> None:
+    chunk = "Zeile 1: Name\nZeile 2: A\nZeile 3: B\nZeile 4: C\nZeile 5: D"
+    halves = gateway._split_chunk_in_half(chunk)
+    assert halves == [
+        "Zeile 1: Name\nZeile 2: A\nZeile 3: B",
+        "Zeile 1: Name\nZeile 4: C\nZeile 5: D",
+    ]
+    assert gateway._split_chunk_in_half("Zeile 1: Name") is None
+
+
+def test_merge_extraction_dedupes_and_concatenates() -> None:
+    from mhvp.ai.models import AiTask
+
+    contact_a = {"first_name": "Max", "last_name": "Muster"}
+    contact_b = {"first_name": "Erika", "last_name": "Muster"}
+    merged = gateway.merge_extraction(
+        AiTask.EXTRACT_CONTACTS,
+        [
+            {"contacts": [contact_a], "questions": ["Rolle unklar bei Max"]},
+            {"contacts": [contact_b, contact_a], "questions": ["Rolle unklar bei Max"]},
+        ],
+    )
+    # 3 entries in, one exact duplicate of contact_a removed, questions deduped too.
+    assert merged["contacts"] == [contact_a, contact_b]
+    assert merged["questions"] == ["Rolle unklar bei Max"]
+
+
+def test_merge_extraction_property_keeps_first_property() -> None:
+    from mhvp.ai.models import AiTask
+
+    merged = gateway.merge_extraction(
+        AiTask.EXTRACT_PROPERTY,
+        [
+            {
+                "property": {"number": "042"},
+                "buildings": ["Haus A"],
+                "units": [{"number": "1"}],
+                "parties": [],
+                "questions": [],
+            },
+            {
+                "property": {"number": "999"},  # ignored: only the first chunk's property counts
+                "buildings": ["Haus A", "Haus B"],
+                "units": [{"number": "2"}],
+                "parties": [{"role": "owner", "unit_number": "1"}],
+                "questions": ["Miteigentumsanteil fehlt"],
+            },
+        ],
+    )
+    assert merged["property"] == {"number": "042"}
+    assert merged["buildings"] == ["Haus A", "Haus B"]
+    assert merged["units"] == [{"number": "1"}, {"number": "2"}]
+    assert merged["questions"] == ["Miteigentumsanteil fehlt"]
+
+
+def test_decode_text_encoding_chain() -> None:
+    """cp1252 encoded German text (as an exported CSV commonly is) must never come back with
+    a replacement character; UTF-8 with umlauts must still decode as UTF-8."""
+    cp1252 = "Müller Straße".encode("cp1252")
+    assert gateway.decode_text(cp1252) == "Müller Straße"
+    utf8 = "Müller Straße".encode()
+    assert gateway.decode_text(utf8) == "Müller Straße"
+    assert "�" not in gateway.decode_text(cp1252)
+
+
+def test_csv_text_decodes_cp1252_without_replacement_chars() -> None:
+    data = "Name;Ort\nMüller;Straße 1\n".encode("cp1252")
+    text = gateway.csv_text(data)
+    assert text == "Zeile 1: Name | Ort\nZeile 2: Müller | Straße 1"
+    assert "�" not in text
+
+
+def test_estimate_tokens_is_chars_over_3_5() -> None:
+    """Expected by hand: 400_000 / 3.5 = 114285.71..., truncated to 114285 tokens."""
+    assert gateway.estimate_tokens(400_000) == 114285
+    assert gateway.estimate_tokens(0) == 0

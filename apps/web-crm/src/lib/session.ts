@@ -14,12 +14,15 @@ export const COOKIE = {
   refresh: "mhvp_rt",
   mfa: "mhvp_mfa",
   ctx: "mhvp_ctx",
+  device: "mhvp_dev",
 } as const;
 
 /** Refresh cookie lifetime; the API default refresh TTL is 30 days (config refresh_token_ttl_days). */
 export const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
 /** The MFA token of login step 1 is short lived. */
 export const MFA_MAX_AGE = 10 * 60;
+/** Trusted device cookie ("Auf diesem Gerät 180 Tage merken", operator 25.09.2026). */
+export const DEVICE_MAX_AGE = 180 * 24 * 60 * 60;
 /** Renew the access token a little before the API rejects it. */
 const ACCESS_SKEW_SECONDS = 30;
 
@@ -60,10 +63,25 @@ export function writeTokens(store: CookieWriter, tokens: TokenResponse, secure: 
   }
   const ctx: SessionContext = { tenantId: tokens.tenant_id ?? null, tenants: tokens.tenants };
   store.set(COOKIE.ctx, JSON.stringify(ctx), cookieOptions(secure, REFRESH_MAX_AGE));
+  if (tokens.device_token) {
+    store.set(COOKIE.device, tokens.device_token, cookieOptions(secure, DEVICE_MAX_AGE));
+  }
 }
 
-export function clearSession(store: CookieWriter, secure: boolean): void {
-  for (const name of Object.values(COOKIE)) store.set(name, "", cookieOptions(secure, 0));
+/**
+ * Clears the session cookies. The trusted device cookie is kept by default: a natural session
+ * end (expired refresh token) must not forget the device, only an explicit logout does
+ * (`clearDevice: true`).
+ */
+export function clearSession(
+  store: CookieWriter,
+  secure: boolean,
+  options: { clearDevice?: boolean } = {},
+): void {
+  for (const name of Object.values(COOKIE)) {
+    if (name === COOKIE.device && !options.clearDevice) continue;
+    store.set(name, "", cookieOptions(secure, 0));
+  }
 }
 
 export function parseContext(raw: string | undefined): SessionContext {

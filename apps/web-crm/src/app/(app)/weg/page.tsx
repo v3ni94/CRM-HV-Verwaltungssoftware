@@ -20,6 +20,12 @@ export default async function HoaPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("gateNotice")}</p>
+      <div className={`${ui.card} flex flex-wrap items-center justify-between gap-3`}>
+        <p className="text-sm text-muted">{t("objectsHint")}</p>
+        <Link href="/objekte?art=hoa" className="shrink-0 text-sm font-medium text-gold hover:underline">
+          {t("objectsLink")} →
+        </Link>
+      </div>
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}

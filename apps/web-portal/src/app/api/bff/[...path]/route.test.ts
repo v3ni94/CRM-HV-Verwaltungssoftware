@@ -87,4 +87,57 @@ describe("portal bff", () => {
     );
     expect(wrong.status).toBe(415);
   });
+
+  it("relays the M21/M22 portal operations (documents, tickets, account, meter, work orders)", async () => {
+    serverFetch.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } }),
+    );
+    for (const path of [
+      "portal/documents",
+      "portal/tickets",
+      "portal/account",
+      "portal/work-orders",
+    ]) {
+      expect((await GET(new Request("http://portal.localhost/x"), ctx(path))).status).toBe(200);
+    }
+    for (const path of [
+      "portal/tickets",
+      `portal/tickets/${ID}/comments`,
+      "portal/change-requests",
+      "portal/meter-readings",
+      `portal/work-orders/${ID}/decline`,
+      `portal/work-orders/${ID}/quote`,
+      `portal/work-orders/${ID}/appointment`,
+      `portal/work-orders/${ID}/complete`,
+      `portal/work-orders/${ID}/invoice`,
+    ]) {
+      const res = await POST(
+        new Request("http://portal.localhost/x", {
+          method: "POST",
+          headers: { ...ORIGIN, "content-type": "application/json" },
+          body: "{}",
+        }),
+        ctx(path),
+      );
+      expect(res.status, path).toBe(200);
+    }
+    const upload = new FormData();
+    upload.append("file", new Blob(["x"], { type: "image/jpeg" }), "a.jpg");
+    expect(
+      (
+        await POST(
+          new Request("http://portal.localhost/x", { method: "POST", headers: ORIGIN, body: upload }),
+          ctx("portal/uploads"),
+        )
+      ).status,
+    ).toBe(200);
+  });
+
+  it("keeps the binary document download outside the JSON proxy", async () => {
+    expect(
+      (await GET(new Request("http://portal.localhost/x"), ctx(`portal/documents/${ID}/download`))).status,
+    ).toBe(404);
+    expect(serverFetch).not.toHaveBeenCalled();
+  });
 });

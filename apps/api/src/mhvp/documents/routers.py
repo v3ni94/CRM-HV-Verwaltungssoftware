@@ -822,9 +822,7 @@ def _document_out(request: Request, doc: PaperlessDocument) -> s.DmsDocumentOut:
     )
 
 
-@router.get(
-    "/properties/{property_id}/dms-documents", summary="Paperless-Dokumente eines Objekts"
-)
+@router.get("/properties/{property_id}/dms-documents", summary="Paperless-Dokumente eines Objekts")
 async def property_dms_documents(
     property_id: uuid.UUID,
     request: Request,

@@ -8,7 +8,14 @@ import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata");
-  return { title: t("title"), description: t("description") };
+  return {
+    title: t("title"),
+    description: t("description"),
+    icons: {
+      icon: [{ url: "/favicon.png", type: "image/png" }],
+      apple: [{ url: "/apple-touch-icon.png" }],
+    },
+  };
 }
 
 export const viewport: Viewport = {

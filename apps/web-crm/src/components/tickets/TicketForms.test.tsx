@@ -14,13 +14,22 @@ describe("Tickets", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("creates a ticket and opens it", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: ID }, 201));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).includes("/tickets/templates")) return jsonResponse([]);
+      return jsonResponse({ id: ID }, 201);
+    });
     renderIntl(<TicketCreate />);
     await userEvent.type(screen.getByLabelText("Titel"), "Heizung defekt");
     await userEvent.selectOptions(screen.getByLabelText("Priorität"), "urgent");
     await userEvent.click(screen.getByText("Ticket anlegen"));
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/tickets/${ID}`));
-    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ title: "Heizung defekt", public_description: null, priority: "urgent" });
+    const createCall = fetchMock.mock.calls.find((c) => !String(c[0]).includes("/templates"));
+    expect(JSON.parse(createCall?.[1]?.body as string)).toEqual({
+      title: "Heizung defekt",
+      public_description: null,
+      priority: "urgent",
+      template_id: null,
+    });
   });
 
   it("changes status and adds an external comment", async () => {

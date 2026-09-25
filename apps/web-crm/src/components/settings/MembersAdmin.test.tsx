@@ -9,6 +9,7 @@ const ROLE_ID = "01920000-0000-7000-8000-00000000f001";
 const MEMBER_ID = "01920000-0000-7000-8000-00000000f002";
 
 const roles = [{ id: ROLE_ID, code: "tenant_admin", name: "Mandantenadministrator", is_system: true, parent_role_id: null, permissions: ["members:read"] }];
+const competenceCatalogue = [{ code: "buchhaltung", label: "Buchhaltung" }];
 
 const member = {
   membership_id: MEMBER_ID,
@@ -34,7 +35,9 @@ describe("MembersAdmin", () => {
       return jsonResponse({ title: "unerwartet" }, 500);
     });
 
-    renderIntl(<MembersAdmin initialMembers={[member]} roles={roles} canCreate canUpdate />);
+    renderIntl(
+      <MembersAdmin initialMembers={[member]} roles={roles} competenceCatalogue={competenceCatalogue} canCreate canUpdate />,
+    );
 
     // Reset password flow (scoped to the desktop table; the same actions also render in the
     // mobile card list).
@@ -53,5 +56,32 @@ describe("MembersAdmin", () => {
     await waitFor(() => expect(screen.getAllByText("Neue Person").length).toBeGreaterThan(0));
     expect(within(screen.getByRole("table")).getByText("neu@muellerhv.de")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it("edits a member's competences", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith(`/api/bff/tenant/members/${MEMBER_ID}/competences`) && method === "PUT") {
+        return jsonResponse(null, 204);
+      }
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+
+    renderIntl(
+      <MembersAdmin initialMembers={[member]} roles={roles} competenceCatalogue={competenceCatalogue} canCreate={false} canUpdate />,
+    );
+
+    const table = within(screen.getByRole("table"));
+    await userEvent.click(table.getByRole("button", { name: "Kompetenzen bearbeiten" }));
+    await userEvent.click(screen.getByLabelText("Buchhaltung"));
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const call = fetchMock.mock.calls.find(([input, init]) =>
+      String(input).endsWith(`/api/bff/tenant/members/${MEMBER_ID}/competences`) && init?.method === "PUT",
+    );
+    expect(call).toBeDefined();
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ competence_codes: ["buchhaltung"] });
   });
 });

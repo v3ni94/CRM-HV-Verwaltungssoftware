@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { TicketAnalytics } from "@/components/dashboard/TicketAnalytics";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TileSkeleton } from "@/components/ui/Skeleton";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -114,6 +115,8 @@ async function DashboardData() {
 
 export default async function DashboardPage() {
   const t = await getTranslations("Workspace");
+  const { data: me } = await serverApi().GET("/api/v1/auth/me");
+  const canSeeAnalytics = me?.permissions.includes("tickets:read") ?? false;
   return (
     <div className="flex flex-col gap-8">
       <PageHeader eyebrow={t("greetingLabel")} title={t("dashboard")} />
@@ -128,6 +131,7 @@ export default async function DashboardPage() {
       >
         <DashboardData />
       </Suspense>
+      {canSeeAnalytics ? <TicketAnalytics /> : null}
     </div>
   );
 }

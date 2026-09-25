@@ -14,7 +14,19 @@ from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.platform.models import Membership, MembershipStatus, RefreshToken, Tenant, User
+from mhvp.platform.models import (
+    Membership,
+    MembershipStatus,
+    RefreshToken,
+    Tenant,
+    TrustedDevice,
+    User,
+)
+
+# Roles for which TOTP stays mandatory (operator 25.09.2026, ADR 0006 addendum). Other users
+# log in with password only unless they enable TOTP themselves under "Meine Daten".
+ADMIN_ROLE_CODES: frozenset[str] = frozenset({"tenant_admin", "administrator"})
+TRUSTED_DEVICE_TTL_DAYS = 180
 
 
 @dataclass(frozen=True)
@@ -129,6 +141,123 @@ async def memberships(session: AsyncSession, user_id: uuid.UUID) -> list[TenantR
         .order_by(Tenant.name)
     )
     return [TenantRef(id=row.id, name=row.name) for row in rows]
+
+
+async def totp_mandatory(factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID) -> bool:
+    """TOTP is mandatory for platform administrators and for a tenant_admin/administrator
+    membership in any tenant (operator 25.09.2026). Everyone else may log in with password
+    only, unless they already enabled TOTP themselves."""
+    async with platform_transaction(factory) as session:
+        user = await session.get(User, user_id)
+        if user is None:
+            return True
+        if user.is_platform_admin:
+            return True
+        rows = (
+            await session.execute(
+                select(Membership.tenant_id, Membership.id).where(
+                    Membership.user_id == user_id, Membership.status == MembershipStatus.ACTIVE
+                )
+            )
+        ).all()
+    for row in rows:
+        async with tenant_transaction(factory, row.tenant_id) as session:
+            _, codes = await effective_permissions(session, row.tenant_id, row.id)
+        if ADMIN_ROLE_CODES.intersection(codes):
+            return True
+    return False
+
+
+async def store_trusted_device(
+    factory: async_sessionmaker[AsyncSession],
+    *,
+    user_id: uuid.UUID,
+    tenant_id: uuid.UUID | None,
+    raw_token: str,
+    user_agent: str | None,
+    now: datetime | None = None,
+) -> None:
+    now = now or datetime.now(UTC)
+    async with platform_transaction(factory) as session:
+        session.add(
+            TrustedDevice(
+                user_id=user_id,
+                tenant_id=tenant_id,
+                token_hash=tokens.sha256_hex(raw_token),
+                label=(user_agent or "")[:300] or None,
+                expires_at=now + timedelta(days=TRUSTED_DEVICE_TTL_DAYS),
+            )
+        )
+
+
+async def check_trusted_device(
+    factory: async_sessionmaker[AsyncSession],
+    *,
+    user_id: uuid.UUID,
+    raw_token: str,
+    now: datetime | None = None,
+) -> bool:
+    """Validates a device token for exactly this user and touches ``last_used_at``. A token
+    issued to another user is rejected even if it is otherwise valid (no cross-user reuse)."""
+    now = now or datetime.now(UTC)
+    async with platform_transaction(factory) as session:
+        device = await session.scalar(
+            select(TrustedDevice).where(TrustedDevice.token_hash == tokens.sha256_hex(raw_token))
+        )
+        if (
+            device is None
+            or device.user_id != user_id
+            or device.revoked_at is not None
+            or device.expires_at <= now
+        ):
+            return False
+        device.last_used_at = now
+        return True
+
+
+async def list_trusted_devices(
+    factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID
+) -> list[TrustedDevice]:
+    now = datetime.now(UTC)
+    async with platform_transaction(factory) as session:
+        rows = await session.execute(
+            select(TrustedDevice)
+            .where(
+                TrustedDevice.user_id == user_id,
+                TrustedDevice.revoked_at.is_(None),
+                TrustedDevice.expires_at > now,
+            )
+            .order_by(TrustedDevice.created_at.desc())
+        )
+        return list(rows.scalars())
+
+
+async def revoke_trusted_device(
+    factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID, device_id: uuid.UUID
+) -> bool:
+    async with platform_transaction(factory) as session:
+        result = await session.execute(
+            update(TrustedDevice)
+            .where(
+                TrustedDevice.id == device_id,
+                TrustedDevice.user_id == user_id,
+                TrustedDevice.revoked_at.is_(None),
+            )
+            .values(revoked_at=datetime.now(UTC))
+        )
+        return bool(result.rowcount)  # type: ignore[attr-defined]
+
+
+async def revoke_all_trusted_devices(
+    factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID
+) -> None:
+    """Revokes every trusted device of a user (password reset by an admin, TOTP secret reset)."""
+    async with platform_transaction(factory) as session:
+        await session.execute(
+            update(TrustedDevice)
+            .where(TrustedDevice.user_id == user_id, TrustedDevice.revoked_at.is_(None))
+            .values(revoked_at=datetime.now(UTC))
+        )
 
 
 async def _roles(

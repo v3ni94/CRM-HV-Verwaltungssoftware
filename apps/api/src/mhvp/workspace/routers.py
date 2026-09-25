@@ -1,6 +1,7 @@
 """Workspace endpoints (/api/v1/workspace, M9)."""
 
 import datetime as dt
+import json
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -9,7 +10,9 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, func, or_, select, update
 
-from mhvp.core.auth.principal import TenantPrincipal, get_principal, tenant_tx
+from mhvp.communication import gcal, gmail
+from mhvp.communication.models import Mailbox, MailboxUser
+from mhvp.core.auth.principal import TenantPrincipal, get_principal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace import services
@@ -20,6 +23,8 @@ router = APIRouter(prefix="/workspace", tags=["Arbeitsplatz"])
 FILTER_RESOURCES = ("contacts", "properties", "units", "contracts", "documents", "imports")
 MAX_BULK = 500
 MAX_RANGE_DAYS = 400
+STATS_READ = require_permission("tickets:read")
+STATS_RANGES = ("day", "week", "month", "quarter", "year")
 
 
 async def member(request: Request) -> TenantPrincipal:
@@ -66,6 +71,20 @@ class CalendarEntryIn(_In):
     shared: bool = False
     notes: str | None = Field(default=None, max_length=4000)
     property_id: uuid.UUID | None = None
+    # Google Calendar (M23-02): time of day for non ganztägige Termine and the target calendar.
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+    target: str = Field(default="internal", pattern="^(internal|default|own)$")
+
+
+class GoogleCalendarPatchIn(_In):
+    title: str | None = Field(default=None, min_length=1, max_length=300)
+    starts_on: date | None = None
+    ends_on: date | None = None
+    all_day: bool | None = None
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+    notes: str | None = Field(default=None, max_length=4000)
 
 
 class CalendarItem(BaseModel):
@@ -77,6 +96,23 @@ class CalendarItem(BaseModel):
     entity_id: uuid.UUID | None = None
     property_id: uuid.UUID | None = None
     editable: bool = False
+    # Google Calendar (M23-02): source/calendar label to colour and filter the entries in
+    # /kalender; google_event_id and mailbox_id identify the event for patch/delete.
+    source: str = "internal"
+    calendar_label: str | None = None
+    google_event_id: str | None = None
+    mailbox_id: uuid.UUID | None = None
+
+
+class CalendarNotice(BaseModel):
+    source: str  # default | own
+    address: str
+    connected: bool  # calendar_enabled and a refresh token is stored
+
+
+class CalendarOut(BaseModel):
+    items: list[CalendarItem]
+    notices: list[CalendarNotice] = Field(default_factory=list)
 
 
 class FilterIn(_In):
@@ -162,6 +198,121 @@ async def dashboard(
         upcoming.sort(key=lambda i: i["date"])
         # Money figures stay out until the ledger is released (G1).
         return {"tiles": tiles, "upcoming": upcoming[:10], "accounting": "locked_until_g1"}
+
+
+def _stats_bounds(range_key: str, today: date) -> tuple[date, date]:
+    """Rolling window ending today, inclusive (orientation only, no legal cut-off date)."""
+    days = {"day": 0, "week": 6, "month": 29, "quarter": 89, "year": 364}[range_key]
+    return today - timedelta(days=days), today
+
+
+def _bucket_key(d: date, range_key: str) -> str:
+    """day/week/month range -> day bucket; quarter -> week bucket; year -> month bucket."""
+    if range_key == "quarter":
+        iso = d.isocalendar()
+        return f"{iso.year}-W{iso.week:02d}"
+    if range_key == "year":
+        return f"{d.year}-{d.month:02d}"
+    return d.isoformat()
+
+
+def _bucket_series(start: date, end: date, range_key: str) -> list[str]:
+    keys: list[str] = []
+    step = timedelta(days=1)
+    cursor = start
+    seen: set[str] = set()
+    while cursor <= end:
+        key = _bucket_key(cursor, range_key)
+        if key not in seen:
+            seen.add(key)
+            keys.append(key)
+        cursor += step
+    return keys
+
+
+@router.get(
+    "/dashboard/stats",
+    summary="Ticket-Auswertung der Startseite (Zeitraum, je Bearbeiter)",
+)
+async def dashboard_stats(
+    request: Request,
+    range: str = Query(default="week", pattern="^(" + "|".join(STATS_RANGES) + ")$"),
+    user_id: uuid.UUID | None = None,
+    principal: TenantPrincipal = Depends(STATS_READ),
+) -> dict[str, Any]:
+    from mhvp.tickets.models import Ticket, TicketStatus
+
+    today = services.local_today()
+    start, end = _stats_bounds(range, today)
+    start_dt = datetime.combine(start, dt.time.min, tzinfo=UTC)
+    end_dt = datetime.combine(end + timedelta(days=1), dt.time.min, tzinfo=UTC)
+    async with tenant_tx(request, principal) as session:
+        base = select(Ticket)
+        if user_id is not None:
+            base = base.where(Ticket.assignee_user_id == user_id)
+        tickets = (await session.scalars(base)).all()
+
+        resolved_statuses = {TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED}
+        open_count = sum(1 for t in tickets if t.status not in resolved_statuses)
+        in_progress_count = sum(1 for t in tickets if t.status == TicketStatus.IN_PROGRESS)
+        created_in_range = [t for t in tickets if start_dt <= t.created_at < end_dt]
+        done_in_range = [
+            t for t in tickets if t.resolved_at is not None and start_dt <= t.resolved_at < end_dt
+        ]
+
+        bucket_order = _bucket_series(start, end, range)
+        buckets: dict[str, dict[str, int]] = {
+            k: {"created": 0, "resolved": 0} for k in bucket_order
+        }
+        for t in created_in_range:
+            key = _bucket_key(t.created_at.date(), range)
+            buckets.setdefault(key, {"created": 0, "resolved": 0})["created"] += 1
+        for t in done_in_range:
+            resolved_at = t.resolved_at
+            if resolved_at is None:
+                continue
+            key = _bucket_key(resolved_at.date(), range)
+            buckets.setdefault(key, {"created": 0, "resolved": 0})["resolved"] += 1
+
+        by_assignee: dict[uuid.UUID, dict[str, Any]] = {}
+        for t in tickets:
+            if t.assignee_user_id is None:
+                continue
+            row = by_assignee.setdefault(
+                t.assignee_user_id, {"open": 0, "resolved_in_range": 0, "_hours": []}
+            )
+            if t.status not in resolved_statuses:
+                row["open"] += 1
+        for t in done_in_range:
+            if t.assignee_user_id is None:
+                continue
+            row = by_assignee.setdefault(
+                t.assignee_user_id, {"open": 0, "resolved_in_range": 0, "_hours": []}
+            )
+            row["resolved_in_range"] += 1
+            resolved_at = t.resolved_at
+            if resolved_at is not None:
+                row["_hours"].append((resolved_at - t.created_at).total_seconds() / 3600)
+
+        assignees = []
+        for uid, row in sorted(by_assignee.items(), key=lambda kv: str(kv[0])):
+            hours = row.pop("_hours")
+            row["average_resolution_hours"] = round(sum(hours) / len(hours), 1) if hours else None
+            assignees.append({"user_id": uid, **row})
+
+        return {
+            "range": range,
+            "start": start,
+            "end": end,
+            "totals": {
+                "open": open_count,
+                "in_progress": in_progress_count,
+                "done_in_range": len(done_in_range),
+                "created_in_range": len(created_in_range),
+            },
+            "buckets": [{"key": k, **buckets[k]} for k in bucket_order],
+            "assignees": assignees,
+        }
 
 
 # Global search -------------------------------------------------------------------------
@@ -289,6 +440,117 @@ async def mark_read(
 
 
 # Calendar ------------------------------------------------------------------------------
+#
+# Operator decision (25.09.2026, M23-02): the CRM calendar is Google Calendar. The tenant's
+# default calendar is the Google account of the default mailbox (source "default"); a user with
+# a mailbox assigned to them (mailbox_user) additionally sees and writes to that mailbox's
+# calendar (source "own"). Internal entries (calendar_entry) and data derived deadlines keep
+# source "internal". Google events are fetched on demand (no periodic sync job) and cached in
+# Redis for 5 minutes per tenant, mailbox and range; a write bumps a version key so the next
+# read misses the cache instead of scanning for keys to delete.
+
+GCAL_CACHE_TTL = 300
+
+
+def _google_label(source: str, address: str) -> str:
+    return f"{'Standardkalender' if source == 'default' else 'Eigener Kalender'} ({address})"
+
+
+async def _resolve_calendars(
+    session: Any, principal: TenantPrincipal
+) -> tuple[Mailbox | None, Mailbox | None]:
+    """(default mailbox, own assigned mailbox), each only if it carries a Google account."""
+    default = await session.scalar(select(Mailbox).where(Mailbox.is_default.is_(True)))
+    own_mailbox_id = await session.scalar(
+        select(MailboxUser.mailbox_id).where(MailboxUser.user_id == principal.user_id)
+    )
+    own = None
+    if own_mailbox_id and (default is None or own_mailbox_id != default.id):
+        own = await session.get(Mailbox, own_mailbox_id)
+    return default, own
+
+
+def _cache_key(
+    tenant_id: uuid.UUID, mailbox_id: uuid.UUID, version: str, start: date, end: date
+) -> str:
+    return f"gcal:items:{tenant_id}:{mailbox_id}:{version}:{start.isoformat()}:{end.isoformat()}"
+
+
+async def _version(request: Request, tenant_id: uuid.UUID, mailbox_id: uuid.UUID) -> str:
+    redis = request.app.state.resources.redis
+    v = await redis.get(f"gcal:v:{tenant_id}:{mailbox_id}")
+    return v.decode() if v else "0"
+
+
+async def _bump_version(request: Request, tenant_id: uuid.UUID, mailbox_id: uuid.UUID) -> None:
+    await request.app.state.resources.redis.incr(f"gcal:v:{tenant_id}:{mailbox_id}")
+
+
+def _event_dates(event: dict[str, Any]) -> tuple[date, date | None]:
+    s = event.get("start", {})
+    e = event.get("end", {})
+    start_raw = s.get("date") or s.get("dateTime")
+    end_raw = e.get("date") or e.get("dateTime")
+    start = date.fromisoformat(start_raw[:10])
+    end = date.fromisoformat(end_raw[:10]) if end_raw else None
+    if end is not None and "date" in e and end > start:
+        # Google's all day end date is exclusive.
+        end = end - timedelta(days=1)
+    if end == start:
+        end = None
+    return start, end
+
+
+def _google_item(
+    event: dict[str, Any], source: str, label: str, mailbox_id: uuid.UUID
+) -> CalendarItem:
+    start, end = _event_dates(event)
+    return CalendarItem(
+        kind="appointment",
+        title=event.get("summary") or "(ohne Titel)",
+        date=start,
+        ends_on=end,
+        editable=True,
+        source=source,
+        calendar_label=label,
+        google_event_id=event["id"],
+        mailbox_id=mailbox_id,
+    )
+
+
+async def _fetch_google_items(
+    request: Request,
+    session: Any,
+    settings: Any,
+    tenant_id: uuid.UUID,
+    mailbox: Mailbox,
+    source: str,
+    start: date,
+    end: date,
+) -> tuple[list[CalendarItem], CalendarNotice]:
+    address, label = mailbox.address, _google_label(source, mailbox.address)
+    notice = CalendarNotice(
+        source=source, address=address, connected=bool(mailbox.calendar_enabled)
+    )
+    if not mailbox.calendar_enabled:
+        return [], notice
+    redis = request.app.state.resources.redis
+    version = await _version(request, tenant_id, mailbox.id)
+    key = _cache_key(tenant_id, mailbox.id, version, start, end)
+    cached = await redis.get(key)
+    if cached:
+        events = json.loads(cached)
+    else:
+        client_id, client_secret = await gmail.oauth_client(session, settings)
+        client = gcal.make_client(client_id, client_secret, mailbox)
+        try:
+            time_min = datetime.combine(start, dt.time.min, tzinfo=UTC)
+            time_max = datetime.combine(end + timedelta(days=1), dt.time.min, tzinfo=UTC)
+            events = await client.list_events(mailbox.calendar_id, time_min, time_max)
+        finally:
+            await client.aclose()
+        await redis.set(key, json.dumps(events), ex=GCAL_CACHE_TTL)
+    return [_google_item(e, source, label, mailbox.id) for e in events], notice
 
 
 @router.get("/calendar", summary="Kalender: eigene Termine, geteilte Termine, Fristen aus Daten")
@@ -297,9 +559,10 @@ async def calendar(
     start: date,
     end: date,
     principal: TenantPrincipal = Depends(member),
-) -> list[CalendarItem]:
+) -> CalendarOut:
     if end < start or (end - start).days > MAX_RANGE_DAYS:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Zeitraum ungültig (höchstens 400 Tage).")
+    settings = request.app.state.settings
     async with tenant_tx(request, principal) as session:
         entries = await session.scalars(
             select(CalendarEntry).where(
@@ -318,6 +581,7 @@ async def calendar(
                 entity_id=e.id,
                 property_id=e.property_id,
                 editable=e.owner_user_id == principal.user_id,
+                source="internal",
             )
             for e in entries.all()
         ]
@@ -328,8 +592,52 @@ async def calendar(
             contracts=principal.has("contracts:read"),
             properties=principal.has("properties:read"),
         )
-        items += [CalendarItem(**d) for d in derived]
-        return sorted(items, key=lambda i: (i.date, i.title))
+        items += [CalendarItem(**d, source="internal") for d in derived]
+
+        notices: list[CalendarNotice] = []
+        default_mailbox, own_mailbox = await _resolve_calendars(session, principal)
+        for mailbox, source in ((default_mailbox, "default"), (own_mailbox, "own")):
+            if mailbox is None:
+                continue
+            google_items, notice = await _fetch_google_items(
+                request, session, settings, principal.tenant_id, mailbox, source, start, end
+            )
+            items += google_items
+            notices.append(notice)
+
+        items.sort(key=lambda i: (i.date, i.title))
+        return CalendarOut(items=items, notices=notices)
+
+
+@router.post("/calendar/refresh", summary="Google-Kalender jetzt neu abrufen")
+async def refresh_calendar(
+    request: Request, principal: TenantPrincipal = Depends(member)
+) -> dict[str, bool]:
+    async with tenant_tx(request, principal) as session:
+        default_mailbox, own_mailbox = await _resolve_calendars(session, principal)
+    for mailbox in (default_mailbox, own_mailbox):
+        if mailbox is not None:
+            await _bump_version(request, principal.tenant_id, mailbox.id)
+    return {"refreshed": True}
+
+
+def _entry_body(body: CalendarEntryIn) -> dict[str, Any]:
+    if body.all_day or (body.starts_at is None and body.ends_at is None):
+        end_exclusive = (body.ends_on or body.starts_on) + timedelta(days=1)
+        return {
+            "summary": body.title,
+            "description": body.notes,
+            "start": {"date": body.starts_on.isoformat()},
+            "end": {"date": end_exclusive.isoformat()},
+        }
+    starts_at = body.starts_at or datetime.combine(body.starts_on, dt.time(9, 0), tzinfo=UTC)
+    ends_at = body.ends_at or (starts_at + timedelta(hours=1))
+    return {
+        "summary": body.title,
+        "description": body.notes,
+        "start": {"dateTime": starts_at.isoformat()},
+        "end": {"dateTime": ends_at.isoformat()},
+    }
 
 
 @router.post("/calendar", status_code=201, summary="Termin anlegen")
@@ -338,24 +646,49 @@ async def create_entry(
 ) -> CalendarItem:
     if body.ends_on and body.ends_on < body.starts_on:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Ende liegt vor dem Beginn.")
+    if body.target == "internal":
+        async with tenant_tx(request, principal) as session:
+            fields = body.model_dump(exclude={"starts_at", "ends_at", "target"})
+            entry = CalendarEntry(
+                tenant_id=principal.tenant_id,
+                owner_user_id=principal.user_id,
+                created_by=principal.user_id,
+                **fields,
+            )
+            session.add(entry)
+            await session.flush()
+            return CalendarItem(
+                kind="appointment",
+                title=entry.title,
+                date=entry.starts_on,
+                ends_on=entry.ends_on,
+                entity_type="calendar_entry",
+                entity_id=entry.id,
+                property_id=entry.property_id,
+                editable=True,
+                source="internal",
+            )
+
+    settings = request.app.state.settings
     async with tenant_tx(request, principal) as session:
-        entry = CalendarEntry(
-            tenant_id=principal.tenant_id,
-            owner_user_id=principal.user_id,
-            created_by=principal.user_id,
-            **body.model_dump(),
-        )
-        session.add(entry)
-        await session.flush()
-        return CalendarItem(
-            kind="appointment",
-            title=entry.title,
-            date=entry.starts_on,
-            ends_on=entry.ends_on,
-            entity_type="calendar_entry",
-            entity_id=entry.id,
-            property_id=entry.property_id,
-            editable=True,
+        default_mailbox, own_mailbox = await _resolve_calendars(session, principal)
+        mailbox = default_mailbox if body.target == "default" else own_mailbox
+        if mailbox is None or not mailbox.calendar_enabled:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Für dieses Ziel ist kein verbundener Google-Kalender vorhanden.",
+            )
+        client_id, client_secret = await gmail.oauth_client(session, settings)
+        client = gcal.make_client(client_id, client_secret, mailbox)
+        try:
+            event = await client.insert_event(mailbox.calendar_id, _entry_body(body))
+        except gcal.GCalError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        finally:
+            await client.aclose()
+        await _bump_version(request, principal.tenant_id, mailbox.id)
+        return _google_item(
+            event, body.target, _google_label(body.target, mailbox.address), mailbox.id
         )
 
 
@@ -371,6 +704,88 @@ async def delete_entry(
         )
         if not result.rowcount:  # type: ignore[attr-defined]
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+
+
+async def _google_mailbox_for(session: Any, principal: TenantPrincipal, source: str) -> Mailbox:
+    if source not in ("default", "own"):
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Unbekannte Kalenderquelle.")
+    default_mailbox, own_mailbox = await _resolve_calendars(session, principal)
+    mailbox = default_mailbox if source == "default" else own_mailbox
+    if mailbox is None or not mailbox.calendar_enabled:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    return mailbox
+
+
+@router.patch("/calendar/google/{source}/{event_id}", summary="Google-Termin ändern")
+async def patch_google_entry(
+    source: str,
+    event_id: str,
+    body: GoogleCalendarPatchIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(member),
+) -> CalendarItem:
+    settings = request.app.state.settings
+    async with tenant_tx(request, principal) as session:
+        mailbox = await _google_mailbox_for(session, principal, source)
+        patch: dict[str, Any] = {}
+        if body.title is not None:
+            patch["summary"] = body.title
+        if body.notes is not None:
+            patch["description"] = body.notes
+        if body.starts_at is not None:
+            patch["start"] = {"dateTime": body.starts_at.isoformat()}
+        elif body.starts_on is not None:
+            if body.all_day is False:
+                patch["start"] = {
+                    "dateTime": datetime.combine(
+                        body.starts_on, dt.time(9, 0), tzinfo=UTC
+                    ).isoformat()
+                }
+            else:
+                patch["start"] = {"date": body.starts_on.isoformat()}
+        if body.ends_at is not None:
+            patch["end"] = {"dateTime": body.ends_at.isoformat()}
+        elif body.ends_on is not None:
+            if body.all_day is False:
+                patch["end"] = {
+                    "dateTime": datetime.combine(
+                        body.ends_on, dt.time(10, 0), tzinfo=UTC
+                    ).isoformat()
+                }
+            else:
+                patch["end"] = {"date": (body.ends_on + timedelta(days=1)).isoformat()}
+        if not patch:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Keine Änderung angegeben.")
+        client_id, client_secret = await gmail.oauth_client(session, settings)
+        client = gcal.make_client(client_id, client_secret, mailbox)
+        try:
+            event = await client.patch_event(mailbox.calendar_id, event_id, patch)
+        except gcal.GCalError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        finally:
+            await client.aclose()
+        await _bump_version(request, principal.tenant_id, mailbox.id)
+        return _google_item(event, source, _google_label(source, mailbox.address), mailbox.id)
+
+
+@router.delete(
+    "/calendar/google/{source}/{event_id}", status_code=204, summary="Google-Termin löschen"
+)
+async def delete_google_entry(
+    source: str, event_id: str, request: Request, principal: TenantPrincipal = Depends(member)
+) -> None:
+    settings = request.app.state.settings
+    async with tenant_tx(request, principal) as session:
+        mailbox = await _google_mailbox_for(session, principal, source)
+        client_id, client_secret = await gmail.oauth_client(session, settings)
+        client = gcal.make_client(client_id, client_secret, mailbox)
+        try:
+            await client.delete_event(mailbox.calendar_id, event_id)
+        except gcal.GCalError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        finally:
+            await client.aclose()
+        await _bump_version(request, principal.tenant_id, mailbox.id)
 
 
 # Saved list filters --------------------------------------------------------------------

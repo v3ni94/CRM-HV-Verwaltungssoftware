@@ -46,11 +46,15 @@ def dav_client(connection: ImmowareConnection) -> ReadOnlyDavClient:
 
 
 def carddav_url(connection: ImmowareConnection) -> str:
-    return connection.carddav_url or derive_carddav_url(connection.base_url or "")
+    return connection.carddav_url or derive_carddav_url(
+        connection.base_url or "", connection.username
+    )
 
 
 def caldav_url(connection: ImmowareConnection) -> str:
-    return connection.caldav_url or derive_caldav_url(connection.base_url or "")
+    return connection.caldav_url or derive_caldav_url(
+        connection.base_url or "", connection.username
+    )
 
 
 async def check_connection(
@@ -69,8 +73,8 @@ async def check_connection(
             headers={"Depth": "0", "Content-Type": "application/xml; charset=utf-8"},
         )
         connection.last_check_ok = response.status_code < 400
-        connection.last_error = None if connection.last_check_ok else sanitize_error(
-            f"HTTP {response.status_code}"
+        connection.last_error = (
+            None if connection.last_check_ok else sanitize_error(f"HTTP {response.status_code}")
         )
     except Exception as exc:
         connection.last_check_ok = False

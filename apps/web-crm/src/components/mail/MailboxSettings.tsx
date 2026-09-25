@@ -14,6 +14,8 @@ export type Mailbox = {
   enabled: boolean;
   has_secret: boolean;
   is_default: boolean;
+  calendar_enabled: boolean;
+  calendar_id: string;
   user_ids: string[];
   last_synced_at: string | null;
   last_error: string | null;
@@ -98,7 +100,7 @@ function MailboxRow({ box, members, onChange }: { box: Mailbox; members: Member[
     if (res.ok) apply(res.data);
     else setError(res.message);
   };
-  const patch = (body: Partial<Pick<Mailbox, "enabled" | "is_default">>) =>
+  const patch = (body: Partial<Pick<Mailbox, "enabled" | "is_default" | "calendar_enabled">>) =>
     run<Mailbox>(() => bff(`/api/bff/mail/mailboxes/${box.id}`, { method: "PATCH", body: JSON.stringify(body) }), onChange);
   const toggleUser = (userId: string, on: boolean) => {
     const user_ids = on ? [...box.user_ids, userId] : box.user_ids.filter((u) => u !== userId);
@@ -136,6 +138,17 @@ function MailboxRow({ box, members, onChange }: { box: Mailbox; members: Member[
           {t("enabled")}
         </label>
         {box.kind === "gmail" ? (
+          <label className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={box.calendar_enabled}
+              disabled={busy}
+              onChange={(e) => void patch({ calendar_enabled: e.target.checked })}
+            />
+            {t("calendarEnabled")}
+          </label>
+        ) : null}
+        {box.kind === "gmail" ? (
           <button type="button" className={ui.button} disabled={busy} onClick={() => void sync()}>
             {t("syncNow")}
           </button>
@@ -145,6 +158,7 @@ function MailboxRow({ box, members, onChange }: { box: Mailbox; members: Member[
         </button>
         {syncInfo ? <span className="text-xs text-success-fg">{syncInfo}</span> : null}
       </div>
+      {box.kind === "gmail" && box.calendar_enabled ? <p className="text-xs text-muted">{t("calendarHint")}</p> : null}
       {box.is_default ? (
         <p className="text-xs text-muted">{t("defaultHint")}</p>
       ) : (

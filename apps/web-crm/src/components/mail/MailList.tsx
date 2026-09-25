@@ -43,17 +43,17 @@ export function MailList({
             <button
               type="button"
               onClick={() => onSelect(message.id)}
-              className={`w-full rounded-lg border px-3 py-2.5 text-left transition ${
+              className={`block w-full min-w-0 rounded-lg border px-3 py-2.5 text-left transition ${
                 message.id === selectedId ? "border-gold bg-surface" : "border-border bg-bg hover:border-gold/60"
               }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm font-medium">{counterpart(message) || t("noAddress")}</span>
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <span className="min-w-0 truncate text-sm font-medium">{counterpart(message) || t("noAddress")}</span>
                 <span className="shrink-0 text-xs text-subtle">
                   {formatDateTime(message.direction === "in" ? message.received_at : message.sent_at)}
                 </span>
               </div>
-              <p className="truncate text-sm text-muted">{message.subject || t("noSubject")}</p>
+              <p className="min-w-0 truncate text-sm text-muted">{message.subject || t("noSubject")}</p>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <span className={statusBadgeClass(message.status)}>{t(`status.${message.status}`)}</span>
                 {message.ticket_id ? <span className={ui.badge}>{t("ticketBadge")}</span> : null}

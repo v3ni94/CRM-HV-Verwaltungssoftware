@@ -26,13 +26,13 @@ function submitterLabel(message: Message, members: Member[] | null, t: ReturnTyp
 function ThreadEntry({ message }: { message: Message }) {
   const t = useTranslations("Mail");
   return (
-    <li className={`${ui.card} flex flex-col gap-1.5`}>
+    <li className={`${ui.card} flex min-w-0 flex-col gap-1.5`}>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
         <span className={ui.badge}>{message.direction === "in" ? t("directionIn") : t("directionOut")}</span>
         <span>{formatDateTime(message.direction === "in" ? message.received_at : message.sent_at)}</span>
       </div>
-      <p className="text-sm font-medium">{message.subject || t("noSubject")}</p>
-      <p className="whitespace-pre-wrap text-sm">{message.body}</p>
+      <p className="break-words text-sm font-medium">{message.subject || t("noSubject")}</p>
+      <p className="whitespace-pre-wrap break-words text-sm">{message.body}</p>
     </li>
   );
 }
@@ -51,7 +51,9 @@ export function MailDetail({
   onCreated: (next: Message) => void;
 }) {
   const t = useTranslations("Mail");
+  const ts = useTranslations("MailSettings");
   const router = useRouter();
+  const [forwarded, setForwarded] = useState(false);
   const [thread, setThread] = useState<Message[] | null>(null);
   const [members, setMembers] = useState<Member[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -114,6 +116,20 @@ export function MailDetail({
     const next = await act("/approve", "POST");
     if (next) onUpdated(next);
   };
+  const forwardInvoice = async () => {
+    if (!window.confirm(ts("forwardInvoiceConfirm"))) return;
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ forwarded_to: string }>(`/api/bff/mail/messages/${message.id}/forward-invoice`, {
+      method: "POST",
+    });
+    setBusy(false);
+    if (res.ok) setForwarded(true);
+    else setError(res.message);
+  };
+  const invoiceForward = message.classification?.invoice_forward as
+    | { decision: string; reason: string }
+    | undefined;
   const reject = async () => {
     if (!rejectNote.trim()) return;
     const next = await act("/reject", "POST", { note: rejectNote.trim() });
@@ -125,13 +141,13 @@ export function MailDetail({
   };
 
   return (
-    <div className={`${ui.card} flex flex-col gap-4`}>
-      <div className="flex flex-col gap-1 border-b border-border-soft pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">{message.subject || t("noSubject")}</h2>
-          <span className={ui.badge}>{t(`status.${message.status}`)}</span>
+    <div className={`${ui.card} flex min-w-0 flex-col gap-4`}>
+      <div className="flex min-w-0 flex-col gap-1 border-b border-border-soft pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h2 className="min-w-0 break-words text-lg font-semibold">{message.subject || t("noSubject")}</h2>
+          <span className={`${ui.badge} shrink-0`}>{t(`status.${message.status}`)}</span>
         </div>
-        <p className="text-sm text-muted">
+        <p className="break-words text-sm text-muted">
           {message.direction === "in" ? t("from", { address: message.from_address ?? "" }) : t("toField", { address: message.to_addresses.join(", ") })}
         </p>
         <div className="flex flex-wrap gap-3 text-xs text-subtle">
@@ -156,12 +172,22 @@ export function MailDetail({
 
       {message.direction === "in" ? <SuggestionCard message={message} onUpdated={onUpdated} onDraftCreated={onCreated} /> : null}
 
+      {message.direction === "in" && invoiceForward?.decision === "suggest" && !forwarded ? (
+        <div className={`${ui.card} flex flex-wrap items-center justify-between gap-2`}>
+          <span className="text-sm">{invoiceForward.reason}</span>
+          <button type="button" className={ui.button} disabled={busy} onClick={() => void forwardInvoice()}>
+            {ts("forwardInvoice")}
+          </button>
+        </div>
+      ) : null}
+      {forwarded ? <p className="text-xs text-success-fg">{ts("forwardInvoiceDone")}</p> : null}
+
       {message.status === "draft" ? (
         <DraftEditor message={message} onUpdated={onUpdated} />
       ) : message.status === "pending" ? (
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted">{submitterLabel(message, members, t)}</p>
-          <p className="whitespace-pre-wrap rounded-md border border-border bg-surface p-3 text-sm">{message.body}</p>
+          <p className="whitespace-pre-wrap break-words rounded-md border border-border bg-surface p-3 text-sm">{message.body}</p>
           {canApprove ? (
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className={ui.primary} disabled={busy} onClick={() => void approve()}>
@@ -189,11 +215,11 @@ export function MailDetail({
       ) : message.status === "sent" ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-muted">{message.sent_at ? t("sentAt", { at: formatDateTime(message.sent_at) }) : ""}</p>
-          <p className="whitespace-pre-wrap rounded-md border border-border bg-surface p-3 text-sm">{message.body}</p>
+          <p className="whitespace-pre-wrap break-words rounded-md border border-border bg-surface p-3 text-sm">{message.body}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <p className="whitespace-pre-wrap rounded-md border border-border bg-surface p-3 text-sm">{message.body}</p>
+          <p className="whitespace-pre-wrap break-words rounded-md border border-border bg-surface p-3 text-sm">{message.body}</p>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className={ui.button} disabled={busy} onClick={() => void reply()}>
               {t("reply")}

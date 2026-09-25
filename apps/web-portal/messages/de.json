@@ -38,7 +38,140 @@
     "title": "Portal",
     "handover": "Übergabeprotokolle",
     "logout": "Abmelden",
-    "footer": "Alle Angaben werden bei der Hausverwaltung gespeichert. Interne Vermerke der Verwaltung sind hier nicht sichtbar."
+    "footer": "Alle Angaben werden bei der Hausverwaltung gespeichert. Interne Vermerke der Verwaltung sind hier nicht sichtbar.",
+    "nav": {
+      "start": "Übersicht",
+      "documents": "Dokumente",
+      "tickets": "Meldungen",
+      "account": "Kontoauszug",
+      "meter": "Zählerstand",
+      "data": "Datenänderung",
+      "orders": "Aufträge"
+    },
+    "start": {
+      "title": "Übersicht",
+      "greetingTenantOwner": "Ihre Vertragsdaten und Anliegen auf einen Blick.",
+      "greetingProvider": "Ihre Aufträge der Hausverwaltung.",
+      "documents": "Dokumente einsehen und herunterladen",
+      "tickets": "Schäden und Anliegen melden",
+      "account": "Kontoauszug ansehen",
+      "meter": "Zählerstand melden",
+      "data": "Stammdaten ändern lassen",
+      "orders": "Aufträge bearbeiten",
+      "handover": "Übergabeprotokolle"
+    },
+    "proposalNotice": "Vorschlag, wird von der Verwaltung geprüft."
+  },
+  "Documents": {
+    "title": "Dokumente",
+    "empty": "Keine freigegebenen Dokumente.",
+    "download": "Herunterladen",
+    "created": "Bereitgestellt am"
+  },
+  "Tickets": {
+    "title": "Meldungen",
+    "empty": "Keine Meldungen vorhanden.",
+    "new": "Neue Schadensmeldung",
+    "titleField": "Titel",
+    "description": "Beschreibung",
+    "photo": "Foto anhängen (optional)",
+    "submit": "Melden",
+    "submitted": "Meldung wurde übermittelt.",
+    "back": "Zurück zur Übersicht",
+    "history": "Verlauf",
+    "commentField": "Nachricht",
+    "commentSubmit": "Senden",
+    "commentSent": "Nachricht wurde gesendet.",
+    "number": "Nummer",
+    "titleRequired": "Bitte einen Titel eingeben.",
+    "descriptionRequired": "Bitte eine Beschreibung eingeben.",
+    "status": {
+      "new": "Neu",
+      "in_progress": "In Bearbeitung",
+      "waiting": "Wartet auf Rückmeldung",
+      "done": "Erledigt",
+      "closed": "Geschlossen",
+      "rejected": "Abgelehnt"
+    }
+  },
+  "Account": {
+    "title": "Kontoauszug",
+    "empty": "Keine offenen Posten.",
+    "contract": "Vertrag",
+    "dueDate": "Fällig am",
+    "amount": "Betrag",
+    "remaining": "Offen"
+  },
+  "Meter": {
+    "title": "Zählerstand melden",
+    "meterId": "Zähler-ID",
+    "meterIdHint": "Die Zähler-ID entnehmen Sie Ihren Unterlagen oder erfragen Sie bei der Verwaltung.",
+    "value": "Zählerstand",
+    "date": "Ablesedatum",
+    "submit": "Melden",
+    "submitted": "Der Zählerstand wurde als Vorschlag übermittelt.",
+    "valueRequired": "Bitte einen Zählerstand eingeben.",
+    "dateRequired": "Bitte ein Ablesedatum eingeben."
+  },
+  "DataChange": {
+    "title": "Datenänderung",
+    "kind": "Art der Änderung",
+    "kindOptions": {
+      "address": "Anschrift",
+      "phone": "Telefonnummer",
+      "email": "E-Mail-Adresse",
+      "bank_account": "Bankverbindung"
+    },
+    "fields": {
+      "street": "Straße",
+      "house_number": "Hausnummer",
+      "postal_code": "PLZ",
+      "city": "Ort",
+      "number": "Telefonnummer",
+      "email": "E-Mail-Adresse",
+      "iban": "IBAN"
+    },
+    "submit": "Änderung vorschlagen",
+    "submitted": "Die Änderung wurde als Vorschlag übermittelt."
+  },
+  "Orders": {
+    "title": "Aufträge",
+    "empty": "Keine Aufträge vorhanden.",
+    "back": "Zurück zur Übersicht",
+    "quoteAmount": "Angebotsbetrag (EUR)",
+    "quoteDocument": "Angebot als Datei anhängen (optional)",
+    "quoteSubmit": "Angebot abgeben",
+    "quoteSubmitted": "Das Angebot wurde übermittelt.",
+    "declineAction": "Auftrag ablehnen",
+    "declineConfirm": "Auftrag wirklich ablehnen?",
+    "declined": "Auftrag wurde abgelehnt.",
+    "appointmentDate": "Termin",
+    "appointmentSubmit": "Termin festlegen",
+    "appointmentSubmitted": "Der Termin wurde übermittelt.",
+    "report": "Ausführungsbericht",
+    "photos": "Fotos der Ausführung (optional)",
+    "completeSubmit": "Ausführung dokumentieren",
+    "completeSubmitted": "Die Ausführung wurde dokumentiert.",
+    "invoiceNumber": "Rechnungsnummer",
+    "invoiceDate": "Rechnungsdatum",
+    "invoiceGross": "Rechnungsbetrag brutto (EUR)",
+    "invoiceDocument": "Rechnung als Datei anhängen",
+    "invoiceDocumentRequired": "Bitte die Rechnung als Datei anhängen.",
+    "invoiceSubmit": "Rechnung einreichen",
+    "invoiceSubmitted": "Die Rechnung wurde als Vorschlag zur Prüfung eingereicht.",
+    "status": {
+      "draft": "Entwurf",
+      "requested": "Angefragt",
+      "quoted": "Angebot abgegeben",
+      "approved": "Freigegeben",
+      "scheduled": "Termin vereinbart",
+      "in_progress": "In Ausführung",
+      "done": "Ausgeführt",
+      "invoiced": "Rechnung eingereicht",
+      "accepted": "Angenommen",
+      "rejected": "Abgelehnt",
+      "cancelled": "Storniert"
+    }
   },
   "Handover": {
     "title": "Übergabeprotokolle",

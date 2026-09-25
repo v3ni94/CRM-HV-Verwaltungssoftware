@@ -29,6 +29,15 @@ describe("portal files", () => {
       (await GET(new Request("http://portal.localhost/x"), ctx(`portal/handover/${ID}/documents/${ID}/content`)))
         .status,
     ).toBe(200);
+    serverFetch.mockResolvedValue(
+      new Response("%PDF-1.4", {
+        status: 200,
+        headers: { "content-type": "application/pdf", "content-disposition": 'attachment; filename="doc.pdf"' },
+      }),
+    );
+    expect(
+      (await GET(new Request("http://portal.localhost/x"), ctx(`portal/documents/${ID}/download`))).status,
+    ).toBe(200);
   });
 
   it("keeps everything else outside and hides upstream errors", async () => {

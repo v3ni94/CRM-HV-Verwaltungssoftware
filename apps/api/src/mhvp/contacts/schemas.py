@@ -12,8 +12,12 @@ from mhvp.contacts.models import (
     Completeness,
     ConsentKind,
     ContactKind,
+    ContactMandateStatus,
+    ContactRoleCode,
     ContactTypeCode,
     IdentifierKind,
+    MandateGrantedVia,
+    MandateScheme,
     PartyRole,
     PhoneLabel,
     PreferredChannel,
@@ -76,6 +80,15 @@ class BankAccountIn(_Strict):
     holder: str | None = Field(default=None, max_length=200)
     valid_from: date
     valid_to: date | None = None
+    sepa_enabled: bool = False
+    mandate_reference: str | None = Field(default=None, max_length=35)
+    mandate_signed_on: date | None = None
+    mandate_granted_via: MandateGrantedVia | None = None
+    mandate_note: str | None = Field(default=None, max_length=2_000)
+    mandate_document_id: uuid.UUID | None = None
+    mandate_scheme: MandateScheme = MandateScheme.CORE
+    mandate_status: ContactMandateStatus = ContactMandateStatus.ACTIVE
+    mandate_revoked_on: date | None = None
 
     @field_validator("iban")
     @classmethod
@@ -89,6 +102,17 @@ class BankAccountIn(_Strict):
     def _period(self) -> Self:
         if self.valid_to is not None and self.valid_to < self.valid_from:
             raise ValueError("valid_to liegt vor valid_from")
+        return self
+
+    @model_validator(mode="after")
+    def _mandate(self) -> Self:
+        if self.sepa_enabled:
+            if self.mandate_signed_on is None:
+                raise ValueError("SEPA-Mandat benötigt ein Unterschriftsdatum")
+            if self.mandate_granted_via is None:
+                raise ValueError("SEPA-Mandat benötigt die Art der Erteilung")
+            if self.mandate_document_id is None and not (self.mandate_note or "").strip():
+                raise ValueError("SEPA-Mandat benötigt ein Dokument oder einen Vermerk")
         return self
 
 
@@ -118,6 +142,11 @@ class ContactIn(_Strict):
         description="Beim Ändern: weglassen oder null lässt die Bankverbindungen unverändert",
     )
     types: list[ContactTypeCode] = Field(default_factory=list)
+    roles: list[ContactRoleCode] = Field(
+        default_factory=list,
+        description="Manuelle Klassifizierung; automatisch abgeleitete Rollen aus Verträgen "
+        "werden zusätzlich beibehalten.",
+    )
     tags: list[str] = Field(default_factory=list, max_length=50)
 
     @model_validator(mode="after")
@@ -161,6 +190,27 @@ class BankAccountOut(BaseModel):
     holder: str | None
     valid_from: date
     valid_to: date | None
+    sepa_enabled: bool
+    mandate_reference: str | None
+    mandate_signed_on: date | None
+    mandate_granted_via: MandateGrantedVia | None
+    mandate_note: str | None
+    mandate_document_id: uuid.UUID | None
+    mandate_scheme: MandateScheme
+    mandate_status: ContactMandateStatus
+    mandate_revoked_on: date | None
+
+
+class SepaMandateOut(BaseModel):
+    """Compact list for GET /contacts/{id}/sepa-mandates."""
+
+    bank_account_id: uuid.UUID
+    iban_masked: str
+    mandate_reference: str | None
+    mandate_signed_on: date | None
+    mandate_scheme: MandateScheme
+    mandate_status: ContactMandateStatus
+    mandate_revoked_on: date | None
 
 
 class ContactSummary(BaseModel):
@@ -174,6 +224,7 @@ class ContactSummary(BaseModel):
     blocked: bool
     tags: list[str]
     types: list[ContactTypeCode]
+    roles: list[ContactRoleCode]
     deleted: bool
 
 
@@ -201,6 +252,7 @@ class ContactOut(BaseModel):
     identifiers: list[IdentifierOut]
     bank_accounts: list[BankAccountOut]
     types: list[ContactTypeCode]
+    roles: list[ContactRoleCode]
     tags: list[str]
     version: int
     created_at: datetime

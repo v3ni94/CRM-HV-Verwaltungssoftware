@@ -32,6 +32,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can("properties:read") ? [{ href: "/objekte", label: t("properties"), icon: "properties" }] : []),
         { href: "/kontakte", label: t("contacts"), icon: "contacts" },
         { href: "/kalender", label: t("calendar"), icon: "calendar" },
+        ...(can("communication:read") ? [{ href: "/mail", label: t("mail"), icon: "mail" }] : []),
+        ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets"), icon: "tickets" }] : []),
       ],
     },
     {
@@ -41,15 +43,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can("accounting:read") ? [{ href: "/weg", label: t("hoa"), icon: "hoa" }] : []),
         ...(can("properties:read") ? [{ href: "/objekte?art=sev", label: t("sev"), icon: "sev" }] : []),
         ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting"), icon: "letting" }] : []),
-        ...(can("contracts:read") ? [{ href: "/makler", label: t("broker"), icon: "broker" }] : []),
         ...(can("documents:read") ? [{ href: "/dms", label: t("dms"), icon: "dms" }] : []),
         ...(can("immoware:read") ? [{ href: "/immoware", label: t("immoware"), icon: "dms" }] : []),
         ...(can("immoware:read")
           ? [{ href: "/immoware/lernphase", label: t("immowareLearning"), icon: "dms" }]
           : []),
-        ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets"), icon: "tickets" }] : []),
-        ...(can("communication:read") ? [{ href: "/mail", label: t("mail"), icon: "mail" }] : []),
       ],
+    },
+    {
+      label: t("group.broker"),
+      items: can("contracts:read")
+        ? [
+            { href: "/makler", label: t("brokerListings"), icon: "broker" },
+            { href: "/makler/import", label: t("brokerFlowImport"), icon: "flowImport" },
+            { href: "/makler/uebergabe", label: t("brokerHandover"), icon: "handover" },
+          ]
+        : [],
     },
     {
       label: t("group.finance"),
@@ -99,10 +108,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             area={tHome("area")}
           />
           <SearchDialog />
-          <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="ml-auto flex min-w-0 items-center gap-2">
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
+            <div className="hidden sm:block">
+              <TenantSwitcher tenants={ctx.tenants} current={ctx.tenantId} />
+            </div>
             <NotificationBell />
-            <ThemeToggle />
-            <TenantSwitcher tenants={ctx.tenants} current={ctx.tenantId} />
             <UserMenu name={me?.display_name || me?.email || ""} email={me?.email ?? undefined} />
           </div>
         </header>

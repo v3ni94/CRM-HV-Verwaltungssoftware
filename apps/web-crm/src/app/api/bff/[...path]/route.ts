@@ -24,7 +24,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/thread$`) },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}/draft$`) },
-  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/(reply-draft|submit|approve|reject|ticket)$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/(reply-draft|submit|approve|reject|ticket|forward-invoice)$`) },
+  { method: "GET", pattern: /^mail\/invoice-forwarding$/ },
+  { method: "PUT", pattern: /^mail\/invoice-forwarding$/ },
   // KI-Vorschläge und Playbooks (M20 Übernahme aus dem Immoware Hub).
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/suggest$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/apply-playbook$`) },
@@ -32,7 +34,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^mail\/playbooks$/ },
   { method: "PATCH", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
-  { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters)$/ },
+  { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters|dashboard\/stats)$/ },
   { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|bulk)$/ },
   { method: "PUT", pattern: /^workspace\/filters$/ },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
@@ -42,9 +44,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^contacts/${ID}$`) },
   { method: "PUT", pattern: new RegExp(`^contacts/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^contacts/${ID}$`) },
-  { method: "GET", pattern: new RegExp(`^contacts/${ID}/(export|notes|consents|duplicates)$`) },
+  {
+    method: "GET",
+    pattern: new RegExp(`^contacts/${ID}/(export|notes|consents|duplicates|sepa-mandates)$`),
+  },
   { method: "POST", pattern: new RegExp(`^contacts/${ID}/(notes|consents)$`) },
   { method: "POST", pattern: new RegExp(`^consents/${ID}/revoke$`) },
+  {
+    method: "POST",
+    pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/mandate/revoke$`),
+  },
   // AI assistant (M7): conversations, runs, proposals, import runs, provider settings.
   { method: "GET", pattern: /^ai\/conversations$/ },
   // Tenant members, roles and settings (settings area).
@@ -53,6 +62,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^tenant/members/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^tenant/members/${ID}/reset-password$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/roles$`) },
+  { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/competences$`) },
+  { method: "GET", pattern: /^tenant\/competence-catalogue$/ },
   { method: "GET", pattern: /^tenant\/roles$/ },
   { method: "POST", pattern: /^tenant\/roles$/ },
   { method: "PUT", pattern: new RegExp(`^tenant/roles/${ID}/permissions$`) },
@@ -62,6 +73,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^auth\/password$/ },
   { method: "GET", pattern: /^auth\/sessions$/ },
   { method: "DELETE", pattern: new RegExp(`^auth/sessions/${ID}$`) },
+  { method: "GET", pattern: /^auth\/trusted-devices$/ },
+  { method: "DELETE", pattern: new RegExp(`^auth/trusted-devices/${ID}$`) },
   // Platform: tenant and tenant administrator creation (platform admins only, checked by the API).
   { method: "POST", pattern: /^platform\/tenants$/ },
   { method: "POST", pattern: /^platform\/users$/ },
@@ -160,6 +173,17 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^tickets$/ },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/comments$`) },
+  // Ticketvorlagen (Checkliste, Zusatzfelder inkl. IBAN) und Sammelstatuswechsel (M19-02).
+  { method: "GET", pattern: /^tickets\/templates$/ },
+  { method: "POST", pattern: /^tickets\/templates$/ },
+  { method: "GET", pattern: new RegExp(`^tickets/templates/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^tickets/templates/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^tickets/${ID}/checklist/[a-zA-Z0-9_-]{1,64}$`) },
+  { method: "POST", pattern: /^tickets\/bulk-status$/ },
+  // Zuweiser mit Grund (operator 25.09.2026, mail-optimierung M20).
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}/assignees$`) },
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/assignees$`) },
+  { method: "DELETE", pattern: new RegExp(`^tickets/${ID}/assignees/${ID}$`) },
   // Paperless-Dokumente in Ticket- und Objektansicht (M31).
   { method: "GET", pattern: new RegExp(`^properties/${ID}/dms-documents$`) },
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/dms-documents$`) },
@@ -172,6 +196,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^sla/rules/${ID}/steps$`) },
   { method: "GET", pattern: new RegExp(`^sla/tickets/${ID}/sla$`) },
   { method: "POST", pattern: /^sla\/rules$/ },
+  { method: "POST", pattern: /^sla\/rules\/presets$/ },
   { method: "PATCH", pattern: new RegExp(`^sla/rules/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^sla/rules/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^sla/rules/${ID}/steps$`) },

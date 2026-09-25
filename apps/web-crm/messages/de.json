@@ -34,7 +34,8 @@
     "backToLogin": "Zurück zur Anmeldung",
     "tenantTitle": "Mandant auswählen",
     "tenantHint": "Ihr Zugang ist für mehrere Mandanten freigeschaltet. Bitte den Mandanten für diese Sitzung wählen.",
-    "noTenants": "Für Ihren Zugang ist kein Mandant freigeschaltet."
+    "noTenants": "Für Ihren Zugang ist kein Mandant freigeschaltet.",
+    "rememberDevice": "Auf diesem Gerät 180 Tage merken"
   },
   "Shell": {
     "skip": "Zum Inhalt springen",
@@ -78,9 +79,13 @@
     "group": {
       "overview": "Übersicht",
       "management": "Verwaltung",
+      "broker": "Makler",
       "finance": "Finanzen",
       "system": "System"
     },
+    "brokerListings": "Anzeigen",
+    "brokerFlowImport": "FLOW-Import",
+    "brokerHandover": "Übergabeprotokoll",
     "rental": "Mietverwaltung",
     "sev": "SEV",
     "settings": "Einstellungen",
@@ -156,7 +161,22 @@
       "dateInvalid": "Bitte ein gültiges Datum angeben."
     },
     "select": "Auswahl",
-    "selectRow": "{name} auswählen"
+    "selectRow": "{name} auswählen",
+    "role": "Rolle",
+    "allRoles": "Alle Rollen",
+    "sepaMandates": {
+      "title": "SEPA-Mandate",
+      "iban": "IBAN",
+      "reference": "Mandatsreferenz",
+      "signedOn": "Erteilt am",
+      "grantedVia": "Erteilungsart",
+      "status": "Status",
+      "document": "Mandat",
+      "documentLink": "PDF öffnen",
+      "revoke": "Widerrufen",
+      "revokeConfirm": "SEPA-Mandat für {iban} wirklich widerrufen?",
+      "revokedOn": "Widerrufen am"
+    }
   },
   "ContactForm": {
     "titleNew": "Neuer Kontakt",
@@ -221,7 +241,23 @@
       "countryInvalid": "Bitte den Ländercode mit zwei Großbuchstaben angeben, z. B. DE.",
       "dateRequired": "Bitte ein Datum angeben.",
       "periodInvalid": "Das Ende liegt vor dem Beginn.",
-      "languageInvalid": "Bitte einen Sprachcode mit zwei Kleinbuchstaben angeben."
+      "languageInvalid": "Bitte einen Sprachcode mit zwei Kleinbuchstaben angeben.",
+      "sepaSignedRequired": "Bitte das Datum der Erteilung angeben.",
+      "sepaGrantedViaRequired": "Bitte die Erteilungsart angeben.",
+      "sepaProofRequired": "Bitte das Mandat als PDF hinterlegen oder einen Vermerk eintragen."
+    },
+    "roles": "Klassifizierung",
+    "sepa": {
+      "enabled": "SEPA-Lastschrift aktiv",
+      "reference": "Mandatsreferenz",
+      "signedOn": "Datum der Erteilung",
+      "grantedVia": "Erteilungsart",
+      "grantedViaNone": "Keine Angabe",
+      "scheme": "Mandatsart",
+      "note": "Vermerk",
+      "document": "Mandat als PDF",
+      "uploading": "Wird hochgeladen…",
+      "documentStored": "Dokument hinterlegt."
     }
   },
   "Duplicates": {
@@ -271,6 +307,29 @@
       "board_member": "Beirat",
       "authority": "Behörde",
       "other": "Sonstige"
+    },
+    "role": {
+      "eigentuemer": "Eigentümer",
+      "mieter": "Mieter",
+      "verwalter": "Verwalter",
+      "dienstleister": "Dienstleister",
+      "bank": "Bank",
+      "sonstiges": "Sonstiges"
+    },
+    "grantedVia": {
+      "telefon": "Telefon",
+      "brief": "Brief",
+      "email": "E-Mail",
+      "portal": "Portal",
+      "persoenlich": "Persönlich"
+    },
+    "mandateScheme": {
+      "core": "Basislastschrift (CORE)",
+      "b2b": "Firmenlastschrift (B2B)"
+    },
+    "mandateStatus": {
+      "active": "aktiv",
+      "revoked": "widerrufen"
     }
   },
   "Ai": {
@@ -462,7 +521,7 @@
     "undo": "Rückgängig",
     "undoConfirm": "Import wirklich zurücknehmen? Datensätze, auf die spätere Daten aufbauen, bleiben erhalten.",
     "undoneAt": "Zurückgenommen am {at}",
-    "immoware24Link": "Importassistent Immoware24 öffnen"
+    "immoware24Link": "Importassistent öffnen"
   },
   "AiSettings": {
     "title": "KI-Einstellungen",
@@ -529,7 +588,7 @@
     }
   },
   "Immoware24": {
-    "title": "Importassistent Immoware24",
+    "title": "Importassistent",
     "intro": "Berichte aus Immoware24 hochladen, Spalten zuordnen, prüfen, testen und übernehmen. Jede Übernahme erzeugt einen Importlauf, der sich zurücknehmen lässt.",
     "backToImports": "Zurück zu den Importen",
     "overviewTitle": "Bestand in der Plattform",
@@ -678,7 +737,66 @@
     "bulkDone": "{changed} geändert.",
     "select": "Auswählen",
     "greetingLabel": "Übersicht",
-    "open": "Öffnen"
+    "open": "Öffnen",
+    "analytics": {
+      "title": "Auswertungen",
+      "kpi": {
+        "open": "Offen",
+        "in_progress": "In Bearbeitung",
+        "done_in_range": "Erledigt im Zeitraum",
+        "created_in_range": "Neu im Zeitraum"
+      },
+      "range": {
+        "label": "Zeitraum",
+        "day": "Tag",
+        "week": "Woche",
+        "month": "Monat",
+        "quarter": "Quartal",
+        "year": "Jahr"
+      },
+      "user": {
+        "label": "Bearbeiter",
+        "all": "Gesamter Mandant"
+      },
+      "chartTitle": "Erstellt und erledigt je Zeitraum",
+      "chartCreated": "Erstellt",
+      "chartResolved": "Erledigt",
+      "tableView": "Als Tabelle anzeigen",
+      "chartView": "Als Diagramm anzeigen",
+      "bucket": "Zeitraum",
+      "empty": "Keine Tickets im gewählten Zeitraum.",
+      "assigneeTitle": "Bearbeiter im Vergleich",
+      "assigneeName": "Bearbeiter",
+      "assigneeOpen": "Offen",
+      "assigneeResolved": "Erledigt im Zeitraum",
+      "assigneeAvgHours": "Ø Bearbeitungszeit (Std.)",
+      "assigneeUnassigned": "Ohne Zuordnung",
+      "compare": "Vergleichen",
+      "compareHint": "Zwei Bearbeiter auswählen, um sie nebeneinander zu vergleichen.",
+      "compareClear": "Vergleich aufheben",
+      "loadError": "Die Auswertung ist derzeit nicht verfügbar.",
+      "hours": "{hours} Std.",
+      "noHours": "keine Angabe"
+    },
+    "prevWeek": "Vorherige Woche",
+    "nextWeek": "Nächste Woche",
+    "viewMode": "Ansicht",
+    "monthView": "Monat",
+    "weekView": "Woche",
+    "refresh": "Aktualisieren",
+    "calendarLegend": "Kalenderfarben",
+    "calendarSource": {
+      "internal": "Interner Termin",
+      "default": "Standardkalender",
+      "own": "Eigener Kalender"
+    },
+    "calendarTarget": "Kalender",
+    "calendarNotConnected": "nicht verbunden",
+    "calendarNotConnectedHint": "Für das Postfach {address} ist die Google-Kalenderfreigabe noch nicht erteilt.",
+    "toMailboxSettings": "Zu den Postfächern",
+    "allDay": "Ganztägig",
+    "notes": "Notiz",
+    "cancel": "Abbrechen"
   },
   "Accounting": {
     "title": "Buchhaltung",
@@ -751,6 +869,8 @@
   "Hoa": {
     "title": "WEG-Verwaltung",
     "gateNotice": "Ausgabe und Buchung von WEG-Abrechnungen sind bis zur Freigabestufe G4 gesperrt.",
+    "objectsHint": "WEG-Objekte und WEG-Verwaltung gehören zusammen: hier die laufende Verwaltung, in der Objektliste die Stammdaten der Gemeinschaften.",
+    "objectsLink": "WEG-Objekte öffnen",
     "empty": "Keine WEG-Objekte erfasst.",
     "collection": "Beschluss-Sammlung",
     "noEntity": "Für dieses Objekt ist keine Gemeinschaft angelegt.",
@@ -1372,7 +1492,60 @@
       "high": "hoch",
       "urgent": "dringend",
       "immediate": "sofort"
-    }
+    },
+    "template": "Vorlage",
+    "noTemplate": "Keine Vorlage",
+    "checklist": "Checkliste",
+    "checklistIncomplete": "Checkliste unvollständig",
+    "extraFields": "Zusatzfelder",
+    "selectAll": "Alle auswählen",
+    "selected": "ausgewählt",
+    "bulkStatusApply": "Status anwenden",
+    "bulkLimitHint": "Ohne Freigaberecht sind höchstens 10 Tickets je Aufruf möglich.",
+    "bulkFailed": "Fehlgeschlagen",
+    "bulkChanged": "Geändert",
+    "saveField": "Speichern",
+    "selectRow": "Ticket auswählen",
+    "linkedTitle": "Tickets",
+    "openCount": "{count} offen",
+    "linkedEmpty": "Keine Tickets verknüpft."
+  },
+  "TicketTemplates": {
+    "title": "Ticketvorlagen",
+    "description": "Checklisten und Zusatzfelder für wiederkehrende Vorgänge, zum Beispiel Vermietung oder Kaution.",
+    "newTemplate": "Neue Vorlage",
+    "category": "Kategorie",
+    "titleField": "Titel",
+    "description2": "Beschreibung",
+    "defaultPriority": "Standardpriorität",
+    "checklist": "Checkliste",
+    "extraFields": "Zusatzfelder",
+    "required": "Pflicht",
+    "remove": "Entfernen",
+    "add": "Hinzufügen",
+    "newChecklistItem": "Neuer Checklistenpunkt",
+    "newFieldLabel": "Neues Feld",
+    "fieldTypes": {
+      "text": "Text",
+      "iban": "IBAN",
+      "date": "Datum",
+      "number": "Zahl",
+      "select": "Auswahl"
+    },
+    "priorities": {
+      "low": "niedrig",
+      "normal": "normal",
+      "high": "hoch",
+      "urgent": "dringend",
+      "immediate": "sofort"
+    },
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "activate": "Aktivieren",
+    "deactivate": "Deaktivieren",
+    "activeState": "aktiv",
+    "inactiveState": "inaktiv"
   },
   "Mail": {
     "title": "Mail",
@@ -1381,6 +1554,7 @@
     "noAddress": "ohne Adresse",
     "noSubject": "ohne Betreff",
     "selectMessage": "Nachricht auswählen.",
+    "backToList": "Zurück zur Liste",
     "refresh": "Aktualisieren",
     "searchPlaceholder": "Suche",
     "ticketBadge": "Ticket",
@@ -1734,6 +1908,12 @@
     "needFile": "Dafür brauche ich eine Datei. Bitte über die Büroklammer anhängen.",
     "working": "Ich lese die Daten und prüfe sie. Das kann einen Moment dauern.",
     "thinking": "Der Assistent arbeitet …",
+    "progress": {
+      "uploading": "Hochladen",
+      "queued": "Eingereiht",
+      "processing": "Verarbeitung",
+      "done": "Fertig"
+    },
     "roleText": {
       "owner": "Importiere diese Kontakte. Es handelt sich ausschließlich um Eigentümer.",
       "tenant": "Importiere diese Kontakte. Es handelt sich ausschließlich um Mieter.",
@@ -1803,6 +1983,14 @@
       "title": "DMS-Anbindung",
       "description": "Paperless-Zugangsdaten und Feld-IDs pflegen, Google Drive anzeigen."
     },
+    "bank": {
+      "title": "Bank",
+      "description": "finAPI-Zugangsdaten für die Onlinebanking-Anbindung (nur lesend)."
+    },
+    "ticketTemplates": {
+      "title": "Ticketvorlagen",
+      "description": "Checklisten und Zusatzfelder für wiederkehrende Vorgänge (z. B. Vermietung, Kaution)."
+    },
     "immoware": {
       "title": "Immoware24-Anbindung",
       "description": "Verbindung zu Immoware24 per WebDAV, CardDAV und CalDAV einrichten und Abholung anstossen."
@@ -1836,7 +2024,8 @@
     "addContactHint": "Der Benutzer wird zusätzlich als Kontakt des Mandanten angelegt.",
     "displayName": "Anzeigename",
     "passwordHint": "Mindestens 12 Zeichen.",
-    "addSubmit": "Benutzer anlegen"
+    "addSubmit": "Benutzer anlegen",
+    "editCompetences": "Kompetenzen bearbeiten"
   },
   "Roles": {
     "title": "Rollen und Rechte",
@@ -1892,7 +2081,10 @@
     "sessionsTitle": "Aktive Sitzungen",
     "noSessions": "Keine aktiven Sitzungen.",
     "unknownDevice": "Unbekanntes Gerät",
-    "revoke": "Abmelden"
+    "revoke": "Abmelden",
+    "devicesTitle": "Gemerkte Geräte",
+    "noDevices": "Keine gemerkten Geräte.",
+    "deviceExpires": "Läuft ab am"
   },
   "TenantAdmin": {
     "createTenantTitle": "Mandant anlegen",
@@ -1945,7 +2137,19 @@
     "removeConfirm": "Postfach {address} entfernen? Bereits aufgenommene Mails und Tickets bleiben erhalten.",
     "syncResult": "{fetched} geprüft, {created} neu, {duplicates} bereits vorhanden",
     "defaultHint": "Ein Standardpostfach sehen alle Benutzer des Mandanten, auch neu angelegte.",
-    "access": "Freigabe für Benutzer"
+    "access": "Freigabe für Benutzer",
+    "calendarEnabled": "Kalenderfreigabe",
+    "calendarHint": "Termine dieses Postfachs erscheinen im Kalender. Bei erstmaliger Freigabe erneut mit Google verbinden, damit die Kalenderberechtigung erteilt wird.",
+    "invoiceForwardingTitle": "Rechnungs-Weiterleitung",
+    "invoiceForwardingHint": "Rechnungen der Gesellschaft selbst (nicht objektbezogen) werden an die hinterlegte Adresse weitergeleitet, wenn der Absender auf der Positivliste steht und kein Objektbezug erkennbar ist. Alle anderen erkannten Rechnungen erscheinen als Vorschlag in der Mailansicht.",
+    "invoiceForwardingEnabled": "Weiterleitung aktiv",
+    "invoiceForwardingAddress": "Zieladresse",
+    "invoiceForwardingAllowlist": "Positivliste (Absenderadressen, durch Komma getrennt)",
+    "invoiceForwardingAllowlistHint": "Wird ein Vorschlag zweimal bestätigt, kommt der Absender automatisch auf die Lernliste.",
+    "invoiceForwardingLearningList": "Lernliste (automatisch bestätigt)",
+    "forwardInvoice": "Weiterleiten?",
+    "forwardInvoiceConfirm": "Diese Rechnung an die hinterlegte Adresse weiterleiten?",
+    "forwardInvoiceDone": "Weitergeleitet."
   },
   "Dms": {
     "area": "Verwaltung",
@@ -2027,6 +2231,7 @@
       "title": "SLA-Regeln",
       "empty": "Noch keine Regel angelegt.",
       "create": "Regel anlegen",
+      "loadPresets": "Vorschlagswerte laden",
       "name": "Name",
       "priority": "Priorität",
       "responseMinutes": "Reaktionszeit (Minuten)",
@@ -2141,6 +2346,47 @@
       "unreachable": "Paperless nicht erreichbar",
       "notConfigured": "Paperless nicht eingerichtet"
     }
+  },
+  "BankSettings": {
+    "title": "Bank (finAPI)",
+    "intro": "Zugangsdaten für die read-only Onlinebanking-Anbindung über finAPI. Keine Bank-PIN oder TAN: Anmeldung und Kontofreigabe laufen ausschließlich über das WebForm der Bank.",
+    "description": "Client-ID, Client-Secret und optionale Mandator-ID des finAPI-Zugangs dieses Mandanten.",
+    "statusConfigured": "Eingerichtet ({url}).",
+    "statusMissing": "Bankanbindung noch nicht eingerichtet.",
+    "baseUrl": "Basis-URL",
+    "mandatorId": "Mandator-ID (optional)",
+    "clientId": "Client-ID",
+    "clientSecret": "Client-Secret",
+    "sandbox": "Sandbox-Umgebung",
+    "save": "Speichern",
+    "saved": "Gespeichert."
+  },
+  "BankConnections": {
+    "title": "Bankverbindungen",
+    "intro": "Bankkonten per finAPI verbinden und dauerhaft mit einem Buchungskreis oder Objekt verknüpfen. Lesend: keine Überweisungen, keine automatische Verbuchung.",
+    "notConfigured": "Bankanbindung noch nicht eingerichtet. Zugangsdaten unter Einstellungen, Bank hinterlegen.",
+    "connect": "Verbinden",
+    "connectPrompt": "Bankname",
+    "check": "Prüfen",
+    "reauthorize": "Erneut freigeben",
+    "disconnect": "Trennen",
+    "assign": "Zuordnen",
+    "fetch": "Umsätze abrufen",
+    "queued": "Abruf eingereiht, wird im Hintergrund verarbeitet.",
+    "unassigned": "Nicht zugeordnet",
+    "webFormHint": "Bankfreigabe im neuen Fenster abschließen und danach auf Prüfen klicken.",
+    "status": {
+      "not_configured": "Angelegt",
+      "web_form_pending": "Bankfreigabe ausstehend",
+      "active": "Verbunden",
+      "update_required": "Erneute Freigabe nötig",
+      "error": "Fehler",
+      "consent_expired": "Zustimmung abgelaufen",
+      "disabled": "Getrennt"
+    },
+    "noConnections": "Noch keine Bankverbindung.",
+    "error": "Vorgang fehlgeschlagen.",
+    "assignPropertyBankAccountId": "ID des internen Kontos"
   },
   "DmsSettings": {
     "title": "DMS-Anbindung",

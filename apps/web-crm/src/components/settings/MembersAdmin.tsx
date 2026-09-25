@@ -75,6 +75,71 @@ function RolesEditor({ member, roles, onSaved }: { member: Member; roles: Role[]
   );
 }
 
+function CompetencesEditor({
+  member,
+  catalogue,
+  onSaved,
+}: {
+  member: Member;
+  catalogue: { code: string; label: string }[];
+  onSaved: (codes: string[]) => void;
+}) {
+  const t = useTranslations("Members");
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>(member.competences ?? []);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const res = await bff<null>(`/api/bff/tenant/members/${member.membership_id}/competences`, {
+      method: "PUT",
+      body: JSON.stringify({ competence_codes: selected }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      onSaved(selected);
+      setOpen(false);
+    } else {
+      setError(res.message);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className={ui.buttonSm} onClick={() => setOpen(true)}>
+        {t("editCompetences")}
+      </button>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2">
+      {catalogue.map((c) => (
+        <label key={c.code} className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={selected.includes(c.code)}
+            onChange={(e) =>
+              setSelected((prev) => (e.target.checked ? [...prev, c.code] : prev.filter((x) => x !== c.code)))
+            }
+          />
+          {c.label}
+        </label>
+      ))}
+      {error ? <p className={ui.error}>{error}</p> : null}
+      <div className="flex gap-2">
+        <button type="button" className={ui.button} disabled={busy} onClick={() => void save()}>
+          {t("save")}
+        </button>
+        <button type="button" className={ui.button} disabled={busy} onClick={() => setOpen(false)}>
+          {t("cancel")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ResetPassword({ membershipId }: { membershipId: string }) {
   const t = useTranslations("Members");
   const [open, setOpen] = useState(false);
@@ -211,11 +276,13 @@ function AddMemberForm({ roles, onCreated }: { roles: Role[]; onCreated: (member
 export function MembersAdmin({
   initialMembers,
   roles,
+  competenceCatalogue,
   canCreate,
   canUpdate,
 }: {
   initialMembers: Member[];
   roles: Role[];
+  competenceCatalogue: { code: string; label: string }[];
   canCreate: boolean;
   canUpdate: boolean;
 }) {
@@ -261,6 +328,7 @@ export function MembersAdmin({
               {canUpdate ? (
                 <div className="flex flex-col gap-1.5 pt-1">
                   <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
+                  <CompetencesEditor member={m} catalogue={competenceCatalogue} onSaved={(competences) => updateMember(m.membership_id, { competences })} />
                   <ResetPassword membershipId={m.membership_id} />
                   <button
                     type="button"
@@ -310,6 +378,7 @@ export function MembersAdmin({
                   <td>
                     <div className="flex flex-col gap-1.5">
                       <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
+                      <CompetencesEditor member={m} catalogue={competenceCatalogue} onSaved={(competences) => updateMember(m.membership_id, { competences })} />
                       <ResetPassword membershipId={m.membership_id} />
                       <button
                         type="button"

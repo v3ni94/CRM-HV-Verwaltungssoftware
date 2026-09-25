@@ -31,6 +31,7 @@ RESOURCES: tuple[str, ...] = (
     "release_gates",
     "sla",
     "immoware",
+    "banking",
 )
 ALL_PERMISSIONS: frozenset[str] = frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS)
 READ_ALL: frozenset[str] = frozenset(f"{r}:read" for r in RESOURCES)
@@ -76,6 +77,10 @@ _MASTER_R = _r("contacts") | _r("properties") | _r("contracts") | _r("documents"
 _ACC_RW = _rw("accounting")
 _ACC_APPROVE = _ACC_RW | {"accounting:approve", "accounting:export"}
 
+# Onlinebanking (M11-finapi): connecting, re-authorizing and disconnecting a bank connection,
+# and seeing unassigned accounts, needs banking:approve in addition to accounting rights.
+_BANKING_APPROVE = _rw("banking") | {"banking:approve"}
+
 SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole("tenant_admin", "Mandantenadministrator", _ADMIN),
     SystemRole("administrator", "Administrator", _ADMIN),
@@ -112,7 +117,8 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
         | _r("properties")
         | _r("contracts")
         | _rw("documents")
-        | _ACC_APPROVE,
+        | _ACC_APPROVE
+        | _BANKING_APPROVE,
     ),
     # Caretakers see objects, not contracts or personal data of residents (data minimisation).
     SystemRole("caretaker", "Hausmeister", _r("properties") | _rw("tickets")),

@@ -151,3 +151,77 @@ def test_sanitize_error_removes_basic_auth_header_and_credentials_in_url() -> No
     assert "s3cr3t" not in cleaned
     assert "dXNlcjpzM2NyM3Q=" not in cleaned
     assert "***" in cleaned
+
+
+HOME_PROPFIND_XML = b"""<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
+  <d:response>
+    <d:href>/dav/calendars/users/info@example.de/</d:href>
+    <d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop>
+    <d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/dav/calendars/users/info@example.de/default/</d:href>
+    <d:propstat><d:prop><d:displayname>Termine</d:displayname>
+    <d:resourcetype><d:collection/><cal:calendar/></d:resourcetype></d:prop>
+    <d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/dav/calendars/users/info@example.de/inbox/</d:href>
+    <d:propstat><d:prop><d:resourcetype><d:collection/><cal:schedule-inbox/></d:resourcetype></d:prop>
+    <d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+</d:multistatus>"""
+
+
+def test_parse_calendar_hrefs_keeps_only_calendar_collections() -> None:
+    from mhvp.immoware.caldav import parse_calendar_hrefs
+
+    assert parse_calendar_hrefs(HOME_PROPFIND_XML) == [
+        "/dav/calendars/users/info@example.de/default/"
+    ]
+
+
+@pytest.mark.asyncio
+async def test_discover_calendars_resolves_absolute_urls_and_skips_home() -> None:
+    from mhvp.immoware.caldav import discover_calendars
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "PROPFIND"
+        assert request.headers["Depth"] == "1"
+        return httpx.Response(207, content=HOME_PROPFIND_XML)
+
+    client = ReadOnlyDavClient(httpx.AsyncClient(transport=httpx.MockTransport(_handler)))
+    try:
+        urls = await discover_calendars(
+            client, "https://dav.example/dav/calendars/users/info@example.de/"
+        )
+    finally:
+        await client.aclose()
+    assert urls == ["https://dav.example/dav/calendars/users/info@example.de/default/"]
+
+
+@pytest.mark.asyncio
+async def test_discover_calendars_returns_empty_on_error() -> None:
+    from mhvp.immoware.caldav import discover_calendars
+
+    client = ReadOnlyDavClient(
+        httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(404)))
+    )
+    try:
+        assert await discover_calendars(client, "https://dav.example/dav/calendars/") == []
+    finally:
+        await client.aclose()
+
+
+def test_derive_urls_use_username_when_known() -> None:
+    from mhvp.immoware.client import derive_caldav_url, derive_carddav_url
+
+    assert (
+        derive_caldav_url("https://x.dav.example/dav", "info@example.de")
+        == "https://x.dav.example/dav/calendars/users/info@example.de/"
+    )
+    assert (
+        derive_carddav_url("https://x.dav.example/dav/")
+        == "https://x.dav.example/dav/addressbooks/"
+    )

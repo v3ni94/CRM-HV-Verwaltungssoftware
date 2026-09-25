@@ -16,7 +16,10 @@ import { bff } from "@/lib/bff";
 import {
   ADDRESS_LABELS,
   CHANNELS,
+  CONTACT_ROLES,
   CONTACT_TYPES,
+  MANDATE_GRANTED_VIA,
+  MANDATE_SCHEMES,
   PHONE_LABELS,
   buildContactSchema,
   duplicateQuery,
@@ -94,6 +97,7 @@ export function ContactForm(props: Props) {
     handleSubmit,
     watch,
     setError,
+    setValue,
     getValues,
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({
@@ -107,7 +111,9 @@ export function ContactForm(props: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<DuplicateCandidate[] | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingMandate, setUploadingMandate] = useState<number | null>(null);
   const kind = watch("kind");
+  const bankAccounts = watch("bank_accounts");
   // PUT without bank_accounts keeps them; they are shown masked and edited separately.
   const bankKept = !!existing && existing.bank_accounts.length > 0;
 
@@ -139,6 +145,16 @@ export function ContactForm(props: Props) {
       }
     }
     setFormError([result.message, ...unmapped].join(" "));
+  }
+
+  async function uploadMandateDocument(i: number, file: File) {
+    setUploadingMandate(i);
+    const form = new FormData();
+    form.set("file", file);
+    form.set("title", file.name);
+    const result = await bff<{ id: string }>("/api/bff/documents", { method: "POST", body: form });
+    setUploadingMandate(null);
+    if (result.ok) setValue(`bank_accounts.${i}.mandate_document_id`, result.data.id, { shouldValidate: true });
   }
 
   const onSubmit = handleSubmit(async (values) => {
@@ -227,6 +243,16 @@ export function ContactForm(props: Props) {
         ))}
       </fieldset>
 
+      <fieldset className="flex flex-wrap gap-3">
+        <legend className={ui.label}>{t("roles")}</legend>
+        {CONTACT_ROLES.map((role) => (
+          <label key={role} className="flex items-center gap-1 text-sm">
+            <input type="checkbox" value={role} {...register("roles")} />
+            {tl(`role.${role}`)}
+          </label>
+        ))}
+      </fieldset>
+
       <Group title={t("addresses")} onAdd={() => addresses.append({ label: "postal", street: "", house_number: "", postal_code: "", city: "", country: "DE", addition: "", is_primary: addresses.fields.length === 0 })} addLabel={t("add")}>
         {addresses.fields.map((field, i) => (
           <Row key={field.id} onRemove={() => addresses.remove(i)} removeLabel={t("remove")}>
@@ -277,18 +303,103 @@ export function ContactForm(props: Props) {
           </section>
         ) : null
       ) : (
-        <Group title={t("bankAccounts")} onAdd={() => banks.append({ label: "", iban: "", bic: "", bank_name: "", holder: "", valid_from: new Date().toISOString().slice(0, 10), valid_to: "" })} addLabel={t("add")}>
-          {banks.fields.map((field, i) => (
-            <Row key={field.id} onRemove={() => banks.remove(i)} removeLabel={t("remove")}>
-              <Text name={`bank_accounts.${i}.iban`} label={t("iban")} register={register} errors={errors} className="sm:col-span-2" />
-              <Text name={`bank_accounts.${i}.bic`} label={t("bic")} register={register} errors={errors} />
-              <Text name={`bank_accounts.${i}.bank_name`} label={t("bankName")} register={register} errors={errors} />
-              <Text name={`bank_accounts.${i}.holder`} label={t("holder")} register={register} errors={errors} />
-              <Text name={`bank_accounts.${i}.label`} label={t("label")} register={register} errors={errors} />
-              <Text name={`bank_accounts.${i}.valid_from`} label={t("validFrom")} type="date" register={register} errors={errors} />
-              <Text name={`bank_accounts.${i}.valid_to`} label={t("validTo")} type="date" register={register} errors={errors} />
-            </Row>
-          ))}
+        <Group
+          title={t("bankAccounts")}
+          onAdd={() =>
+            banks.append({
+              label: "",
+              iban: "",
+              bic: "",
+              bank_name: "",
+              holder: "",
+              valid_from: new Date().toISOString().slice(0, 10),
+              valid_to: "",
+              sepa_enabled: false,
+              mandate_reference: "",
+              mandate_signed_on: "",
+              mandate_granted_via: "",
+              mandate_note: "",
+              mandate_document_id: "",
+              mandate_scheme: "core",
+            })
+          }
+          addLabel={t("add")}
+        >
+          {banks.fields.map((field, i) => {
+            const sepaEnabled = bankAccounts?.[i]?.sepa_enabled;
+            const documentId = bankAccounts?.[i]?.mandate_document_id;
+            return (
+              <Row key={field.id} onRemove={() => banks.remove(i)} removeLabel={t("remove")}>
+                <Text name={`bank_accounts.${i}.iban`} label={t("iban")} register={register} errors={errors} className="sm:col-span-2" />
+                <Text name={`bank_accounts.${i}.bic`} label={t("bic")} register={register} errors={errors} />
+                <Text name={`bank_accounts.${i}.bank_name`} label={t("bankName")} register={register} errors={errors} />
+                <Text name={`bank_accounts.${i}.holder`} label={t("holder")} register={register} errors={errors} />
+                <Text name={`bank_accounts.${i}.label`} label={t("label")} register={register} errors={errors} />
+                <Text name={`bank_accounts.${i}.valid_from`} label={t("validFrom")} type="date" register={register} errors={errors} />
+                <Text name={`bank_accounts.${i}.valid_to`} label={t("validTo")} type="date" register={register} errors={errors} />
+
+                <div className="sm:col-span-4 mt-2 flex flex-col gap-2 rounded border border-border p-2">
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <input type="checkbox" {...register(`bank_accounts.${i}.sepa_enabled`)} />
+                    {t("sepa.enabled")}
+                  </label>
+                  {sepaEnabled ? (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+                      <Text name={`bank_accounts.${i}.mandate_reference`} label={t("sepa.reference")} register={register} errors={errors} />
+                      <Text
+                        name={`bank_accounts.${i}.mandate_signed_on`}
+                        label={t("sepa.signedOn")}
+                        type="date"
+                        register={register}
+                        errors={errors}
+                      />
+                      <Select
+                        name={`bank_accounts.${i}.mandate_granted_via`}
+                        label={t("sepa.grantedVia")}
+                        register={register}
+                        errors={errors}
+                        options={[["", t("sepa.grantedViaNone")], ...MANDATE_GRANTED_VIA.map((v) => [v, tl(`grantedVia.${v}`)] as [string, string])]}
+                      />
+                      <Select
+                        name={`bank_accounts.${i}.mandate_scheme`}
+                        label={t("sepa.scheme")}
+                        register={register}
+                        options={MANDATE_SCHEMES.map((v) => [v, tl(`mandateScheme.${v}`)])}
+                      />
+                      <Text
+                        name={`bank_accounts.${i}.mandate_note`}
+                        label={t("sepa.note")}
+                        register={register}
+                        errors={errors}
+                        className="sm:col-span-2"
+                      />
+                      <div className="sm:col-span-2">
+                        <label htmlFor={`f-mandate-file-${i}`} className={ui.label}>
+                          {t("sepa.document")}
+                        </label>
+                        <input
+                          id={`f-mandate-file-${i}`}
+                          type="file"
+                          accept="application/pdf"
+                          className={ui.input}
+                          disabled={uploadingMandate === i}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void uploadMandateDocument(i, file);
+                          }}
+                        />
+                        {uploadingMandate === i ? (
+                          <p className="text-xs text-muted">{t("sepa.uploading")}</p>
+                        ) : documentId ? (
+                          <p className="text-xs text-muted">{t("sepa.documentStored")}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </Row>
+            );
+          })}
         </Group>
       )}
 
@@ -360,25 +471,33 @@ function Select({
   label,
   register,
   options,
+  errors,
 }: {
   name: FieldPath<ContactFormValues>;
   label: string;
   register: UseFormRegister<ContactFormValues>;
   options: [string, string][];
+  errors?: FieldErrors<ContactFormValues>;
 }) {
   const id = `f-${name.replaceAll(".", "-")}`;
+  const error = errors ? errorAt(errors, name) : undefined;
   return (
     <div>
       <label htmlFor={id} className={ui.label}>
         {label}
       </label>
-      <select id={id} className={ui.input} {...register(name)}>
+      <select id={id} className={ui.input} aria-invalid={!!error} {...register(name)}>
         {options.map(([value, text]) => (
           <option key={value} value={value}>
             {text}
           </option>
         ))}
       </select>
+      {error ? (
+        <p id={`${id}-error`} className={ui.error}>
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

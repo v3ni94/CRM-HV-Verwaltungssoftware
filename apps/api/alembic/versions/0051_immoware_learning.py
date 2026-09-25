@@ -2,8 +2,8 @@
 Immoware Hub, /home/user/IMMOWARE24/app/Modules/Learning). Rein lesende Erkundung des DAV-
 Spiegels je Art (webdav, carddav, caldav) mit Fakten- und Diff-Ablage.
 
-Revision ID: 0045
-Revises: 0044
+Revision ID: 0051
+Revises: 0050
 
 Tenant tables must call mhvp.core.db.rls.tenant_rls_statements() (ADR 0002).
 """
@@ -16,8 +16,8 @@ from sqlalchemy.dialects import postgresql
 
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
-revision: str = "0045"
-down_revision: str | None = "0044"
+revision: str = "0051"
+down_revision: str | None = "0050"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

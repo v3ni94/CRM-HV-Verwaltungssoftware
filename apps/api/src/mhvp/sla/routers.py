@@ -193,6 +193,78 @@ async def update_rule(
         return _rule_out(rule)
 
 
+# Vorschlagswerte für eine Hausverwaltung (Produktschutz-Vorschlag, keine Rechtsvorschrift;
+# docs/OPEN_QUESTIONS.md M19-01, operator 25.09.2026): Reaktion/Lösung je Priorität in Minuten.
+PRESET_RULES: dict[Priority, tuple[int, int]] = {
+    Priority.IMMEDIATE: (2 * 60, 8 * 60),
+    Priority.URGENT: (4 * 60, 24 * 60),
+    Priority.HIGH: (8 * 60, 72 * 60),
+    Priority.NORMAL: (24 * 60, 168 * 60),
+    Priority.LOW: (72 * 60, 336 * 60),
+}
+PRESET_NAMES = {
+    Priority.IMMEDIATE: "Vorschlag: Notfall",
+    Priority.URGENT: "Vorschlag: Dringend",
+    Priority.HIGH: "Vorschlag: Hoch",
+    Priority.NORMAL: "Vorschlag: Normal",
+    Priority.LOW: "Vorschlag: Niedrig",
+}
+
+
+@router.post(
+    "/rules/presets",
+    status_code=201,
+    summary="Vorschlagswerte laden (Produktschutz-Vorschlag, keine Rechtsvorschrift)",
+)
+async def load_presets(
+    request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> list[dict[str, Any]]:
+    """Setzt für jede Priorität ohne bestehende Regel eine Vorschlagsregel (Antwort-/Lösungszeit)
+    und den Geschäftszeitenkalender Mo-Fr 08:00-17:00 Europe/Berlin; bestehende Regeln und ein
+    bereits gepflegter Kalender bleiben unverändert. Feiertage NRW pflegt der Betreiber selbst
+    (``holidays`` bleibt eine einfache Liste, kein Automatismus)."""
+    async with tenant_tx(request, principal) as session:
+        created: list[SlaRule] = []
+        for priority, (response_minutes, resolution_minutes) in PRESET_RULES.items():
+            existing = await session.scalar(
+                select(SlaRule).where(
+                    SlaRule.tenant_id == principal.tenant_id, SlaRule.priority == priority
+                )
+            )
+            if existing is not None:
+                created.append(existing)
+                continue
+            rule = SlaRule(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                name=PRESET_NAMES[priority],
+                priority=priority,
+                response_minutes=response_minutes,
+                resolution_minutes=resolution_minutes,
+                clock_type=(
+                    ClockType.CALENDAR if priority == Priority.IMMEDIATE else ClockType.BUSINESS
+                ),
+                active=True,
+            )
+            session.add(rule)
+            await session.flush()
+            created.append(rule)
+        calendar = await get_calendar(session, principal.tenant_id)
+        if (
+            calendar.weekdays == [0, 1, 2, 3, 4]
+            and calendar.opens_at.strftime("%H:%M") == "08:00"
+            and calendar.closes_at.strftime("%H:%M") == "16:30"
+        ):
+            # Nur der Standard aus der Modellvorgabe wird durch den Vorschlag 08:00-17:00
+            # ersetzt; ein bereits abweichend gepflegter Kalender bleibt unangetastet.
+            from datetime import time as _time
+
+            calendar.closes_at = _time(17, 0)
+            calendar.timezone = "Europe/Berlin"
+        await session.flush()
+        return [_rule_out(r) for r in created]
+
+
 @router.delete("/rules/{rule_id}", status_code=204, summary="SLA-Regel löschen")
 async def delete_rule(
     rule_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(MANAGE)

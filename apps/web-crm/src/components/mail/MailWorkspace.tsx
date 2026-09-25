@@ -209,9 +209,22 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
           {error}
         </p>
       ) : null}
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <MailList messages={messages} selectedId={selectedId} onSelect={setSelectedId} loading={busy && messages === null} />
-        <MailDetail message={selected} canApprove={canApprove} canReadMembers={canReadMembers} onUpdated={onUpdated} onCreated={onUpdated} />
+      <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+        <div className={`min-w-0 ${selectedId ? "hidden md:block" : ""}`}>
+          <MailList messages={messages} selectedId={selectedId} onSelect={setSelectedId} loading={busy && messages === null} />
+        </div>
+        <div className={`min-w-0 ${selectedId ? "" : "hidden md:block"}`}>
+          {selectedId ? (
+            <button
+              type="button"
+              className={`${ui.button} mb-3 md:hidden`}
+              onClick={() => setSelectedId(null)}
+            >
+              {t("backToList")}
+            </button>
+          ) : null}
+          <MailDetail message={selected} canApprove={canApprove} canReadMembers={canReadMembers} onUpdated={onUpdated} onCreated={onUpdated} />
+        </div>
       </div>
     </div>
   );

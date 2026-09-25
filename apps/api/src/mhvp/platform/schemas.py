@@ -131,8 +131,16 @@ class MemberOut(BaseModel):
     display_name: str
     status: str
     roles: list[str]
+    competences: list[str] = Field(default_factory=list)
     contact_id: uuid.UUID | None = None
     last_login_at: datetime | None = None
+
+
+class MemberCompetences(BaseModel):
+    """Kompetenzcodes des Mitglieds (operator 25.09.2026). Werden gegen den Katalog
+    (``mhvp.tickets.competences``, ggf. um die Mandantenerweiterung) geprüft."""
+
+    competence_codes: list[str] = Field(default_factory=list, max_length=64)
 
 
 class MemberInvite(BaseModel):

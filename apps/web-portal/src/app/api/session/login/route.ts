@@ -15,7 +15,9 @@ export async function POST(request: Request): Promise<Response> {
     });
     if (!data) return relayProblem(response.status, error);
     const result = NextResponse.json({ status: data.status });
-    result.cookies.set(COOKIE.mfa, data.mfa_token, cookieOptions(secureOf(request), MFA_MAX_AGE));
+    if (data.mfa_token) {
+      result.cookies.set(COOKIE.mfa, data.mfa_token, cookieOptions(secureOf(request), MFA_MAX_AGE));
+    }
     return result;
   } catch {
     return unreachable();

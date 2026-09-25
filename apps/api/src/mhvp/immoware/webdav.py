@@ -101,9 +101,7 @@ def guess_object_number(href: str) -> str | None:
     return match.group(1) if match else None
 
 
-async def propfind(
-    client: ReadOnlyDavClient, url: str, *, depth: int | str = 1
-) -> list[DavEntry]:
+async def propfind(client: ReadOnlyDavClient, url: str, *, depth: int | str = 1) -> list[DavEntry]:
     response = await client.request(
         "PROPFIND",
         url,

@@ -57,6 +57,7 @@ PLATFORM_TABLES = frozenset(
         "tenant_domain",
         "membership",
         "refresh_token",
+        "trusted_device",
         "oidc_authorization_code",
         "license",
         "usage_counter",

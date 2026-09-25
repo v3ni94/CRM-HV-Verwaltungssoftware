@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { Prospects } from "@/components/letting/Prospects";
+import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -12,9 +13,10 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
   const { unitId } = await params;
   const t = await getTranslations("Prospects");
   const api = serverApi();
-  const [expose, prospects] = await Promise.all([
+  const [expose, prospects, tickets] = await Promise.all([
     api.GET("/api/v1/letting/units/{unit_id}/expose", { params: { path: { unit_id: unitId } } }),
     api.GET("/api/v1/letting/prospects", { params: { query: { unit_id: unitId } } }),
+    api.GET("/api/v1/tickets", { params: { query: { unit_id: unitId, limit: 50 } } }),
   ]);
   redirectIfUnauthenticated(expose.response);
   if (!expose.data) return <p role="alert" className={ui.alert}>{problemMessage(expose.error as Problem | undefined, expose.response.status)}</p>;
@@ -48,6 +50,7 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
       </section>
       <h2 className={ui.h2}>{t("title")}</h2>
       <Prospects unitId={unitId} rows={rows} names={names} />
+      <TicketsSection tickets={(tickets.data ?? []) as TicketSummary[]} />
     </div>
   );
 }

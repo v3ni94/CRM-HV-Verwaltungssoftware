@@ -46,10 +46,16 @@ def upgrade() -> None:
         sa.Column("last_error", sa.Text(), nullable=True),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.Column("created_by", sa.UUID(), nullable=True),
         sa.Column("updated_by", sa.UUID(), nullable=True),
@@ -77,10 +83,16 @@ def upgrade() -> None:
             sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("id", sa.UUID(), nullable=False),
             sa.Column(
-                "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+                "created_at",
+                sa.DateTime(timezone=True),
+                server_default=sa.text("now()"),
+                nullable=False,
             ),
             sa.Column(
-                "updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+                "updated_at",
+                sa.DateTime(timezone=True),
+                server_default=sa.text("now()"),
+                nullable=False,
             ),
             sa.Column("created_by", sa.UUID(), nullable=True),
             sa.Column("updated_by", sa.UUID(), nullable=True),
@@ -165,7 +177,11 @@ def upgrade() -> None:
     )
     op.create_table(
         "immoware_sync_run",
-        sa.Column("kind", sa.Enum("webdav", "carddav", "caldav", name="immoware_sync_kind"), nullable=False),
+        sa.Column(
+            "kind",
+            sa.Enum("webdav", "carddav", "caldav", name="immoware_sync_kind"),
+            nullable=False,
+        ),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
@@ -180,16 +196,25 @@ def upgrade() -> None:
         sa.Column("error", sa.Text(), nullable=True),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.Column("created_by", sa.UUID(), nullable=True),
         sa.Column("updated_by", sa.UUID(), nullable=True),
         sa.Column("tenant_id", sa.UUID(), nullable=False),
         sa.ForeignKeyConstraint(
-            ["tenant_id"], ["tenant.id"], name=op.f("fk_immoware_sync_run_tenant_id_tenant"), ondelete="RESTRICT"
+            ["tenant_id"],
+            ["tenant.id"],
+            name=op.f("fk_immoware_sync_run_tenant_id_tenant"),
+            ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_immoware_sync_run")),
     )

@@ -51,6 +51,43 @@ with a key derived per tenant. Section 5.3 lists platform tables without RLS.
 * Password and lockout parameters are assumptions (A-012) until confirmed.
 * Key rotation (JWT, master key) needs a procedure before production (M9 runbook).
 
+## Addendum (25.09.2026): optional TOTP for non-administrators, trusted devices
+
+Requirement type: Produktschutz (operator decision, no Rechtsgrundlage claimed). This
+narrows decision 2 above without weakening the platform administrator or tenant administrator
+requirement.
+
+1. **TOTP is mandatory only for administrators**: platform administrators
+   (`app_user.is_platform_admin`) and members holding the `tenant_admin` or `administrator`
+   role in any tenant (`mhvp.core.auth.service.ADMIN_ROLE_CODES`). Every other user logs in
+   with password only (`POST /auth/login` answers `status: "ok"` with the session already
+   issued) unless they enabled TOTP themselves under "Meine Daten" (`user.totp_enabled`), in
+   which case the existing two step flow applies to them too. Determining "administrator" is
+   a login time check across every active membership of the user (`service.totp_mandatory`);
+   it re-evaluates on every login, so a role change takes effect immediately, consistent with
+   decision 3 above (permissions are never cached beyond a token's lifetime).
+2. **Trusted device**: after a successful TOTP verification the user may tick "Auf diesem
+   Gerät 180 Tage merken". The API issues a random 256 bit token, stores only its SHA-256 hash
+   in the new platform table `trusted_device` (`user_id`, `tenant_id` nullable and purely
+   informational, `token_hash`, `label` from the user agent, `created_at`, `expires_at` =
+   `created_at` + 180 days, `last_used_at`, `revoked_at`), and returns the raw token once. The
+   web BFF stores it in an httpOnly, `Secure`, `SameSite=Strict` cookie for 180 days and never
+   exposes it to client script. On the next login the password step accepts a valid,
+   unexpired, unrevoked device token for that same user and skips TOTP, exactly as if TOTP
+   were not mandatory. A device token issued to one user is refused for another, even if the
+   hash were somehow known. `trusted_device` is a platform table without RLS, added to the
+   allowlist beside `refresh_token` (section 4 below), because it too is read before a tenant
+   context exists.
+3. **Revocation**: devices are listed and individually revocable by their owner
+   (`GET`/`DELETE /auth/trusted-devices`) under "Meine Daten". A password reset carried out by
+   an administrator (`POST /tenant/members/{id}/reset-password`) revokes every trusted device
+   of that user, in addition to the existing refresh token revocation, because a device token
+   would otherwise keep skipping TOTP after the reset. A future TOTP secret reset endpoint
+   (not yet implemented; no such endpoint exists in this milestone) must do the same before it
+   ships. Argon2id hashing, the ten failure lockout of decision 2 and short lived access
+   tokens are unchanged.
+4. **Platform tables** (decision 1 above) now also list `trusted_device`.
+
 ## References
 
 MASTER-PROMPT 3.3, 3.4, 3.5, 5, 6.8, 6.9.4, 12, 18.0; ADR 0002, 0003.

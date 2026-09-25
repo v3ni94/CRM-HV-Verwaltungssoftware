@@ -25,9 +25,13 @@
     "group": {
       "overview": "Overview",
       "management": "Management",
+      "broker": "Broker",
       "finance": "Finance",
       "system": "System"
     },
+    "brokerListings": "Listings",
+    "brokerFlowImport": "FLOW import",
+    "brokerHandover": "Handover protocol",
     "rental": "Rental",
     "sev": "SEV",
     "settings": "Settings",
@@ -520,7 +524,10 @@
       "high": "high",
       "urgent": "urgent",
       "immediate": "immediate"
-    }
+    },
+    "linkedTitle": "Tickets",
+    "openCount": "{count} open",
+    "linkedEmpty": "No linked tickets."
   },
   "Mail": {
     "title": "Mail",
@@ -759,7 +766,26 @@
   },
   "Workspace": {
     "greetingLabel": "Overview",
-    "open": "Open"
+    "open": "Open",
+    "prevWeek": "Previous week",
+    "nextWeek": "Next week",
+    "viewMode": "View",
+    "monthView": "Month",
+    "weekView": "Week",
+    "refresh": "Refresh",
+    "calendarLegend": "Calendar colours",
+    "calendarSource": {
+      "internal": "Internal entry",
+      "default": "Default calendar",
+      "own": "Own calendar"
+    },
+    "calendarTarget": "Calendar",
+    "calendarNotConnected": "not connected",
+    "calendarNotConnectedHint": "Google Calendar access has not been granted yet for mailbox {address}.",
+    "toMailboxSettings": "Go to mailboxes",
+    "allDay": "All day",
+    "notes": "Note",
+    "cancel": "Cancel"
   },
   "Properties": {
     "area": "Portfolio",
@@ -951,7 +977,19 @@
     "removeConfirm": "Remove mailbox {address}? Ingested mails and tickets are kept.",
     "syncResult": "{fetched} checked, {created} new, {duplicates} already present",
     "defaultHint": "Every user of the tenant sees a default mailbox, including newly created ones.",
-    "access": "Access for users"
+    "access": "Access for users",
+    "calendarEnabled": "Calendar sync",
+    "calendarHint": "This mailbox's appointments appear in the calendar. When enabling it the first time, reconnect with Google so the calendar permission is granted.",
+    "invoiceForwardingTitle": "Invoice forwarding",
+    "invoiceForwardingHint": "Invoices addressed to the company itself (not property related) are forwarded to the configured address when the sender is on the allowlist and no property reference is found. Every other detected invoice appears as a suggestion in the mail view.",
+    "invoiceForwardingEnabled": "Forwarding active",
+    "invoiceForwardingAddress": "Target address",
+    "invoiceForwardingAllowlist": "Allowlist (sender addresses, comma separated)",
+    "invoiceForwardingAllowlistHint": "Confirming a suggestion twice adds the sender to the learning list automatically.",
+    "invoiceForwardingLearningList": "Learning list (auto-confirmed)",
+    "forwardInvoice": "Forward?",
+    "forwardInvoiceConfirm": "Forward this invoice to the configured address?",
+    "forwardInvoiceDone": "Forwarded."
   },
   "Settings": {
     "mail": {
@@ -965,6 +1003,10 @@
     "dms": {
       "title": "DMS connection",
       "description": "Manage Paperless credentials and field IDs, view Google Drive."
+    },
+    "bank": {
+      "title": "Bank",
+      "description": "finAPI credentials for the read-only online banking connection."
     },
     "immoware": {
       "title": "Immoware24 connection",
@@ -1030,6 +1072,7 @@
     },
     "rules": {
       "title": "SLA rules",
+      "loadPresets": "Load suggested values",
       "empty": "No rule created yet.",
       "create": "Create rule",
       "name": "Name",
@@ -1146,6 +1189,47 @@
       "unreachable": "Paperless unreachable",
       "notConfigured": "Paperless not configured"
     }
+  },
+  "BankSettings": {
+    "title": "Bank (finAPI)",
+    "intro": "Credentials for the read-only online banking connection via finAPI. No bank PIN or TAN: login and account authorization only happen in the bank's own WebForm.",
+    "description": "Client ID, client secret and optional mandator ID of this tenant's finAPI access.",
+    "statusConfigured": "Configured ({url}).",
+    "statusMissing": "Bank connection not yet configured.",
+    "baseUrl": "Base URL",
+    "mandatorId": "Mandator ID (optional)",
+    "clientId": "Client ID",
+    "clientSecret": "Client secret",
+    "sandbox": "Sandbox environment",
+    "save": "Save",
+    "saved": "Saved."
+  },
+  "BankConnections": {
+    "title": "Bank connections",
+    "intro": "Connect bank accounts via finAPI and link them permanently to a ledger or property. Read only: no transfers, no automatic posting.",
+    "notConfigured": "Bank connection not yet configured. Set up credentials under Settings, Bank.",
+    "connect": "Connect",
+    "connectPrompt": "Bank name",
+    "check": "Check",
+    "reauthorize": "Re-authorize",
+    "disconnect": "Disconnect",
+    "assign": "Assign",
+    "fetch": "Fetch transactions",
+    "queued": "Fetch queued, processing in the background.",
+    "unassigned": "Not assigned",
+    "webFormHint": "Complete bank authorization in the new window, then click Check.",
+    "status": {
+      "not_configured": "Created",
+      "web_form_pending": "Bank authorization pending",
+      "active": "Connected",
+      "update_required": "Re-authorization required",
+      "error": "Error",
+      "consent_expired": "Consent expired",
+      "disabled": "Disconnected"
+    },
+    "noConnections": "No bank connection yet.",
+    "error": "Action failed.",
+    "assignPropertyBankAccountId": "Internal account ID"
   },
   "DmsSettings": {
     "title": "DMS connection",
@@ -1366,5 +1450,8 @@
         "notFound": "Learning run not found."
       }
     }
+  },
+  "Members": {
+    "editCompetences": "Edit competences"
   }
 }

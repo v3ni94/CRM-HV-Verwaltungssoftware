@@ -54,9 +54,20 @@ def sniff_matches(mime_type: str, data: bytes) -> bool:
     return signatures is None or data.startswith(signatures)
 
 
+def _decode(data: bytes) -> str:
+    """UTF-8 (optional BOM), then Windows-1252, then Latin-1: German exports are often not
+    UTF-8 and a silent replacement would destroy umlauts before the text is used anywhere."""
+    for encoding in ("utf-8-sig", "cp1252"):
+        try:
+            return data.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return data.decode("latin-1")
+
+
 def extract(mime_type: str, data: bytes) -> tuple[str | None, TextStatus]:
     if mime_type in ("text/plain", "text/csv", "application/xml", "text/xml", "message/rfc822"):
-        return data.decode("utf-8", errors="replace")[:MAX_TEXT_CHARS], TextStatus.EXTRACTED
+        return _decode(data)[:MAX_TEXT_CHARS], TextStatus.EXTRACTED
     if mime_type == "application/pdf":
         try:
             reader = PdfReader(io.BytesIO(data))

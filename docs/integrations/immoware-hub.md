@@ -114,3 +114,12 @@ Aufwand grob, zu verifizieren nach Sichtung der betroffenen CRM-Module: Paperles
 8. Stammdaten müssen nicht migriert werden.
 9. Das Mailprogramm im selben Repo ist der größere Übernahmeblock.
 10. Der Hub läuft weiter, bis das CRM die Funktionen im Betrieb abdeckt.
+
+## Kalenderadresse (CalDAV) im CRM
+
+Als Kalenderadresse genügt die Kalender-Heimat des Benutzers, zum Beispiel
+`https://<kennung>.dav.immoware24.de/dav/calendars/users/<Login>/`. Der Abgleich ermittelt die
+Kalender darunter per PROPFIND und fragt jeden einzeln ab. Antwortet der Server auf die Heimat mit
+401, stimmen Login oder Passwort nicht oder das DAV-Modul ist beim Mandanten nicht freigeschaltet;
+mit 404 existiert der Benutzerpfad nicht. In beiden Fällen ist die Klärung beim Immoware24-Support
+nötig, die Software kann das nicht umgehen.

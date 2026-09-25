@@ -9,9 +9,10 @@ export const dynamic = "force-dynamic";
 export default async function ProfilePage() {
   const t = await getTranslations("Profile");
   const api = serverApi();
-  const [me, sessions, ctx] = await Promise.all([
+  const [me, sessions, devices, ctx] = await Promise.all([
     api.GET("/api/v1/auth/me"),
     api.GET("/api/v1/auth/sessions"),
+    api.GET("/api/v1/auth/trusted-devices"),
     sessionContext(),
   ]);
   redirectIfUnauthenticated(me.response);
@@ -25,6 +26,7 @@ export default async function ProfilePage() {
         roles={me.data?.roles ?? []}
         tenantName={tenantName}
         initialSessions={sessions.data ?? []}
+        initialDevices={devices.data ?? []}
       />
     </div>
   );
