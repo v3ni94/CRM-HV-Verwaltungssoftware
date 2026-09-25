@@ -30,6 +30,7 @@ RESOURCES: tuple[str, ...] = (
     "audit",
     "release_gates",
     "sla",
+    "immoware",
 )
 ALL_PERMISSIONS: frozenset[str] = frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS)
 READ_ALL: frozenset[str] = frozenset(f"{r}:read" for r in RESOURCES)

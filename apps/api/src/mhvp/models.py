@@ -10,6 +10,7 @@ from mhvp.contracts import models as contract_models
 from mhvp.core import events, numbering, webhooks
 from mhvp.documents import models as document_models
 from mhvp.hoa import models as hoa_models
+from mhvp.immoware import models as immoware_models
 from mhvp.imports import models as import_models
 from mhvp.letting import models as letting_models
 from mhvp.letting import rentlaw as rentlaw_models
@@ -32,6 +33,7 @@ __all__ = [
     "document_models",
     "events",
     "hoa_models",
+    "immoware_models",
     "import_models",
     "letting_models",
     "licensing_models",

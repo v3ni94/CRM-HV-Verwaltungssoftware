@@ -162,6 +162,18 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^sla/on-call/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^sla/alerts/${ID}/ack$`) },
   { method: "PUT", pattern: /^sla\/calendar$/ },
+  // Immoware24-Lesezugriff per DAV (M32): Anbindung, Läufe, Dokumente, Kontakte, Termine.
+  { method: "GET", pattern: /^immoware\/connection$/ },
+  { method: "PUT", pattern: /^immoware\/connection$/ },
+  { method: "POST", pattern: /^immoware\/connection\/check$/ },
+  { method: "POST", pattern: /^immoware\/sync\/(webdav|carddav|caldav)$/ },
+  { method: "GET", pattern: /^immoware\/sync\/runs$/ },
+  { method: "GET", pattern: /^immoware\/documents$/ },
+  { method: "GET", pattern: new RegExp(`^immoware/documents/${ID}/file$`) },
+  { method: "GET", pattern: /^immoware\/contacts$/ },
+  { method: "POST", pattern: new RegExp(`^immoware/contacts/${ID}/match$`) },
+  { method: "POST", pattern: new RegExp(`^immoware/contacts/${ID}/create-contact$`) },
+  { method: "GET", pattern: /^immoware\/events$/ },
   // Incoming invoices (M14): capture, review steps, IBAN confirmation, release, posting.
   { method: "POST", pattern: /^accounting\/invoices$/ },
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },

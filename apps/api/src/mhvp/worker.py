@@ -37,6 +37,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.letting.tasks",
             "mhvp.platform.licensing",
             "mhvp.sla.tasks",
+            "mhvp.immoware.tasks",
         ],
     )
     app.conf.update(
@@ -104,6 +105,20 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "sla-check-clocks": {
                 "task": "mhvp.sla.check_clocks",
                 "schedule": 300.0,
+            },
+            # Immoware24-DAV-Abholung (M32): Beat fest alle 15 Minuten, Task prueft selbst
+            # anhand von ``poll_minutes``, ob ein Lauf faellig ist (read only, kein Schreibpfad).
+            "immoware-sync-webdav": {
+                "task": "mhvp.immoware.sync_webdav",
+                "schedule": 900.0,
+            },
+            "immoware-sync-carddav": {
+                "task": "mhvp.immoware.sync_carddav",
+                "schedule": 900.0,
+            },
+            "immoware-sync-caldav": {
+                "task": "mhvp.immoware.sync_caldav",
+                "schedule": 900.0,
             },
         },
     )

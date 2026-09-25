@@ -156,6 +156,24 @@ class ErrorCodes:
         "Funktion nicht freigegeben",
         "Release gate is closed for this tenant (ADR 0003).",
     )
+    IMW_NOT_CONFIGURED = ErrorCode(
+        "MHVP-IMW-0001",
+        502,
+        "Immoware24 ist nicht eingerichtet",
+        "No enabled ImmowareConnection with base_url and credentials for this tenant.",
+    )
+    IMW_UNAVAILABLE = ErrorCode(
+        "MHVP-IMW-0002",
+        503,
+        "Immoware24 nicht erreichbar",
+        "DAV request to Immoware24 failed or timed out.",
+    )
+    IMW_WRITE_BLOCKED = ErrorCode(
+        "MHVP-IMW-0003",
+        500,
+        "Schreibversuch blockiert",
+        "Write path to Immoware24 is hard-blocked; only PROPFIND/REPORT/GET are allowed.",
+    )
 
 
 def _build_registry() -> dict[str, ErrorCode]:

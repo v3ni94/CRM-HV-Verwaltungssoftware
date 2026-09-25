@@ -603,6 +603,14 @@
         "title": "AiTask",
         "type": "string"
       },
+      "AlertChannel": {
+        "enum": [
+          "email",
+          "internal"
+        ],
+        "title": "AlertChannel",
+        "type": "string"
+      },
       "AllocationCategory": {
         "enum": [
           "allocable_heating",
@@ -2682,6 +2690,42 @@
         "title": "CalendarEntryIn",
         "type": "object"
       },
+      "CalendarIn": {
+        "additionalProperties": false,
+        "properties": {
+          "closes_at": {
+            "default": "16:30",
+            "title": "Closes At",
+            "type": "string"
+          },
+          "holidays": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Holidays",
+            "type": "array"
+          },
+          "opens_at": {
+            "default": "08:00",
+            "title": "Opens At",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "Europe/Berlin",
+            "title": "Timezone",
+            "type": "string"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "title": "CalendarIn",
+        "type": "object"
+      },
       "CalendarItem": {
         "properties": {
           "date": {
@@ -3181,6 +3225,25 @@
         ],
         "title": "CircularIn",
         "type": "object"
+      },
+      "ClockState": {
+        "enum": [
+          "running",
+          "paused",
+          "breached",
+          "done"
+        ],
+        "title": "ClockState",
+        "type": "string"
+      },
+      "ClockType": {
+        "description": "Zeitbasis der Uhr: Geschäftszeit (Arbeitskalender) oder Kalenderzeit (rund um die Uhr,\nwie im Hub für Notfälle vorgesehen).",
+        "enum": [
+          "business",
+          "calendar"
+        ],
+        "title": "ClockType",
+        "type": "string"
       },
       "Co2In": {
         "additionalProperties": false,
@@ -5788,6 +5851,158 @@
         "title": "DmsConnectionOut",
         "type": "object"
       },
+      "DmsDocumentOut": {
+        "description": "Ein Paperless-Dokument in der Ticket- oder Objektansicht (M31).",
+        "properties": {
+          "added": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Added"
+          },
+          "correspondent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correspondent"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          },
+          "download_url": {
+            "title": "Download Url",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "original_file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original File Name"
+          },
+          "page_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Count"
+          },
+          "preview_url": {
+            "title": "Preview Url",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created",
+          "added",
+          "correspondent",
+          "document_type",
+          "tags",
+          "page_count",
+          "original_file_name",
+          "preview_url",
+          "download_url"
+        ],
+        "title": "DmsDocumentOut",
+        "type": "object"
+      },
+      "DmsDocumentPage": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/DmsDocumentOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/DmsDocumentPageMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "DmsDocumentPage",
+        "type": "object"
+      },
+      "DmsDocumentPageMeta": {
+        "properties": {
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "per_page": {
+            "title": "Per Page",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "per_page",
+          "total"
+        ],
+        "title": "DmsDocumentPageMeta",
+        "type": "object"
+      },
       "DocumentHit": {
         "properties": {
           "category_id": {
@@ -6640,6 +6855,53 @@
         ],
         "title": "EntryStatus",
         "type": "string"
+      },
+      "EscalationStepIn": {
+        "additionalProperties": false,
+        "properties": {
+          "after_minutes": {
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "After Minutes",
+            "type": "integer"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/AlertChannel",
+            "default": "email"
+          },
+          "notify_role": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notify Role"
+          },
+          "notify_user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Notify User Ids",
+            "type": "array"
+          },
+          "step_no": {
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Step No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "step_no",
+          "after_minutes"
+        ],
+        "title": "EscalationStepIn",
+        "type": "object"
       },
       "EventOut": {
         "properties": {
@@ -7701,6 +7963,378 @@
           "id"
         ],
         "title": "IdentifierOut",
+        "type": "object"
+      },
+      "ImmowareConnectionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "caldav_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caldav Url"
+          },
+          "carddav_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carddav Url"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "nur schreibbar",
+            "title": "Password"
+          },
+          "poll_minutes": {
+            "default": 30,
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Poll Minutes",
+            "type": "integer"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "verify_tls": {
+            "default": true,
+            "title": "Verify Tls",
+            "type": "boolean"
+          }
+        },
+        "title": "ImmowareConnectionIn",
+        "type": "object"
+      },
+      "ImmowareConnectionOut": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "caldav_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caldav Url"
+          },
+          "carddav_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carddav Url"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "has_password": {
+            "title": "Has Password",
+            "type": "boolean"
+          },
+          "last_check_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Check At"
+          },
+          "last_check_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Check Ok"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "poll_minutes": {
+            "title": "Poll Minutes",
+            "type": "integer"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "verify_tls": {
+            "title": "Verify Tls",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "base_url",
+          "carddav_url",
+          "caldav_url",
+          "username",
+          "has_password",
+          "enabled",
+          "verify_tls",
+          "poll_minutes",
+          "last_check_at",
+          "last_check_ok",
+          "last_error"
+        ],
+        "title": "ImmowareConnectionOut",
+        "type": "object"
+      },
+      "ImmowareContactOut": {
+        "properties": {
+          "addresses": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Addresses",
+            "type": "array"
+          },
+          "emails": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Emails",
+            "type": "array"
+          },
+          "fn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fn"
+          },
+          "href": {
+            "title": "Href",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_synced_at": {
+            "format": "date-time",
+            "title": "Last Synced At",
+            "type": "string"
+          },
+          "matched_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Contact Id"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org"
+          },
+          "phones": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Phones",
+            "type": "array"
+          },
+          "uid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uid"
+          }
+        },
+        "required": [
+          "id",
+          "href",
+          "uid",
+          "fn",
+          "org",
+          "emails",
+          "phones",
+          "addresses",
+          "matched_contact_id",
+          "last_synced_at"
+        ],
+        "title": "ImmowareContactOut",
+        "type": "object"
+      },
+      "ImmowareSyncRunOut": {
+        "properties": {
+          "added": {
+            "title": "Added",
+            "type": "integer"
+          },
+          "changed": {
+            "title": "Changed",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SyncKind"
+          },
+          "removed": {
+            "title": "Removed",
+            "type": "integer"
+          },
+          "seen": {
+            "title": "Seen",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SyncStatus"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "started_at",
+          "finished_at",
+          "status",
+          "seen",
+          "added",
+          "changed",
+          "removed",
+          "error"
+        ],
+        "title": "ImmowareSyncRunOut",
         "type": "object"
       },
       "ImportIn": {
@@ -10940,6 +11574,21 @@
         "title": "MappingOut",
         "type": "object"
       },
+      "MatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id"
+        ],
+        "title": "MatchIn",
+        "type": "object"
+      },
       "MeOut": {
         "properties": {
           "display_name": {
@@ -12063,6 +12712,57 @@
           "expires_in"
         ],
         "title": "OidcTokenResponse",
+        "type": "object"
+      },
+      "OnCallIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "starts_at",
+          "ends_at"
+        ],
+        "title": "OnCallIn",
         "type": "object"
       },
       "OrderOut": {
@@ -16492,6 +17192,58 @@
         "title": "SettlementIn",
         "type": "object"
       },
+      "SlaColor": {
+        "enum": [
+          "green",
+          "yellow",
+          "red"
+        ],
+        "title": "SlaColor",
+        "type": "string"
+      },
+      "SlaRuleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "clock_type": {
+            "$ref": "#/components/schemas/ClockType",
+            "default": "business"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "resolution_minutes": {
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Resolution Minutes",
+            "type": "integer"
+          },
+          "response_minutes": {
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Response Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "priority",
+          "response_minutes",
+          "resolution_minutes"
+        ],
+        "title": "SlaRuleIn",
+        "type": "object"
+      },
       "SourceIn": {
         "additionalProperties": false,
         "properties": {
@@ -16721,6 +17473,15 @@
         "title": "SwitchRequest",
         "type": "object"
       },
+      "SyncKind": {
+        "enum": [
+          "webdav",
+          "carddav",
+          "caldav"
+        ],
+        "title": "SyncKind",
+        "type": "string"
+      },
       "SyncRunOut": {
         "properties": {
           "counts": {
@@ -16786,6 +17547,15 @@
         ],
         "title": "SyncRunOut",
         "type": "object"
+      },
+      "SyncStatus": {
+        "enum": [
+          "running",
+          "ok",
+          "failed"
+        ],
+        "title": "SyncStatus",
+        "type": "string"
       },
       "TeamIn": {
         "additionalProperties": false,
@@ -26566,6 +27336,57 @@
         ]
       }
     },
+    "/api/v1/dms-documents/{paperless_id}/file": {
+      "get": {
+        "operationId": "dms_document_file_api_v1_dms_documents__paperless_id__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "paperless_id",
+            "required": true,
+            "schema": {
+              "title": "Paperless Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "download",
+              "pattern": "^(download|preview|thumb)$",
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paperless-Datei laden (Proxy, Token bleibt serverseitig)",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
     "/api/v1/document-categories": {
       "get": {
         "operationId": "list_categories_api_v1_document_categories_get",
@@ -29459,6 +30280,554 @@
         "summary": "Statuswechsel (6.9.3, W06)",
         "tags": [
           "WEG"
+        ]
+      }
+    },
+    "/api/v1/immoware/connection": {
+      "get": {
+        "operationId": "get_connection_api_v1_immoware_connection_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImmowareConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Immoware24-Anbindung lesen",
+        "tags": [
+          "Immoware24"
+        ]
+      },
+      "put": {
+        "operationId": "put_connection_api_v1_immoware_connection_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImmowareConnectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImmowareConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Immoware24-Anbindung einrichten",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/connection/check": {
+      "post": {
+        "operationId": "check_connection_api_v1_immoware_connection_check_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImmowareConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Verbindung pruefen (PROPFIND Depth 0)",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/contacts": {
+      "get": {
+        "operationId": "list_contacts_api_v1_immoware_contacts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unmatched",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unmatched",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Contacts Api V1 Immoware Contacts Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Immoware24-Kontakte",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/contacts/{dav_contact_id}/create-contact": {
+      "post": {
+        "operationId": "create_contact_from_dav_api_v1_immoware_contacts__dav_contact_id__create_contact_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dav_contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dav Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImmowareContactOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Als CRM-Kontakt anlegen",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/contacts/{dav_contact_id}/match": {
+      "post": {
+        "operationId": "match_contact_api_v1_immoware_contacts__dav_contact_id__match_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dav_contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dav Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImmowareContactOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mit CRM-Kontakt verknuepfen",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/documents": {
+      "get": {
+        "operationId": "list_documents_api_v1_immoware_documents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "path",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Path",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Documents Api V1 Immoware Documents Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dokumentbaum durchsuchen",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/documents/{document_id}/file": {
+      "get": {
+        "operationId": "download_document_api_v1_immoware_documents__document_id__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Datei herunterladen (Proxy)",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/events": {
+      "get": {
+        "operationId": "list_events_api_v1_immoware_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Events Api V1 Immoware Events Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Immoware24-Termine",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/sync/runs": {
+      "get": {
+        "operationId": "sync_runs_api_v1_immoware_sync_runs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImmowareSyncRunOut"
+                  },
+                  "title": "Response Sync Runs Api V1 Immoware Sync Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Letzte Synchronisationslaeufe",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/sync/{kind}": {
+      "post": {
+        "operationId": "trigger_sync_api_v1_immoware_sync__kind__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SyncKind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Trigger Sync Api V1 Immoware Sync  Kind  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abholung manuell anstossen",
+        "tags": [
+          "Immoware24"
         ]
       }
     },
@@ -35389,6 +36758,72 @@
         ]
       }
     },
+    "/api/v1/properties/{property_id}/dms-documents": {
+      "get": {
+        "operationId": "property_dms_documents_api_v1_properties__property_id__dms_documents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DmsDocumentPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paperless-Dokumente eines Objekts",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
     "/api/v1/properties/{property_id}/legal-entities": {
       "get": {
         "operationId": "list_entities_api_v1_properties__property_id__legal_entities_get",
@@ -36325,6 +37760,818 @@
         "summary": "SEPA-Mandat widerrufen",
         "tags": [
           "Verträge"
+        ]
+      }
+    },
+    "/api/v1/sla/alerts": {
+      "get": {
+        "operationId": "list_alerts_api_v1_sla_alerts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unacknowledged",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unacknowledged",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Alerts Api V1 Sla Alerts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Notfallalarme",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/alerts/{alert_id}/ack": {
+      "post": {
+        "operationId": "ack_alert_api_v1_sla_alerts__alert_id__ack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alert_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Alert Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ack Alert Api V1 Sla Alerts  Alert Id  Ack Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Notfallalarm bestätigen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/calendar": {
+      "get": {
+        "operationId": "get_calendar_endpoint_api_v1_sla_calendar_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Calendar Endpoint Api V1 Sla Calendar Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Geschäftszeitenkalender",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "put": {
+        "operationId": "put_calendar_api_v1_sla_calendar_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Calendar Api V1 Sla Calendar Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Geschäftszeitenkalender ändern",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/clocks": {
+      "get": {
+        "operationId": "list_clocks_api_v1_sla_clocks_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ClockState"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "color",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SlaColor"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Color"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Clocks Api V1 Sla Clocks Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SLA-Uhren",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/clocks/{clock_id}/pause": {
+      "post": {
+        "operationId": "pause_api_v1_sla_clocks__clock_id__pause_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clock_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Clock Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Pause Api V1 Sla Clocks  Clock Id  Pause Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Uhr pausieren",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/clocks/{clock_id}/resume": {
+      "post": {
+        "operationId": "resume_api_v1_sla_clocks__clock_id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clock_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Clock Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resume Api V1 Sla Clocks  Clock Id  Resume Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Uhr fortsetzen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/on-call": {
+      "get": {
+        "operationId": "list_on_call_api_v1_sla_on_call_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List On Call Api V1 Sla On Call Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Bereitschaftsplan",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "post": {
+        "operationId": "create_on_call_api_v1_sla_on_call_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnCallIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create On Call Api V1 Sla On Call Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bereitschaft eintragen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/on-call/current": {
+      "get": {
+        "operationId": "get_current_on_call_api_v1_sla_on_call_current_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Current On Call Api V1 Sla On Call Current Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Aktuelle Bereitschaft",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/on-call/{on_call_id}": {
+      "delete": {
+        "operationId": "delete_on_call_api_v1_sla_on_call__on_call_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "on_call_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "On Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bereitschaft löschen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/rules": {
+      "get": {
+        "operationId": "list_rules_api_v1_sla_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Rules Api V1 Sla Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "SLA-Regeln",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "post": {
+        "operationId": "create_rule_api_v1_sla_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlaRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Rule Api V1 Sla Rules Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SLA-Regel anlegen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/rules/{rule_id}": {
+      "delete": {
+        "operationId": "delete_rule_api_v1_sla_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SLA-Regel löschen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "patch": {
+        "operationId": "update_rule_api_v1_sla_rules__rule_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlaRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Rule Api V1 Sla Rules  Rule Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SLA-Regel ändern",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/rules/{rule_id}/steps": {
+      "get": {
+        "operationId": "list_steps_api_v1_sla_rules__rule_id__steps_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Steps Api V1 Sla Rules  Rule Id  Steps Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eskalationsstufen einer Regel",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "post": {
+        "operationId": "create_step_api_v1_sla_rules__rule_id__steps_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscalationStepIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Step Api V1 Sla Rules  Rule Id  Steps Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eskalationsstufe anlegen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/steps/{step_id}": {
+      "delete": {
+        "operationId": "delete_step_api_v1_sla_steps__step_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eskalationsstufe löschen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/tickets/{ticket_id}/sla": {
+      "get": {
+        "operationId": "ticket_clock_api_v1_sla_tickets__ticket_id__sla_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ticket Clock Api V1 Sla Tickets  Ticket Id  Sla Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SLA-Uhr eines Tickets",
+        "tags": [
+          "SLA und Bereitschaft"
         ]
       }
     },
@@ -38225,6 +40472,72 @@
         "summary": "Kommentar (intern oder extern)",
         "tags": [
           "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/dms-documents": {
+      "get": {
+        "operationId": "ticket_dms_documents_api_v1_tickets__ticket_id__dms_documents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DmsDocumentPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paperless-Dokumente eines Tickets",
+        "tags": [
+          "Dokumente"
         ]
       }
     },

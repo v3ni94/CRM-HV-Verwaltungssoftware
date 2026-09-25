@@ -17,6 +17,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.7.0",
+    date: "25.09.2026",
+    title: "Immoware24-Lesezugriff per DAV",
+    changes: [
+      "Neues Paket mhvp.immoware: Spiegel von Immoware24 per WebDAV, CardDAV und CalDAV, strikt lesend",
+      "Anbindung je Tenant mit Verbindungstest, manueller und automatischer Abholung alle 15 Minuten",
+      "Dokumentbaum, Adressbuch (Zuordnung oder Anlage als CRM-Kontakt) und Kalender als Spiegeltabellen",
+    ],
+  },
+  {
     version: "1.6.1",
     date: "25.09.2026",
     title: "Google Drive auf der DMS-Seite einrichtbar",

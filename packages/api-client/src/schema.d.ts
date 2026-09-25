@@ -2087,6 +2087,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dms-documents/{paperless_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paperless-Datei laden (Proxy, Token bleibt serverseitig) */
+        get: operations["dms_document_file_api_v1_dms_documents__paperless_id__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/document-categories": {
         parameters: {
             query?: never;
@@ -2960,6 +2977,177 @@ export interface paths {
         put?: never;
         /** Statuswechsel (6.9.3, W06) */
         post: operations["transition_statement_api_v1_hoa_statements__statement_id__transition_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Immoware24-Anbindung lesen */
+        get: operations["get_connection_api_v1_immoware_connection_get"];
+        /** Immoware24-Anbindung einrichten */
+        put: operations["put_connection_api_v1_immoware_connection_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/connection/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verbindung pruefen (PROPFIND Depth 0) */
+        post: operations["check_connection_api_v1_immoware_connection_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Immoware24-Kontakte */
+        get: operations["list_contacts_api_v1_immoware_contacts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/contacts/{dav_contact_id}/create-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Als CRM-Kontakt anlegen */
+        post: operations["create_contact_from_dav_api_v1_immoware_contacts__dav_contact_id__create_contact_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/contacts/{dav_contact_id}/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mit CRM-Kontakt verknuepfen */
+        post: operations["match_contact_api_v1_immoware_contacts__dav_contact_id__match_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dokumentbaum durchsuchen */
+        get: operations["list_documents_api_v1_immoware_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/documents/{document_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Datei herunterladen (Proxy) */
+        get: operations["download_document_api_v1_immoware_documents__document_id__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Immoware24-Termine */
+        get: operations["list_events_api_v1_immoware_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/sync/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Letzte Synchronisationslaeufe */
+        get: operations["sync_runs_api_v1_immoware_sync_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/sync/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Abholung manuell anstossen */
+        post: operations["trigger_sync_api_v1_immoware_sync__kind__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4721,6 +4909,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/properties/{property_id}/dms-documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paperless-Dokumente eines Objekts */
+        get: operations["property_dms_documents_api_v1_properties__property_id__dms_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/properties/{property_id}/legal-entities": {
         parameters: {
             query?: never;
@@ -4945,6 +5150,249 @@ export interface paths {
         put?: never;
         /** SEPA-Mandat widerrufen */
         post: operations["revoke_mandate_api_v1_sepa_mandates__mandate_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notfallalarme */
+        get: operations["list_alerts_api_v1_sla_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/alerts/{alert_id}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Notfallalarm bestätigen */
+        post: operations["ack_alert_api_v1_sla_alerts__alert_id__ack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Geschäftszeitenkalender */
+        get: operations["get_calendar_endpoint_api_v1_sla_calendar_get"];
+        /** Geschäftszeitenkalender ändern */
+        put: operations["put_calendar_api_v1_sla_calendar_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/clocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SLA-Uhren */
+        get: operations["list_clocks_api_v1_sla_clocks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/clocks/{clock_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Uhr pausieren */
+        post: operations["pause_api_v1_sla_clocks__clock_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/clocks/{clock_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Uhr fortsetzen */
+        post: operations["resume_api_v1_sla_clocks__clock_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/on-call": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bereitschaftsplan */
+        get: operations["list_on_call_api_v1_sla_on_call_get"];
+        put?: never;
+        /** Bereitschaft eintragen */
+        post: operations["create_on_call_api_v1_sla_on_call_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/on-call/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Aktuelle Bereitschaft */
+        get: operations["get_current_on_call_api_v1_sla_on_call_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/on-call/{on_call_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Bereitschaft löschen */
+        delete: operations["delete_on_call_api_v1_sla_on_call__on_call_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SLA-Regeln */
+        get: operations["list_rules_api_v1_sla_rules_get"];
+        put?: never;
+        /** SLA-Regel anlegen */
+        post: operations["create_rule_api_v1_sla_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/rules/{rule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** SLA-Regel löschen */
+        delete: operations["delete_rule_api_v1_sla_rules__rule_id__delete"];
+        options?: never;
+        head?: never;
+        /** SLA-Regel ändern */
+        patch: operations["update_rule_api_v1_sla_rules__rule_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/sla/rules/{rule_id}/steps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eskalationsstufen einer Regel */
+        get: operations["list_steps_api_v1_sla_rules__rule_id__steps_get"];
+        put?: never;
+        /** Eskalationsstufe anlegen */
+        post: operations["create_step_api_v1_sla_rules__rule_id__steps_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/steps/{step_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Eskalationsstufe löschen */
+        delete: operations["delete_step_api_v1_sla_steps__step_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/tickets/{ticket_id}/sla": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SLA-Uhr eines Tickets */
+        get: operations["ticket_clock_api_v1_sla_tickets__ticket_id__sla_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5536,6 +5984,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tickets/{ticket_id}/dms-documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paperless-Dokumente eines Tickets */
+        get: operations["ticket_dms_documents_api_v1_tickets__ticket_id__dms_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/units/{unit_id}": {
         parameters: {
             query?: never;
@@ -5998,6 +6463,11 @@ export interface components {
          * @enum {string}
          */
         AiTask: "extract_contacts" | "extract_property" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize";
+        /**
+         * AlertChannel
+         * @enum {string}
+         */
+        AlertChannel: "email" | "internal";
         /**
          * AllocationCategory
          * @enum {string}
@@ -6587,6 +7057,28 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** CalendarIn */
+        CalendarIn: {
+            /**
+             * Closes At
+             * @default 16:30
+             */
+            closes_at: string;
+            /** Holidays */
+            holidays?: string[];
+            /**
+             * Opens At
+             * @default 08:00
+             */
+            opens_at: string;
+            /**
+             * Timezone
+             * @default Europe/Berlin
+             */
+            timezone: string;
+            /** Weekdays */
+            weekdays?: number[];
+        };
         /** CalendarItem */
         CalendarItem: {
             /**
@@ -6764,6 +7256,18 @@ export interface components {
             /** Wording */
             wording: string;
         };
+        /**
+         * ClockState
+         * @enum {string}
+         */
+        ClockState: "running" | "paused" | "breached" | "done";
+        /**
+         * ClockType
+         * @description Zeitbasis der Uhr: Geschäftszeit (Arbeitskalender) oder Kalenderzeit (rund um die Uhr,
+         *     wie im Hub für Notfälle vorgesehen).
+         * @enum {string}
+         */
+        ClockType: "business" | "calendar";
         /** Co2In */
         Co2In: {
             /** Costs */
@@ -7617,6 +8121,49 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /**
+         * DmsDocumentOut
+         * @description Ein Paperless-Dokument in der Ticket- oder Objektansicht (M31).
+         */
+        DmsDocumentOut: {
+            /** Added */
+            added: string | null;
+            /** Correspondent */
+            correspondent: string | null;
+            /** Created */
+            created: string | null;
+            /** Document Type */
+            document_type: string | null;
+            /** Download Url */
+            download_url: string;
+            /** Id */
+            id: number;
+            /** Original File Name */
+            original_file_name: string | null;
+            /** Page Count */
+            page_count: number | null;
+            /** Preview Url */
+            preview_url: string;
+            /** Tags */
+            tags: string[];
+            /** Title */
+            title: string;
+        };
+        /** DmsDocumentPage */
+        DmsDocumentPage: {
+            /** Data */
+            data: components["schemas"]["DmsDocumentOut"][];
+            meta: components["schemas"]["DmsDocumentPageMeta"];
+        };
+        /** DmsDocumentPageMeta */
+        DmsDocumentPageMeta: {
+            /** Page */
+            page: number;
+            /** Per Page */
+            per_page: number;
+            /** Total */
+            total: number;
+        };
         /** DocumentHit */
         DocumentHit: {
             /** Category Id */
@@ -7900,6 +8447,19 @@ export interface components {
          * @enum {string}
          */
         EntryStatus: "draft" | "posted";
+        /** EscalationStepIn */
+        EscalationStepIn: {
+            /** After Minutes */
+            after_minutes: number;
+            /** @default email */
+            channel: components["schemas"]["AlertChannel"];
+            /** Notify Role */
+            notify_role?: string | null;
+            /** Notify User Ids */
+            notify_user_ids?: string[];
+            /** Step No */
+            step_no: number;
+        };
         /** EventOut */
         EventOut: {
             /** Actor User Id */
@@ -8263,6 +8823,120 @@ export interface components {
             kind: components["schemas"]["IdentifierKind"];
             /** Value */
             value: string;
+        };
+        /** ImmowareConnectionIn */
+        ImmowareConnectionIn: {
+            /** Base Url */
+            base_url?: string | null;
+            /** Caldav Url */
+            caldav_url?: string | null;
+            /** Carddav Url */
+            carddav_url?: string | null;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Password
+             * @description nur schreibbar
+             */
+            password?: string | null;
+            /**
+             * Poll Minutes
+             * @default 30
+             */
+            poll_minutes: number;
+            /** Username */
+            username?: string | null;
+            /**
+             * Verify Tls
+             * @default true
+             */
+            verify_tls: boolean;
+        };
+        /** ImmowareConnectionOut */
+        ImmowareConnectionOut: {
+            /** Base Url */
+            base_url: string | null;
+            /** Caldav Url */
+            caldav_url: string | null;
+            /** Carddav Url */
+            carddav_url: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Has Password */
+            has_password: boolean;
+            /** Last Check At */
+            last_check_at: string | null;
+            /** Last Check Ok */
+            last_check_ok: boolean | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Poll Minutes */
+            poll_minutes: number;
+            /** Username */
+            username: string | null;
+            /** Verify Tls */
+            verify_tls: boolean;
+        };
+        /** ImmowareContactOut */
+        ImmowareContactOut: {
+            /** Addresses */
+            addresses: {
+                [key: string]: string;
+            }[];
+            /** Emails */
+            emails: string[];
+            /** Fn */
+            fn: string | null;
+            /** Href */
+            href: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Synced At
+             * Format: date-time
+             */
+            last_synced_at: string;
+            /** Matched Contact Id */
+            matched_contact_id: string | null;
+            /** Org */
+            org: string | null;
+            /** Phones */
+            phones: string[];
+            /** Uid */
+            uid: string | null;
+        };
+        /** ImmowareSyncRunOut */
+        ImmowareSyncRunOut: {
+            /** Added */
+            added: number;
+            /** Changed */
+            changed: number;
+            /** Error */
+            error: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["SyncKind"];
+            /** Removed */
+            removed: number;
+            /** Seen */
+            seen: number;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            status: components["schemas"]["SyncStatus"];
         };
         /** ImportIn */
         ImportIn: {
@@ -9242,6 +9916,14 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** MatchIn */
+        MatchIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+        };
         /** MeOut */
         MeOut: {
             /** Display Name */
@@ -9622,6 +10304,28 @@ export interface components {
              * @default Bearer
              */
             token_type: string;
+        };
+        /** OnCallIn */
+        OnCallIn: {
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /** Note */
+            note?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
         };
         /** OrderOut */
         OrderOut: {
@@ -11043,6 +11747,28 @@ export interface components {
              */
             open_item_id: string;
         };
+        /**
+         * SlaColor
+         * @enum {string}
+         */
+        SlaColor: "green" | "yellow" | "red";
+        /** SlaRuleIn */
+        SlaRuleIn: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /** @default business */
+            clock_type: components["schemas"]["ClockType"];
+            /** Name */
+            name: string;
+            priority: components["schemas"]["Priority"];
+            /** Resolution Minutes */
+            resolution_minutes: number;
+            /** Response Minutes */
+            response_minutes: number;
+        };
         /** SourceIn */
         SourceIn: {
             /**
@@ -11140,6 +11866,11 @@ export interface components {
              */
             tenant_id: string;
         };
+        /**
+         * SyncKind
+         * @enum {string}
+         */
+        SyncKind: "webdav" | "carddav" | "caldav";
         /** SyncRunOut */
         SyncRunOut: {
             /** Counts */
@@ -11162,6 +11893,11 @@ export interface components {
             /** Status */
             status: string;
         };
+        /**
+         * SyncStatus
+         * @enum {string}
+         */
+        SyncStatus: "running" | "ok" | "failed";
         /** TeamIn */
         TeamIn: {
             /** Member User Ids */
@@ -16629,6 +17365,39 @@ export interface operations {
             };
         };
     };
+    dms_document_file_api_v1_dms_documents__paperless_id__file_get: {
+        parameters: {
+            query?: {
+                kind?: string;
+            };
+            header?: never;
+            path: {
+                paperless_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_categories_api_v1_document_categories_get: {
         parameters: {
             query?: never;
@@ -18661,6 +19430,337 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_connection_api_v1_immoware_connection_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImmowareConnectionOut"];
+                };
+            };
+        };
+    };
+    put_connection_api_v1_immoware_connection_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImmowareConnectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImmowareConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_connection_api_v1_immoware_connection_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImmowareConnectionOut"];
+                };
+            };
+        };
+    };
+    list_contacts_api_v1_immoware_contacts_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                unmatched?: boolean;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_contact_from_dav_api_v1_immoware_contacts__dav_contact_id__create_contact_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dav_contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImmowareContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    match_contact_api_v1_immoware_contacts__dav_contact_id__match_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dav_contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImmowareContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_documents_api_v1_immoware_documents_get: {
+        parameters: {
+            query?: {
+                path?: string;
+                q?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_document_api_v1_immoware_documents__document_id__file_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_events_api_v1_immoware_events_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_runs_api_v1_immoware_sync_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImmowareSyncRunOut"][];
+                };
+            };
+        };
+    };
+    trigger_sync_api_v1_immoware_sync__kind__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: components["schemas"]["SyncKind"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
                     };
                 };
             };
@@ -22738,6 +23838,40 @@ export interface operations {
             };
         };
     };
+    property_dms_documents_api_v1_properties__property_id__dms_documents_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmsDocumentPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_entities_api_v1_properties__property_id__legal_entities_get: {
         parameters: {
             query?: never;
@@ -23337,6 +24471,594 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MandateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_alerts_api_v1_sla_alerts_get: {
+        parameters: {
+            query?: {
+                unacknowledged?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ack_alert_api_v1_sla_alerts__alert_id__ack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_calendar_endpoint_api_v1_sla_calendar_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_calendar_api_v1_sla_calendar_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_clocks_api_v1_sla_clocks_get: {
+        parameters: {
+            query?: {
+                state?: components["schemas"]["ClockState"] | null;
+                color?: components["schemas"]["SlaColor"] | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_api_v1_sla_clocks__clock_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clock_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_api_v1_sla_clocks__clock_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clock_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_on_call_api_v1_sla_on_call_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    create_on_call_api_v1_sla_on_call_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnCallIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_on_call_api_v1_sla_on_call_current_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    } | null;
+                };
+            };
+        };
+    };
+    delete_on_call_api_v1_sla_on_call__on_call_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                on_call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_rules_api_v1_sla_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    create_rule_api_v1_sla_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlaRuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_rule_api_v1_sla_rules__rule_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_rule_api_v1_sla_rules__rule_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlaRuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_steps_api_v1_sla_rules__rule_id__steps_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_step_api_v1_sla_rules__rule_id__steps_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EscalationStepIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_step_api_v1_sla_steps__step_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                step_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ticket_clock_api_v1_sla_tickets__ticket_id__sla_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -24655,6 +26377,40 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ticket_dms_documents_api_v1_tickets__ticket_id__dms_documents_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmsDocumentPage"];
                 };
             };
             /** @description Validation Error */
