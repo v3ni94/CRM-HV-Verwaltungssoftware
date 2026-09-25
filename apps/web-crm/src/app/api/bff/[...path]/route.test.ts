@@ -95,6 +95,10 @@ describe("BFF proxy", () => {
     ["POST", "tickets"],
     ["PATCH", `tickets/${ID}`],
     ["POST", `tickets/${ID}/comments`],
+    ["GET", "tickets"],
+    ["GET", `tickets/${ID}`],
+    ["POST", "tickets/merge"],
+    ["GET", `properties/${ID}`],
   ])("forwards the operation %s %s", async (method, path) => {
     serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {

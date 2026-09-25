@@ -201,6 +201,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^tickets/templates/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}/checklist/[a-zA-Z0-9_-]{1,64}$`) },
   { method: "POST", pattern: /^tickets\/bulk-status$/ },
+  // Tickets zusammenführen (M36): Zielsuche über die Liste (q), Vorschau über das Detail.
+  { method: "GET", pattern: /^tickets$/ },
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}$`) },
+  { method: "POST", pattern: /^tickets\/merge$/ },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}$`) },
   // Zuweiser mit Grund (operator 25.09.2026, mail-optimierung M20).
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/assignees$`) },
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/assignees$`) },

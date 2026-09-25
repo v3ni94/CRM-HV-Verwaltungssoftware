@@ -1546,7 +1546,30 @@
     "selectRow": "Ticket auswählen",
     "linkedTitle": "Tickets",
     "openCount": "{count} offen",
-    "linkedEmpty": "Keine Tickets verknüpft."
+    "linkedEmpty": "Keine Tickets verknüpft.",
+    "merge": {
+      "action": "Zusammenführen",
+      "title": "Ticket zusammenführen",
+      "searchLabel": "Zielticket suchen",
+      "searchPlaceholder": "Nummer oder Titel",
+      "search": "Suchen",
+      "results": "Suchergebnisse",
+      "noResults": "Kein passendes Ticket gefunden.",
+      "loadFailed": "Das Zielticket konnte nicht geladen werden.",
+      "sourceHeading": "Quellticket",
+      "targetHeading": "Zielticket",
+      "contact": "Kontakt",
+      "property": "Objekt",
+      "messages": "Nachrichten",
+      "none": "keine Angabe",
+      "hint": "Das Quellticket wird geschlossen und verweist auf das Zielticket.",
+      "confirm": "Zusammenführen bestätigen",
+      "cancel": "Abbrechen",
+      "mergedBanner": "Zusammengeführt in Ticket #{number}",
+      "mergedLocked": "Das Ticket ist gesperrt, die Bearbeitung erfolgt im Zielticket.",
+      "contains": "Enthält Ticket",
+      "showMerged": "Zusammengeführte anzeigen"
+    }
   },
   "TicketTemplates": {
     "title": "Ticketvorlagen",

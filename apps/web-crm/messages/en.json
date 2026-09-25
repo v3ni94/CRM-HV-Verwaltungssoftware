@@ -527,7 +527,30 @@
     },
     "linkedTitle": "Tickets",
     "openCount": "{count} open",
-    "linkedEmpty": "No linked tickets."
+    "linkedEmpty": "No linked tickets.",
+    "merge": {
+      "action": "Merge",
+      "title": "Merge ticket",
+      "searchLabel": "Search target ticket",
+      "searchPlaceholder": "Number or title",
+      "search": "Search",
+      "results": "Search results",
+      "noResults": "No matching ticket found.",
+      "loadFailed": "The target ticket could not be loaded.",
+      "sourceHeading": "Source ticket",
+      "targetHeading": "Target ticket",
+      "contact": "Contact",
+      "property": "Property",
+      "messages": "Messages",
+      "none": "not specified",
+      "hint": "The source ticket will be closed and will point to the target ticket.",
+      "confirm": "Confirm merge",
+      "cancel": "Cancel",
+      "mergedBanner": "Merged into ticket #{number}",
+      "mergedLocked": "This ticket is locked, work continues in the target ticket.",
+      "contains": "Contains ticket",
+      "showMerged": "Show merged"
+    }
   },
   "Mail": {
     "title": "Mail",
