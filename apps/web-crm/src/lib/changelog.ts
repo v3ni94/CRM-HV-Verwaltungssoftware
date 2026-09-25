@@ -17,6 +17,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.10.0",
+    date: "25.09.2026",
+    title:
+      "Tickets mit Sammelstatus und Vorlagen, Start-Auswertungen, Handy-Oberfläche, KI-Stückelung",
+    changes: [
+      "Tickets: Sammelauswahl mit Statuswechsel (Mitarbeiter höchstens 10 gleichzeitig, Administratoren unbegrenzt), Ticketvorlagen mit Checklisten und Pflichtfeldern (z. B. IBAN beim Kautionsticket) unter Einstellungen",
+      "Start: Auswertungen mit Kennzahlen und Grafik (Tickets offen, neu und erledigt je Tag, Woche, Monat, Quartal, Jahr), Filter je Benutzer und Vergleich zweier Benutzer",
+      "Menü: Mail und Tickets unter Übersicht, eigene Gruppe Makler (Anzeigen, FLOW-Import, Übergabeprotokoll), WEG-Objekte und WEG-Verwaltung als ein Eintrag, Importassistent ohne Zusatz",
+      "Handy und Tablet: Menü im Vordergrund, Mail-Ansicht ohne seitlichen Überlauf und lesbar auf dem Handy, Chat mit Fortschrittsanzeige und eigener Farbgebung",
+      "KI: Umlaute aus Windows-kodierten CSV-Dateien korrekt, große Listen werden in Teilen verarbeitet statt gesperrt, automatische Wahl des großen Modells bei Umfang, Fortschritt je Teil, Zeichenstatistik je Datei im Lauf",
+      "Buchhaltung: Auswertungen je Buchungskreis (Liquiditätsvorschau 90 Tage, Zahlungen je Debitor, Erträge je Erlöskonto)",
+      "Makler: Anzeigenformulare in Gruppen (Objekt, Adresse und Freigabe, Preise mit Warmmiete, Energieausweis, Ausstattung, Vermarktung)",
+      "Tests: Integrationstests für DMS-Anzeige und Immoware-Spiegel",
+    ],
+  },
+  {
     version: "1.9.2",
     date: "25.09.2026",
     title: "OIDC-Anbieter für die Statusseite zusammengeführt",
@@ -165,6 +181,20 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Tickets und Aufträge, Postfach, Portale für Mieter, Eigentümer und Dienstleister",
       "WEG-Wirtschaftsplan und Abrechnung, Versammlung, Beiratsprüfung, Mieterhöhung und Vermietung",
       "Immoware24-Import und KI-Onboarding",
+    ],
+  },
+  {
+    version: "1.4.0",
+    date: "25.09.2026",
+    title: "SLA, Notfallkette und Bereitschaft",
+    changes: [
+      "SLA-Regeln je Ticketpriorität mit Reaktions- und Lösungszeit, Uhren laufen nur in der Geschäftszeit",
+      "Arbeitskalender mit Feiertagen, Uhren lassen sich pausieren und fortsetzen",
+      "Eskalationsstufen mit Benachrichtigung an Zuständige und Bereitschaft",
+      "Bereitschaftsplan mit aktueller Bereitschaft und Alarmen zum Quittieren",
+      "Einstellungsseite SLA und Bereitschaft, SLA-Ampel im Ticket",
+      "Erste Antwort per freigegebener Mail stoppt die Reaktionsuhr",
+      "Migration 0042, Plan docs/plans/M30-sla.md",
     ],
   },
 ];
