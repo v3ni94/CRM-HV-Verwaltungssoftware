@@ -1041,7 +1041,8 @@
       "rules": "Rules",
       "onCall": "On-call",
       "calendar": "Calendar",
-      "alerts": "Alerts"
+      "alerts": "Alerts",
+      "sms": "SMS gateway"
     },
     "priorities": {
       "low": "low",
@@ -1056,7 +1057,8 @@
     },
     "channels": {
       "email": "email",
-      "internal": "internal"
+      "internal": "internal",
+      "sms": "SMS"
     },
     "channel": "Channel",
     "colors": {
@@ -1146,7 +1148,9 @@
       "empty": "No open emergency alerts.",
       "level": "Level {level}",
       "acked": "acknowledged",
-      "ack": "Acknowledge"
+      "ack": "Acknowledge",
+      "delivered": "delivered",
+      "deliveryError": "Delivery failed: {error}"
     },
     "badge": {
       "responseRemaining": "Response due in {minutes} min",
@@ -1156,6 +1160,25 @@
       "resolvedAt": "Resolved on {at}",
       "pause": "Pause",
       "resume": "Resume"
+    },
+    "smsGateway": {
+      "title": "SMS gateway",
+      "intro": "Vendor neutral HTTP gateway for SMS escalations to the on-call person. Nothing is sent unless enabled. Placeholders of the JSON template:",
+      "enabled": "Enabled",
+      "url": "URL",
+      "method": "Method",
+      "authHeaderName": "Auth header name",
+      "authHeaderValue": "Auth header value",
+      "authHeaderSet": "A value is stored. Leave empty to keep it.",
+      "authHeaderClear": "Delete stored value",
+      "bodyTemplate": "Template (JSON)",
+      "sender": "Sender",
+      "save": "Save",
+      "saved": "Saved.",
+      "testTo": "Test number",
+      "test": "Send test message",
+      "testOk": "The gateway accepted the test message.",
+      "testFailed": "Test failed: {error}"
     }
   },
   "Version": {
@@ -1452,6 +1475,10 @@
     }
   },
   "Members": {
-    "editCompetences": "Edit competences"
+    "editCompetences": "Edit competences",
+    "mobilePhone": "Mobile phone",
+    "editMobilePhone": "Set mobile phone",
+    "mobilePhoneShow": "Mobile: {phone}",
+    "mobilePhoneHint": "Used for SMS escalations to the on-call person. Leave empty to delete."
   }
 }

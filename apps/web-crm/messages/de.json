@@ -2125,7 +2125,11 @@
     "displayName": "Anzeigename",
     "passwordHint": "Mindestens 12 Zeichen.",
     "addSubmit": "Benutzer anlegen",
-    "editCompetences": "Kompetenzen bearbeiten"
+    "editCompetences": "Kompetenzen bearbeiten",
+    "mobilePhone": "Mobilnummer",
+    "editMobilePhone": "Mobilnummer pflegen",
+    "mobilePhoneShow": "Mobil: {phone}",
+    "mobilePhoneHint": "Für SMS-Eskalationen an die Bereitschaft. Leer lassen löscht die Nummer."
   },
   "Roles": {
     "title": "Rollen und Rechte",
@@ -2298,7 +2302,8 @@
       "rules": "Regeln",
       "onCall": "Bereitschaft",
       "calendar": "Kalender",
-      "alerts": "Alarme"
+      "alerts": "Alarme",
+      "sms": "SMS-Gateway"
     },
     "priorities": {
       "low": "niedrig",
@@ -2313,7 +2318,8 @@
     },
     "channels": {
       "email": "E-Mail",
-      "internal": "intern"
+      "internal": "intern",
+      "sms": "SMS"
     },
     "channel": "Kanal",
     "colors": {
@@ -2403,7 +2409,9 @@
       "empty": "Keine offenen Notfallalarme.",
       "level": "Stufe {level}",
       "acked": "quittiert",
-      "ack": "Quittieren"
+      "ack": "Quittieren",
+      "delivered": "zugestellt",
+      "deliveryError": "Zustellung fehlgeschlagen: {error}"
     },
     "badge": {
       "responseRemaining": "Reaktion in {minutes} Min. fällig",
@@ -2413,6 +2421,25 @@
       "resolvedAt": "Gelöst am {at}",
       "pause": "Pausieren",
       "resume": "Fortsetzen"
+    },
+    "smsGateway": {
+      "title": "SMS-Gateway",
+      "intro": "Anbieterneutrales HTTP-Gateway für SMS-Eskalationen an die Bereitschaft. Ohne Aktivierung wird keine SMS versendet. Platzhalter der JSON-Vorlage:",
+      "enabled": "Aktiv",
+      "url": "URL",
+      "method": "Methode",
+      "authHeaderName": "Name des Auth-Headers",
+      "authHeaderValue": "Wert des Auth-Headers",
+      "authHeaderSet": "Ein Wert ist gespeichert. Leer lassen, um ihn zu behalten.",
+      "authHeaderClear": "Gespeicherten Wert löschen",
+      "bodyTemplate": "Vorlage (JSON)",
+      "sender": "Absender",
+      "save": "Speichern",
+      "saved": "Gespeichert.",
+      "testTo": "Testnummer",
+      "test": "Testnachricht senden",
+      "testOk": "Testnachricht wurde vom Gateway angenommen.",
+      "testFailed": "Test fehlgeschlagen: {error}"
     }
   },
   "Version": {

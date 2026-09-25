@@ -9,7 +9,7 @@ import { ui } from "@/lib/ui";
 
 export type Priority = "low" | "normal" | "high" | "urgent" | "immediate";
 export type ClockType = "business" | "calendar";
-export type AlertChannel = "email" | "internal";
+export type AlertChannel = "email" | "internal" | "sms";
 
 export type SlaRule = {
   id: string;
@@ -48,6 +48,28 @@ export type EmergencyAlert = {
   sent_at: string;
   acknowledged_by: string | null;
   acknowledged_at: string | null;
+  delivered_at?: string | null;
+  delivery_error?: string | null;
+};
+
+export type SmsGatewayConfig = {
+  enabled: boolean;
+  url: string | null;
+  method: string;
+  auth_header_name: string | null;
+  auth_header_set: boolean;
+  body_template: string | null;
+  sender: string | null;
+};
+
+export const EMPTY_SMS_GATEWAY: SmsGatewayConfig = {
+  enabled: false,
+  url: null,
+  method: "POST",
+  auth_header_name: null,
+  auth_header_set: false,
+  body_template: null,
+  sender: null,
 };
 
 export type WorkCalendar = {
@@ -62,7 +84,7 @@ export type Member = { user_id: string; email: string; display_name: string; sta
 
 const PRIORITIES: Priority[] = ["low", "normal", "high", "urgent", "immediate"];
 const CLOCK_TYPES: ClockType[] = ["business", "calendar"];
-const CHANNELS: AlertChannel[] = ["email", "internal"];
+const CHANNELS: AlertChannel[] = ["email", "internal", "sms"];
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 
 function memberLabel(members: Member[], userId: string): string {
@@ -729,6 +751,13 @@ function AlertsTab({ initial }: { initial: EmergencyAlert[] }) {
               <span className="text-xs text-muted">{formatDateTime(a.sent_at)}</span>
               <span className="text-xs text-muted">{a.sent_to}</span>
               <span className={ui.badge}>{t(`channels.${a.channel}`)}</span>
+              {a.delivery_error ? (
+                <span className="text-xs text-danger-fg">
+                  {t("alerts.deliveryError", { error: a.delivery_error })}
+                </span>
+              ) : a.delivered_at ? (
+                <span className="text-xs text-success-fg">{t("alerts.delivered")}</span>
+              ) : null}
               {a.acknowledged_at ? (
                 <span className={ui.badgeSuccess}>{t("alerts.acked")}</span>
               ) : (
@@ -744,7 +773,180 @@ function AlertsTab({ initial }: { initial: EmergencyAlert[] }) {
   );
 }
 
-const TABS = ["rules", "onCall", "calendar", "alerts"] as const;
+function SmsGatewayTab({ initial, canManage }: { initial: SmsGatewayConfig; canManage: boolean }) {
+  const t = useTranslations("Sla");
+  const [config, setConfig] = useState(initial);
+  const [secret, setSecret] = useState("");
+  const [clearSecret, setClearSecret] = useState(false);
+  const [testTo, setTestTo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const set = <K extends keyof SmsGatewayConfig>(key: K, value: SmsGatewayConfig[K]) =>
+    setConfig((prev) => ({ ...prev, [key]: value }));
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const res = await bff<SmsGatewayConfig>("/api/bff/sla/sms-gateway", {
+      method: "PUT",
+      body: JSON.stringify({
+        enabled: config.enabled,
+        url: config.url?.trim() || null,
+        method: config.method,
+        auth_header_name: config.auth_header_name?.trim() || null,
+        auth_header_value: clearSecret ? "" : secret || null,
+        body_template: config.body_template?.trim() || null,
+        sender: config.sender?.trim() || null,
+      }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      setConfig(res.data);
+      setSecret("");
+      setClearSecret(false);
+      setNotice(t("smsGateway.saved"));
+    } else setError(res.message);
+  };
+
+  const test = async () => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const res = await bff<{ ok: boolean; error: string | null }>("/api/bff/sla/sms-gateway/test", {
+      method: "POST",
+      body: JSON.stringify({ to: testTo.trim() }),
+    });
+    setBusy(false);
+    if (!res.ok) setError(res.message);
+    else if (res.data.ok) setNotice(t("smsGateway.testOk"));
+    else setError(t("smsGateway.testFailed", { error: res.data.error ?? "" }));
+  };
+
+  return (
+    <section className={`${ui.card} flex flex-col gap-3`}>
+      <h2 className="text-sm font-semibold">{t("smsGateway.title")}</h2>
+      <p className="text-xs text-muted">
+        {t("smsGateway.intro")} <code>{"{to}"}</code>, <code>{"{text}"}</code>, <code>{"{sender}"}</code>
+      </p>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          disabled={!canManage}
+          checked={config.enabled}
+          onChange={(e) => set("enabled", e.target.checked)}
+        />
+        {t("smsGateway.enabled")}
+      </label>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex min-w-72 flex-1 flex-col gap-1">
+          <span className={ui.label}>{t("smsGateway.url")}</span>
+          <input
+            type="url"
+            className={ui.input}
+            disabled={!canManage}
+            value={config.url ?? ""}
+            onChange={(e) => set("url", e.target.value)}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("smsGateway.method")}</span>
+          <select
+            className={ui.input}
+            disabled={!canManage}
+            value={config.method}
+            onChange={(e) => set("method", e.target.value)}
+          >
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+          </select>
+        </label>
+      </div>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("smsGateway.authHeaderName")}</span>
+          <input
+            className={ui.input}
+            disabled={!canManage}
+            value={config.auth_header_name ?? ""}
+            onChange={(e) => set("auth_header_name", e.target.value)}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("smsGateway.authHeaderValue")}</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            className={ui.input}
+            disabled={!canManage || clearSecret}
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("smsGateway.sender")}</span>
+          <input
+            className={ui.input}
+            maxLength={40}
+            disabled={!canManage}
+            value={config.sender ?? ""}
+            onChange={(e) => set("sender", e.target.value)}
+          />
+        </label>
+      </div>
+      {config.auth_header_set ? (
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+          <span>{t("smsGateway.authHeaderSet")}</span>
+          {canManage ? (
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={clearSecret} onChange={(e) => setClearSecret(e.target.checked)} />
+              {t("smsGateway.authHeaderClear")}
+            </label>
+          ) : null}
+        </div>
+      ) : null}
+      <label className="flex flex-col gap-1">
+        <span className={ui.label}>{t("smsGateway.bodyTemplate")}</span>
+        <textarea
+          className={`${ui.input} font-mono`}
+          rows={4}
+          disabled={!canManage}
+          value={config.body_template ?? ""}
+          onChange={(e) => set("body_template", e.target.value)}
+        />
+      </label>
+      {canManage ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <button type="button" className={ui.primary} disabled={busy} onClick={() => void save()}>
+            {t("smsGateway.save")}
+          </button>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("smsGateway.testTo")}</span>
+            <input type="tel" className={ui.input} value={testTo} onChange={(e) => setTestTo(e.target.value)} />
+          </label>
+          <button
+            type="button"
+            className={ui.button}
+            disabled={busy || testTo.trim().length < 3}
+            onClick={() => void test()}
+          >
+            {t("smsGateway.test")}
+          </button>
+        </div>
+      ) : null}
+      {notice ? <p className="text-xs text-success-fg">{notice}</p> : null}
+      {error ? (
+        <p role="alert" className={ui.alert}>
+          {error}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+const TABS = ["rules", "onCall", "calendar", "sms", "alerts"] as const;
 type Tab = (typeof TABS)[number];
 
 export function SlaSettings({
@@ -755,6 +957,7 @@ export function SlaSettings({
   alerts,
   members,
   canManage,
+  smsGateway = EMPTY_SMS_GATEWAY,
 }: {
   rules: SlaRule[];
   onCall: OnCallSchedule[];
@@ -763,6 +966,7 @@ export function SlaSettings({
   alerts: EmergencyAlert[];
   members: Member[];
   canManage: boolean;
+  smsGateway?: SmsGatewayConfig;
 }) {
   const t = useTranslations("Sla");
   const [tab, setTab] = useState<Tab>("rules");
@@ -787,6 +991,7 @@ export function SlaSettings({
         <OnCallTab initial={onCall} current={currentOnCall} members={members} canManage={canManage} />
       ) : null}
       {tab === "calendar" ? <CalendarTab initial={calendar} canManage={canManage} /> : null}
+      {tab === "sms" ? <SmsGatewayTab initial={smsGateway} canManage={canManage} /> : null}
       {tab === "alerts" ? <AlertsTab initial={alerts} /> : null}
     </div>
   );

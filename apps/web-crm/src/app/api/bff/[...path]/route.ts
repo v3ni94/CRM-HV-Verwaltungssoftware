@@ -65,6 +65,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^tenant/members/${ID}/reset-password$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/roles$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/competences$`) },
+  { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/mobile-phone$`) },
   { method: "GET", pattern: /^tenant\/competence-catalogue$/ },
   { method: "GET", pattern: /^tenant\/roles$/ },
   { method: "POST", pattern: /^tenant\/roles$/ },
@@ -226,6 +227,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^sla/on-call/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^sla/alerts/${ID}/ack$`) },
   { method: "PUT", pattern: /^sla\/calendar$/ },
+  { method: "GET", pattern: /^sla\/sms-gateway$/ },
+  { method: "PUT", pattern: /^sla\/sms-gateway$/ },
+  { method: "POST", pattern: /^sla\/sms-gateway\/test$/ },
   // Immoware24-Lesezugriff per DAV (M32): Anbindung, Läufe, Dokumente, Kontakte, Termine.
   { method: "GET", pattern: /^immoware\/connection$/ },
   { method: "PUT", pattern: /^immoware\/connection$/ },

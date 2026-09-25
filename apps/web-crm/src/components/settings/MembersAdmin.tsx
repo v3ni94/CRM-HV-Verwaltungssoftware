@@ -140,6 +140,64 @@ function CompetencesEditor({
   );
 }
 
+function MobilePhoneEditor({ member, onSaved }: { member: Member; onSaved: (phone: string | null) => void }) {
+  const t = useTranslations("Members");
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(member.mobile_phone ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const phone = value.trim() || null;
+    const res = await bff<null>(`/api/bff/tenant/members/${member.membership_id}/mobile-phone`, {
+      method: "PUT",
+      body: JSON.stringify({ mobile_phone: phone }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      onSaved(phone);
+      setOpen(false);
+    } else {
+      setError(res.message);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className={ui.buttonSm} onClick={() => setOpen(true)}>
+        {member.mobile_phone ? t("mobilePhoneShow", { phone: member.mobile_phone }) : t("editMobilePhone")}
+      </button>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2">
+      <label className="flex flex-col gap-1 text-xs">
+        {t("mobilePhone")}
+        <input
+          type="tel"
+          className={ui.input}
+          maxLength={40}
+          value={value}
+          placeholder="+49 170 1234567"
+          onChange={(e) => setValue(e.target.value)}
+        />
+      </label>
+      <p className="text-xs text-muted">{t("mobilePhoneHint")}</p>
+      {error ? <p className={ui.error}>{error}</p> : null}
+      <div className="flex gap-2">
+        <button type="button" className={ui.button} disabled={busy} onClick={() => void save()}>
+          {t("save")}
+        </button>
+        <button type="button" className={ui.button} disabled={busy} onClick={() => setOpen(false)}>
+          {t("cancel")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ResetPassword({ membershipId }: { membershipId: string }) {
   const t = useTranslations("Members");
   const [open, setOpen] = useState(false);
@@ -329,6 +387,7 @@ export function MembersAdmin({
                 <div className="flex flex-col gap-1.5 pt-1">
                   <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
                   <CompetencesEditor member={m} catalogue={competenceCatalogue} onSaved={(competences) => updateMember(m.membership_id, { competences })} />
+                  <MobilePhoneEditor member={m} onSaved={(mobile_phone) => updateMember(m.membership_id, { mobile_phone })} />
                   <ResetPassword membershipId={m.membership_id} />
                   <button
                     type="button"
@@ -379,6 +438,7 @@ export function MembersAdmin({
                     <div className="flex flex-col gap-1.5">
                       <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
                       <CompetencesEditor member={m} catalogue={competenceCatalogue} onSaved={(competences) => updateMember(m.membership_id, { competences })} />
+                  <MobilePhoneEditor member={m} onSaved={(mobile_phone) => updateMember(m.membership_id, { mobile_phone })} />
                       <ResetPassword membershipId={m.membership_id} />
                       <button
                         type="button"
