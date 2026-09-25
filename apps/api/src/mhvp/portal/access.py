@@ -152,9 +152,7 @@ async def staff_permissions(session: AsyncSession, account: PortalAccount) -> fr
             select(Role.code)
             .join(MembershipRole, MembershipRole.role_id == Role.id)
             .join(Membership, Membership.id == MembershipRole.membership_id)
-            .where(
-                Membership.tenant_id == account.tenant_id, Membership.user_id == account.user_id
-            )
+            .where(Membership.tenant_id == account.tenant_id, Membership.user_id == account.user_id)
         )
     )
     settings = await session.scalar(

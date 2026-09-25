@@ -47,7 +47,7 @@ async def list_rules(
         return [_out(r) for r in rows]
 
 
-class RuleIn(BaseModel):
+class ClassificationRuleIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     pattern_type: ClassificationPatternType
     pattern_value: str = Field(min_length=1, max_length=1000)
@@ -71,7 +71,7 @@ class RulePatch(BaseModel):
 
 @router.post("", status_code=201, summary="Klassifikationsregel anlegen")
 async def create_rule(
-    body: RuleIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+    body: ClassificationRuleIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         if body.target_category_id is not None:

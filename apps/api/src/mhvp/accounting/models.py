@@ -621,7 +621,9 @@ class DunningSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     threshold_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
     # Fees are inactive below this level even with a fee_amount set (V7: "ab der 1. Mahnung").
     fee_from_level: Mapped[int | None] = mapped_column(Integer)
-    interest_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    interest_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     # Gesetzlicher Verzugszins = Basiszinssatz + Aufschlag (§ 288 BGB, Anhang C zu verifizieren).
     # Basiszinssatz has no in-repo source register entry; the operator maintains the current
     # value here. The run stays disabled while this is empty.
@@ -677,7 +679,9 @@ class DunningFeeInvoiceDraft(IdMixin, TimestampMixin, TenantMixin, Base):
     recipient_legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
     amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     text: Mapped[str] = mapped_column(String(400), nullable=False)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft", server_default="draft"
+    )
     released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -699,7 +703,9 @@ class DunningMahnbescheidPrep(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     zustelladresse: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     aktenzeichen_intern: Mapped[str] = mapped_column(String(64), nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="in_vorbereitung")
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="in_vorbereitung", server_default="in_vorbereitung"
+    )
 
 
 class ExportRun(IdMixin, TimestampMixin, TenantMixin, Base):

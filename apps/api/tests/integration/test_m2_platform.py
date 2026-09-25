@@ -116,11 +116,6 @@ async def _build_world(settings: Settings) -> World:
         await engine.dispose()
 
 
-@pytest.fixture(scope="module")
-def world(database: Database, redis_url: str) -> World:
-    return asyncio.run(_build_world(_settings(database, redis_url)))
-
-
 @pytest.fixture
 def client(database: Database, redis_url: str) -> Iterator[TestClient]:
     with TestClient(create_app(_settings(database, redis_url))) as test_client:
@@ -1166,9 +1161,7 @@ def test_staff_invite_conflicts_with_existing_external_portal_account(
     assert granted.json()["portal_access"] == "granted"
 
 
-def test_external_portal_grant_refused_for_staff_account(
-    client: TestClient, world: World
-) -> None:
+def test_external_portal_grant_refused_for_staff_account(client: TestClient, world: World) -> None:
     """Converse of the check above (Sicherheitsreview 2026-09-25, Befund 1): a staff member's
     account must never additionally receive an external grant, even for a different contact
     sharing the same e-mail."""

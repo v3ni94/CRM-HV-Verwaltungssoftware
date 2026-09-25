@@ -20,6 +20,11 @@ def local_today() -> date:
     return datetime.now(UTC).astimezone(_LOCAL).date()
 
 
+def local_date(moment: datetime) -> date:
+    """Calendar day of a UTC timestamp in the operator time zone (day buckets, numbering)."""
+    return moment.astimezone(_LOCAL).date()
+
+
 async def notify(
     session: AsyncSession,
     *,

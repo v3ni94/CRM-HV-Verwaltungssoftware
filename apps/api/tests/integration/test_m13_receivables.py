@@ -236,9 +236,7 @@ def test_receivable_run(client: TestClient, world: World) -> None:
 
     # M13-04: issuing an invoice number is blocked without a configured prefix, and blocked for
     # XRechnung until the VAT status (and, for regelbesteuert, tax data) is entered.
-    assert (
-        client.post(f"{A}/admin-fees/{fee['id']}/invoice-issue", headers=h).status_code == 409
-    )
+    assert client.post(f"{A}/admin-fees/{fee['id']}/invoice-issue", headers=h).status_code == 409
     _ok(
         client.patch(
             "/api/v1/tenant/billing-settings",
@@ -246,9 +244,7 @@ def test_receivable_run(client: TestClient, world: World) -> None:
             headers=h,
         )
     )
-    assert (
-        client.post(f"{A}/admin-fees/{fee['id']}/invoice-issue", headers=h).status_code == 409
-    )
+    assert client.post(f"{A}/admin-fees/{fee['id']}/invoice-issue", headers=h).status_code == 409
     _ok(
         client.patch(
             "/api/v1/tenant/billing-settings",

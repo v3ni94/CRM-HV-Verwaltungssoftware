@@ -34,7 +34,8 @@ export function InvoiceMatchPanel({ invoiceId }: { invoiceId: string }) {
   }
 
   useEffect(() => {
-    load();
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoiceId]);
 
   async function match(withProposal: boolean) {

@@ -4,9 +4,11 @@ Without ``MHVP_DATABASE_URL`` / ``MHVP_MIGRATION_DATABASE_URL`` the tests are sk
 reported as not executed; CI sets ``MHVP_REQUIRE_INTEGRATION=1`` so they fail instead.
 """
 
+import asyncio
 import os
 from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import Any
 
 import pytest
 from alembic import command
@@ -84,3 +86,12 @@ def app_engine(database: Database) -> Iterator[Engine]:
     engine = create_engine(database.app_url)
     yield engine
     engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def world(database: Database, redis_url: str) -> Any:
+    """Shared platform world of test_m2_platform: built once per session so that modules
+    reusing it (OIDC clients) do not re-register the same users."""
+    from tests.integration.test_m2_platform import _build_world, _settings
+
+    return asyncio.run(_build_world(_settings(database, redis_url)))

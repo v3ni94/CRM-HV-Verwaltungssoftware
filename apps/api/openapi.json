@@ -610,13 +610,15 @@
         "enum": [
           "extract_contacts",
           "extract_property",
+          "map_columns",
           "classify_email",
           "propose_posting",
           "extract_invoice",
           "draft_reply",
           "check_statement",
           "answer_question",
-          "summarize"
+          "summarize",
+          "classify_document"
         ],
         "title": "AiTask",
         "type": "string"
@@ -625,7 +627,8 @@
         "enum": [
           "email",
           "internal",
-          "sms"
+          "sms",
+          "whatsapp"
         ],
         "title": "AlertChannel",
         "type": "string"
@@ -1281,6 +1284,21 @@
         "title": "AssigneeIn",
         "type": "object"
       },
+      "AttachInvoiceIn": {
+        "additionalProperties": false,
+        "properties": {
+          "invoice_id": {
+            "format": "uuid",
+            "title": "Invoice Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice_id"
+        ],
+        "title": "AttachInvoiceIn",
+        "type": "object"
+      },
       "AttendanceIn": {
         "additionalProperties": false,
         "properties": {
@@ -1686,6 +1704,20 @@
         "title": "BatchIn",
         "type": "object"
       },
+      "Body_apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post",
+        "type": "object"
+      },
       "Body_flow_import_preview_api_v1_letting_flow_import_preview_post": {
         "properties": {
           "file": {
@@ -1726,6 +1758,20 @@
           "file"
         ],
         "title": "Body_preview_or_apply_api_v1_handover_imports_uprotokoll_post",
+        "type": "object"
+      },
+      "Body_preview_or_apply_api_v1_objektakte_imports_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_or_apply_api_v1_objektakte_imports_post",
         "type": "object"
       },
       "Body_token_api_v1_oidc_token_post": {
@@ -2773,6 +2819,42 @@
         "title": "BuildingOut",
         "type": "object"
       },
+      "BulkDecisionIn": {
+        "properties": {
+          "case_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Case Ids",
+            "type": "array"
+          },
+          "category_id": {
+            "format": "uuid",
+            "title": "Category Id",
+            "type": "string"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          }
+        },
+        "required": [
+          "case_ids",
+          "category_id"
+        ],
+        "title": "BulkDecisionIn",
+        "type": "object"
+      },
       "BulkItem": {
         "additionalProperties": false,
         "properties": {
@@ -2852,6 +2934,16 @@
             "title": "All Day",
             "type": "boolean"
           },
+          "attendees": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Attendees",
+            "type": "array"
+          },
           "ends_at": {
             "anyOf": [
               {
@@ -2875,6 +2967,18 @@
               }
             ],
             "title": "Ends On"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
           },
           "notes": {
             "anyOf": [
@@ -2904,6 +3008,24 @@
             "default": false,
             "title": "Shared",
             "type": "boolean"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_type": {
+            "default": "manual",
+            "pattern": "^(manual|ticket|handover)$",
+            "title": "Source Type",
+            "type": "string"
           },
           "starts_at": {
             "anyOf": [
@@ -2978,8 +3100,45 @@
         "title": "CalendarIn",
         "type": "object"
       },
+      "CalendarInviteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm": {
+            "description": "Muss true sein: ausdrückliche Bestätigung des Nutzers.",
+            "title": "Confirm",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "CalendarInviteIn",
+        "type": "object"
+      },
       "CalendarItem": {
         "properties": {
+          "attendees": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Attendees",
+            "type": "array"
+          },
+          "calendar_event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Event Id"
+          },
           "calendar_label": {
             "anyOf": [
               {
@@ -3046,6 +3205,22 @@
               }
             ],
             "title": "Google Event Id"
+          },
+          "invite_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invite Status"
+          },
+          "is_stale": {
+            "default": false,
+            "title": "Is Stale",
+            "type": "boolean"
           },
           "kind": {
             "title": "Kind",
@@ -3603,6 +3778,83 @@
         "title": "CircularIn",
         "type": "object"
       },
+      "ClassificationPatternType": {
+        "description": "M35 Stufe 3 (docs/plans/M35-objektakte-uebernahme.md section 4, rule stage): the four\npattern kinds the task requires. Only `FILENAME_REGEX` and `TEXT_KEYWORD` have a matching\nseed from the objektakte reference rules (docs/rules/M35-02.md); `SENDER_DOMAIN` and\n`DRIVE_FOLDER` are supported by the schema and service but unseeded until a tenant, or a\nlater stage, adds one.",
+        "enum": [
+          "filename_regex",
+          "text_keyword",
+          "sender_domain",
+          "drive_folder"
+        ],
+        "title": "ClassificationPatternType",
+        "type": "string"
+      },
+      "ClassificationRuleIn": {
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "confidence": {
+            "default": 0.8,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "pattern_type": {
+            "$ref": "#/components/schemas/ClassificationPatternType"
+          },
+          "pattern_value": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Pattern Value",
+            "type": "string"
+          },
+          "priority": {
+            "default": 100,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "target_category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Category Id"
+          },
+          "target_document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Document Type"
+          }
+        },
+        "required": [
+          "name",
+          "pattern_type",
+          "pattern_value"
+        ],
+        "title": "ClassificationRuleIn",
+        "type": "object"
+      },
       "ClockState": {
         "enum": [
           "running",
@@ -4116,7 +4368,8 @@
           "data_sharing",
           "portal_terms",
           "email_delivery",
-          "marketing"
+          "marketing",
+          "whatsapp"
         ],
         "title": "ConsentKind",
         "type": "string"
@@ -5811,6 +6064,72 @@
         "title": "Decision",
         "type": "string"
       },
+      "DecisionIn": {
+        "properties": {
+          "action": {
+            "enum": [
+              "accept_candidate",
+              "set_manually",
+              "reject",
+              "snooze"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "candidate_index": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Index"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          },
+          "snoozed_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snoozed Until"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "DecisionIn",
+        "type": "object"
+      },
       "DeliveryOut": {
         "properties": {
           "attempts": {
@@ -6186,6 +6505,110 @@
           "status"
         ],
         "title": "DepositOut",
+        "type": "object"
+      },
+      "DiagnosisOut": {
+        "properties": {
+          "caldav_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caldav Url"
+          },
+          "carddav_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carddav Url"
+          },
+          "dav_module_likely_not_booked": {
+            "title": "Dav Module Likely Not Booked",
+            "type": "boolean"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosisStepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "webdav_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webdav Url"
+          }
+        },
+        "required": [
+          "steps",
+          "carddav_url",
+          "caldav_url",
+          "webdav_url",
+          "dav_module_likely_not_booked"
+        ],
+        "title": "DiagnosisOut",
+        "type": "object"
+      },
+      "DiagnosisStepOut": {
+        "properties": {
+          "collections": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Collections",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "status",
+          "ok",
+          "note"
+        ],
+        "title": "DiagnosisStepOut",
         "type": "object"
       },
       "DispatchIn": {
@@ -6779,6 +7202,21 @@
         "title": "DueDayRule",
         "type": "string"
       },
+      "DunningMarkSentIn": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "pattern": "^(post|email|portal)$",
+            "title": "Channel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "title": "DunningMarkSentIn",
+        "type": "object"
+      },
       "DunningRunIn": {
         "additionalProperties": false,
         "properties": {
@@ -6797,6 +7235,55 @@
       "DunningSettingsIn": {
         "additionalProperties": false,
         "properties": {
+          "fee_from_level": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee From Level"
+          },
+          "interest_base_rate": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interest Base Rate"
+          },
+          "interest_enabled": {
+            "default": false,
+            "title": "Interest Enabled",
+            "type": "boolean"
+          },
+          "interest_spread": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interest Spread"
+          },
           "levels": {
             "items": {
               "additionalProperties": true,
@@ -6838,6 +7325,37 @@
           "levels"
         ],
         "title": "DunningSettingsIn",
+        "type": "object"
+      },
+      "DunningSettingsPresetIn": {
+        "additionalProperties": false,
+        "properties": {
+          "interest_profile": {
+            "anyOf": [
+              {
+                "pattern": "^(verbraucher|unternehmer)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interest Profile"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          }
+        },
+        "title": "DunningSettingsPresetIn",
         "type": "object"
       },
       "DuplicateCandidate": {
@@ -7543,6 +8061,33 @@
         "title": "ExtraFieldIn",
         "type": "object"
       },
+      "FastTableImportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "FastTableImportIn",
+        "type": "object"
+      },
+      "FastTableImportOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "FastTableImportOut",
+        "type": "object"
+      },
       "FeeIn": {
         "additionalProperties": false,
         "properties": {
@@ -7657,6 +8202,38 @@
           "amounts_per_unit_type"
         ],
         "title": "FeeIn",
+        "type": "object"
+      },
+      "FetchRangeIn": {
+        "additionalProperties": false,
+        "description": "Optional date range for a manual fetch (Stage 2). The provider is never asked to\nfilter by date (docs/integrations/finapi.md, \"zu prüfen\"); the range only bounds what is\nkept from the rows finAPI actually returned -- nothing is synthesized for a gap the\nprovider does not cover.",
+        "properties": {
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          }
+        },
+        "title": "FetchRangeIn",
         "type": "object"
       },
       "FieldOut": {
@@ -7922,6 +8499,17 @@
       "FinApiConfigIn": {
         "additionalProperties": false,
         "properties": {
+          "auto_fetch_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Fetch Enabled"
+          },
           "base_url": {
             "maxLength": 300,
             "minLength": 8,
@@ -7968,6 +8556,11 @@
       },
       "FinApiConfigOut": {
         "properties": {
+          "auto_fetch_enabled": {
+            "default": false,
+            "title": "Auto Fetch Enabled",
+            "type": "boolean"
+          },
           "base_url": {
             "anyOf": [
               {
@@ -8990,6 +9583,11 @@
       "ImmowareConnectionIn": {
         "additionalProperties": false,
         "properties": {
+          "auto_take_over_contacts": {
+            "default": false,
+            "title": "Auto Take Over Contacts",
+            "type": "boolean"
+          },
           "base_url": {
             "anyOf": [
               {
@@ -9074,6 +9672,11 @@
       },
       "ImmowareConnectionOut": {
         "properties": {
+          "auto_take_over_contacts": {
+            "default": false,
+            "title": "Auto Take Over Contacts",
+            "type": "boolean"
+          },
           "base_url": {
             "anyOf": [
               {
@@ -9096,6 +9699,11 @@
             ],
             "title": "Caldav Url"
           },
+          "caldav_url_discovered": {
+            "default": false,
+            "title": "Caldav Url Discovered",
+            "type": "boolean"
+          },
           "carddav_url": {
             "anyOf": [
               {
@@ -9106,6 +9714,11 @@
               }
             ],
             "title": "Carddav Url"
+          },
+          "carddav_url_discovered": {
+            "default": false,
+            "title": "Carddav Url Discovered",
+            "type": "boolean"
           },
           "enabled": {
             "title": "Enabled",
@@ -9138,6 +9751,30 @@
             ],
             "title": "Last Check Ok"
           },
+          "last_diagnosis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Diagnosis"
+          },
+          "last_diagnosis_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Diagnosis At"
+          },
           "last_error": {
             "anyOf": [
               {
@@ -9167,6 +9804,22 @@
           "verify_tls": {
             "title": "Verify Tls",
             "type": "boolean"
+          },
+          "webdav_root_discovered": {
+            "default": false,
+            "title": "Webdav Root Discovered",
+            "type": "boolean"
+          },
+          "webdav_root_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webdav Root Url"
           }
         },
         "required": [
@@ -9318,6 +9971,14 @@
               }
             ],
             "title": "Finished At"
+          },
+          "folder_errors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Folder Errors",
+            "type": "array"
           },
           "id": {
             "format": "uuid",
@@ -10113,6 +10774,80 @@
           "net"
         ],
         "title": "InvoiceLineIn",
+        "type": "object"
+      },
+      "InvoiceMatchOut": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "bank_transaction_id": {
+            "format": "uuid",
+            "title": "Bank Transaction Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "match_basis": {
+            "title": "Match Basis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bank_transaction_id",
+          "match_basis",
+          "amount"
+        ],
+        "title": "InvoiceMatchOut",
+        "type": "object"
+      },
+      "InvoiceMatchResultOut": {
+        "properties": {
+          "invoice_id": {
+            "format": "uuid",
+            "title": "Invoice Id",
+            "type": "string"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/InvoiceMatchOut"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "proposal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrderOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposal_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Note"
+          }
+        },
+        "required": [
+          "invoice_id",
+          "matches"
+        ],
+        "title": "InvoiceMatchResultOut",
         "type": "object"
       },
       "InvoiceReviewIn": {
@@ -13583,6 +14318,28 @@
               }
             ],
             "title": "Mobile Phone"
+          },
+          "portal_access": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portal Access"
+          },
+          "portal_access_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portal Access Reason"
           },
           "roles": {
             "items": {
@@ -17191,6 +17948,28 @@
         "title": "ProposalOut",
         "type": "object"
       },
+      "ProposePaymentIn": {
+        "additionalProperties": false,
+        "description": "Only used when `match` found no candidate transaction; creates a draft `PaymentOrder`\n(gate G2 stays closed, \"vorbereitet, nicht ausgeführt\").",
+        "properties": {
+          "bank_account_id": {
+            "format": "uuid",
+            "title": "Bank Account Id",
+            "type": "string"
+          },
+          "execution_date": {
+            "format": "date",
+            "title": "Execution Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bank_account_id",
+          "execution_date"
+        ],
+        "title": "ProposePaymentIn",
+        "type": "object"
+      },
       "ProspectIn": {
         "additionalProperties": false,
         "properties": {
@@ -18336,6 +19115,29 @@
         "title": "ReportType",
         "type": "string"
       },
+      "RequiredDocumentIn": {
+        "properties": {
+          "document_category_id": {
+            "format": "uuid",
+            "title": "Document Category Id",
+            "type": "string"
+          },
+          "management_type": {
+            "$ref": "#/components/schemas/ManagementType"
+          },
+          "mandatory": {
+            "default": true,
+            "title": "Mandatory",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "management_type",
+          "document_category_id"
+        ],
+        "title": "RequiredDocumentIn",
+        "type": "object"
+      },
       "RetentionProfileIn": {
         "additionalProperties": false,
         "properties": {
@@ -19000,6 +19802,102 @@
           "created_by"
         ],
         "title": "RuleOut",
+        "type": "object"
+      },
+      "RulePatch": {
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "pattern_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClassificationPatternType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pattern_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern Value"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "target_category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Category Id"
+          },
+          "target_document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Document Type"
+          }
+        },
+        "title": "RulePatch",
         "type": "object"
       },
       "RunIn": {
@@ -20228,6 +21126,119 @@
         "title": "SyncStatus",
         "type": "string"
       },
+      "TakeOverContactsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Ids"
+          }
+        },
+        "title": "TakeOverContactsIn",
+        "type": "object"
+      },
+      "TakeOverContactsOut": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "linked": {
+            "title": "Linked",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created",
+          "linked",
+          "skipped",
+          "total"
+        ],
+        "title": "TakeOverContactsOut",
+        "type": "object"
+      },
+      "TakeOverDocumentOut": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "created"
+        ],
+        "title": "TakeOverDocumentOut",
+        "type": "object"
+      },
+      "TakeOverFolderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "folder_prefix": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Folder Prefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder_prefix"
+        ],
+        "title": "TakeOverFolderIn",
+        "type": "object"
+      },
+      "TakeOverFolderOut": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "linked": {
+            "title": "Linked",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created",
+          "linked",
+          "failed",
+          "total"
+        ],
+        "title": "TakeOverFolderOut",
+        "type": "object"
+      },
       "TeamIn": {
         "additionalProperties": false,
         "properties": {
@@ -20361,6 +21372,287 @@
           "active"
         ],
         "title": "TemplateOut",
+        "type": "object"
+      },
+      "TenantBillingSettingsOut": {
+        "description": "Secrets are write only: vat_id and tax_number are returned masked (last 4 chars).",
+        "properties": {
+          "datev_account_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Account Length"
+          },
+          "datev_chart_of_accounts": {
+            "title": "Datev Chart Of Accounts",
+            "type": "string"
+          },
+          "datev_client_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Client Number"
+          },
+          "datev_consultant_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Consultant Number"
+          },
+          "datev_fiscal_year_start_month": {
+            "title": "Datev Fiscal Year Start Month",
+            "type": "integer"
+          },
+          "invoice_prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Prefix"
+          },
+          "kleinunternehmer_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kleinunternehmer Note"
+          },
+          "leitweg_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leitweg Id"
+          },
+          "tax_number_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Number Masked"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "vat_id_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Id Masked"
+          },
+          "vat_status": {
+            "title": "Vat Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "invoice_prefix",
+          "vat_status",
+          "vat_id_masked",
+          "tax_number_masked",
+          "leitweg_id",
+          "kleinunternehmer_note",
+          "datev_consultant_number",
+          "datev_client_number",
+          "datev_chart_of_accounts",
+          "datev_account_length",
+          "datev_fiscal_year_start_month",
+          "version"
+        ],
+        "title": "TenantBillingSettingsOut",
+        "type": "object"
+      },
+      "TenantBillingSettingsPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "datev_account_length": {
+            "anyOf": [
+              {
+                "maximum": 8.0,
+                "minimum": 4.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Account Length"
+          },
+          "datev_chart_of_accounts": {
+            "anyOf": [
+              {
+                "enum": [
+                  "unset",
+                  "skr03",
+                  "skr04"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Chart Of Accounts"
+          },
+          "datev_client_number": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Client Number"
+          },
+          "datev_consultant_number": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Consultant Number"
+          },
+          "datev_fiscal_year_start_month": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Fiscal Year Start Month"
+          },
+          "invoice_prefix": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Prefix"
+          },
+          "kleinunternehmer_note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kleinunternehmer Note"
+          },
+          "leitweg_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leitweg Id"
+          },
+          "tax_number": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Number"
+          },
+          "vat_id": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Id"
+          },
+          "vat_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "unset",
+                  "regelbesteuert",
+                  "kleinunternehmer"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Status"
+          }
+        },
+        "title": "TenantBillingSettingsPatch",
         "type": "object"
       },
       "TenantCreate": {
@@ -22432,6 +23724,90 @@
         "title": "WebhookPatch",
         "type": "object"
       },
+      "WhatsAppConfigIn": {
+        "additionalProperties": false,
+        "properties": {
+          "access_token": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nur beim Setzen übertragen; leer lassen behält den gespeicherten Wert, leerer String löscht ihn. Wird nie zurückgegeben.",
+            "title": "Access Token"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "phone_number_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Number Id"
+          },
+          "sms_fallback": {
+            "default": true,
+            "title": "Sms Fallback",
+            "type": "boolean"
+          },
+          "template_language": {
+            "default": "de",
+            "maxLength": 10,
+            "title": "Template Language",
+            "type": "string"
+          },
+          "template_names": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Template Names",
+            "type": "object"
+          },
+          "whatsapp_business_account_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Whatsapp Business Account Id"
+          }
+        },
+        "title": "WhatsAppConfigIn",
+        "type": "object"
+      },
+      "WhatsAppTestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "to": {
+            "maxLength": 40,
+            "minLength": 3,
+            "pattern": "^\\+?[0-9 ()/-]+$",
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "WhatsAppTestIn",
+        "type": "object"
+      },
       "WorkOrderIn": {
         "additionalProperties": false,
         "properties": {
@@ -23546,6 +24922,69 @@
         ]
       }
     },
+    "/api/v1/accounting/admin-fees/{fee_id}/invoice-issue": {
+      "post": {
+        "description": "Allocates the gapless PREFIX-JJJJ-000001 invoice number (M13-04) and blocks when the\ntenant's VAT status or tax data required for XRechnung is missing.",
+        "operationId": "fee_issue_api_v1_accounting_admin_fees__fee_id__invoice_issue_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fee_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fee Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "invoice_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Invoice Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Fee Issue Api V1 Accounting Admin Fees  Fee Id  Invoice Issue Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Honorarrechnung als XRechnung ausstellen (Rechnungsnummer, USt-Prüfung)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/accounting/admin-fees/{fee_id}/invoice-preview": {
       "get": {
         "description": "Draft only: issuing an invoice (XRechnung) needs the tax data of the tenant (M13-04).",
@@ -23587,6 +25026,149 @@
           }
         },
         "summary": "Honorarrechnung als Entwurf berechnen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/dunning-cases/{case_id}/mahnbescheid-vorbereitung": {
+      "get": {
+        "operationId": "dunning_get_mahnbescheid_api_v1_accounting_dunning_cases__case_id__mahnbescheid_vorbereitung_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dunning Get Mahnbescheid Api V1 Accounting Dunning Cases  Case Id  Mahnbescheid Vorbereitung Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mahnbescheid-Vorbereitung (Export für Anwalt oder Online-Mahnantrag)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "operationId": "dunning_prepare_mahnbescheid_api_v1_accounting_dunning_cases__case_id__mahnbescheid_vorbereitung_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dunning Prepare Mahnbescheid Api V1 Accounting Dunning Cases  Case Id  Mahnbescheid Vorbereitung Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mahnbescheid vorbereiten (nach letzter Stufe)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/dunning-cases/{case_id}/mark-sent": {
+      "post": {
+        "operationId": "dunning_mark_sent_api_v1_accounting_dunning_cases__case_id__mark_sent_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DunningMarkSentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dunning Mark Sent Api V1 Accounting Dunning Cases  Case Id  Mark Sent Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mahnung als versendet markieren (M16-09: nur so kann die Stufe steigen)",
         "tags": [
           "Buchhaltung"
         ]
@@ -23774,6 +25356,56 @@
       }
     },
     "/api/v1/accounting/dunning-settings": {
+      "get": {
+        "operationId": "get_dunning_settings_api_v1_accounting_dunning_settings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Dunning Settings Api V1 Accounting Dunning Settings Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mahnstufen, Gebühren und Zins lesen (Mandant oder Objekt)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
       "put": {
         "operationId": "put_dunning_settings_api_v1_accounting_dunning_settings_put",
         "requestBody": {
@@ -23810,7 +25442,50 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Mahnstufen (ohne Gebühren und Zinsen bis V7)",
+        "summary": "Mahnstufen, Gebühren (je Stufe, nur mit Betrag) und Zins",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/dunning-settings/presets": {
+      "post": {
+        "operationId": "post_dunning_settings_presets_api_v1_accounting_dunning_settings_presets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DunningSettingsPresetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Dunning Settings Presets Api V1 Accounting Dunning Settings Presets Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlagswerte laden (Betreiberentscheidung 25.09.2026, V7)",
         "tags": [
           "Buchhaltung"
         ]
@@ -25233,7 +26908,7 @@
     },
     "/api/v1/accounting/ledgers/{ledger_id}/exports/datev": {
       "post": {
-        "description": "The DATEV format version and the consultant/client numbers are not specified (M18-01).",
+        "description": "Emits the DATEV EXTF Buchungsstapel header only once consultant_number, client_number\nand chart_of_accounts are set (operator decision 25.09.2026, M18-01). Otherwise rejects with\nthe existing message.",
         "operationId": "export_datev_api_v1_accounting_ledgers__ledger_id__exports_datev_post",
         "parameters": [
           {
@@ -25245,13 +26920,37 @@
               "title": "Ledger Id",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
           }
         ],
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Export Datev Api V1 Accounting Ledgers  Ledger Id  Exports Datev Post",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -25267,7 +26966,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "DATEV-Buchungsstapel (nicht freigegeben)",
+        "summary": "DATEV-Buchungsstapel (nur mit hinterlegten Beraterdaten)",
         "tags": [
           "Buchhaltung"
         ]
@@ -26565,6 +28264,67 @@
           }
         },
         "summary": "Nachricht senden",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/fast-table-import": {
+      "get": {
+        "operationId": "get_fast_table_import_api_v1_ai_fast_table_import_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FastTableImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Schneller Tabellenimport (Einstellung)",
+        "tags": [
+          "KI-Assistent"
+        ]
+      },
+      "put": {
+        "description": "Deterministic CSV/XLSX contact import (M7-06, docs/rules/M7-06.md): on by default. Off\nfalls every ``extract_contacts`` run back to sending every row through the LLM.",
+        "operationId": "put_fast_table_import_api_v1_ai_fast_table_import_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FastTableImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FastTableImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schnellen Tabellenimport setzen",
         "tags": [
           "KI-Assistent"
         ]
@@ -27870,7 +29630,7 @@
     },
     "/api/v1/banking/finapi/accounts/{link_id}/fetch": {
       "post": {
-        "description": "A real click only: this never runs on a schedule (master prompt section 2). The fetch\nitself completes asynchronously in the existing Celery worker (`banking.finapi_fetch`).",
+        "description": "A real click only: this never runs on a schedule by itself (master prompt section 2;\nthe tenant-wide scheduled fetch, Stage 2, is a separate opt-in flag, see `/config`). The\nfetch itself completes asynchronously in the existing Celery worker\n(`banking.finapi_fetch`); `body.since`/`body.until` bound what is kept, also historical,\nas far as the provider actually delivers (rule 0.1.3).",
         "operationId": "fetch_finapi_transactions_api_v1_banking_finapi_accounts__link_id__fetch_post",
         "parameters": [
           {
@@ -27884,6 +29644,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FetchRangeIn",
+                "default": {}
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -27906,7 +29676,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Umsätze abrufen (asynchron, nur auf Klick)",
+        "summary": "Umsätze abrufen (asynchron, nur auf Klick, mit Zeitraum)",
         "tags": [
           "Bank"
         ]
@@ -28125,6 +29895,64 @@
         ]
       }
     },
+    "/api/v1/banking/finapi/connections/{finapi_connection_id}/fetch": {
+      "post": {
+        "description": "Per bank fetch (Stage 2): queues one run per account already assigned to a Buchungskreis\nunder this connection; unassigned accounts are skipped (nothing to post transactions to\nyet), same date-range semantics as the per-account endpoint.",
+        "operationId": "fetch_finapi_connection_transactions_api_v1_banking_finapi_connections__finapi_connection_id__fetch_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "finapi_connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Finapi Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FetchRangeIn",
+                "default": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SyncRunOut"
+                  },
+                  "title": "Response Fetch Finapi Connection Transactions Api V1 Banking Finapi Connections  Finapi Connection Id  Fetch Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umsätze für alle zugeordneten Konten dieser Bank abrufen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
     "/api/v1/banking/finapi/connections/{finapi_connection_id}/reauthorize": {
       "post": {
         "operationId": "reauthorize_finapi_connection_api_v1_banking_finapi_connections__finapi_connection_id__reauthorize_post",
@@ -28204,6 +30032,114 @@
           }
         },
         "summary": "Kontoauszug (CAMT.053) importieren",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/invoice-matching/{invoice_id}": {
+      "get": {
+        "operationId": "get_invoice_matches_api_v1_banking_invoice_matching__invoice_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InvoiceMatchOut"
+                  },
+                  "title": "Response Get Invoice Matches Api V1 Banking Invoice Matching  Invoice Id  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verknüpfte Bankumsätze einer Rechnung (nur lesen)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/invoice-matching/{invoice_id}/match": {
+      "post": {
+        "description": "Finds and links matching imported bank transactions (evidence only, never books by\nitself). When nothing matches and `body` names a bank account and execution date, a draft\npayment PROPOSAL is created via the existing `mhvp.banking.payments.order_from_invoice`;\ngate G2 stays closed, so this never submits or initiates a payment (rule 0.1.6).",
+        "operationId": "match_invoice_transactions_api_v1_banking_invoice_matching__invoice_id__match_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ProposePaymentIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceMatchResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rechnung mit Bankumsätzen abgleichen (Betrag + Rechnungsnummer/IBAN)",
         "tags": [
           "Bank"
         ]
@@ -35863,6 +37799,27 @@
         ]
       }
     },
+    "/api/v1/immoware/connection/diagnose": {
+      "post": {
+        "operationId": "diagnose_connection_api_v1_immoware_connection_diagnose_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosisOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Verbindung diagnostizieren (RFC 6764/4918 Discovery)",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
     "/api/v1/immoware/contacts": {
       "get": {
         "operationId": "list_contacts_api_v1_immoware_contacts_get",
@@ -35942,6 +37899,47 @@
           }
         },
         "summary": "Immoware24-Kontakte",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/contacts/take-over": {
+      "post": {
+        "operationId": "take_over_contacts_api_v1_immoware_contacts_take_over_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TakeOverContactsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOverContactsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Alle unverknuepften Kontakte uebernehmen",
         "tags": [
           "Immoware24"
         ]
@@ -36127,6 +38125,47 @@
         ]
       }
     },
+    "/api/v1/immoware/documents/take-over-folder": {
+      "post": {
+        "operationId": "take_over_documents_in_folder_api_v1_immoware_documents_take_over_folder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TakeOverFolderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOverFolderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ordner uebernehmen",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
     "/api/v1/immoware/documents/{document_id}/file": {
       "get": {
         "operationId": "download_document_api_v1_immoware_documents__document_id__file_get",
@@ -36163,6 +38202,49 @@
           }
         },
         "summary": "Datei herunterladen (Proxy)",
+        "tags": [
+          "Immoware24"
+        ]
+      }
+    },
+    "/api/v1/immoware/documents/{document_id}/take-over": {
+      "post": {
+        "operationId": "take_over_document_api_v1_immoware_documents__document_id__take_over_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOverDocumentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Als CRM-Dokument uebernehmen",
         "tags": [
           "Immoware24"
         ]
@@ -40214,6 +42296,859 @@
         ]
       }
     },
+    "/api/v1/objektakte/classification-rules": {
+      "get": {
+        "operationId": "list_rules_api_v1_objektakte_classification_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Rules Api V1 Objektakte Classification Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Klassifikationsregeln auflisten",
+        "tags": [
+          "objektakte-rules"
+        ]
+      },
+      "post": {
+        "operationId": "create_rule_api_v1_objektakte_classification_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassificationRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Rule Api V1 Objektakte Classification Rules Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Klassifikationsregel anlegen",
+        "tags": [
+          "objektakte-rules"
+        ]
+      }
+    },
+    "/api/v1/objektakte/classification-rules/{rule_id}": {
+      "delete": {
+        "operationId": "delete_rule_api_v1_objektakte_classification_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Klassifikationsregel löschen",
+        "tags": [
+          "objektakte-rules"
+        ]
+      },
+      "patch": {
+        "operationId": "update_rule_api_v1_objektakte_classification_rules__rule_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RulePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Rule Api V1 Objektakte Classification Rules  Rule Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Klassifikationsregel ändern oder aktivieren/deaktivieren",
+        "tags": [
+          "objektakte-rules"
+        ]
+      }
+    },
+    "/api/v1/objektakte/imports": {
+      "post": {
+        "description": "`mode=preview` (default) only parses and reports, changes nothing. `mode=apply` creates\nthe rows; call it only after reviewing the preview, since the operator (not this endpoint)\ndecides whether the unmatched properties and duplicates it reports are acceptable.",
+        "operationId": "preview_or_apply_api_v1_objektakte_imports_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "preview",
+              "pattern": "^(preview|apply)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_or_apply_api_v1_objektakte_imports_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Preview Or Apply Api V1 Objektakte Imports Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "objektakte-Export prüfen oder übernehmen",
+        "tags": [
+          "objektakte"
+        ]
+      }
+    },
+    "/api/v1/objektakte/imports/{import_run_id}": {
+      "get": {
+        "operationId": "get_import_api_v1_objektakte_imports__import_run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Import Api V1 Objektakte Imports  Import Run Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ergebnis eines objektakte-Imports abrufen",
+        "tags": [
+          "objektakte"
+        ]
+      }
+    },
+    "/api/v1/objektakte/imports/{import_run_id}/ocr-cache": {
+      "post": {
+        "description": "Accepts a ZIP of the objektakte `/data/ocr-cache` directory (plan section 4 item 2):\nexactly one text file per cache entry, matched to a migrated `Document` by\n`source_meta[\"ocr_cache_key\"]` (set by the document importer from\n`documents_document.ocr_cache_key`). A match sets `ocr_text` and marks the document\n`extracted`, so full text search works without a re-OCR of the ~26,000 existing documents\n(plan section 5). Preview thumbnails are out of scope for this stage (M35-02, plan section 4\nStufe 2 acceptance note); the CRM renders no document preview at all yet, so nothing is lost\nby not copying `/data/previews` here either.\n\nThe key is the cache file's name without extension (objektakte writes the key verbatim as\nthe file name, `ocr_cache_key.txt` or similar); an unmatched key is reported, never silently\ndropped, since it may point at a document not yet imported.",
+        "operationId": "apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Apply Ocr Cache Api V1 Objektakte Imports  Import Run Id  Ocr Cache Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "OCR-Textcache (objektakte /data/ocr-cache) übernehmen",
+        "tags": [
+          "objektakte"
+        ]
+      }
+    },
+    "/api/v1/objektakte/properties/{property_id}/completeness": {
+      "get": {
+        "operationId": "get_completeness_api_v1_objektakte_properties__property_id__completeness_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Completeness Api V1 Objektakte Properties  Property Id  Completeness Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vollständigkeit der Objektakte prüfen",
+        "tags": [
+          "objektakte-completeness"
+        ]
+      }
+    },
+    "/api/v1/objektakte/properties/{property_id}/completeness/nachforderungsschreiben": {
+      "post": {
+        "operationId": "draft_nachforderungsschreiben_api_v1_objektakte_properties__property_id__completeness_nachforderungsschreiben_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Draft Nachforderungsschreiben Api V1 Objektakte Properties  Property Id  Completeness Nachforderungsschreiben Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nachforderungsschreiben als Entwurf erzeugen",
+        "tags": [
+          "objektakte-completeness"
+        ]
+      }
+    },
+    "/api/v1/objektakte/required-documents": {
+      "get": {
+        "operationId": "list_required_documents_api_v1_objektakte_required_documents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "management_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ManagementType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Management Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Required Documents Api V1 Objektakte Required Documents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pflichtunterlagen je Verwaltungsart auflisten",
+        "tags": [
+          "objektakte-completeness"
+        ]
+      },
+      "post": {
+        "operationId": "upsert_required_document_api_v1_objektakte_required_documents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequiredDocumentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Upsert Required Document Api V1 Objektakte Required Documents Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pflichtunterlage anlegen oder ändern",
+        "tags": [
+          "objektakte-completeness"
+        ]
+      }
+    },
+    "/api/v1/objektakte/required-documents/{required_id}": {
+      "delete": {
+        "operationId": "delete_required_document_api_v1_objektakte_required_documents__required_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "required_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Required Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pflichtunterlage entfernen",
+        "tags": [
+          "objektakte-completeness"
+        ]
+      }
+    },
+    "/api/v1/objektakte/review": {
+      "get": {
+        "operationId": "list_cases_api_v1_objektakte_review_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "in_progress",
+                    "resolved",
+                    "dismissed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "priority_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Priority Min"
+            }
+          },
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Cases Api V1 Objektakte Review Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüffälle auflisten",
+        "tags": [
+          "objektakte-review"
+        ]
+      }
+    },
+    "/api/v1/objektakte/review/bulk-decide": {
+      "post": {
+        "operationId": "bulk_decide_api_v1_objektakte_review_bulk_decide_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Bulk Decide Api V1 Objektakte Review Bulk Decide Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrere Prüffälle mit derselben Klasse entscheiden",
+        "tags": [
+          "objektakte-review"
+        ]
+      }
+    },
+    "/api/v1/objektakte/review/{case_id}": {
+      "get": {
+        "operationId": "get_case_api_v1_objektakte_review__case_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Case Api V1 Objektakte Review  Case Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüffall abrufen",
+        "tags": [
+          "objektakte-review"
+        ]
+      }
+    },
+    "/api/v1/objektakte/review/{case_id}/ask-ai": {
+      "post": {
+        "description": "M35 Stufe 3 part 2: masked filename plus OCR text only (rule 0.1.13, no IBAN, e-mail,\nphone number or probable name ever leaves the CRM); the model's answer is written back as\na proposal only, in `document.source_meta[\"classification\"]` (`stage=\"ai\"`) — never\napplied to `document.category_id` (rule 0.1.6). Only for an open case with a document.",
+        "operationId": "ask_ai_api_v1_objektakte_review__case_id__ask_ai_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ask Ai Api V1 Objektakte Review  Case Id  Ask Ai Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Vorschlag anfordern (Stufe 3 von drei)",
+        "tags": [
+          "objektakte-review"
+        ]
+      }
+    },
+    "/api/v1/objektakte/review/{case_id}/decide": {
+      "post": {
+        "operationId": "decide_case_api_v1_objektakte_review__case_id__decide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Decide Case Api V1 Objektakte Review  Case Id  Decide Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüffall entscheiden",
+        "tags": [
+          "objektakte-review"
+        ]
+      }
+    },
     "/api/v1/oidc/authorize": {
       "get": {
         "operationId": "authorize_api_v1_oidc_authorize_get",
@@ -41692,6 +44627,33 @@
           }
         },
         "summary": "Eigene Übergabeprotokolle",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/protocols": {
+      "get": {
+        "description": "List of every protocol of the tenant for staff with \"handover:read\"; minimal fields\nonly, the full record still goes through the participant/staff detail path below. External\nportal users never reach this endpoint (no tenant wide grant, no staff permission set).",
+        "operationId": "list_protocols_staff_api_v1_portal_handover_protocols_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Protocols Staff Api V1 Portal Handover Protocols Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Übergabeprotokolle (Mitarbeiter)",
         "tags": [
           "Portal"
         ]
@@ -45598,6 +48560,113 @@
         ]
       }
     },
+    "/api/v1/sla/whatsapp-config": {
+      "get": {
+        "operationId": "get_whatsapp_config_endpoint_api_v1_sla_whatsapp_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Whatsapp Config Endpoint Api V1 Sla Whatsapp Config Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "WhatsApp-Konfiguration des Mandanten (ohne Secret)",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "put": {
+        "operationId": "put_whatsapp_config_api_v1_sla_whatsapp_config_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppConfigIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Whatsapp Config Api V1 Sla Whatsapp Config Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "WhatsApp-Konfiguration einrichten oder ändern",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/whatsapp-config/test": {
+      "post": {
+        "operationId": "send_whatsapp_test_api_v1_sla_whatsapp_config_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppTestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Send Whatsapp Test Api V1 Sla Whatsapp Config Test Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Testnachricht (freigegebene Vorlage) an eine Mitarbeiter-Mobilnummer senden",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
     "/api/v1/statements": {
       "get": {
         "operationId": "list_statements_api_v1_statements_get",
@@ -46250,6 +49319,84 @@
         ]
       }
     },
+    "/api/v1/tenant/billing-settings": {
+      "get": {
+        "operationId": "get_billing_settings_api_v1_tenant_billing_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantBillingSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rechnungsstellung und Steuer",
+        "tags": [
+          "Mandant"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_billing_settings_api_v1_tenant_billing_settings_patch",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantBillingSettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantBillingSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rechnungsstellung und Steuer ändern",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/tenant/branding": {
       "get": {
         "description": "Public for portals: resolved from the Host header (3.3); with a token from its tenant.",
@@ -46675,6 +49822,104 @@
           }
         },
         "summary": "Rollen eines Mitglieds setzen",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/portal-role-permissions": {
+      "get": {
+        "operationId": "get_portal_role_permissions_api_v1_tenant_portal_role_permissions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Portal Role Permissions Api V1 Tenant Portal Role Permissions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Portalrechte je Rolle",
+        "tags": [
+          "Mandant"
+        ]
+      },
+      "put": {
+        "description": "Replaces the tenant's overrides (a role code missing from ``body`` falls back to the\nbuilt in default). Operator decision 25.09.2026 (M2-08 entschieden).",
+        "operationId": "put_portal_role_permissions_api_v1_tenant_portal_role_permissions_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Portal Role Permissions Api V1 Tenant Portal Role Permissions Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalrechte je Rolle ändern",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/portal-role-permissions/resync": {
+      "post": {
+        "description": "Applies the current matrix to every existing staff access grant of the tenant; grants of\nexternal portal users (tenants, owners, providers, handover participants) are untouched,\nsince only ``legal_basis == \"staff_access\"`` accounts are considered. Also creates the\nmissing staff grant for a member who has none yet (e.g. a role change out of the exempt\nset). Operator decision 25.09.2026 (M2-08 entschieden).",
+        "operationId": "resync_portal_role_permissions_api_v1_tenant_portal_role_permissions_resync_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Resync Portal Role Permissions Api V1 Tenant Portal Role Permissions Resync Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Portalrechte auf bestehende Zugänge anwenden",
         "tags": [
           "Mandant"
         ]
@@ -47293,18 +50538,20 @@
         "operationId": "list_tickets_api_v1_tickets_get",
         "parameters": [
           {
+            "description": "Ein Status oder mehrere, kommagetrennt (z. B. new,in_progress)",
             "in": "query",
             "name": "status",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/TicketStatus"
+                  "type": "string"
                 },
                 {
                   "type": "null"
                 }
               ],
+              "description": "Ein Status oder mehrere, kommagetrennt (z. B. new,in_progress)",
               "title": "Status"
             }
           },
@@ -47360,6 +50607,131 @@
             }
           },
           {
+            "description": "Rolle des verknüpften Kontakts zur Einheit: owner oder tenant",
+            "in": "query",
+            "name": "contact_role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rolle des verknüpften Kontakts zur Einheit: owner oder tenant",
+              "title": "Contact Role"
+            }
+          },
+          {
+            "description": "Bearbeiter, primär oder zusätzlich zugewiesen",
+            "in": "query",
+            "name": "assignee_user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearbeiter, primär oder zusätzlich zugewiesen",
+              "title": "Assignee User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "priority",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Priority"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Priority"
+            }
+          },
+          {
+            "description": "Erstellt ab (inklusive)",
+            "in": "query",
+            "name": "created_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Erstellt ab (inklusive)",
+              "title": "Created From"
+            }
+          },
+          {
+            "description": "Erstellt bis (inklusive)",
+            "in": "query",
+            "name": "created_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Erstellt bis (inklusive)",
+              "title": "Created To"
+            }
+          },
+          {
             "in": "query",
             "name": "mine",
             "required": false,
@@ -47370,7 +50742,7 @@
             }
           },
           {
-            "description": "Nummer oder Titel",
+            "description": "Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse",
             "in": "query",
             "name": "q",
             "required": false,
@@ -47384,7 +50756,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Nummer oder Titel",
+              "description": "Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse",
               "title": "Q"
             }
           },
@@ -48031,6 +51403,62 @@
         ]
       }
     },
+    "/api/v1/tickets/{ticket_id}/attach-invoice": {
+      "post": {
+        "description": "M11-finapi Stage 3: marks this ticket as an invoice ticket (`category = \"invoice\"`) and\nfiles the invoice's original document into the property's Google Drive year folder\n(`mhvp.documents.property_filing`, \"<Objektordner>/<Jahr>\"). Requires the ticket's own\nproperty and the invoice's original document; nothing is invented when either is\nmissing. Idempotent: a repeated call with the same invoice does not re-upload the\ndocument, only re-confirms the link.",
+        "operationId": "attach_invoice_api_v1_tickets__ticket_id__attach_invoice_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachInvoiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Attach Invoice Api V1 Tickets  Ticket Id  Attach Invoice Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rechnung zuordnen (Kategorie Rechnung, Jahresablage im Objektordner)",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
     "/api/v1/tickets/{ticket_id}/checklist/{key}": {
       "patch": {
         "operationId": "toggle_checklist_item_api_v1_tickets__ticket_id__checklist__key__patch",
@@ -48495,6 +51923,90 @@
         ]
       }
     },
+    "/api/v1/whatsapp/webhook": {
+      "get": {
+        "operationId": "verify_api_v1_whatsapp_webhook_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "hub.mode",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Hub.Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hub.verify_token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Hub.Verify Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hub.challenge",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Hub.Challenge",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Webhook-Verifizierung (Meta Cloud API)",
+        "tags": [
+          "WhatsApp Webhook"
+        ]
+      },
+      "post": {
+        "operationId": "receive_api_v1_whatsapp_webhook_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Receive Api V1 Whatsapp Webhook Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Statuswebhook (Meta Cloud API)",
+        "tags": [
+          "WhatsApp Webhook"
+        ]
+      }
+    },
     "/api/v1/work-orders": {
       "post": {
         "operationId": "create_order_api_v1_work_orders_post",
@@ -48846,6 +52358,67 @@
           }
         },
         "summary": "Google-Termin ändern",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/calendar/google/{source}/{event_id}/invite": {
+      "post": {
+        "operationId": "send_invite_api_v1_workspace_calendar_google__source___event_id__invite_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "title": "Source",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarInviteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einladung an externe Teilnehmer senden (nur nach Bestätigung)",
         "tags": [
           "Arbeitsplatz"
         ]

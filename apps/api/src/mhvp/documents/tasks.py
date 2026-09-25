@@ -7,6 +7,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import httpx
+from botocore.exceptions import ClientError
 from celery import shared_task
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -136,7 +137,7 @@ async def mirror_tenant(
                     mirror.external_ref, mirror.status = resolved, MirrorStatus.DONE
             mirror.last_error = None
             mirror.next_attempt_at = now + timedelta(seconds=60)
-        except (DmsError, httpx.HTTPError, ValueError, KeyError) as exc:
+        except (DmsError, httpx.HTTPError, ClientError, ValueError, KeyError) as exc:
             message = str(exc) if isinstance(exc, DmsError) else type(exc).__name__
             mirror.last_error = message[:500]
             index = min(mirror.attempts - 1, len(BACKOFF_SECONDS) - 1)

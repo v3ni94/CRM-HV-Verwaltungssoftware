@@ -19,7 +19,6 @@ from tests.integration.test_m2_platform import (
     World,
     bearer,
     login,
-    world,  # noqa: F401  (fixture)
 )
 from tests.integration.test_m2_platform import _settings as base_settings
 
@@ -80,7 +79,7 @@ def _authorize(client: TestClient, headers: dict[str, str], client_id: str, veri
 
 def test_cli_registers_confidential_client_for_the_code_flow(
     client: TestClient,
-    world: World,  # noqa: F811
+    world: World,
     database: Database,
     redis_url: str,
     cleanup: None,

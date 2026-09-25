@@ -279,13 +279,13 @@ async def dashboard_stats(
             k: {"created": 0, "resolved": 0} for k in bucket_order
         }
         for t in created_in_range:
-            key = _bucket_key(t.created_at.date(), range)
+            key = _bucket_key(services.local_date(t.created_at), range)
             buckets.setdefault(key, {"created": 0, "resolved": 0})["created"] += 1
         for t in done_in_range:
             resolved_at = t.resolved_at
             if resolved_at is None:
                 continue
-            key = _bucket_key(resolved_at.date(), range)
+            key = _bucket_key(services.local_date(resolved_at), range)
             buckets.setdefault(key, {"created": 0, "resolved": 0})["resolved"] += 1
 
         by_assignee: dict[uuid.UUID, dict[str, Any]] = {}

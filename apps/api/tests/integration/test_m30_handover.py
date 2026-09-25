@@ -11,7 +11,7 @@ import asyncio
 import base64
 import io
 from collections.abc import Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -25,6 +25,7 @@ from reportlab.pdfgen.canvas import Canvas
 
 from mhvp.main import create_app
 from mhvp.platform import services
+from mhvp.workspace.services import local_today
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m6_documents import COMPANY
@@ -155,7 +156,7 @@ def test_handover_flow(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "m30admin"))
     _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h))
     _, unit_id = _unit(client, h)
-    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    stamp = local_today().strftime("%Y%m%d")
 
     # Prefill from unit and property: the unit has no own address, the property address wins.
     pre = _ok(client.get(f"{H}/prefill", params={"unit_id": unit_id}, headers=h))
@@ -450,7 +451,6 @@ def test_handover_portal_flow(client: TestClient, world: World) -> None:
     after the completion and expires after READ_DAYS; a resync keeps the grant, a revoke ends
     it; portal users never reach the CRM API."""
     from mhvp.handover.portal import READ_DAYS
-    from mhvp.workspace.services import local_today
 
     h = bearer(login(client, world, "m30admin"))
     _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h))

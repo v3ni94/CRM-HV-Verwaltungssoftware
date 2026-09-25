@@ -30,8 +30,8 @@ async def _world(settings: Any) -> World:
         a, _ = await services.provision_tenant(factory, slug=f"sla-{RUN}", name=f"SLA {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
         for name, role in [
-            ("m21admin", "tenant_admin"),
-            ("m21read", "read_only"),
+            ("slaadmin", "tenant_admin"),
+            ("slaread", "read_only"),
         ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
@@ -62,8 +62,8 @@ def _ok(response: Any, status: int = 200) -> Any:
 
 
 def test_ticket_creation_starts_clock_and_rules_govern_it(client: TestClient, world: World) -> None:
-    h = bearer(login(client, world, "m21admin"))
-    reader = bearer(login(client, world, "m21read"))
+    h = bearer(login(client, world, "slaadmin"))
+    reader = bearer(login(client, world, "slaread"))
 
     rule = _ok(
         client.post(
@@ -99,7 +99,7 @@ def test_ticket_creation_starts_clock_and_rules_govern_it(client: TestClient, wo
             json={
                 "step_no": 1,
                 "after_minutes": 0,
-                "notify_user_ids": [str(world.users["m21admin"])],
+                "notify_user_ids": [str(world.users["slaadmin"])],
                 "channel": "internal",
             },
             headers=h,
@@ -138,7 +138,7 @@ def test_ticket_creation_starts_clock_and_rules_govern_it(client: TestClient, wo
 
 
 def test_on_call_and_calendar(client: TestClient, world: World) -> None:
-    h = bearer(login(client, world, "m21admin"))
+    h = bearer(login(client, world, "slaadmin"))
     from datetime import UTC, datetime, timedelta
 
     now = datetime.now(UTC)
@@ -146,7 +146,7 @@ def test_on_call_and_calendar(client: TestClient, world: World) -> None:
         client.post(
             "/api/v1/sla/on-call",
             json={
-                "user_id": str(world.users["m21admin"]),
+                "user_id": str(world.users["slaadmin"]),
                 "starts_at": (now - timedelta(hours=1)).isoformat(),
                 "ends_at": (now + timedelta(hours=8)).isoformat(),
                 "note": "Wochenendbereitschaft",
@@ -181,7 +181,7 @@ def test_on_call_and_calendar(client: TestClient, world: World) -> None:
 
 
 def test_presets_create_rules_once_and_keep_existing(client: TestClient, world: World) -> None:
-    h = bearer(login(client, world, "m21admin"))
+    h = bearer(login(client, world, "slaadmin"))
     first = _ok(client.post("/api/v1/sla/rules/presets", headers=h), 201)
     assert {r["priority"] for r in first} == {"immediate", "urgent", "high", "normal", "low"}
     assert all(r["active"] for r in first)
@@ -198,7 +198,7 @@ def test_sms_gateway_config_hides_secret_and_test_reports_errors(
 ) -> None:
     """M35: GET/PUT /sla/sms-gateway ohne Secret in der Antwort, Test ohne aktives Gateway
     liefert einen Fehlertext, Lesende dürfen nicht ändern."""
-    h = bearer(login(client, world, "m21admin"))
+    h = bearer(login(client, world, "slaadmin"))
     empty = _ok(client.get("/api/v1/sla/sms-gateway", headers=h))
     assert empty["enabled"] is False
     assert empty["auth_header_set"] is False
@@ -242,7 +242,7 @@ def test_sms_gateway_config_hides_secret_and_test_reports_errors(
     assert "deaktiviert" in result["error"]
     assert "geheim-m35" not in str(result)
 
-    reader = bearer(login(client, world, "m21read"))
+    reader = bearer(login(client, world, "slaread"))
     denied = client.put("/api/v1/sla/sms-gateway", json={"enabled": False}, headers=reader)
     assert denied.status_code == 403
 
@@ -253,7 +253,7 @@ def test_whatsapp_config_hides_secret_and_test_reports_errors(
     """M35: GET/PUT /sla/whatsapp-config ohne Secret in der Antwort, ausgeschaltete
     Konfiguration verlangt keine Vollständigkeit, eine Testnachricht ohne aktive Konfiguration
     liefert einen Fehlertext, Lesende dürfen nicht ändern."""
-    h = bearer(login(client, world, "m21admin"))
+    h = bearer(login(client, world, "slaadmin"))
     empty = _ok(client.get("/api/v1/sla/whatsapp-config", headers=h))
     assert empty["enabled"] is False
     assert empty["access_token_set"] is False
@@ -293,14 +293,12 @@ def test_whatsapp_config_hides_secret_and_test_reports_errors(
     assert kept["access_token_set"] is True
 
     result = _ok(
-        client.post(
-            "/api/v1/sla/whatsapp-config/test", json={"to": "+49 170 1234567"}, headers=h
-        )
+        client.post("/api/v1/sla/whatsapp-config/test", json={"to": "+49 170 1234567"}, headers=h)
     )
     assert result["ok"] is False
     assert "deaktiviert" in result["error"]
     assert "geheim-wa-m35" not in str(result)
 
-    reader = bearer(login(client, world, "m21read"))
+    reader = bearer(login(client, world, "slaread"))
     denied = client.put("/api/v1/sla/whatsapp-config", json={"enabled": False}, headers=reader)
     assert denied.status_code == 403

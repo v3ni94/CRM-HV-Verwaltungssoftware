@@ -324,7 +324,10 @@ class TenantBillingSettings(IdMixin, TimestampMixin, TenantMixin, Base):
 
     invoice_prefix: Mapped[str | None] = mapped_column(String(16))
     vat_status: Mapped[VatStatus] = mapped_column(
-        _enum(VatStatus, "tenant_vat_status"), nullable=False, default=VatStatus.UNSET
+        _enum(VatStatus, "tenant_vat_status"),
+        nullable=False,
+        default=VatStatus.UNSET,
+        server_default="unset",
     )
     # Encrypted at rest (EncryptedText); only the last 4 characters are ever returned by the API.
     vat_id: Mapped[str | None] = mapped_column(EncryptedText())
@@ -341,10 +344,13 @@ class TenantBillingSettings(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(ChartOfAccountsKind, "tenant_chart_of_accounts_kind"),
         nullable=False,
         default=ChartOfAccountsKind.UNSET,
+        server_default="unset",
     )
     datev_account_length: Mapped[int | None] = mapped_column(Integer)
-    datev_fiscal_year_start_month: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    datev_fiscal_year_start_month: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
 
 class InvoiceNumberCounter(IdMixin, TenantMixin, Base):
@@ -357,7 +363,9 @@ class InvoiceNumberCounter(IdMixin, TenantMixin, Base):
 
     prefix: Mapped[str] = mapped_column(String(16), nullable=False)
     year: Mapped[int] = mapped_column(Integer, nullable=False)
-    last_number: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_number: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
 
 class ApiKey(IdMixin, TimestampMixin, TenantMixin, Base):

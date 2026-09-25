@@ -37,9 +37,9 @@ async def _world(settings: Any) -> World:
         b, _ = await services.provision_tenant(factory, slug=f"gcal2-{RUN}", name=f"GCal2 {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, tenant, role in [
-            ("m23admin", a, "tenant_admin"),
-            ("m23colleague", a, "standard"),
-            ("m23other", b, "tenant_admin"),
+            ("gcaladmin", a, "tenant_admin"),
+            ("gcalcolleague", a, "standard"),
+            ("gcalother", b, "tenant_admin"),
         ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
@@ -176,9 +176,9 @@ def _mailbox(client: TestClient, headers: dict[str, str], address: str, calendar
 def test_merged_calendar_authorization_and_tenant_separation(
     client: TestClient, world: World, fake: FakeGCal
 ) -> None:
-    admin = bearer(login(client, world, "m23admin"))
-    colleague = bearer(login(client, world, "m23colleague"))
-    other_tenant = bearer(login(client, world, "m23other"))
+    admin = bearer(login(client, world, "gcaladmin"))
+    colleague = bearer(login(client, world, "gcalcolleague"))
+    other_tenant = bearer(login(client, world, "gcalother"))
 
     default_box = _mailbox(client, admin, f"info-cal-{RUN}@example.com", "primary")
     own_box = _mailbox(client, admin, f"own-cal-{RUN}@example.com", f"own-{RUN}")
@@ -188,7 +188,7 @@ def test_merged_calendar_authorization_and_tenant_separation(
     _ok(
         client.put(
             f"{M}/mailboxes/{own_box['id']}/users",
-            json={"user_ids": [str(world.users["m23admin"])]},
+            json={"user_ids": [str(world.users["gcaladmin"])]},
             headers=admin,
         )
     )
@@ -225,7 +225,7 @@ def test_merged_calendar_authorization_and_tenant_separation(
 def test_create_patch_delete_proxy_to_google_and_cache_invalidates(
     client: TestClient, world: World, fake: FakeGCal
 ) -> None:
-    admin = bearer(login(client, world, "m23admin"))
+    admin = bearer(login(client, world, "gcaladmin"))
     # Only one default mailbox at a time: clear any default set by an earlier test.
     for box_row in _ok(client.get(f"{M}/mailboxes", headers=admin)):
         if box_row["is_default"]:
@@ -296,7 +296,7 @@ def test_invitation_only_after_explicit_confirmation(
 ) -> None:
     """M23-02 rule 2 / M23-05: attendees are stored but never sent to Google until the staff
     user confirms "Einladung senden"; creation always uses sendUpdates=none."""
-    admin = bearer(login(client, world, "m23admin"))
+    admin = bearer(login(client, world, "gcaladmin"))
     _solo_default_mailbox(client, admin)
     today = datetime.now(UTC).date().isoformat()
 
@@ -350,7 +350,7 @@ def test_stale_google_event_is_flagged_and_not_overwritten(
 ) -> None:
     """M23-02 rule 3: if the event changed on Google's side (etag differs), the CRM shows the
     Google version and marks its own copy stale instead of silently overwriting either side."""
-    admin = bearer(login(client, world, "m23admin"))
+    admin = bearer(login(client, world, "gcaladmin"))
     _solo_default_mailbox(client, admin)
     today = datetime.now(UTC).date().isoformat()
 

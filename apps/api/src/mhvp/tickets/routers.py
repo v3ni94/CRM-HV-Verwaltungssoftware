@@ -799,7 +799,7 @@ async def list_tickets(
 ) -> list[dict[str, Any]]:
     from mhvp.contacts.models import Contact, PartyMember
     from mhvp.contracts.models import Contract, ContractKind
-    from mhvp.properties.models import Property
+    from mhvp.properties.models import Property, PropertyOwner, Unit
 
     async with tenant_tx(request, principal) as session:
         query = select(Ticket).order_by(Ticket.number.desc())
@@ -842,27 +842,59 @@ async def list_tickets(
                 raise ProblemError(
                     ErrorCodes.VALIDATION, detail="contact_role muss owner oder tenant sein."
                 )
-            kind = ContractKind.OWNERSHIP if contact_role == "owner" else ContractKind.TENANCY
             # Role of the ticket's linked contact (or, if also filtering by contact_id, that
             # contact) as owner or tenant of the ticket's unit (operator 25.09.2026):
             # Contract.unit_id == Ticket.unit_id, Contract.party_id via PartyMember.contact_id.
+            # Ownership can also be recorded at property level via PropertyOwner (Mietverwaltung,
+            # see properties.routers.add_owner), so the owner role additionally matches through
+            # Unit.property_id == PropertyOwner.property_id.
             role_contact = contact_id if contact_id is not None else Ticket.contact_id
-            role_conditions = [Ticket.unit_id.is_not(None)]
+
+            def _parties() -> Any:
+                return (
+                    select(PartyMember.party_id)
+                    .where(PartyMember.contact_id == role_contact)
+                    .correlate(Ticket)
+                )
+
+            role_conditions: list[Any] = [Ticket.unit_id.is_not(None)]
             if contact_id is None:
                 role_conditions.append(Ticket.contact_id.is_not(None))
-            role_conditions.append(
-                Ticket.id.in_(
-                    select(Ticket.id).where(
+            role_match: Any
+            if contact_role == "tenant":
+                role_match = (
+                    select(Contract.id)
+                    .where(
                         Contract.unit_id == Ticket.unit_id,
-                        Contract.kind == kind,
-                        Contract.party_id.in_(
-                            select(PartyMember.party_id).where(
-                                PartyMember.contact_id == role_contact
-                            )
-                        ),
+                        Contract.kind == ContractKind.TENANCY,
+                        Contract.party_id.in_(_parties()),
                     )
+                    .correlate(Ticket)
+                    .exists()
                 )
-            )
+            else:
+                ownership_contract = (
+                    select(Contract.id)
+                    .where(
+                        Contract.unit_id == Ticket.unit_id,
+                        Contract.kind == ContractKind.OWNERSHIP,
+                        Contract.party_id.in_(_parties()),
+                    )
+                    .correlate(Ticket)
+                    .exists()
+                )
+                property_owner = (
+                    select(PropertyOwner.id)
+                    .join(Unit, Unit.property_id == PropertyOwner.property_id)
+                    .where(
+                        Unit.id == Ticket.unit_id,
+                        PropertyOwner.party_id.in_(_parties()),
+                    )
+                    .correlate(Ticket)
+                    .exists()
+                )
+                role_match = ownership_contract | property_owner
+            role_conditions.append(role_match)
             query = query.where(*role_conditions)
         if assignee_user_id:
             query = query.where(
