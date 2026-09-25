@@ -17,14 +17,6 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.17.1",
-    date: "25.09.2026",
-    title: "Worker: KI-Clients sauber schließen",
-    changes: [
-      "Die HTTP-Clients der KI-Anbieter werden nach jedem Anbieterschritt geschlossen, der Worker meldet nach KI-Läufen kein \"Event loop is closed\" mehr",
-    ],
-  },
-  {
     version: "1.17.2",
     date: "25.09.2026",
     title: "Worker: KI-Clients sauber schließen",
