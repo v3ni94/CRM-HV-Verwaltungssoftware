@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.5.0",
+    date: "25.09.2026",
+    title: "Paperless-Dokumente in Ticket und Objekt",
+    changes: [
+      "Abschnitt Dokumente (Paperless) in der Ticketansicht und in der Objektansicht mit Vorschau und Download",
+      "Suche in Paperless über die Objektnummer (Custom Field) und die Ticketnummer im Volltext, Treffer werden zusammengeführt",
+      "Dateien werden über das CRM durchgereicht, der Paperless-Zugang bleibt serverseitig",
+      "Feld-IDs für Objektnummer und Gesellschaft je Mandant in der DMS-Anbindung einstellbar",
+      "Versionsnummer im Footer mit Verlauf unter /version",
+    ],
+  },
+  {
     version: "1.4.0",
     date: "25.09.2026",
     title: "SLA, Notfallkette und Bereitschaft",

@@ -5,6 +5,15 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.5.0 (25.09.2026) Paperless-Dokumente in Ticket und Objekt
+
+- Abschnitt Dokumente (Paperless) in der Ticketansicht und in der Objektansicht mit Vorschau und Download
+- Suche in Paperless über die Objektnummer (Custom Field) und die Ticketnummer im Volltext, Treffer werden zusammengeführt
+- Dateien werden über das CRM durchgereicht, der Paperless-Zugang bleibt serverseitig
+- Feld-IDs für Objektnummer und Gesellschaft je Mandant in der DMS-Anbindung einstellbar (Optionen object_field_id, company_field_id)
+- Versionsnummer im Footer mit Verlauf unter /version
+- Plan docs/plans/M31-paperless-view.md, keine Migration
+
 ## 1.4.0 (25.09.2026) SLA, Notfallkette und Bereitschaft
 
 - SLA-Regeln je Ticketpriorität mit Reaktions- und Lösungszeit, Uhren laufen nur in der Geschäftszeit
