@@ -1,4 +1,4 @@
-# M33 KI-Wissensbasis je Mandant und Objekt, Mail-Vorbereitung (Welle 3 Punkt 14)
+# M34 KI-Wissensbasis je Mandant und Objekt, Mail-Vorbereitung (Welle 3 Punkt 14)
 
 Stand 25.09.2026. Betreiberauftrag: eine Wissensbasis je Mandant und optional je Objekt (Ablageregeln,
 Arbeitsabläufe, Korrekturen, Fakten), die als Kontext in KI-Läufe einfließt, plus eine sofortige
@@ -35,7 +35,7 @@ Vorbereitung eingehender Mails (Absender, Rolle, Einheit, passende Dokumente, An
 - Migration angewendet (`alembic upgrade head`), kein Autogenerate-Diff
   (`test_no_autogenerate_drift`), kein Namenskonflikt im OpenAPI-Dokument
   (`test_no_new_schema_name_collisions`).
-- Backend-Tests: `apps/api/tests/integration/test_m33_ai_knowledge.py` (Wissensbasis CRUD,
+- Backend-Tests: `apps/api/tests/integration/test_m34_ai_knowledge.py` (Wissensbasis CRUD,
   Mandantentrennung, Berechtigungen; Mail-Vorbereitung mit gefaktem KI-Anbieter, ohne
   DMS-Verbindung, daher ohne Netzwerkzugriff; Korrektur legt einen gelernten Wissenseintrag an).
   `ruff check` und `mypy --strict` sauber für die geänderten Module.
@@ -44,6 +44,6 @@ Vorbereitung eingehender Mails (Absender, Rolle, Einheit, passende Dokumente, An
 
 ## Offene Punkte
 
-Siehe `docs/OPEN_QUESTIONS.md` (M33-01 Freigabeworkflow für Wissenseinträge, M33-02
-Google-Drive-Suche noch nicht gegen einen echten Drive-Account verifiziert, M33-03 Umgang mit
+Siehe `docs/OPEN_QUESTIONS.md` (M34-01 Freigabeworkflow für Wissenseinträge, M34-02
+Google-Drive-Suche noch nicht gegen einen echten Drive-Account verifiziert, M34-03 Umgang mit
 mehrdeutigen Rollen bei mehreren aktiven Verträgen derselben Partei).

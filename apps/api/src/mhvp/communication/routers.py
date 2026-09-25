@@ -1025,9 +1025,7 @@ async def get_preparation(
         return dict(preparation_result)
 
 
-@router.post(
-    "/messages/{message_id}/preparation/correct", summary="Mail-Vorbereitung korrigieren"
-)
+@router.post("/messages/{message_id}/preparation/correct", summary="Mail-Vorbereitung korrigieren")
 async def correct_preparation(
     message_id: uuid.UUID,
     body: ai_s.PreparationCorrectionIn,

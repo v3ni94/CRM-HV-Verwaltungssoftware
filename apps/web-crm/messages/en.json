@@ -40,7 +40,8 @@
     "navExpand": "Expand sidebar",
     "openNav": "Open navigation",
     "dms": "DMS",
-    "immoware": "Immoware24"
+    "immoware": "Immoware24",
+    "immowareLearning": "Learning phase"
   },
   "Hoa": {
     "title": "HOA management",
@@ -1370,6 +1371,84 @@
       "previous": "Previous",
       "next": "Next",
       "page": "Page {page}"
+    },
+    "learning": {
+      "navLink": "Learning phase",
+      "title": "Immoware24 learning phase",
+      "intro": "Reads structure and field usage of the Immoware24 mirror per kind and compares the result with the last successful run.",
+      "kinds": {
+        "webdav": "WebDAV (documents)",
+        "carddav": "CardDAV (contacts)",
+        "caldav": "CalDAV (events)"
+      },
+      "start": "Start analysis",
+      "starting": "Starting...",
+      "empty": "No learning runs yet.",
+      "list": {
+        "columns": {
+          "kind": "Kind",
+          "status": "Status",
+          "started": "Started",
+          "finished": "Finished",
+          "changed": "Change"
+        }
+      },
+      "status": {
+        "pending": "Pending",
+        "running": "Running",
+        "done": "Done",
+        "failed": "Failed"
+      },
+      "detail": {
+        "title": "Run {kind}",
+        "back": "Back to list",
+        "error": "Error: {error}",
+        "changedYes": "Changes since previous run",
+        "changedNo": "No changes since previous run",
+        "firstRun": "First run of this kind, no previous run to compare.",
+        "rawFacts": "Raw data (JSON)",
+        "webdav": {
+          "folderCount": "Folders",
+          "objectNumberShare": "Share of folders with object number",
+          "folders": "Folders",
+          "columns": {
+            "path": "Path",
+            "depth": "Depth",
+            "files": "Files",
+            "bytes": "Bytes",
+            "objectNumber": "Object number"
+          }
+        },
+        "carddav": {
+          "mirroredContacts": "Mirrored contacts",
+          "shareWithEmail": "Share with email",
+          "shareWithPhone": "Share with phone",
+          "shareWithAddress": "Share with address",
+          "fieldUsage": "Field usage",
+          "duplicateCandidates": "Duplicate candidates (email)",
+          "columns": {
+            "field": "Field",
+            "count": "Count"
+          }
+        },
+        "caldav": {
+          "mirroredEvents": "Mirrored events",
+          "allDayShare": "Share all day",
+          "fieldUsage": "Field usage",
+          "eventsPerMonth": "Events per month",
+          "topPrefixes": "Most common prefixes",
+          "columns": {
+            "field": "Field",
+            "count": "Count",
+            "month": "Month",
+            "prefix": "Prefix"
+          }
+        },
+        "changes": "Changes"
+      },
+      "errors": {
+        "notFound": "Learning run not found."
+      }
     }
   },
   "Members": {

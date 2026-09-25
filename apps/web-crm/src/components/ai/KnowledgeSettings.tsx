@@ -14,7 +14,7 @@ type PropertyOption = { id: string; number: string; name: string };
 
 const emptyForm = { propertyId: "", kind: "fact" as Kind, title: "", content: "" };
 
-/** Wissensbasis je Mandant und Objekt (Welle 3 Punkt 14, M33): Ablageregeln, Arbeitsabläufe,
+/** Wissensbasis je Mandant und Objekt (Welle 3 Punkt 14, M34): Ablageregeln, Arbeitsabläufe,
  * Korrekturen und Fakten, die als Kontext in KI-Läufe (Chat, Mail-Vorbereitung) einfließen.
  * Nur Vorschlagskontext, nie automatisch geschrieben (Regel 0.1.6). */
 export function KnowledgeSettings({

@@ -10,7 +10,7 @@ import { ui } from "@/lib/ui";
 
 import type { Message } from "./MailWorkspace";
 
-/** Mail-Vorbereitung (Welle 3 Punkt 14, M33): löst Kontakt, Einheit, Objekt und Rolle des
+/** Mail-Vorbereitung (Welle 3 Punkt 14, M34): löst Kontakt, Einheit, Objekt und Rolle des
  * Absenders auf, sucht passende Dokumente je Objekt und schlägt einen Antwortentwurf vor. Nur
  * Vorschlag; „Übernehmen" öffnet den bestehenden Antwortentwurf-Fluss, nichts wird automatisch
  * versendet (Regel 0.1.6). */

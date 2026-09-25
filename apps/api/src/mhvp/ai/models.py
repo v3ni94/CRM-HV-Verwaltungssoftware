@@ -227,9 +227,7 @@ class AiKnowledgeEntry(IdMixin, TimestampMixin, TenantMixin, Base):
         Index("ix_ai_knowledge_entry_tenant_kind", "tenant_id", "kind"),
     )
 
-    property_id: Mapped[uuid.UUID | None] = _fk(
-        "property.id", nullable=True, ondelete="CASCADE"
-    )
+    property_id: Mapped[uuid.UUID | None] = _fk("property.id", nullable=True, ondelete="CASCADE")
     kind: Mapped[AiKnowledgeKind] = mapped_column(
         _enum(AiKnowledgeKind, "ai_knowledge_kind"), nullable=False
     )

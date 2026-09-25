@@ -41,9 +41,9 @@ das CRM bekommt den Reiter DMS, objektakte bleibt das System für Übernahme und
 - Drive-Ordner-IDs je Objekt für den Absprung (liefert objektakte aus drive_nodes).
 - Datenschutz: Zugriff des CRM nur auf maskierte Felder; keine IBAN im Klartext.
 
-## Ergänzung 25.09.2026: Mail-Vorbereitung liest Paperless und Drive strikt je Objekt (M33, M20-05)
+## Ergänzung 25.09.2026: Mail-Vorbereitung liest Paperless und Drive strikt je Objekt (M34, M20-05)
 
-Für die Mail-Vorbereitung (Welle 3 Punkt 14, `docs/plans/M33-ki-wissensbasis.md`) muss die
+Für die Mail-Vorbereitung (Welle 3 Punkt 14, `docs/plans/M34-ki-wissensbasis.md`) muss die
 Dokumentsuche eines eingehenden Vorgangs auf genau ein Objekt beschränkt bleiben, unabhängig von
 den Stufen oben:
 

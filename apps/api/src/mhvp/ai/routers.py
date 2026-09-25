@@ -591,9 +591,7 @@ async def list_knowledge(
             query = query.where(AiKnowledgeEntry.property_id == property_id)
         if kind is not None:
             query = query.where(AiKnowledgeEntry.kind == kind)
-        rows = (
-            await session.scalars(query.order_by(AiKnowledgeEntry.created_at.desc()))
-        ).all()
+        rows = (await session.scalars(query.order_by(AiKnowledgeEntry.created_at.desc()))).all()
         return [s.KnowledgeEntryOut.model_validate(r) for r in rows]
 
 

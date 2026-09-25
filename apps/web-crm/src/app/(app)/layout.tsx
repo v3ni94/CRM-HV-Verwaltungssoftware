@@ -45,6 +45,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting"), icon: "letting" }] : []),
         ...(can("documents:read") ? [{ href: "/dms", label: t("dms"), icon: "dms" }] : []),
         ...(can("immoware:read") ? [{ href: "/immoware", label: t("immoware"), icon: "dms" }] : []),
+        ...(can("immoware:read")
+          ? [{ href: "/immoware/lernphase", label: t("immowareLearning"), icon: "dms" }]
+          : []),
       ],
     },
     {

@@ -94,7 +94,8 @@
     "navExpand": "Leiste ausklappen",
     "dms": "DMS",
     "openNav": "Navigation öffnen",
-    "immoware": "Immoware24"
+    "immoware": "Immoware24",
+    "immowareLearning": "Lernphase"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -2924,6 +2925,84 @@
       "previous": "Zurueck",
       "next": "Weiter",
       "page": "Seite {page}"
+    },
+    "learning": {
+      "navLink": "Lernphase",
+      "title": "Lernphase Immoware24",
+      "intro": "Erkundet lesend Struktur und Feldnutzung des Immoware24-Spiegels je Art und vergleicht das Ergebnis mit dem letzten erfolgreichen Lauf.",
+      "kinds": {
+        "webdav": "WebDAV (Dokumente)",
+        "carddav": "CardDAV (Kontakte)",
+        "caldav": "CalDAV (Termine)"
+      },
+      "start": "Analyse starten",
+      "starting": "Wird gestartet...",
+      "empty": "Noch keine Lernlaeufe vorhanden.",
+      "list": {
+        "columns": {
+          "kind": "Art",
+          "status": "Status",
+          "started": "Gestartet",
+          "finished": "Beendet",
+          "changed": "Aenderung"
+        }
+      },
+      "status": {
+        "pending": "Wartend",
+        "running": "Laeuft",
+        "done": "Fertig",
+        "failed": "Fehlgeschlagen"
+      },
+      "detail": {
+        "title": "Lauf {kind}",
+        "back": "Zurueck zur Liste",
+        "error": "Fehler: {error}",
+        "changedYes": "Aenderungen zum Vorlauf",
+        "changedNo": "Keine Aenderungen zum Vorlauf",
+        "firstRun": "Erster Lauf dieser Art, kein Vorlauf zum Vergleich.",
+        "rawFacts": "Rohdaten (JSON)",
+        "webdav": {
+          "folderCount": "Ordner",
+          "objectNumberShare": "Anteil Ordner mit Objektnummer",
+          "folders": "Ordner",
+          "columns": {
+            "path": "Pfad",
+            "depth": "Tiefe",
+            "files": "Dateien",
+            "bytes": "Bytes",
+            "objectNumber": "Objektnummer"
+          }
+        },
+        "carddav": {
+          "mirroredContacts": "Gespiegelte Kontakte",
+          "shareWithEmail": "Anteil mit E-Mail",
+          "shareWithPhone": "Anteil mit Telefon",
+          "shareWithAddress": "Anteil mit Adresse",
+          "fieldUsage": "Feldnutzung",
+          "duplicateCandidates": "Duplikatkandidaten (E-Mail)",
+          "columns": {
+            "field": "Feld",
+            "count": "Anzahl"
+          }
+        },
+        "caldav": {
+          "mirroredEvents": "Gespiegelte Termine",
+          "allDayShare": "Anteil ganztaegig",
+          "fieldUsage": "Feldnutzung",
+          "eventsPerMonth": "Termine je Monat",
+          "topPrefixes": "Haeufigste Praefixe",
+          "columns": {
+            "field": "Feld",
+            "count": "Anzahl",
+            "month": "Monat",
+            "prefix": "Praefix"
+          }
+        },
+        "changes": "Aenderungen"
+      },
+      "errors": {
+        "notFound": "Lernlauf nicht gefunden."
+      }
     }
   }
 }

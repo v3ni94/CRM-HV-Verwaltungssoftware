@@ -152,3 +152,42 @@ class ImmowareSyncRun(IdMixin, TimestampMixin, TenantMixin, Base):
     changed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     removed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     error: Mapped[str | None] = mapped_column(Text)
+
+
+class LearningKind(StrEnum):
+    """Art des Lernlaufs (M33, Uebernahme des Moduls Learning aus dem Immoware Hub)."""
+
+    WEBDAV = "webdav"
+    CARDDAV = "carddav"
+    CALDAV = "caldav"
+
+
+class LearningStatus(StrEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"
+
+
+class ImmowareLearningRun(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Ein Lauf der Lernphase (M33): erkundet lesend Struktur und Feldnutzung des Immoware24-
+    Spiegels je Art und vergleicht das Ergebnis mit dem letzten erfolgreichen Lauf gleicher Art
+    (LearningDiffer im Hub). Reine Erkenntnisgewinnung ohne Schreibpfad, siehe
+    docs/plans/M33-immoware-lernphase.md."""
+
+    __tablename__ = "immoware_learning_run"
+
+    kind: Mapped[LearningKind] = mapped_column(
+        _enum(LearningKind, "immoware_learning_kind"), nullable=False, index=True
+    )
+    status: Mapped[LearningStatus] = mapped_column(
+        _enum(LearningStatus, "immoware_learning_status"),
+        nullable=False,
+        default=LearningStatus.PENDING,
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    facts: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    diff: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+    triggered_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

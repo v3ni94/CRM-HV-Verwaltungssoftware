@@ -101,9 +101,7 @@ def suggest_message(tenant_id: str, message_id: str) -> str:
     )
 
 
-async def prepare_mail_once(
-    settings: Settings, tenant_id: uuid.UUID, message_id: uuid.UUID
-) -> str:
+async def prepare_mail_once(settings: Settings, tenant_id: uuid.UUID, message_id: uuid.UUID) -> str:
     """Computes the mail preparation (contact/unit/property, scoped document search, reply
     draft, Welle 3 item 14) and stores it under ``message.suggestion["preparation"]``. A failure
     never leaves this function as an exception, matching ``suggest_message_once``."""

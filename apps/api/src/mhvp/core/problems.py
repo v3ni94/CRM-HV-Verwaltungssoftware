@@ -168,6 +168,12 @@ class ErrorCodes:
         "Immoware24 nicht erreichbar",
         "DAV request to Immoware24 failed or timed out.",
     )
+    IMW_LEARNING_RUN_NOT_FOUND = ErrorCode(
+        "MHVP-IMW-0004",
+        404,
+        "Lernlauf nicht gefunden",
+        "No ImmowareLearningRun with this id for the tenant (M33).",
+    )
     IMW_WRITE_BLOCKED = ErrorCode(
         "MHVP-IMW-0003",
         500,

@@ -3,8 +3,8 @@
 preparation (source ``learned``); they are read only context for AI runs, never posted or
 sent automatically (rule 0.1.6).
 
-Revision ID: 0051
-Revises: 0050
+Revision ID: 0052
+Revises: 0051
 
 Tenant tables must call mhvp.core.db.rls.tenant_rls_statements() (ADR 0002).
 """
@@ -16,8 +16,8 @@ from alembic import op
 
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
-revision: str = "0051"
-down_revision: str | None = "0050"
+revision: str = "0052"
+down_revision: str | None = "0051"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

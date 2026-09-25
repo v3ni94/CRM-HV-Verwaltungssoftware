@@ -1,4 +1,4 @@
-"""M33 Wissensbasis und Mail-Vorbereitung (Welle 3 item 14): Wissenseintrag anlegen, ändern,
+"""M34 Wissensbasis und Mail-Vorbereitung (Welle 3 item 14): Wissenseintrag anlegen, ändern,
 löschen, Mandantentrennung und Berechtigungen; Mail-Vorbereitung löst Absender, Rolle und Einheit
 auf und erstellt einen Antwortentwurf mit einem gefakten KI-Anbieter (keine Netzwerkzugriffe); die
 Korrektur einer Vorbereitung legt einen gelernten Wissenseintrag an."""
@@ -52,7 +52,11 @@ class FakeProvider:
         self.calls.append(kwargs)
         data = self.queue.pop(0) if self.queue else {}
         return Completion(
-            data=data, raw_text=json.dumps(data), tokens_in=100, tokens_out=50, model=kwargs["model"]
+            data=data,
+            raw_text=json.dumps(data),
+            tokens_in=100,
+            tokens_out=50,
+            model=kwargs["model"],
         )
 
 
@@ -147,9 +151,7 @@ def _unit(c: TestClient, h: dict[str, str], prop_id: str, number: str) -> str:
     return str(unit["id"])
 
 
-def _party_with_email(
-    c: TestClient, h: dict[str, str], name: str, email: str
-) -> tuple[str, str]:
+def _party_with_email(c: TestClient, h: dict[str, str], name: str, email: str) -> tuple[str, str]:
     contact = _ok(
         c.post(
             f"{M}/contacts",
@@ -262,8 +264,12 @@ def test_knowledge_crud_and_filters(client: TestClient, world: World) -> None:
     )
     assert updated["content"].endswith("aktualisiert.")
 
-    assert client.delete(f"{M}/ai/knowledge/{property_entry['id']}", headers=reader).status_code == 403
-    assert client.delete(f"{M}/ai/knowledge/{property_entry['id']}", headers=admin).status_code == 204
+    assert (
+        client.delete(f"{M}/ai/knowledge/{property_entry['id']}", headers=reader).status_code == 403
+    )
+    assert (
+        client.delete(f"{M}/ai/knowledge/{property_entry['id']}", headers=admin).status_code == 204
+    )
     assert client.get(f"{M}/ai/knowledge", headers=admin).status_code == 200
     remaining = _ok(client.get(f"{M}/ai/knowledge", headers=admin))
     assert property_entry["id"] not in [e["id"] for e in remaining]
@@ -282,17 +288,22 @@ def test_knowledge_tenant_separation(client: TestClient, world: World) -> None:
     )
     other_list = _ok(client.get(f"{M}/ai/knowledge", headers=other))
     assert entry["id"] not in [e["id"] for e in other_list]
-    assert client.put(
-        f"{M}/ai/knowledge/{entry['id']}",
-        json={"kind": "fact", "title": "x", "content": "y"},
-        headers=other,
-    ).status_code == 404
+    assert (
+        client.put(
+            f"{M}/ai/knowledge/{entry['id']}",
+            json={"kind": "fact", "title": "x", "content": "y"},
+            headers=other,
+        ).status_code
+        == 404
+    )
 
 
 # Mail-Vorbereitung ---------------------------------------------------------------------------
 
 
-def test_mail_preparation_and_correction(client: TestClient, world: World, fake: FakeProvider) -> None:
+def test_mail_preparation_and_correction(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
     admin = bearer(login(client, world, "kbadmin"))
     second = bearer(login(client, world, "kbsecond"))
     _setup_provider(client, admin, second)
@@ -357,13 +368,13 @@ def test_mail_preparation_and_correction(client: TestClient, world: World, fake:
     )
     doc = _upload(client, admin, "m1.eml", raw)
     msg = _ok(
-        client.post(f"{M}/mail/ingest", json={"document_id": doc, "auto_ticket": False}, headers=admin),
+        client.post(
+            f"{M}/mail/ingest", json={"document_id": doc, "auto_ticket": False}, headers=admin
+        ),
         201,
     )
 
-    computed = _ok(
-        client.post(f"{M}/mail/messages/{msg['id']}/preparation", headers=admin)
-    )
+    computed = _ok(client.post(f"{M}/mail/messages/{msg['id']}/preparation", headers=admin))
     assert computed["contact_id"] == contact_id
     assert computed["unit_id"] == unit
     assert computed["property_id"] == prop["id"]
@@ -398,7 +409,9 @@ def test_mail_preparation_and_correction(client: TestClient, world: World, fake:
     assert after_correction["correction"]["note"].startswith("Rolle war falsch")
 
 
-def test_preparation_without_contact_match(client: TestClient, world: World, fake: FakeProvider) -> None:
+def test_preparation_without_contact_match(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
     admin = bearer(login(client, world, "kbadmin"))
     raw = _eml(
         f"unbekannt{RUN}@example.com",
@@ -408,7 +421,9 @@ def test_preparation_without_contact_match(client: TestClient, world: World, fak
     )
     doc = _upload(client, admin, "m2.eml", raw)
     msg = _ok(
-        client.post(f"{M}/mail/ingest", json={"document_id": doc, "auto_ticket": False}, headers=admin),
+        client.post(
+            f"{M}/mail/ingest", json={"document_id": doc, "auto_ticket": False}, headers=admin
+        ),
         201,
     )
     computed = _ok(client.post(f"{M}/mail/messages/{msg['id']}/preparation", headers=admin))

@@ -90,12 +90,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^ai\/routing$/ },
   { method: "PUT", pattern: /^ai\/providers\/(anthropic|openai)$/ },
   { method: "POST", pattern: /^ai\/providers\/(anthropic|openai)\/release$/ },
-  // Wissensbasis je Mandant und Objekt (Welle 3 Punkt 14, M33).
+  // Wissensbasis je Mandant und Objekt (Welle 3 Punkt 14, M34).
   { method: "GET", pattern: /^ai\/knowledge$/ },
   { method: "POST", pattern: /^ai\/knowledge$/ },
   { method: "PUT", pattern: new RegExp(`^ai/knowledge/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^ai/knowledge/${ID}$`) },
-  // Mail-Vorbereitung (M33).
+  // Mail-Vorbereitung (M34).
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/preparation$`) },
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/preparation$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/preparation/correct$`) },
@@ -227,6 +227,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^immoware/contacts/${ID}/match$`) },
   { method: "POST", pattern: new RegExp(`^immoware/contacts/${ID}/create-contact$`) },
   { method: "GET", pattern: /^immoware\/events$/ },
+  // Lernphase Immoware24 (M33, Uebernahme des Moduls Learning aus dem Immoware Hub).
+  { method: "POST", pattern: /^immoware\/learning\/runs$/ },
+  { method: "GET", pattern: /^immoware\/learning\/runs$/ },
+  { method: "GET", pattern: new RegExp(`^immoware/learning/runs/${ID}$`) },
   // Incoming invoices (M14): capture, review steps, IBAN confirmation, release, posting.
   { method: "POST", pattern: /^accounting\/invoices$/ },
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },

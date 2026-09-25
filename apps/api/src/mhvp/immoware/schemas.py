@@ -2,10 +2,11 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from mhvp.immoware.models import SyncKind, SyncStatus
+from mhvp.immoware.models import LearningKind, LearningStatus, SyncKind, SyncStatus
 
 
 class _In(BaseModel):
@@ -100,3 +101,28 @@ class Meta(BaseModel):
     page: int
     per_page: int
     total: int
+
+
+class LearningRunIn(_In):
+    kind: LearningKind
+
+
+class LearningRunOut(_Out):
+    id: uuid.UUID
+    kind: LearningKind
+    status: LearningStatus
+    started_at: datetime | None
+    finished_at: datetime | None
+    facts: dict[str, Any] | None
+    diff: dict[str, Any] | None
+    error: str | None
+    triggered_by_user_id: uuid.UUID | None
+
+
+class LearningRunListOut(_Out):
+    id: uuid.UUID
+    kind: LearningKind
+    status: LearningStatus
+    started_at: datetime | None
+    finished_at: datetime | None
+    error: str | None
