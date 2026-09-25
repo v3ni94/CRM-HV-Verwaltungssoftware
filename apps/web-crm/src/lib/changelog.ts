@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.15.2",
+    date: "25.09.2026",
+    title: "KI-Import: parallele Verarbeitung der Teile",
+    changes: [
+      "KI: Teile großer Listen werden parallel verarbeitet (vier gleichzeitige Anfragen an den Anbieter statt nacheinander); ein Import mit 11 Teilen braucht damit statt 5 bis 10 Minuten etwa ein Viertel der Zeit. Fortschrittsanzeige und Aufteilung zu großer Teile bleiben erhalten",
+    ],
+  },
+  {
     version: "1.15.1",
     date: "25.09.2026",
     title: "KI-Chat: Fehlermeldungen mit Schritt und Status",

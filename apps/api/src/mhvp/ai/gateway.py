@@ -34,6 +34,7 @@ HARD_LIMIT_CHARS = 2_000_000  # a single attached document beyond this always bl
 MAX_TABLE_ROWS = 20_000  # rows with content; formatted empty rows do not count
 MAX_DOCUMENT_CHARS = 250_000  # per file for non chunked tasks; longer files are cut visibly
 CHUNK_CHARS = 150_000  # extraction tasks: table text is split into row chunks of this size
+CHUNK_CONCURRENCY = 4  # concurrent provider calls per chunked run (latency bound, not CPU)
 CHUNK_ROWS = 80  # rows per chunk for extract_contacts/extract_property (fits max_tokens=16000)
 RETRIEVE_LIMIT = 6  # normal retrieval; reduced (below) when the input would be too large
 REDUCED_RETRIEVE_LIMIT = 3
@@ -758,38 +759,58 @@ async def execute(
 
     if item.chunks and task in CHUNKED_TASKS:
         # Row chunked extraction (rule 2): one provider call per chunk, merged afterwards.
-        queue = list(item.chunks)
-        outputs: list[dict[str, Any]] = []
+        # Chunks run concurrently (bounded by CHUNK_CONCURRENCY): the wall clock is dominated
+        # by provider latency, not CPU, so sequential calls made an 11 part import take minutes.
+        queue: asyncio.Queue[str] = asyncio.Queue()
+        for chunk_text in item.chunks:
+            queue.put_nowait(chunk_text)
+        outputs = []
         done = 0
-        while queue:
-            chunk_text = queue.pop(0)
-            messages = _messages(chunk_text, item.context, shots)
-            result = await _call_plan(plan, keys, prompt.system, messages, schema, task)
-            tokens_in += result.tokens_in
-            tokens_out += result.tokens_out
-            skipped_extra.extend(result.skips)
-            chosen = result.chosen
-            if result.output is None and result.error and "max_tokens" in result.error:
-                halves = _split_chunk_in_half(chunk_text)
-                if halves is not None:
-                    queue = [*halves, *queue]
-                    continue
-            if result.output is not None:
-                outputs.append(result.output)
-            else:
-                warnings.append(f"Ein Teil konnte nicht verarbeitet werden: {result.error}")
-            done += 1
-            total_now = done + len(queue)
-            await _update_progress(
-                factory,
-                tenant_id,
-                run_id,
-                {
-                    "stage": f"Verarbeitung Teil {done} von {total_now}" if queue else "Fertig",
-                    "current": done,
-                    "total": total_now,
-                },
-            )
+        pending = len(item.chunks)
+        chosen_ref: list[Any] = [chosen]
+        lock = asyncio.Lock()
+
+        async def _work() -> None:
+            nonlocal tokens_in, tokens_out, done, pending
+            while True:
+                try:
+                    chunk_text = queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    return
+                messages = _messages(chunk_text, item.context, shots)
+                result = await _call_plan(plan, keys, prompt.system, messages, schema, task)
+                async with lock:
+                    tokens_in += result.tokens_in
+                    tokens_out += result.tokens_out
+                    skipped_extra.extend(result.skips)
+                    chosen_ref[0] = result.chosen
+                    if result.output is None and result.error and "max_tokens" in result.error:
+                        halves = _split_chunk_in_half(chunk_text)
+                        if halves is not None:
+                            for half in halves:
+                                queue.put_nowait(half)
+                            pending += 1  # one chunk became two
+                            continue
+                    if result.output is not None:
+                        outputs.append(result.output)
+                    else:
+                        warnings.append(f"Ein Teil konnte nicht verarbeitet werden: {result.error}")
+                    done += 1
+                    total_now = pending
+                    stage = (
+                        f"Verarbeitung Teil {done} von {total_now}"
+                        if done < total_now
+                        else "Fertig"
+                    )
+                await _update_progress(
+                    factory,
+                    tenant_id,
+                    run_id,
+                    {"stage": stage, "current": done, "total": total_now},
+                )
+
+        await asyncio.gather(*(_work() for _ in range(max(1, CHUNK_CONCURRENCY))))
+        chosen = chosen_ref[0]
         if outputs:
             output = merge_extraction(task, outputs)
             error = None
