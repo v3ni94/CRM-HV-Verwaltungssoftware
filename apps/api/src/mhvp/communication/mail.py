@@ -48,15 +48,19 @@ def parse(raw: bytes) -> dict[str, Any]:
             received = parsedate_to_datetime(str(msg["Date"]))
         except (TypeError, ValueError):
             received = None
+    # Field caps match the message columns (String(320)/String(998)): one mail with an
+    # oversized header must not fail the insert and with it every following sync attempt.
     return {
-        "from": (getaddresses([str(msg["From"] or "")]) or [("", "")])[0][1].lower() or None,
+        "from": (getaddresses([str(msg["From"] or "")]) or [("", "")])[0][1].lower()[:320] or None,
         "to": [
-            a.lower() for _, a in getaddresses([str(msg["To"] or ""), str(msg["Cc"] or "")]) if a
+            a.lower()[:320]
+            for _, a in getaddresses([str(msg["To"] or ""), str(msg["Cc"] or "")])
+            if a
         ],
         "subject": str(msg["Subject"] or "")[:998] or None,
         "body": text.strip()[:100000],
-        "message_id": str(msg["Message-ID"] or "").strip() or None,
-        "in_reply_to": str(msg["In-Reply-To"] or "").strip() or None,
+        "message_id": str(msg["Message-ID"] or "").strip()[:998] or None,
+        "in_reply_to": str(msg["In-Reply-To"] or "").strip()[:998] or None,
         "received_at": received,
         "attachments": attachments,
     }

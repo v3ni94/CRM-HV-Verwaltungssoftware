@@ -5311,6 +5311,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tickets/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ticketauswertung: Bestand, Zeitreihe, je Bearbeiter
+         * @description Dashboard numbers: current stock by status, created/resolved per period (local time,
+         *     Europe/Berlin) and totals per assignee for the whole tenant. assignee_user_id narrows the
+         *     stock and the series; the per-user comparison always covers the tenant.
+         */
+        get: operations["ticket_stats_api_v1_tickets_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tickets/{ticket_id}": {
         parameters: {
             query?: never;
@@ -23774,6 +23796,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ticket_stats_api_v1_tickets_stats_get: {
+        parameters: {
+            query?: {
+                interval?: "day" | "week" | "month" | "quarter" | "year";
+                periods?: number;
+                assignee_user_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

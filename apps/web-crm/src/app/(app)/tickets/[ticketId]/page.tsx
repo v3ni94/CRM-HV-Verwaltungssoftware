@@ -26,7 +26,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
       <h1 className={ui.title}>
         #{String(data.number)} {String(data.title ?? "")}
       </h1>
-      {data.public_description ? <p className="text-sm">{String(data.public_description)}</p> : null}
+      {data.public_description ? <p className="text-sm break-words">{String(data.public_description)}</p> : null}
       <TicketEdit id={ticketId} status={String(data.status)} priority={String(data.priority)} />
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">{t("comments")}</h2>
@@ -36,7 +36,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
               <div className="text-xs text-muted">
                 {formatDateTime(c.created_at)} · {c.internal ? t("internal") : t("external")}
               </div>
-              <div className="whitespace-pre-wrap">{c.body}</div>
+              <div className="min-w-0 whitespace-pre-wrap break-words">{c.body}</div>
             </li>
           ))}
         </ul>

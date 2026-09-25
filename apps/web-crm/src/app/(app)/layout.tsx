@@ -21,6 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: me, response } = await serverApi().GET("/api/v1/auth/me");
   redirectIfUnauthenticated(response);
   const can = (p: string) => me?.permissions.includes(p) ?? false;
+  const uprotokollUrl = (process.env.MHVP_UPROTOKOLL_URL ?? "https://uprotokoll.mueller-holding.ag").replace(/\/+$/, "");
   const groups: NavGroup[] = [
     {
       label: t("group.overview"),
@@ -29,6 +30,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can("properties:read") ? [{ href: "/objekte", label: t("properties"), icon: "properties" }] : []),
         { href: "/kontakte", label: t("contacts"), icon: "contacts" },
         { href: "/kalender", label: t("calendar"), icon: "calendar" },
+        ...(can("communication:read") ? [{ href: "/mail", label: t("mail"), icon: "mail" }] : []),
+        ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets"), icon: "tickets" }] : []),
       ],
     },
     {
@@ -38,9 +41,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can("accounting:read") ? [{ href: "/weg", label: t("hoa"), icon: "hoa" }] : []),
         ...(can("properties:read") ? [{ href: "/objekte?art=sev", label: t("sev"), icon: "sev" }] : []),
         ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting"), icon: "letting" }] : []),
-        ...(can("contracts:read") ? [{ href: "/makler", label: t("broker"), icon: "broker" }] : []),
         ...(can("documents:read") ? [{ href: "/dms", label: t("dms"), icon: "dms" }] : []),
-        ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets"), icon: "tickets" }] : []),
+      ],
+    },
+    {
+      // Makler as its own top-level area: FLOW listings and the handover protocol app,
+      // more sub-items may follow.
+      label: t("group.broker"),
+      items: [
+        ...(can("contracts:read") ? [{ href: "/makler", label: t("brokerFlow"), icon: "broker" }] : []),
+        { href: uprotokollUrl, label: t("uprotokoll"), icon: "protocol", external: true },
       ],
     },
     {

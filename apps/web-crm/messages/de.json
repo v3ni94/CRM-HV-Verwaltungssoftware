@@ -57,6 +57,7 @@
     "aiSettings": "KI-Einstellungen",
     "dashboard": "Start",
     "calendar": "Kalender",
+    "mail": "Mail",
     "entity": {
       "contact": "Kontakt",
       "property": "Objekt",
@@ -78,7 +79,8 @@
       "overview": "Übersicht",
       "management": "Verwaltung",
       "finance": "Finanzen",
-      "system": "System"
+      "system": "System",
+      "broker": "Makler"
     },
     "rental": "Mietverwaltung",
     "sev": "SEV",
@@ -86,7 +88,9 @@
     "myData": "Meine Daten",
     "navCollapse": "Leiste einklappen",
     "navExpand": "Leiste ausklappen",
-    "dms": "DMS"
+    "dms": "DMS",
+    "brokerFlow": "Flow (Inserate)",
+    "uprotokoll": "Übergabeprotokoll"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -458,7 +462,7 @@
     "undo": "Rückgängig",
     "undoConfirm": "Import wirklich zurücknehmen? Datensätze, auf die spätere Daten aufbauen, bleiben erhalten.",
     "undoneAt": "Zurückgenommen am {at}",
-    "immoware24Link": "Importassistent Immoware24 öffnen"
+    "immoware24Link": "Importassistent öffnen"
   },
   "AiSettings": {
     "title": "KI-Einstellungen",
@@ -525,7 +529,7 @@
     }
   },
   "Immoware24": {
-    "title": "Importassistent Immoware24",
+    "title": "Importassistent",
     "intro": "Berichte aus Immoware24 hochladen, Spalten zuordnen, prüfen, testen und übernehmen. Jede Übernahme erzeugt einen Importlauf, der sich zurücknehmen lässt.",
     "backToImports": "Zurück zu den Importen",
     "overviewTitle": "Bestand in der Plattform",
@@ -1748,5 +1752,53 @@
     "searchObject": "Akte {number} suchen",
     "empty": "Keine Objekte vorhanden.",
     "hint": "Der Absprung öffnet die Suche der Objektübernahme mit der Objektnummer. Eine direkte Verknüpfung je Akte folgt mit Stufe 3."
+  },
+  "TicketStats": {
+    "title": "Ticketauswertung",
+    "kpis": "Ticket-Kennzahlen",
+    "interval": "Zeitraum",
+    "intervals": {
+      "day": "Tag",
+      "week": "Woche",
+      "month": "Monat",
+      "quarter": "Quartal",
+      "year": "Jahr"
+    },
+    "user": "Bearbeiter",
+    "allUsers": "Gesamter Mandant",
+    "kpiOpen": "Offen gesamt",
+    "kpiNew": "Neu",
+    "kpiInProgress": "In Bearbeitung",
+    "kpiWaiting": "Wartend",
+    "kpiResolvedWindow": "Erledigt im Zeitraum",
+    "seriesTitle": "Erstellt und erledigt je Zeitabschnitt",
+    "created": "Erstellt",
+    "resolved": "Erledigt",
+    "byUserTitle": "Vergleich je Bearbeiter (gesamter Mandant)",
+    "open": "Offen",
+    "resolvedWindow": "Erledigt im Zeitraum",
+    "unassigned": "Nicht zugewiesen",
+    "othersRow": "Weitere ({count})",
+    "asTable": "Als Tabelle anzeigen",
+    "period": "Zeitabschnitt",
+    "empty": "Noch keine Tickets."
+  },
+  "Mail": {
+    "title": "Mail",
+    "intro": "Eingegangene Vorgänge aus den verbundenen Postfächern. Zuordnung zu Tickets und Kontakten erfolgt automatisch, Einstellungen unter Postfächer.",
+    "mailboxes": "Postfächer verwalten",
+    "statusAll": "Alle Status",
+    "colDate": "Eingegangen",
+    "colFrom": "Absender",
+    "colSubject": "Betreff",
+    "colStatus": "Status",
+    "colTicket": "Ticket",
+    "toTicket": "Ticket öffnen",
+    "empty": "Keine Vorgänge.",
+    "status": {
+      "new": "Neu",
+      "assigned": "Zugeordnet",
+      "done": "Erledigt"
+    }
   }
 }

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { TicketStats } from "@/components/workspace/TicketStats";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TileSkeleton } from "@/components/ui/Skeleton";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -128,6 +129,7 @@ export default async function DashboardPage() {
       >
         <DashboardData />
       </Suspense>
+      <TicketStats />
     </div>
   );
 }

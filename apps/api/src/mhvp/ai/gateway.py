@@ -29,9 +29,24 @@ from mhvp.core.events import emit
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, TextStatus
 
-MAX_INPUT_CHARS = 600_000
+
+# Character limits are operator configuration (MHVP_AI_MAX_INPUT_CHARS /
+# MHVP_AI_MAX_DOCUMENT_CHARS). The defaults fit a 200k-token context window; raising them
+# requires a routed model with a matching window (e.g. a 1M-token model), otherwise runs
+# fail at the provider instead of with the clear message here.
+def _max_input_chars() -> int:
+    from mhvp.core.config import get_settings
+
+    return get_settings().ai_max_input_chars
+
+
+def _max_document_chars() -> int:
+    from mhvp.core.config import get_settings
+
+    return get_settings().ai_max_document_chars
+
+
 MAX_TABLE_ROWS = 2_000  # rows with content; formatted empty rows do not count
-MAX_DOCUMENT_CHARS = 250_000  # per file; longer files are cut with a visible note
 FEW_SHOT = 8
 WARN_SHARE = Decimal("0.8")
 # Rate limits and overloads: wait and retry the same provider before falling back (seconds).
@@ -107,8 +122,9 @@ async def document_text(session: AsyncSession, blobs: BlobStore, document_id: uu
         raise GatewayBlockedError(
             f"Für {document.filename} liegt noch kein Text vor (Texterkennung ausstehend)."
         )
-    if len(body) > MAX_DOCUMENT_CHARS:
-        body = body[:MAX_DOCUMENT_CHARS] + "\n[gekürzt: Datei länger als das Limit für eine Datei]"
+    if len(body) > _max_document_chars():
+        note = "\n[gekürzt: Datei länger als das Limit für eine Datei]"
+        body = body[: _max_document_chars()] + note
     return f'<datei name="{document.filename}" id="{document.id}">\n{body}\n</datei>'
 
 
@@ -140,10 +156,12 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
     for document_id in document_ids:
         parts.append(await document_text(session, blobs, document_id))
     text = "\n\n".join(parts)
-    if len(text) > MAX_INPUT_CHARS:
+    if len(text) > _max_input_chars():
         raise GatewayBlockedError(
             f"Die Unterlagen sind zu umfangreich ({len(text)} Zeichen, höchstens "
-            f"{MAX_INPUT_CHARS}). Bitte in kleinere Teile aufteilen."
+            f"{_max_input_chars()}). Bitte in kleinere Teile aufteilen oder das Limit "
+            "(MHVP_AI_MAX_INPUT_CHARS) zusammen mit einem Modell mit größerem Kontextfenster "
+            "erhöhen."
         )
     return TaskInput(text=text, document_ids=document_ids, context=dict(ref.get("context", {})))
 
@@ -214,12 +232,39 @@ async def _provider_order(session: AsyncSession, strategy: str) -> list[AiProvid
     return [first, *others] if first else others
 
 
+# Documented context windows (input tokens) by model prefix; every other model gets the
+# conservative 200k default. Operators can override per tier entry with "context_tokens".
+KNOWN_CONTEXT_TOKENS: tuple[tuple[str, int], ...] = (
+    ("gpt-4.1", 1_000_000),
+    ("gpt-5", 400_000),
+)
+DEFAULT_CONTEXT_TOKENS = 200_000
+# Rough German prose ratio; the reserve covers prompt, examples and the 16k output budget.
+CONTEXT_RESERVE_TOKENS = 24_000
+CHARS_PER_TOKEN_X2 = 7  # 3,5 Zeichen je Token, ganzzahlig gerechnet
+
+
+def _context_tokens(model: str, entry: dict[str, Any]) -> int:
+    configured = entry.get("context_tokens")
+    if configured:
+        return int(configured)
+    for prefix, tokens in KNOWN_CONTEXT_TOKENS:
+        if model.startswith(prefix):
+            return tokens
+    return DEFAULT_CONTEXT_TOKENS
+
+
 @dataclass
 class Route:
     config: AiProviderConfig
     model: str
     price_in: Decimal
     price_out: Decimal
+    context_tokens: int = DEFAULT_CONTEXT_TOKENS
+
+    @property
+    def max_input_chars(self) -> int:
+        return max(0, self.context_tokens - CONTEXT_RESERVE_TOKENS) * CHARS_PER_TOKEN_X2 // 2
 
 
 async def routes(session: AsyncSession, task: AiTask) -> tuple[list[Route], list[str]]:
@@ -266,7 +311,7 @@ async def routes(session: AsyncSession, task: AiTask) -> tuple[list[Route], list
         except (KeyError, ArithmeticError):
             reasons.append(f"{config.provider.value}: Modell oder Preise für Stufe {tier} fehlen")
             continue
-        usable.append(Route(config, model, price_in, price_out))
+        usable.append(Route(config, model, price_in, price_out, _context_tokens(model, entry)))
     return usable, reasons
 
 
@@ -358,6 +403,17 @@ async def execute(
                     )
                     continue
                 plan.append((candidate, spent, budget))
+            # Large inputs skip models whose context window is too small; the fallback note on
+            # the run shows the switch. Blocked only when no released model is large enough.
+            fitting = [p for p in plan if len(item.text) <= p[0].max_input_chars]
+            for candidate, _, _ in plan:
+                if len(item.text) > candidate.max_input_chars:
+                    reasons.append(
+                        f"{candidate.config.provider.value} ({candidate.model}): Kontextfenster "
+                        f"zu klein für {len(item.text)} Zeichen; Wechsel auf ein Modell mit "
+                        "größerem Kontext"
+                    )
+            plan = fitting
             if not plan:
                 raise GatewayBlockedError("; ".join(reasons))
             skipped = list(reasons)

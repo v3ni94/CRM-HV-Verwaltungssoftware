@@ -2,13 +2,15 @@
 invoice end to end. Payment stays in accounting (M14/M15); board status never pays."""
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, update
+from sqlalchemy import Date, cast, func, select, update
+from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
@@ -426,6 +428,145 @@ async def list_tickets(
         if mine:
             query = query.where(Ticket.assignee_user_id == principal.user_id)
         return [_ticket_out(t) for t in (await session.scalars(query.limit(limit))).all()]
+
+
+OPEN_STATUSES = (TicketStatus.NEW, TicketStatus.IN_PROGRESS, TicketStatus.WAITING)
+STATS_TZ = "Europe/Berlin"
+
+
+def _bucket_start(interval: str, day: date) -> date:
+    if interval == "day":
+        return day
+    if interval == "week":
+        return day - timedelta(days=day.weekday())
+    if interval == "month":
+        return day.replace(day=1)
+    if interval == "quarter":
+        return day.replace(month=((day.month - 1) // 3) * 3 + 1, day=1)
+    return day.replace(month=1, day=1)
+
+
+def _bucket_back(interval: str, start: date, steps: int) -> date:
+    if interval == "day":
+        return start - timedelta(days=steps)
+    if interval == "week":
+        return start - timedelta(weeks=steps)
+    if interval == "quarter":
+        steps *= 3
+    if interval == "year":
+        return start.replace(year=start.year - steps)
+    months = (start.year * 12 + start.month - 1) - steps
+    return date(months // 12, months % 12 + 1, 1)
+
+
+@router.get("/tickets/stats", summary="Ticketauswertung: Bestand, Zeitreihe, je Bearbeiter")
+async def ticket_stats(
+    request: Request,
+    interval: Literal["day", "week", "month", "quarter", "year"] = "week",
+    periods: int = Query(default=12, ge=1, le=60),
+    assignee_user_id: uuid.UUID | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """Dashboard numbers: current stock by status, created/resolved per period (local time,
+    Europe/Berlin) and totals per assignee for the whole tenant. assignee_user_id narrows the
+    stock and the series; the per-user comparison always covers the tenant."""
+    today = datetime.now(UTC).astimezone(ZoneInfo(STATS_TZ)).date()
+    window_start = _bucket_back(interval, _bucket_start(interval, today), periods - 1)
+    starts = sorted(
+        _bucket_back(interval, _bucket_start(interval, today), i) for i in range(periods)
+    )
+
+    def scoped(*where: Any) -> Any:
+        query = select(func.count()).select_from(Ticket).where(*where)
+        if assignee_user_id:
+            query = query.where(Ticket.assignee_user_id == assignee_user_id)
+        return query
+
+    def local_day(column: Any) -> Any:
+        return cast(func.date_trunc(interval, func.timezone(STATS_TZ, column)), Date)
+
+    async with tenant_tx(request, principal) as session:
+        by_status = {s.value: 0 for s in TicketStatus}
+        rows = await session.execute(
+            scoped().with_only_columns(Ticket.status, func.count()).group_by(Ticket.status)
+        )
+        for status, count in rows:
+            by_status[status.value] = int(count)
+
+        series = {d: {"created": 0, "resolved": 0} for d in starts}
+        created_rows = await session.execute(
+            scoped(func.timezone(STATS_TZ, Ticket.created_at) >= window_start)
+            .with_only_columns(local_day(Ticket.created_at), func.count())
+            # GROUP BY 1: the truncation carries bind parameters, so a repeated expression
+            # would not compare equal on the server (SQLSTATE 42803).
+            .group_by(sql_text("1"))
+        )
+        for day, count in created_rows:
+            if day in series:
+                series[day]["created"] = int(count)
+        resolved_rows = await session.execute(
+            scoped(
+                Ticket.resolved_at.is_not(None),
+                func.timezone(STATS_TZ, Ticket.resolved_at) >= window_start,
+            )
+            .with_only_columns(local_day(Ticket.resolved_at), func.count())
+            .group_by(sql_text("1"))
+        )
+        for day, count in resolved_rows:
+            if day in series:
+                series[day]["resolved"] = int(count)
+
+        # Comparison per assignee over the whole tenant (open stock and resolved in window).
+        per_user: dict[uuid.UUID | None, dict[str, int]] = {}
+        open_rows = await session.execute(
+            select(Ticket.assignee_user_id, func.count())
+            .where(Ticket.status.in_(OPEN_STATUSES))
+            .group_by(Ticket.assignee_user_id)
+        )
+        for user_id, count in open_rows:
+            per_user.setdefault(user_id, {"open": 0, "resolved": 0})["open"] = int(count)
+        user_resolved = await session.execute(
+            select(Ticket.assignee_user_id, func.count())
+            .where(
+                Ticket.resolved_at.is_not(None),
+                func.timezone(STATS_TZ, Ticket.resolved_at) >= window_start,
+            )
+            .group_by(Ticket.assignee_user_id)
+        )
+        for user_id, count in user_resolved:
+            per_user.setdefault(user_id, {"open": 0, "resolved": 0})["resolved"] = int(count)
+
+        # Display names come from the platform user table (no RLS, section 5.3).
+        from mhvp.platform.models import User
+
+        ids = [u for u in per_user if u is not None]
+        names = {}
+        if ids:
+            name_rows = await session.execute(
+                select(User.id, User.display_name).where(User.id.in_(ids))
+            )
+            names = dict(name_rows.all())
+
+    return {
+        "interval": interval,
+        "periods": periods,
+        "window_start": window_start.isoformat(),
+        "open_total": sum(by_status[s.value] for s in OPEN_STATUSES),
+        "by_status": by_status,
+        "series": [{"start": d.isoformat(), **series[d]} for d in starts],
+        "by_user": sorted(
+            (
+                {
+                    "user_id": str(u) if u else None,
+                    "name": names.get(u),
+                    "open": v["open"],
+                    "resolved": v["resolved"],
+                }
+                for u, v in per_user.items()
+            ),
+            key=lambda r: (-r["resolved"], -r["open"]),
+        ),
+    }
 
 
 @router.patch("/tickets/{ticket_id}", summary="Status, Zuweisung, Checkliste")

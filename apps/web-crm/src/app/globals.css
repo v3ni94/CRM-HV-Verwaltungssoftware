@@ -166,3 +166,25 @@ body {
     transform: none;
   }
 }
+
+/* Data-viz series tokens (dashboard charts). Values validated with the dataviz palette
+   checker against the light (#fbf6ec) and dark (#1e1d22) surfaces; dark steps are selected,
+   not an automatic flip. Same dark triggers as tokens.css. */
+.viz-root {
+  --viz-created: #2a78d6; /* Zeitreihe: erstellt */
+  --viz-resolved: #b07b1e; /* erledigt (Gold, brandnah, im Lightness-Band) */
+  --viz-open: #1baf7a; /* offener Bestand */
+  --viz-grid: var(--mhvp-color-border-soft);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .viz-root {
+    --viz-created: #3987e5;
+    --viz-resolved: #c08618;
+    --viz-open: #199e70;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  --viz-created: #3987e5;
+  --viz-resolved: #c08618;
+  --viz-open: #199e70;
+}

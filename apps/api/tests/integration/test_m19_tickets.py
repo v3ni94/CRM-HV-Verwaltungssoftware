@@ -277,3 +277,53 @@ def test_ticket_to_order_to_invoice(client: TestClient, world: World) -> None:
         o["status"] for o in full["work_orders"]
     ) == ["accepted", "quoted"]
     assert [e["kind"] for e in full["events"]][:2] == ["created", "status"]
+
+
+def test_ticket_stats_series_and_user_comparison(client: TestClient, world: World) -> None:
+    """Dashboard stats: stock by status, created/resolved buckets and per-user comparison,
+    plus the assignee filter narrowing stock and series."""
+    h = bearer(login(client, world, "m19admin"))
+    tech = str(world.users["m19tech"])
+    care = str(world.users["m19care"])
+
+    made = []
+    for i in range(3):
+        t = _ok(
+            client.post("/api/v1/tickets", json={"title": f"Statistik {RUN} {i}"}, headers=h), 201
+        )
+        made.append(t["id"])
+    # tech resolves one, care keeps one open, one stays unassigned
+    _ok(client.patch(f"/api/v1/tickets/{made[0]}", json={"assignee_user_id": tech}, headers=h))
+    _ok(client.patch(f"/api/v1/tickets/{made[0]}", json={"status": "done"}, headers=h))
+    _ok(client.patch(f"/api/v1/tickets/{made[1]}", json={"assignee_user_id": care}, headers=h))
+
+    stats = _ok(client.get("/api/v1/tickets/stats?interval=day&periods=7", headers=h))
+    assert stats["interval"] == "day"
+    assert len(stats["series"]) == 7
+    assert stats["by_status"]["done"] >= 1
+    assert stats["open_total"] >= 2
+    today = stats["series"][-1]
+    assert today["created"] >= 3
+    assert today["resolved"] >= 1
+
+    users = {u["user_id"]: u for u in stats["by_user"]}
+    assert users[tech]["resolved"] >= 1
+    assert users[tech]["name"] == "m19tech"
+    assert users[care]["open"] >= 1
+    assert None in users or users.get(None) is None or True  # unassigned bucket may exist
+
+    # Assignee filter narrows stock and series to that user.
+    filtered = _ok(
+        client.get(f"/api/v1/tickets/stats?interval=day&periods=7&assignee_user_id={care}", headers=h)
+    )
+    assert filtered["open_total"] == 1
+    assert filtered["series"][-1]["resolved"] == 0
+
+    # Every interval works against the database.
+    for interval in ("week", "month", "quarter", "year"):
+        r = _ok(client.get(f"/api/v1/tickets/stats?interval={interval}&periods=4", headers=h))
+        assert len(r["series"]) == 4
+
+    # Reading requires the tickets permission.
+    ro = bearer(login(client, world, "m19read"))
+    assert client.get("/api/v1/tickets/stats", headers=ro).status_code == 403

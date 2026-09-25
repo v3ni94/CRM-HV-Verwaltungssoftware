@@ -78,6 +78,11 @@ class Settings(BaseSettings):
     google_client_id: str | None = None
     google_client_secret: SecretStr | None = None
     gmail_sync_batch: int = Field(default=50, ge=1, le=500)
+
+    # AI gateway input limits (M7). Defaults fit a 200k-token context window; raise them only
+    # together with a routed model whose window matches (e.g. 1M tokens), see ai/gateway.py.
+    ai_max_input_chars: int = Field(default=600_000, ge=100_000, le=10_000_000)
+    ai_max_document_chars: int = Field(default=250_000, ge=50_000, le=5_000_000)
     # Public URLs for the OAuth redirect (API callback) and the return to the CRM screen.
     api_public_url: str | None = None
     web_crm_url: str | None = None

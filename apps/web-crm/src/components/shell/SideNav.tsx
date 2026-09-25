@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 import { ChevronIcon, navIcon } from "./icons";
 
-export type NavItem = { href: string; label: string; icon?: string };
+export type NavItem = { href: string; label: string; icon?: string; external?: boolean };
 export type NavGroup = { label: string; items: NavItem[] };
 
 const STORAGE_KEY = "mhvp.nav.collapsed";
@@ -130,26 +130,45 @@ export function SideNav({
               <span className="mhvp-label px-3 pb-1 text-rail-muted md:hidden">{g.label}</span>
               {isCollapsed ? null : (
                 <div className="flex shrink-0 gap-1 md:flex-col">
-                  {g.items.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      title={railCollapsed ? item.label : undefined}
-                      aria-current={active(item.href) ? "page" : undefined}
-                      className={`relative flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition duration-150 ${
-                        railCollapsed ? "md:justify-center md:px-2" : ""
-                      } ${
-                        active(item.href)
-                          ? "bg-rail-active font-medium text-rail-fg md:before:absolute md:before:bottom-2 md:before:left-0 md:before:top-2 md:before:w-0.5 md:before:rounded-full md:before:bg-gold"
-                          : "text-rail-muted hover:bg-rail-hover hover:text-rail-fg"
-                      }`}
-                    >
-                      <span className="hidden md:inline-flex">
-                        <ItemIcon name={item.icon} />
-                      </span>
-                      <span className={railCollapsed ? "md:sr-only" : ""}>{item.label}</span>
-                    </Link>
-                  ))}
+                  {g.items.map((item) => {
+                    const itemClass = `relative flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition duration-150 ${
+                      railCollapsed ? "md:justify-center md:px-2" : ""
+                    } ${
+                      !item.external && active(item.href)
+                        ? "bg-rail-active font-medium text-rail-fg md:before:absolute md:before:bottom-2 md:before:left-0 md:before:top-2 md:before:w-0.5 md:before:rounded-full md:before:bg-gold"
+                        : "text-rail-muted hover:bg-rail-hover hover:text-rail-fg"
+                    }`;
+                    const body = (
+                      <>
+                        <span className="hidden md:inline-flex">
+                          <ItemIcon name={item.icon} />
+                        </span>
+                        <span className={railCollapsed ? "md:sr-only" : ""}>{item.label}</span>
+                      </>
+                    );
+                    return item.external ? (
+                      <a
+                        key={item.href}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={railCollapsed ? item.label : undefined}
+                        className={itemClass}
+                      >
+                        {body}
+                      </a>
+                    ) : (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        title={railCollapsed ? item.label : undefined}
+                        aria-current={active(item.href) ? "page" : undefined}
+                        className={itemClass}
+                      >
+                        {body}
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>

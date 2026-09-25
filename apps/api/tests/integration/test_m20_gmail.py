@@ -292,3 +292,83 @@ def test_oauth_client_consent_and_mailbox_access(
     # Removing the mailbox keeps the messages (mailbox_id becomes null).
     assert client.delete(f"{M}/mailboxes/{box['id']}", headers=h).status_code == 204
     assert address not in {b["address"] for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+
+
+def test_oversized_headers_are_capped_and_sync_survives(
+    client: TestClient, world: World, fake: FakeGmail
+) -> None:
+    """Regression (production 500): a mail whose From/Message-ID exceeded the column limits
+    failed the insert; the flush in sync_mailbox's finally block then raised
+    PendingRollbackError on this and every following sync attempt of the mailbox."""
+    h = bearer(login(client, world, "gmadmin"))
+    box = _ok(
+        client.post(
+            f"{M}/mailboxes",
+            json={"address": f"grenz{RUN}@example.com", "kind": "gmail", "secret": "rt"},
+            headers=h,
+        ),
+        201,
+    )
+    box = _ok(client.patch(f"{M}/mailboxes/{box['id']}", json={"enabled": True}, headers=h))
+    long_id = "<" + "m" * 1200 + f"-{RUN}@x>"
+    fake.add("x1", _eml(("l" * 360) + "@example.com", f"Grenzwerte {RUN}", long_id))
+    assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["created"] == 1
+    listed = {b["id"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+    assert listed[box["id"]]["last_error"] is None
+
+
+def test_failed_ingest_raises_original_error_not_pending_rollback(
+    database: Database, redis_url: str, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A database error inside the ingest poisons the transaction. sync_mailbox must let the
+    original error through instead of masking it with PendingRollbackError from its finally."""
+    import asyncio
+
+    from sqlalchemy import text as sql_text
+    from sqlalchemy.exc import DBAPIError
+
+    from mhvp.communication import services as comm_services
+    from mhvp.communication.models import Mailbox
+    from mhvp.core import crypto
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.documents.blobs import BlobStore
+
+    crypto.set_master_key(b"k" * 32)
+    settings = _settings(database, redis_url)
+
+    async def poisoned_ingest(session: Any, *args: Any, **kwargs: Any) -> Any:
+        with pytest.raises(DBAPIError):
+            await session.execute(sql_text("SELECT 1/0"))
+        raise ValueError("Originalfehler")
+
+    monkeypatch.setattr(comm_services, "ingest_raw", poisoned_ingest)
+    fake = FakeGmail()
+    fake.add("p1", _eml(f"p{RUN}@example.com", "Kaputt", f"<p1-{RUN}@x>"))
+    gclient = gmail.GmailClient("cid", "cs", "rt", transport=httpx.MockTransport(fake.handler))
+
+    async def run() -> None:
+        engine = create_app_engine(settings)
+        try:
+            factory = create_session_factory(engine)
+            with pytest.raises(ValueError, match="Originalfehler"):
+                async with tenant_transaction(factory, world.tenant_a) as session:
+                    box = Mailbox(
+                        tenant_id=world.tenant_a,
+                        address=f"poison{RUN}@example.com",
+                        kind="gmail",
+                        enabled=True,
+                        secret="rt",
+                    )
+                    session.add(box)
+                    await session.flush()
+                    with mock_aws():
+                        boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
+                        await gmail.sync_mailbox(
+                            session, BlobStore(settings), settings, box, gclient
+                        )
+            await gclient.aclose()
+        finally:
+            await engine.dispose()
+
+    asyncio.run(run())

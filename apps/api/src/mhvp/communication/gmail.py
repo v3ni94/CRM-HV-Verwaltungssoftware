@@ -231,11 +231,16 @@ async def sync_mailbox(
         mailbox.gmail_history_id = new_cursor
         mailbox.last_error = None
     except (GmailError, httpx.HTTPError, ValueError) as exc:
+        # The enclosing transaction rolls back on raise; router and Celery task store
+        # last_error in a fresh transaction afterwards.
         mailbox.last_error = str(exc)[:1000]
         raise
-    finally:
-        mailbox.last_synced_at = datetime.now(UTC)
-        await session.flush()
+    # Flush only on success: a database error inside ingest_raw leaves the transaction
+    # aborted, and a flush in a finally block would then raise PendingRollbackError or
+    # InFailedSqlTransaction and mask the original error on every retry (production 500
+    # on POST /mailboxes/{id}/sync).
+    mailbox.last_synced_at = datetime.now(UTC)
+    await session.flush()
     return counts
 
 
