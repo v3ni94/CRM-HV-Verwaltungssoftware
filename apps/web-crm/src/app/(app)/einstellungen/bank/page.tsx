@@ -21,6 +21,7 @@ export default async function BankSettingsPage() {
     base_url: null,
     mandator_id: null,
     sandbox: null,
+    auto_fetch_enabled: false,
   }) as FinApiConfig;
   return (
     <div className="flex flex-col gap-4">

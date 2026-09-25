@@ -37,6 +37,8 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M30-06](M30-06.md) | Übergabeprotokoll: Gehilfenzugang, Sichtbarkeit und Ablauf | M30 | implemented, not accepted |
 | [M11-finapi-dedup](M11-finapi-dedup.md) | finAPI Umsatzabgleich (Bankreferenz vorrangig, D05) | M11 | implemented, not accepted |
 | [M11-finapi-authorization](M11-finapi-authorization.md) | finAPI: Recht `banking:approve`, unzugeordnete Konten verborgen | M11 | implemented, not accepted |
+| [M11-05](M11-05-credentials-never-in-crm.md) | Zugangsdaten nie im CRM (Bank-WebForm) | M11 | implemented, not accepted |
+| [M11-06](M11-06-payment-proposal-only-until-g2.md) | Zahlung nur Vorschlag bis G2 (Rechnungsabgleich) | M11, 18.0 | implemented, not accepted |
 | [M3-02](M3-02-sepa-mandate.md) | SEPA-Mandat auf der Bankverbindung des Kontakts | M3, 6.1 | implemented, not accepted |
 | [M20-05](M20-05.md) | Mail-Vorbereitung: Dokumentsuche strikt je Objekt, keine Kontoauflistung | M20, M34, 11.2 | implemented, not accepted |
 | [M23-05](M23-05.md) | Google-Kalender: Einladungen nur nach Bestätigung, kein stiller externer Überschreib | M23 | implemented, not accepted |

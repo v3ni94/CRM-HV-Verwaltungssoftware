@@ -76,9 +76,77 @@ disconnect, tenant separation), 19 (no config -> "not configured", never demo da
 Ruff, mypy and the targeted pytest run are reported in the final message; tests not executed
 are named explicitly there (no live finAPI sandbox or bank in this environment).
 
-## Open points
+## Open points (original stage)
 
 M11-40 to M11-45 in `docs/OPEN_QUESTIONS.md` (finAPI contract/licensing, § 34 ZAG assessment,
 mandator model, update endpoint confirmation, callback signature, rate limits). Gate: G2 is not
 affected, this stage is read only; G1 (productive bookkeeping of the resulting transactions)
 already gates on the existing accounting release, unchanged here.
+
+## Umbau (Stages 1 to 6, operator decision 25.09.2026)
+
+PSD2/XS2A via the finAPI aggregator becomes the primary path for unlimited banks, next to the
+existing file upload; HBCI/FinTS is explicitly deferred, only the seam for a later adapter is
+built. Six stages, each gated (ruff, mypy, alembic, targeted pytest; tsc, eslint, vitest for the
+web app) before the next started:
+
+- **Stage 1 -- provider abstraction.** `mhvp.banking.connectors.BankConnector` extended with
+  `search_bank`, `start_connection`, `complete_connection`, `refresh_consent` (plus the
+  existing `list_accounts`/`fetch_transactions`); `FinApiConnector` implements it on top of the
+  unchanged `FinApiClient`; a new `FileConnector` puts the CSV/CAMT path on the same seam
+  without changing its behaviour; `UnconfiguredConnector` (FinTS/EBICS placeholder) implements
+  it too. No migration. Tests: `apps/api/tests/unit/test_banking_connectors.py`.
+- **Stage 2 -- onboarding, consent, transactions.** `FinApiTenantConfig.auto_fetch_enabled`
+  (default off, migration `0059`); `/banking/finapi/accounts/{id}/fetch` and the new
+  `/banking/finapi/connections/{id}/fetch` (per bank) take an optional date range; new Celery
+  beat task `mhvp.banking.finapi_scheduled_fetch`, opt-in per tenant. Fixed a real regression in
+  `mhvp.banking.tasks.sync_tenant`: it routed every non-file connector, including an already
+  active finAPI connection, through the generic `UnconfiguredConnector` placeholder and
+  silently flipped it to `not_configured` on every daily run; finAPI now has its own branch.
+- **Stage 3 -- matching and proposals.** New table `invoice_bank_transaction_link` (migration
+  `0061`) records an automatic match (amount plus invoice number or IBAN in the purpose) as
+  evidence only; `mhvp.banking.invoice_matching.propose_payment` creates a draft `PaymentOrder`
+  via the existing, unchanged `payments.order_from_invoice` when nothing matches (rule
+  `M11-06`, gate G2 stays closed). `POST /tickets/{id}/attach-invoice` (the only addition to
+  `mhvp.tickets.routers`) sets a ticket's category to `invoice` and files the invoice's original
+  document into the property's Google Drive year folder (`mhvp.documents.property_filing`,
+  `GoogleDriveStore.file_in_property_year_folder`, new, alongside the unchanged `put`/
+  `DRIVE_FOLDERS` mirror flow). Tests: `apps/api/tests/integration/test_m11_invoice_matching.py`.
+- **Stage 4 -- portal document reference.** `GET /portal/account` rows carry a `document_id`
+  when the booking behind that open item (`JournalEntry.document_id`) is a document this portal
+  account may actually see (`mhvp.portal.access.visible_documents`, the same check the download
+  endpoint re-runs); never a bare id the portal could not then open. Test:
+  `apps/api/tests/integration/test_m11_portal_document_ref.py`.
+- **Stage 5 -- CRM UI.** `FinApiConnections.tsx`/`FinApiSettingsCard.tsx` fixed a pre-existing
+  bug (calls to `/api/v1/banking/finapi/...`, unreachable through the BFF proxy; corrected to
+  `/api/bff/banking/finapi/...`) and gained a date-range fetch control (`FetchRangeControl`, used
+  per account and per bank) and the auto-fetch switch; `InvoiceMatchPanel.tsx` on the invoice
+  page shows a matched transaction or a "Zahlung vorbereiten" (draft only) form; the invoice
+  matching and attach-invoice endpoints were added to the BFF allowlist. `TicketAttachInvoiceButton`
+  is additive next to the appointment button another agent added to the ticket detail page.
+  Tests: `FinApiConnections.test.tsx`, `InvoiceMatchPanel.test.tsx`,
+  `TicketAttachInvoiceButton.test.tsx`.
+- **Stage 6 -- docs.** This section; `docs/integrations/finapi.md` ("Rebuild" section: WebForm
+  flow, consent renewal, history depth); `docs/rules/M11-05-credentials-never-in-crm.md`,
+  `docs/rules/M11-06-payment-proposal-only-until-g2.md`, registered in `docs/rules/README.md`;
+  `docs/OPEN_QUESTIONS.md` updated (V2/V3 decided per operator, history depth per bank still
+  open).
+
+Migrations of this rebuild: `0059_finapi_auto_fetch.py`, `0061_invoice_bank_transaction_link.py`
+(numbered around several concurrently developed migrations by other agents on the shared
+branch; `alembic heads` confirmed a single head after each stage).
+
+### Open points (rebuild)
+
+- History depth per bank is not modelled (`docs/integrations/finapi.md`, "wie vom Anbieter
+  geliefert"); verify per bank once real contracts exist.
+- `FinApiConnection.consent_valid_until` stays unset until a verified consent-expiry field is
+  confirmed from finAPI (see "Zu prüfen" in `docs/integrations/finapi.md`); the CRM's "Erneut
+  freigeben" action does not yet show a countdown.
+- finAPI contract/licensing and the § 34 ZAG assessment (M11-40 to M11-45) remain open; per
+  operator decision 25.09.2026 accounts are configured per tenant and finAPI is confirmed as the
+  aggregator, but the underlying finAPI contract is still pending (see
+  `docs/OPEN_QUESTIONS.md`).
+- Portal/CRM UI for the account assignment step still takes a raw internal account id
+  (`AssignForm`); a proper picker (search by property/unit) was out of scope for this rebuild's
+  time budget and is a good next small UI task.

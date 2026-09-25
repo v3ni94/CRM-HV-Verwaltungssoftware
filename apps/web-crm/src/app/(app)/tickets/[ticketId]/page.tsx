@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { SlaBadge } from "@/components/tickets/SlaBadge";
 import { TicketAppointmentButton } from "@/components/tickets/TicketAppointmentButton";
+import { TicketAttachInvoiceButton } from "@/components/tickets/TicketAttachInvoiceButton";
 import { TicketChecklist } from "@/components/tickets/TicketChecklist";
 import { TicketEdit } from "@/components/tickets/TicketForms";
 import { TicketMergeDialog } from "@/components/tickets/TicketMergeDialog";
@@ -81,6 +82,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
         <>
           <SlaBadge ticketId={ticketId} canManage={canManageSla} />
           <TicketAppointmentButton ticketId={ticketId} ticketTitle={data.title ? String(data.title) : `#${String(data.number)}`} />
+          <TicketAttachInvoiceButton ticketId={ticketId} hasProperty={Boolean(data.property_id)} />
           <TicketEdit id={ticketId} status={String(data.status)} priority={String(data.priority)} />
           <TicketChecklist
             ticketId={ticketId}

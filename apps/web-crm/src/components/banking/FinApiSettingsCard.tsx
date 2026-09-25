@@ -11,6 +11,7 @@ export type FinApiConfig = {
   base_url: string | null;
   mandator_id: string | null;
   sandbox: boolean | null;
+  auto_fetch_enabled: boolean;
 };
 
 /** finAPI-Zugangsdaten (Einstellungen, /einstellungen/bank, M11-finapi). Client-ID und
@@ -24,6 +25,7 @@ export function FinApiSettingsCard({ initial }: { initial: FinApiConfig }) {
   const [mandatorId, setMandatorId] = useState(initial.mandator_id ?? "");
   const [baseUrl, setBaseUrl] = useState(initial.base_url ?? "");
   const [sandbox, setSandbox] = useState(initial.sandbox ?? true);
+  const [autoFetch, setAutoFetch] = useState(initial.auto_fetch_enabled);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export function FinApiSettingsCard({ initial }: { initial: FinApiConfig }) {
     setBusy(true);
     setError(null);
     setMessage(null);
-    const result = await bff<FinApiConfig>("/api/v1/banking/finapi/config", {
+    const result = await bff<FinApiConfig>("/api/bff/banking/finapi/config", {
       method: "PUT",
       body: JSON.stringify({
         client_id: clientId,
@@ -40,6 +42,7 @@ export function FinApiSettingsCard({ initial }: { initial: FinApiConfig }) {
         mandator_id: mandatorId || null,
         base_url: baseUrl,
         sandbox,
+        auto_fetch_enabled: autoFetch,
       }),
     });
     setBusy(false);
@@ -89,7 +92,17 @@ export function FinApiSettingsCard({ initial }: { initial: FinApiConfig }) {
           <input type="checkbox" checked={sandbox} onChange={(e) => setSandbox(e.target.checked)} />
           {t("sandbox")}
         </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={autoFetch}
+            onChange={(e) => setAutoFetch(e.target.checked)}
+            data-testid="auto-fetch-toggle"
+          />
+          {t("autoFetch")}
+        </label>
       </div>
+      <p className="mt-1 text-xs text-muted">{t("autoFetchHint")}</p>
       <button
         type="button"
         className={`${ui.primary} mt-3`}

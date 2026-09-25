@@ -648,13 +648,14 @@ async def meter_reading(
 @router.get("/account", summary="Kontoauszug: offene Posten der eigenen Verträge")
 async def statement(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, Any]:
     from mhvp.accounting import services as acc
-    from mhvp.accounting.models import Ledger, LedgerAccount
+    from mhvp.accounting.models import JournalEntry, Ledger, LedgerAccount
     from mhvp.contracts.models import Contract, DebtorAccountReservation
 
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
         contract_ids = (await _scopes(session, account)).get("contract", set())
         items: list[dict[str, Any]] = []
+        entry_ids: set[uuid.UUID] = set()
         leading = True
         for contract in (
             (await session.scalars(select(Contract).where(Contract.id.in_(contract_ids)))).all()
@@ -676,14 +677,38 @@ async def statement(request: Request, ctx: Portal = Depends(portal_user)) -> dic
                 continue
             leading = leading and ledger.leading_system.value == "mhvp"
             for i in await acc.open_items(session, ledger, local_today(), debtor.id):
+                if i["journal_entry_id"]:
+                    entry_ids.add(i["journal_entry_id"])
                 items.append(
                     {
                         "contract_number": contract.number,
                         "due_date": i["due_date"],
                         "amount": i["amount"],
                         "remaining": i["remaining"],
+                        "_journal_entry_id": i["journal_entry_id"],
                     }
                 )
+        # Stage 4 (M11-finapi): a row carries a document reference only when the booking that
+        # created it (`JournalEntry.document_id`, set for a posted invoice, 7.9) is one this
+        # account may actually see (`access.visible_documents`, same check the download
+        # endpoint re-runs) -- never a bare id the portal could not then open (rule 0.1.3).
+        document_by_entry: dict[uuid.UUID, uuid.UUID] = {}
+        if entry_ids:
+            rows = (
+                await session.execute(
+                    select(JournalEntry.id, JournalEntry.document_id).where(
+                        JournalEntry.id.in_(entry_ids), JournalEntry.document_id.is_not(None)
+                    )
+                )
+            ).all()
+            visible = await access.visible_documents(session, account, local_today())
+            visible_ids = {d.id for d in visible}
+            document_by_entry = {
+                entry_id: doc_id for entry_id, doc_id in rows if doc_id in visible_ids
+            }
+        for item in items:
+            entry_id = item.pop("_journal_entry_id")
+            item["document_id"] = document_by_entry.get(entry_id)
         return {
             "items": items,
             "note": None

@@ -56,9 +56,9 @@ export function FinApiConnections() {
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    const cfg = await bff<{ configured: boolean }>("/api/v1/banking/finapi/config");
+    const cfg = await bff<{ configured: boolean }>("/api/bff/banking/finapi/config");
     setConfigured(cfg.ok ? cfg.data.configured : false);
-    const list = await bff<FinApiConnection[]>("/api/v1/banking/finapi/connections");
+    const list = await bff<FinApiConnection[]>("/api/bff/banking/finapi/connections");
     if (list.ok) setConnections(list.data);
   }
 
@@ -82,7 +82,7 @@ export function FinApiConnections() {
   }
 
   async function connect() {
-    const created = await act<FinApiConnection>("/api/v1/banking/finapi/connections", {
+    const created = await act<FinApiConnection>("/api/bff/banking/finapi/connections", {
       method: "POST",
       body: JSON.stringify({ bank_name: bankName || t("connectPrompt") }),
     });
@@ -138,7 +138,7 @@ export function FinApiConnections() {
                   type="button"
                   className={ui.buttonSm}
                   disabled={busy}
-                  onClick={() => act(`/api/v1/banking/finapi/connections/${c.id}/check`, { method: "POST" })}
+                  onClick={() => act(`/api/bff/banking/finapi/connections/${c.id}/check`, { method: "POST" })}
                 >
                   {t("check")}
                 </button>
@@ -148,7 +148,7 @@ export function FinApiConnections() {
                   disabled={busy}
                   onClick={async () => {
                     const updated = await act<FinApiConnection>(
-                      `/api/v1/banking/finapi/connections/${c.id}/reauthorize`,
+                      `/api/bff/banking/finapi/connections/${c.id}/reauthorize`,
                       { method: "POST" }
                     );
                     if (updated?.web_form_url) window.open(updated.web_form_url, "_blank", "noopener");
@@ -160,11 +160,26 @@ export function FinApiConnections() {
                   type="button"
                   className={ui.buttonSm}
                   disabled={busy}
-                  onClick={() => act(`/api/v1/banking/finapi/connections/${c.id}/disconnect`, { method: "POST" })}
+                  onClick={() => act(`/api/bff/banking/finapi/connections/${c.id}/disconnect`, { method: "POST" })}
                 >
                   {t("disconnect")}
                 </button>
               </div>
+              {c.accounts.some((a) => a.property_bank_account_id) ? (
+                <div className="mt-2">
+                  <FetchRangeControl
+                    label={t("fetchBank")}
+                    busy={busy}
+                    onFetch={(since, until) =>
+                      act(
+                        `/api/bff/banking/finapi/connections/${c.id}/fetch`,
+                        { method: "POST", body: JSON.stringify({ since, until }) },
+                        t("queued")
+                      )
+                    }
+                  />
+                </div>
+              ) : null}
               {c.accounts.length > 0 ? (
                 <div className="mt-2 overflow-x-auto">
                   <table className="mhvp-table">
@@ -193,7 +208,7 @@ export function FinApiConnections() {
                                 label={t("assign")}
                                 placeholder={t("assignPropertyBankAccountId")}
                                 onAssign={(id) =>
-                                  act(`/api/v1/banking/finapi/accounts/${a.id}/assign`, {
+                                  act(`/api/bff/banking/finapi/accounts/${a.id}/assign`, {
                                     method: "POST",
                                     body: JSON.stringify({ property_bank_account_id: id }),
                                   })
@@ -202,16 +217,21 @@ export function FinApiConnections() {
                             )}
                           </td>
                           <td>
-                            <button
-                              type="button"
-                              className={ui.buttonSm}
-                              disabled={busy || !a.property_bank_account_id}
-                              onClick={() =>
-                                act(`/api/v1/banking/finapi/accounts/${a.id}/fetch`, { method: "POST" }, t("queued"))
-                              }
-                            >
-                              {t("fetch")}
-                            </button>
+                            {a.property_bank_account_id ? (
+                              <FetchRangeControl
+                                label={t("fetch")}
+                                busy={busy}
+                                onFetch={(since, until) =>
+                                  act(
+                                    `/api/bff/banking/finapi/accounts/${a.id}/fetch`,
+                                    { method: "POST", body: JSON.stringify({ since, until }) },
+                                    t("queued")
+                                  )
+                                }
+                              />
+                            ) : (
+                              "–"
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -224,6 +244,54 @@ export function FinApiConnections() {
         </div>
       )}
     </section>
+  );
+}
+
+/** Date range (optional, both ends) for a manual finAPI fetch (M11-finapi Stage 2). Empty
+ *  fields mean "as far as the provider delivers" -- nothing is synthesized client side. */
+export function FetchRangeControl({
+  label,
+  busy,
+  onFetch,
+}: {
+  label: string;
+  busy: boolean;
+  onFetch: (since: string | null, until: string | null) => void;
+}) {
+  const t = useTranslations("BankConnections");
+  const [since, setSince] = useState("");
+  const [until, setUntil] = useState("");
+  return (
+    <div className="flex flex-wrap items-end gap-1" data-testid="fetch-range">
+      <label className="flex flex-col text-xs text-muted">
+        {t("since")}
+        <input
+          type="date"
+          className={ui.input}
+          value={since}
+          onChange={(e) => setSince(e.target.value)}
+          aria-label={t("since")}
+        />
+      </label>
+      <label className="flex flex-col text-xs text-muted">
+        {t("until")}
+        <input
+          type="date"
+          className={ui.input}
+          value={until}
+          onChange={(e) => setUntil(e.target.value)}
+          aria-label={t("until")}
+        />
+      </label>
+      <button
+        type="button"
+        className={ui.buttonSm}
+        disabled={busy}
+        onClick={() => onFetch(since || null, until || null)}
+      >
+        {label}
+      </button>
+    </div>
   );
 }
 

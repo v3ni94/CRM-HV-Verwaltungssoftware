@@ -81,6 +81,60 @@ claims a live connection. Without a `FinApiTenantConfig` row, `GET /banking/fina
 answers `{"configured": false}` and the UI shows "Bankanbindung noch nicht eingerichtet"
 (no silent switch to demo data, master prompt section 13).
 
+## Rebuild (M11-finapi Stages 1 to 6, operator decision 25.09.2026)
+
+PSD2/XS2A via finAPI Access is the primary path for unlimited banks going forward, next to the
+existing file (CSV/CAMT) upload; HBCI/FinTS is explicitly not built now, only the seam for it
+(`mhvp.banking.connectors.BankConnector`, `mhvp.banking.finapi.FinApiConnector`).
+
+### WebForm flow (as implemented)
+
+1. `POST /banking/finapi/connections` (`bank_name` free text, descriptive only) calls
+   `create_bank_connection_import_web_form` and returns a `web_form_url`. The bank itself is
+   **not** searched or selected by this backend beforehand: no verified bank-search endpoint
+   exists for the WebForm 2.0 model (see "Zu prüfen" above), so bank selection by IBAN, BIC or
+   name happens inside the WebForm the browser is redirected to.
+2. The CRM opens `web_form_url` in a new tab (`window.open(..., "_blank")`); this keeps the
+   original tab's session cookies (SameSite=Strict) without needing the same-site return page.
+   A top-level, full-navigation return flow through `apps/web-crm/src/app/api/session/return`
+   is available and used elsewhere for OAuth-style redirects, but is not wired to finAPI here
+   because no verified callback/redirect URL parameter exists for the WebForm creation call
+   (see "Zu prüfen"); wiring it later needs that parameter confirmed first, not guessed.
+3. `POST /banking/finapi/connections/{id}/check` re-reads the WebForm and, once finished, the
+   bank connection and its accounts with the tenant's own credentials (never trusts the browser
+   return alone). Accounts appear unassigned until a person assigns each one to a
+   `property_bank_account` (legal entity/ledger and, through that account, a property).
+
+### Consent renewal ("Erneut freigeben")
+
+`POST /banking/finapi/connections/{id}/reauthorize` opens a fresh WebForm on the same
+connection (the only reachable re-authorization path; "Update a Bank Connection" is
+unverified, see above) and sets the connection to `update_required` until `check` confirms it
+again. `FinApiConnection.consent_valid_until` is stored but not yet populated by
+`complete_connection`/`check`: no verified field carries a consent expiry date from finAPI
+(see "Zu prüfen"); the CRM only shows an expiry once that field is confirmed. The daily
+`banking.sync_all` job's consent-expiry reminder still runs against
+`BankConnection.consent_valid_until` for whichever connector sets it.
+
+### Transactions, date range and history depth
+
+`POST /banking/finapi/accounts/{id}/fetch` and `POST /banking/finapi/connections/{id}/fetch`
+(per bank, every assigned account) take an optional `{since, until}` body. Neither bound is
+sent to finAPI: `/transactions` documents no confirmed date filter (see "Zu prüfen"), so the
+client fetches every page finAPI returns and only *keeps* rows inside the requested range
+client side. **History depth is wie vom Anbieter geliefert**: this integration does not know,
+and does not claim, how far back a given bank or a given finAPI contract tier actually
+delivers transactions; that varies per bank and is not modelled or promised anywhere in this
+codebase (open point, see `docs/OPEN_QUESTIONS.md`).
+
+### Scheduled fetch (opt-in, default off)
+
+`FinApiTenantConfig.auto_fetch_enabled` (default `false`) gates the Celery beat job
+`mhvp.banking.finapi_scheduled_fetch` (`apps/api/src/mhvp/worker.py`, daily 06:30). A tenant
+that has not explicitly opted in never has anything queued by it; a manual click is always
+independent of this flag. Idempotent by provider transaction id (`bank_reference =
+"finapi:<id>"`), same as every other fetch path (D05).
+
 ## Sources
 
 Official documentation, fetched 25.09.2026 for this document:

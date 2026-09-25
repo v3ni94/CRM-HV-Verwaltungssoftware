@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { InvoiceActions } from "@/components/invoices/InvoiceForms";
+import { InvoiceMatchPanel } from "@/components/invoices/InvoiceMatchPanel";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatDateTime, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -71,6 +72,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
         released={Boolean(d.released)}
         ibanOpen={Boolean(d.payee_iban_suffix) && !d.iban_confirmed && findings.some((f) => f.startsWith("IBAN"))}
       />
+      {String(d.posting_status) === "posted" ? <InvoiceMatchPanel invoiceId={invoiceId} /> : null}
     </div>
   );
 }
