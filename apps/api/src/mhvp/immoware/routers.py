@@ -20,7 +20,10 @@ from mhvp.immoware.models import (
     ImmowareDavContact,
     ImmowareDavDocument,
     ImmowareDavEvent,
+    ImmowareLearningRun,
     ImmowareSyncRun,
+    LearningKind,
+    LearningStatus,
     SyncKind,
 )
 from mhvp.immoware.webdav import download
@@ -40,9 +43,7 @@ async def _event(
         entity_type="immoware",
         entity_id=entity_id,
         actor_user_id=principal.user_id,
-        payload={
-            k: v if isinstance(v, int | bool | None) else str(v) for k, v in payload.items()
-        },
+        payload={k: v if isinstance(v, int | bool | None) else str(v) for k, v in payload.items()},
     )
 
 
@@ -103,9 +104,7 @@ async def put_connection(
         row.verify_tls = body.verify_tls
         row.poll_minutes = body.poll_minutes
         await session.flush()
-        await _event(
-            session, principal, "immoware.connection_updated", row.id, enabled=row.enabled
-        )
+        await _event(session, principal, "immoware.connection_updated", row.id, enabled=row.enabled)
         return _connection_out(row)
 
 
@@ -325,3 +324,66 @@ async def list_events(
             "data": [s.ImmowareEventOut.model_validate(r) for r in rows],
             "meta": s.Meta(page=page, per_page=page_size, total=total),
         }
+
+
+@router.post("/learning/runs", status_code=201, summary="Lernlauf anstossen (M33)")
+async def create_learning_run(
+    body: s.LearningRunIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> s.LearningRunOut:
+    async with tenant_tx(request, principal) as session:
+        run = ImmowareLearningRun(
+            tenant_id=principal.tenant_id,
+            kind=body.kind,
+            status=LearningStatus.PENDING,
+            triggered_by_user_id=principal.user_id,
+        )
+        session.add(run)
+        await session.flush()
+        run_id = run.id
+        await _event(
+            session, principal, "immoware.learning_run_created", run.id, kind=body.kind.value
+        )
+        out = s.LearningRunOut.model_validate(run)
+
+    from mhvp.worker import get_celery
+
+    get_celery().send_task(
+        "mhvp.immoware.learning_run",
+        args=[str(principal.tenant_id), str(run_id)],
+        queue="default",
+    )
+    return out
+
+
+@router.get("/learning/runs", summary="Lernlaeufe auflisten (M33)")
+async def list_learning_runs(
+    request: Request,
+    kind: LearningKind | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=200),
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        stmt = select(ImmowareLearningRun)
+        if kind is not None:
+            stmt = stmt.where(ImmowareLearningRun.kind == kind)
+        total = await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+        offset, limit = _paginate(page, page_size)
+        rows = await session.scalars(
+            stmt.order_by(ImmowareLearningRun.created_at.desc()).offset(offset).limit(limit)
+        )
+        return {
+            "data": [s.LearningRunListOut.model_validate(r) for r in rows],
+            "meta": s.Meta(page=page, per_page=page_size, total=total),
+        }
+
+
+@router.get("/learning/runs/{run_id}", summary="Lernlauf lesen (M33)")
+async def get_learning_run(
+    run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> s.LearningRunOut:
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(ImmowareLearningRun, run_id)
+        if row is None or row.tenant_id != principal.tenant_id:
+            raise ProblemError(ErrorCodes.IMW_LEARNING_RUN_NOT_FOUND)
+        return s.LearningRunOut.model_validate(row)

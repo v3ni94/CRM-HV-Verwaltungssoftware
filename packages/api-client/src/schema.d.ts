@@ -3424,6 +3424,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/immoware/learning/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lernlaeufe auflisten (M33) */
+        get: operations["list_learning_runs_api_v1_immoware_learning_runs_get"];
+        put?: never;
+        /** Lernlauf anstossen (M33) */
+        post: operations["create_learning_run_api_v1_immoware_learning_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/immoware/learning/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lernlauf lesen (M33) */
+        get: operations["get_learning_run_api_v1_immoware_learning_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/immoware/sync/runs": {
         parameters: {
             query?: never;
@@ -9718,6 +9753,47 @@ export interface components {
          * @enum {string}
          */
         LeadingSystem: "immoware24" | "mhvp";
+        /**
+         * LearningKind
+         * @description Art des Lernlaufs (M33, Uebernahme des Moduls Learning aus dem Immoware Hub).
+         * @enum {string}
+         */
+        LearningKind: "webdav" | "carddav" | "caldav";
+        /** LearningRunIn */
+        LearningRunIn: {
+            kind: components["schemas"]["LearningKind"];
+        };
+        /** LearningRunOut */
+        LearningRunOut: {
+            /** Diff */
+            diff: {
+                [key: string]: unknown;
+            } | null;
+            /** Error */
+            error: string | null;
+            /** Facts */
+            facts: {
+                [key: string]: unknown;
+            } | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["LearningKind"];
+            /** Started At */
+            started_at: string | null;
+            status: components["schemas"]["LearningStatus"];
+            /** Triggered By User Id */
+            triggered_by_user_id: string | null;
+        };
+        /**
+         * LearningStatus
+         * @enum {string}
+         */
+        LearningStatus: "pending" | "running" | "done" | "failed";
         /** LedgerIn */
         LedgerIn: {
             /**
@@ -21152,6 +21228,105 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_learning_runs_api_v1_immoware_learning_runs_get: {
+        parameters: {
+            query?: {
+                kind?: components["schemas"]["LearningKind"] | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_learning_run_api_v1_immoware_learning_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LearningRunIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_learning_run_api_v1_immoware_learning_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningRunOut"];
                 };
             };
             /** @description Validation Error */

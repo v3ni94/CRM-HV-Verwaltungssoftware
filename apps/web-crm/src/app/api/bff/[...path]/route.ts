@@ -193,6 +193,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^immoware/contacts/${ID}/match$`) },
   { method: "POST", pattern: new RegExp(`^immoware/contacts/${ID}/create-contact$`) },
   { method: "GET", pattern: /^immoware\/events$/ },
+  // Lernphase Immoware24 (M33, Uebernahme des Moduls Learning aus dem Immoware Hub).
+  { method: "POST", pattern: /^immoware\/learning\/runs$/ },
+  { method: "GET", pattern: /^immoware\/learning\/runs$/ },
+  { method: "GET", pattern: new RegExp(`^immoware/learning/runs/${ID}$`) },
   // Incoming invoices (M14): capture, review steps, IBAN confirmation, release, posting.
   { method: "POST", pattern: /^accounting\/invoices$/ },
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },
