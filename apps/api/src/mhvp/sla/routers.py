@@ -10,6 +10,13 @@ from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.sla.channels import (
+    SMS_TEST_TEXT,
+    get_gateway,
+    render_sms_body,
+    send_sms,
+    validate_channels_by_level,
+)
 from mhvp.sla.escalation import current_on_call
 from mhvp.sla.models import (
     AlertChannel,
@@ -21,6 +28,7 @@ from mhvp.sla.models import (
     SlaClock,
     SlaColor,
     SlaRule,
+    SmsGateway,
     WorkCalendar,
 )
 from mhvp.sla.service import get_calendar, pause_clock, recompute_color, resume_clock
@@ -43,6 +51,18 @@ class SlaRuleIn(_In):
     resolution_minutes: int = Field(ge=1, le=1_000_000)
     clock_type: ClockType = ClockType.BUSINESS
     active: bool = True
+    channels_by_level: dict[str, list[AlertChannel]] | None = Field(
+        default=None,
+        description="Kanäle je Stufe, z. B. {'1': ['internal']}; leer = Standard (M35).",
+    )
+
+    def data(self) -> dict[str, Any]:
+        values = self.model_dump()
+        if self.channels_by_level is not None:
+            values["channels_by_level"] = {
+                k: [c.value for c in v] for k, v in self.channels_by_level.items()
+            }
+        return values
 
 
 class EscalationStepIn(_In):
@@ -59,6 +79,25 @@ class OnCallIn(_In):
     ends_at: datetime
     phone: str | None = Field(default=None, max_length=64)
     note: str | None = Field(default=None, max_length=500)
+
+
+class SmsGatewayIn(_In):
+    enabled: bool = False
+    url: str | None = Field(default=None, max_length=500, pattern=r"^https?://")
+    method: str = Field(default="POST", pattern="^(POST|PUT)$")
+    auth_header_name: str | None = Field(default=None, max_length=100, pattern=r"^[A-Za-z0-9-]+$")
+    auth_header_value: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Nur beim Setzen übertragen; leer lassen behält den gespeicherten Wert, "
+        "leerer String löscht ihn. Wird nie zurückgegeben.",
+    )
+    body_template: str | None = Field(default=None, max_length=4000)
+    sender: str | None = Field(default=None, max_length=40)
+
+
+class SmsTestIn(_In):
+    to: str = Field(min_length=3, max_length=40, pattern=r"^\+?[0-9 ()/-]+$")
 
 
 class CalendarIn(_In):
@@ -78,6 +117,7 @@ def _rule_out(row: SlaRule) -> dict[str, Any]:
         "resolution_minutes": row.resolution_minutes,
         "clock_type": row.clock_type.value,
         "active": row.active,
+        "channels_by_level": row.channels_by_level,
     }
 
 
@@ -128,7 +168,28 @@ def _alert_out(row: EmergencyAlert) -> dict[str, Any]:
         "sent_at": row.sent_at.isoformat(),
         "acknowledged_by": str(row.acknowledged_by) if row.acknowledged_by else None,
         "acknowledged_at": row.acknowledged_at.isoformat() if row.acknowledged_at else None,
+        "delivered_at": row.delivered_at.isoformat() if row.delivered_at else None,
+        "delivery_error": row.delivery_error,
     }
+
+
+def _gateway_out(row: SmsGateway | None) -> dict[str, Any]:
+    """Konfiguration ohne Secret; ``auth_header_set`` zeigt nur, ob ein Wert gespeichert ist."""
+    return {
+        "enabled": bool(row and row.enabled),
+        "url": row.url if row else None,
+        "method": row.method if row else "POST",
+        "auth_header_name": row.auth_header_name if row else None,
+        "auth_header_set": bool(row and row.auth_header_value),
+        "body_template": row.body_template if row else None,
+        "sender": row.sender if row else None,
+    }
+
+
+def _check_channels(value: dict[str, list[str]] | None) -> None:
+    error = validate_channels_by_level(value)
+    if error:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=error)
 
 
 def _calendar_out(row: WorkCalendar) -> dict[str, Any]:
@@ -167,9 +228,9 @@ async def create_rule(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Für diese Priorität besteht bereits eine Regel."
             )
-        rule = SlaRule(
-            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
-        )
+        data = body.data()
+        _check_channels(data["channels_by_level"])
+        rule = SlaRule(tenant_id=principal.tenant_id, created_by=principal.user_id, **data)
         session.add(rule)
         await session.flush()
         return _rule_out(rule)
@@ -186,7 +247,9 @@ async def update_rule(
         rule = await session.get(SlaRule, rule_id)
         if rule is None:
             raise ProblemError(ErrorCodes.NOT_FOUND)
-        for key, value in body.model_dump().items():
+        data = body.data()
+        _check_channels(data["channels_by_level"])
+        for key, value in data.items():
             setattr(rule, key, value)
         rule.updated_by = principal.user_id
         await session.flush()
@@ -457,6 +520,61 @@ async def ack_alert(
         if alert.acknowledged_at is None:
             alert.acknowledged_by, alert.acknowledged_at = principal.user_id, datetime.now(UTC)
         return _alert_out(alert)
+
+
+# --- SMS-Gateway (M35) ----------------------------------------------------------
+
+
+@router.get("/sms-gateway", summary="SMS-Gateway des Mandanten (ohne Secret)")
+async def get_sms_gateway(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        return _gateway_out(await get_gateway(session, principal.tenant_id))
+
+
+@router.put("/sms-gateway", summary="SMS-Gateway einrichten oder ändern")
+async def put_sms_gateway(
+    body: SmsGatewayIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> dict[str, Any]:
+    if body.body_template:
+        try:
+            render_sms_body(body.body_template, "+490000000000", "Test", body.sender)
+        except ValueError as exc:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Vorlage ergibt mit {to}, {text} und {sender} kein gültiges JSON.",
+            ) from exc
+    if body.enabled and (not body.url or not body.body_template):
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Für ein aktives Gateway sind URL und Vorlage nötig."
+        )
+    async with tenant_tx(request, principal) as session:
+        row = await get_gateway(session, principal.tenant_id)
+        if row is None:
+            row = SmsGateway(tenant_id=principal.tenant_id, created_by=principal.user_id)
+            session.add(row)
+        row.enabled = body.enabled
+        row.url = body.url
+        row.method = body.method
+        row.auth_header_name = body.auth_header_name
+        if body.auth_header_value is not None:
+            row.auth_header_value = body.auth_header_value or None
+        row.body_template = body.body_template
+        row.sender = body.sender
+        row.updated_by = principal.user_id
+        await session.flush()
+        return _gateway_out(row)
+
+
+@router.post("/sms-gateway/test", summary="Test-SMS über das Gateway senden")
+async def send_test_sms(
+    body: SmsTestIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        gateway = await get_gateway(session, principal.tenant_id)
+        error = await send_sms(gateway, body.to, SMS_TEST_TEXT)
+    return {"ok": error is None, "error": error}
 
 
 # --- Kalender -----------------------------------------------------------------

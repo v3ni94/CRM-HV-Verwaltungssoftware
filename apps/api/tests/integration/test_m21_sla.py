@@ -191,3 +191,57 @@ def test_presets_create_rules_once_and_keep_existing(client: TestClient, world: 
     assert {r["id"] for r in second} == {r["id"] for r in first}
     calendar = _ok(client.get("/api/v1/sla/calendar", headers=h))
     assert calendar["closes_at"].startswith("17:00")
+
+
+def test_sms_gateway_config_hides_secret_and_test_reports_errors(
+    client: TestClient, world: World
+) -> None:
+    """M35: GET/PUT /sla/sms-gateway ohne Secret in der Antwort, Test ohne aktives Gateway
+    liefert einen Fehlertext, Lesende dürfen nicht ändern."""
+    h = bearer(login(client, world, "m21admin"))
+    empty = _ok(client.get("/api/v1/sla/sms-gateway", headers=h))
+    assert empty["enabled"] is False
+    assert empty["auth_header_set"] is False
+
+    bad = client.put(
+        "/api/v1/sla/sms-gateway",
+        json={"enabled": False, "body_template": '{"to": {to}}'},
+        headers=h,
+    )
+    assert bad.status_code == 422, bad.text
+
+    saved = _ok(
+        client.put(
+            "/api/v1/sla/sms-gateway",
+            json={
+                "enabled": False,
+                "url": "https://gateway.example/api/sms",
+                "auth_header_name": "X-Api-Key",
+                "auth_header_value": "geheim-m35",
+                "body_template": '{"to": "{to}", "text": "{text}", "from": "{sender}"}',
+                "sender": "MHVP",
+            },
+            headers=h,
+        )
+    )
+    assert saved["auth_header_set"] is True
+    assert "geheim-m35" not in str(saved)
+    kept = _ok(
+        client.put(
+            "/api/v1/sla/sms-gateway",
+            json={**{k: v for k, v in saved.items() if k != "auth_header_set"}},
+            headers=h,
+        )
+    )
+    assert kept["auth_header_set"] is True
+
+    result = _ok(
+        client.post("/api/v1/sla/sms-gateway/test", json={"to": "+49 170 1234567"}, headers=h)
+    )
+    assert result["ok"] is False
+    assert "deaktiviert" in result["error"]
+    assert "geheim-m35" not in str(result)
+
+    reader = bearer(login(client, world, "m21read"))
+    denied = client.put("/api/v1/sla/sms-gateway", json={"enabled": False}, headers=reader)
+    assert denied.status_code == 403

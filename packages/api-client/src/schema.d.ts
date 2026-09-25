@@ -6486,6 +6486,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sla/sms-gateway": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SMS-Gateway des Mandanten (ohne Secret) */
+        get: operations["get_sms_gateway_api_v1_sla_sms_gateway_get"];
+        /** SMS-Gateway einrichten oder ändern */
+        put: operations["put_sms_gateway_api_v1_sla_sms_gateway_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sla/sms-gateway/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test-SMS über das Gateway senden */
+        post: operations["send_test_sms_api_v1_sla_sms_gateway_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sla/steps/{step_id}": {
         parameters: {
             query?: never;
@@ -6833,6 +6868,23 @@ export interface paths {
         get?: never;
         /** Kompetenzen eines Mitglieds setzen */
         put: operations["put_member_competences_api_v1_tenant_members__membership_id__competences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/members/{membership_id}/mobile-phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Mobilnummer eines Mitglieds setzen (SMS-Eskalation, M35) */
+        put: operations["put_member_mobile_phone_api_v1_tenant_members__membership_id__mobile_phone_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -11841,6 +11893,14 @@ export interface components {
             /** Role Codes */
             role_codes: string[];
         };
+        /**
+         * MemberMobilePhone
+         * @description Mobilnummer für SMS-Eskalationen an die Bereitschaft (M35); ``None`` löscht sie.
+         */
+        MemberMobilePhone: {
+            /** Mobile Phone */
+            mobile_phone?: string | null;
+        };
         /** MemberOut */
         MemberOut: {
             /** Competences */
@@ -11858,6 +11918,8 @@ export interface components {
              * Format: uuid
              */
             membership_id: string;
+            /** Mobile Phone */
+            mobile_phone?: string | null;
             /** Roles */
             roles: string[];
             /** Status */
@@ -13780,6 +13842,13 @@ export interface components {
              * @default true
              */
             active: boolean;
+            /**
+             * Channels By Level
+             * @description Kanäle je Stufe, z. B. {'1': ['internal']}; leer = Standard (M35).
+             */
+            channels_by_level?: {
+                [key: string]: components["schemas"]["AlertChannel"][];
+            } | null;
             /** @default business */
             clock_type: components["schemas"]["ClockType"];
             /** Name */
@@ -13789,6 +13858,37 @@ export interface components {
             resolution_minutes: number;
             /** Response Minutes */
             response_minutes: number;
+        };
+        /** SmsGatewayIn */
+        SmsGatewayIn: {
+            /** Auth Header Name */
+            auth_header_name?: string | null;
+            /**
+             * Auth Header Value
+             * @description Nur beim Setzen übertragen; leer lassen behält den gespeicherten Wert, leerer String löscht ihn. Wird nie zurückgegeben.
+             */
+            auth_header_value?: string | null;
+            /** Body Template */
+            body_template?: string | null;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Method
+             * @default POST
+             */
+            method: string;
+            /** Sender */
+            sender?: string | null;
+            /** Url */
+            url?: string | null;
+        };
+        /** SmsTestIn */
+        SmsTestIn: {
+            /** To */
+            to: string;
         };
         /** SourceIn */
         SourceIn: {
@@ -29579,6 +29679,98 @@ export interface operations {
             };
         };
     };
+    get_sms_gateway_api_v1_sla_sms_gateway_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_sms_gateway_api_v1_sla_sms_gateway_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SmsGatewayIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_test_sms_api_v1_sla_sms_gateway_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SmsTestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_step_api_v1_sla_steps__step_id__delete: {
         parameters: {
             query?: never;
@@ -30275,6 +30467,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["MemberCompetences"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_member_mobile_phone_api_v1_tenant_members__membership_id__mobile_phone_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberMobilePhone"];
             };
         };
         responses: {

@@ -13486,6 +13486,27 @@
         "title": "MemberInvite",
         "type": "object"
       },
+      "MemberMobilePhone": {
+        "description": "Mobilnummer für SMS-Eskalationen an die Bereitschaft (M35); ``None`` löscht sie.",
+        "properties": {
+          "mobile_phone": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 3,
+                "pattern": "^\\+?[0-9 ()/-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobile Phone"
+          }
+        },
+        "title": "MemberMobilePhone",
+        "type": "object"
+      },
       "MemberOut": {
         "properties": {
           "competences": {
@@ -13531,6 +13552,17 @@
             "format": "uuid",
             "title": "Membership Id",
             "type": "string"
+          },
+          "mobile_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobile Phone"
           },
           "roles": {
             "items": {
@@ -19697,6 +19729,24 @@
             "title": "Active",
             "type": "boolean"
           },
+          "channels_by_level": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "$ref": "#/components/schemas/AlertChannel"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kanäle je Stufe, z. B. {'1': ['internal']}; leer = Standard (M35).",
+            "title": "Channels By Level"
+          },
           "clock_type": {
             "$ref": "#/components/schemas/ClockType",
             "default": "business"
@@ -19730,6 +19780,104 @@
           "resolution_minutes"
         ],
         "title": "SlaRuleIn",
+        "type": "object"
+      },
+      "SmsGatewayIn": {
+        "additionalProperties": false,
+        "properties": {
+          "auth_header_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Header Name"
+          },
+          "auth_header_value": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nur beim Setzen übertragen; leer lassen behält den gespeicherten Wert, leerer String löscht ihn. Wird nie zurückgegeben.",
+            "title": "Auth Header Value"
+          },
+          "body_template": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Template"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "method": {
+            "default": "POST",
+            "pattern": "^(POST|PUT)$",
+            "title": "Method",
+            "type": "string"
+          },
+          "sender": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sender"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "pattern": "^https?://",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "SmsGatewayIn",
+        "type": "object"
+      },
+      "SmsTestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "to": {
+            "maxLength": 40,
+            "minLength": 3,
+            "pattern": "^\\+?[0-9 ()/-]+$",
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "SmsTestIn",
         "type": "object"
       },
       "SourceIn": {
@@ -45186,6 +45334,113 @@
         ]
       }
     },
+    "/api/v1/sla/sms-gateway": {
+      "get": {
+        "operationId": "get_sms_gateway_api_v1_sla_sms_gateway_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Sms Gateway Api V1 Sla Sms Gateway Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "SMS-Gateway des Mandanten (ohne Secret)",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "put": {
+        "operationId": "put_sms_gateway_api_v1_sla_sms_gateway_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmsGatewayIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Sms Gateway Api V1 Sla Sms Gateway Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SMS-Gateway einrichten oder ändern",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/sms-gateway/test": {
+      "post": {
+        "operationId": "send_test_sms_api_v1_sla_sms_gateway_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmsTestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Send Test Sms Api V1 Sla Sms Gateway Test Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test-SMS über das Gateway senden",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
     "/api/v1/sla/steps/{step_id}": {
       "delete": {
         "operationId": "delete_step_api_v1_sla_steps__step_id__delete",
@@ -46205,6 +46460,52 @@
           }
         },
         "summary": "Kompetenzen eines Mitglieds setzen",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/members/{membership_id}/mobile-phone": {
+      "put": {
+        "operationId": "put_member_mobile_phone_api_v1_tenant_members__membership_id__mobile_phone_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberMobilePhone"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mobilnummer eines Mitglieds setzen (SMS-Eskalation, M35)",
         "tags": [
           "Mandant"
         ]

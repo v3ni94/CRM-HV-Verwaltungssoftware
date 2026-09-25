@@ -134,6 +134,15 @@ class MemberOut(BaseModel):
     competences: list[str] = Field(default_factory=list)
     contact_id: uuid.UUID | None = None
     last_login_at: datetime | None = None
+    mobile_phone: str | None = None
+
+
+class MemberMobilePhone(BaseModel):
+    """Mobilnummer für SMS-Eskalationen an die Bereitschaft (M35); ``None`` löscht sie."""
+
+    mobile_phone: str | None = Field(
+        default=None, min_length=3, max_length=40, pattern=r"^\+?[0-9 ()/-]+$"
+    )
 
 
 class MemberCompetences(BaseModel):
