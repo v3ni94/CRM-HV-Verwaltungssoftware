@@ -15,6 +15,7 @@ from mhvp.immoware import models as immoware_models
 from mhvp.imports import models as import_models
 from mhvp.letting import models as letting_models
 from mhvp.letting import rentlaw as rentlaw_models
+from mhvp.objektakte import models as objektakte_models
 from mhvp.platform import licensing as licensing_models
 from mhvp.platform import models as platform_models
 from mhvp.portal import models as portal_models
@@ -40,6 +41,7 @@ __all__ = [
     "letting_models",
     "licensing_models",
     "numbering",
+    "objektakte_models",
     "platform_models",
     "portal_models",
     "property_models",

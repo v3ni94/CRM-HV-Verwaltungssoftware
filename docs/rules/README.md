@@ -27,6 +27,8 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 
 | ID | Title | Master prompt section | Status |
 | --- | --- | --- | --- |
+| [M2-07](M2-07.md) | Löschen nur Administrator | M2 | implemented, not accepted |
+| [M16-01](M16-01.md) | Mahngebühr nur mit hinterlegtem Betrag, Rechnung an Gemeinschaft nur mit vertraglicher Grundlage | M16 | implemented, not accepted |
 | [M26-RL](M26-rent-law.md) | Mieterhöhung Regelwerk | 8, M26 | implemented, not accepted |
 | [M28-01](M28-01.md) | Makler: Anzeigen, keine FLOWFACT-Anbindung | M28 | implemented, not accepted |
 | [M26-02](M26-02.md) | OpenImmo-Export: Format-Mapping, nur lesend, kein Portal-Upload | M26 | implemented, not accepted |
@@ -36,6 +38,10 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M11-finapi-authorization](M11-finapi-authorization.md) | finAPI: Recht `banking:approve`, unzugeordnete Konten verborgen | M11 | implemented, not accepted |
 | [M3-02](M3-02-sepa-mandate.md) | SEPA-Mandat auf der Bankverbindung des Kontakts | M3, 6.1 | implemented, not accepted |
 | [M20-05](M20-05.md) | Mail-Vorbereitung: Dokumentsuche strikt je Objekt, keine Kontoauflistung | M20, M34, 11.2 | implemented, not accepted |
+| [M23-05](M23-05.md) | Google-Kalender: Einladungen nur nach Bestätigung, kein stiller externer Überschreib | M23 | implemented, not accepted |
+| [M35-01](M35-01.md) | objektakte-Übernahme: Quellkennung und IBAN-Regel | M35 | implemented, not accepted |
+| [M35-02](M35-02.md) | objektakte-Übernahme: Klassifikation Stufe 1 (Regeln) | M35 | implemented, not accepted |
+| [M21-05](M21-05.md) | WhatsApp nur mit freigegebenen Vorlagen und Einwilligung | M21 | implemented, not accepted |
 | [B01](B01.md) | Richtiger Rechtsträger | 7.1 | implemented, not accepted |
 | [B02](B02.md) | Entwurf und Buchung | 7.1 | implemented, not accepted |
 | [B03](B03.md) | Korrektur statt Überschreiben | 7.1 | implemented, not accepted |

@@ -182,6 +182,14 @@ class Property(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "number"),
         CheckConstraint("number ~ '^[0-9]{3}$'", name="number_format"),
+        Index(
+            "uq_property_source",
+            "tenant_id",
+            "source_system",
+            "source_id",
+            unique=True,
+            postgresql_where=text("source_system IS NOT NULL AND source_id IS NOT NULL"),
+        ),
     )
 
     number: Mapped[str] = mapped_column(String(3), nullable=False)
@@ -222,6 +230,8 @@ class Property(IdMixin, TimestampMixin, TenantMixin, Base):
     managed_to: Mapped[date | None] = mapped_column(Date)
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    source_system: Mapped[str | None] = mapped_column(String(32))
+    source_id: Mapped[str | None] = mapped_column(String(64))
 
 
 class LegalEntity(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -306,7 +316,17 @@ class Building(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class Unit(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "unit"
-    __table_args__ = (UniqueConstraint("tenant_id", "property_id", "number"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "property_id", "number"),
+        Index(
+            "uq_unit_source",
+            "tenant_id",
+            "source_system",
+            "source_id",
+            unique=True,
+            postgresql_where=text("source_system IS NOT NULL AND source_id IS NOT NULL"),
+        ),
+    )
 
     property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
     building_id: Mapped[uuid.UUID] = _fk("building.id")
@@ -330,6 +350,8 @@ class Unit(IdMixin, TimestampMixin, TenantMixin, Base):
     postal_code: Mapped[str | None] = mapped_column(String(20))
     city: Mapped[str | None] = mapped_column(String(100))
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    source_system: Mapped[str | None] = mapped_column(String(32))
+    source_id: Mapped[str | None] = mapped_column(String(64))
 
 
 class AllocationKey(IdMixin, TimestampMixin, TenantMixin, Base):
