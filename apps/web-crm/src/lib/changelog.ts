@@ -17,7 +17,7 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.17.4",
+    version: "1.17.5",
     date: "25.09.2026",
     title: "SLA: Kanäle je Eskalationsstufe in der Oberfläche",
     changes: [
