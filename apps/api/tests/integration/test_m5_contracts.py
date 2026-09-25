@@ -534,3 +534,49 @@ def test_mandates_direct_debit_and_deposits(client: TestClient, world: World) ->
     )
     assert final["balance"] == "600.00"
     assert len(_ok(client.get(deposits, headers=h), 200)) == 1
+
+
+def test_mandate_evidence_without_document(client: TestClient, world: World) -> None:
+    h = bearer(login(client, world, "m5admin"))
+    prop = _property(client, h, "506", "rental")
+    owner, _ = _party(client, h, "NachweisVermieter", "company")
+    entity = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/owners",
+            json={"party_id": owner, "valid_from": "2020-01-01"},
+            headers=h,
+        )
+    )["legal_entity_id"]
+    payer, contact = _party(client, h, "NachweisZahler", iban=IBAN)
+    mandate = {
+        "party_id": payer,
+        "legal_entity_id": entity,
+        "contact_bank_account_id": contact["bank_accounts"][0]["id"],
+        "reference": f"ME{RUN}"[:35],
+        "creditor_id": "DE98ZZZ09999999999",
+        "signed_at": "2026-02-01",
+    }
+    # Neither PDF nor recorded grant: refused with the evidence problem message.
+    missing = client.post("/api/v1/sepa-mandates", json=mandate, headers=h)
+    assert missing.status_code in (400, 422), missing.text
+    assert "Nachweis" in missing.text
+    created = _ok(
+        client.post(
+            "/api/v1/sepa-mandates",
+            json={**mandate, "evidence_channel": "email", "evidence_note": "E-Mail vom 01.02.2026"},
+            headers=h,
+        )
+    )
+    assert created["document_id"] is None
+    assert created["evidence_channel"] == "email"
+    assert created["evidence_note"] == "E-Mail vom 01.02.2026"
+    listed = _ok(
+        client.get("/api/v1/sepa-mandates", params={"contact_id": contact["id"]}, headers=h), 200
+    )
+    assert [m["id"] for m in listed] == [created["id"]]
+    _, foreign = _party(client, h, "NachweisFremd")
+    # The contact filter joins over the bank account, so a foreign contact sees nothing.
+    empty = _ok(
+        client.get("/api/v1/sepa-mandates", params={"contact_id": foreign["id"]}, headers=h), 200
+    )
+    assert empty == []

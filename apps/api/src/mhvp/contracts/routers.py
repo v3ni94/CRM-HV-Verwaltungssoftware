@@ -407,6 +407,7 @@ async def _mandate_out(session: Any, mandate: SepaMandate) -> s.MandateOut:
 async def list_mandates(
     request: Request,
     party_id: uuid.UUID | None = None,
+    contact_id: uuid.UUID | None = None,
     status: MandateStatus | None = None,
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.MandateOut]:
@@ -414,6 +415,11 @@ async def list_mandates(
         query = select(SepaMandate)
         if party_id is not None:
             query = query.where(SepaMandate.party_id == party_id)
+        if contact_id is not None:
+            query = query.join(
+                ContactBankAccount,
+                ContactBankAccount.id == SepaMandate.contact_bank_account_id,
+            ).where(ContactBankAccount.contact_id == contact_id)
         if status is not None:
             query = query.where(SepaMandate.status == status)
         rows = (await session.scalars(query.order_by(SepaMandate.signed_at))).all()
@@ -424,6 +430,10 @@ async def list_mandates(
 async def create_mandate(
     body: s.MandateIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> s.MandateOut:
+    if body.document_id is None and body.evidence_channel is None:
+        raise svc.invalid(
+            "Mandat braucht einen Nachweis: PDF-Dokument oder erfasster Weg der Erteilung."
+        )
     async with tenant_tx(request, principal) as session:
         await _get(session, Party, body.party_id)
         account = await _get(session, ContactBankAccount, body.contact_bank_account_id)

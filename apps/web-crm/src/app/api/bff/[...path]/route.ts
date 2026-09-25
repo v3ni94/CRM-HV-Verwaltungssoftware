@@ -94,6 +94,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^mail\/forwarding$/ },
   { method: "PUT", pattern: /^mail\/forwarding$/ },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/forward-invoice$`) },
+  // Google-Kalender ueber die Postfach-Identitaet (M20-03).
+  { method: "GET", pattern: /^mail\/calendar\/events$/ },
+  { method: "POST", pattern: /^mail\/calendar\/events$/ },
   // Dunning (M16): preview and approval by a second person; fees and interest stay locked (V7).
   { method: "POST", pattern: /^accounting\/dunning-runs$/ },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-runs/${ID}/approve$`) },
@@ -145,6 +148,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Incoming invoices (M14): capture, review steps, IBAN confirmation, release, posting.
   { method: "POST", pattern: /^accounting\/invoices$/ },
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },
+  // SEPA mandates (M5): recording and revoking evidence only; collecting stays locked until G2.
+  { method: "GET", pattern: /^sepa-mandates$/ },
+  { method: "POST", pattern: /^sepa-mandates$/ },
+  { method: "POST", pattern: new RegExp(`^sepa-mandates/${ID}/revoke$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];

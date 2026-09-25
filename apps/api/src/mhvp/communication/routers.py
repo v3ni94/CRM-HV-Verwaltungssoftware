@@ -8,6 +8,7 @@ from datetime import UTC, date, datetime
 from email.message import EmailMessage
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
@@ -681,3 +682,102 @@ async def forward_invoice(
                 settings_row.mail_forwarding = {**config, "senders": senders}
                 await session.flush()
         return _out(row)
+
+
+# ---- Google Kalender ueber die Postfach-Identitaet (M20-03) --------------------------------
+# Betreiberregel: Der Kalender ist immer der Google-Kalender. Standardpostfach = Kalender der
+# Organisation (dort landen neue Termine), weitere Postfaecher werden daneben angezeigt.
+
+
+class CalendarEventIn(_In):
+    summary: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    starts_at: datetime
+    ends_at: datetime
+    mailbox_id: uuid.UUID | None = None
+
+
+async def _calendar_mailboxes(session: AsyncSession, principal: TenantPrincipal) -> list[Mailbox]:
+    query = select(Mailbox).where(
+        Mailbox.kind == "gmail", Mailbox.enabled.is_(True), Mailbox.secret.is_not(None)
+    )
+    if not principal.has("tenant_settings:update"):
+        allowed = await _accessible_mailboxes(session, principal.user_id)
+        query = query.where(Mailbox.id.in_(allowed))
+    return list((await session.scalars(query.order_by(Mailbox.is_default.desc()))).all())
+
+
+@router.get("/calendar/events", summary="Google-Kalender: Termine der verbundenen Postfächer")
+async def calendar_events(
+    request: Request,
+    start: date,
+    end: date,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    from mhvp.communication.gcal import CalendarClient, event_out
+    from mhvp.communication.gmail import GmailError, oauth_client
+
+    if end < start or (end - start).days > 120:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Zeitraum ungültig (höchstens 120 Tage).")
+    settings = request.app.state.settings
+    events: list[dict[str, Any]] = []
+    errors: list[str] = []
+    async with tenant_tx(request, principal) as session:
+        boxes = await _calendar_mailboxes(session, principal)
+        if not boxes:
+            return {"events": [], "errors": [], "connected": False}
+        client_id, client_secret = await oauth_client(session, settings)
+        for box in boxes:
+            client = CalendarClient(client_id, client_secret, box.secret or "")
+            try:
+                rows = await client.list_events(
+                    f"{start.isoformat()}T00:00:00Z", f"{end.isoformat()}T23:59:59Z"
+                )
+                events.extend(event_out(box.address, item) for item in rows)
+            except (GmailError, httpx.HTTPError):
+                # Fehlende Kalender-Freigabe (Postfach neu verbinden) oder Netzfehler:
+                # der Rest der Kalender wird trotzdem angezeigt.
+                errors.append(
+                    f"{box.address}: Kalender nicht erreichbar (Postfach ggf. neu verbinden)."
+                )
+            finally:
+                await client.aclose()
+    events.sort(key=lambda e: str(e.get("starts_at") or ""))
+    return {"events": events, "errors": errors, "connected": True}
+
+
+@router.post(
+    "/calendar/events", status_code=201, summary="Termin im Google-Standardkalender anlegen"
+)
+async def create_calendar_event(
+    body: CalendarEventIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    from mhvp.communication.gcal import CalendarClient, event_out
+    from mhvp.communication.gmail import GmailError, oauth_client
+
+    if body.ends_at <= body.starts_at:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Ende liegt vor dem Beginn.")
+    settings = request.app.state.settings
+    async with tenant_tx(request, principal) as session:
+        boxes = await _calendar_mailboxes(session, principal)
+        box = next((b for b in boxes if b.id == body.mailbox_id), None) if body.mailbox_id else None
+        if box is None:
+            box = next((b for b in boxes if b.is_default), boxes[0] if boxes else None)
+        if box is None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Kein verbundenes Gmail-Postfach mit Kalender."
+            )
+        client_id, client_secret = await oauth_client(session, settings)
+        client = CalendarClient(client_id, client_secret, box.secret or "")
+        try:
+            item = await client.create_event(
+                body.summary, body.starts_at, body.ends_at, body.description
+            )
+        except GmailError as exc:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=f"{exc} Reicht die Freigabe nicht, das Postfach bitte neu verbinden.",
+            ) from exc
+        finally:
+            await client.aclose()
+        return event_out(box.address, item)

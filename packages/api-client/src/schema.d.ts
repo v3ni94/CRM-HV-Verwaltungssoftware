@@ -3626,6 +3626,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/calendar/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Google-Kalender: Termine der verbundenen Postfächer */
+        get: operations["calendar_events_api_v1_mail_calendar_events_get"];
+        put?: never;
+        /** Termin im Google-Standardkalender anlegen */
+        post: operations["create_calendar_event_api_v1_mail_calendar_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/forwarding": {
         parameters: {
             query?: never;
@@ -6650,6 +6668,25 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** CalendarEventIn */
+        CalendarEventIn: {
+            /** Description */
+            description?: string | null;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /** Mailbox Id */
+            mailbox_id?: string | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /** Summary */
+            summary: string;
+        };
         /** CalendarItem */
         CalendarItem: {
             /**
@@ -9187,10 +9224,16 @@ export interface components {
             creditor_id: string;
             /**
              * Document Id
-             * Format: uuid
-             * @description Nachweis des unterschriebenen Mandats (Pflicht)
+             * @description PDF-Nachweis des unterschriebenen Mandats
              */
-            document_id: string;
+            document_id?: string | null;
+            /**
+             * Evidence Channel
+             * @description Weg der Erteilung, wenn kein PDF vorliegt
+             */
+            evidence_channel?: ("phone" | "letter" | "email" | "other") | null;
+            /** Evidence Note */
+            evidence_note?: string | null;
             /**
              * Legal Entity Id
              * Format: uuid
@@ -9224,11 +9267,12 @@ export interface components {
             contact_bank_account_id: string;
             /** Creditor Id */
             creditor_id: string;
-            /**
-             * Document Id
-             * Format: uuid
-             */
-            document_id: string;
+            /** Document Id */
+            document_id: string | null;
+            /** Evidence Channel */
+            evidence_channel: string | null;
+            /** Evidence Note */
+            evidence_note: string | null;
             /** Iban Masked */
             iban_masked?: string | null;
             /**
@@ -20190,6 +20234,75 @@ export interface operations {
             };
         };
     };
+    calendar_events_api_v1_mail_calendar_events_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_calendar_event_api_v1_mail_calendar_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarEventIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_forwarding_api_v1_mail_forwarding_get: {
         parameters: {
             query?: never;
@@ -23227,6 +23340,7 @@ export interface operations {
         parameters: {
             query?: {
                 party_id?: string | null;
+                contact_id?: string | null;
                 status?: components["schemas"]["MandateStatus"] | null;
             };
             header?: never;

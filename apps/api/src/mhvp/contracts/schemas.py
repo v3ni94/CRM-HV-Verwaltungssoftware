@@ -3,7 +3,7 @@
 import uuid
 from datetime import date
 from decimal import Decimal
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -200,7 +200,13 @@ class MandateIn(_In):
     type: MandateType = MandateType.CORE
     sequence: MandateSequence = MandateSequence.RECURRING
     valid_until: date | None = None
-    document_id: uuid.UUID = Field(description="Nachweis des unterschriebenen Mandats (Pflicht)")
+    document_id: uuid.UUID | None = Field(
+        default=None, description="PDF-Nachweis des unterschriebenen Mandats"
+    )
+    evidence_channel: Literal["phone", "letter", "email", "other"] | None = Field(
+        default=None, description="Weg der Erteilung, wenn kein PDF vorliegt"
+    )
+    evidence_note: str | None = Field(default=None, max_length=500)
 
     @field_validator("creditor_id")
     @classmethod
@@ -232,7 +238,9 @@ class MandateOut(_Out):
     sequence: MandateSequence
     valid_until: date | None
     status: MandateStatus
-    document_id: uuid.UUID
+    document_id: uuid.UUID | None
+    evidence_channel: str | None
+    evidence_note: str | None
 
 
 class DepositIn(_In):

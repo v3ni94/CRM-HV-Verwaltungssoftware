@@ -272,7 +272,10 @@ class SepaMandate(IdMixin, TimestampMixin, TenantMixin, Base):
     status: Mapped[MandateStatus] = mapped_column(
         _enum(MandateStatus, "mandate_status"), nullable=False, default=MandateStatus.ACTIVE
     )
-    document_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    # Weg der Erteilung, wenn kein PDF vorliegt: phone|letter|email|other.
+    evidence_channel: Mapped[str | None] = mapped_column(String(16))
+    evidence_note: Mapped[str | None] = mapped_column(String(500))
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

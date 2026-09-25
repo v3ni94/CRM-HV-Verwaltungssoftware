@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
+import { SepaMandatePanel } from "@/components/contacts/SepaMandatePanel";
 import { serverApi } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
 
@@ -12,15 +13,37 @@ import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-const TABS = ["stammdaten", "kommunikation", "bankverbindungen", "notizen", "einwilligungen"] as const;
+const TABS = ["stammdaten", "kommunikation", "bankverbindungen", "sepa", "notizen", "einwilligungen"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_KEY: Record<Tab, string> = {
   stammdaten: "master",
   kommunikation: "communication",
   bankverbindungen: "bank",
+  sepa: "sepa",
   notizen: "notes",
   einwilligungen: "consents",
 };
+
+/** Mandates, contract parties and the creditor legal entities for the SEPA tab. The legal
+ *  entities come from the managed properties (page_size 200 covers the current portfolio). */
+async function loadSepa(contactId: string) {
+  const api = serverApi();
+  const [mandates, parties, properties] = await Promise.all([
+    api.GET("/api/v1/sepa-mandates", { params: { query: { contact_id: contactId } } }),
+    api.GET("/api/v1/parties", { params: { query: { contact_id: contactId } } }),
+    api.GET("/api/v1/properties", { params: { query: { page_size: 200 } } }),
+  ]);
+  const lists = await Promise.all(
+    (properties.data?.items ?? []).map(async (p) => {
+      const res = await api.GET("/api/v1/properties/{property_id}/legal-entities", {
+        params: { path: { property_id: p.id } },
+      });
+      return (res.data ?? []).map((le) => ({ id: le.id, name: `${le.name} (${p.name})` }));
+    }),
+  );
+  const legalEntities = [...new Map(lists.flat().map((le) => [le.id, le])).values()];
+  return { mandates: mandates.data ?? [], parties: parties.data ?? [], legalEntities };
+}
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   if (value === null || value === undefined || value === "") return null;
@@ -57,6 +80,7 @@ export default async function ContactDetailPage({
     tab === "einwilligungen"
       ? ((await api.GET("/api/v1/contacts/{contact_id}/consents", { params: { path: { contact_id: id } } })).data ?? [])
       : [];
+  const sepa = tab === "sepa" ? await loadSepa(id) : null;
   const person = contact.kind === "person";
 
   return (
@@ -214,6 +238,15 @@ export default async function ContactDetailPage({
         ) : (
           <p className="text-sm text-muted">{t("none")}</p>
         )
+      ) : null}
+
+      {tab === "sepa" && sepa ? (
+        <SepaMandatePanel
+          bankAccounts={contact.bank_accounts}
+          parties={sepa.parties}
+          legalEntities={sepa.legalEntities}
+          mandates={sepa.mandates}
+        />
       ) : null}
 
       {tab === "notizen" ? <NotesPanel contactId={contact.id} notes={notes} /> : null}

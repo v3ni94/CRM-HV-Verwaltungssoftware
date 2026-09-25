@@ -2718,6 +2718,58 @@
         "title": "CalendarEntryIn",
         "type": "object"
       },
+      "CalendarEventIn": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "mailbox_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mailbox Id"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "summary": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "summary",
+          "starts_at",
+          "ends_at"
+        ],
+        "title": "CalendarEventIn",
+        "type": "object"
+      },
       "CalendarItem": {
         "properties": {
           "date": {
@@ -10698,10 +10750,47 @@
             "type": "string"
           },
           "document_id": {
-            "description": "Nachweis des unterschriebenen Mandats (Pflicht)",
-            "format": "uuid",
-            "title": "Document Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "PDF-Nachweis des unterschriebenen Mandats",
+            "title": "Document Id"
+          },
+          "evidence_channel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "phone",
+                  "letter",
+                  "email",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Weg der Erteilung, wenn kein PDF vorliegt",
+            "title": "Evidence Channel"
+          },
+          "evidence_note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Note"
           },
           "legal_entity_id": {
             "format": "uuid",
@@ -10749,8 +10838,7 @@
           "contact_bank_account_id",
           "reference",
           "creditor_id",
-          "signed_at",
-          "document_id"
+          "signed_at"
         ],
         "title": "MandateIn",
         "type": "object"
@@ -10767,9 +10855,38 @@
             "type": "string"
           },
           "document_id": {
-            "format": "uuid",
-            "title": "Document Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "evidence_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Channel"
+          },
+          "evidence_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Note"
           },
           "iban_masked": {
             "anyOf": [
@@ -10840,7 +10957,9 @@
           "sequence",
           "valid_until",
           "status",
-          "document_id"
+          "document_id",
+          "evidence_channel",
+          "evidence_note"
         ],
         "title": "MandateOut",
         "type": "object"
@@ -31510,6 +31629,102 @@
         ]
       }
     },
+    "/api/v1/mail/calendar/events": {
+      "get": {
+        "operationId": "calendar_events_api_v1_mail_calendar_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Calendar Events Api V1 Mail Calendar Events Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Google-Kalender: Termine der verbundenen Postfächer",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "post": {
+        "operationId": "create_calendar_event_api_v1_mail_calendar_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarEventIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Calendar Event Api V1 Mail Calendar Events Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Termin im Google-Standardkalender anlegen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/forwarding": {
       "get": {
         "operationId": "get_forwarding_api_v1_mail_forwarding_get",
@@ -35932,6 +36147,23 @@
                 }
               ],
               "title": "Party Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contact Id"
             }
           },
           {

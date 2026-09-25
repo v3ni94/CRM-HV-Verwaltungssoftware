@@ -7,6 +7,18 @@ import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+export type GoogleEvent = {
+  id: string;
+  calendar: string;
+  summary: string;
+  starts_at: string | null;
+  ends_at: string | null;
+  all_day: boolean;
+  link: string | null;
+};
+
+type GoogleFeed = { events: GoogleEvent[]; errors: string[]; connected: boolean };
+
 export type CalendarItem = {
   kind: string;
   title: string;
@@ -31,18 +43,26 @@ export function CalendarView({ initialYear, initialMonth }: { initialYear: numbe
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const [items, setItems] = useState<CalendarItem[]>([]);
+  const [google, setGoogle] = useState<GoogleFeed>({ events: [], errors: [], connected: false });
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [day, setDay] = useState("");
   const [shared, setShared] = useState(false);
+  const [inGoogle, setInGoogle] = useState(false);
+  const [fromTime, setFromTime] = useState("09:00");
+  const [toTime, setToTime] = useState("10:00");
 
   const load = useCallback(async () => {
     const { start, end } = monthRange(year, month);
-    const result = await bff<CalendarItem[]>(`/api/bff/workspace/calendar?start=${start}&end=${end}`);
-    if (result.ok) {
-      setItems(result.data);
+    const [internal, feed] = await Promise.all([
+      bff<CalendarItem[]>(`/api/bff/workspace/calendar?start=${start}&end=${end}`),
+      bff<GoogleFeed>(`/api/bff/mail/calendar/events?start=${start}&end=${end}`),
+    ]);
+    if (internal.ok) {
+      setItems(internal.data);
       setError(null);
-    } else setError(result.message);
+    } else setError(internal.message);
+    if (feed.ok && feed.data && Array.isArray(feed.data.events)) setGoogle(feed.data);
   }, [year, month]);
 
   useEffect(() => {
@@ -57,10 +77,19 @@ export function CalendarView({ initialYear, initialMonth }: { initialYear: numbe
 
   async function add(event: React.FormEvent) {
     event.preventDefault();
-    const result = await bff("/api/bff/workspace/calendar", {
-      method: "POST",
-      body: JSON.stringify({ title, starts_on: day, shared }),
-    });
+    const result = inGoogle
+      ? await bff("/api/bff/mail/calendar/events", {
+          method: "POST",
+          body: JSON.stringify({
+            summary: title,
+            starts_at: `${day}T${fromTime}:00`,
+            ends_at: `${day}T${toTime}:00`,
+          }),
+        })
+      : await bff("/api/bff/workspace/calendar", {
+          method: "POST",
+          body: JSON.stringify({ title, starts_on: day, shared }),
+        });
     if (result.ok) {
       setTitle("");
       setDay("");
@@ -94,6 +123,44 @@ export function CalendarView({ initialYear, initialMonth }: { initialYear: numbe
         <p role="alert" className={ui.alert}>
           {error}
         </p>
+      ) : null}
+      {google.errors.map((message) => (
+        <p key={message} className={ui.notice}>
+          {message}
+        </p>
+      ))}
+      {google.connected && google.events.length > 0 ? (
+        <section>
+          <h3 className="mb-1 text-sm font-medium">{t("googleCalendar")}</h3>
+          <ul className="flex flex-col divide-y divide-border rounded border border-border">
+            {google.events.map((event) => (
+              <li key={event.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <span className="w-36 tabular-nums text-xs">
+                  {event.starts_at
+                    ? event.all_day
+                      ? formatDate(event.starts_at)
+                      : new Intl.DateTimeFormat("de-DE", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        }).format(new Date(event.starts_at))
+                    : "–"}
+                </span>
+                <span className="w-40 truncate text-xs text-muted" title={event.calendar}>
+                  {event.calendar}
+                </span>
+                <span className="flex-1">
+                  {event.link ? (
+                    <a href={event.link} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                      {event.summary}
+                    </a>
+                  ) : (
+                    event.summary
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
       {items.length === 0 ? (
         <p className="text-sm text-muted">{t("noEntries")}</p>
@@ -130,6 +197,28 @@ export function CalendarView({ initialYear, initialMonth }: { initialYear: numbe
           <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
           {t("shared")}
         </label>
+        {google.connected ? (
+          <label className="flex items-center gap-1 text-sm">
+            <input type="checkbox" checked={inGoogle} onChange={(e) => setInGoogle(e.target.checked)} />
+            {t("inGoogle")}
+          </label>
+        ) : null}
+        {inGoogle ? (
+          <>
+            <div>
+              <label htmlFor="entry-from" className={ui.label}>
+                {t("timeFrom")}
+              </label>
+              <input id="entry-from" type="time" value={fromTime} onChange={(e) => setFromTime(e.target.value)} className={ui.input} />
+            </div>
+            <div>
+              <label htmlFor="entry-to" className={ui.label}>
+                {t("timeTo")}
+              </label>
+              <input id="entry-to" type="time" value={toTime} onChange={(e) => setToTime(e.target.value)} className={ui.input} />
+            </div>
+          </>
+        ) : null}
         <button type="submit" className={ui.primary}>
           {t("addEntry")}
         </button>

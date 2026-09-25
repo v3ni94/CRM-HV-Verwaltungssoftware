@@ -129,7 +129,8 @@
       "communication": "Kommunikation",
       "bank": "Bankverbindungen",
       "notes": "Notizen",
-      "consents": "Einwilligungen"
+      "consents": "Einwilligungen",
+      "sepa": "SEPA-Mandate"
     },
     "created": "Angelegt am",
     "updated": "Geändert am",
@@ -155,6 +156,48 @@
       "revokeConfirm": "Einwilligung wirklich als widerrufen erfassen?",
       "sourceInvalid": "Bitte die Quelle mit mindestens 2 Zeichen angeben.",
       "dateInvalid": "Bitte ein gültiges Datum angeben."
+    },
+    "sepa": {
+      "lockedHint": "Mandate werden hier nur erfasst und dokumentiert. Der Lastschrifteinzug bleibt bis zur Freigabestufe G2 gesperrt.",
+      "reference": "Mandatsreferenz",
+      "creditorId": "Gläubiger-ID",
+      "signedAt": "Erteilt am",
+      "bankAccount": "Bankverbindung",
+      "evidence": "Nachweis",
+      "evidencePdf": "PDF-Dokument hinterlegt",
+      "evidenceRecorded": "per {channel} vom {date}",
+      "recordedHint": "Erfasster Nachweis ohne Dokument. Es wird empfohlen, das Original nachzureichen.",
+      "status": "Status",
+      "statusValue": {
+        "active": "aktiv",
+        "revoked": "widerrufen",
+        "expired": "abgelaufen"
+      },
+      "channel": {
+        "phone": "Telefon",
+        "letter": "Brief",
+        "email": "E-Mail",
+        "other": "Sonstiges"
+      },
+      "revoke": "Widerrufen",
+      "revokeConfirm": "Mandat wirklich als widerrufen erfassen? Verknüpfte Verträge werden nicht mehr per Lastschrift gekennzeichnet.",
+      "add": "Mandat erfassen",
+      "party": "Vertragspartei",
+      "legalEntity": "Rechtsträger (Gläubiger)",
+      "legalEntitySelect": "Bitte wählen",
+      "creditorIdHint": "Gläubiger-Identifikationsnummer, z. B. DE98ZZZ09999999999",
+      "referenceHint": "Eindeutig je Gläubiger-ID, max. 35 Zeichen",
+      "evidenceKind": "Art des Nachweises",
+      "evidenceKindDocument": "PDF-Dokument hochladen",
+      "evidenceKindRecorded": "Weg der Erteilung erfassen",
+      "file": "Mandat als PDF",
+      "channelLabel": "Weg der Erteilung",
+      "note": "Notiz",
+      "noteHint": "z. B. E-Mail vom 01.02.2026",
+      "save": "Mandat speichern",
+      "requiredMissing": "Bitte alle Pflichtfelder ausfüllen.",
+      "fileMissing": "Bitte eine PDF-Datei auswählen oder den Weg der Erteilung erfassen.",
+      "noBankAccount": "Für dieses Mandat wird eine Bankverbindung des Kontakts benötigt. Bitte zuerst eine Bankverbindung hinterlegen."
     },
     "select": "Auswahl",
     "selectRow": "{name} auswählen",
@@ -682,7 +725,11 @@
     "bulkDone": "{changed} geändert.",
     "select": "Auswählen",
     "greetingLabel": "Übersicht",
-    "open": "Öffnen"
+    "open": "Öffnen",
+    "googleCalendar": "Google-Kalender (verbundene Postfächer)",
+    "inGoogle": "Im Google-Standardkalender anlegen",
+    "timeFrom": "Von",
+    "timeTo": "Bis"
   },
   "Accounting": {
     "title": "Buchhaltung",
