@@ -401,9 +401,9 @@ export function AiChatWidget() {
       {open ? (
         <section
           aria-label={t("title")}
-          className="fixed bottom-20 right-5 z-40 flex h-[32rem] w-[min(26rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-bg shadow-lg"
+          className="fixed bottom-20 right-5 z-40 flex h-[32rem] w-[min(26rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border-2 border-gold/70 bg-bg shadow-lg"
         >
-          <header className="flex items-center justify-between border-b border-border-soft bg-surface px-4 py-3">
+          <header className="flex items-center justify-between border-b border-gold/40 bg-gold-tint px-4 py-3">
             <div>
               <p className="text-sm font-semibold">{t("title")}</p>
               <p className="mhvp-label">{t("onPage", { page: t(`area.${ctx.area}`) })}</p>
@@ -435,7 +435,7 @@ export function AiChatWidget() {
               }
               const last = i === entries.length - 1;
               return (
-                <li key={i} className="max-w-[92%] self-start rounded-2xl rounded-bl-md bg-surface px-3.5 py-2">
+                <li key={i} className="max-w-[92%] self-start rounded-2xl rounded-bl-md border border-gold/30 bg-gold-tint px-3.5 py-2">
                   <p className="whitespace-pre-wrap">{e.text}</p>
                   {last && e.chips?.length && !busy ? (
                     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -454,7 +454,16 @@ export function AiChatWidget() {
                 </li>
               );
             })}
-            {busy ? <li className="self-start text-xs text-muted">{t("thinking")}</li> : null}
+            {busy ? (
+              <li className="w-full self-start" aria-live="polite">
+                <div className="max-w-[92%] rounded-2xl rounded-bl-md bg-gold-tint px-3.5 py-2">
+                  <p className="text-xs text-muted">{t("thinking")}</p>
+                  <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-gold-soft" role="progressbar" aria-label={t("thinking")}>
+                    <div className="mhvp-progress-slide h-full w-1/3 rounded-full bg-gold" />
+                  </div>
+                </div>
+              </li>
+            ) : null}
             {error ? (
               <li role="alert" className={ui.alert}>
                 {error}

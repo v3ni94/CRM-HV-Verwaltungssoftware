@@ -1253,7 +1253,19 @@
       "high": "hoch",
       "urgent": "dringend",
       "immediate": "sofort"
-    }
+    },
+    "bulk": {
+      "selected": "{count} Tickets markiert",
+      "selectAll": "Alle Tickets markieren",
+      "selectOne": "Ticket {number} markieren",
+      "target": "Status setzen auf",
+      "apply": "Anwenden",
+      "clear": "Auswahl aufheben",
+      "done": "{updated} Tickets aktualisiert.",
+      "partial": "{updated} Tickets aktualisiert, {skipped} übersprungen (Status bereits gesetzt oder Wechsel unzulässig)."
+    },
+    "template": "Vorlage",
+    "noTemplate": "Ohne Vorlage"
   },
   "Platform": {
     "title": "Plattform",
@@ -1593,6 +1605,10 @@
     "mail": {
       "title": "Postfächer",
       "description": "Google OAuth, Postfächer verbinden, Standardpostfach und Freigaben."
+    },
+    "templates": {
+      "title": "Ticketvorlagen",
+      "description": "Vorlagen mit Checklisten, Routing, SLA und Pflicht-Zusatzfeldern (z. B. IBAN beim Kautionsticket)."
     }
   },
   "Members": {
@@ -1800,5 +1816,42 @@
       "assigned": "Zugeordnet",
       "done": "Erledigt"
     }
+  },
+  "TicketTemplates": {
+    "area": "Einstellungen",
+    "title": "Ticketvorlagen",
+    "intro": "Vorlagen legen Titel, Checkliste, Priorität, SLA und Pflicht-Zusatzfelder je Kategorie fest. Beim Anlegen eines Tickets mit dieser Kategorie wird die Checkliste übernommen und die Zusatzfelder werden abgefragt.",
+    "empty": "Noch keine Vorlagen.",
+    "new": "Neue Vorlage",
+    "newTitle": "Neue Vorlage",
+    "editTitle": "Vorlage bearbeiten",
+    "formTitle": "Vorlagenformular",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteConfirm": "Vorlage „{category}\" wirklich löschen?",
+    "summary": "{checklist} Prüfschritte · {fields} Zusatzfelder · SLA {sla} Std.",
+    "category": "Kategorie",
+    "titleField": "Tickettitel",
+    "priority": "Priorität",
+    "priorities": {
+      "low": "niedrig",
+      "normal": "normal",
+      "high": "hoch",
+      "urgent": "dringend",
+      "immediate": "sofort"
+    },
+    "sla": "SLA (Stunden)",
+    "checklist": "Checkliste (ein Schritt je Zeile)",
+    "checklistHint": "z. B. Vorbesichtigung vereinbaren\nExposé freigeben\nÜbergabetermin planen",
+    "fields": "Pflicht-Zusatzfelder",
+    "fieldLabel": "Beschriftung (z. B. IBAN des Mieters)",
+    "kindText": "Text",
+    "kindIban": "IBAN (mit formaler Prüfung)",
+    "required": "Pflicht",
+    "addField": "Zusatzfeld hinzufügen",
+    "removeField": "Entfernen",
+    "ibanHint": "IBAN-Felder werden formal geprüft (Prüfsumme), ohne Pflichtfeld kann das Ticket nicht angelegt werden.",
+    "save": "Speichern",
+    "cancel": "Abbrechen"
   }
 }

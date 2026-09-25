@@ -327,3 +327,150 @@ def test_ticket_stats_series_and_user_comparison(client: TestClient, world: Worl
     # Reading requires the tickets permission.
     ro = bearer(login(client, world, "m19read"))
     assert client.get("/api/v1/tickets/stats", headers=ro).status_code == 403
+
+
+def test_bulk_status_with_role_limit(client: TestClient, world: World) -> None:
+    """Markierte Tickets gesammelt umstellen: Mitarbeiter höchstens 10 je Aufruf, Admin
+    unbegrenzt; unzulässige Wechsel werden übersprungen und gemeldet."""
+    admin = bearer(login(client, world, "m19admin"))
+    tech = bearer(login(client, world, "m19tech"))
+
+    ids = [
+        _ok(client.post("/api/v1/tickets", json={"title": f"Bulk {RUN} {i}"}, headers=admin), 201)[
+            "id"
+        ]
+        for i in range(12)
+    ]
+
+    # Mitarbeiter: 11 auf einmal -> Fehler "zu viele", nichts geändert
+    r = client.post(
+        "/api/v1/tickets/bulk-status",
+        json={"ticket_ids": ids[:11], "status": "done"},
+        headers=tech,
+    )
+    assert r.status_code == 422, r.text
+    assert "Zu viele Tickets" in r.text
+    assert _ok(client.get(f"/api/v1/tickets/{ids[0]}", headers=admin))["status"] == "new"
+
+    # Mitarbeiter: 10 auf einmal ist erlaubt
+    result = _ok(
+        client.post(
+            "/api/v1/tickets/bulk-status",
+            json={"ticket_ids": ids[:10], "status": "done"},
+            headers=tech,
+        )
+    )
+    assert result == {"updated": 10, "skipped": []}
+
+    # Admin: unbegrenzt; bereits erledigte Tickets werden gemeldet statt geändert,
+    # unzulässige Wechsel (done -> waiting gibt es nicht) ebenfalls
+    result = _ok(
+        client.post(
+            "/api/v1/tickets/bulk-status",
+            json={"ticket_ids": ids, "status": "done"},
+            headers=admin,
+        )
+    )
+    assert result["updated"] == 2
+    assert len(result["skipped"]) == 10
+    result = _ok(
+        client.post(
+            "/api/v1/tickets/bulk-status",
+            json={"ticket_ids": ids[:2], "status": "waiting"},
+            headers=admin,
+        )
+    )
+    assert result["updated"] == 0
+    assert all("unzulässig" in s["reason"] for s in result["skipped"])
+
+    # Leserolle darf gar nicht
+    ro = bearer(login(client, world, "m19read"))
+    assert (
+        client.post(
+            "/api/v1/tickets/bulk-status",
+            json={"ticket_ids": ids[:1], "status": "done"},
+            headers=ro,
+        ).status_code
+        == 403
+    )
+
+
+def test_ticket_templates_with_required_iban_field(client: TestClient, world: World) -> None:
+    """Vorlagenverwaltung: anlegen, listen, ändern, löschen; ein Kautionsticket verlangt die
+    IBAN als Pflichtfeld mit formaler Prüfung (Mod 97)."""
+    admin = bearer(login(client, world, "m19admin"))
+    tpl = _ok(
+        client.post(
+            "/api/v1/ticket-templates",
+            json={
+                "category": f"kaution-{RUN}",
+                "title": "Kaution abrechnen",
+                "checklist": ["Auszug prüfen", "Abrechnung erstellen", "Auszahlung anweisen"],
+                "required_fields": [
+                    {"key": "iban", "label": "IBAN des Mieters", "kind": "iban", "required": True}
+                ],
+            },
+            headers=admin,
+        ),
+        201,
+    )
+    listed = _ok(client.get("/api/v1/ticket-templates", headers=admin))
+    mine = next(t for t in listed if t["category"] == f"kaution-{RUN}")
+    assert mine["required_fields"][0]["kind"] == "iban"
+
+    # Ohne IBAN: klare Fehlermeldung; mit ungültiger IBAN: formale Prüfung schlägt an
+    r = client.post(
+        "/api/v1/tickets", json={"category": f"kaution-{RUN}"}, headers=admin
+    )
+    assert r.status_code == 422 and "Pflichtfeld fehlt: IBAN" in r.text
+    r = client.post(
+        "/api/v1/tickets",
+        json={"category": f"kaution-{RUN}", "extra_fields": {"iban": "DE00 1234"}},
+        headers=admin,
+    )
+    assert r.status_code == 422 and "keine gültige IBAN" in r.text
+
+    # Gültige IBAN (Testwert, Mod 97 = 1) wird normalisiert gespeichert; Checkliste kommt mit
+    ticket = _ok(
+        client.post(
+            "/api/v1/tickets",
+            json={
+                "category": f"kaution-{RUN}",
+                "extra_fields": {"iban": "de89 3704 0044 0532 0130 00"},
+            },
+            headers=admin,
+        ),
+        201,
+    )
+    assert ticket["extra_fields"] == {"iban": "DE89370400440532013000"}
+    assert len(ticket["checklist"]) == 3
+
+    # Ändern; Löschen ist gesperrt, solange Tickets die Vorlage verwenden
+    patched = _ok(
+        client.patch(
+            f"/api/v1/ticket-templates/{tpl['id']}",
+            json={
+                "category": f"kaution-{RUN}",
+                "title": "Kaution abrechnen (neu)",
+                "required_fields": [],
+            },
+            headers=admin,
+        )
+    )
+    assert patched["title"] == "Kaution abrechnen (neu)"
+    assert client.delete(f"/api/v1/ticket-templates/{tpl['id']}", headers=admin).status_code == 409
+
+    # Unbenutzte Vorlage lässt sich löschen; Nicht-Admin darf nicht verwalten
+    spare = _ok(
+        client.post(
+            "/api/v1/ticket-templates",
+            json={"category": f"leer-{RUN}", "title": "Leer"},
+            headers=admin,
+        ),
+        201,
+    )
+    ro = bearer(login(client, world, "m19read"))
+    assert client.delete(f"/api/v1/ticket-templates/{spare['id']}", headers=ro).status_code == 403
+    assert (
+        client.delete(f"/api/v1/ticket-templates/{spare['id']}", headers=admin).status_code == 204
+    )

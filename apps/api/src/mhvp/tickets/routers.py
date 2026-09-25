@@ -1,6 +1,7 @@
 """Tickets and work orders (/api/v1/tickets, /api/v1/work-orders, M19): ticket to order to
 invoice end to end. Payment stays in accounting (M14/M15); board status never pays."""
 
+import re
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -79,6 +80,45 @@ ORDER_FLOW = {
 }
 
 
+def _valid_iban(value: str) -> bool:
+    """Rein formale Prüfung (Struktur + Mod 97, ISO 13616), keine Existenzprüfung."""
+    v = re.sub(r"\s+", "", value).upper()
+    if not re.fullmatch(r"[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}", v):
+        return False
+    digits = "".join(str(int(c, 36)) for c in v[4:] + v[:4])
+    return int(digits) % 97 == 1
+
+
+def _check_extra_fields(tpl: TicketTemplate | None, extra: dict[str, str]) -> dict[str, str]:
+    """Validate the template's configured extra fields (e.g. IBAN on a deposit ticket) and
+    return the normalized values; unknown keys are rejected to keep the data deliberate."""
+    fields = {f["key"]: f for f in (tpl.required_fields if tpl else [])}
+    unknown = sorted(set(extra) - set(fields))
+    if unknown:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail=f"Unbekannte Zusatzfelder: {', '.join(unknown)}."
+        )
+    out: dict[str, str] = {}
+    for key, field in fields.items():
+        value = (extra.get(key) or "").strip()
+        if not value:
+            if field.get("required", True):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail=f"Pflichtfeld fehlt: {field.get('label', key)}.",
+                )
+            continue
+        if field.get("kind") == "iban":
+            if not _valid_iban(value):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail=f"{field.get('label', key)}: keine gültige IBAN (formale Prüfung).",
+                )
+            value = re.sub(r"\s+", "", value).upper()
+        out[key] = value[:500]
+    return out
+
+
 class _In(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -86,6 +126,13 @@ class _In(BaseModel):
 class TeamIn(_In):
     name: str = Field(min_length=1, max_length=100)
     member_user_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class TemplateField(_In):
+    key: str = Field(min_length=1, max_length=40, pattern=r"^[a-z0-9_]+$")
+    label: str = Field(min_length=1, max_length=100)
+    kind: Literal["text", "iban"] = "text"
+    required: bool = True
 
 
 class TicketTemplateIn(_In):
@@ -96,11 +143,13 @@ class TicketTemplateIn(_In):
     default_team_id: uuid.UUID | None = None
     default_assignee_user_id: uuid.UUID | None = None
     sla_hours: int | None = Field(default=None, ge=1, le=8760)
+    required_fields: list[TemplateField] = Field(default_factory=list, max_length=20)
 
 
 class TicketIn(_In):
     title: str | None = Field(default=None, max_length=300)
     category: str | None = Field(default=None, max_length=100)
+    extra_fields: dict[str, str] = Field(default_factory=dict)
     property_id: uuid.UUID | None = None
     unit_id: uuid.UUID | None = None
     public_description: str | None = Field(default=None, max_length=20000)
@@ -175,6 +224,7 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             "resolved_at",
             "time_spent_minutes",
             "merged_into_ticket_id",
+            "extra_fields",
             "created_at",
         )
     } | {
@@ -241,6 +291,73 @@ async def create_template(
         return {"id": tpl.id, "category": tpl.category}
 
 
+def _template_out(tpl: TicketTemplate) -> dict[str, Any]:
+    return {
+        k: getattr(tpl, k)
+        for k in (
+            "id",
+            "category",
+            "title",
+            "checklist",
+            "default_priority",
+            "default_team_id",
+            "default_assignee_user_id",
+            "sla_hours",
+            "required_fields",
+        )
+    }
+
+
+@router.get("/ticket-templates", summary="Ticketvorlagen")
+async def list_templates(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.scalars(select(TicketTemplate).order_by(TicketTemplate.category))
+        ).all()
+        return [_template_out(t) for t in rows]
+
+
+@router.patch("/ticket-templates/{template_id}", summary="Ticketvorlage ändern")
+async def patch_template(
+    template_id: uuid.UUID,
+    body: TicketTemplateIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        tpl = await session.get(TicketTemplate, template_id, with_for_update=True)
+        if tpl is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        for key, value in body.model_dump().items():
+            setattr(tpl, key, value)
+        await session.flush()
+        return _template_out(tpl)
+
+
+@router.delete("/ticket-templates/{template_id}", status_code=204, summary="Ticketvorlage löschen")
+async def delete_template(
+    template_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> None:
+    async with tenant_tx(request, principal) as session:
+        tpl = await session.get(TicketTemplate, template_id, with_for_update=True)
+        if tpl is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        used = await session.scalar(
+            select(func.count()).select_from(Ticket).where(Ticket.template_id == template_id)
+        )
+        if used:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=(
+                    f"Vorlage wird von {used} Tickets verwendet und bleibt aus "
+                    "Nachvollziehbarkeitsgründen erhalten."
+                ),
+            )
+        await session.delete(tpl)
+
+
 @router.post("/tickets", status_code=201, summary="Ticket anlegen (Vorlage, Routing, SLA)")
 async def create_ticket(
     body: TicketIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -256,6 +373,7 @@ async def create_ticket(
         title = body.title or (tpl.title if tpl else None)
         if not title:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Titel fehlt.")
+        extra_fields = _check_extra_fields(tpl, body.extra_fields)
         priority = body.priority or (tpl.default_priority if tpl else Priority.NORMAL)
         hours = tpl.sla_hours if tpl and tpl.sla_hours else SLA_HOURS[priority]
         ticket = Ticket(
@@ -269,7 +387,8 @@ async def create_ticket(
             assignee_user_id=tpl.default_assignee_user_id if tpl else None,
             checklist=[{"text": c, "done": False} for c in (tpl.checklist if tpl else [])],
             sla_due_at=datetime.now(UTC) + timedelta(hours=hours),
-            **body.model_dump(exclude={"title", "priority"}),
+            extra_fields=extra_fields,
+            **body.model_dump(exclude={"title", "priority", "extra_fields"}),
         )
         session.add(ticket)
         await session.flush()
@@ -629,6 +748,75 @@ async def patch_ticket(
             ]
         await session.flush()
         return _ticket_out(ticket)
+
+
+BULK_LIMIT_NON_ADMIN = 10
+
+
+class TicketBulkStatus(_In):
+    ticket_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
+    status: TicketStatus
+
+
+@router.post("/tickets/bulk-status", summary="Status für markierte Tickets setzen")
+async def bulk_status(
+    body: TicketBulkStatus, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    """Bulk action of the ticket list. Non-admins may change at most 10 tickets per call
+    (product rule); tenant admins are unlimited. Invalid transitions are skipped and
+    reported, they never abort the rest of the selection."""
+    ids = list(dict.fromkeys(body.ticket_ids))
+    if not principal.has("tenant_settings:update") and len(ids) > BULK_LIMIT_NON_ADMIN:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail=(
+                f"Zu viele Tickets ausgewählt ({len(ids)}): höchstens {BULK_LIMIT_NON_ADMIN} "
+                "gleichzeitig. Administratoren sind nicht begrenzt."
+            ),
+        )
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.scalars(select(Ticket).where(Ticket.id.in_(ids)).with_for_update())
+        ).all()
+        found = {t.id: t for t in rows}
+        updated = 0
+        skipped: list[dict[str, str]] = []
+        for ticket_id in ids:
+            ticket = found.get(ticket_id)
+            if ticket is None:
+                skipped.append({"id": str(ticket_id), "reason": "Ticket nicht gefunden"})
+                continue
+            if body.status is ticket.status:
+                skipped.append(
+                    {"id": str(ticket_id), "reason": f"Status ist bereits {ticket.status.value}"}
+                )
+                continue
+            if body.status not in TICKET_FLOW[ticket.status]:
+                skipped.append(
+                    {
+                        "id": str(ticket_id),
+                        "reason": (
+                            f"Wechsel {ticket.status.value} nach {body.status.value} unzulässig"
+                        ),
+                    }
+                )
+                continue
+            await _event(
+                session,
+                ticket,
+                "status",
+                principal.user_id,
+                {"from": ticket.status.value, "to": body.status.value, "bulk": True},
+            )
+            ticket.status = body.status
+            ticket.resolved_at = (
+                datetime.now(UTC)
+                if body.status in (TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED)
+                else None
+            )
+            updated += 1
+        await session.flush()
+        return {"updated": updated, "skipped": skipped}
 
 
 @router.post(

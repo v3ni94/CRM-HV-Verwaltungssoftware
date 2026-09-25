@@ -188,3 +188,15 @@ body {
   --viz-resolved: #c08618;
   --viz-open: #199e70;
 }
+
+/* Unbestimmter Ladebalken des KI-Chats. */
+@keyframes mhvp-progress-slide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+.mhvp-progress-slide {
+  animation: mhvp-progress-slide 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mhvp-progress-slide { animation: none; }
+}

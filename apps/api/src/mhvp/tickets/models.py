@@ -101,6 +101,11 @@ class TicketTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
     default_team_id: Mapped[uuid.UUID | None] = _fk("team.id")
     default_assignee_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     sla_hours: Mapped[int | None] = mapped_column(Integer)
+    # Configurable extra fields the template demands on creation, e.g. an IBAN on a deposit
+    # ticket: [{"key", "label", "kind": "text"|"iban", "required": bool}].
+    required_fields: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
 
 
 class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -133,6 +138,7 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     time_spent_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     merged_into_ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id")
+    extra_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
 
 class TicketComment(IdMixin, TimestampMixin, TenantMixin, Base):

@@ -5266,7 +5266,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Ticketvorlagen */
+        get: operations["list_templates_api_v1_ticket_templates_get"];
         put?: never;
         /** Ticketvorlage mit Routing und SLA */
         post: operations["create_template_api_v1_ticket_templates_post"];
@@ -5274,6 +5275,24 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ticket-templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Ticketvorlage löschen */
+        delete: operations["delete_template_api_v1_ticket_templates__template_id__delete"];
+        options?: never;
+        head?: never;
+        /** Ticketvorlage ändern */
+        patch: operations["patch_template_api_v1_ticket_templates__template_id__patch"];
         trace?: never;
     };
     "/api/v1/tickets": {
@@ -5288,6 +5307,28 @@ export interface paths {
         put?: never;
         /** Ticket anlegen (Vorlage, Routing, SLA) */
         post: operations["create_ticket_api_v1_tickets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/bulk-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Status für markierte Tickets setzen
+         * @description Bulk action of the ticket list. Non-admins may change at most 10 tickets per call
+         *     (product rule); tenant admins are unlimited. Invalid transitions are skipped and
+         *     reported, they never abort the rest of the selection.
+         */
+        post: operations["bulk_status_api_v1_tickets_bulk_status_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10915,6 +10956,24 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** TemplateField */
+        TemplateField: {
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @default text
+             * @enum {string}
+             */
+            kind: "text" | "iban";
+            /** Label */
+            label: string;
+            /**
+             * Required
+             * @default true
+             */
+            required: boolean;
+        };
         /** TemplateIn */
         TemplateIn: {
             /** Body */
@@ -11000,10 +11059,20 @@ export interface components {
          * @enum {string}
          */
         TextStatus: "extracted" | "pending" | "none";
+        /** TicketBulkStatus */
+        TicketBulkStatus: {
+            status: components["schemas"]["TicketStatus"];
+            /** Ticket Ids */
+            ticket_ids: string[];
+        };
         /** TicketIn */
         TicketIn: {
             /** Category */
             category?: string | null;
+            /** Extra Fields */
+            extra_fields?: {
+                [key: string]: string;
+            };
             /** Initiator Contact Id */
             initiator_contact_id?: string | null;
             /** Internal Description */
@@ -11064,6 +11133,8 @@ export interface components {
             default_priority: components["schemas"]["Priority"];
             /** Default Team Id */
             default_team_id?: string | null;
+            /** Required Fields */
+            required_fields?: components["schemas"]["TemplateField"][];
             /** Sla Hours */
             sla_hours?: number | null;
             /** Title */
@@ -23675,6 +23746,28 @@ export interface operations {
             };
         };
     };
+    list_templates_api_v1_ticket_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
     create_template_api_v1_ticket_templates_post: {
         parameters: {
             query?: never;
@@ -23690,6 +23783,72 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_template_api_v1_ticket_templates__template_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_template_api_v1_ticket_templates__template_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketTemplateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23761,6 +23920,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_status_api_v1_tickets_bulk_status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketBulkStatus"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

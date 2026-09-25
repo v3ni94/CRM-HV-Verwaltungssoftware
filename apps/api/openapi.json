@@ -16492,6 +16492,44 @@
         "title": "TeamIn",
         "type": "object"
       },
+      "TemplateField": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 40,
+            "minLength": 1,
+            "pattern": "^[a-z0-9_]+$",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "default": "text",
+            "enum": [
+              "text",
+              "iban"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "required": {
+            "default": true,
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "TemplateField",
+        "type": "object"
+      },
       "TemplateIn": {
         "additionalProperties": false,
         "properties": {
@@ -16739,6 +16777,30 @@
         "title": "TextStatus",
         "type": "string"
       },
+      "TicketBulkStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus"
+          },
+          "ticket_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Ticket Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ticket_ids",
+          "status"
+        ],
+        "title": "TicketBulkStatus",
+        "type": "object"
+      },
       "TicketIn": {
         "additionalProperties": false,
         "properties": {
@@ -16753,6 +16815,13 @@
               }
             ],
             "title": "Category"
+          },
+          "extra_fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Extra Fields",
+            "type": "object"
           },
           "initiator_contact_id": {
             "anyOf": [
@@ -17028,6 +17097,14 @@
               }
             ],
             "title": "Default Team Id"
+          },
+          "required_fields": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateField"
+            },
+            "maxItems": 20,
+            "title": "Required Fields",
+            "type": "array"
           },
           "sla_hours": {
             "anyOf": [
@@ -36764,6 +36841,30 @@
       }
     },
     "/api/v1/ticket-templates": {
+      "get": {
+        "operationId": "list_templates_api_v1_ticket_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Templates Api V1 Ticket Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ticketvorlagen",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      },
       "post": {
         "operationId": "create_template_api_v1_ticket_templates_post",
         "requestBody": {
@@ -36801,6 +36902,95 @@
           }
         },
         "summary": "Ticketvorlage mit Routing und SLA",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/ticket-templates/{template_id}": {
+      "delete": {
+        "operationId": "delete_template_api_v1_ticket_templates__template_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ticketvorlage löschen",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_template_api_v1_ticket_templates__template_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketTemplateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Template Api V1 Ticket Templates  Template Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ticketvorlage ändern",
         "tags": [
           "Tickets und Aufträge"
         ]
@@ -36935,6 +37125,50 @@
           }
         },
         "summary": "Ticket anlegen (Vorlage, Routing, SLA)",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/bulk-status": {
+      "post": {
+        "description": "Bulk action of the ticket list. Non-admins may change at most 10 tickets per call\n(product rule); tenant admins are unlimited. Invalid transitions are skipped and\nreported, they never abort the rest of the selection.",
+        "operationId": "bulk_status_api_v1_tickets_bulk_status_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketBulkStatus"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Bulk Status Api V1 Tickets Bulk Status Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Status für markierte Tickets setzen",
         "tags": [
           "Tickets und Aufträge"
         ]
