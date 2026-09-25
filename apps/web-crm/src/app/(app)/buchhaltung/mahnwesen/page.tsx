@@ -23,7 +23,14 @@ export default async function DunningPage() {
   const today = new Date().toISOString().slice(0, 10);
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("title")} />
+      <PageHeader
+        title={t("title")}
+        action={
+          <Link href="/buchhaltung/mahnwesen/einstellungen" className={ui.secondary}>
+            {t("settings")}
+          </Link>
+        }
+      />
       <p className={ui.notice}>{t("notice")}</p>
       <DunningPreviewButton today={today} />
       <h2 className={ui.h2}>{t("runs")}</h2>

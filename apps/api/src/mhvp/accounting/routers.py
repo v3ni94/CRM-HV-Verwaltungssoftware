@@ -1326,24 +1326,47 @@ def _dunning_out(run: DunningRun, cases: list[DunningCase]) -> dict[str, Any]:
         "run_date": run.run_date,
         "status": run.status,
         "totals": run.totals,
-        "cases": [
-            {
-                "id": c.id,
-                "contract_id": c.contract_id,
-                "debtor_account_id": c.debtor_account_id,
-                "level": c.level,
-                "total": c.total,
-                "fee_amount": c.fee_amount,
-                "interest_amount": c.interest_amount,
-                "status": c.status,
-                "reason": c.reason,
-                "open_items": c.open_items,
-                "fee_entry_id": c.fee_entry_id,
-                "fee_invoice_draft_id": c.fee_invoice_draft_id,
-            }
-            for c in cases
-        ],
+        "cases": [_case_out(c) for c in cases],
     }
+
+
+def _dunning_settings_out(row: DunningSettings) -> dict[str, Any]:
+    return {
+        "id": row.id,
+        "property_id": row.property_id,
+        "levels": row.levels,
+        "threshold_amount": row.threshold_amount,
+        "fee_from_level": row.fee_from_level,
+        "interest_enabled": row.interest_enabled,
+        "interest_base_rate": row.interest_base_rate,
+        "interest_spread": row.interest_spread,
+        "status": _settings_status(row),
+    }
+
+
+@router.get(
+    "/dunning-settings", summary="Mahnstufen, Gebühren und Zins lesen (Mandant oder Objekt)"
+)
+async def get_dunning_settings(
+    request: Request,
+    property_id: uuid.UUID | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await dunning.settings_for(session, property_id)
+        if row is None:
+            return {
+                "id": None,
+                "property_id": property_id,
+                "levels": [],
+                "threshold_amount": "0.00",
+                "fee_from_level": None,
+                "interest_enabled": False,
+                "interest_base_rate": None,
+                "interest_spread": None,
+                "status": "nicht eingerichtet",
+            }
+        return _dunning_settings_out(row)
 
 
 @router.put("/dunning-settings", summary="Mahnstufen, Gebühren (je Stufe, nur mit Betrag) und Zins")
@@ -1383,16 +1406,7 @@ async def put_dunning_settings(
         row.interest_base_rate = body.interest_base_rate
         row.interest_spread = body.interest_spread
         await session.flush()
-        return {
-            "id": row.id,
-            "levels": row.levels,
-            "threshold_amount": row.threshold_amount,
-            "fee_from_level": row.fee_from_level,
-            "interest_enabled": row.interest_enabled,
-            "interest_base_rate": row.interest_base_rate,
-            "interest_spread": row.interest_spread,
-            "status": _settings_status(row),
-        }
+        return _dunning_settings_out(row)
 
 
 @router.post(
@@ -1416,11 +1430,7 @@ async def post_dunning_settings_presets(
             row.interest_spread = Decimal(dunning.interest_spread_presets()[body.interest_profile])
         await session.flush()
         return {
-            "id": row.id,
-            "levels": row.levels,
-            "fee_from_level": row.fee_from_level,
-            "interest_spread": row.interest_spread,
-            "status": _settings_status(row),
+            **_dunning_settings_out(row),
             "note": (
                 "Vorschlagswerte laut Betreiberentscheidung 25.09.2026 (V7, teilweise "
                 "entschieden). Gebührenbeträge und Basiszinssatz bleiben leer, bis der "
@@ -1498,6 +1508,50 @@ async def dunning_approve(
             (await session.scalars(select(DunningCase).where(DunningCase.run_id == run.id))).all()
         )
         return _dunning_out(run, cases)
+
+
+class DunningMarkSentIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    channel: str = Field(pattern="^(post|email|portal)$")
+
+
+def _case_out(case: DunningCase) -> dict[str, Any]:
+    return {
+        "id": case.id,
+        "contract_id": case.contract_id,
+        "debtor_account_id": case.debtor_account_id,
+        "level": case.level,
+        "total": case.total,
+        "fee_amount": case.fee_amount,
+        "interest_amount": case.interest_amount,
+        "status": case.status,
+        "reason": case.reason,
+        "open_items": case.open_items,
+        "fee_entry_id": case.fee_entry_id,
+        "fee_invoice_draft_id": case.fee_invoice_draft_id,
+        "delivery_channel": case.delivery_channel,
+        "delivered_at": case.delivered_at,
+    }
+
+
+@router.post(
+    "/dunning-cases/{case_id}/mark-sent",
+    summary="Mahnung als versendet markieren (M16-09: nur so kann die Stufe steigen)",
+)
+async def dunning_mark_sent(
+    case_id: uuid.UUID,
+    body: DunningMarkSentIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Needs a person.")
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(DunningCase, case_id, with_for_update=True)
+        if case is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await dunning.mark_sent(session, case, body.channel, principal.user_id)
+        return _case_out(case)
 
 
 def _mahnbescheid_out(prep: Any) -> dict[str, Any]:

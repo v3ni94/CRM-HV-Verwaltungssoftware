@@ -22,7 +22,7 @@ for the Mahnbescheid preparation, never booked automatically.
 """
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
@@ -303,6 +303,33 @@ async def approve(
     run.status, run.approved_by = "approved", user_id
     await session.flush()
     return run
+
+
+DELIVERY_CHANNELS = ("post", "email", "portal")
+
+
+async def mark_sent(
+    session: AsyncSession, case: DunningCase, channel: str, user_id: uuid.UUID | None
+) -> DunningCase:
+    """Minimal manual delivery record (M16-09): only this lets the ladder advance to the next
+    level, since ``last_level`` only counts cases with status ``sent``. Proof of actual
+    delivery (M16-02: letter generation, postal/e-mail evidence) stays a separate, open point;
+    this only records that a person marked the case as sent, by which channel and when."""
+    if case.status != "proposed":
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Nur vorgeschlagene Fälle können als versendet gelten."
+        )
+    run = await session.get(DunningRun, case.run_id)
+    if run is None or run.status != "approved":
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Der Mahnlauf muss zuerst freigegeben werden."
+        )
+    case.status = "sent"
+    case.delivery_channel = channel
+    case.delivered_at = datetime.now(UTC)
+    case.updated_by = user_id
+    await session.flush()
+    return case
 
 
 async def prepare_mahnbescheid(

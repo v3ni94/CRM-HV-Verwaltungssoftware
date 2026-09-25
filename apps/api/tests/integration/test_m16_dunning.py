@@ -350,3 +350,99 @@ def test_dunning_presets_fee_and_mahnbescheid(
     assert any(n["art"] == "Mahngebühr" for n in prep["nebenforderungen"])
     again = _ok(gated.get(f"{A}/dunning-cases/{case['id']}/mahnbescheid-vorbereitung", headers=h))
     assert again["id"] == prep["id"]  # repeated preparation returns the same record
+
+
+def test_dunning_mark_sent_advances_level(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """M16-09: nothing advances a case past level 1 until it is marked sent (letters and
+    delivery proof itself stay open, M16-02); ``mark-sent`` records channel and time and lets
+    the next preview propose level 2, where the fee configured for that level applies."""
+    _, gated = clients
+    h = bearer(login(gated, world, "m16admin"))
+    acc_user = bearer(login(gated, world, "m16acc"))
+    prop = _ok(
+        gated.post(
+            "/api/v1/properties",
+            json={"number": "764", "name": "Mahnhaus Stufenaufstieg", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    c1 = _contract(gated, h, prop["id"], "01", "2020-01-01")
+    template = _ok(gated.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        gated.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    _ok(gated.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=h))
+    acc = {
+        a["number"]: a["id"] for a in _ok(gated.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    for code, number in [("hoa_fee", "060100"), ("reserve", "060200")]:
+        _ok(
+            gated.put(
+                f"{A}/ledgers/{ledger}/payment-type-accounts",
+                json={"payment_type_code": code, "account_id": acc[number]},
+                headers=h,
+            )
+        )
+    run = _ok(
+        gated.post(f"{A}/receivable-runs", json={"period_month": "2026-03-01"}, headers=h), 201
+    )
+    _ok(gated.post(f"{A}/receivable-runs/{run['id']}/post", headers=h))
+    _ok(
+        gated.put(
+            f"{A}/dunning-settings",
+            json={
+                "property_id": prop["id"],
+                "levels": [
+                    {"level": 1, "min_days_overdue": 5, "text": "Erinnerung", "fee_amount": None},
+                    {"level": 2, "min_days_overdue": 5, "text": "1. Mahnung", "fee_amount": "7.50"},
+                ],
+                "threshold_amount": "20.00",
+                "fee_from_level": 2,
+            },
+            headers=h,
+        )
+    )
+
+    first = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-03-20"}, headers=h), 201)
+    first_case = next(c for c in first["cases"] if c["contract_id"] == c1["id"])
+    assert first_case["level"] == 1
+    assert first_case["fee_amount"] == "0.00"
+    approved = _ok(gated.post(f"{A}/dunning-runs/{first['id']}/approve", headers=acc_user))
+    approved_case = next(c for c in approved["cases"] if c["contract_id"] == c1["id"])
+
+    # Marking as sent needs a proposed, approved case; the run itself cannot be marked twice.
+    refused_again = gated.post(
+        f"{A}/dunning-cases/{approved_case['id']}/mahnbescheid-vorbereitung", headers=h
+    )
+    assert refused_again.status_code == 409  # level 1 is not the highest configured level (2)
+
+    sent = _ok(
+        gated.post(
+            f"{A}/dunning-cases/{approved_case['id']}/mark-sent",
+            json={"channel": "post"},
+            headers=h,
+        )
+    )
+    assert sent["status"] == "sent"
+    assert sent["delivery_channel"] == "post"
+    assert sent["delivered_at"] is not None
+    assert (
+        gated.post(
+            f"{A}/dunning-cases/{approved_case['id']}/mark-sent",
+            json={"channel": "post"},
+            headers=h,
+        ).status_code
+        == 409
+    )  # already sent
+
+    second = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-04-10"}, headers=h), 201)
+    second_case = next(c for c in second["cases"] if c["contract_id"] == c1["id"])
+    assert second_case["level"] == 2
+    assert second_case["fee_amount"] == "7.50"

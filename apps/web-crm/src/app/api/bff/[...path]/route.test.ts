@@ -99,6 +99,15 @@ describe("BFF proxy", () => {
     ["GET", `tickets/${ID}`],
     ["POST", "tickets/merge"],
     ["GET", `properties/${ID}`],
+    // Dunning fees/interest (M16, 25.09.2026): read/write settings, presets, marking a case
+    // sent (M16-09) and preparing a Mahnbescheid are all allowlisted, fee amounts and the
+    // Basiszinssatz stay inactive until the operator enters them (V7).
+    ["GET", "accounting/dunning-settings"],
+    ["PUT", "accounting/dunning-settings"],
+    ["POST", "accounting/dunning-settings/presets"],
+    ["POST", `accounting/dunning-cases/${ID}/mark-sent`],
+    ["POST", `accounting/dunning-cases/${ID}/mahnbescheid-vorbereitung`],
+    ["GET", `accounting/dunning-cases/${ID}/mahnbescheid-vorbereitung`],
   ])("forwards the operation %s %s", async (method, path) => {
     serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {
@@ -124,7 +133,6 @@ describe("BFF proxy", () => {
     ["GET", "imports/immoware24/files/not-a-uuid/rows"],
     ["POST", "imports/immoware24/fields"],
     ["POST", "banking/payment-batches"],
-    ["PUT", "accounting/dunning-settings"],
     ["POST", `banking/rules/${ID}/activate`],
     ["POST", "banking/auto-post"],
     ["POST", "banking/automation"],
