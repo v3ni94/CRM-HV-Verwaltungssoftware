@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { SlaBadge } from "@/components/tickets/SlaBadge";
 import { TicketEdit } from "@/components/tickets/TicketForms";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -57,6 +58,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           ))}
         </ul>
       </section>
+      <DmsDocumentsPanel entity="ticket" id={ticketId} />
     </div>
   );
 }
