@@ -89,64 +89,89 @@ async def import_file(
             session.add(statement)
             await session.flush()
             counts["statements"] += 1
-        for tx in stmt.transactions:
-            if tx.bank_reference:
-                known = await session.scalar(
-                    select(BankTransaction.id).where(
-                        BankTransaction.property_bank_account_id == account.id,
-                        BankTransaction.bank_reference == tx.bank_reference,
-                    )
-                )
-                if known is not None:
-                    counts["duplicates"] += 1  # re-import: no additional effect (B08)
-                    continue
-            digest = content_hash(account.iban_fingerprint, tx)
-            same = await session.scalar(
-                select(BankTransaction.id)
-                .where(
-                    BankTransaction.property_bank_account_id == account.id,
-                    BankTransaction.hash == digest,
-                )
-                .limit(1)
-            )
-            # With a distinct bank reference two equal payments are two payments (D05);
-            # without any reference a hash match goes to review, it is never dropped.
-            review = same is not None and tx.bank_reference is None
-            row = BankTransaction(
-                tenant_id=tenant_id,
-                property_bank_account_id=account.id,
-                legal_entity_id=account.legal_entity_id,
-                statement_id=statement.id,
-                sync_run_id=run.id,
-                bank_reference=tx.bank_reference,
-                booking_date=tx.booking_date,
-                value_date=tx.value_date,
-                amount=tx.amount,
-                currency=tx.currency,
-                counterpart_name=tx.counterpart_name,
-                counterpart_iban=tx.counterpart_iban,
-                counterpart_iban_fingerprint=crypto.fingerprint(tx.counterpart_iban)
-                if tx.counterpart_iban
-                else None,
-                counterpart_bic=tx.counterpart_bic,
-                purpose=tx.purpose,
-                end_to_end_id=tx.end_to_end_id,
-                mandate_reference=tx.mandate_reference,
-                creditor_id=tx.creditor_id,
-                transaction_code=tx.transaction_code,
-                hash=digest,
-                possible_duplicate_of_id=same,
-                raw=tx.raw,
-                status=TransactionStatus.NEEDS_REVIEW if review else TransactionStatus.NEW,
-            )
-            session.add(row)
-            await session.flush()
-            counts["new"] += 1
-            counts["possible_duplicates"] += int(same is not None)
-            counts["transfers"] += int(await pair_transfer(session, row))
+        stmt_counts = await ingest_transactions(
+            session,
+            tenant_id=tenant_id,
+            account=account,
+            statement_id=statement.id,
+            sync_run_id=run.id,
+            transactions=stmt.transactions,
+        )
+        for key, value in stmt_counts.items():
+            counts[key] += value
     run.status, run.counts = "done", counts
     await session.flush()
     return run
+
+
+async def ingest_transactions(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    account: Any,
+    statement_id: uuid.UUID | None,
+    sync_run_id: uuid.UUID | None,
+    transactions: list[RawTransaction],
+) -> dict[str, int]:
+    """Idempotent per-transaction ingest shared by file import and aggregator fetch (M31).
+    Identity is the bank reference per account; a pure content match only flags review."""
+    counts = {"new": 0, "duplicates": 0, "possible_duplicates": 0, "transfers": 0}
+    for tx in transactions:
+        if tx.bank_reference:
+            known = await session.scalar(
+                select(BankTransaction.id).where(
+                    BankTransaction.property_bank_account_id == account.id,
+                    BankTransaction.bank_reference == tx.bank_reference,
+                )
+            )
+            if known is not None:
+                counts["duplicates"] += 1  # re-import: no additional effect (B08)
+                continue
+        digest = content_hash(account.iban_fingerprint, tx)
+        same = await session.scalar(
+            select(BankTransaction.id)
+            .where(
+                BankTransaction.property_bank_account_id == account.id,
+                BankTransaction.hash == digest,
+            )
+            .limit(1)
+        )
+        # With a distinct bank reference two equal payments are two payments (D05);
+        # without any reference a hash match goes to review, it is never dropped.
+        review = same is not None and tx.bank_reference is None
+        row = BankTransaction(
+            tenant_id=tenant_id,
+            property_bank_account_id=account.id,
+            legal_entity_id=account.legal_entity_id,
+            statement_id=statement_id,
+            sync_run_id=sync_run_id,
+            bank_reference=tx.bank_reference,
+            booking_date=tx.booking_date,
+            value_date=tx.value_date,
+            amount=tx.amount,
+            currency=tx.currency,
+            counterpart_name=tx.counterpart_name,
+            counterpart_iban=tx.counterpart_iban,
+            counterpart_iban_fingerprint=crypto.fingerprint(tx.counterpart_iban)
+            if tx.counterpart_iban
+            else None,
+            counterpart_bic=tx.counterpart_bic,
+            purpose=tx.purpose,
+            end_to_end_id=tx.end_to_end_id,
+            mandate_reference=tx.mandate_reference,
+            creditor_id=tx.creditor_id,
+            transaction_code=tx.transaction_code,
+            hash=digest,
+            possible_duplicate_of_id=same,
+            raw=tx.raw,
+            status=TransactionStatus.NEEDS_REVIEW if review else TransactionStatus.NEW,
+        )
+        session.add(row)
+        await session.flush()
+        counts["new"] += 1
+        counts["possible_duplicates"] += int(same is not None)
+        counts["transfers"] += int(await pair_transfer(session, row))
+    return counts
 
 
 async def pair_transfer(session: AsyncSession, tx: BankTransaction) -> bool:

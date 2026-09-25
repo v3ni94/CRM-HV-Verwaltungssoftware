@@ -959,3 +959,418 @@ async def bank_status(
         batch.status = body.status
         await session.flush()
         return [await _order_out(session, o) for o in orders]
+
+
+# ---- finAPI (M31): rein lesende Aggregator-Anbindung -------------------------------------
+# Eigene Banking-Rechte: read=Lesen, create=Verbinden, update=Aktualisieren/Zuordnen,
+# delete=Trennen, export=Exportieren.
+
+from mhvp.banking import aggregator, finapi  # noqa: E402
+from mhvp.banking.models import (  # noqa: E402
+    AccountUsage,
+    BankAccountLink,
+    BankBalance,
+    FetchStatus,
+)
+from mhvp.core.auth.principal import sessions  # noqa: E402
+from mhvp.core.db.tenancy import tenant_transaction  # noqa: E402
+
+B_READ = require_permission("banking:read")
+B_CONNECT = require_permission("banking:create")
+B_UPDATE = require_permission("banking:update")
+B_DISCONNECT = require_permission("banking:delete")
+
+
+def _settings(request: Request) -> Any:
+    return request.app.state.settings
+
+
+def _require_configured(request: Request) -> None:
+    if not finapi.configured(_settings(request)):
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Bankanbindung noch nicht eingerichtet (finAPI-Zugangsdaten fehlen).",
+        )
+
+
+def _client(request: Request, connection: BankConnection) -> finapi.FinApiClient:
+    return finapi.FinApiClient(_settings(request), aggregator.client_credentials(connection))
+
+
+class FinapiConnectIn(_In):
+    bank_name: str = Field(min_length=1, max_length=200)
+    # Dokumentierter Berechtigungskontext: wer ist bankseitig bevollmächtigt (keine
+    # Software-Rolle, sondern die tatsächliche Vollmacht).
+    authorization_context: str = Field(min_length=5, max_length=2000)
+
+
+class AccountAssignIn(_In):
+    link_id: uuid.UUID
+    selected: bool = True
+    property_bank_account_id: uuid.UUID | None = None
+    usage: AccountUsage = AccountUsage.CURRENT
+
+
+class AccountSelectionIn(_In):
+    accounts: list[AccountAssignIn] = Field(min_length=1, max_length=200)
+
+
+class FetchIn(_In):
+    connection_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
+
+
+def _link_out(link: BankAccountLink, balance: BankBalance | None) -> dict[str, Any]:
+    return {
+        "id": link.id,
+        "connection_id": link.connection_id,
+        "provider_account_id": link.provider_account_id,
+        "property_bank_account_id": link.property_bank_account_id,
+        "holder_name": link.holder_name,
+        "iban_suffix": link.iban[-4:] if link.iban else None,
+        "label": link.label,
+        "account_type": link.account_type,
+        "currency": link.currency,
+        "usage": link.usage,
+        "is_selected": link.is_selected,
+        "last_attempt_at": link.last_attempt_at,
+        "last_bank_success_at": link.last_bank_success_at,
+        "last_imported_at": link.last_imported_at,
+        "last_error": link.last_error,
+        "balance": balance.balance if balance else None,
+        "available": balance.available if balance else None,
+        "balance_type": balance.balance_type if balance else None,
+        # Liefert der Provider keinen bankseitigen Zeitpunkt, bleibt das Feld leer und die
+        # Oberfläche sagt das ausdrücklich.
+        "balance_bank_reference_at": balance.bank_reference_at if balance else None,
+        "balance_captured_at": balance.captured_at if balance else None,
+    }
+
+
+def _run_out(run: BankSyncRun) -> dict[str, Any]:
+    return {
+        "id": run.id,
+        "connection_id": run.connection_id,
+        "trigger": run.trigger,
+        "fetch_status": run.fetch_status,
+        "webform_url": run.webform_url,
+        "counts": run.counts,
+        "errors": run.errors,
+        "account_results": run.account_results,
+        "created_at": run.created_at,
+        "finished_at": run.finished_at,
+    }
+
+
+@router.get("/finapi/status", summary="Ist die Bankanbindung eingerichtet?")
+async def finapi_status(
+    request: Request, principal: TenantPrincipal = Depends(B_READ)
+) -> dict[str, bool]:
+    return {"configured": finapi.configured(_settings(request))}
+
+
+@router.post("/finapi/connections", status_code=201, summary="Bankkonto verbinden (WebForm)")
+async def finapi_connect(
+    body: FinapiConnectIn, request: Request, principal: TenantPrincipal = Depends(B_CONNECT)
+) -> dict[str, Any]:
+    _require_configured(request)
+    async with tenant_tx(request, principal) as session:
+        try:
+            connection, run = await aggregator.start_import(
+                session,
+                _settings(request),
+                tenant_id=principal.tenant_id,
+                actor_user_id=principal.user_id,
+                bank_name=body.bank_name,
+                authorization_context=body.authorization_context,
+                client_factory=lambda c: _client(request, c),
+            )
+        except finapi.AggregatorError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="banking.connection_started",
+            entity_type="bank_connection",
+            entity_id=connection.id,
+            actor_user_id=principal.user_id,
+            payload={"bank_name": connection.bank_name},
+        )
+        return {"connection_id": connection.id, "run_id": run.id, "webform_url": run.webform_url}
+
+
+@router.post(
+    "/finapi/connections/{connection_id}/confirm",
+    summary="WebForm-Ergebnis serverseitig prüfen und Konten übernehmen",
+)
+async def finapi_confirm(
+    connection_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(B_CONNECT)
+) -> dict[str, Any]:
+    _require_configured(request)
+    async with tenant_tx(request, principal) as session:
+        connection = await session.get(BankConnection, connection_id)
+        if connection is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        run = await session.scalar(
+            select(BankSyncRun)
+            .where(
+                BankSyncRun.connection_id == connection_id,
+                BankSyncRun.trigger == "initial_import",
+            )
+            .order_by(BankSyncRun.created_at.desc())
+            .limit(1)
+        )
+        if run is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        client = _client(request, connection)
+        try:
+            return await aggregator.confirm_import(session, connection, run, client)
+        except finapi.AggregatorError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        finally:
+            await client.aclose()
+
+
+@router.get(
+    "/finapi/connections/{connection_id}/accounts",
+    summary="Konten der Verbindung (Zuordnung, Salden, Datenstand)",
+)
+async def finapi_accounts(
+    connection_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(B_READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        links = (
+            await session.scalars(
+                select(BankAccountLink)
+                .where(BankAccountLink.connection_id == connection_id)
+                .order_by(BankAccountLink.label)
+            )
+        ).all()
+        out = []
+        for link in links:
+            balance = await session.scalar(
+                select(BankBalance)
+                .where(BankBalance.account_link_id == link.id)
+                .order_by(BankBalance.captured_at.desc())
+                .limit(1)
+            )
+            out.append(_link_out(link, balance))
+        return out
+
+
+@router.put(
+    "/finapi/connections/{connection_id}/accounts",
+    summary="Konten auswählen und Objekten/Buchungskreisen zuordnen",
+)
+async def finapi_assign(
+    connection_id: uuid.UUID,
+    body: AccountSelectionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(B_UPDATE),
+) -> list[dict[str, Any]]:
+    from mhvp.properties.models import PropertyBankAccount
+
+    async with tenant_tx(request, principal) as session:
+        for item in body.accounts:
+            link = await session.get(BankAccountLink, item.link_id)
+            if link is None or link.connection_id != connection_id:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+            if item.property_bank_account_id is not None:
+                account = await session.get(PropertyBankAccount, item.property_bank_account_id)
+                if account is None:
+                    raise ProblemError(
+                        ErrorCodes.VALIDATION, detail="Internes Bankkonto nicht gefunden."
+                    )
+            # Eine spätere Änderung der Zuordnung verschiebt keine abgeschlossenen Buchungen:
+            # bestehende Umsätze bleiben am bisherigen internen Konto (dokumentierter
+            # Korrekturvorgang nötig, M31).
+            link.is_selected = item.selected
+            link.property_bank_account_id = item.property_bank_account_id
+            link.usage = item.usage
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="banking.accounts_assigned",
+            entity_type="bank_connection",
+            entity_id=connection_id,
+            actor_user_id=principal.user_id,
+            payload={"accounts": len(body.accounts)},
+        )
+        links = (
+            await session.scalars(
+                select(BankAccountLink).where(BankAccountLink.connection_id == connection_id)
+            )
+        ).all()
+        return [_link_out(link, None) for link in links]
+
+
+@router.post("/finapi/fetch", summary="Ausgewählte Verbindungen jetzt aktualisieren")
+async def finapi_fetch_now(
+    body: FetchIn, request: Request, principal: TenantPrincipal = Depends(B_UPDATE)
+) -> list[dict[str, Any]]:
+    """Ein Klick stößt je Verbindung genau einen echten Provider-Update-Prozess an; läuft
+    bereits einer, wird dieser zurückgegeben statt ein zweiter gestartet."""
+    _require_configured(request)
+    settings = _settings(request)
+    runs: list[tuple[uuid.UUID, uuid.UUID, bool]] = []
+    async with tenant_tx(request, principal) as session:
+        for connection_id in dict.fromkeys(body.connection_ids):
+            connection = await session.get(BankConnection, connection_id)
+            if connection is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+            if connection.status is ConnectionStatus.DISABLED:
+                raise ProblemError(
+                    ErrorCodes.CONFLICT, detail="Verbindung ist getrennt; kein Abruf möglich."
+                )
+            run, created = await aggregator.start_fetch(
+                session,
+                tenant_id=principal.tenant_id,
+                actor_user_id=principal.user_id,
+                connection=connection,
+            )
+            runs.append((connection.id, run.id, created))
+        run_rows = {
+            r.id: r
+            for r in (
+                await session.scalars(
+                    select(BankSyncRun).where(BankSyncRun.id.in_([rid for _, rid, _ in runs]))
+                )
+            ).all()
+        }
+        out = [_run_out(run_rows[rid]) for _, rid, _ in runs]
+    from mhvp.banking.tasks import finapi_fetch_once
+
+    for _, rid, created in runs:
+        if not created:
+            continue
+        if settings.banking_inline:
+            await finapi_fetch_once(settings, principal.tenant_id, rid)
+        else:
+            from mhvp.worker import get_celery
+
+            get_celery().send_task(
+                "mhvp.banking.finapi_fetch",
+                args=[str(principal.tenant_id), str(rid)],
+                queue="bank",
+            )
+    if settings.banking_inline:
+        async with tenant_tx(request, principal) as session:
+            rows = (
+                await session.scalars(
+                    select(BankSyncRun).where(BankSyncRun.id.in_([rid for _, rid, _ in runs]))
+                )
+            ).all()
+            return [_run_out(r) for r in rows]
+    return out
+
+
+@router.post("/finapi/runs/{run_id}/resume", summary="Nach Bankfreigabe denselben Lauf fortsetzen")
+async def finapi_resume(
+    run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(B_UPDATE)
+) -> dict[str, Any]:
+    _require_configured(request)
+    async with tenant_tx(request, principal) as session:
+        run = await session.get(BankSyncRun, run_id)
+        if run is None or run.connection_id is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        connection = await session.get(BankConnection, run.connection_id)
+        if connection is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        client = _client(request, connection)
+        try:
+            await aggregator.resume_after_webform(
+                session, _settings(request), run, connection, client
+            )
+        except finapi.AggregatorError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        finally:
+            await client.aclose()
+        return _run_out(run)
+
+
+@router.get("/finapi/runs", summary="Abrufprotokolle")
+async def finapi_runs(
+    request: Request,
+    connection_id: uuid.UUID | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    principal: TenantPrincipal = Depends(B_READ),
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        query = (
+            select(BankSyncRun)
+            .where(BankSyncRun.source == "finapi")
+            .order_by(BankSyncRun.created_at.desc())
+            .limit(limit)
+        )
+        if connection_id:
+            query = query.where(BankSyncRun.connection_id == connection_id)
+        return [_run_out(r) for r in (await session.scalars(query)).all()]
+
+
+@router.delete(
+    "/finapi/connections/{connection_id}",
+    summary="Verbindung trennen (Daten und Historie bleiben)",
+)
+async def finapi_disconnect(
+    connection_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(B_DISCONNECT)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        connection = await session.get(BankConnection, connection_id)
+        if connection is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        client = _client(request, connection)
+        try:
+            external_error = await aggregator.disconnect(session, connection, client)
+        finally:
+            await client.aclose()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="banking.connection_disconnected",
+            entity_type="bank_connection",
+            entity_id=connection.id,
+            actor_user_id=principal.user_id,
+            payload={"external_error": external_error},
+        )
+        # Kein bankseitiger Consent-Widerruf wird behauptet; nur die Provider-Verbindung
+        # wurde im verfügbaren Umfang entfernt bzw. der Fehler bleibt sichtbar.
+        return {"status": "disabled", "external_error": external_error}
+
+
+@router.post(
+    "/finapi/callback/{tenant_id}/{run_id}",
+    summary="Provider-Callback (Hinweis, serverseitig verifiziert)",
+    include_in_schema=False,
+)
+async def finapi_callback(
+    tenant_id: uuid.UUID, run_id: uuid.UUID, request: Request, token: str = Query(min_length=16)
+) -> dict[str, str]:
+    """Unauthenticated hint from the web form. It never changes state by itself: the stored
+    token must match and the result is re-verified against the provider before anything moves.
+    Duplicate, late or missing callbacks are safe: confirm/resume do the same work on demand."""
+    settings = _settings(request)
+    if not finapi.configured(settings):
+        return {"status": "ignored"}
+    async with tenant_transaction(sessions(request), tenant_id) as session:
+        run = await session.get(BankSyncRun, run_id)
+        if run is None or run.connection_id is None or run.source != "finapi":
+            return {"status": "ignored"}
+        connection = await session.get(BankConnection, run.connection_id)
+        if connection is None:
+            return {"status": "ignored"}
+        import hmac
+
+        expected = str(connection.provider_refs.get("callback_token") or "")
+        if not expected or not hmac.compare_digest(expected, token):
+            return {"status": "ignored"}
+        client = _client(request, connection)
+        try:
+            if run.trigger == "initial_import":
+                await aggregator.confirm_import(session, connection, run, client)
+            elif run.fetch_status is FetchStatus.AWAITING_AUTHORIZATION:
+                await aggregator.resume_after_webform(session, settings, run, connection, client)
+        except finapi.AggregatorError:
+            return {"status": "deferred"}
+        finally:
+            await client.aclose()
+    return {"status": "ok"}

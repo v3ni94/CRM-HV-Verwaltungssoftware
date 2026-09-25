@@ -22,9 +22,14 @@ export default async function BankPage() {
     <div className="flex flex-col gap-4">
       <h1 className={ui.title}>{t("title")}</h1>
       <p className={ui.notice}>{t("notice")}</p>
-      <Link href="/bank/zahlungen" className="text-sm font-medium hover:underline">
-        {t("ordersLink")}
-      </Link>
+      <div className="flex flex-wrap gap-4 text-sm">
+        <Link href="/bank/zahlungen" className="font-medium hover:underline">
+          {t("ordersLink")}
+        </Link>
+        <Link href="/bank/verbindungen" className="font-medium hover:underline">
+          {t("connectionsLink")}
+        </Link>
+      </div>
       <StatementImport />
       {!data ? (
         <p role="alert" className={ui.alert}>

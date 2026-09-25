@@ -28,6 +28,12 @@ x-app-env: &app-env
   MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS: ${MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS:-false}
   # uvicorn trusts X-Forwarded-* only from these addresses (set to the Traefik network).
   FORWARDED_ALLOW_IPS: ${MHVP_FORWARDED_ALLOW_IPS:-127.0.0.1}
+  # Banking ueber finAPI Access (M31, rein lesend; leer = nicht eingerichtet, keine Demo-Daten).
+  MHVP_BANKING_FINAPI_BASE_URL: ${MHVP_BANKING_FINAPI_BASE_URL:-}
+  MHVP_BANKING_FINAPI_CLIENT_ID: ${MHVP_BANKING_FINAPI_CLIENT_ID:-}
+  MHVP_BANKING_FINAPI_CLIENT_SECRET: ${MHVP_BANKING_FINAPI_CLIENT_SECRET:-}
+  MHVP_BANKING_FINAPI_CALLBACK_BASE_URL: ${MHVP_BANKING_FINAPI_CALLBACK_BASE_URL:-}
+  MHVP_BANKING_FETCH_OVERLAP_DAYS: ${MHVP_BANKING_FETCH_OVERLAP_DAYS:-10}
 
 # U-Protokoll (apps/u-protokoll): eigenstaendige PHP-App fuer Uebergabe-/Abnahmeprotokolle,
 # eingebunden als eigener Dienst mit eigener MariaDB (die App unterstuetzt kein PostgreSQL).

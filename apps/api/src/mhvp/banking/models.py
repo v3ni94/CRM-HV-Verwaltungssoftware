@@ -68,6 +68,92 @@ class BankConnection(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(ConnectionStatus, "bank_connection_status"), nullable=False
     )
     error_message: Mapped[str | None] = mapped_column(Text)
+    # M31 (finAPI): Provider-Referenzen (user_id, bank_connection_id, webform_id) getrennt von
+    # den verschluesselten Zugangsgeheimnissen; zustaendige berechtigte Person und der
+    # dokumentierte Berechtigungskontext (eine Software-Rolle ersetzt keine Bankvollmacht).
+    provider_refs: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    authorized_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    authorization_context: Mapped[str | None] = mapped_column(Text)
+    consent_note: Mapped[str | None] = mapped_column(Text)
+
+
+class FetchStatus(StrEnum):
+    """Local fetch-run states (M31). Internal terms, no claimed provider enums."""
+
+    QUEUED = "queued"
+    RUNNING = "running"
+    AWAITING_AUTHORIZATION = "awaiting_authorization"
+    IMPORTING = "importing"
+    SUCCEEDED = "succeeded"
+    PARTIAL = "partial"
+    FAILED = "failed"
+    CANCELED = "canceled"
+    EXPIRED = "expired"
+
+
+class AccountUsage(StrEnum):
+    CURRENT = "current"  # laufendes Konto
+    RESERVE = "reserve"  # Ruecklagenkonto
+    DEPOSIT = "deposit"  # Kautionskonto
+    OTHER = "other"
+
+
+class BankAccountLink(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Source mapping (M31): one external account reference of a connection, optionally bound
+    to an internal property bank account. Several external references never create several
+    internal accounts on their own; re-imports update this mapping in a controlled way."""
+
+    __tablename__ = "bank_account_link"
+    __table_args__ = (
+        Index(
+            "uq_bank_account_link_ref",
+            "tenant_id",
+            "connection_id",
+            "provider_account_id",
+            unique=True,
+        ),
+    )
+
+    connection_id: Mapped[uuid.UUID] = _fk("bank_connection.id")
+    provider_account_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Internes Konto; leer = noch nicht zugeordnet (nur fuer Banking-Administratoren sichtbar,
+    # gelangt nicht in die Buchhaltung).
+    property_bank_account_id: Mapped[uuid.UUID | None] = _fk(
+        "property_bank_account.id", nullable=True
+    )
+    holder_name: Mapped[str | None] = mapped_column(String(200))
+    iban: Mapped[str | None] = mapped_column(EncryptedText())
+    iban_fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
+    label: Mapped[str | None] = mapped_column(String(200))
+    account_type: Mapped[str | None] = mapped_column(String(40))
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="EUR")
+    usage: Mapped[AccountUsage] = mapped_column(
+        _enum(AccountUsage, "bank_account_usage"), nullable=False, default=AccountUsage.CURRENT
+    )
+    is_selected: Mapped[bool] = mapped_column(nullable=False, default=False)
+    # Zeitpunkte getrennt (11): letzter Versuch, letzte erfolgreiche Bankaktualisierung,
+    # zuletzt in unsere Software uebernommen.
+    last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_bank_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_imported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
+
+
+class BankBalance(IdMixin, TenantMixin, Base):
+    """Balance snapshots per linked account: booked and available stay separate, the bank's
+    reference time is kept when the provider delivers one (M31)."""
+
+    __tablename__ = "bank_balance"
+
+    account_link_id: Mapped[uuid.UUID] = _fk("bank_account_link.id")
+    balance: Mapped[Decimal | None] = mapped_column(MONEY)
+    available: Mapped[Decimal | None] = mapped_column(MONEY)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="EUR")
+    balance_type: Mapped[str | None] = mapped_column(String(40))
+    bank_reference_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    captured_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
 
 
 class BankSyncRun(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -84,6 +170,17 @@ class BankSyncRun(IdMixin, TimestampMixin, TenantMixin, Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     counts: Mapped[dict[str, int]] = mapped_column(JSONB, nullable=False, default=dict)
     errors: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    # M31 (finAPI): Ausloeser, Berechtigungskontext, Provider-Task/WebForm, Ergebnisse je Konto.
+    trigger: Mapped[str | None] = mapped_column(String(32))
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    fetch_status: Mapped[FetchStatus | None] = mapped_column(
+        _enum(FetchStatus, "bank_fetch_status")
+    )
+    provider_task_id: Mapped[str | None] = mapped_column(String(64))
+    webform_id: Mapped[str | None] = mapped_column(String(64))
+    webform_url: Mapped[str | None] = mapped_column(Text)
+    account_results: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class BankStatement(IdMixin, TimestampMixin, TenantMixin, Base):

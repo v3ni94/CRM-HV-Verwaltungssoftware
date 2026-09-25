@@ -880,7 +880,8 @@
       "transfers": "Umbuchungen",
       "statements": "Auszüge"
     },
-    "ordersLink": "Zahlungsaufträge"
+    "ordersLink": "Zahlungsaufträge",
+    "connectionsLink": "Bankverbindungen (finAPI)"
   },
   "Payments": {
     "title": "Zahlungsaufträge",
@@ -1453,6 +1454,10 @@
     "maintenanceOpen": "Offene Wartungen und Prüfpflichten",
     "noMaintenance": "Keine offenen Wartungen.",
     "toHoa": "Zur WEG-Verwaltung",
+    "hoaSection": {
+      "title": "WEG-Verwaltung",
+      "description": "Wirtschaftsplan, Jahresabrechnung, Sonderumlage, Versammlung"
+    },
     "toLetting": "Zur Vermietung",
     "create": "Objekt anlegen",
     "createButton": "Anlegen",
@@ -1856,6 +1861,102 @@
     "removeField": "Entfernen",
     "ibanHint": "IBAN-Felder werden formal geprüft (Prüfsumme), ohne Pflichtfeld kann das Ticket nicht angelegt werden.",
     "save": "Speichern",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "insertRecommended": "Empfohlene Vorlagen mit SLA einfügen",
+    "recommendedHint": "Praxiswerte für Hausverwaltungen (Notfall 4 Std. mit Bereitschaft, dringende Reparatur 24 Std., Standard 72 Std., Kaution 14 Tage). Vorhandene Vorlagen bleiben unberührt; alles nachträglich anpassbar."
+  },
+  "BankFinapi": {
+    "title": "Bankverbindungen",
+    "notice": "Rein lesende Bankanbindung über finAPI. Die Anmeldung bei der Bank geschieht ausschließlich im Formular des Anbieters; Abrufe starten nur auf Klick, es gibt keine zeitgesteuerten Bankabrufe.",
+    "logsLink": "Abrufprotokolle ansehen",
+    "logsTitle": "Abrufprotokolle",
+    "logsEmpty": "Noch keine Abrufe.",
+    "backToConnections": "Zurück zu den Bankverbindungen",
+    "notConfigured": "Bankanbindung noch nicht eingerichtet. Es fehlen die finAPI-Zugangsdaten der Umgebung (siehe docs/BANKING-FINAPI.md); bis dahin werden keine Bankdaten abgerufen.",
+    "connectTitle": "Bankkonto verbinden",
+    "connectHint": "Es öffnet sich das Bankformular des Anbieters. Bank-PIN und TAN werden nur dort eingegeben und nie in dieser Software gespeichert.",
+    "bankName": "Bezeichnung der Bankverbindung",
+    "authorizationContext": "Berechtigungskontext",
+    "authorizationPlaceholder": "z. B. Kontovollmacht der GdWE Musterweg 1 laut Verwaltervertrag vom 01.02.2026",
+    "authorizationHelp": "Wer ist bankseitig bevollmächtigt? Diese Angabe wird dauerhaft zur Verbindung gespeichert.",
+    "connect": "Verbinden und Bankformular öffnen",
+    "webformOpened": "Bankformular geöffnet. Nach Abschluss bei der Bank hier auf Bestätigen klicken.",
+    "confirm": "Bestätigen",
+    "confirmDone": "Verbindung bestätigt, {count} Konten übernommen. Bitte Konten zuordnen und auswählen.",
+    "confirmState": {
+      "pending": "Das Bankformular ist noch nicht abgeschlossen.",
+      "canceled": "Das Bankformular wurde abgebrochen. Bestehende Zuordnungen bleiben erhalten.",
+      "expired": "Das Bankformular ist abgelaufen. Bitte erneut verbinden; bestehende Zuordnungen bleiben erhalten."
+    },
+    "connectionsTitle": "Verbindungen",
+    "empty": "Noch keine Bankverbindung über finAPI.",
+    "status": {
+      "not_configured": "Einrichtung offen",
+      "active": "Aktiv",
+      "error": "Fehler",
+      "consent_expired": "Freigabe abgelaufen",
+      "disabled": "Getrennt"
+    },
+    "fetchAll": "Alle aktualisieren",
+    "fetchOne": "Aktualisieren",
+    "fetchDone": "Abruf abgeschlossen. Details im Abrufprotokoll.",
+    "authorizationNeeded": "Die Bank verlangt eine erneute Freigabe. Das Bankformular wurde geöffnet; danach hier Fortsetzen klicken.",
+    "awaitingTitle": "Freigabe der Bank erforderlich",
+    "awaitingHint": "Ein Abruf wartet auf die Bankfreigabe.",
+    "openWebform": "Bankformular öffnen",
+    "resume": "Fortsetzen",
+    "resumeDone": "Der Lauf wurde fortgesetzt. Details im Abrufprotokoll.",
+    "stillWaiting": "Die Freigabe ist noch nicht abgeschlossen.",
+    "showAccounts": "Konten anzeigen",
+    "colSelected": "Abrufen",
+    "colAccount": "Konto der Bank",
+    "colAssignment": "Internes Konto (Objekt)",
+    "colUsage": "Verwendung",
+    "colBalance": "Saldo",
+    "colTimes": "Datenstand",
+    "unassigned": "Nicht zugeordnet",
+    "unassignedHint": "Ohne Zuordnung gelangt dieses Konto nicht in die Buchhaltung.",
+    "usage": {
+      "current": "Laufendes Konto",
+      "reserve": "Rücklage",
+      "deposit": "Kaution",
+      "other": "Sonstiges"
+    },
+    "noBankTime": "Kein bankseitiger Zeitpunkt geliefert",
+    "lastAttempt": "Letzter Abrufversuch",
+    "lastBankSuccess": "Letzte Bankaktualisierung",
+    "lastImported": "Zuletzt übernommen",
+    "saveAssignment": "Zuordnung speichern",
+    "assignmentSaved": "Zuordnung gespeichert. Bereits übernommene Umsätze bleiben am bisherigen Konto.",
+    "disconnect": "Trennen",
+    "disconnectConfirm": "Verbindung trennen? Konten, Umsätze und Protokolle bleiben erhalten; weitere Abrufe sind nicht mehr möglich.",
+    "disconnected": "Verbindung getrennt. Daten und Historie bleiben erhalten.",
+    "disconnectedWithError": "Verbindung lokal getrennt; die Löschung beim Anbieter meldete einen Fehler: {error}",
+    "trigger": {
+      "manual": "Manuell",
+      "initial_import": "Erstanbindung"
+    },
+    "fetchStatus": {
+      "queued": "Eingereiht",
+      "running": "Läuft",
+      "awaiting_authorization": "Wartet auf Bankfreigabe",
+      "importing": "Übernahme läuft",
+      "succeeded": "Erfolgreich",
+      "partial": "Teilweise erfolgreich",
+      "failed": "Fehlgeschlagen",
+      "canceled": "Abgebrochen",
+      "expired": "Abgelaufen"
+    },
+    "logStarted": "Gestartet",
+    "logFinished": "Beendet",
+    "logTrigger": "Auslöser",
+    "logStatus": "Ergebnis",
+    "logCounts": "Umsätze",
+    "logNotes": "Hinweise",
+    "logNew": "Neu",
+    "logDuplicates": "Bereits vorhanden",
+    "logPending": "Vormerkungen übersprungen",
+    "logFailedAccounts": "Konten mit Fehler",
+    "logSkippedAccounts": "Konten ohne Zuordnung"
   }
 }

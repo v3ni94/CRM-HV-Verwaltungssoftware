@@ -1290,6 +1290,147 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/finapi/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bankkonto verbinden (WebForm) */
+        post: operations["finapi_connect_api_v1_banking_finapi_connections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/connections/{connection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Verbindung trennen (Daten und Historie bleiben) */
+        delete: operations["finapi_disconnect_api_v1_banking_finapi_connections__connection_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/connections/{connection_id}/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Konten der Verbindung (Zuordnung, Salden, Datenstand) */
+        get: operations["finapi_accounts_api_v1_banking_finapi_connections__connection_id__accounts_get"];
+        /** Konten auswählen und Objekten/Buchungskreisen zuordnen */
+        put: operations["finapi_assign_api_v1_banking_finapi_connections__connection_id__accounts_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/connections/{connection_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** WebForm-Ergebnis serverseitig prüfen und Konten übernehmen */
+        post: operations["finapi_confirm_api_v1_banking_finapi_connections__connection_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/fetch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ausgewählte Verbindungen jetzt aktualisieren
+         * @description Ein Klick stößt je Verbindung genau einen echten Provider-Update-Prozess an; läuft
+         *     bereits einer, wird dieser zurückgegeben statt ein zweiter gestartet.
+         */
+        post: operations["finapi_fetch_now_api_v1_banking_finapi_fetch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abrufprotokolle */
+        get: operations["finapi_runs_api_v1_banking_finapi_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/runs/{run_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Nach Bankfreigabe denselben Lauf fortsetzen */
+        post: operations["finapi_resume_api_v1_banking_finapi_runs__run_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ist die Bankanbindung eingerichtet? */
+        get: operations["finapi_status_api_v1_banking_finapi_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/imports": {
         parameters: {
             query?: never;
@@ -5678,6 +5819,23 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountAssignIn */
+        AccountAssignIn: {
+            /**
+             * Link Id
+             * Format: uuid
+             */
+            link_id: string;
+            /** Property Bank Account Id */
+            property_bank_account_id?: string | null;
+            /**
+             * Selected
+             * @default true
+             */
+            selected: boolean;
+            /** @default current */
+            usage: components["schemas"]["AccountUsage"];
+        };
         /**
          * AccountCategory
          * @enum {string}
@@ -5758,11 +5916,21 @@ export interface components {
             /** Visible */
             visible?: boolean | null;
         };
+        /** AccountSelectionIn */
+        AccountSelectionIn: {
+            /** Accounts */
+            accounts: components["schemas"]["AccountAssignIn"][];
+        };
         /**
          * AccountType
          * @enum {string}
          */
         AccountType: "asset" | "liability" | "income" | "expense";
+        /**
+         * AccountUsage
+         * @enum {string}
+         */
+        AccountUsage: "current" | "reserve" | "deposit" | "other";
         /**
          * AccountVatOption
          * @enum {string}
@@ -7832,6 +8000,11 @@ export interface components {
              */
             vat_percent: number | string;
         };
+        /** FetchIn */
+        FetchIn: {
+            /** Connection Ids */
+            connection_ids: string[];
+        };
         /** FieldOut */
         FieldOut: {
             /** Choices */
@@ -7876,6 +8049,13 @@ export interface components {
             };
             /** Resource */
             resource: string;
+        };
+        /** FinapiConnectIn */
+        FinapiConnectIn: {
+            /** Authorization Context */
+            authorization_context: string;
+            /** Bank Name */
+            bank_name: string;
         };
         /** GateDecision */
         GateDecision: {
@@ -14562,6 +14742,301 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finapi_connect_api_v1_banking_finapi_connections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinapiConnectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finapi_disconnect_api_v1_banking_finapi_connections__connection_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finapi_accounts_api_v1_banking_finapi_connections__connection_id__accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finapi_assign_api_v1_banking_finapi_connections__connection_id__accounts_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountSelectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finapi_confirm_api_v1_banking_finapi_connections__connection_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finapi_fetch_now_api_v1_banking_finapi_fetch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FetchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finapi_runs_api_v1_banking_finapi_runs_get: {
+        parameters: {
+            query?: {
+                connection_id?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finapi_resume_api_v1_banking_finapi_runs__run_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finapi_status_api_v1_banking_finapi_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
                 };
             };
         };

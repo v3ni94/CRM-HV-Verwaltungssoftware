@@ -27,6 +27,9 @@ async def sync_tenant(session: AsyncSession, tenant_id: uuid.UUID) -> dict[str, 
     for conn in (await session.scalars(select(BankConnection))).all():
         if conn.connector is Connector.FILE_IMPORT or conn.status is ConnectionStatus.DISABLED:
             continue
+        if conn.connector is Connector.AGGREGATOR_FINAPI:
+            # M31: keine zeitgesteuerten Bankabrufe; finAPI laeuft nur auf Nutzerklick.
+            continue
         counts["connections"] += 1
         run = BankSyncRun(
             tenant_id=tenant_id, connection_id=conn.id, source=conn.connector.value, status="failed"
@@ -86,3 +89,35 @@ async def sync_all_once(settings: Settings) -> dict[str, int]:
 @shared_task(name="mhvp.banking.sync_all")
 def sync_all() -> dict[str, int]:
     return asyncio.run(sync_all_once(get_settings()))
+
+
+async def finapi_fetch_once(settings: Settings, tenant_id: uuid.UUID, run_id: uuid.UUID) -> None:
+    """Finishes one user-requested fetch run asynchronously (M31). This is no periodic bank
+    fetch: the run was created by an explicit click and only this run is completed here."""
+    from mhvp.banking import aggregator
+    from mhvp.banking.finapi import FinApiClient
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    try:
+        factory = create_session_factory(engine)
+        async with tenant_transaction(factory, tenant_id) as session:
+            run = await session.get(BankSyncRun, run_id)
+            if run is None or run.connection_id is None:
+                return
+            connection = await session.get(BankConnection, run.connection_id)
+            if connection is None:
+                return
+            client = FinApiClient(settings, aggregator.client_credentials(connection))
+            try:
+                await aggregator.run_fetch(session, settings, run, connection, client)
+            finally:
+                await client.aclose()
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.banking.finapi_fetch")
+def finapi_fetch(tenant_id: str, run_id: str) -> None:
+    asyncio.run(finapi_fetch_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(run_id)))

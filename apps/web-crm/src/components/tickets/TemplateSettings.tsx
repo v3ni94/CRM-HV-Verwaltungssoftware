@@ -55,6 +55,152 @@ function keyFor(label: string): string {
   );
 }
 
+
+/** Praxisnahe Standard-SLA einer Hausverwaltung (Reaktionszeiten in Stunden). Nach dem
+ *  Einfügen frei anpassbar; eine spätere Erweiterung über die KI-Wissensdatenbank ergänzt
+ *  Vorlagen nur auf ausdrücklichen Zuruf eines Administrators. */
+const RECOMMENDED: {
+  category: string;
+  title: string;
+  checklist: string[];
+  default_priority: string;
+  sla_hours: number | null;
+  required_fields: TemplateField[];
+}[] = [
+  {
+    category: "Notfall",
+    title: "Notfall (Rohrbruch, Heizungsausfall, Stromausfall)",
+    checklist: [
+      "Gefahr eingrenzen: Absperrung/Haupthahn, Notdienst beauftragen",
+      "Mieter und betroffene Parteien informieren",
+      "Bereitschaft: Reaktion auch außerhalb der Geschäftszeiten (24/7-Notdienstkette)",
+      "Versicherungsrelevanz prüfen und Fotos sichern",
+      "Folgeauftrag für dauerhafte Instandsetzung anlegen",
+    ],
+    default_priority: "urgent",
+    sla_hours: 4,
+    required_fields: [],
+  },
+  {
+    category: "Reparatur",
+    title: "Reparatur dringend (Nutzung eingeschränkt)",
+    checklist: [
+      "Schaden telefonisch verifizieren",
+      "Handwerker beauftragen (Rahmenvertrag prüfen)",
+      "Termin mit Mieter abstimmen",
+      "Erledigung kontrollieren und Rechnung zuordnen",
+    ],
+    default_priority: "high",
+    sla_hours: 24,
+    required_fields: [],
+  },
+  {
+    category: "Reparatur",
+    title: "Reparaturmeldung (Standard)",
+    checklist: [
+      "Meldung erfassen und Objekt/Einheit zuordnen",
+      "Zuständigkeit klären (Mieter, Eigentümer, GdWE)",
+      "Angebot einholen ab Schwellenwert",
+      "Auftrag, Terminierung, Abnahme",
+    ],
+    default_priority: "normal",
+    sla_hours: 72,
+    required_fields: [],
+  },
+  {
+    category: "Mieteranfrage",
+    title: "Allgemeine Mieteranfrage",
+    checklist: ["Anliegen prüfen", "Antwort oder Zwischenbescheid senden"],
+    default_priority: "normal",
+    sla_hours: 48,
+    required_fields: [],
+  },
+  {
+    category: "Vermietung",
+    title: "Interessent/Besichtigung",
+    checklist: [
+      "Rückmeldung an Interessenten",
+      "Selbstauskunft anfordern",
+      "Besichtigung terminieren",
+      "Entscheidung und Absagen versenden",
+    ],
+    default_priority: "high",
+    sla_hours: 24,
+    required_fields: [],
+  },
+  {
+    category: "Vermietung",
+    title: "Kündigung und Wohnungsabnahme",
+    checklist: [
+      "Kündigungseingang bestätigen und Frist prüfen",
+      "Vorabnahme terminieren",
+      "Übergabeprotokoll bei Abnahme erstellen",
+      "Kaution und Nebenkostenabrechnung vormerken",
+      "Neuvermietung anstoßen",
+    ],
+    default_priority: "normal",
+    sla_hours: 48,
+    required_fields: [],
+  },
+  {
+    category: "Kaution",
+    title: "Kautionsabrechnung",
+    checklist: [
+      "Abnahmeprotokoll und offene Forderungen prüfen",
+      "Einbehalte begründen und belegen",
+      "Auszahlung anweisen",
+    ],
+    default_priority: "normal",
+    sla_hours: 336,
+    required_fields: [{ key: "iban", label: "IBAN für die Auszahlung", kind: "iban", required: true }],
+  },
+  {
+    category: "Versicherungsfall",
+    title: "Versicherungsfall melden",
+    checklist: [
+      "Schaden dokumentieren (Fotos, Zeugen)",
+      "Meldung an Versicherer",
+      "Schadennummer erfassen",
+      "Regulierung nachhalten",
+    ],
+    default_priority: "high",
+    sla_hours: 24,
+    required_fields: [],
+  },
+  {
+    category: "Buchhaltung",
+    title: "Zahlungsrückstand/Mahnung",
+    checklist: [
+      "Kontoauszug und Sollstellung abgleichen",
+      "Zahlungserinnerung senden",
+      "Mahnstufe dokumentieren",
+    ],
+    default_priority: "normal",
+    sla_hours: 120,
+    required_fields: [],
+  },
+  {
+    category: "Eigentümer",
+    title: "Eigentümeranfrage (WEG)",
+    checklist: ["Anliegen prüfen", "Beschlusslage/Unterlagen sichten", "Antwort senden"],
+    default_priority: "normal",
+    sla_hours: 72,
+    required_fields: [],
+  },
+  {
+    category: "Mieterhöhung",
+    title: "Mieterhöhung prüfen und ankündigen",
+    checklist: [
+      "Mietspiegel/Vergleichsmieten prüfen",
+      "Kappungsgrenze und Fristen prüfen (rechtliche Prüfung, kein Automatismus)",
+      "Schreiben als Entwurf zur Freigabe vorlegen",
+    ],
+    default_priority: "low",
+    sla_hours: 336,
+    required_fields: [],
+  },
+];
+
 export function TemplateSettings({ templates }: { templates: Template[] }) {
   const t = useTranslations("TicketTemplates");
   const router = useRouter();
@@ -99,6 +245,24 @@ export function TemplateSettings({ templates }: { templates: Template[] }) {
       return;
     }
     setDraft(null);
+    router.refresh();
+  };
+
+  const insertRecommended = async () => {
+    setBusy(true);
+    setError(null);
+    const existing = new Set(templates.map((tpl) => tpl.title));
+    let failed: string | null = null;
+    for (const tpl of RECOMMENDED) {
+      if (existing.has(tpl.title)) continue;
+      const res = await bff("/api/bff/ticket-templates", {
+        method: "POST",
+        body: JSON.stringify(tpl),
+      });
+      if (!res.ok) failed = res.message;
+    }
+    setBusy(false);
+    if (failed) setError(failed);
     router.refresh();
   };
 
@@ -230,9 +394,15 @@ export function TemplateSettings({ templates }: { templates: Template[] }) {
           </div>
         </section>
       ) : (
-        <button type="button" className={`${ui.primary} self-start`} onClick={() => setDraft({ ...EMPTY })}>
-          {t("new")}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" className={ui.primary} onClick={() => setDraft({ ...EMPTY })}>
+            {t("new")}
+          </button>
+          <button type="button" className={ui.button} disabled={busy} onClick={insertRecommended}>
+            {t("insertRecommended")}
+          </button>
+          <span className="text-xs text-muted">{t("recommendedHint")}</span>
+        </div>
       )}
     </div>
   );

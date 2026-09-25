@@ -80,6 +80,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(book|ignore)$`) },
   // Payment orders (M15): approval and cancel only; the payment file needs G2.
   { method: "POST", pattern: new RegExp(`^banking/payment-orders/${ID}/(approve|cancel)$`) },
+  // Banking über finAPI (M31, rein lesend): Verbinden, Bestätigen, Zuordnen, Abruf, Trennen.
+  { method: "GET", pattern: /^banking\/finapi\/(status|runs)$/ },
+  { method: "GET", pattern: /^banking\/connections$/ },
+  { method: "POST", pattern: /^banking\/finapi\/connections$/ },
+  { method: "POST", pattern: new RegExp(`^banking/finapi/connections/${ID}/confirm$`) },
+  { method: "GET", pattern: new RegExp(`^banking/finapi/connections/${ID}/accounts$`) },
+  { method: "PUT", pattern: new RegExp(`^banking/finapi/connections/${ID}/accounts$`) },
+  { method: "DELETE", pattern: new RegExp(`^banking/finapi/connections/${ID}$`) },
+  { method: "POST", pattern: /^banking\/finapi\/fetch$/ },
+  { method: "POST", pattern: new RegExp(`^banking/finapi/runs/${ID}/resume$`) },
   // Dunning (M16): preview and approval by a second person; fees and interest stay locked (V7).
   { method: "POST", pattern: /^accounting\/dunning-runs$/ },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-runs/${ID}/approve$`) },

@@ -79,6 +79,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
         </div>
       </div>
 
+      {isHoa ? (
+        <Link href={`/weg/${propertyId}`} className={ui.cardLink}>
+          <h2 className={ui.subtitle}>{t("hoaSection.title")}</h2>
+          <p className="mt-1 text-sm">{t("hoaSection.description")}</p>
+        </Link>
+      ) : null}
+
       {(data.legal_entities ?? []).length ? (
         <section className={ui.card}>
           <h2 className={ui.subtitle}>{t("legalEntities")}</h2>

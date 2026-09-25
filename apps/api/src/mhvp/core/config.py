@@ -79,6 +79,19 @@ class Settings(BaseSettings):
     google_client_secret: SecretStr | None = None
     gmail_sync_batch: int = Field(default=50, ge=1, le=500)
 
+    # Banking-Provider finAPI Access (M31, rein lesend). Projektkonfiguration, keine
+    # Standard-Variablennamen des Anbieters. Ohne Werte meldet die Anwendung
+    # "Bankanbindung noch nicht eingerichtet"; kein stiller Demo-Modus.
+    banking_finapi_base_url: str | None = None  # z. B. https://sandbox.finapi.io
+    banking_finapi_client_id: SecretStr | None = None
+    banking_finapi_client_secret: SecretStr | None = None
+    banking_finapi_callback_base_url: str | None = (
+        None  # oeffentliche API-Basis fuer Rueckleitungen
+    )
+    banking_fetch_overlap_days: int = Field(default=10, ge=0, le=90)
+    # Abruf synchron im Request statt ueber Celery (Tests/kleine Umgebungen).
+    banking_inline: bool = False
+
     # AI gateway input limits (M7). Defaults fit a 200k-token context window; raise them only
     # together with a routed model whose window matches (e.g. 1M tokens), see ai/gateway.py.
     ai_max_input_chars: int = Field(default=600_000, ge=100_000, le=10_000_000)

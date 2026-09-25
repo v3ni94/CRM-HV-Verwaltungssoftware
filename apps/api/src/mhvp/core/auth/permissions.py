@@ -15,6 +15,9 @@ from mhvp.platform.models import MembershipRole, Role, RolePermission
 ACTIONS: tuple[str, ...] = ("read", "create", "update", "delete", "approve", "export")
 RESOURCES: tuple[str, ...] = (
     "accounting",
+    # Banking (M31): read=Lesen, create=Verbinden, update=Aktualisieren/Zuordnen,
+    # export=Exportieren, delete=Trennen. approve bleibt frei.
+    "banking",
     "ai",
     "contacts",
     "contracts",
@@ -105,7 +108,9 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
         | _r("properties")
         | _r("contracts")
         | _rw("documents")
-        | _ACC_APPROVE,
+        | _ACC_APPROVE
+        | _rw("banking", delete=True)
+        | {"banking:export"},
     ),
     # Caretakers see objects, not contracts or personal data of residents (data minimisation).
     SystemRole("caretaker", "Hausmeister", _r("properties") | _rw("tickets")),

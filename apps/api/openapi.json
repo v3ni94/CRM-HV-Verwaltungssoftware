@@ -1,6 +1,42 @@
 {
   "components": {
     "schemas": {
+      "AccountAssignIn": {
+        "additionalProperties": false,
+        "properties": {
+          "link_id": {
+            "format": "uuid",
+            "title": "Link Id",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "selected": {
+            "default": true,
+            "title": "Selected",
+            "type": "boolean"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/AccountUsage",
+            "default": "current"
+          }
+        },
+        "required": [
+          "link_id"
+        ],
+        "title": "AccountAssignIn",
+        "type": "object"
+      },
       "AccountCategory": {
         "enum": [
           "bank",
@@ -268,6 +304,25 @@
         "title": "AccountPatch",
         "type": "object"
       },
+      "AccountSelectionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountAssignIn"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Accounts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accounts"
+        ],
+        "title": "AccountSelectionIn",
+        "type": "object"
+      },
       "AccountType": {
         "enum": [
           "asset",
@@ -276,6 +331,16 @@
           "expense"
         ],
         "title": "AccountType",
+        "type": "string"
+      },
+      "AccountUsage": {
+        "enum": [
+          "current",
+          "reserve",
+          "deposit",
+          "other"
+        ],
+        "title": "AccountUsage",
         "type": "string"
       },
       "AccountVatOption": {
@@ -6865,6 +6930,26 @@
         "title": "FeeIn",
         "type": "object"
       },
+      "FetchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Connection Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "connection_ids"
+        ],
+        "title": "FetchIn",
+        "type": "object"
+      },
       "FieldOut": {
         "properties": {
           "choices": {
@@ -6966,6 +7051,29 @@
           "params"
         ],
         "title": "FilterOut",
+        "type": "object"
+      },
+      "FinapiConnectIn": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_context": {
+            "maxLength": 2000,
+            "minLength": 5,
+            "title": "Authorization Context",
+            "type": "string"
+          },
+          "bank_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Bank Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bank_name",
+          "authorization_context"
+        ],
+        "title": "FinapiConnectIn",
         "type": "object"
       },
       "GateDecision": {
@@ -23372,6 +23480,427 @@
           }
         },
         "summary": "Bankverbindung anlegen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/connections": {
+      "post": {
+        "operationId": "finapi_connect_api_v1_banking_finapi_connections_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinapiConnectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Finapi Connect Api V1 Banking Finapi Connections Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankkonto verbinden (WebForm)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/connections/{connection_id}": {
+      "delete": {
+        "operationId": "finapi_disconnect_api_v1_banking_finapi_connections__connection_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Finapi Disconnect Api V1 Banking Finapi Connections  Connection Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verbindung trennen (Daten und Historie bleiben)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/connections/{connection_id}/accounts": {
+      "get": {
+        "operationId": "finapi_accounts_api_v1_banking_finapi_connections__connection_id__accounts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Finapi Accounts Api V1 Banking Finapi Connections  Connection Id  Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Konten der Verbindung (Zuordnung, Salden, Datenstand)",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "put": {
+        "operationId": "finapi_assign_api_v1_banking_finapi_connections__connection_id__accounts_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountSelectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Finapi Assign Api V1 Banking Finapi Connections  Connection Id  Accounts Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Konten auswählen und Objekten/Buchungskreisen zuordnen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/connections/{connection_id}/confirm": {
+      "post": {
+        "operationId": "finapi_confirm_api_v1_banking_finapi_connections__connection_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Finapi Confirm Api V1 Banking Finapi Connections  Connection Id  Confirm Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "WebForm-Ergebnis serverseitig prüfen und Konten übernehmen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/fetch": {
+      "post": {
+        "description": "Ein Klick stößt je Verbindung genau einen echten Provider-Update-Prozess an; läuft\nbereits einer, wird dieser zurückgegeben statt ein zweiter gestartet.",
+        "operationId": "finapi_fetch_now_api_v1_banking_finapi_fetch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FetchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Finapi Fetch Now Api V1 Banking Finapi Fetch Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ausgewählte Verbindungen jetzt aktualisieren",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/runs": {
+      "get": {
+        "operationId": "finapi_runs_api_v1_banking_finapi_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "connection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Connection Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Finapi Runs Api V1 Banking Finapi Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abrufprotokolle",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/runs/{run_id}/resume": {
+      "post": {
+        "operationId": "finapi_resume_api_v1_banking_finapi_runs__run_id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Finapi Resume Api V1 Banking Finapi Runs  Run Id  Resume Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nach Bankfreigabe denselben Lauf fortsetzen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/status": {
+      "get": {
+        "operationId": "finapi_status_api_v1_banking_finapi_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Finapi Status Api V1 Banking Finapi Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ist die Bankanbindung eingerichtet?",
         "tags": [
           "Bank"
         ]
