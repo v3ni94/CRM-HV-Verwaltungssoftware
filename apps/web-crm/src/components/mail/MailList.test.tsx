@@ -33,6 +33,8 @@ function makeMessage(overrides: Partial<Message>): Message {
     approved_by: null,
     approved_at: null,
     rejection_note: null,
+    suggestion: {},
+    suggestion_status: "none",
     ...overrides,
   };
 }

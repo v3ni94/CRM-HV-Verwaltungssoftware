@@ -17,7 +17,7 @@ from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication import mail
-from mhvp.communication.models import Mailbox, MailboxUser, Message
+from mhvp.communication.models import Mailbox, MailboxUser, Message, Playbook
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.events import emit
@@ -29,6 +29,7 @@ CREATE = require_permission("communication:create")
 UPDATE = require_permission("communication:update")
 APPROVE = require_permission("communication:approve")
 ADMIN = require_permission("tenant_settings:update")
+PLAYBOOK_ADMIN = require_permission("tenant_settings:update")
 SMTP_TIMEOUT = 30
 OAUTH_STATE_TTL = 600
 
@@ -80,6 +81,30 @@ class MailReplyDraftIn(_In):
     body: str | None = None
 
 
+class PlaybookIn(_In):
+    title: str = Field(min_length=1, max_length=200)
+    category: str | None = Field(default=None, max_length=64)
+    keywords: list[str] = Field(default_factory=list, max_length=64)
+    summary: str = ""
+    steps: list[str] = Field(default_factory=list)
+    reply_template: str | None = None
+    status: str = Field(default="draft", pattern="^(draft|active|archived)$")
+
+
+class PlaybookPatchIn(_In):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    category: str | None = Field(default=None, max_length=64)
+    keywords: list[str] | None = Field(default=None, max_length=64)
+    summary: str | None = None
+    steps: list[str] | None = None
+    reply_template: str | None = None
+    status: str | None = Field(default=None, pattern="^(draft|active|archived)$")
+
+
+class ApplyPlaybookIn(_In):
+    playbook_id: uuid.UUID
+
+
 def _mailbox_out(m: Mailbox, user_ids: list[uuid.UUID] | None = None) -> dict[str, Any]:
     return {
         "id": m.id,
@@ -126,6 +151,27 @@ def _out(m: Message) -> dict[str, Any]:
             "approved_at",
             "rejection_note",
             "gmail_message_id",
+            "suggestion",
+            "suggestion_status",
+        )
+    }
+
+
+def _playbook_out(p: Playbook) -> dict[str, Any]:
+    return {
+        k: getattr(p, k)
+        for k in (
+            "id",
+            "title",
+            "category",
+            "keywords",
+            "summary",
+            "steps",
+            "reply_template",
+            "source_ticket_id",
+            "status",
+            "usage_count",
+            "created_by",
         )
     }
 
@@ -750,3 +796,136 @@ async def take_appointment(
         session.add(entry)
         await session.flush()
         return {"calendar_entry_id": entry.id, "date": entry.starts_on}
+
+
+# KI-Vorschläge und Playbooks (M20 Übernahme aus dem Immoware Hub) ---------------------------
+
+
+@router.post("/messages/{message_id}/suggest", summary="KI-Vorschlag neu berechnen")
+async def recompute_suggestion(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    from mhvp.communication import suggest
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)
+        result = await suggest.suggest_for_message(session, request.app.state.settings, row)
+        status = result.pop("status")
+        row.suggestion, row.suggestion_status = result, status
+        await session.flush()
+        return _out(row)
+
+
+@router.get("/playbooks", summary="Playbooks")
+async def list_playbooks(
+    request: Request,
+    status: str | None = None,
+    q: str | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        query = select(Playbook).order_by(Playbook.title)
+        if status:
+            query = query.where(Playbook.status == status)
+        if q:
+            query = query.where(Playbook.title.ilike(f"%{q}%"))
+        return [_playbook_out(p) for p in (await session.scalars(query)).all()]
+
+
+@router.post("/playbooks", status_code=201, summary="Playbook anlegen")
+async def create_playbook(
+    body: PlaybookIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = Playbook(
+            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
+        )
+        session.add(row)
+        await session.flush()
+        return _playbook_out(row)
+
+
+@router.patch("/playbooks/{playbook_id}", summary="Playbook ändern oder freigeben")
+async def patch_playbook(
+    playbook_id: uuid.UUID,
+    body: PlaybookPatchIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Playbook, playbook_id, with_for_update=True)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        for key, value in body.model_dump(exclude_none=True).items():
+            setattr(row, key, value)
+        await session.flush()
+        return _playbook_out(row)
+
+
+@router.delete("/playbooks/{playbook_id}", status_code=204, summary="Playbook löschen")
+async def delete_playbook(
+    playbook_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(PLAYBOOK_ADMIN)
+) -> None:
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Playbook, playbook_id, with_for_update=True)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await session.delete(row)
+
+
+@router.post(
+    "/messages/{message_id}/apply-playbook",
+    status_code=201,
+    summary="Antwortentwurf aus Playbook",
+)
+async def apply_playbook(
+    message_id: uuid.UUID,
+    body: ApplyPlaybookIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    from mhvp.contacts.models import Contact
+    from mhvp.tickets.models import Ticket
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)
+        playbook = await session.get(Playbook, body.playbook_id, with_for_update=True)
+        if playbook is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        contact = await session.get(Contact, row.contact_id) if row.contact_id else None
+        salutation = "Sehr geehrte Damen und Herren"
+        if contact is not None and contact.salutation and contact.last_name:
+            greeting = "Sehr geehrter Herr" if contact.salutation == "Herr" else "Sehr geehrte Frau"
+            salutation = f"{greeting} {contact.last_name}"
+        ticket = await session.get(Ticket, row.ticket_id) if row.ticket_id else None
+        objekt = row.suggestion.get("property_number") or ""
+        template = playbook.reply_template
+        if template:
+            body_text = (
+                template.replace("{anrede}", salutation)
+                .replace("{ticket}", str(ticket.number) if ticket else "")
+                .replace("{objekt}", objekt)
+            )
+        elif row.suggestion.get("reply_draft"):
+            body_text = str(row.suggestion["reply_draft"])
+        else:
+            body_text = mail.draft_reply(salutation, row.subject, ticket.number if ticket else None)
+        playbook.usage_count += 1
+        draft = Message(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            direction="out",
+            status="draft",
+            mailbox_id=row.mailbox_id,
+            to_addresses=[row.from_address] if row.from_address else [],
+            subject=f"AW: {row.subject or ''}"[:998],
+            body=body_text,
+            in_reply_to=row.header_message_id,
+            thread_id=row.thread_id or row.id,
+            contact_id=row.contact_id,
+            property_id=row.property_id,
+            ticket_id=row.ticket_id,
+        )
+        session.add(draft)
+        await session.flush()
+        return _out(draft)

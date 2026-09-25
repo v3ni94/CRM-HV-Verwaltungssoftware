@@ -36,6 +36,18 @@ export type Message = {
   approved_by: string | null;
   approved_at: string | null;
   rejection_note: string | null;
+  suggestion: {
+    category?: string | null;
+    urgency?: "low" | "normal" | "high" | "emergency" | null;
+    summary?: string;
+    property_number?: string | null;
+    contact_name?: string | null;
+    reply_draft?: string | null;
+    playbook_id?: string | null;
+    playbook_score?: number | null;
+    reason?: string;
+  };
+  suggestion_status: "none" | "pending" | "ready" | "failed" | "skipped";
 };
 
 export type Mailbox = { id: string; address: string };

@@ -90,8 +90,12 @@ Reihenfolge:
 3. SLA und Notfallkette.
 4. Entwurf, Freigabe und Versand mit Abgleich gegen den Gesendet-Ordner.
 5. Aktionspläne mit Vier-Augen-Freigabe, auf CRM-Stammdaten statt Immoware24.
-6. KI-Vorschläge über `mhvp.ai`, Prompts und Maskierung übernehmen.
-7. Prozessdatenbank (Playbooks).
+6. KI-Vorschläge über `mhvp.ai`, Prompts und Maskierung übernehmen. **Umgesetzt (25.09.2026):**
+   `mhvp.communication.suggest` mit dem Task `classify_email`, siehe `docs/plans/M20.md`.
+7. Prozessdatenbank (Playbooks). **Umgesetzt (25.09.2026):** Tabelle `playbook`, lokale
+   Schlagwort-Zuordnung und KI-Lernen aus geschlossenen Tickets (Task `draft_reply`), siehe
+   `docs/plans/M20.md`. Ähnlichkeitsbewertung bewusst einfach gehalten (Keyword-Score statt
+   Vektorsuche); eine feinere Bewertung ist ein späterer Ausbauschritt.
 8. Paperless- und Drive-Kontext im Vorgang.
 9. Oberfläche im Next.js-Frontend (`apps/web-crm`) als Reiter „Mail“, Domain `mail.mueller-holding.ag` über Traefik.
 

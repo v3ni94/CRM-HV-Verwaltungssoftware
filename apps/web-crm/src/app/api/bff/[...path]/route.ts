@@ -25,6 +25,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}/draft$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/(reply-draft|submit|approve|reject|ticket)$`) },
+  // KI-Vorschläge und Playbooks (M20 Übernahme aus dem Immoware Hub).
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/suggest$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/apply-playbook$`) },
+  { method: "GET", pattern: /^mail\/playbooks$/ },
+  { method: "POST", pattern: /^mail\/playbooks$/ },
+  { method: "PATCH", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
   { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters)$/ },
   { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|bulk)$/ },
   { method: "PUT", pattern: /^workspace\/filters$/ },

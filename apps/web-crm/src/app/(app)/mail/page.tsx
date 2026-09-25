@@ -1,9 +1,11 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MailWorkspace } from "@/components/mail/MailWorkspace";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,7 @@ export const dynamic = "force-dynamic";
  *  the four-eyes approval flow are loaded client side; this page only checks the permission. */
 export default async function MailPage() {
   const t = await getTranslations("Mail");
+  const tPlaybooks = await getTranslations("MailPlaybooks");
   const api = serverApi();
   const me = await api.GET("/api/v1/auth/me");
   redirectIfUnauthenticated(me.response);
@@ -18,7 +21,14 @@ export default async function MailPage() {
   if (!permissions.includes("communication:read")) notFound();
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("title")} />
+      <PageHeader
+        title={t("title")}
+        action={
+          <Link href="/mail/playbooks" className={ui.button}>
+            {tPlaybooks("title")}
+          </Link>
+        }
+      />
       <MailWorkspace canApprove={permissions.includes("communication:approve")} canReadMembers={permissions.includes("members:read")} />
     </div>
   );

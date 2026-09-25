@@ -1329,6 +1329,32 @@
       "draft": "Entwurf",
       "pending": "wartet auf Freigabe",
       "sent": "gesendet"
+    },
+    "suggestion": {
+      "title": "KI-Vorschlag",
+      "recompute": "Neu berechnen",
+      "category": "Kategorie",
+      "urgency": "Dringlichkeit",
+      "urgencyLevel": {
+        "low": "niedrig",
+        "normal": "normal",
+        "high": "hoch",
+        "emergency": "Notfall"
+      },
+      "summary": "Zusammenfassung",
+      "property": "Objekt",
+      "contact": "Kontakt",
+      "playbook": "Passendes Playbook",
+      "playbookScore": "Übereinstimmung {percent}%",
+      "useReply": "Antwort aus Vorschlag",
+      "applyPlaybook": "Playbook anwenden",
+      "status": {
+        "none": "Noch kein Vorschlag.",
+        "pending": "Wird berechnet...",
+        "ready": "Vorschlag bereit",
+        "failed": "Vorschlag fehlgeschlagen: {reason}",
+        "skipped": "Kein Vorschlag: {reason}"
+      }
     }
   },
   "Platform": {
@@ -1828,5 +1854,26 @@
     "searchObject": "Akte {number} suchen",
     "empty": "Keine Objekte vorhanden.",
     "hint": "Der Absprung öffnet die Suche der Objektübernahme mit der Objektnummer. Eine direkte Verknüpfung je Akte folgt mit Stufe 3."
+  },
+  "MailPlaybooks": {
+    "title": "Playbooks",
+    "empty": "Keine Playbooks.",
+    "new": "Playbook anlegen",
+    "titleLabel": "Titel",
+    "category": "Kategorie",
+    "keywords": "Schlagwörter (kommagetrennt)",
+    "summary": "Zusammenfassung",
+    "steps": "Arbeitsschritte (eine Zeile je Schritt)",
+    "replyTemplate": "Antwortvorlage",
+    "status": {
+      "draft": "Entwurf",
+      "active": "aktiv",
+      "archived": "archiviert"
+    },
+    "save": "Speichern",
+    "delete": "Löschen",
+    "activate": "Freigeben",
+    "usageCount": "{count}x verwendet",
+    "backToMail": "Zurück zur Mail"
   }
 }

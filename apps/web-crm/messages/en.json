@@ -574,6 +574,32 @@
       "draft": "draft",
       "pending": "awaiting approval",
       "sent": "sent"
+    },
+    "suggestion": {
+      "title": "AI suggestion",
+      "recompute": "Recompute",
+      "category": "Category",
+      "urgency": "Urgency",
+      "urgencyLevel": {
+        "low": "low",
+        "normal": "normal",
+        "high": "high",
+        "emergency": "emergency"
+      },
+      "summary": "Summary",
+      "property": "Property",
+      "contact": "Contact",
+      "playbook": "Matching playbook",
+      "playbookScore": "Match {percent}%",
+      "useReply": "Reply from suggestion",
+      "applyPlaybook": "Apply playbook",
+      "status": {
+        "none": "No suggestion yet.",
+        "pending": "Computing...",
+        "ready": "Suggestion ready",
+        "failed": "Suggestion failed: {reason}",
+        "skipped": "No suggestion: {reason}"
+      }
     }
   },
   "Platform": {
@@ -930,5 +956,26 @@
       "title": "Mailboxes",
       "description": "Google OAuth, connect mailboxes, default mailbox and access."
     }
+  },
+  "MailPlaybooks": {
+    "title": "Playbooks",
+    "empty": "No playbooks.",
+    "new": "Create playbook",
+    "titleLabel": "Title",
+    "category": "Category",
+    "keywords": "Keywords (comma separated)",
+    "summary": "Summary",
+    "steps": "Steps (one per line)",
+    "replyTemplate": "Reply template",
+    "status": {
+      "draft": "draft",
+      "active": "active",
+      "archived": "archived"
+    },
+    "save": "Save",
+    "delete": "Delete",
+    "activate": "Activate",
+    "usageCount": "used {count}x",
+    "backToMail": "Back to mail"
   }
 }

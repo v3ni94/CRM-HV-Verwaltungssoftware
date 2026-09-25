@@ -1,6 +1,7 @@
 """Tickets and work orders (/api/v1/tickets, /api/v1/work-orders, M19): ticket to order to
 invoice end to end. Payment stays in accounting (M14/M15); board status never pays."""
 
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -428,6 +429,32 @@ async def list_tickets(
         return [_ticket_out(t) for t in (await session.scalars(query.limit(limit))).all()]
 
 
+async def _queue_learn_playbook(session: AsyncSession, settings: Any, ticket: Ticket) -> None:
+    """Playbook-Lernen beim Schließen eines Tickets (M20 Übernahme aus dem Immoware Hub):
+    synchron in Tests und Entwicklung (``ai_inline``), sonst über die Queue ``ai``. Ein
+    Fehler beim Lernen darf den Statuswechsel nie stören."""
+    if settings.ai_inline:
+        from mhvp.communication.suggest import learn_playbook_from_ticket
+
+        try:
+            await learn_playbook_from_ticket(session, settings, ticket)
+        except Exception:
+            return
+    else:
+        try:
+            from mhvp.worker import get_celery
+
+            get_celery().send_task(
+                "mhvp.communication.learn_playbook",
+                args=[str(ticket.tenant_id), str(ticket.id)],
+                queue="ai",
+            )
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "could not queue playbook learning", extra={"ticket_id": str(ticket.id)}
+            )
+
+
 @router.patch("/tickets/{ticket_id}", summary="Status, Zuweisung, Checkliste")
 async def patch_ticket(
     ticket_id: uuid.UUID,
@@ -458,6 +485,8 @@ async def patch_ticket(
                 if body.status in (TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED)
                 else None
             )
+            if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
+                await _queue_learn_playbook(session, request.app.state.settings, ticket)
         if body.assignee_user_id and body.assignee_user_id != ticket.assignee_user_id:
             ticket.assignee_user_id = body.assignee_user_id
             await _event(
