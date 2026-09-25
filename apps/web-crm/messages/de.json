@@ -2388,6 +2388,25 @@
         "archive": "Protokoll archivieren? Es bleibt über den Filter erreichbar.",
         "unarchive": "Protokoll aus dem Archiv zurückholen?"
       }
+    },
+    "portalAccess": {
+      "title": "Portalzugang",
+      "help": "Der Beteiligte füllt das Protokoll im Portal selbst aus, fügt Fotos hinzu, unterschreibt und schließt ab. Interne Vermerke bleiben verborgen. Nach dem Abschluss bleibt das PDF im Portal 14 Tage abrufbar.",
+      "needsContact": "Nur für Beteiligte mit Kontakt im CRM.",
+      "email": "E-Mail-Adresse für die Einladung",
+      "grant": "Portalzugang einrichten",
+      "renew": "Zugang erneuern",
+      "revoke": "Zugang beenden",
+      "confirmRevoke": "Den Portalzugang für dieses Protokoll beenden?",
+      "status": {
+        "invited": "Eingeladen, Passwort noch nicht gesetzt",
+        "active": "Zugang aktiv",
+        "read": "Nur lesen bis {date}",
+        "inactive": "Zugang abgelaufen"
+      },
+      "tokenTitle": "Einladung (wird nur einmal angezeigt)",
+      "tokenHelp": "Bitte den Einladungscode zusammen mit der Portaladresse an den Beteiligten weitergeben. Der Code gilt 14 Tage; im Portal setzt der Beteiligte sein Passwort und richtet den zweiten Faktor ein.",
+      "done": "Portalzugang eingerichtet."
     }
   }
 }

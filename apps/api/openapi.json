@@ -1788,6 +1788,56 @@
         "title": "Body_upload_document_api_v1_handover_protocols__protocol_id__documents_post",
         "type": "object"
       },
+      "Body_upload_document_api_v1_portal_handover__protocol_id__documents_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "pattern": "^(meters|rooms|defects|items)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_document_api_v1_portal_handover__protocol_id__documents_post",
+        "type": "object"
+      },
       "BookIn": {
         "additionalProperties": false,
         "properties": {
@@ -13679,6 +13729,26 @@
           "password"
         ],
         "title": "PortalAcceptIn",
+        "type": "object"
+      },
+      "PortalAccessIn": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "title": "PortalAccessIn",
         "type": "object"
       },
       "PortalAppointmentIn": {
@@ -28996,6 +29066,116 @@
         ]
       }
     },
+    "/api/v1/handover/protocols/{protocol_id}/participants/{participant_id}/portal-access": {
+      "delete": {
+        "operationId": "revoke_portal_access_api_v1_handover_protocols__protocol_id__participants__participant_id__portal_access_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "participant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Participant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalzugang eines Beteiligten beenden",
+        "tags": [
+          "handover"
+        ]
+      },
+      "post": {
+        "description": "The participant fills in and signs the protocol in the portal (docs/rules/M30-01.md).\n\nNeeds a CRM contact on the participant. Without a portal account one is created (role\nportal_user, invitation token shown once); the grant is ``handover`` / ``edit`` until the\ncompletion. Repeated calls renew the grant.",
+        "operationId": "grant_portal_access_api_v1_handover_protocols__protocol_id__participants__participant_id__portal_access_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "participant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Participant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalAccessIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Grant Portal Access Api V1 Handover Protocols  Protocol Id  Participants  Participant Id  Portal Access Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalzugang für einen Beteiligten (Gehilfe) einrichten",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
     "/api/v1/handover/protocols/{protocol_id}/pdf": {
       "get": {
         "operationId": "get_pdf_api_v1_handover_protocols__protocol_id__pdf_get",
@@ -36370,6 +36550,757 @@
           }
         },
         "summary": "Dokument herunterladen (gleiche Prüfung)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover": {
+      "get": {
+        "operationId": "list_protocols_api_v1_portal_handover_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Protocols Api V1 Portal Handover Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigene Übergabeprotokolle",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}": {
+      "get": {
+        "operationId": "get_protocol_api_v1_portal_handover__protocol_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Protocol Api V1 Portal Handover  Protocol Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokoll lesen",
+        "tags": [
+          "Portal"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_protocol_api_v1_portal_handover__protocol_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Protocol Api V1 Portal Handover  Protocol Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protokollfelder ändern",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/complete": {
+      "post": {
+        "description": "Completion by the participant: PDF on the letterhead, lock, then the grant becomes read\nonly for READ_DAYS so the finished PDF can still be opened; the management prepares the\ndispatch in the CRM (no automatic mail, M20-01).",
+        "operationId": "complete_api_v1_portal_handover__protocol_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Complete Api V1 Portal Handover  Protocol Id  Complete Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protokoll verbindlich abschließen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/documents": {
+      "post": {
+        "operationId": "upload_document_api_v1_portal_handover__protocol_id__documents_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_document_api_v1_portal_handover__protocol_id__documents_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Upload Document Api V1 Portal Handover  Protocol Id  Documents Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Foto oder Anhang hochladen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/documents/{document_id}": {
+      "delete": {
+        "operationId": "delete_document_api_v1_portal_handover__protocol_id__documents__document_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Foto oder Anhang entfernen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/documents/{document_id}/content": {
+      "get": {
+        "description": "Only files linked to the granted protocol; the generic document download of the portal\n(access matrix) does not cover handover files.",
+        "operationId": "document_content_api_v1_portal_handover__protocol_id__documents__document_id__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Foto, Anhang oder Unterschrift anzeigen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/hints": {
+      "get": {
+        "operationId": "hints_api_v1_portal_handover__protocol_id__hints_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Hints Api V1 Portal Handover  Protocol Id  Hints Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hinweise vor dem Abschluss",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/pdf": {
+      "get": {
+        "operationId": "get_pdf_api_v1_portal_handover__protocol_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "download",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Download",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "PDF (Entwurf oder abgeschlossene Fassung)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/signatures": {
+      "post": {
+        "operationId": "add_signature_api_v1_portal_handover__protocol_id__signatures_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignatureIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Signature Api V1 Portal Handover  Protocol Id  Signatures Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unterschrift speichern",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/signatures/{signature_id}": {
+      "delete": {
+        "operationId": "delete_signature_api_v1_portal_handover__protocol_id__signatures__signature_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "signature_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signature Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unterschrift löschen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/{section}": {
+      "post": {
+        "operationId": "create_item_api_v1_portal_handover__protocol_id___section__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Item Api V1 Portal Handover  Protocol Id   Section  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Teildatensatz anlegen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/{section}/order": {
+      "post": {
+        "operationId": "order_items_api_v1_portal_handover__protocol_id___section__order_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Order Items Api V1 Portal Handover  Protocol Id   Section  Order Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reihenfolge speichern",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/{section}/{item_id}": {
+      "delete": {
+        "operationId": "delete_item_api_v1_portal_handover__protocol_id___section___item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Teildatensatz löschen",
+        "tags": [
+          "Portal"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_item_api_v1_portal_handover__protocol_id___section___item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Item Api V1 Portal Handover  Protocol Id   Section   Item Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Teildatensatz ändern",
         "tags": [
           "Portal"
         ]

@@ -11,7 +11,7 @@ import asyncio
 import base64
 import io
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -438,3 +438,286 @@ def test_signature_png_is_valid() -> None:
     assert png.startswith(b"\x89PNG")
     assert len(png) > 100
     assert isinstance(UUID(int=0), UUID)
+
+
+PH = "/api/v1/portal/handover"
+
+
+def test_handover_portal_flow(client: TestClient, world: World) -> None:
+    """M30 stage 3: a participant with a CRM contact gets a portal account and the grant
+    ``handover``/``edit`` on exactly one protocol, fills it in, adds a photo, signs and completes
+    it; internal data stays invisible, CRM references cannot be set, the grant turns read only
+    after the completion and expires after READ_DAYS; a resync keeps the grant, a revoke ends
+    it; portal users never reach the CRM API."""
+    from mhvp.handover.portal import READ_DAYS
+    from mhvp.workspace.services import local_today
+
+    h = bearer(login(client, world, "m30admin"))
+    _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h))
+    pid = _ok(client.post(H, json={"kind": "rental"}, headers=h), 201)["id"]
+    _ok(
+        client.patch(
+            f"{H}/{pid}",
+            json={
+                "street": "Portalweg",
+                "house_number": "1",
+                "postal_code": "40789",
+                "city": "Monheim am Rhein",
+                "internal_note": "nur intern",
+                "management_number": "V-99",
+            },
+            headers=h,
+        )
+    )
+    contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "person",
+                "first_name": "Gerd",
+                "last_name": f"Gehilfe{RUN}",
+                "emails": [{"email": world.email("m30helper"), "is_primary": True}],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    mover = _ok(
+        client.post(
+            f"{H}/{pid}/participants",
+            json={"contact_id": contact["id"], "role": "moving_in"},
+            headers=h,
+        ),
+        201,
+    )
+    free = _ok(
+        client.post(f"{H}/{pid}/participants", json={"role": "witness", "company": "X"}, headers=h),
+        201,
+    )
+    assert mover["portal_access"] is None
+    # A portal access needs a CRM contact on the participant.
+    assert (
+        client.post(
+            f"{H}/{pid}/participants/{free['id']}/portal-access", json={}, headers=h
+        ).status_code
+        == 422
+    )
+    grant = _ok(
+        client.post(f"{H}/{pid}/participants/{mover['id']}/portal-access", json={}, headers=h),
+        201,
+    )
+    assert grant["invitation_token"]
+    assert grant["account_status"] == "invited"
+    assert grant["right"] == "edit"
+    assert grant["email"] == world.email("m30helper")
+    full = _ok(client.get(f"{H}/{pid}", headers=h))
+    assert next(x for x in full["participants"] if x["id"] == mover["id"])["portal_access"] == {
+        "account_status": "invited",
+        "right": "edit",
+        "valid_to": None,
+        "active": True,
+    }
+    # Repeating the call renews the grant without a second account or token.
+    again = _ok(
+        client.post(f"{H}/{pid}/participants/{mover['id']}/portal-access", json={}, headers=h),
+        201,
+    )
+    assert again["invitation_token"] is None
+    assert again["account_id"] == grant["account_id"]
+
+    _ok(
+        client.post(
+            "/api/v1/portal/invitations/accept",
+            json={"token": grant["invitation_token"], "password": PASSWORD},
+        )
+    )
+    hp = bearer(login(client, world, "m30helper"))
+    # No CRM rights for the portal user.
+    assert client.get(f"{H}/{pid}", headers=hp).status_code == 403
+    assert client.get(H, headers=hp).status_code == 403
+
+    listed = _ok(client.get(PH, headers=hp))
+    assert [x["id"] for x in listed] == [pid]
+    assert listed[0]["right"] == "edit"
+    assert listed[0]["address"] == "Portalweg 1, 40789 Monheim am Rhein"
+    view = _ok(client.get(f"{PH}/{pid}", headers=hp))
+    assert "internal_note" not in view
+    assert "management_number" not in view
+    assert "internal_contact" not in view
+    assert "versions" not in view
+    assert view["access"] == {"right": "edit", "valid_to": None}
+    assert view["street"] == "Portalweg"
+
+    # Internal remarks of the CRM are invisible and untouchable in the portal.
+    internal = _ok(
+        client.post(f"{H}/{pid}/notes", json={"text": "intern", "is_internal": True}, headers=h),
+        201,
+    )
+    _ok(client.post(f"{H}/{pid}/notes", json={"text": "offen"}, headers=h), 201)
+    view = _ok(client.get(f"{PH}/{pid}", headers=hp))
+    assert [n["text"] for n in view["notes"]] == ["offen"]
+    assert (
+        client.patch(
+            f"{PH}/{pid}/notes/{internal['id']}", json={"text": "x"}, headers=hp
+        ).status_code
+        == 404
+    )
+    assert client.delete(f"{PH}/{pid}/notes/{internal['id']}", headers=hp).status_code == 404
+
+    # Fields: allowed ones are saved, internal fields and CRM references are rejected.
+    today = local_today()
+    patched = _ok(
+        client.patch(
+            f"{PH}/{pid}",
+            json={"handover_date": today.isoformat(), "general_note": "vom Mieter"},
+            headers=hp,
+        )
+    )
+    assert patched["general_note"] == "vom Mieter"
+    assert "internal_note" not in patched
+    for bad in ({"internal_note": "x"}, {"unit_id": str(UUID(int=1))}, {"foo": 1}):
+        assert client.patch(f"{PH}/{pid}", json=bad, headers=hp).status_code == 422, bad
+    assert client.patch(f"{PH}/{pid}", json=[1], headers=hp).status_code == 422
+
+    # Sub records: room, defect on that room, note (internal flag dropped), participant
+    # (contact reference dropped), meter (meter reference dropped), order.
+    room = _ok(
+        client.post(f"{PH}/{pid}/rooms", json={"name": "Küche", "condition": "ok"}, headers=hp),
+        201,
+    )
+    defect = _ok(
+        client.post(
+            f"{PH}/{pid}/defects", json={"room_id": room["id"], "title": "Kratzer"}, headers=hp
+        ),
+        201,
+    )
+    assert defect["room_id"] == room["id"]
+    note = _ok(
+        client.post(
+            f"{PH}/{pid}/notes", json={"text": "vom Portal", "is_internal": True}, headers=hp
+        ),
+        201,
+    )
+    assert note["is_internal"] is False
+    witness = _ok(
+        client.post(
+            f"{PH}/{pid}/participants",
+            json={"role": "witness", "last_name": "Zeuge", "contact_id": contact["id"]},
+            headers=hp,
+        ),
+        201,
+    )
+    assert witness["contact_id"] is None
+    meter = _ok(
+        client.post(
+            f"{PH}/{pid}/meters",
+            json={"meter_type": "electricity", "value": "1234.5", "meter_id": str(UUID(int=2))},
+            headers=hp,
+        ),
+        201,
+    )
+    assert meter["meter_id"] is None
+    _ok(client.post(f"{PH}/{pid}/rooms/order", json={"ids": [room["id"]]}, headers=hp))
+    assert client.post(f"{PH}/{pid}/unknown", json={}, headers=hp).status_code == 422
+    assert client.post(f"{PH}/{pid}/rooms", json=[1], headers=hp).status_code == 422
+    _ok(client.patch(f"{PH}/{pid}/rooms/{room['id']}", json={"comment": "sauber"}, headers=hp))
+
+    # Photo of the room, readable through the portal; foreign documents stay invisible.
+    photo = _ok(
+        client.post(
+            f"{PH}/{pid}/documents",
+            files={"file": ("kueche.jpg", _jpeg(), "image/jpeg")},
+            data={"section": "rooms", "item_id": room["id"]},
+            headers=hp,
+        ),
+        201,
+    )
+    assert photo["kind"] == "photo"
+    assert photo["item_id"] == room["id"]
+    content = client.get(f"{PH}/{pid}/documents/{photo['id']}/content", headers=hp)
+    assert content.status_code == 200, content.text
+    assert content.headers["content-type"] == "image/jpeg"
+    assert client.get(f"{PH}/{pid}/documents/{UUID(int=3)}/content", headers=hp).status_code == 404
+    extra = _ok(
+        client.post(
+            f"{PH}/{pid}/documents",
+            files={"file": ("zweit.jpg", _jpeg(), "image/jpeg")},
+            data={"section": "rooms", "item_id": room["id"]},
+            headers=hp,
+        ),
+        201,
+    )
+    assert client.delete(f"{PH}/{pid}/documents/{extra['id']}", headers=hp).status_code == 204
+
+    # Signature of the participant, then completion with hints (no keys, no meters read...).
+    sig = _ok(
+        client.post(
+            f"{PH}/{pid}/signatures",
+            json={
+                "image": "data:image/png;base64," + base64.b64encode(_signature_png()).decode(),
+                "signer_name": "Gerd Gehilfe",
+                "signer_role": "moving_in",
+                "participant_id": mover["id"],
+            },
+            headers=hp,
+        ),
+        201,
+    )
+    assert sig["participant_id"] == mover["id"]
+    hints = _ok(client.get(f"{PH}/{pid}/hints", headers=hp))["hints"]
+    assert hints
+    assert client.post(f"{PH}/{pid}/complete", json={"force": False}, headers=hp).status_code == 422
+    done = _ok(client.post(f"{PH}/{pid}/complete", json={"force": True}, headers=hp))
+    assert done["status"] == "completed"
+    assert done["locked"] is True
+    assert done["access"]["right"] == "read"
+    assert done["access"]["valid_to"] == (today + timedelta(days=READ_DAYS)).isoformat()
+    assert "internal_note" not in done
+
+    # Read only from now on: reading and the PDF work, every write is refused.
+    assert _ok(client.get(f"{PH}/{pid}", headers=hp))["status"] == "completed"
+    pdf = client.get(f"{PH}/{pid}/pdf", headers=hp)
+    assert pdf.status_code == 200
+    assert pdf.headers["content-type"] == "application/pdf"
+    assert "nur intern" not in " ".join(
+        page.extract_text() for page in PdfReader(io.BytesIO(pdf.content)).pages
+    )
+    assert client.post(f"{PH}/{pid}/rooms", json={"name": "Bad"}, headers=hp).status_code == 403
+    assert client.patch(f"{PH}/{pid}", json={"general_note": "x"}, headers=hp).status_code == 403
+    assert client.post(f"{PH}/{pid}/complete", json={"force": True}, headers=hp).status_code == 403
+    assert client.delete(f"{PH}/{pid}/signatures/{sig['id']}", headers=hp).status_code == 403
+
+    # The CRM sees the completion by the participant and the read only access.
+    crm_view = _ok(client.get(f"{H}/{pid}", headers=h))
+    assert crm_view["status"] == "completed"
+    assert crm_view["internal_note"] == "nur intern"
+    access = next(x for x in crm_view["participants"] if x["id"] == mover["id"])["portal_access"]
+    assert access["right"] == "read"
+    assert access["account_status"] == "active"
+    assert access["active"] is True
+
+    # Re-deriving the contract grants keeps the handover grant (manual legal basis).
+    _ok(client.post(f"/api/v1/portal-admin/accounts/{grant['account_id']}/sync-grants", headers=h))
+    assert [x["id"] for x in _ok(client.get(PH, headers=hp))] == [pid]
+
+    # Other protocols are not reachable; a revoked access ends everything.
+    other = _ok(client.post(H, json={"kind": "general"}, headers=h), 201)["id"]
+    assert client.get(f"{PH}/{other}", headers=hp).status_code == 404
+    assert (
+        client.delete(f"{H}/{pid}/participants/{mover['id']}/portal-access", headers=h).status_code
+        == 204
+    )
+    assert (
+        client.delete(f"{H}/{pid}/participants/{mover['id']}/portal-access", headers=h).status_code
+        == 404
+    )
+    assert _ok(client.get(PH, headers=hp)) == []
+    assert client.get(f"{PH}/{pid}", headers=hp).status_code == 404
+    assert (
+        next(
+            x
+            for x in _ok(client.get(f"{H}/{pid}", headers=h))["participants"]
+            if x["id"] == mover["id"]
+        )["portal_access"]
+        is None
+    )

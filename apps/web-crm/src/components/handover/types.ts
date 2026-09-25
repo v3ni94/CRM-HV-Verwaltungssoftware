@@ -60,9 +60,16 @@ export type Protocol = {
   participants_summary?: string;
 };
 
-export type Item = Record<string, string | number | boolean | null> & {
-  id: string;
+/** Portal access of a participant (M30 Stufe 3), null without account or grant. */
+export type PortalAccess = {
+  account_status: "invited" | "active" | string;
+  right: "edit" | "read";
+  valid_to: string | null;
+  active: boolean;
 };
+
+export type ItemValue = string | number | boolean | null | PortalAccess;
+export type Item = Record<string, ItemValue | undefined> & { id: string };
 
 export type Doc = {
   id: string;

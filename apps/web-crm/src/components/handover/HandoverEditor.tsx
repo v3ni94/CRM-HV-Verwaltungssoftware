@@ -9,6 +9,7 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { PortalAccessBox } from "./PortalAccessBox";
 import { SignaturePad } from "./SignaturePad";
 import {
   FIELDS,
@@ -861,6 +862,16 @@ function SectionList({
                 </span>
               ) : null}
             </div>
+            {section === "participants" && item.contact_id ? (
+              <PortalAccessBox
+                base={base}
+                item={item}
+                disabled={disabled}
+                onChanged={onChanged}
+                onError={onError}
+                t={t}
+              />
+            ) : null}
             {editing && editing !== "new" && editing.id === item.id ? (
               <ItemForm
                 section={section}

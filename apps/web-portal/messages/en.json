@@ -8,6 +8,36 @@
     "area": "Portal",
     "apiStatusLabel": "API status",
     "apiReady": "API ready",
-    "apiUnavailable": "API unavailable"
+    "apiUnavailable": "API unavailable",
+    "login": "Sign in",
+    "handover": "My handover protocols",
+    "intro": "Access for tenants, owners and participants of the property management. Credentials are provided by your management."
+  },
+  "Auth": {
+    "loginTitle": "Sign in",
+    "email": "E-mail",
+    "password": "Password",
+    "submit": "Continue",
+    "submitting": "Please wait",
+    "emailInvalid": "Please enter a valid e-mail address.",
+    "passwordRequired": "Please enter the password.",
+    "mfaTitle": "Second factor",
+    "mfaSetupTitle": "Set up the second factor",
+    "mfaSetupHint": "Scan the QR code with an authenticator app or enter the key manually, then enter the six digit code.",
+    "mfaHint": "Please enter the six digit code from the authenticator app.",
+    "secretLabel": "Key for manual entry",
+    "qrAlt": "QR code for the authenticator app",
+    "code": "Code",
+    "codeInvalid": "The code has 6 to 8 digits.",
+    "verify": "Confirm",
+    "setupLoading": "Preparing the setup",
+    "backToLogin": "Back to sign in",
+    "noTenant": "Your access is not assigned to a tenant. Please contact your management."
+  },
+  "Portal": {
+    "title": "Portal",
+    "handover": "Handover protocols",
+    "logout": "Sign out",
+    "footer": "All entries are stored by the property management. Internal notes of the management are not visible here."
   }
 }

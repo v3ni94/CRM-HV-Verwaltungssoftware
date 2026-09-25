@@ -217,3 +217,78 @@ describe("HandoverEditor deposit round trip", () => {
     expect(JSON.parse(bodies[0]!)).toMatchObject({ deposit_amount: "1500.00" });
   });
 });
+
+describe("HandoverEditor portal access", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sets up the portal access of a participant with a contact and shows the token once", async () => {
+    const calls: { url: string; method: string; body: string | null }[] = [];
+    const participant = {
+      id: "0192abcd-0000-7000-8000-000000000062",
+      role: "moving_in",
+      first_name: "Gerd",
+      last_name: "Gehilfe",
+      contact_id: "0192abcd-0000-7000-8000-000000000063",
+      email: "gerd@example.org",
+      portal_access: null,
+      sort_order: 0,
+    };
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      calls.push({ url, method, body: typeof init?.body === "string" ? init.body : null });
+      if (method === "POST" && url.endsWith("/portal-access")) {
+        return jsonResponse(
+          {
+            account_status: "invited",
+            right: "edit",
+            valid_to: null,
+            active: true,
+            account_id: "0192abcd-0000-7000-8000-000000000064",
+            invitation_token: "abcd.secret-token",
+            email: "gerd@example.org",
+          },
+          201,
+        );
+      }
+      return jsonResponse(
+        protocol({
+          current_step: "participants",
+          participants: [
+            {
+              ...participant,
+              portal_access: { account_status: "invited", right: "edit", valid_to: null, active: true },
+            },
+          ],
+        }),
+      );
+    });
+    renderIntl(
+      <HandoverEditor
+        initial={protocol({ current_step: "participants", participants: [participant] })}
+      />,
+    );
+    expect(screen.getByLabelText("E-Mail-Adresse für die Einladung")).toHaveValue("gerd@example.org");
+    await userEvent.click(screen.getByText("Portalzugang einrichten"));
+    await waitFor(() => expect(screen.getByTestId("invitation-token")).toHaveTextContent("abcd.secret-token"));
+    const post = calls.find((c) => c.method === "POST");
+    expect(post?.url).toBe(`/api/bff/handover/protocols/${ID}/participants/${participant.id}/portal-access`);
+    expect(JSON.parse(post?.body ?? "{}")).toEqual({ email: "gerd@example.org" });
+    await waitFor(() =>
+      expect(screen.getByText("Eingeladen, Passwort noch nicht gesetzt")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Zugang beenden")).toBeInTheDocument();
+  });
+
+  it("offers no portal access for participants without a contact", () => {
+    renderIntl(
+      <HandoverEditor
+        initial={protocol({
+          current_step: "participants",
+          participants: [{ id: "0192abcd-0000-7000-8000-000000000065", role: "witness", company: "X", contact_id: null, sort_order: 0 }],
+        })}
+      />,
+    );
+    expect(screen.queryByTestId("portal-access")).not.toBeInTheDocument();
+  });
+});

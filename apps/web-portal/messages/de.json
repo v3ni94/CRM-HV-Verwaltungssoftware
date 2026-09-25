@@ -8,6 +8,312 @@
     "area": "Portal",
     "apiStatusLabel": "Status der Schnittstelle",
     "apiReady": "API bereit",
-    "apiUnavailable": "API nicht erreichbar"
+    "apiUnavailable": "API nicht erreichbar",
+    "login": "Anmelden",
+    "handover": "Zu meinen Übergabeprotokollen",
+    "intro": "Zugang für Mieter, Eigentümer und Beteiligte der Hausverwaltung. Die Zugangsdaten erhalten Sie von Ihrer Verwaltung."
+  },
+  "Auth": {
+    "loginTitle": "Anmelden",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "submit": "Weiter",
+    "submitting": "Bitte warten",
+    "emailInvalid": "Bitte eine gültige E-Mail-Adresse eingeben.",
+    "passwordRequired": "Bitte das Passwort eingeben.",
+    "mfaTitle": "Zweiter Faktor",
+    "mfaSetupTitle": "Zweiten Faktor einrichten",
+    "mfaSetupHint": "Den QR-Code mit einer Authenticator-App scannen oder den Schlüssel manuell eingeben. Danach den angezeigten sechsstelligen Code eingeben.",
+    "mfaHint": "Bitte den sechsstelligen Code aus der Authenticator-App eingeben.",
+    "secretLabel": "Schlüssel für die manuelle Eingabe",
+    "qrAlt": "QR-Code für die Authenticator-App",
+    "code": "Code",
+    "codeInvalid": "Der Code besteht aus 6 bis 8 Ziffern.",
+    "verify": "Bestätigen",
+    "setupLoading": "Einrichtung wird vorbereitet",
+    "backToLogin": "Zurück zur Anmeldung",
+    "noTenant": "Für Ihren Zugang ist kein Mandant freigeschaltet. Bitte wenden Sie sich an Ihre Verwaltung."
+  },
+  "Portal": {
+    "title": "Portal",
+    "handover": "Übergabeprotokolle",
+    "logout": "Abmelden",
+    "footer": "Alle Angaben werden bei der Hausverwaltung gespeichert. Interne Vermerke der Verwaltung sind hier nicht sichtbar."
+  },
+  "Handover": {
+    "title": "Übergabeprotokolle",
+    "empty": "Keine Einträge.",
+    "statusLabel": {
+      "draft": "Entwurf",
+      "in_progress": "In Bearbeitung",
+      "signature_pending": "Unterschrift ausstehend",
+      "completed": "Abgeschlossen",
+      "sent": "Zustellung vorbereitet",
+      "archived": "Archiviert",
+      "cancelled": "Storniert"
+    },
+    "saved": "Gespeichert.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "confirmDelete": "Eintrag wirklich löschen?",
+    "add": {
+      "participants": "Beteiligten hinzufügen",
+      "meters": "Zähler hinzufügen",
+      "rooms": "Raum hinzufügen",
+      "defects": "Mangel hinzufügen",
+      "keys": "Schlüssel hinzufügen",
+      "items": "Gegenstand hinzufügen",
+      "notes": "Bemerkung hinzufügen"
+    },
+    "photos": {
+      "add": "Foto",
+      "uploading": "Wird hochgeladen",
+      "remove": "Foto entfernen"
+    },
+    "fields": {
+      "address": "Adresse",
+      "street": "Straße",
+      "house_number": "Hausnummer",
+      "postal_code": "PLZ",
+      "city": "Ort",
+      "object_label": "Objektbezeichnung",
+      "building": "Gebäude",
+      "floor": "Etage",
+      "unit_number": "Einheit",
+      "unit_label": "Einheit (Bezeichnung)",
+      "unit_position": "Lage",
+      "handover_date": "Übergabedatum",
+      "handover_start": "Beginn",
+      "handover_end": "Ende",
+      "hide_time_information": "Uhrzeit im Protokoll nicht anzeigen",
+      "handover_location": "Ort der Übergabe",
+      "ticket_number": "Ticketnummer",
+      "reference_number": "Referenz",
+      "rental_contract_number": "Mietvertragsnummer",
+      "general_note": "Allgemeine Bemerkung",
+      "deposit_amount": "Kautionsbetrag (EUR)",
+      "deposit_account_holder": "Kontoinhaber",
+      "deposit_iban": "IBAN",
+      "deposit_bic": "BIC",
+      "deposit_bank_name": "Bank",
+      "deposit_note": "Bemerkung zur Kaution",
+      "deposit_separate_statement": "Kautionsabrechnung erfolgt separat",
+      "role": "Rolle",
+      "salutation": "Anrede",
+      "first_name": "Vorname",
+      "last_name": "Nachname",
+      "company": "Firma",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "comment": "Bemerkung",
+      "meter_type": "Zählerart",
+      "custom_type": "Eigene Bezeichnung",
+      "number": "Zählernummer",
+      "value": "Zählerstand",
+      "unit": "Einheit",
+      "location": "Standort",
+      "read_on": "Abgelesen am",
+      "read_at": "Uhrzeit",
+      "name": "Bezeichnung",
+      "room_type": "Raumart",
+      "condition": "Zustand",
+      "room_id": "Raum",
+      "category": "Kategorie",
+      "title": "Titel",
+      "priority": "Priorität",
+      "defect_status": "Status",
+      "responsibility": "Verantwortlich",
+      "description": "Beschreibung",
+      "key_type": "Schlüsselart",
+      "custom_name": "Eigene Bezeichnung",
+      "quantity": "Anzahl",
+      "key_number": "Schlüsselnummer",
+      "status": "Status",
+      "item_type": "Art",
+      "text": "Text",
+      "responsible_party": "Verantwortlich",
+      "due_date": "Frist",
+      "is_internal": "Intern, nicht im Kunden-PDF"
+    },
+    "roles": {
+      "moving_out": "Ausziehender Mieter",
+      "moving_in": "Einziehender Mieter",
+      "seller": "Verkaufender Eigentümer",
+      "buyer": "Kaufender Eigentümer",
+      "handing_over": "Übergebende Partei",
+      "taking_over": "Übernehmende Partei",
+      "management": "Verwaltung",
+      "broker": "Makler",
+      "caretaker": "Hausmeister",
+      "proxy": "Bevollmächtigter",
+      "witness": "Zeuge",
+      "relative": "Angehöriger",
+      "expert": "Sachverständiger",
+      "craftsman": "Handwerker",
+      "other": "Sonstige Person"
+    },
+    "options": {
+      "participants": {
+        "role": {
+          "moving_out": "Ausziehender Mieter",
+          "moving_in": "Einziehender Mieter",
+          "seller": "Verkaufender Eigentümer",
+          "buyer": "Kaufender Eigentümer",
+          "handing_over": "Übergebende Partei",
+          "taking_over": "Übernehmende Partei",
+          "management": "Verwaltung",
+          "broker": "Makler",
+          "caretaker": "Hausmeister",
+          "proxy": "Bevollmächtigter",
+          "witness": "Zeuge",
+          "relative": "Angehöriger",
+          "expert": "Sachverständiger",
+          "craftsman": "Handwerker",
+          "other": "Sonstige Person"
+        }
+      },
+      "meters": {
+        "meter_type": {
+          "electricity": "Strom",
+          "gas": "Gas",
+          "water": "Wasser",
+          "cold_water": "Kaltwasser",
+          "hot_water": "Warmwasser",
+          "heating": "Heizungszähler",
+          "heat_quantity": "Wärmemengenzähler",
+          "common_electricity": "Allgemeinstrom",
+          "sub_meter": "Zwischenzähler",
+          "photovoltaic": "Photovoltaik",
+          "other": "Sonstiger Zähler"
+        },
+        "unit": {
+          "kWh": "kWh",
+          "m³": "m³",
+          "MWh": "MWh",
+          "Liter": "Liter",
+          "Einheiten": "Einheiten"
+        }
+      },
+      "rooms": {
+        "condition": {
+          "ok": "Mängelfrei",
+          "defective": "Mängel vorhanden",
+          "not_checked": "Nicht geprüft",
+          "not_accessible": "Nicht zugänglich",
+          "not_included": "Nicht Bestandteil der Übergabe"
+        }
+      },
+      "defects": {
+        "priority": {
+          "info": "Hinweis",
+          "low": "Gering",
+          "medium": "Mittel",
+          "high": "Hoch",
+          "urgent": "Dringend"
+        },
+        "defect_status": {
+          "pre_existing": "Bereits vorhanden",
+          "new": "Neu festgestellt",
+          "acknowledged": "Vom Übergebenden anerkannt",
+          "rejected": "Anerkennung abgelehnt",
+          "unclear": "Ungeklärt"
+        }
+      },
+      "keys": {
+        "status": {
+          "handed_over": "Übergeben",
+          "not_handed_over": "Nicht übergeben",
+          "to_follow": "Nachzureichen"
+        }
+      },
+      "notes": {
+        "category": {
+          "agreement": "Vereinbarung",
+          "hint": "Hinweis",
+          "defect": "Mangel",
+          "open_task": "Offene Aufgabe",
+          "follow_up": "Nachreichung",
+          "payment": "Zahlungsangelegenheit",
+          "other": "Sonstiger Punkt"
+        }
+      }
+    },
+    "signature": {
+      "consent": "Mit ihrer Unterschrift bestätigen die Unterzeichnenden die Richtigkeit und Vollständigkeit der Angaben und erklären sich mit der elektronischen Verarbeitung und Speicherung des Protokolls für die Dauer der gesetzlichen Aufbewahrungs- und Verjährungsfristen einverstanden.",
+      "participant": "Beteiligter",
+      "free": "Freie Eingabe",
+      "done": "unterschrieben",
+      "name": "Name",
+      "role": "Rolle",
+      "location": "Ort",
+      "canvas": "Unterschriftsfeld",
+      "clear": "Leeren",
+      "save": "Unterschrift speichern",
+      "saved": "Unterschrift gespeichert.",
+      "empty": "Bitte zuerst unterschreiben.",
+      "none": "Noch keine Unterschrift erfasst.",
+      "noName": "Ohne Namen",
+      "confirmDelete": "Unterschrift wirklich löschen?"
+    },
+    "hints": {
+      "title": "Hinweise (kein Abschlusshindernis):"
+    },
+    "pdf": {
+      "preview": "PDF-Vorschau (Entwurf)",
+      "stored": "PDF anzeigen"
+    },
+    "tabs": {
+      "object": "Objekt",
+      "participants": "Beteiligte",
+      "deposit": "Kaution",
+      "meters": "Zähler",
+      "rooms": "Räume",
+      "defects": "Mängel",
+      "keys": "Schlüssel",
+      "items": "Gegenstände",
+      "notes": "Bemerkungen",
+      "signatures": "Unterschriften",
+      "summary": "Prüfung und Abschluss"
+    },
+    "complete": {
+      "action": "Protokoll verbindlich abschließen",
+      "force": "Trotz Hinweisen verbindlich abschließen",
+      "confirm": "Das Protokoll wird abgeschlossen, festgeschrieben und als PDF abgelegt. Danach sind keine Änderungen mehr möglich. Fortfahren?",
+      "confirmForce": "Es liegen Hinweise vor. Das Protokoll wird trotzdem abgeschlossen und festgeschrieben. Fortfahren?",
+      "help": "Mit dem Abschluss wird das Protokoll festgeschrieben und als PDF erzeugt. Danach sind keine Änderungen mehr möglich; das PDF bleibt hier für {days} Tage abrufbar. Die Zustellung übernimmt die Verwaltung."
+    },
+    "intro": "Bitte füllen Sie das Übergabeprotokoll Abschnitt für Abschnitt aus. Jede Eingabe wird sofort gespeichert.",
+    "list": {
+      "number": "Nummer",
+      "object": "Objekt",
+      "date": "Übergabe am",
+      "status": "Status",
+      "open": "Öffnen"
+    },
+    "access": {
+      "edit": "Ausfüllen möglich",
+      "read": "Nur lesen, abrufbar bis {date}",
+      "none": "Für Ihren Zugang liegt kein Übergabeprotokoll vor."
+    },
+    "locked": "Das Protokoll ist abgeschlossen und kann nicht mehr geändert werden.",
+    "back": "Zurück zur Übersicht",
+    "deposit": {
+      "notice": "Angaben zur Kaution werden nur erfasst und im Protokoll ausgegeben; sie lösen keine Zahlung aus."
+    },
+    "summary": {
+      "title": "Zusammenfassung",
+      "rooms": "Räume",
+      "meters": "Zähler",
+      "defects": "Mängel",
+      "keys": "Schlüssel",
+      "items": "Gegenstände",
+      "notes": "Bemerkungen",
+      "signatures": "Unterschriften",
+      "photos": "Fotos"
+    },
+    "pdfDraft": "Vorschau (Entwurf)",
+    "pdfFinal": "Protokoll als PDF"
   }
 }

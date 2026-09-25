@@ -272,6 +272,7 @@ async def _full_out(session: Any, p: HandoverProtocol) -> dict[str, Any]:
         out[name] = [_row(x) for x in full[name]]
     for item in out["participants"]:
         item["role_label"] = svc.role_label(item["role"], p.kind)
+        item["portal_access"] = await portal_access_of(session, p, item["contact_id"])
     out["signatures"] = [_row(x) for x in full["signatures"]]
     out["documents"] = full["documents"]
     out["hints"] = svc.completion_hints(full)
@@ -925,7 +926,190 @@ async def prepare_dispatches(
         return {"created": created, "skipped": skipped}
 
 
-# Sections ----------------------------------------------------------------------------------
+# Portal access of a participant (M30 stage 3) ------------------------------------------------
+
+
+class PortalAccessIn(_In):
+    email: str | None = Field(default=None, min_length=3, max_length=320)
+
+
+async def portal_access_of(
+    session: Any, p: HandoverProtocol, contact_id: uuid.UUID | None
+) -> dict[str, Any] | None:
+    """Portal account and handover grant of a participant, None without account or grant."""
+    from mhvp.portal.models import AccessGrant, PortalAccount
+
+    if contact_id is None:
+        return None
+    account = await session.scalar(
+        select(PortalAccount).where(PortalAccount.contact_id == contact_id)
+    )
+    if account is None:
+        return None
+    grant = await session.scalar(
+        select(AccessGrant).where(
+            AccessGrant.account_id == account.id,
+            AccessGrant.scope_type == "handover",
+            AccessGrant.scope_id == p.id,
+        )
+    )
+    if grant is None:
+        return None
+    today = local_today()
+    return {
+        "account_status": account.status,
+        "right": grant.right,
+        "valid_to": grant.valid_to,
+        "active": grant.valid_from <= today and (grant.valid_to is None or grant.valid_to >= today),
+    }
+
+
+@router.post(
+    "/protocols/{protocol_id}/participants/{participant_id}/portal-access",
+    status_code=201,
+    summary="Portalzugang für einen Beteiligten (Gehilfe) einrichten",
+)
+async def grant_portal_access(
+    protocol_id: uuid.UUID,
+    participant_id: uuid.UUID,
+    body: PortalAccessIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """The participant fills in and signs the protocol in the portal (docs/rules/M30-01.md).
+
+    Needs a CRM contact on the participant. Without a portal account one is created (role
+    portal_user, invitation token shown once); the grant is ``handover`` / ``edit`` until the
+    completion. Repeated calls renew the grant."""
+    from mhvp.handover.models import HandoverParticipant
+    from mhvp.portal.models import AccessGrant, PortalAccount
+    from mhvp.portal.routers import provision_account
+
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        svc.require_unlocked(p)
+        participant = await session.get(HandoverParticipant, participant_id)
+        if participant is None or participant.protocol_id != p.id:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if participant.contact_id is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Der Beteiligte muss mit einem Kontakt des CRM verknüpft sein.",
+            )
+        contact_id = participant.contact_id
+        email = (body.email or participant.email or "").strip()
+        display_name = (
+            " ".join(x for x in (participant.first_name, participant.last_name) if x)
+            or participant.company
+            or "Beteiligter"
+        )
+        account = await session.scalar(
+            select(PortalAccount).where(PortalAccount.contact_id == contact_id)
+        )
+    token: str | None = None
+    if account is None:
+        if not email:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Für die Einladung wird eine E-Mail-Adresse benötigt.",
+            )
+        created = await provision_account(
+            request, principal, contact_id=contact_id, email=email, display_name=display_name
+        )
+        token = created["invitation_token"]
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        account = await session.scalar(
+            select(PortalAccount).where(PortalAccount.contact_id == contact_id)
+        )
+        if account is None:  # pragma: no cover - created above or found before
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        grant = await session.scalar(
+            select(AccessGrant).where(
+                AccessGrant.account_id == account.id,
+                AccessGrant.scope_type == "handover",
+                AccessGrant.scope_id == p.id,
+            )
+        )
+        if grant is None:
+            grant = AccessGrant(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                account_id=account.id,
+                scope_type="handover",
+                scope_id=p.id,
+                right="edit",
+                legal_basis="handover_participant",
+                role="participant",
+                valid_from=local_today(),
+            )
+            session.add(grant)
+        grant.right, grant.valid_to, grant.valid_from = "edit", None, local_today()
+        await session.flush()
+        await _event(
+            session,
+            principal,
+            "handover.portal_access.granted",
+            p,
+            participant_id=str(participant_id),
+            account_id=str(account.id),
+            invited=token is not None,
+        )
+        out = await portal_access_of(session, p, contact_id) or {}
+        out["account_id"] = account.id
+        out["invitation_token"] = token
+        out["email"] = email or None
+        return out
+
+
+@router.delete(
+    "/protocols/{protocol_id}/participants/{participant_id}/portal-access",
+    status_code=204,
+    summary="Portalzugang eines Beteiligten beenden",
+)
+async def revoke_portal_access(
+    protocol_id: uuid.UUID,
+    participant_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> Response:
+    from mhvp.handover.models import HandoverParticipant
+    from mhvp.portal.models import AccessGrant, PortalAccount
+
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        participant = await session.get(HandoverParticipant, participant_id)
+        if participant is None or participant.protocol_id != p.id or not participant.contact_id:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        account = await session.scalar(
+            select(PortalAccount).where(PortalAccount.contact_id == participant.contact_id)
+        )
+        grant = (
+            await session.scalar(
+                select(AccessGrant).where(
+                    AccessGrant.account_id == account.id,
+                    AccessGrant.scope_type == "handover",
+                    AccessGrant.scope_id == p.id,
+                )
+            )
+            if account is not None
+            else None
+        )
+        if grant is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await session.delete(grant)
+        await session.flush()
+        await _event(
+            session,
+            principal,
+            "handover.portal_access.revoked",
+            p,
+            participant_id=str(participant_id),
+        )
+    return Response(status_code=204)
+
+
+# Sections (generic, placed last so that the specific routes above win) ------------------------
 
 
 def _section(name: str) -> tuple[type[Any], type[_In]]:
@@ -935,9 +1119,13 @@ def _section(name: str) -> tuple[type[Any], type[_In]]:
 
 
 async def _body(request: Request, schema: type[_In]) -> _In:
-    """Validate the JSON body against the section schema (same problem format as FastAPI)."""
+    """Validate the JSON body against the section schema (same problem format as FastAPI).
+
+    A delegating router (portal, M30 stage 3) may put a pre-filtered payload into
+    ``request.state.handover_payload``; it then replaces the raw body."""
+    payload = getattr(request.state, "handover_payload", None)
     try:
-        return schema.model_validate(await request.json())
+        return schema.model_validate(payload if payload is not None else await request.json())
     except ValidationError as exc:
         raise ProblemError(
             ErrorCodes.VALIDATION,
@@ -1006,6 +1194,7 @@ async def create_item(
         out = _row(row)
         if section == "participants":
             out["role_label"] = svc.role_label(out["role"], p.kind)
+            out["portal_access"] = await portal_access_of(session, p, row.contact_id)
         return out
 
 
@@ -1087,6 +1276,7 @@ async def patch_item(
         out = _row(row)
         if section == "participants":
             out["role_label"] = svc.role_label(out["role"], p.kind)
+            out["portal_access"] = await portal_access_of(session, p, row.contact_id)
         return out
 
 
