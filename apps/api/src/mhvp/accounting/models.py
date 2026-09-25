@@ -600,8 +600,10 @@ class RecurringInvoicePlan(IdMixin, TimestampMixin, TenantMixin, Base):
 
 
 class DunningSettings(IdMixin, TimestampMixin, TenantMixin, Base):
-    """Levels per tenant, optional override per property (6.4). Fees and interest stay zero
-    until the legal rules are released (V7); a configured value is no legal basis (0.1.3)."""
+    """Levels per tenant, optional override per property (6.4). Fee amount per level is
+    nullable and inactive until a value is entered (operator decision 25.09.2026, V7); no
+    default amount is ever assumed. Interest stays disabled until ``interest_base_rate`` is
+    maintained by the operator (Basiszinssatz changes half yearly, no value is hardcoded)."""
 
     __tablename__ = "dunning_settings"
     __table_args__ = (
@@ -614,9 +616,17 @@ class DunningSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     )
 
     property_id: Mapped[uuid.UUID | None] = _fk("property.id", nullable=True)
-    # [{level, min_days_overdue, text}]
+    # [{level, min_days_overdue, text, fee_amount|null}]
     levels: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
     threshold_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    # Fees are inactive below this level even with a fee_amount set (V7: "ab der 1. Mahnung").
+    fee_from_level: Mapped[int | None] = mapped_column(Integer)
+    interest_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Gesetzlicher Verzugszins = Basiszinssatz + Aufschlag (§ 288 BGB, Anhang C zu verifizieren).
+    # Basiszinssatz has no in-repo source register entry; the operator maintains the current
+    # value here. The run stays disabled while this is empty.
+    interest_base_rate: Mapped[Decimal | None] = mapped_column(RATE)
+    interest_spread: Mapped[Decimal | None] = mapped_column(RATE)
 
 
 class DunningRun(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -645,6 +655,51 @@ class DunningCase(IdMixin, TimestampMixin, TenantMixin, Base):
     letter_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
     delivery_channel: Mapped[str | None] = mapped_column(String(16))
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Draft receivable for the fee (Sollstellung beim Forderungsinhaber), created on approval.
+    fee_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
+    # Draft HVM outgoing invoice for the fee, only when the claim holder is not HVM itself.
+    fee_invoice_draft_id: Mapped[uuid.UUID | None] = _fk(
+        "dunning_fee_invoice_draft.id", nullable=True
+    )
+
+
+class DunningFeeInvoiceDraft(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Draft outgoing invoice of Hausverwaltung Müller GmbH to the claim holder (Gemeinschaft
+    or Eigentümer/Vermieter) for a dunning fee (operator decision 25.09.2026, V7). Draft only,
+    behind G1 and the four eyes release; no invoice number is issued here (7.9, M13 pattern:
+    the fee calculation itself already stays a proposal until amounts and the contractual
+    basis are confirmed by Rechtsberatung)."""
+
+    __tablename__ = "dunning_fee_invoice_draft"
+
+    case_id: Mapped[uuid.UUID] = _fk("dunning_case.id", ondelete="CASCADE")
+    issuer_ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
+    recipient_legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    text: Mapped[str] = mapped_column(String(400), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DunningMahnbescheidPrep(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Preparation record for a gerichtliches Mahnverfahren (7.5, M16). Data only; no filing.
+    Always exported marked ``Vorbereitung, Prüfung durch Rechtsanwalt``; deadline hints are
+    informational and marked ``zu prüfen`` (0.1.3, never a computed Notfrist)."""
+
+    __tablename__ = "dunning_mahnbescheid_prep"
+    __table_args__ = (UniqueConstraint("tenant_id", "case_id"),)
+
+    case_id: Mapped[uuid.UUID] = _fk("dunning_case.id", ondelete="CASCADE")
+    antragsteller_legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
+    antragsgegner_snapshot: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    hauptforderung: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    nebenforderungen: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    zustelladresse: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    aktenzeichen_intern: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="in_vorbereitung")
 
 
 class ExportRun(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -659,3 +714,6 @@ class ExportRun(IdMixin, TimestampMixin, TenantMixin, Base):
     rows: Mapped[int] = mapped_column(Integer, nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    # Export log remark, e.g. "Kontenzuordnung zu prüfen" for a DATEV export (M18-01): the CRM
+    # account numbers are emitted unmapped, no Kontenrahmen assignment is invented.
+    note: Mapped[str | None] = mapped_column(String(200))

@@ -15,12 +15,13 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.accounting import dunning, invoices, receivables, reports
+from mhvp.accounting import dunning, invoices, numbering, receivables, reports
 from mhvp.accounting import services as svc
 from mhvp.accounting.models import (
     AdminFeeSetting,
     ChartTemplate,
     DunningCase,
+    DunningMahnbescheidPrep,
     DunningRun,
     DunningSettings,
     EntryKind,
@@ -847,6 +848,46 @@ async def fee_preview(
         return receivables.admin_fee(fee, counts)
 
 
+@router.post(
+    "/admin-fees/{fee_id}/invoice-issue",
+    summary="Honorarrechnung als XRechnung ausstellen (Rechnungsnummer, USt-Prüfung)",
+)
+async def fee_issue(
+    fee_id: uuid.UUID,
+    request: Request,
+    invoice_date: date | None = None,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """Allocates the gapless PREFIX-JJJJ-000001 invoice number (M13-04) and blocks when the
+    tenant's VAT status or tax data required for XRechnung is missing."""
+    from mhvp.platform.models import TenantBillingSettings
+    from mhvp.properties.models import Unit
+
+    async with tenant_tx(request, principal) as session:
+        fee = await _get(session, AdminFeeSetting, fee_id)
+        rows = await session.execute(
+            select(Unit.unit_type, func.count())
+            .where(Unit.property_id == fee.property_id)
+            .group_by(Unit.unit_type)
+        )
+        counts = {unit_type.value: int(n) for unit_type, n in rows.all()}
+        draft = receivables.admin_fee(fee, counts)
+        billing_settings = await session.scalar(
+            select(TenantBillingSettings).where(
+                TenantBillingSettings.tenant_id == principal.tenant_id
+            )
+        )
+        numbering.assert_xrechnung_allowed(billing_settings)
+        issue_date = invoice_date or local_today()
+        number = await numbering.allocate_invoice_number(
+            session, principal.tenant_id, issue_date.year
+        )
+        draft["number"] = number
+        draft["invoice_date"] = issue_date
+        draft["status"] = "issued"
+        return draft
+
+
 # Incoming invoices (M14, 7.9.1) --------------------------------------------------------
 
 
@@ -1246,11 +1287,37 @@ class DunningSettingsIn(BaseModel):
     property_id: uuid.UUID | None = None
     levels: list[dict[str, Any]] = Field(min_length=1, max_length=5)
     threshold_amount: Decimal = Field(default=Decimal("0"), ge=0)
+    fee_from_level: int | None = Field(default=None, ge=1)
+    interest_enabled: bool = False
+    interest_base_rate: Decimal | None = Field(default=None, ge=0)
+    interest_spread: Decimal | None = Field(default=None, ge=0)
+
+
+class DunningSettingsPresetIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    property_id: uuid.UUID | None = None
+    interest_profile: str | None = Field(default=None, pattern="^(verbraucher|unternehmer)$")
 
 
 class DunningRunIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     run_date: date
+
+
+def _settings_status(row: DunningSettings | None) -> str:
+    if row is None:
+        return "nicht eingerichtet"
+    fees_configured = row.fee_from_level is not None and any(
+        lv.get("fee_amount") is not None for lv in row.levels
+    )
+    interest_configured = row.interest_enabled and row.interest_base_rate is not None
+    if fees_configured and interest_configured:
+        return "gebuehr_und_zins_hinterlegt"
+    if fees_configured:
+        return "nur_gebuehr_hinterlegt"
+    if interest_configured:
+        return "nur_zins_hinterlegt"
+    return "kein_betrag_hinterlegt"
 
 
 def _dunning_out(run: DunningRun, cases: list[DunningCase]) -> dict[str, Any]:
@@ -1259,9 +1326,9 @@ def _dunning_out(run: DunningRun, cases: list[DunningCase]) -> dict[str, Any]:
         "run_date": run.run_date,
         "status": run.status,
         "totals": run.totals,
-        "fees_and_interest": "locked_until_v7",
         "cases": [
             {
+                "id": c.id,
                 "contract_id": c.contract_id,
                 "debtor_account_id": c.debtor_account_id,
                 "level": c.level,
@@ -1271,34 +1338,96 @@ def _dunning_out(run: DunningRun, cases: list[DunningCase]) -> dict[str, Any]:
                 "status": c.status,
                 "reason": c.reason,
                 "open_items": c.open_items,
+                "fee_entry_id": c.fee_entry_id,
+                "fee_invoice_draft_id": c.fee_invoice_draft_id,
             }
             for c in cases
         ],
     }
 
 
-@router.put("/dunning-settings", summary="Mahnstufen (ohne Gebühren und Zinsen bis V7)")
+@router.put("/dunning-settings", summary="Mahnstufen, Gebühren (je Stufe, nur mit Betrag) und Zins")
 async def put_dunning_settings(
     body: DunningSettingsIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
     for level in body.levels:
         if (
-            set(level) - {"level", "min_days_overdue", "text"}
+            set(level) - {"level", "min_days_overdue", "text", "fee_amount"}
             or "level" not in level
             or "min_days_overdue" not in level
         ):
             raise ProblemError(
                 ErrorCodes.VALIDATION,
-                detail="Stufe: level, min_days_overdue, text; Gebühren, Zinsen bis V7 gesperrt.",
+                detail="Stufe: level, min_days_overdue, text, optional fee_amount.",
             )
+        fee = level.get("fee_amount")
+        if fee is not None and Decimal(str(fee)) < 0:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Mahngebühr darf nicht negativ sein.")
+    if body.interest_enabled and body.interest_base_rate is None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail=(
+                "Verzugszins kann erst mit hinterlegtem Basiszinssatz aktiviert werden "
+                "(halbjährlich zu pflegen, kein Wert hinterlegt bis Eingabe)."
+            ),
+        )
     async with tenant_tx(request, principal) as session:
         row = await dunning.settings_for(session, body.property_id)
         if row is None or row.property_id != body.property_id:
             row = DunningSettings(tenant_id=principal.tenant_id, property_id=body.property_id)
             session.add(row)
-        row.levels, row.threshold_amount = body.levels, body.threshold_amount
+        row.levels = body.levels
+        row.threshold_amount = body.threshold_amount
+        row.fee_from_level = body.fee_from_level
+        row.interest_enabled = body.interest_enabled
+        row.interest_base_rate = body.interest_base_rate
+        row.interest_spread = body.interest_spread
         await session.flush()
-        return {"id": row.id, "levels": row.levels, "threshold_amount": row.threshold_amount}
+        return {
+            "id": row.id,
+            "levels": row.levels,
+            "threshold_amount": row.threshold_amount,
+            "fee_from_level": row.fee_from_level,
+            "interest_enabled": row.interest_enabled,
+            "interest_base_rate": row.interest_base_rate,
+            "interest_spread": row.interest_spread,
+            "status": _settings_status(row),
+        }
+
+
+@router.post(
+    "/dunning-settings/presets",
+    status_code=201,
+    summary="Vorschlagswerte laden (Betreiberentscheidung 25.09.2026, V7)",
+)
+async def post_dunning_settings_presets(
+    body: DunningSettingsPresetIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await dunning.settings_for(session, body.property_id)
+        if row is None or row.property_id != body.property_id:
+            row = DunningSettings(tenant_id=principal.tenant_id, property_id=body.property_id)
+            session.add(row)
+        row.levels = dunning.preset_levels()
+        row.fee_from_level = 2  # ab der 1. Mahnung (V7)
+        row.interest_enabled = False
+        row.interest_base_rate = None
+        if body.interest_profile:
+            row.interest_spread = Decimal(dunning.interest_spread_presets()[body.interest_profile])
+        await session.flush()
+        return {
+            "id": row.id,
+            "levels": row.levels,
+            "fee_from_level": row.fee_from_level,
+            "interest_spread": row.interest_spread,
+            "status": _settings_status(row),
+            "note": (
+                "Vorschlagswerte laut Betreiberentscheidung 25.09.2026 (V7, teilweise "
+                "entschieden). Gebührenbeträge und Basiszinssatz bleiben leer, bis der "
+                "Betreiber sie einträgt; rechtliche Prüfung der Gebührenhöhe und Grundlage "
+                "steht aus."
+            ),
+        }
 
 
 @router.post("/dunning-runs", status_code=201, summary="Mahnlauf: Vorschau")
@@ -1369,6 +1498,66 @@ async def dunning_approve(
             (await session.scalars(select(DunningCase).where(DunningCase.run_id == run.id))).all()
         )
         return _dunning_out(run, cases)
+
+
+def _mahnbescheid_out(prep: Any) -> dict[str, Any]:
+    return {
+        "id": prep.id,
+        "case_id": prep.case_id,
+        "antragsteller_legal_entity_id": prep.antragsteller_legal_entity_id,
+        "antragsgegner": prep.antragsgegner_snapshot,
+        "hauptforderung": prep.hauptforderung,
+        "nebenforderungen": prep.nebenforderungen,
+        "zustelladresse": prep.zustelladresse,
+        "aktenzeichen_intern": prep.aktenzeichen_intern,
+        "status": prep.status,
+        "hinweis": (
+            "Vorbereitung, Prüfung durch Rechtsanwalt. Fristen sind nur Hinweise und zu prüfen; "
+            "keine rechtliche Vollständigkeitsprüfung, keine Antragstellung durch die Plattform."
+        ),
+    }
+
+
+@router.post(
+    "/dunning-cases/{case_id}/mahnbescheid-vorbereitung",
+    status_code=201,
+    summary="Mahnbescheid vorbereiten (nach letzter Stufe)",
+)
+async def dunning_prepare_mahnbescheid(
+    case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(DunningCase, case_id)
+        if case is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        case_ledger = await session.get(Ledger, case.ledger_id)
+        if case_ledger is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        settings = await dunning.settings_for(session, case_ledger.property_id)
+        highest = max((int(lv["level"]) for lv in settings.levels), default=0) if settings else 0
+        if case.level < highest:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Mahnbescheid nur nach der letzten Mahnstufe vorzubereiten.",
+            )
+        prep = await dunning.prepare_mahnbescheid(session, case, principal.user_id)
+        return _mahnbescheid_out(prep)
+
+
+@router.get(
+    "/dunning-cases/{case_id}/mahnbescheid-vorbereitung",
+    summary="Mahnbescheid-Vorbereitung (Export für Anwalt oder Online-Mahnantrag)",
+)
+async def dunning_get_mahnbescheid(
+    case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        prep = await session.scalar(
+            select(DunningMahnbescheidPrep).where(DunningMahnbescheidPrep.case_id == case_id)
+        )
+        if prep is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return _mahnbescheid_out(prep)
 
 
 # Evaluations and exports (M18, 7.5, 7.7) -----------------------------------------------
@@ -1455,14 +1644,76 @@ async def export_journal(
 
 
 @router.post(
-    "/ledgers/{ledger_id}/exports/datev", summary="DATEV-Buchungsstapel (nicht freigegeben)"
+    "/ledgers/{ledger_id}/exports/datev",
+    status_code=201,
+    summary="DATEV-Buchungsstapel (nur mit hinterlegten Beraterdaten)",
 )
-async def export_datev(ledger_id: uuid.UUID, principal: TenantPrincipal = Depends(EXPORT)) -> None:
-    """The DATEV format version and the consultant/client numbers are not specified (M18-01)."""
-    raise ProblemError(
-        ErrorCodes.CONFLICT,
-        detail="DATEV-Format und Berater-/Mandantennummern sind noch nicht festgelegt (M18-01).",
-    )
+async def export_datev(
+    ledger_id: uuid.UUID,
+    start: date,
+    end: date,
+    request: Request,
+    principal: TenantPrincipal = Depends(EXPORT),
+) -> dict[str, Any]:
+    """Emits the DATEV EXTF Buchungsstapel header only once consultant_number, client_number
+    and chart_of_accounts are set (operator decision 25.09.2026, M18-01). Otherwise rejects with
+    the existing message."""
+    from mhvp.platform.models import ChartOfAccountsKind, TenantBillingSettings
+
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        settings = await session.scalar(
+            select(TenantBillingSettings).where(
+                TenantBillingSettings.tenant_id == principal.tenant_id
+            )
+        )
+        if (
+            settings is None
+            or not settings.datev_consultant_number
+            or not settings.datev_client_number
+            or settings.datev_chart_of_accounts is ChartOfAccountsKind.UNSET
+        ):
+            raise ProblemError(
+                ErrorCodes.DATEV_NOT_CONFIGURED,
+                detail=(
+                    "DATEV-Format und Berater-/Mandantennummern sind noch nicht "
+                    "festgelegt (M18-01)."
+                ),
+            )
+        data, rows = await reports.datev_csv(
+            session,
+            ledger,
+            start,
+            end,
+            consultant_number=settings.datev_consultant_number,
+            client_number=settings.datev_client_number,
+            chart_of_accounts=settings.datev_chart_of_accounts.value,
+            account_length=settings.datev_account_length,
+            fiscal_year_start_month=settings.datev_fiscal_year_start_month,
+        )
+        run = ExportRun(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            ledger_id=ledger.id,
+            format="datev_buchungsstapel",
+            period_from=start,
+            period_to=end,
+            rows=rows,
+            sha256=reports.checksum(data),
+            note="Kontenzuordnung zu prüfen",
+        )
+        session.add(run)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="export_run.created",
+            entity_type="export_run",
+            entity_id=run.id,
+            actor_user_id=principal.user_id,
+            payload={"format": run.format, "rows": rows},
+        )
+        await session.flush()
+        return {"id": run.id, "rows": rows, "sha256": run.sha256, "content": data.decode("utf-8")}
 
 
 # Invoice intake (M14, manual actions only; no automatic polling, see docs/OPEN_QUESTIONS.md
