@@ -1,6 +1,8 @@
 import { getTranslations } from "next-intl/server";
 
 import { DunningApproveButton } from "@/components/accounting/DunningApproveButton";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -9,6 +11,12 @@ import { ui } from "@/lib/ui";
 export const dynamic = "force-dynamic";
 
 type Case = { contract_id: string | null; level: number; total: string; status: string; reason: string | null };
+
+const CASE_VARIANT: Record<string, StatusPillVariant> = {
+  proposed: "warning",
+  excluded: "neutral",
+  sent: "success",
+};
 
 export default async function DunningRunPage({ params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
@@ -28,31 +36,36 @@ export default async function DunningRunPage({ params }: { params: Promise<{ run
   const proposed = cases.filter((c) => c.status === "proposed").length;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>
-        {t("run", { date: formatDate(String(data.run_date)) })} · {t(`runStatus.${String(data.status)}`)}
-      </h1>
+      <PageHeader
+        breadcrumb={[{ href: "/buchhaltung/mahnwesen", label: t("title") }]}
+        title={`${t("run", { date: formatDate(String(data.run_date)) })} · ${t(`runStatus.${String(data.status)}`)}`}
+      />
       <p className={ui.notice}>{t("feesLocked")}</p>
       {data.status === "preview" && proposed > 0 ? <DunningApproveButton runId={runId} /> : null}
-      <table className="w-full border-collapse text-sm">
-        <thead className="border-b border-border text-left text-xs text-muted">
+      <div className="overflow-x-auto">
+<table className="mhvp-table">
+        <thead>
           <tr>
-            <th className="py-1.5 pr-3 font-medium">{t("level")}</th>
-            <th className="py-1.5 pr-3 text-right font-medium">{t("total")}</th>
-            <th className="py-1.5 pr-3 font-medium">{t("status")}</th>
-            <th className="py-1.5 font-medium">{t("reason")}</th>
+            <th>{t("level")}</th>
+            <th className="num">{t("total")}</th>
+            <th>{t("status")}</th>
+            <th>{t("reason")}</th>
           </tr>
         </thead>
         <tbody>
           {cases.map((c, i) => (
-            <tr key={`${c.contract_id ?? "x"}-${i}`} className="border-b border-border">
-              <td className="py-1.5 pr-3">{c.level}</td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(c.total)}</td>
-              <td className="py-1.5 pr-3">{t(`caseStatus.${c.status}`)}</td>
-              <td className="py-1.5 text-muted">{c.reason}</td>
+            <tr key={`${c.contract_id ?? "x"}-${i}`}>
+              <td>{c.level}</td>
+              <td className="num">{formatEur(c.total)}</td>
+              <td>
+                <StatusPill variant={CASE_VARIANT[c.status] ?? "neutral"} label={t(`caseStatus.${c.status}`)} />
+              </td>
+              <td className="text-muted">{c.reason}</td>
             </tr>
           ))}
         </tbody>
       </table>
+</div>
     </div>
   );
 }

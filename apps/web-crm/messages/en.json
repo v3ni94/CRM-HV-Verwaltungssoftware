@@ -18,6 +18,7 @@
     "bank": "Bank",
     "billing": "Statements",
     "tickets": "Tickets",
+    "mail": "Mail",
     "platform": "Platform",
     "invoices": "Invoices",
     "properties": "Properties",
@@ -33,6 +34,7 @@
     "myData": "My data",
     "navCollapse": "Collapse sidebar",
     "navExpand": "Expand sidebar",
+    "openNav": "Open navigation",
     "dms": "DMS"
   },
   "Hoa": {
@@ -518,6 +520,88 @@
       "immediate": "immediate"
     }
   },
+  "Mail": {
+    "title": "Mail",
+    "loading": "Loading...",
+    "empty": "No messages.",
+    "noAddress": "no address",
+    "noSubject": "no subject",
+    "selectMessage": "Select a message.",
+    "refresh": "Refresh",
+    "searchPlaceholder": "Search",
+    "ticketBadge": "Ticket",
+    "thread": "Thread",
+    "directionIn": "Inbound",
+    "directionOut": "Outbound",
+    "from": "From {address}",
+    "toField": "To {address}",
+    "to": "To (comma separated)",
+    "subject": "Subject",
+    "body": "Body",
+    "save": "Save",
+    "submitForApproval": "Submit for approval",
+    "reply": "Reply",
+    "createTicket": "Create ticket",
+    "markDone": "Mark done",
+    "openTicket": "Open ticket",
+    "openContact": "Open contact",
+    "openProperty": "Open property",
+    "attachments": "{count} attachment(s)",
+    "approveAndSend": "Approve and send",
+    "reject": "Reject",
+    "confirmReject": "Save rejection",
+    "rejectionNoteLabel": "Rejection reason",
+    "rejectionNote": "Rejected: {note}",
+    "pendingHint": "Waiting for approval by someone with approval rights.",
+    "submittedBy": "Submitted by {who} on {at}",
+    "sentAt": "Sent on {at}",
+    "tabs": {
+      "inbox": "Inbox",
+      "drafts": "Drafts",
+      "pending": "Approvals",
+      "sent": "Sent"
+    },
+    "statusFilter": {
+      "all": "all"
+    },
+    "mailboxFilter": {
+      "all": "all mailboxes"
+    },
+    "status": {
+      "new": "new",
+      "assigned": "assigned",
+      "done": "done",
+      "draft": "draft",
+      "pending": "awaiting approval",
+      "sent": "sent"
+    },
+    "suggestion": {
+      "title": "AI suggestion",
+      "recompute": "Recompute",
+      "category": "Category",
+      "urgency": "Urgency",
+      "urgencyLevel": {
+        "low": "low",
+        "normal": "normal",
+        "high": "high",
+        "emergency": "emergency"
+      },
+      "summary": "Summary",
+      "property": "Property",
+      "contact": "Contact",
+      "playbook": "Matching playbook",
+      "playbookScore": "Match {percent}%",
+      "useReply": "Reply from suggestion",
+      "applyPlaybook": "Apply playbook",
+      "status": {
+        "none": "No suggestion yet.",
+        "pending": "Computing...",
+        "ready": "Suggestion ready",
+        "failed": "Suggestion failed: {reason}",
+        "skipped": "No suggestion: {reason}"
+      }
+    }
+  },
   "Platform": {
     "title": "Platform",
     "notice": "Read only view for platform administrators. Prices and licences are maintained via the API. Release gates are neither opened nor changed here; G5 evidence is kept manually.",
@@ -871,6 +955,220 @@
     "mail": {
       "title": "Mailboxes",
       "description": "Google OAuth, connect mailboxes, default mailbox and access."
+    },
+    "sla": {
+      "title": "SLA and on-call",
+      "description": "Rules, escalation steps, on-call schedule, calendar and emergency alerts."
+    },
+    "dms": {
+      "title": "DMS connection",
+      "description": "Manage Paperless credentials and field IDs, view Google Drive."
     }
+  },
+  "MailPlaybooks": {
+    "title": "Playbooks",
+    "empty": "No playbooks.",
+    "new": "Create playbook",
+    "titleLabel": "Title",
+    "category": "Category",
+    "keywords": "Keywords (comma separated)",
+    "summary": "Summary",
+    "steps": "Steps (one per line)",
+    "replyTemplate": "Reply template",
+    "status": {
+      "draft": "draft",
+      "active": "active",
+      "archived": "archived"
+    },
+    "save": "Save",
+    "delete": "Delete",
+    "activate": "Activate",
+    "usageCount": "used {count}x",
+    "backToMail": "Back to mail"
+  },
+  "Sla": {
+    "title": "SLA and on-call",
+    "intro": "Response and resolution times per priority, escalation steps, on-call schedule, business calendar and emergency alerts.",
+    "tabs": {
+      "rules": "Rules",
+      "onCall": "On-call",
+      "calendar": "Calendar",
+      "alerts": "Alerts"
+    },
+    "priorities": {
+      "low": "low",
+      "normal": "normal",
+      "high": "high",
+      "urgent": "urgent",
+      "immediate": "immediate"
+    },
+    "clockTypes": {
+      "business": "business hours",
+      "calendar": "calendar time"
+    },
+    "channels": {
+      "email": "email",
+      "internal": "internal"
+    },
+    "channel": "Channel",
+    "colors": {
+      "green": "on track",
+      "yellow": "at risk",
+      "red": "breached"
+    },
+    "clockStates": {
+      "running": "running",
+      "paused": "paused",
+      "breached": "breached",
+      "done": "done"
+    },
+    "rules": {
+      "title": "SLA rules",
+      "empty": "No rule created yet.",
+      "create": "Create rule",
+      "name": "Name",
+      "priority": "Priority",
+      "responseMinutes": "Response time (minutes)",
+      "resolutionMinutes": "Resolution time (minutes)",
+      "clockType": "Clock type",
+      "active": "Active",
+      "inactive": "inactive",
+      "save": "Save",
+      "cancelEdit": "Cancel",
+      "edit": "Edit",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "responseSummary": "Response {minutes} min",
+      "resolutionSummary": "Resolution {minutes} min"
+    },
+    "escalation": {
+      "show": "Show escalation steps",
+      "title": "Escalation steps",
+      "empty": "No escalation step created yet.",
+      "step": "Step {step}",
+      "after": "after {minutes} min",
+      "role": "Role {role}",
+      "noTarget": "no target set",
+      "remove": "Remove",
+      "stepNo": "Step",
+      "afterMinutes": "After minutes",
+      "notifyUser": "User",
+      "noUser": "no user",
+      "notifyRole": "Role",
+      "add": "Create step"
+    },
+    "onCall": {
+      "title": "On-call schedule",
+      "current": "Currently on call: {name}",
+      "none": "No one is currently on call.",
+      "empty": "No on-call period created yet.",
+      "remove": "Delete",
+      "user": "User",
+      "startsAt": "From",
+      "endsAt": "To",
+      "phone": "Phone",
+      "note": "Note",
+      "add": "Add on-call period"
+    },
+    "calendar": {
+      "title": "Business calendar",
+      "weekdays": "Working days",
+      "day": {
+        "0": "Monday",
+        "1": "Tuesday",
+        "2": "Wednesday",
+        "3": "Thursday",
+        "4": "Friday",
+        "5": "Saturday",
+        "6": "Sunday"
+      },
+      "opensAt": "Opens at",
+      "closesAt": "Closes at",
+      "timezone": "Time zone {timezone}",
+      "holidays": "Holidays",
+      "noHolidays": "No holiday set yet.",
+      "holidayDate": "Date",
+      "addHoliday": "Add holiday",
+      "save": "Save",
+      "saved": "Saved."
+    },
+    "alerts": {
+      "title": "Emergency alerts",
+      "empty": "No open emergency alerts.",
+      "level": "Level {level}",
+      "acked": "acknowledged",
+      "ack": "Acknowledge"
+    },
+    "badge": {
+      "responseRemaining": "Response due in {minutes} min",
+      "responseOverdue": "Response overdue by {minutes} min",
+      "resolutionRemaining": "Resolution due in {minutes} min",
+      "resolutionOverdue": "Resolution overdue by {minutes} min",
+      "resolvedAt": "Resolved on {at}",
+      "pause": "Pause",
+      "resume": "Resume"
+    }
+  },
+  "Version": {
+    "title": "Version history",
+    "description": "What changed in which version.",
+    "current": "Current version {version}",
+    "scheme": "Scheme: first digit for major rebuilds, second for new features, third for small fixes."
+  },
+  "DmsDocuments": {
+    "title": "Documents (Paperless)",
+    "loading": "Loading documents...",
+    "empty": "No documents available.",
+    "columns": {
+      "title": "Title",
+      "date": "Date",
+      "correspondent": "Correspondent",
+      "documentType": "Document type",
+      "tags": "Tags",
+      "actions": "Actions"
+    },
+    "actions": {
+      "preview": "Preview",
+      "download": "Download"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page}"
+    },
+    "errors": {
+      "unreachable": "Paperless unreachable",
+      "notConfigured": "Paperless not configured"
+    }
+  },
+  "DmsSettings": {
+    "title": "DMS connection",
+    "intro": "Connection between the CRM and document management. Immoware24 remains the master of record.",
+    "paperlessTitle": "Paperless",
+    "googleDriveTitle": "Google Drive",
+    "googleDriveHint": "Google Drive is configured through this form. Create an OAuth client in the Google Cloud Console, enable the Drive API, generate a refresh token once via OAuth Playground or gcloud.",
+    "enabled": "Active",
+    "baseUrl": "Base URL",
+    "baseUrlHint": "Only https is allowed.",
+    "token": "API token",
+    "tokenStored": "Token stored, enter a new one to change it",
+    "tokenMissing": "not stored",
+    "tokenHint": "The token is write only and never shown again. Leave empty to keep the stored token.",
+    "objectFieldId": "Field ID property number",
+    "companyFieldId": "Field ID company",
+    "save": "Save",
+    "saved": "Saved.",
+    "yes": "Yes",
+    "no": "No",
+    "notSet": "not set",
+    "rootFolderId": "Root folder ID",
+    "rootFolderIdHint": "The ID from the folder's Drive URL.",
+    "clientId": "OAuth client ID",
+    "clientSecret": "Client secret",
+    "refreshToken": "Refresh token",
+    "secretStored": "Credentials stored",
+    "secretMissing": "not stored",
+    "secretHint": "The client secret and refresh token are write only and never shown again. Leave empty to keep the stored credentials.",
+    "secretPairRequired": "Enter the client secret and refresh token together."
   }
 }

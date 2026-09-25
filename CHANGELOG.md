@@ -1,78 +1,99 @@
-# Versionsverlauf MH-Verwaltungsplattform
+# Versionsverlauf MH Verwaltungsplattform
 
-Rückwirkend angelegt am 25.09.2026 aus den Meilenstein-Plänen (docs/plans/) und der
-Git-Historie; ab jetzt wird jede Auslieferung hier fortgeschrieben. Versionsschema:
-0.MINOR.PATCH bis zur Marktreife (M27/G5), Datum TT.MM.JJJJ. Die produktive Umgebung
-(crm.mueller-holding.ag) fährt den jeweils zuletzt deployten Stand; ein Eintrag hier
-bedeutet „im Repository fertig", nicht automatisch „deployt".
+Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zweite Stelle
+(1.1, 1.2) für neue Funktionen oder Module, dritte Stelle (1.2.1, 1.2.2) für kleine
+Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
+unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
-## 0.31.0, 25.09.2026 (Branch claude/webseite-crm-prompt-k29mt8, noch zu deployen)
+## 1.9.0 (25.09.2026) Banking, Rechnungs-Weiterleitung, Kundenportal, SEPA-Nachweis
 
-- Banking über finAPI Access (M31, rein lesend): Bankverbindung per WebForm 2.0, dauerhafte
-  Kontenzuordnung zu Objektkonten, Abruf nur auf Klick, idempotenter Umsatzimport nur
-  gebuchter Umsätze, Abrufprotokolle, Trennen ohne Datenverlust; 10 Abnahmetests gegen
-  Fake-Provider. Live-Voraussetzungen offen, siehe docs/BANKING-FINAPI.md.
-- Rechnungs-Weiterleitung (M32): Gesellschaftsrechnungen (z. B. Telekom, AOK) per Klick oder
-  automatisch für gelernte Absender an das Rechnungsprogramm (Lexware-Inbox) weiterleiten und
-  in Gmail archivieren; Objektrechnungen nie automatisch. Einstellungsseite mit Absenderliste.
-- Erledigte Mails und Tickets archivieren die zugehörige Nachricht im Gmail-Postfach
-  (erweiterte Google-Freigabe nötig, Postfach einmal neu verbinden).
-- Ticketvorlagen: empfohlene SLA-Sätze für die Hausverwaltung per Klick einfügbar (Notfall
-  4 Std. mit Bereitschaftshinweis, dringende Reparatur 24 Std., Standard 72 Std., Kaution
-  14 Tage mit IBAN-Pflichtfeld), danach frei anpassbar.
-- WEG-Verwaltung in die Objektakte integriert: eigener Menüpunkt entfernt, /weg leitet auf den
-  Objektfilter, Vorgänge (Wirtschaftsplan, Abrechnung, Sonderumlage, Versammlung) am Objekt.
-- Favicon und App-Symbole aus der Bildmarke (anthrazit, Marke weiß, Punkt gold).
+- Banking über finAPI (rein lesend): Bankverbindung per Bank-Webformular, Kontenzuordnung zu Objektkonten, Abruf nur auf Klick, Import nur gebuchter Umsätze ohne Duplikate, Abrufprotokolle, Trennen ohne Datenverlust
+- Rechnungs-Weiterleitung: Gesellschaftsrechnungen (z. B. Telekom, AOK) per Klick oder automatisch für gelernte Absender an das Rechnungsprogramm, danach Archivierung im Postfach; Objektrechnungen nie automatisch
+- Erledigte Mails und Tickets archivieren die Nachricht im Gmail-Postfach; Google-Kalender der verbundenen Postfächer im CRM-Kalender, Termin anlegen in den Standardkalender (Postfächer einmal neu mit Google verbinden)
+- Kundenportal: Anmeldung, Einladung, Dokumente, Schadensmeldungen mit Verlauf, Zählerstand, offene Posten, Dienstleister-Aufträge
+- SEPA-Mandat je Kontakt-Bankverbindung mit Nachweis als PDF oder erfasstem Weg (Telefon, Brief, E-Mail vom Datum); Einzug bleibt bis Freigabestufe G2 gesperrt
+- Ticketauswertung auf der Startseite (Tag bis Jahr, Nutzervergleich), Sammel-Statuswechsel, Ticketvorlagen mit Checklisten, Pflichtfeldern und empfohlenen SLA-Sätzen
+- Zwei-Faktor-Pflicht nur für Administratoren mit 180-Tage-Gerätevertrauen; Kontakte nach Art (Eigentümer, Mieter, Verwalter, Dienstleister, Bank, Sonstiges); U-Protokoll als eigener Dienst; WEG-Verwaltung in die Objekte integriert; Favicon aus der Bildmarke
 
-## 0.30.2, 25.09.2026
+## 1.8.0 (25.09.2026) Gehilfenzugang für Übergabeprotokolle über das Portal
 
-- BFF-Freigaben für Ticketauswertung und Vorlagen, Kontaktimport verarbeitet große CSV-Dateien
-  in Stapeln vollständig (Umlaute korrekt, cp1252-Erkennung), Darstellungsdurchgang über alle
-  Seiten (Zeilenumbrüche Ticketdetail, Fußzeile).
-- KI-Assistent: Zeichen-Obergrenzen konfigurierbar, automatischer Wechsel auf ein Modell mit
-  größerem Kontextfenster mit sichtbarem Hinweis; Chat mit Ladebalken und Gold-Akzent.
+- Makler, Übergabeprotokolle: Portalzugang je Beteiligtem mit CRM-Kontakt einrichten und beenden; Portalkonto wird bei Bedarf angelegt, Einladungscode einmalig angezeigt
+- Portal (apps/web-portal): Anmeldung mit Passwort und zweitem Faktor, Liste der eigenen Übergabeprotokolle, Ausfüllen der Abschnitte, Fotos, Unterschrift, Abschluss; interne Vermerke der Verwaltung bleiben verborgen
+- Nach dem Abschluss durch den Beteiligten bleibt das PDF im Portal 14 Tage lesbar, danach erlischt der Zugang; Zustellung weiterhin nur über den Postausgang
+- Portal-API `/api/v1/portal/handover`, Regel M30-01 ergänzt, offene Fragen M30-01 (Einladungscode) und M30-05 (zweiter Faktor für Gehilfen)
 
-## 0.30.1, 25.09.2026
+## 1.7.0 (25.09.2026) Übergabeprotokolle im Bereich Makler
 
-- Zwei-Faktor-Pflicht nur noch für Administratoren, vertrauenswürdige Geräte 180 Tage.
-- Kontakte nach Art unterscheidbar (Eigentümer, Mieter, Verwalter, Dienstleister, Bank,
-  Sonstiges) mit Filter und Badges.
-- Fehlerbehebung: 500 (PendingRollbackError) beim Gmail-Postfachabruf.
+- Neuer Unterpunkt Makler, Übergabeprotokolle: Anlage mit Vorbelegung aus Objekt und Einheit, Beteiligte aus den Kontakten, Zähler, Räume, Mängel, Schlüssel, Gegenstände, Bemerkungen, Fotos und Anhänge als Dokumente
+- Unterschriften per Canvas mit Prüfsumme, Hinweise vor dem Abschluss, Abschluss mit PDF auf dem Briefbogen, Festschreibung, neue Versionen ohne Dateiduplikate, Stornierung, Archivierung
+- Zustellung an die Beteiligten als E-Mail-Entwurf im Postausgang (Vier-Augen-Freigabe), kein automatischer Versand
+- Protokollnummern UP-JJJJMMTT-NNN aus der Nummernfolge je Mandant und Tag
+- Migration 0043 (Tabellen handover_*), Regel M30-01, Plan docs/plans/M30-uebergabeprotokoll.md, offene Fragen M30-01 bis M30-04 (Gehilfenzugang über das Portal folgt als Stufe 3)
 
-## 0.30.0, 25.09.2026
+## 1.6.1 (25.09.2026) Google Drive auf der DMS-Seite einrichtbar
 
-- Startseite mit Ticketauswertung (Tag/Woche/Monat/Quartal/Jahr, Nutzervergleich, Grafiken).
-- Mail als eigener Menüpunkt unter Übersicht; Navigationsgruppe Makler.
-- Tickets: Mehrfachauswahl mit Sammel-Statuswechsel (Mitarbeiter höchstens 10, Admin
-  unbegrenzt); Vorlagenverwaltung mit Checklisten und Pflichtfeldern (z. B. IBAN bei Kaution).
-- U-Protokoll (Übergabe-/Abnahmeprotokolle) als eigener Dienst im Stack unter
-  uprotokoll.mueller-holding.ag, verlinkt aus dem Makler-Bereich.
-- „Importassistent Immoware24" heißt jetzt „Importassistent".
+- Google-Drive-Anbindung wird auf der Seite DMS-Anbindung eingerichtet: Wurzelordner, OAuth-Client, Zugangsdaten
 
-## 0.29.x, bis 24.09.2026 (rückwirkend zusammengefasst, vor dieser Arbeitslinie)
+## 1.6.0 (25.09.2026) Einstellungsseite DMS-Anbindung
 
-- M28 Makler: Müller FLOW (Inseratsverwaltung) in die Plattform überführt.
-- M29 DMS: Objektübernahme (objektakte) angebunden.
-- M30 (parallel in Arbeit): natives Übergabeprotokoll.
-- Betrieb: Produktivdeployment auf eigenem Server (Traefik, Let's Encrypt, Backups mit age).
+- Neue Einstellungsseite DMS-Anbindung: Paperless-Basis-URL, API-Token und die Feld-IDs Objektnummer und Gesellschaft im Browser pflegbar
+- Google Drive wird auf derselben Seite nur lesend angezeigt (aktiv, Basis-URL, Token hinterlegt)
+- Karte DMS-Anbindung in den Einstellungen, sichtbar mit dem Recht tenant_settings:update
 
-## 0.1.0 bis 0.27.0, Aufbauphase (rückwirkend, je Meilenstein aus docs/plans/)
+## 1.5.1 (25.09.2026) Korrektur Migration SLA
 
-- M1 Grundgerüst (Monorepo, CI, Docker), M2 Mandanten und Auth (RLS, Rollen, 2FA),
-  M3 Kontakte, M4 Objekte/Einheiten/Rechtsträger, M5 Verträge, M6 Dokumente/DMS-Adapter
-  (Paperless, Drive), M7 KI-Gateway mit Freigabe-Workflows, M8 Immoware24-Importassistent,
-  M9 Betrieb (Backups, Runbooks, Metriken).
-- M10 Buchhaltungskern (nicht führend, Gate G1 zu), M11 Bankimport CAMT.053, M12 Zuordnung
-  mit Regeln, M13 Sollstellungen/Verwalterhonorar (XRechnung als Entwurf), M14 Belegeingang
-  mit Vier-Augen-Prüfung, M15 Zahlläufe pain.001 (Gate G2 zu), M16 Mahnwesen (Gebühren 0,00,
-  Gate zu), M17 Betriebskostenabrechnung (Gate G3 zu), M18 Auswertungen/GoBD-Export.
-- M19 Tickets und Aufträge, M20 Postfach (IMAP/Gmail) mit Ticketautomatik, M21/M22 Portal-API
-  für Mieter, Eigentümer und Dienstleister (Zugriffsmatrix § 18 Abs. 4 WEG), M23
-  Kommunikation/Zustellung, M24 WEG-Wirtschaftsplan und Hausgeld (Gate G4 zu), M25
-  Versammlung und Beschlüsse, M26 Vermietung und Mieterhöhung (Entwürfe), M27
-  Lizenzierung/Marktreife (Gate G5 zu).
+- Migration 0042 verwendet den vorhandenen Typ ticket_priority statt ihn erneut anzulegen (Enum sla_alert_channel ebenfalls nur einmal), der Deploy brach bisher mit DuplicateObject ab
 
-Hinweise: Die Gates G1 bis G5 (führende Buchhaltung, Zahlungsverkehr, Miet- und
-WEG-Abrechnung, Fremdmandanten) sind bewusst geschlossen; Öffnung nur dokumentiert per
-Vier-Augen-Verfahren. Details je Meilenstein in docs/plans/, offene Punkte in
-docs/OPEN_QUESTIONS.md.
+## 1.5.0 (25.09.2026) Paperless-Dokumente in Ticket und Objekt
+
+- Abschnitt Dokumente (Paperless) in der Ticketansicht und in der Objektansicht mit Vorschau und Download
+- Suche in Paperless über die Objektnummer (Custom Field) und die Ticketnummer im Volltext, Treffer werden zusammengeführt
+- Dateien werden über das CRM durchgereicht, der Paperless-Zugang bleibt serverseitig
+- Feld-IDs für Objektnummer und Gesellschaft je Mandant in der DMS-Anbindung einstellbar (Optionen object_field_id, company_field_id)
+- Versionsnummer im Footer mit Verlauf unter /version
+- Plan docs/plans/M31-paperless-view.md, keine Migration
+
+## 1.4.0 (25.09.2026) SLA, Notfallkette und Bereitschaft
+
+- SLA-Regeln je Ticketpriorität mit Reaktions- und Lösungszeit, Uhren laufen nur in der Geschäftszeit
+- Arbeitskalender mit Feiertagen, Uhren lassen sich pausieren und fortsetzen
+- Eskalationsstufen mit Benachrichtigung an Zuständige und Bereitschaft
+- Bereitschaftsplan mit aktueller Bereitschaft und Alarmen zum Quittieren
+- Einstellungsseite SLA und Bereitschaft, SLA-Ampel im Ticket
+- Erste Antwort per freigegebener Mail stoppt die Reaktionsuhr
+- Migration 0042, Plan docs/plans/M30-sla.md
+
+## 1.3.0 (25.09.2026) KI-Vorschläge und Playbooks für Mails
+
+- KI-Antwortvorschlag je eingehender Mail im Ticket
+- Playbooks werden aus abgeschlossenen Tickets gelernt und beim nächsten gleichartigen Vorgang angeboten
+- Tickets zusammenführen zu einem neuen Ticket mit neuer Nummer, Verlauf bleibt erhalten
+- Migrationen 0037 und 0041
+
+## 1.2.0 (24.09.2026) Postfach im CRM
+
+- Gmail-Abruf je Postfach, jede Mail wird einem Ticket zugeordnet oder eröffnet ein neues
+- Google-OAuth-Einstellungen, Standardpostfach und Zugriff je Benutzer
+- Mail-Reiter im Ticket mit Vier-Augen-Freigabe vor dem Versand über Gmail
+- Fehlerhafte Einzelmails brechen den Abruf nicht mehr ab und werden gemeldet
+- Migrationen 0035, 0036, 0039, 0040
+
+## 1.1.0 (24.09.2026) Makler, DMS-Bereich und neue Oberfläche
+
+- Maklerbereich mit Miet- und Kaufangeboten, Felder nach FLOW-Datenvertrag, FLOW-Import
+- DMS-Bereich mit Anbindung der Objektübernahme (objektakte)
+- Überarbeitetes Design mit dunkler Navigationsleiste, Seitenköpfen und Dashboard-Kacheln, mobile Ansicht
+- Einstellungsbereich mit Benutzerverwaltung, Rollen, Mandant, Profil
+- KI-Assistent auf jeder Seite mit Seitenkontext, Auswertung aller Chats für Revisionsleser
+- Mehrkern-Auslegung für API, Celery und PostgreSQL im Produktivbetrieb
+
+## 1.0.0 (23.09.2026) Marktreife der Grundplattform
+
+- Mandantenfähige Plattform mit Rollen, Rechten und Revisionsprotokoll (M1, M2)
+- Kontakte, Objekte, Einheiten, Verträge (M3 bis M5)
+- Dokumente mit Aufbewahrung, DMS-Spiegel (Paperless, Google Drive), Briefe und Serienbriefe (M6)
+- KI-Gateway, Onboarding-Chat, Immoware24-Import, Oberfläche und Betrieb (M7 bis M9)
+- Buchungskreis, Bankanbindung, Matching mit KI-Kontierung, Sollstellung, Verwalterhonorar (M10 bis M13)
+- Belegeingang, Kreditoren, Zahlläufe, Mahnwesen, Mietabrechnung, Auswertungen und Exporte (M14 bis M18)
+- Tickets und Aufträge, Postfach, Portale für Mieter, Eigentümer und Dienstleister, Kommunikation (M19 bis M23)
+- WEG-Wirtschaftsplan und Abrechnung, Versammlung, Beiratsprüfung, Mieterhöhung und Vermietung, Marktreife (M24 bis M27)

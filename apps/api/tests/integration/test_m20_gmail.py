@@ -153,7 +153,7 @@ def _ok(response: Any, status: int = 200) -> Any:
 
 
 def test_gmail_sync_creates_tickets_and_threads(
-    client: TestClient, world: World, fake: FakeGmail
+    client: TestClient, world: World, fake: FakeGmail, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     h = bearer(login(client, world, "gmadmin"))
     box = _ok(
@@ -172,7 +172,7 @@ def test_gmail_sync_creates_tickets_and_threads(
     fake.add("g1", _eml(f"a{RUN}@example.com", f"Heizung defekt {RUN}", f"<g1-{RUN}@x>"))
     fake.add("g2", _eml(f"b{RUN}@example.com", f"Frage Abrechnung {RUN}", f"<g2-{RUN}@x>"))
     result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
-    assert result == {"fetched": 2, "created": 2, "duplicates": 0}
+    assert result == {"fetched": 2, "created": 2, "duplicates": 0, "failed": 0}
 
     msgs = {m["subject"]: m for m in _ok(client.get(f"{M}/messages", headers=h))}
     first, second = msgs[f"Heizung defekt {RUN}"], msgs[f"Frage Abrechnung {RUN}"]
@@ -199,8 +199,32 @@ def test_gmail_sync_creates_tickets_and_threads(
         "fetched": 3,
         "created": 0,
         "duplicates": 3,
+        "failed": 0,
     }
     fake.expire_history = False
+
+    # One unstorable mail (NUL byte survives parsing, ingest raises) does not roll back the
+    # others: it is counted as failed, recorded on the mailbox, the rest is ingested.
+    fake.add("g4", _eml(f"c{RUN}@example.com", f"Kaputt {RUN}", f"<g4-{RUN}@x>"))
+    fake.add("g5", _eml(f"d{RUN}@example.com", f"Heil {RUN}", f"<g5-{RUN}@x>"))
+    from mhvp.communication import services
+
+    real_ingest = services.ingest_parsed
+
+    async def broken(session: Any, *args: Any, parsed: Any, **kwargs: Any) -> Any:
+        if parsed["subject"] == f"Kaputt {RUN}":
+            from sqlalchemy import text
+
+            await session.execute(text("select * from table_that_does_not_exist"))
+        return await real_ingest(session, *args, parsed=parsed, **kwargs)
+
+    monkeypatch.setattr(services, "ingest_parsed", broken)
+    result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert (result["created"], result["failed"]) == (1, 1)
+    monkeypatch.setattr(services, "ingest_parsed", real_ingest)
+    listed = {b["id"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+    assert "Nachricht g4" in (listed[box["id"]]["last_error"] or "")
+    assert f"Heil {RUN}" in {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=h))}
 
     # Failing token refresh: error recorded on the mailbox, no crash, no partial data.
     fake.token_ok = False
@@ -323,8 +347,9 @@ def test_oversized_headers_are_capped_and_sync_survives(
 def test_failed_ingest_raises_original_error_not_pending_rollback(
     database: Database, redis_url: str, world: World, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A database error inside the ingest poisons the transaction. sync_mailbox must let the
-    original error through instead of masking it with PendingRollbackError from its finally."""
+    """A database error inside the ingest must never surface as PendingRollbackError. With the
+    per-mail savepoint the batch continues: the failure is counted, the original reason lands
+    in last_error and the transaction stays usable."""
     import asyncio
 
     from sqlalchemy import text as sql_text
@@ -343,7 +368,7 @@ def test_failed_ingest_raises_original_error_not_pending_rollback(
     async def poisoned_ingest(session: Any, *args: Any, **kwargs: Any) -> Any:
         with pytest.raises(DBAPIError):
             await session.execute(sql_text("SELECT 1/0"))
-        raise ValueError("Originalfehler")
+        raise ValueError("Originalfehler")  # der Savepoint faengt das je Nachricht ab
 
     monkeypatch.setattr(comm_services, "ingest_raw", poisoned_ingest)
     fake = FakeGmail()
@@ -366,11 +391,15 @@ def test_failed_ingest_raises_original_error_not_pending_rollback(
                 await session.flush()
                 with mock_aws():
                     boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
-                    with pytest.raises(ValueError, match="Originalfehler"):
-                        await gmail.sync_mailbox(
-                            session, BlobStore(settings), settings, box, gclient
-                        )
-                # The poisoned transaction must not be committed by the context manager.
+                    counts = await gmail.sync_mailbox(
+                        session, BlobStore(settings), settings, box, gclient
+                    )
+                assert counts["failed"] == 1
+                assert counts["created"] == 0
+                assert box.last_error is not None
+                assert "Originalfehler" in box.last_error
+                # Die Sitzung bleibt benutzbar (kein PendingRollbackError nach dem Savepoint).
+                assert (await session.execute(sql_text("SELECT 1"))).scalar_one() == 1
                 await session.rollback()
             await gclient.aclose()
         finally:

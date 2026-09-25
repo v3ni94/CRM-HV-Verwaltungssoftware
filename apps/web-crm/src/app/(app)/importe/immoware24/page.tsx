@@ -5,6 +5,7 @@ import { Immoware24Wizard } from "@/components/imports/Immoware24Wizard";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function Immoware24Page() {
       <Link href="/importe" className="text-sm text-muted hover:underline">
         {t("backToImports")}
       </Link>
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <p className="text-sm text-muted">{t("intro")}</p>
       {overview.data ? (
         <section className={ui.card} aria-labelledby="overview-title">

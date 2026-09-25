@@ -1,15 +1,18 @@
 /**
- * Backend-for-frontend proxy for the portal screens. Only the listed portal operations are
- * reachable; the bearer token is added server side from the httpOnly cookie. Mutating methods
- * require a same-origin Origin header (CSRF, together with SameSite=Strict cookies).
+ * Backend-for-frontend proxy of the portal. Only the listed portal operations are reachable;
+ * the bearer token is added server side from the httpOnly cookie. Mutating methods require a
+ * same-origin Origin header (CSRF, together with SameSite=Strict cookies). Binary handover
+ * content (photos, PDF) is served by /api/portal-files, never through this JSON proxy.
  */
 import { serverFetch } from "@/lib/api-server";
 import { rejectForeignOrigin } from "@/lib/csrf";
 import { problemJson } from "@/lib/problem";
 
 const ID = "[0-9a-fA-F-]{36}";
+const SECTION = "(participants|meters|rooms|defects|keys|items|notes)";
 const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/me$/ },
+  // Kundenportal: documents, tickets, meter readings, account, work orders.
   { method: "GET", pattern: /^portal\/documents$/ },
   { method: "GET", pattern: new RegExp(`^portal/documents/${ID}/download$`) },
   { method: "GET", pattern: /^portal\/tickets$/ },
@@ -20,10 +23,20 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/account$/ },
   { method: "GET", pattern: /^portal\/work-orders$/ },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/(decline|quote|appointment|complete)$`) },
+  // Übergabeprotokolle (M30 Stufe 3): fill in, photos, signatures, completion.
+  { method: "GET", pattern: /^portal\/handover$/ },
+  { method: "GET", pattern: new RegExp(`^portal/handover/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^portal/handover/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^portal/handover/${ID}/hints$`) },
+  { method: "POST", pattern: new RegExp(`^portal/handover/${ID}/(documents|signatures|complete)$`) },
+  { method: "DELETE", pattern: new RegExp(`^portal/handover/${ID}/(documents|signatures)/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^portal/handover/${ID}/${SECTION}(/order)?$`) },
+  { method: "PATCH", pattern: new RegExp(`^portal/handover/${ID}/${SECTION}/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^portal/handover/${ID}/${SECTION}/${ID}$`) },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
-const MULTIPART = /^portal\/uploads$/;
+const MULTIPART = new RegExp(`^portal/(uploads|handover/${ID}/documents)$`);
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
@@ -52,7 +65,7 @@ async function proxy(request: Request, context: Context): Promise<Response> {
     if (body.byteLength > MAX_UPLOAD_BYTES) return problemJson(413, "Datei zu groß");
     // The boundary parameter must be kept, so the original header is forwarded unchanged.
     headers.set("content-type", type);
-  } else if (method === "POST") {
+  } else if (method === "POST" || method === "PATCH") {
     body = await request.text();
     headers.set("content-type", "application/json");
   }
@@ -79,3 +92,5 @@ async function proxy(request: Request, context: Context): Promise<Response> {
 
 export const GET = proxy;
 export const POST = proxy;
+export const PATCH = proxy;
+export const DELETE = proxy;

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -48,10 +49,11 @@ export default async function DmsPage() {
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <EmptyState title={t("empty")} />
       ) : (
         <div className={`${ui.card} overflow-x-auto p-0`}>
-          <table className={ui.table} data-testid="dms-objects">
+          <div className="overflow-x-auto">
+<table className={ui.table} data-testid="dms-objects">
             <thead>
               <tr>
                 <th>{t("colNumber")}</th>
@@ -77,6 +79,7 @@ export default async function DmsPage() {
               ))}
             </tbody>
           </table>
+</div>
         </div>
       )}
     </div>

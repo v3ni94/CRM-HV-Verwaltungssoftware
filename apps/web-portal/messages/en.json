@@ -5,20 +5,34 @@
   },
   "Home": {
     "productName": "MH Verwaltungsplattform",
-    "area": "Customer portal",
+    "area": "Portal",
     "apiStatusLabel": "API status",
     "apiReady": "API ready",
-    "apiUnavailable": "API unavailable"
+    "apiUnavailable": "API unavailable",
+    "login": "Sign in",
+    "handover": "My handover protocols",
+    "intro": "Access for tenants, owners and participants of the property management. Credentials are provided by your management."
   },
   "Auth": {
     "loginTitle": "Sign in",
     "email": "E-mail",
     "password": "Password",
+    "submit": "Continue",
+    "submitting": "Please wait",
     "emailInvalid": "Please enter a valid e-mail address.",
     "passwordRequired": "Please enter the password.",
-    "submit": "Sign in",
-    "submitting": "Checking …",
-    "mfaHint": "Two-factor sign-in is configured for this account. Please sign in via the management application or contact your property manager.",
+    "mfaTitle": "Second factor",
+    "mfaSetupTitle": "Set up the second factor",
+    "mfaSetupHint": "Scan the QR code with an authenticator app or enter the key manually, then enter the six digit code.",
+    "mfaHint": "Please enter the six digit code from the authenticator app.",
+    "secretLabel": "Key for manual entry",
+    "qrAlt": "QR code for the authenticator app",
+    "code": "Code",
+    "codeInvalid": "The code has 6 to 8 digits.",
+    "verify": "Confirm",
+    "setupLoading": "Preparing the setup",
+    "backToLogin": "Back to sign in",
+    "noTenant": "Your access is not assigned to a tenant. Please contact your management.",
     "inviteLink": "Received an invitation? Set up access",
     "inviteTitle": "Set up access",
     "inviteIntro": "Please enter the invitation code from your letter and choose your password.",
@@ -32,6 +46,12 @@
     "toLogin": "Go to sign in",
     "loginLink": "Already set up? Go to sign in"
   },
+  "Portal": {
+    "title": "Portal",
+    "handover": "Handover protocols",
+    "logout": "Sign out",
+    "footer": "All entries are stored by the property management. Internal notes of the management are not visible here."
+  },
   "Shell": {
     "portalName": "Customer portal",
     "navStart": "Home",
@@ -41,7 +61,8 @@
     "navAccount": "Open items",
     "navOrders": "Work orders",
     "logout": "Sign out",
-    "menu": "Menu"
+    "menu": "Menu",
+    "navHandover": "Handovers"
   },
   "Start": {
     "greeting": "Welcome to the customer portal",
@@ -55,7 +76,9 @@
     "cardAccount": "Open items",
     "cardAccountText": "View open receivables of your contracts.",
     "cardOrders": "My work orders",
-    "cardOrdersText": "Accept orders, submit quotes and document completion."
+    "cardOrdersText": "Accept orders, submit quotes and document completion.",
+    "cardHandover": "Handover protocols",
+    "cardHandoverText": "View, fill in and sign handover protocols."
   },
   "Documents": {
     "title": "My documents",
@@ -133,5 +156,281 @@
     "cancel": "Cancel",
     "submitting": "Sending …",
     "actionDone": "The change was submitted."
+  },
+  "Handover": {
+    "title": "Handover protocols",
+    "empty": "No entries.",
+    "statusLabel": {
+      "draft": "Draft",
+      "in_progress": "In progress",
+      "signature_pending": "Signature pending",
+      "completed": "Completed",
+      "sent": "Delivery prepared",
+      "archived": "Archived",
+      "cancelled": "Cancelled"
+    },
+    "saved": "Saved.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Really delete this entry?",
+    "add": {
+      "participants": "Add participant",
+      "meters": "Add meter",
+      "rooms": "Add room",
+      "defects": "Add defect",
+      "keys": "Add key",
+      "items": "Add item",
+      "notes": "Add note"
+    },
+    "photos": {
+      "add": "Photo",
+      "uploading": "Uploading",
+      "remove": "Remove photo"
+    },
+    "fields": {
+      "address": "Address",
+      "street": "Street",
+      "house_number": "House number",
+      "postal_code": "Postal code",
+      "city": "City",
+      "object_label": "Property label",
+      "building": "Building",
+      "floor": "Floor",
+      "unit_number": "Unit",
+      "unit_label": "Unit (label)",
+      "unit_position": "Position",
+      "handover_date": "Handover date",
+      "handover_start": "Start",
+      "handover_end": "End",
+      "hide_time_information": "Do not show the time in the protocol",
+      "handover_location": "Place of the handover",
+      "ticket_number": "Ticket number",
+      "reference_number": "Reference",
+      "rental_contract_number": "Rental contract number",
+      "general_note": "General note",
+      "deposit_amount": "Deposit amount (EUR)",
+      "deposit_account_holder": "Account holder",
+      "deposit_iban": "IBAN",
+      "deposit_bic": "BIC",
+      "deposit_bank_name": "Bank",
+      "deposit_note": "Note on the deposit",
+      "deposit_separate_statement": "Deposit statement is issued separately",
+      "role": "Role",
+      "salutation": "Salutation",
+      "first_name": "First name",
+      "last_name": "Last name",
+      "company": "Company",
+      "email": "E-mail",
+      "phone": "Phone",
+      "comment": "Note",
+      "meter_type": "Meter type",
+      "custom_type": "Custom label",
+      "number": "Meter number",
+      "value": "Meter reading",
+      "unit": "Unit",
+      "location": "Location",
+      "read_on": "Read on",
+      "read_at": "Time",
+      "name": "Label",
+      "room_type": "Room type",
+      "condition": "Condition",
+      "room_id": "Room",
+      "category": "Category",
+      "title": "Title",
+      "priority": "Priority",
+      "defect_status": "Status",
+      "responsibility": "Responsible",
+      "description": "Description",
+      "key_type": "Key type",
+      "custom_name": "Custom label",
+      "quantity": "Quantity",
+      "key_number": "Key number",
+      "status": "Status",
+      "item_type": "Type",
+      "text": "Text",
+      "responsible_party": "Responsible",
+      "due_date": "Deadline",
+      "is_internal": "Internal, not in the customer PDF"
+    },
+    "roles": {
+      "moving_out": "Tenant moving out",
+      "moving_in": "Tenant moving in",
+      "seller": "Selling owner",
+      "buyer": "Buying owner",
+      "handing_over": "Handing over party",
+      "taking_over": "Taking over party",
+      "management": "Management",
+      "broker": "Broker",
+      "caretaker": "Caretaker",
+      "proxy": "Authorised representative",
+      "witness": "Witness",
+      "relative": "Relative",
+      "expert": "Expert",
+      "craftsman": "Craftsman",
+      "other": "Other person"
+    },
+    "options": {
+      "participants": {
+        "role": {
+          "moving_out": "Tenant moving out",
+          "moving_in": "Tenant moving in",
+          "seller": "Selling owner",
+          "buyer": "Buying owner",
+          "handing_over": "Handing over party",
+          "taking_over": "Taking over party",
+          "management": "Management",
+          "broker": "Broker",
+          "caretaker": "Caretaker",
+          "proxy": "Authorised representative",
+          "witness": "Witness",
+          "relative": "Relative",
+          "expert": "Expert",
+          "craftsman": "Craftsman",
+          "other": "Other person"
+        }
+      },
+      "meters": {
+        "meter_type": {
+          "electricity": "Electricity",
+          "gas": "Gas",
+          "water": "Water",
+          "cold_water": "Cold water",
+          "hot_water": "Hot water",
+          "heating": "Heating meter",
+          "heat_quantity": "Heat quantity meter",
+          "common_electricity": "Common electricity",
+          "sub_meter": "Sub meter",
+          "photovoltaic": "Photovoltaic",
+          "other": "Other meter"
+        },
+        "unit": {
+          "kWh": "kWh",
+          "m³": "m³",
+          "MWh": "MWh",
+          "Liter": "Litres",
+          "Einheiten": "Units"
+        }
+      },
+      "rooms": {
+        "condition": {
+          "ok": "No defects",
+          "defective": "Defects present",
+          "not_checked": "Not checked",
+          "not_accessible": "Not accessible",
+          "not_included": "Not part of the handover"
+        }
+      },
+      "defects": {
+        "priority": {
+          "info": "Note",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "urgent": "Urgent"
+        },
+        "defect_status": {
+          "pre_existing": "Pre-existing",
+          "new": "Newly identified",
+          "acknowledged": "Acknowledged by the handing over party",
+          "rejected": "Acknowledgement rejected",
+          "unclear": "Unresolved"
+        }
+      },
+      "keys": {
+        "status": {
+          "handed_over": "Handed over",
+          "not_handed_over": "Not handed over",
+          "to_follow": "To follow"
+        }
+      },
+      "notes": {
+        "category": {
+          "agreement": "Agreement",
+          "hint": "Note",
+          "defect": "Defect",
+          "open_task": "Open task",
+          "follow_up": "To be supplied",
+          "payment": "Payment matter",
+          "other": "Other item"
+        }
+      }
+    },
+    "signature": {
+      "consent": "With their signature the signatories confirm the correctness and completeness of the entries and consent to the electronic processing and storage of the protocol for the duration of the statutory retention and limitation periods.",
+      "participant": "Participant",
+      "free": "Free entry",
+      "done": "signed",
+      "name": "Name",
+      "role": "Role",
+      "location": "Place",
+      "canvas": "Signature field",
+      "clear": "Clear",
+      "save": "Save signature",
+      "saved": "Signature saved.",
+      "empty": "Please sign first.",
+      "none": "No signature recorded yet.",
+      "noName": "Without name",
+      "confirmDelete": "Really delete this signature?"
+    },
+    "hints": {
+      "title": "Notes (no obstacle to completion):"
+    },
+    "pdf": {
+      "preview": "PDF preview (draft)",
+      "stored": "Show PDF"
+    },
+    "tabs": {
+      "object": "Property",
+      "participants": "Participants",
+      "deposit": "Deposit",
+      "meters": "Meters",
+      "rooms": "Rooms",
+      "defects": "Defects",
+      "keys": "Keys",
+      "items": "Items",
+      "notes": "Notes",
+      "signatures": "Signatures",
+      "summary": "Review and completion"
+    },
+    "complete": {
+      "action": "Complete the protocol bindingly",
+      "force": "Complete bindingly despite notes",
+      "confirm": "The protocol will be completed, locked and stored as a PDF. No further changes are possible afterwards. Continue?",
+      "confirmForce": "There are open notes. The protocol will still be completed and locked. Continue?",
+      "help": "Completion locks the protocol and generates the PDF. No further changes are possible afterwards; the PDF stays available here for {days} days. Delivery is handled by the management."
+    },
+    "intro": "Please fill in the handover protocol section by section. Every entry is saved immediately.",
+    "list": {
+      "number": "Number",
+      "object": "Property",
+      "date": "Handover on",
+      "status": "Status",
+      "open": "Open"
+    },
+    "access": {
+      "edit": "Filling in possible",
+      "read": "Read only, available until {date}",
+      "none": "There is no handover protocol for your access."
+    },
+    "locked": "The protocol is completed and can no longer be changed.",
+    "back": "Back to the overview",
+    "deposit": {
+      "notice": "Deposit details are only recorded and printed in the protocol; they do not trigger a payment."
+    },
+    "summary": {
+      "title": "Summary",
+      "rooms": "Rooms",
+      "meters": "Meters",
+      "defects": "Defects",
+      "keys": "Keys",
+      "items": "Items",
+      "notes": "Notes",
+      "signatures": "Signatures",
+      "photos": "Photos"
+    },
+    "pdfDraft": "Preview (draft)",
+    "pdfFinal": "Protocol as PDF"
   }
 }

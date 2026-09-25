@@ -79,3 +79,15 @@ Versand von Daten an FLOWFACT braucht die Zugangsdaten und die dokumentierte Sch
   wird als Mapper übernommen. Bilder als Dokumente mit Prüfsumme und FLOWFACT-Medien-ID.
 - Der Adapter wird aus docs/flowfact-api.md und docs/connector.md des FLOW-Repos abgeleitet und
   erst nach einem Smoke-Test gegen das echte Konto (Token, currentUser, Schemata) freigegeben.
+
+## Stufe 4 (umgesetzt 24.09.2026): FLOW-Import per SQL-Dump
+
+Der Import liest einen von Hand hochgeladenen Datenbankexport aus dem Webhosting (kein
+Exportbefehl in FLOW, siehe oben) und erzeugt je FLOW-Anzeige eine Vorschau mit
+Zuordnungsvorschlag zu Objekt und Einheit, Preisumrechnung und Statusabbildung, bevor eine
+Anzeige tatsächlich angelegt wird (`mhvp.letting.flow_import`, docs/rules/M28-01.md). Die
+Übernahme ist über `external_uuid` idempotent, ein zweiter Lauf über denselben Importlauf legt
+nichts doppelt an. FLOWFACT selbst wird weiterhin nicht angesprochen; `publication_status` bleibt
+ein aus `listing_flowfact_links.sync_status` abgeleiteter Platzhalter. Offen bleibt die
+automatische Einheitenzuordnung, da FLOW kein Einheitenkennzeichen mitführt; sie ist im
+Erfassungsbogen (`/makler/import`) manuell nachzutragen.

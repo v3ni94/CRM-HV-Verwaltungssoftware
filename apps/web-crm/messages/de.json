@@ -58,7 +58,6 @@
     "aiSettings": "KI-Einstellungen",
     "dashboard": "Start",
     "calendar": "Kalender",
-    "mail": "Mail",
     "entity": {
       "contact": "Kontakt",
       "property": "Objekt",
@@ -73,6 +72,7 @@
     "bank": "Bank",
     "billing": "Abrechnung",
     "tickets": "Tickets",
+    "mail": "Mail",
     "platform": "Plattform",
     "invoices": "Rechnungen",
     "properties": "Objekte",
@@ -90,6 +90,7 @@
     "navCollapse": "Leiste einklappen",
     "navExpand": "Leiste ausklappen",
     "dms": "DMS",
+    "openNav": "Navigation öffnen",
     "brokerFlow": "Flow (Inserate)",
     "uprotokoll": "Übergabeprotokoll"
   },
@@ -157,6 +158,8 @@
       "sourceInvalid": "Bitte die Quelle mit mindestens 2 Zeichen angeben.",
       "dateInvalid": "Bitte ein gültiges Datum angeben."
     },
+    "select": "Auswahl",
+    "selectRow": "{name} auswählen",
     "sepa": {
       "lockedHint": "Mandate werden hier nur erfasst und dokumentiert. Der Lastschrifteinzug bleibt bis zur Freigabestufe G2 gesperrt.",
       "reference": "Mandatsreferenz",
@@ -199,8 +202,6 @@
       "fileMissing": "Bitte eine PDF-Datei auswählen oder den Weg der Erteilung erfassen.",
       "noBankAccount": "Für dieses Mandat wird eine Bankverbindung des Kontakts benötigt. Bitte zuerst eine Bankverbindung hinterlegen."
     },
-    "select": "Auswahl",
-    "selectRow": "{name} auswählen",
     "type": "Art",
     "allTypes": "Alle Arten",
     "colTypes": "Art"
@@ -509,7 +510,7 @@
     "undo": "Rückgängig",
     "undoConfirm": "Import wirklich zurücknehmen? Datensätze, auf die spätere Daten aufbauen, bleiben erhalten.",
     "undoneAt": "Zurückgenommen am {at}",
-    "immoware24Link": "Importassistent öffnen"
+    "immoware24Link": "Importassistent Immoware24 öffnen"
   },
   "AiSettings": {
     "title": "KI-Einstellungen",
@@ -576,7 +577,7 @@
     }
   },
   "Immoware24": {
-    "title": "Importassistent",
+    "title": "Importassistent Immoware24",
     "intro": "Berichte aus Immoware24 hochladen, Spalten zuordnen, prüfen, testen und übernehmen. Jede Übernahme erzeugt einen Importlauf, der sich zurücknehmen lässt.",
     "backToImports": "Zurück zu den Importen",
     "overviewTitle": "Bestand in der Plattform",
@@ -804,9 +805,6 @@
   "Broker": {
     "title": "Makler",
     "flowfactNotice": "Die Übergabe an FLOWFACT folgt, sobald die Schnittstellendokumentation vorliegt (M28-01).",
-    "uprotokollTitle": "Übergabeprotokolle (U-Protokoll)",
-    "uprotokollText": "Wohnungsübergaben und Abnahmen werden im U-Protokoll erfasst: mehrstufiger Assistent, Fotos, digitale Unterschriften, PDF-Erzeugung und E-Mail-Versand.",
-    "uprotokollOpen": "U-Protokoll öffnen",
     "tabRental": "Vermietung",
     "tabSale": "Verkauf",
     "statusAll": "Alle",
@@ -861,7 +859,36 @@
       "delete": "Löschen",
       "confirmDelete": "Anzeige wirklich löschen?",
       "onlyDraftDelete": "Nur Anzeigen im Entwurf können gelöscht werden."
-    }
+    },
+    "import": {
+      "title": "FLOW-Import",
+      "back": "Zurück zu Makler",
+      "intro": "SQL-Datenbankexport aus Müller FLOW hochladen und vor der Übernahme prüfen. Es erfolgt kein Zugriff auf FLOWFACT.",
+      "file": "SQL-Dump",
+      "upload": "Prüfen",
+      "flowNumber": "FLOW-Nr.",
+      "kind": "Art",
+      "match": "Zuordnung",
+      "problems": "Hinweise",
+      "action": "Aktion",
+      "property": "Objekt",
+      "unit": "Einheit",
+      "selectProperty": "Objekt wählen",
+      "selectUnit": "Einheit wählen",
+      "actionCreate": "Übernehmen",
+      "actionSkip": "Überspringen",
+      "apply": "Ausgewählte übernehmen",
+      "confirmApply": "Sollen {count} Anzeigen übernommen werden?",
+      "resultSummary": "{created} Anzeigen angelegt, {skipped} übersprungen.",
+      "outcome": {
+        "created": "Angelegt",
+        "skipped": "Übersprungen"
+      }
+    },
+    "handover": "Übergabeprotokolle",
+    "uprotokollTitle": "Übergabeprotokolle (U-Protokoll)",
+    "uprotokollText": "Wohnungsübergaben und Abnahmen werden im U-Protokoll erfasst: mehrstufiger Assistent, Fotos, digitale Unterschriften, PDF-Erzeugung und E-Mail-Versand.",
+    "uprotokollOpen": "U-Protokoll öffnen"
   },
   "Receivables": {
     "title": "Sollstellungen",
@@ -1319,6 +1346,100 @@
     "template": "Vorlage",
     "noTemplate": "Ohne Vorlage"
   },
+  "Mail": {
+    "title": "Mail",
+    "loading": "Wird geladen...",
+    "empty": "Keine Nachrichten.",
+    "noAddress": "ohne Adresse",
+    "noSubject": "ohne Betreff",
+    "selectMessage": "Nachricht auswählen.",
+    "refresh": "Aktualisieren",
+    "searchPlaceholder": "Suche",
+    "ticketBadge": "Ticket",
+    "thread": "Verlauf",
+    "directionIn": "Eingang",
+    "directionOut": "Ausgang",
+    "from": "Von {address}",
+    "toField": "An {address}",
+    "to": "An (kommagetrennt)",
+    "subject": "Betreff",
+    "body": "Text",
+    "save": "Speichern",
+    "submitForApproval": "Zur Freigabe",
+    "reply": "Antworten",
+    "createTicket": "Ticket anlegen",
+    "markDone": "Erledigt",
+    "openTicket": "Ticket öffnen",
+    "openContact": "Kontakt öffnen",
+    "openProperty": "Objekt öffnen",
+    "attachments": "{count} Anhang/Anhänge",
+    "approveAndSend": "Freigeben und senden",
+    "reject": "Ablehnen",
+    "confirmReject": "Ablehnung speichern",
+    "rejectionNoteLabel": "Ablehnungsgrund",
+    "rejectionNote": "Abgelehnt: {note}",
+    "pendingHint": "Wartet auf Freigabe durch einen Freigabeberechtigten.",
+    "submittedBy": "Eingereicht von {who} am {at}",
+    "sentAt": "Gesendet am {at}",
+    "tabs": {
+      "inbox": "Posteingang",
+      "drafts": "Entwürfe",
+      "pending": "Freigaben",
+      "sent": "Gesendet"
+    },
+    "statusFilter": {
+      "all": "alle"
+    },
+    "mailboxFilter": {
+      "all": "alle Postfächer"
+    },
+    "status": {
+      "new": "neu",
+      "assigned": "zugeordnet",
+      "done": "erledigt",
+      "draft": "Entwurf",
+      "pending": "wartet auf Freigabe",
+      "sent": "gesendet"
+    },
+    "suggestion": {
+      "title": "KI-Vorschlag",
+      "recompute": "Neu berechnen",
+      "category": "Kategorie",
+      "urgency": "Dringlichkeit",
+      "urgencyLevel": {
+        "low": "niedrig",
+        "normal": "normal",
+        "high": "hoch",
+        "emergency": "Notfall"
+      },
+      "summary": "Zusammenfassung",
+      "property": "Objekt",
+      "contact": "Kontakt",
+      "playbook": "Passendes Playbook",
+      "playbookScore": "Übereinstimmung {percent}%",
+      "useReply": "Antwort aus Vorschlag",
+      "applyPlaybook": "Playbook anwenden",
+      "status": {
+        "none": "Noch kein Vorschlag.",
+        "pending": "Wird berechnet...",
+        "ready": "Vorschlag bereit",
+        "failed": "Vorschlag fehlgeschlagen: {reason}",
+        "skipped": "Kein Vorschlag: {reason}"
+      }
+    },
+    "intro": "Eingegangene Vorgänge aus den verbundenen Postfächern. Zuordnung zu Tickets und Kontakten erfolgt automatisch, Einstellungen unter Postfächer.",
+    "mailboxes": "Postfächer verwalten",
+    "statusAll": "Alle Status",
+    "colDate": "Eingegangen",
+    "colFrom": "Absender",
+    "colSubject": "Betreff",
+    "colStatus": "Status",
+    "colTicket": "Ticket",
+    "toTicket": "Ticket öffnen",
+    "colForward": "Rechnungsprogramm",
+    "forwarded": "Weitergeleitet",
+    "forwardInvoice": "An Rechnungsprogramm weiterleiten"
+  },
   "Platform": {
     "title": "Plattform",
     "notice": "Lesesicht für Plattformadministratoren. Preise und Lizenzen werden über die API gepflegt. Freigabestufen werden hier weder geöffnet noch geändert; G5-Nachweise sind manuell zu führen.",
@@ -1501,10 +1622,6 @@
     "maintenanceOpen": "Offene Wartungen und Prüfpflichten",
     "noMaintenance": "Keine offenen Wartungen.",
     "toHoa": "Zur WEG-Verwaltung",
-    "hoaSection": {
-      "title": "WEG-Verwaltung",
-      "description": "Wirtschaftsplan, Jahresabrechnung, Sonderumlage, Versammlung"
-    },
     "toLetting": "Zur Vermietung",
     "create": "Objekt anlegen",
     "createButton": "Anlegen",
@@ -1559,7 +1676,11 @@
       "hoa": "Keine WEG-Objekte.",
       "sev": "Keine WEG-Objekte mit aktivierter SEV und hinterlegten Mietverträgen."
     },
-    "sevHint": "Angezeigt werden WEG-Objekte mit Sondereigentumsverwaltung, für die mindestens ein Mietvertrag hinterlegt ist."
+    "sevHint": "Angezeigt werden WEG-Objekte mit Sondereigentumsverwaltung, für die mindestens ein Mietvertrag hinterlegt ist.",
+    "hoaSection": {
+      "title": "WEG-Verwaltung",
+      "description": "Wirtschaftsplan, Jahresabrechnung, Sonderumlage, Versammlung"
+    }
   },
   "AiChat": {
     "title": "KI-Assistent",
@@ -1661,6 +1782,14 @@
     "mail": {
       "title": "Postfächer",
       "description": "Google OAuth, Postfächer verbinden, Standardpostfach und Freigaben."
+    },
+    "sla": {
+      "title": "SLA und Bereitschaft",
+      "description": "Regeln, Eskalationsstufen, Bereitschaftsplan, Kalender und Notfallalarme."
+    },
+    "dms": {
+      "title": "DMS-Anbindung",
+      "description": "Paperless-Zugangsdaten und Feld-IDs pflegen, Google Drive anzeigen."
     },
     "templates": {
       "title": "Ticketvorlagen",
@@ -1829,6 +1958,551 @@
     "empty": "Keine Objekte vorhanden.",
     "hint": "Der Absprung öffnet die Suche der Objektübernahme mit der Objektnummer. Eine direkte Verknüpfung je Akte folgt mit Stufe 3."
   },
+  "MailPlaybooks": {
+    "title": "Playbooks",
+    "empty": "Keine Playbooks.",
+    "new": "Playbook anlegen",
+    "titleLabel": "Titel",
+    "category": "Kategorie",
+    "keywords": "Schlagwörter (kommagetrennt)",
+    "summary": "Zusammenfassung",
+    "steps": "Arbeitsschritte (eine Zeile je Schritt)",
+    "replyTemplate": "Antwortvorlage",
+    "status": {
+      "draft": "Entwurf",
+      "active": "aktiv",
+      "archived": "archiviert"
+    },
+    "save": "Speichern",
+    "delete": "Löschen",
+    "activate": "Freigeben",
+    "usageCount": "{count}x verwendet",
+    "backToMail": "Zurück zur Mail"
+  },
+  "Sla": {
+    "title": "SLA und Bereitschaft",
+    "intro": "Reaktions- und Lösungszeiten je Priorität, Eskalationsstufen, Bereitschaftsplan, Geschäftszeitenkalender und Notfallalarme.",
+    "tabs": {
+      "rules": "Regeln",
+      "onCall": "Bereitschaft",
+      "calendar": "Kalender",
+      "alerts": "Alarme"
+    },
+    "priorities": {
+      "low": "niedrig",
+      "normal": "normal",
+      "high": "hoch",
+      "urgent": "dringend",
+      "immediate": "sofort"
+    },
+    "clockTypes": {
+      "business": "Geschäftszeit",
+      "calendar": "Kalenderzeit"
+    },
+    "channels": {
+      "email": "E-Mail",
+      "internal": "intern"
+    },
+    "channel": "Kanal",
+    "colors": {
+      "green": "im Rahmen",
+      "yellow": "kritisch",
+      "red": "verletzt"
+    },
+    "clockStates": {
+      "running": "läuft",
+      "paused": "pausiert",
+      "breached": "verletzt",
+      "done": "erledigt"
+    },
+    "rules": {
+      "title": "SLA-Regeln",
+      "empty": "Noch keine Regel angelegt.",
+      "create": "Regel anlegen",
+      "name": "Name",
+      "priority": "Priorität",
+      "responseMinutes": "Reaktionszeit (Minuten)",
+      "resolutionMinutes": "Lösungszeit (Minuten)",
+      "clockType": "Uhrtyp",
+      "active": "Aktiv",
+      "inactive": "inaktiv",
+      "save": "Speichern",
+      "cancelEdit": "Abbrechen",
+      "edit": "Bearbeiten",
+      "activate": "Aktivieren",
+      "deactivate": "Deaktivieren",
+      "responseSummary": "Reaktion {minutes} Min.",
+      "resolutionSummary": "Lösung {minutes} Min."
+    },
+    "escalation": {
+      "show": "Eskalationsstufen anzeigen",
+      "title": "Eskalationsstufen",
+      "empty": "Noch keine Eskalationsstufe angelegt.",
+      "step": "Stufe {step}",
+      "after": "nach {minutes} Min.",
+      "role": "Rolle {role}",
+      "noTarget": "kein Ziel hinterlegt",
+      "remove": "Entfernen",
+      "stepNo": "Stufe",
+      "afterMinutes": "Nach Minuten",
+      "notifyUser": "Benutzer",
+      "noUser": "kein Benutzer",
+      "notifyRole": "Rolle",
+      "add": "Stufe anlegen"
+    },
+    "onCall": {
+      "title": "Bereitschaftsplan",
+      "current": "Aktuell in Bereitschaft: {name}",
+      "none": "Aktuell ist niemand in Bereitschaft eingetragen.",
+      "empty": "Noch kein Bereitschaftszeitraum angelegt.",
+      "remove": "Löschen",
+      "user": "Benutzer",
+      "startsAt": "Von",
+      "endsAt": "Bis",
+      "phone": "Telefon",
+      "note": "Notiz",
+      "add": "Bereitschaft eintragen"
+    },
+    "calendar": {
+      "title": "Geschäftszeitenkalender",
+      "weekdays": "Werktage",
+      "day": {
+        "0": "Montag",
+        "1": "Dienstag",
+        "2": "Mittwoch",
+        "3": "Donnerstag",
+        "4": "Freitag",
+        "5": "Samstag",
+        "6": "Sonntag"
+      },
+      "opensAt": "Öffnungszeit von",
+      "closesAt": "Öffnungszeit bis",
+      "timezone": "Zeitzone {timezone}",
+      "holidays": "Feiertage",
+      "noHolidays": "Noch kein Feiertag hinterlegt.",
+      "holidayDate": "Datum",
+      "addHoliday": "Feiertag hinzufügen",
+      "save": "Speichern",
+      "saved": "Gespeichert."
+    },
+    "alerts": {
+      "title": "Notfallalarme",
+      "empty": "Keine offenen Notfallalarme.",
+      "level": "Stufe {level}",
+      "acked": "quittiert",
+      "ack": "Quittieren"
+    },
+    "badge": {
+      "responseRemaining": "Reaktion in {minutes} Min. fällig",
+      "responseOverdue": "Reaktion seit {minutes} Min. überfällig",
+      "resolutionRemaining": "Lösung in {minutes} Min. fällig",
+      "resolutionOverdue": "Lösung seit {minutes} Min. überfällig",
+      "resolvedAt": "Gelöst am {at}",
+      "pause": "Pausieren",
+      "resume": "Fortsetzen"
+    }
+  },
+  "Version": {
+    "title": "Versionsverlauf",
+    "description": "Was wurde in welcher Version geändert.",
+    "current": "Aktuelle Version {version}",
+    "scheme": "Schema: erste Stelle für grundlegende Umbauten, zweite Stelle für neue Funktionen, dritte Stelle für kleine Korrekturen."
+  },
+  "DmsDocuments": {
+    "title": "Dokumente (Paperless)",
+    "loading": "Dokumente werden geladen...",
+    "empty": "Keine Dokumente vorhanden.",
+    "columns": {
+      "title": "Titel",
+      "date": "Datum",
+      "correspondent": "Korrespondent",
+      "documentType": "Dokumenttyp",
+      "tags": "Tags",
+      "actions": "Aktionen"
+    },
+    "actions": {
+      "preview": "Vorschau",
+      "download": "Download"
+    },
+    "pagination": {
+      "previous": "Zurück",
+      "next": "Weiter",
+      "page": "Seite {page}"
+    },
+    "errors": {
+      "unreachable": "Paperless nicht erreichbar",
+      "notConfigured": "Paperless nicht eingerichtet"
+    }
+  },
+  "DmsSettings": {
+    "title": "DMS-Anbindung",
+    "intro": "Verbindung des CRM zum Dokumentenmanagement. Immoware24 bleibt Master der Stammdaten.",
+    "paperlessTitle": "Paperless",
+    "googleDriveTitle": "Google Drive",
+    "googleDriveHint": "Google Drive wird über dieses Formular eingerichtet. OAuth-Client in der Google Cloud Console anlegen, Drive-API aktivieren, Refresh-Token einmalig per OAuth-Playground oder gcloud erzeugen.",
+    "enabled": "Aktiv",
+    "baseUrl": "Basis-URL",
+    "baseUrlHint": "Nur https zulässig.",
+    "token": "API-Token",
+    "tokenStored": "Token hinterlegt, zum Ändern neu eingeben",
+    "tokenMissing": "nicht hinterlegt",
+    "tokenHint": "Der Token wird nur geschrieben und nie wieder angezeigt. Leer lassen, um den hinterlegten Token zu behalten.",
+    "objectFieldId": "Feld-ID Objektnummer",
+    "companyFieldId": "Feld-ID Gesellschaft",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "yes": "Ja",
+    "no": "Nein",
+    "notSet": "nicht hinterlegt",
+    "rootFolderId": "Ordner-ID des Wurzelordners",
+    "rootFolderIdHint": "Die ID aus der Drive-URL des Ordners.",
+    "clientId": "OAuth Client-ID",
+    "clientSecret": "Client-Secret",
+    "refreshToken": "Refresh-Token",
+    "secretStored": "Zugangsdaten hinterlegt",
+    "secretMissing": "nicht hinterlegt",
+    "secretHint": "Client-Secret und Refresh-Token werden nur geschrieben und nie wieder angezeigt. Leer lassen, um die hinterlegten Zugangsdaten zu behalten.",
+    "secretPairRequired": "Client-Secret und Refresh-Token zusammen eintragen."
+  },
+  "Handover": {
+    "title": "Übergabeprotokolle",
+    "broker": "Makler",
+    "new": "Neues Übergabeprotokoll",
+    "search": "Suchen",
+    "searchPlaceholder": "Nummer, Ticket, Adresse, Objekt",
+    "statusAll": "Alle",
+    "showArchived": "Archivierte anzeigen",
+    "empty": "Keine Einträge.",
+    "list": {
+      "number": "Protokoll",
+      "object": "Objekt",
+      "participants": "Beteiligte",
+      "date": "Übergabe"
+    },
+    "statusLabel": {
+      "draft": "Entwurf",
+      "in_progress": "In Bearbeitung",
+      "signature_pending": "Unterschrift ausstehend",
+      "completed": "Abgeschlossen",
+      "sent": "Zustellung vorbereitet",
+      "archived": "Archiviert",
+      "cancelled": "Storniert"
+    },
+    "create": {
+      "title": "Neues Übergabeprotokoll",
+      "kind": "Protokollart",
+      "kinds": {
+        "rental": "Wohnungsübergabe (Vermietung)",
+        "sale": "Wohnungsübergabe (Verkauf)",
+        "general": "Allgemeines Übergabeprotokoll"
+      },
+      "property": "Objekt",
+      "noProperty": "Ohne Objektbezug",
+      "unit": "Einheit",
+      "help": "Adresse, Etage und Einheit werden aus den Stammdaten vorbelegt und bleiben im Protokoll änderbar. Kein Feld ist Pflicht.",
+      "submit": "Anlegen"
+    },
+    "steps": "Abschnitte",
+    "tabs": {
+      "object": "Objekt",
+      "participants": "Beteiligte",
+      "deposit": "Kaution",
+      "internal": "Intern",
+      "meters": "Zähler",
+      "rooms": "Räume",
+      "defects": "Mängel",
+      "keys": "Schlüssel",
+      "items": "Gegenstände",
+      "notes": "Bemerkungen",
+      "attachments": "Anhänge",
+      "signatures": "Unterschriften",
+      "summary": "Prüfung und Abschluss"
+    },
+    "saved": "Gespeichert.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "confirmDelete": "Eintrag wirklich löschen?",
+    "locked": "Das Protokoll ist abgeschlossen und schreibgeschützt. Änderungen sind nur über eine neue Version möglich.",
+    "lockedCancelled": "Das Protokoll wurde storniert und ist nicht wirksam.",
+    "deposit": {
+      "notice": "Kautionsangaben werden nur erfasst und im Protokoll ausgegeben. Sie erzeugen keine Forderung und keine Zahlung. Die IBAN wird beim Abschluss formal geprüft."
+    },
+    "internal": {
+      "notice": "Interne Angaben erscheinen nie im PDF und nie in einer Portalansicht."
+    },
+    "participants": {
+      "fromContact": "Beteiligten aus den Kontakten übernehmen",
+      "searchPlaceholder": "Name oder Firma",
+      "search": "Suchen"
+    },
+    "add": {
+      "participants": "Beteiligten hinzufügen",
+      "meters": "Zähler hinzufügen",
+      "rooms": "Raum hinzufügen",
+      "defects": "Mangel hinzufügen",
+      "keys": "Schlüssel hinzufügen",
+      "items": "Gegenstand hinzufügen",
+      "notes": "Bemerkung hinzufügen"
+    },
+    "photos": {
+      "add": "Foto",
+      "uploading": "Wird hochgeladen",
+      "remove": "Foto entfernen"
+    },
+    "attachments": {
+      "add": "Datei hinzufügen"
+    },
+    "fields": {
+      "address": "Adresse",
+      "street": "Straße",
+      "house_number": "Hausnummer",
+      "postal_code": "PLZ",
+      "city": "Ort",
+      "object_label": "Objektbezeichnung",
+      "building": "Gebäude",
+      "floor": "Etage",
+      "unit_number": "Einheit",
+      "unit_label": "Einheit (Bezeichnung)",
+      "unit_position": "Lage",
+      "handover_date": "Übergabedatum",
+      "handover_start": "Beginn",
+      "handover_end": "Ende",
+      "hide_time_information": "Uhrzeit im Protokoll nicht anzeigen",
+      "handover_location": "Ort der Übergabe",
+      "ticket_number": "Ticketnummer",
+      "reference_number": "Referenz",
+      "rental_contract_number": "Mietvertragsnummer",
+      "management_number": "Verwaltungsnummer",
+      "internal_contact": "Interner Ansprechpartner",
+      "internal_note": "Interne Notiz",
+      "general_note": "Allgemeine Bemerkung",
+      "deposit_amount": "Kautionsbetrag (EUR)",
+      "deposit_account_holder": "Kontoinhaber",
+      "deposit_iban": "IBAN",
+      "deposit_bic": "BIC",
+      "deposit_bank_name": "Bank",
+      "deposit_note": "Bemerkung zur Kaution",
+      "deposit_iban_verified": "IBAN wurde geprüft",
+      "deposit_separate_statement": "Kautionsabrechnung erfolgt separat",
+      "role": "Rolle",
+      "salutation": "Anrede",
+      "first_name": "Vorname",
+      "last_name": "Nachname",
+      "company": "Firma",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "comment": "Bemerkung",
+      "meter_type": "Zählerart",
+      "custom_type": "Eigene Bezeichnung",
+      "number": "Zählernummer",
+      "value": "Zählerstand",
+      "unit": "Einheit",
+      "location": "Standort",
+      "read_on": "Abgelesen am",
+      "read_at": "Uhrzeit",
+      "name": "Bezeichnung",
+      "room_type": "Raumart",
+      "condition": "Zustand",
+      "room_id": "Raum",
+      "category": "Kategorie",
+      "title": "Titel",
+      "priority": "Priorität",
+      "defect_status": "Status",
+      "responsibility": "Verantwortlich",
+      "description": "Beschreibung",
+      "key_type": "Schlüsselart",
+      "custom_name": "Eigene Bezeichnung",
+      "quantity": "Anzahl",
+      "key_number": "Schlüsselnummer",
+      "status": "Status",
+      "item_type": "Art",
+      "text": "Text",
+      "responsible_party": "Verantwortlich",
+      "due_date": "Frist",
+      "is_internal": "Intern, nicht im Kunden-PDF"
+    },
+    "roles": {
+      "moving_out": "Ausziehender Mieter",
+      "moving_in": "Einziehender Mieter",
+      "seller": "Verkaufender Eigentümer",
+      "buyer": "Kaufender Eigentümer",
+      "handing_over": "Übergebende Partei",
+      "taking_over": "Übernehmende Partei",
+      "management": "Verwaltung",
+      "broker": "Makler",
+      "caretaker": "Hausmeister",
+      "proxy": "Bevollmächtigter",
+      "witness": "Zeuge",
+      "relative": "Angehöriger",
+      "expert": "Sachverständiger",
+      "craftsman": "Handwerker",
+      "other": "Sonstige Person"
+    },
+    "options": {
+      "participants": {
+        "role": {
+          "moving_out": "Ausziehender Mieter",
+          "moving_in": "Einziehender Mieter",
+          "seller": "Verkaufender Eigentümer",
+          "buyer": "Kaufender Eigentümer",
+          "handing_over": "Übergebende Partei",
+          "taking_over": "Übernehmende Partei",
+          "management": "Verwaltung",
+          "broker": "Makler",
+          "caretaker": "Hausmeister",
+          "proxy": "Bevollmächtigter",
+          "witness": "Zeuge",
+          "relative": "Angehöriger",
+          "expert": "Sachverständiger",
+          "craftsman": "Handwerker",
+          "other": "Sonstige Person"
+        }
+      },
+      "meters": {
+        "meter_type": {
+          "electricity": "Strom",
+          "gas": "Gas",
+          "water": "Wasser",
+          "cold_water": "Kaltwasser",
+          "hot_water": "Warmwasser",
+          "heating": "Heizungszähler",
+          "heat_quantity": "Wärmemengenzähler",
+          "common_electricity": "Allgemeinstrom",
+          "sub_meter": "Zwischenzähler",
+          "photovoltaic": "Photovoltaik",
+          "other": "Sonstiger Zähler"
+        },
+        "unit": {
+          "kWh": "kWh",
+          "m³": "m³",
+          "MWh": "MWh",
+          "Liter": "Liter",
+          "Einheiten": "Einheiten"
+        }
+      },
+      "rooms": {
+        "condition": {
+          "ok": "Mängelfrei",
+          "defective": "Mängel vorhanden",
+          "not_checked": "Nicht geprüft",
+          "not_accessible": "Nicht zugänglich",
+          "not_included": "Nicht Bestandteil der Übergabe"
+        }
+      },
+      "defects": {
+        "priority": {
+          "info": "Hinweis",
+          "low": "Gering",
+          "medium": "Mittel",
+          "high": "Hoch",
+          "urgent": "Dringend"
+        },
+        "defect_status": {
+          "pre_existing": "Bereits vorhanden",
+          "new": "Neu festgestellt",
+          "acknowledged": "Vom Übergebenden anerkannt",
+          "rejected": "Anerkennung abgelehnt",
+          "unclear": "Ungeklärt"
+        }
+      },
+      "keys": {
+        "status": {
+          "handed_over": "Übergeben",
+          "not_handed_over": "Nicht übergeben",
+          "to_follow": "Nachzureichen"
+        }
+      },
+      "notes": {
+        "category": {
+          "agreement": "Vereinbarung",
+          "hint": "Hinweis",
+          "defect": "Mangel",
+          "open_task": "Offene Aufgabe",
+          "follow_up": "Nachreichung",
+          "payment": "Zahlungsangelegenheit",
+          "other": "Sonstiger Punkt"
+        }
+      }
+    },
+    "signature": {
+      "consent": "Mit ihrer Unterschrift bestätigen die Unterzeichnenden die Richtigkeit und Vollständigkeit der Angaben und erklären sich mit der elektronischen Verarbeitung und Speicherung des Protokolls für die Dauer der gesetzlichen Aufbewahrungs- und Verjährungsfristen einverstanden.",
+      "participant": "Beteiligter",
+      "free": "Freie Eingabe",
+      "done": "unterschrieben",
+      "name": "Name",
+      "role": "Rolle",
+      "location": "Ort",
+      "canvas": "Unterschriftsfeld",
+      "clear": "Leeren",
+      "save": "Unterschrift speichern",
+      "saved": "Unterschrift gespeichert.",
+      "empty": "Bitte zuerst unterschreiben.",
+      "none": "Noch keine Unterschrift erfasst.",
+      "noName": "Ohne Namen",
+      "confirmDelete": "Unterschrift wirklich löschen?"
+    },
+    "summary": {
+      "title": "Zusammenfassung"
+    },
+    "hints": {
+      "title": "Hinweise (kein Abschlusshindernis):"
+    },
+    "complete": {
+      "action": "Protokoll verbindlich abschließen",
+      "force": "Trotz Hinweisen verbindlich abschließen",
+      "confirm": "Das Protokoll wird abgeschlossen, festgeschrieben und als PDF abgelegt. Danach sind keine Änderungen mehr möglich. Fortfahren?",
+      "confirmForce": "Es liegen Hinweise vor. Das Protokoll wird trotzdem abgeschlossen und festgeschrieben. Fortfahren?",
+      "help": "Beim Abschluss wird das PDF auf dem Briefbogen des Mandanten erzeugt und in der Dokumentenverwaltung abgelegt."
+    },
+    "pdf": {
+      "preview": "PDF-Vorschau (Entwurf)",
+      "stored": "PDF anzeigen"
+    },
+    "dispatch": {
+      "title": "Zustellung an die Beteiligten",
+      "help": "Für jeden Beteiligten mit Kontakt im CRM wird eine Zustellung mit E-Mail-Entwurf vorbereitet. Der Versand erfolgt über den Postausgang mit Vier-Augen-Freigabe.",
+      "action": "Zustellung vorbereiten",
+      "result": "{created} Zustellung(en) vorbereitet, {skipped} übersprungen (kein Kontakt oder keine E-Mail)."
+    },
+    "versions": {
+      "title": "Versionen",
+      "label": "Version {version}",
+      "reason": "Änderungsgrund für eine neue Version",
+      "reasonRequired": "Bitte einen Änderungsgrund angeben.",
+      "create": "Neue Version anlegen"
+    },
+    "status": {
+      "cancel": "Stornieren",
+      "archive": "Archivieren",
+      "unarchive": "Aus dem Archiv zurückholen",
+      "confirm": {
+        "cancel": "Protokoll wirklich stornieren? Es ist danach nicht mehr wirksam.",
+        "archive": "Protokoll archivieren? Es bleibt über den Filter erreichbar.",
+        "unarchive": "Protokoll aus dem Archiv zurückholen?"
+      }
+    },
+    "portalAccess": {
+      "title": "Portalzugang",
+      "help": "Der Beteiligte füllt das Protokoll im Portal selbst aus, fügt Fotos hinzu, unterschreibt und schließt ab. Interne Vermerke bleiben verborgen. Nach dem Abschluss bleibt das PDF im Portal 14 Tage abrufbar.",
+      "needsContact": "Nur für Beteiligte mit Kontakt im CRM.",
+      "email": "E-Mail-Adresse für die Einladung",
+      "grant": "Portalzugang einrichten",
+      "renew": "Zugang erneuern",
+      "revoke": "Zugang beenden",
+      "confirmRevoke": "Den Portalzugang für dieses Protokoll beenden?",
+      "status": {
+        "invited": "Eingeladen, Passwort noch nicht gesetzt",
+        "active": "Zugang aktiv",
+        "read": "Nur lesen bis {date}",
+        "inactive": "Zugang abgelaufen"
+      },
+      "tokenTitle": "Einladung (wird nur einmal angezeigt)",
+      "tokenHelp": "Bitte den Einladungscode zusammen mit der Portaladresse an den Beteiligten weitergeben. Der Code gilt 14 Tage; im Portal setzt der Beteiligte sein Passwort und richtet den zweiten Faktor ein.",
+      "done": "Portalzugang eingerichtet."
+    }
+  },
   "TicketStats": {
     "title": "Ticketauswertung",
     "kpis": "Ticket-Kennzahlen",
@@ -1858,26 +2532,6 @@
     "asTable": "Als Tabelle anzeigen",
     "period": "Zeitabschnitt",
     "empty": "Noch keine Tickets."
-  },
-  "Mail": {
-    "title": "Mail",
-    "intro": "Eingegangene Vorgänge aus den verbundenen Postfächern. Zuordnung zu Tickets und Kontakten erfolgt automatisch, Einstellungen unter Postfächer.",
-    "mailboxes": "Postfächer verwalten",
-    "statusAll": "Alle Status",
-    "colDate": "Eingegangen",
-    "colFrom": "Absender",
-    "colSubject": "Betreff",
-    "colStatus": "Status",
-    "colTicket": "Ticket",
-    "toTicket": "Ticket öffnen",
-    "empty": "Keine Vorgänge.",
-    "status": {
-      "new": "Neu",
-      "assigned": "Zugeordnet",
-      "done": "Erledigt"
-    },
-    "colForward": "Rechnungsprogramm",
-    "forwarded": "Weitergeleitet"
   },
   "TicketTemplates": {
     "area": "Einstellungen",

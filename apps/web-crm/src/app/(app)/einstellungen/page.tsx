@@ -24,6 +24,8 @@ export default async function SettingsPage() {
     { href: "/einstellungen/postfaecher", title: t("mail.title"), description: t("mail.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/vorlagen", title: t("templates.title"), description: t("templates.description"), show: can("tickets:approve") },
     { href: "/einstellungen/weiterleitung", title: t("forwarding.title"), description: t("forwarding.description"), show: can("tenant_settings:update") },
+    { href: "/einstellungen/dms", title: t("dms.title"), description: t("dms.description"), show: can("tenant_settings:update") },
+    { href: "/einstellungen/sla", title: t("sla.title"), description: t("sla.description"), show: can("sla:read") },
     { href: "/einstellungen/profil", title: t("profile.title"), description: t("profile.description"), show: true },
     { href: "/plattform", title: t("platform.title"), description: t("platform.description"), show: Boolean(me.data?.is_platform_admin) },
   ].filter((c) => c.show);
@@ -34,7 +36,7 @@ export default async function SettingsPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <Link key={c.href} href={c.href} className={ui.cardLink}>
-            <h2 className="font-medium">{c.title}</h2>
+            <h2 className={ui.h2}>{c.title}</h2>
             <p className="mt-1 text-sm text-muted">{c.description}</p>
           </Link>
         ))}

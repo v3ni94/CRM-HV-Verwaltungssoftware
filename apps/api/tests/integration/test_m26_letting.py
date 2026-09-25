@@ -809,3 +809,153 @@ def test_listing_flow_fields(
         201,
     )
     assert feat_ok["features"] == {"balkon": True, "keller": False}
+
+
+FLOW_DUMP = """
+INSERT INTO `listings` (`id`, `uuid`, `objektnummer`, `vermarktungsart`, `objektart`, `titel`,
+  `strasse`, `hausnummer`, `plz`, `ort`, `adresse_im_inserat_anzeigen`, `wohnflaeche_qm`,
+  `zimmer`, `etage`, `status`)
+VALUES
+(1, '{uuid}', 'MF-2026-9001', 'miete', 'wohnung', 'FLOW Musterwohnung', 'Flowweg', '9',
+  '99999', 'Flowstadt', 1, 55.00, 2.0, 1, 'veroeffentlicht');
+
+INSERT INTO `listing_prices`
+  (`listing_id`, `kaltmiete_cent`, `nebenkosten_cent`, `heizkosten_cent`,
+   `heizkosten_in_nebenkosten_enthalten`, `kaution_cent`, `provision_typ`)
+VALUES
+  (1, 70000, 18000, NULL, 0, 140000, 'provisionsfrei');
+
+INSERT INTO `listing_energies` (`listing_id`, `status`)
+VALUES
+  (1, 'in_erstellung');
+
+INSERT INTO `listing_internals` (`listing_id`, `verwaltungsobjekt_referenz`)
+VALUES
+  (1, '{number}');
+
+INSERT INTO `listing_flowfact_links` (`listing_id`, `flowfact_entity_id`, `sync_status`)
+VALUES
+  (1, NULL, 'nicht_uebertragen');
+"""
+
+
+def test_flow_import_preview_apply_idempotency_and_tenant_separation(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
+    """M28 stage 4 (docs/rules/M28-01.md): preview, apply, re-apply is idempotent (no new
+    listing on the second apply), and the import run is tenant separated."""
+    import uuid as uuid_mod
+
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "765",
+                "name": "Maklerhaus FLOW",
+                "management_type": "rental",
+                "city": f"Maklerstadt {RUN}",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    building = _ok(
+        client.post(f"/api/v1/properties/{prop['id']}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )["id"]
+    unit = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/units",
+            json={
+                "building_id": building,
+                "number": "01",
+                "unit_type": "apartment",
+                "street": "Flowweg",
+                "house_number": "9",
+                "postal_code": "99999",
+                "city": "Flowstadt",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+
+    dump = FLOW_DUMP.format(uuid=str(uuid_mod.uuid4()), number=prop["number"])
+    preview = _ok(
+        client.post(
+            f"{L}/flow-import/preview",
+            files={"file": ("flow_export.sql", dump.encode("utf-8"), "application/sql")},
+            headers=h,
+        ),
+        201,
+    )
+    assert preview["row_count"] == 1
+    row = preview["rows"][0]
+    assert row["kind"] == "rental"
+    assert row["listing_fields"]["price"] == "700.00"
+    assert row["match"]["property_number"] == prop["number"]
+    assert row["match"]["unit_id"] is None  # FLOW has no unit label; property match only
+    run_id = preview["id"]
+
+    fetched = _ok(client.get(f"{L}/flow-import/{run_id}", headers=h))
+    assert fetched["row_count"] == 1
+
+    applied = _ok(
+        client.post(
+            f"{L}/flow-import/{run_id}/apply",
+            json={"items": [{"index": 0, "action": "create", "unit_id": unit}]},
+            headers=h,
+        )
+    )
+    assert applied["created_count"] == 1
+    listing_id = applied["rows"][0]["listing_id"]
+    listing = _ok(client.get(f"{L}/listings/{listing_id}", headers=h))
+    assert listing["source"] == "flow_import"
+    assert listing["price"] == "700.00"
+    # Re-apply is idempotent: no new listing is created for the same run.
+    reapplied = _ok(
+        client.post(
+            f"{L}/flow-import/{run_id}/apply",
+            json={"items": [{"index": 0, "action": "create", "unit_id": unit}]},
+            headers=h,
+        )
+    )
+    assert reapplied["created_count"] == 1  # unchanged, no new creation this time
+    assert reapplied["skipped_count"] == 1
+    assert reapplied["rows"][0]["outcome"] == "created"  # row keeps its first outcome
+
+    listings = _ok(client.get(f"{L}/listings", params={"q": "FLOW Musterwohnung"}, headers=h))
+    assert len(listings) == 1
+
+    # tenant separation: a second tenant cannot read the first tenant's import run
+    async def _other_tenant_world(settings: Any) -> World:
+        from mhvp.core import crypto
+        from mhvp.core.db.engine import create_app_engine, create_session_factory
+
+        crypto.set_master_key(b"k" * 32)
+        engine = create_app_engine(settings)
+        factory = create_session_factory(engine)
+        try:
+            b, _ = await services.provision_tenant(
+                factory, slug=f"vmflow-{RUN}", name=f"VMFlow {RUN}"
+            )
+            other = World(tenant_a=b, tenant_b=b, app_url=world.app_url)
+            uid = await services.create_user(
+                factory,
+                email=other.email("mflowother"),
+                display_name="mflowother",
+                password=PASSWORD,
+            )
+            other.users["mflowother"] = uid
+            await services.add_member(
+                factory, tenant_id=b, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
+            )
+            return other
+        finally:
+            await engine.dispose()
+
+    other_world = asyncio.run(_other_tenant_world(_settings(database, redis_url)))
+    ho = bearer(login(client, other_world, "mflowother"))
+    assert client.get(f"{L}/flow-import/{run_id}", headers=ho).status_code == 404

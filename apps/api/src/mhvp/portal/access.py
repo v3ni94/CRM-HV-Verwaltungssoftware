@@ -14,13 +14,21 @@ from mhvp.portal.models import AccessGrant, PortalAccount
 if TYPE_CHECKING:
     pass
 
+# Grants that are not derived from contracts and therefore survive a resync: the handover
+# protocol access of a participant (M30 stage 3, docs/rules/M30-01.md).
+MANUAL_BASES = frozenset({"handover_participant"})
+
 
 async def sync_grants(session: AsyncSession, account: PortalAccount) -> int:
     from mhvp.contacts.models import PartyMember
     from mhvp.contracts.models import Contract, ContractKind
     from mhvp.properties.models import LegalEntity, LegalEntityKind
 
-    await session.execute(delete(AccessGrant).where(AccessGrant.account_id == account.id))
+    await session.execute(
+        delete(AccessGrant).where(
+            AccessGrant.account_id == account.id, AccessGrant.legal_basis.not_in(MANUAL_BASES)
+        )
+    )
     parties = list(
         await session.scalars(
             select(PartyMember.party_id).where(PartyMember.contact_id == account.contact_id)

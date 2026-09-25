@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "@mhvp/ui/tokens.css";
 
-/* Map the MHVP tokens into Tailwind (same mapping as the CRM shell). */
+/* Map the MHVP tokens into Tailwind; tenant branding overrides the variables at runtime (V14). */
 @theme inline {
   --color-bg: var(--mhvp-color-bg);
   --color-surface: var(--mhvp-color-surface);
@@ -17,6 +17,12 @@
   --color-anthracite-soft: var(--mhvp-color-anthracite-soft);
   --color-accent: var(--mhvp-color-accent);
   --color-accent-fg: var(--mhvp-color-accent-fg);
+  --color-rail-bg: var(--mhvp-color-rail-bg);
+  --color-rail-fg: var(--mhvp-color-rail-fg);
+  --color-rail-muted: var(--mhvp-color-rail-muted);
+  --color-rail-border: var(--mhvp-color-rail-border);
+  --color-rail-hover: var(--mhvp-color-rail-hover);
+  --color-rail-active: var(--mhvp-color-rail-active);
   --color-success-bg: var(--mhvp-color-success-bg);
   --color-success-fg: var(--mhvp-color-success-fg);
   --color-warning-bg: var(--mhvp-color-warning-bg);
@@ -28,9 +34,11 @@
   --radius-md: var(--mhvp-radius-md);
   --radius-lg: var(--mhvp-radius-lg);
   --radius-xl: var(--mhvp-radius-xl);
+  --radius-card: var(--mhvp-radius-lg);
   --shadow-xs: var(--mhvp-shadow-xs);
   --shadow-sm: var(--mhvp-shadow-sm);
   --shadow-md: var(--mhvp-shadow-md);
+  --shadow-lg: var(--mhvp-shadow-lg);
   --shadow-card: var(--mhvp-shadow-sm);
 }
 
@@ -72,13 +80,24 @@ body {
   background: var(--mhvp-color-gold);
 }
 
+.mhvp-display {
+  font-size: var(--mhvp-font-display-size);
+  line-height: var(--mhvp-font-display-line);
+  letter-spacing: var(--mhvp-font-display-tracking);
+}
+
 .mhvp-h2 {
   font-size: var(--mhvp-font-h2-size);
   line-height: var(--mhvp-font-h2-line);
   letter-spacing: var(--mhvp-font-h2-tracking);
 }
 
-/* Versal labels: uppercase, letter spaced, grey. */
+.mhvp-caption {
+  font-size: var(--mhvp-font-caption-size);
+  line-height: var(--mhvp-font-caption-line);
+}
+
+/* Versal labels: uppercase, letter spaced, grey (CI section 3a, item 4). */
 .mhvp-label {
   font-size: 0.68rem;
   letter-spacing: 0.08em;
@@ -86,7 +105,7 @@ body {
   color: var(--mhvp-color-subtle);
 }
 
-/* Data tables: airy rows, no vertical rules, sticky head. */
+/* Data tables: airy rows, beige header, no vertical rules, sticky head. */
 .mhvp-table {
   width: 100%;
   border-collapse: collapse;
@@ -111,6 +130,9 @@ body {
   border-bottom: 1px solid var(--mhvp-color-border-soft);
   vertical-align: top;
 }
+.mhvp-table tbody tr {
+  transition: background var(--mhvp-motion-fast) var(--mhvp-motion-ease);
+}
 .mhvp-table tbody tr:hover {
   background: var(--mhvp-color-surface);
 }
@@ -119,7 +141,29 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Card hover lift for clickable surfaces (start page tiles). */
+/* Opt-in sticky first column for wide, horizontally scrollable tables (e.g. the properties and
+ * contacts lists), so the row identity stays visible while scrolling sideways on a phone. */
+.mhvp-table--sticky-col thead th:first-child,
+.mhvp-table--sticky-col tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--mhvp-color-bg);
+}
+.mhvp-table--sticky-col thead th:first-child {
+  z-index: 3;
+}
+
+/* Soft status pill with a leading dot; used by badge-* helpers in lib/ui.ts. */
+.mhvp-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* Card hover lift for clickable surfaces (dashboard tiles, list cards). */
 .mhvp-lift {
   transition:
     transform var(--mhvp-motion) var(--mhvp-motion-ease),

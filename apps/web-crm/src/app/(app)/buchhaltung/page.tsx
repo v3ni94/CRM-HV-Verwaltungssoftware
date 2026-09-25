@@ -5,6 +5,8 @@ import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,7 @@ export default async function LedgersPage() {
   redirectIfUnauthenticated(response);
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("parallelNotice")}</p>
       <Link href="/buchhaltung/sollstellungen" className="text-sm font-medium hover:underline">
         {t("receivablesLink")}
@@ -27,30 +29,32 @@ export default async function LedgersPage() {
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
       ) : data.length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <EmptyState title={t("empty")} />
       ) : (
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("ledger")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("leading")}</th>
-              <th className="py-1.5 font-medium">{t("lockedUntil")}</th>
+              <th>{t("ledger")}</th>
+              <th>{t("leading")}</th>
+              <th>{t("lockedUntil")}</th>
             </tr>
           </thead>
           <tbody>
             {data.map((l) => (
               <tr key={l.id} className="border-b border-border hover:bg-surface">
-                <td className="py-1.5 pr-3">
+                <td>
                   <Link href={`/buchhaltung/${l.id}`} className="font-medium hover:underline">
                     {l.name}
                   </Link>
                 </td>
-                <td className="py-1.5 pr-3">{t(`system.${l.leading_system}`)}</td>
-                <td className="py-1.5">{formatDate(l.locked_until) || t("notLocked")}</td>
+                <td>{t(`system.${l.leading_system}`)}</td>
+                <td>{formatDate(l.locked_until) || t("notLocked")}</td>
               </tr>
             ))}
           </tbody>
         </table>
+</div>
       )}
     </div>
   );

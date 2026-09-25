@@ -1,23 +1,29 @@
 /**
- * Session cookies of the portal BFF.
+ * Session cookies of the backend-for-frontend (BFF).
  *
  * Access and refresh tokens live only in httpOnly, SameSite=Strict cookies; client JavaScript
  * never sees them. `Secure` is set for every host except localhost style dev hosts.
- * Portal users are no administrators, so there is no MFA or device-trust cookie here.
  */
 import type { components } from "@mhvp/api-client";
 
 export type TokenResponse = components["schemas"]["TokenResponse"];
+export type TenantRef = components["schemas"]["mhvp__core__auth__routers__TenantOut"];
 
 export const COOKIE = {
   access: "mhvp_at",
   refresh: "mhvp_rt",
+  mfa: "mhvp_mfa",
+  ctx: "mhvp_ctx",
 } as const;
 
-/** Refresh cookie lifetime; the API default refresh TTL is 30 days. */
+/** Refresh cookie lifetime; the API default refresh TTL is 30 days (config refresh_token_ttl_days). */
 export const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
+/** The MFA token of login step 1 is short lived. */
+export const MFA_MAX_AGE = 10 * 60;
 /** Renew the access token a little before the API rejects it. */
 const ACCESS_SKEW_SECONDS = 30;
+
+export type SessionContext = { tenantId: string | null; tenants: TenantRef[] };
 
 export type CookieOptions = {
   httpOnly: true;
@@ -52,11 +58,26 @@ export function writeTokens(store: CookieWriter, tokens: TokenResponse, secure: 
   if (tokens.refresh_token) {
     store.set(COOKIE.refresh, tokens.refresh_token, cookieOptions(secure, REFRESH_MAX_AGE));
   }
+  const ctx: SessionContext = { tenantId: tokens.tenant_id ?? null, tenants: tokens.tenants };
+  store.set(COOKIE.ctx, JSON.stringify(ctx), cookieOptions(secure, REFRESH_MAX_AGE));
 }
 
 export function clearSession(store: CookieWriter, secure: boolean): void {
-  for (const name of Object.values(COOKIE)) {
-    store.set(name, "", cookieOptions(secure, 0));
+  for (const name of Object.values(COOKIE)) store.set(name, "", cookieOptions(secure, 0));
+}
+
+export function parseContext(raw: string | undefined): SessionContext {
+  if (!raw) return { tenantId: null, tenants: [] };
+  try {
+    const value = JSON.parse(raw) as Partial<SessionContext>;
+    const tenants = Array.isArray(value.tenants)
+      ? value.tenants.filter(
+          (t): t is TenantRef => typeof t?.id === "string" && typeof t?.name === "string",
+        )
+      : [];
+    return { tenantId: typeof value.tenantId === "string" ? value.tenantId : null, tenants };
+  } catch {
+    return { tenantId: null, tenants: [] };
   }
 }
 
@@ -70,8 +91,8 @@ type RefreshResult = { tokens: TokenResponse } | { tokens: null };
 // one browser (parallel RSC fetches, prefetches) must therefore share a single refresh call.
 type Inflight = Map<string, { at: number; promise: Promise<RefreshResult> }>;
 // Shared through globalThis so middleware and route handler bundles use one map per process.
-const globalStore = globalThis as { __mhvpPortalRefreshInflight?: Inflight };
-const inflight: Inflight = (globalStore.__mhvpPortalRefreshInflight ??= new Map());
+const globalStore = globalThis as { __mhvpRefreshInflight?: Inflight };
+const inflight: Inflight = (globalStore.__mhvpRefreshInflight ??= new Map());
 const DEDUPE_MS = 30_000;
 
 /** Rotate the refresh token once; concurrent callers with the same token share the result. */

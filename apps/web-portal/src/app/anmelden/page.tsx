@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
+import { AuthCard } from "@/components/auth/AuthCard";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { AuthCard } from "@/components/layout/AuthCard";
 
 export const dynamic = "force-dynamic";
 

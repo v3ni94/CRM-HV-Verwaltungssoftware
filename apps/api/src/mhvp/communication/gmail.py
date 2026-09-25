@@ -7,6 +7,7 @@ current inbox and relies on Message-ID deduplication.
 """
 
 import base64
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -18,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.communication.models import Mailbox
 from mhvp.core.config import Settings
 from mhvp.documents.blobs import BlobStore
+
+log = logging.getLogger(__name__)
 
 OAUTH_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"  # noqa: S105
 API = "https://gmail.googleapis.com/gmail/v1/users/me"
@@ -145,6 +148,11 @@ class GmailClient:
         """Sends a complete RFC-822 message (scope gmail.send); returns the Gmail id."""
         encoded = base64.urlsafe_b64encode(raw).decode().rstrip("=")
         r = await self._post("messages/send", {"raw": encoded})
+        if r.status_code == 403:
+            raise GmailError(
+                "Sendeberechtigung fehlt, Postfach unter Einstellungen, Postfächer erneut "
+                "mit Google verbinden."
+            )
         if r.status_code not in (200, 201):
             raise GmailError(f"Versand fehlgeschlagen (HTTP {r.status_code}).")
         return str(r.json()["id"])
@@ -249,7 +257,8 @@ async def sync_mailbox(
     """Fetch new inbox messages and ingest them; updates cursor and error state."""
     from mhvp.communication.services import ingest_raw
 
-    counts = {"fetched": 0, "created": 0, "duplicates": 0}
+    counts = {"fetched": 0, "created": 0, "duplicates": 0, "failed": 0}
+    first_failure: str | None = None
     try:
         new_cursor = await client.profile_history_id()
         ids = None
@@ -262,28 +271,36 @@ async def sync_mailbox(
             if raw is None:
                 continue
             counts["fetched"] += 1
-            _, created = await ingest_raw(
-                session,
-                blobs,
-                settings,
-                tenant_id=mailbox.tenant_id,
-                actor_user_id=mailbox.created_by,
-                raw=raw,
-                mailbox_id=mailbox.id,
-                auto_ticket=True,
-            )
+            # Savepoint per mail: one unreadable or unstorable mail must not roll back the
+            # whole batch or poison the session (seen 25.09.2026 as PendingRollbackError).
+            try:
+                async with session.begin_nested():
+                    _, created = await ingest_raw(
+                        session,
+                        blobs,
+                        settings,
+                        tenant_id=mailbox.tenant_id,
+                        actor_user_id=mailbox.created_by,
+                        raw=raw,
+                        mailbox_id=mailbox.id,
+                        auto_ticket=True,
+                    )
+            except Exception as exc:  # recorded on the mailbox, batch continues
+                counts["failed"] += 1
+                log.exception("gmail message not ingested", extra={"gmail_id": mid})
+                if first_failure is None:
+                    first_failure = f"Nachricht {mid}: {type(exc).__name__}: {exc}"[:1000]
+                continue
             counts["created" if created else "duplicates"] += 1
         mailbox.gmail_history_id = new_cursor
-        mailbox.last_error = None
+        mailbox.last_error = first_failure
     except (GmailError, httpx.HTTPError, ValueError) as exc:
         # The enclosing transaction rolls back on raise; router and Celery task store
         # last_error in a fresh transaction afterwards.
         mailbox.last_error = str(exc)[:1000]
         raise
-    # Flush only on success: a database error inside ingest_raw leaves the transaction
-    # aborted, and a flush in a finally block would then raise PendingRollbackError or
-    # InFailedSqlTransaction and mask the original error on every retry (production 500
-    # on POST /mailboxes/{id}/sync).
+    # Flush only on success: savepoints keep the session usable per mail, but after a raise
+    # the outer transaction is rolled back and must not be flushed here.
     mailbox.last_synced_at = datetime.now(UTC)
     await session.flush()
     return counts

@@ -91,7 +91,7 @@ function Sessions({ initial }: { initial: SessionRow[] }) {
               <span className="text-muted">
                 {s.user_agent ?? t("unknownDevice")} · {formatDateTime(s.last_used_at)}
               </span>
-              <button type="button" className="text-xs underline" disabled={busyId === s.family_id} onClick={() => void revoke(s.family_id)}>
+              <button type="button" className={ui.buttonSm} disabled={busyId === s.family_id} onClick={() => void revoke(s.family_id)}>
                 {t("revoke")}
               </button>
             </li>

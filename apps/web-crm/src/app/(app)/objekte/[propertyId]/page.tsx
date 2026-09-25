@@ -1,17 +1,19 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_CLASS: Record<string, string> = {
-  active: ui.badgeSuccess,
-  onboarding: ui.badgeWarning,
-  terminated: ui.badge,
+const STATUS_VARIANT: Record<string, StatusPillVariant> = {
+  active: "success",
+  onboarding: "warning",
+  terminated: "neutral",
 };
 
 export default async function PropertyPage({ params }: { params: Promise<{ propertyId: string }> }) {
@@ -62,7 +64,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
         <div className={ui.card}>
           <p className={ui.subtitle}>{t("status")}</p>
           <p className="mt-1">
-            <span className={STATUS_CLASS[data.status] ?? ui.badge}>{t(`status.${data.status}`)}</span>
+            <StatusPill variant={STATUS_VARIANT[data.status] ?? "neutral"} label={t(`status.${data.status}`)} />
           </p>
         </div>
         <div className={ui.card}>
@@ -100,12 +102,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       ) : null}
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold">{t("units")}</h2>
+        <h2 className={ui.h2}>{t("units")}</h2>
         {unitRows.length === 0 ? (
           <p className="text-sm text-muted">{t("noUnits")}</p>
         ) : (
           <div className={`${ui.card} overflow-x-auto p-0`}>
-            <table className={ui.table} data-testid="units">
+            <div className="overflow-x-auto">
+<table className={ui.table} data-testid="units">
               <thead>
                 <tr>
                   <th>{t("unitNumber")}</th>
@@ -129,6 +132,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
                 ))}
               </tbody>
             </table>
+</div>
           </div>
         )}
       </section>
@@ -166,6 +170,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
           )}
         </section>
       </div>
+
+      <DmsDocumentsPanel entity="property" id={propertyId} />
     </div>
   );
 }

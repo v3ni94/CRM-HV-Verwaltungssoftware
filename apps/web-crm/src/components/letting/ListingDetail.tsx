@@ -27,6 +27,7 @@ export type Listing = {
   floor: string | null;
   publication_status: string;
   notes: string | null;
+  warnings?: string[];
 };
 
 const NEXT: Record<string, { action: string; status: Listing["status"] }[]> = {
@@ -63,6 +64,7 @@ export function ListingDetail({ listing }: { listing: Listing }) {
   const [status, setStatus] = useState(listing.status);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>(listing.warnings ?? []);
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -90,6 +92,7 @@ export function ListingDetail({ listing }: { listing: Listing }) {
     setBusy(false);
     if (res.ok) {
       setStatus(res.data.status);
+      setWarnings(res.data.warnings ?? []);
       router.refresh();
     } else {
       setError(res.message);
@@ -128,6 +131,13 @@ export function ListingDetail({ listing }: { listing: Listing }) {
         <p role="alert" className={ui.alert}>
           {error}
         </p>
+      ) : null}
+      {warnings.length > 0 ? (
+        <ul role="status" className={ui.notice} data-testid="listing-warnings">
+          {warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
       ) : null}
       <form onSubmit={save} className="flex flex-col gap-4" data-testid="listing-edit">
         <div className="grid gap-3 md:grid-cols-2">

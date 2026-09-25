@@ -6,7 +6,7 @@ import { COOKIE, clearSession } from "@/lib/session";
 
 import { publicApi, secureOf } from "../_shared";
 
-/** Revokes the session family at the API and clears the session cookies. */
+/** Revokes the session family at the API and clears all session cookies. */
 export async function POST(request: Request): Promise<Response> {
   const rejected = rejectForeignOrigin(request);
   if (rejected) return rejected;

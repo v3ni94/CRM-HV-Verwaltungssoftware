@@ -17,27 +17,29 @@ export function ResolutionTable({ rows }: { rows: ResolutionRow[] }) {
   const t = useTranslations("Hoa");
   if (rows.length === 0) return <p className="text-sm text-muted">{t("noResolutions")}</p>;
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="border-b border-border text-left text-xs text-muted">
+    <div className="overflow-x-auto">
+<table className="mhvp-table">
+      <thead>
         <tr>
-          <th className="py-1.5 pr-3 font-medium">{t("number")}</th>
-          <th className="py-1.5 pr-3 font-medium">{t("decidedOn")}</th>
-          <th className="py-1.5 pr-3 font-medium">{t("subject")}</th>
-          <th className="py-1.5 pr-3 font-medium">{t("kind")}</th>
-          <th className="py-1.5 font-medium">{t("status")}</th>
+          <th>{t("number")}</th>
+          <th>{t("decidedOn")}</th>
+          <th>{t("subject")}</th>
+          <th>{t("kind")}</th>
+          <th>{t("status")}</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((r) => (
-          <tr key={r.id} className="border-b border-border">
-            <td className="py-1.5 pr-3 tabular-nums">{r.number}</td>
-            <td className="py-1.5 pr-3">{formatDate(r.decided_on)}</td>
-            <td className="py-1.5 pr-3">{r.subject}</td>
-            <td className="py-1.5 pr-3">{t(`kinds.${r.kind}`)}</td>
-            <td className="py-1.5">{t(`statuses.${r.status}`)}</td>
+          <tr key={r.id}>
+            <td className="tabular-nums">{r.number}</td>
+            <td>{formatDate(r.decided_on)}</td>
+            <td>{r.subject}</td>
+            <td>{t(`kinds.${r.kind}`)}</td>
+            <td>{t(`statuses.${r.status}`)}</td>
           </tr>
         ))}
       </tbody>
     </table>
+</div>
   );
 }

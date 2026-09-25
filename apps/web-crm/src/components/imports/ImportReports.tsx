@@ -68,20 +68,21 @@ export function ValidationReport({ sourceId, counts }: { sourceId: string; count
       ) : rows === null ? null : rows.length === 0 ? (
         <p className="text-sm text-muted">{t("noRows")}</p>
       ) : (
-        <table className="w-full border-collapse text-sm" data-testid="validation-rows">
-          <thead className="border-b border-border text-left text-xs text-muted">
+        <div className="overflow-x-auto">
+<table className="mhvp-table" data-testid="validation-rows">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("colRow")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("colStatus")}</th>
-              <th className="py-1.5 font-medium">{t("colErrors")}</th>
+              <th>{t("colRow")}</th>
+              <th>{t("colStatus")}</th>
+              <th>{t("colErrors")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.row_number} className="border-b border-border align-top">
-                <td className="py-1.5 pr-3">{r.row_number}</td>
-                <td className="py-1.5 pr-3">{t(`rowStatus.${r.status}`)}</td>
-                <td className="py-1.5">
+                <td>{r.row_number}</td>
+                <td>{t(`rowStatus.${r.status}`)}</td>
+                <td>
                   {r.errors.length ? (
                     <ul className="list-inside list-disc">
                       {r.errors.map((e) => (
@@ -94,6 +95,7 @@ export function ValidationReport({ sourceId, counts }: { sourceId: string; count
             ))}
           </tbody>
         </table>
+</div>
       )}
     </div>
   );
@@ -117,25 +119,27 @@ export function RunReportView({ report, testId }: { report: RunReport; testId?: 
           </div>
         </dl>
       ) : null}
-      {report.problems.length > 0 ? (
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+      {report.problems.length> 0 ? (
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("colRow")}</th>
-              <th className="py-1.5 pr-3 font-medium">{t("colStatus")}</th>
-              <th className="py-1.5 font-medium">{t("colProblems")}</th>
+              <th>{t("colRow")}</th>
+              <th>{t("colStatus")}</th>
+              <th>{t("colProblems")}</th>
             </tr>
           </thead>
           <tbody>
             {report.problems.map((p) => (
               <tr key={p.row} className="border-b border-border align-top">
-                <td className="py-1.5 pr-3">{p.row}</td>
-                <td className="py-1.5 pr-3">{t.has(`rowStatus.${p.status}`) ? t(`rowStatus.${p.status}`) : p.status}</td>
-                <td className="py-1.5">{p.messages.join("; ")}</td>
+                <td>{p.row}</td>
+                <td>{t.has(`rowStatus.${p.status}`) ? t(`rowStatus.${p.status}`) : p.status}</td>
+                <td>{p.messages.join("; ")}</td>
               </tr>
             ))}
           </tbody>
         </table>
+</div>
       ) : (
         <p className="text-sm text-muted">{t("noProblems")}</p>
       )}
@@ -151,17 +155,18 @@ export function ReconciliationView({ data }: { data: Reconciliation }) {
     <div className="flex flex-col gap-3" data-testid="reconciliation">
       <p className="text-sm">{t("reconRows", { count: data.rows })}</p>
       <StatusCounts counts={data.status} />
-      <p className={data.open_differences > 0 ? ui.alert : ui.notice} data-testid="open-differences">
+      <p className={data.open_differences> 0 ? ui.alert : ui.notice} data-testid="open-differences">
         {t("openDifferences", { count: data.open_differences })}
       </p>
-      {units.length > 0 ? (
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+      {units.length> 0 ? (
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("colProperty")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("colFile")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("colPlatform")}</th>
-              <th className="py-1.5 text-right font-medium">{t("colDifference")}</th>
+              <th>{t("colProperty")}</th>
+              <th className="num">{t("colFile")}</th>
+              <th className="num">{t("colPlatform")}</th>
+              <th className="num">{t("colDifference")}</th>
             </tr>
           </thead>
           <tbody>
@@ -170,15 +175,16 @@ export function ReconciliationView({ data }: { data: Reconciliation }) {
                 key={number}
                 className={`border-b border-border ${u.difference !== 0 ? "bg-danger-bg text-danger-fg" : ""}`}
                 data-difference={u.difference !== 0 ? "true" : undefined}
-              >
-                <td className="py-1.5 pr-3">{number}</td>
-                <td className="py-1.5 pr-3 text-right">{u.file}</td>
-                <td className="py-1.5 pr-3 text-right">{u.platform}</td>
-                <td className="py-1.5 text-right">{u.difference > 0 ? `+${u.difference}` : u.difference}</td>
+>
+                <td>{number}</td>
+                <td className="text-right">{u.file}</td>
+                <td className="text-right">{u.platform}</td>
+                <td className="text-right">{u.difference> 0 ? `+${u.difference}` : u.difference}</td>
               </tr>
             ))}
           </tbody>
         </table>
+</div>
       ) : null}
     </div>
   );

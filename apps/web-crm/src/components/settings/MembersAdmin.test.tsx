@@ -36,10 +36,12 @@ describe("MembersAdmin", () => {
 
     renderIntl(<MembersAdmin initialMembers={[member]} roles={roles} canCreate canUpdate />);
 
-    // Reset password flow.
-    await userEvent.click(screen.getByRole("button", { name: "Passwort zurücksetzen" }));
-    await userEvent.type(screen.getByPlaceholderText("Startpasswort"), "sicheresstartpw1");
-    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    // Reset password flow (scoped to the desktop table; the same actions also render in the
+    // mobile card list).
+    const table = within(screen.getByRole("table"));
+    await userEvent.click(table.getByRole("button", { name: "Passwort zurücksetzen" }));
+    await userEvent.type(table.getByPlaceholderText("Startpasswort"), "sicheresstartpw1");
+    await userEvent.click(table.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(screen.getByText("Passwort wurde zurückgesetzt.")).toBeInTheDocument());
 
     // Add member flow.
@@ -48,7 +50,7 @@ describe("MembersAdmin", () => {
     await userEvent.type(screen.getByLabelText("Startpasswort", { exact: false }), "sicheresstartpw2");
     await userEvent.click(screen.getByRole("button", { name: "Benutzer anlegen" }));
 
-    await waitFor(() => expect(screen.getByText("Neue Person")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("Neue Person").length).toBeGreaterThan(0));
     expect(within(screen.getByRole("table")).getByText("neu@muellerhv.de")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalled();
   });

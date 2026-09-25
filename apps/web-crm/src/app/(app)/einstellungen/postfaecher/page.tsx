@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MailboxSettings, type Mailbox, type Member, type OAuthStatus } from "@/components/mail/MailboxSettings";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function MailboxSettingsPage({
   ]);
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <p className="text-sm text-muted">{t("intro")}</p>
       {params.connected ? <p className={ui.notice}>{t("connected", { address: params.connected })}</p> : null}
       {params.oauth_error ? (

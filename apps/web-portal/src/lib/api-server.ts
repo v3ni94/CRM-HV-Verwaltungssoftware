@@ -7,6 +7,7 @@
  * and returns to the page. Rotation without persisting would make the next refresh a reuse,
  * which the API answers by revoking the session family.
  */
+import { createApiClient, type ApiClient } from "@mhvp/api-client";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -15,8 +16,10 @@ import {
   apiBaseUrl,
   clearSession,
   isSecureHost,
+  parseContext,
   refreshTokens,
   writeTokens,
+  type SessionContext,
 } from "./session";
 
 type CookieStore = Awaited<ReturnType<typeof cookies>>;
@@ -73,6 +76,11 @@ async function authedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   return fetch(withBearer(retry, tokens.access_token), { cache: "no-store" });
 }
 
+/** Typed client (generated from openapi.json) acting as the signed-in user. */
+export function serverApi(): ApiClient {
+  return createApiClient(apiBaseUrl(), authedFetch);
+}
+
 /** Raw authenticated fetch against an API path (used by the BFF proxy and the pages). */
 export function serverFetch(path: string, init: RequestInit = {}): Promise<Response> {
   return authedFetch(new Request(`${apiBaseUrl()}${path}`, init));
@@ -83,6 +91,10 @@ export async function serverGet<T>(path: string): Promise<{ data: T | null; resp
   const response = await serverFetch(path, { headers: { accept: "application/json" } });
   if (!response.ok) return { data: null, response };
   return { data: (await response.json()) as T, response };
+}
+
+export async function sessionContext(): Promise<SessionContext> {
+  return parseContext((await cookies()).get(COOKIE.ctx)?.value);
 }
 
 /** For pages: a 401 after the refresh attempt ends the session. */

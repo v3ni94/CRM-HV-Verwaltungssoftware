@@ -1,7 +1,10 @@
+import Link from "next/link";
+import { appBuild, appVersion } from "@/lib/version";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
 import { AiChatWidget } from "@/components/ai/AiChatWidget";
+import { MobileNav } from "@/components/shell/MobileNav";
 import { SearchDialog } from "@/components/shell/SearchDialog";
 import { SideNav, type NavGroup } from "@/components/shell/SideNav";
 import { TenantSwitcher } from "@/components/shell/TenantSwitcher";
@@ -44,8 +47,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ],
     },
     {
-      // Makler as its own top-level area: FLOW listings and the handover protocol app,
-      // more sub-items may follow.
+      // Makler as its own top-level area: FLOW listings, native handover protocols (M30)
+      // and the external U-Protokoll app; more sub-items may follow.
       label: t("group.broker"),
       items: [
         ...(can("contracts:read") ? [{ href: "/makler", label: t("brokerFlow"), icon: "broker" }] : []),
@@ -91,6 +94,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-bg/80 px-4 py-2.5 backdrop-blur-md md:px-6">
+          <MobileNav
+            groups={groups}
+            label={t("nav")}
+            openLabel={t("openNav")}
+            closeLabel={t("close")}
+            productName={tHome("productName")}
+            area={tHome("area")}
+          />
           <SearchDialog />
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <NotificationBell />
@@ -102,7 +113,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main id="inhalt" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8 md:py-10">
           {children}
         </main>
-        <footer className="break-words border-t border-border-soft px-4 py-4 pr-20 text-xs text-subtle md:px-8">{tHome("footer")}</footer>
+        <footer
+          className="break-words border-t border-border-soft px-4 py-4 pr-20 text-xs text-subtle md:px-8"
+          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
+          <span>{tHome("footer")}</span>
+          <span className="mt-1 block">
+            <Link href="/version" className="underline-offset-2 hover:underline">
+              Version {appVersion()}
+              {appBuild() ? ` (${appBuild()})` : ""}
+            </Link>
+          </span>
+        </footer>
       </div>
       <AiChatWidget />
     </div>

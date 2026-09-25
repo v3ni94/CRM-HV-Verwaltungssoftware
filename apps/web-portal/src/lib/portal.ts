@@ -63,6 +63,11 @@ export function isProvider(me: PortalMe): boolean {
   return me.roles.includes("provider");
 }
 
+/** Beteiligter eines Übergabeprotokolls (access_grant scope_type handover, role participant). */
+export function isHandoverParticipant(me: PortalMe): boolean {
+  return me.roles.includes("participant");
+}
+
 /** German labels for the TicketStatus values of the API. */
 export const TICKET_STATUS_LABELS: Record<string, string> = {
   new: "Neu",

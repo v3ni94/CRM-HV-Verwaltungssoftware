@@ -78,7 +78,7 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     mailbox_id: Mapped[uuid.UUID | None] = _fk("mailbox.id")
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="new"
-    )  # new, assigned, done, draft, sent
+    )  # in: new, assigned, done. out: draft, pending, sent (Vier-Augen-Freigabe, M20).
     from_address: Mapped[str | None] = mapped_column(String(320))
     to_addresses: Mapped[list[str]] = mapped_column(
         ARRAY(String(320)), nullable=False, default=list
@@ -105,6 +105,43 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=list
     )
     reply_due: Mapped[date | None] = mapped_column(Date)
+    # Freigabe-Workflow für ausgehende Mails (M20): submit -> approve/reject (Vier-Augen-Prinzip).
+    submitted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejection_note: Mapped[str | None] = mapped_column(Text)
+    gmail_message_id: Mapped[str | None] = mapped_column(String(64))
+    # KI-Vorschlag je eingehender Mail (M20 Übernahme): Kategorie, Dringlichkeit, Zusammenfassung,
+    # erkanntes Objekt/Kontakt, Antwortentwurf, passendes Playbook. Nur Vorschlag (mhvp.ai.gateway).
+    suggestion: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="{}"
+    )
+    suggestion_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="none", server_default="none"
+    )  # none, pending, ready, failed, skipped
+
+
+class Playbook(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Aus geschlossenen Tickets gelernter Ablauf (M20 Übernahme aus dem Immoware Hub)."""
+
+    __tablename__ = "playbook"
+    __table_args__ = (UniqueConstraint("tenant_id", "title", name="uq_playbook_title"),)
+
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    category: Mapped[str | None] = mapped_column(String(64))
+    keywords: Mapped[list[str]] = mapped_column(ARRAY(String(64)), nullable=False, default=list)
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    steps: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    reply_template: Mapped[str | None] = mapped_column(Text)
+    source_ticket_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ticket.id", ondelete="SET NULL"), nullable=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft"
+    )  # draft, active, archived
+    usage_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 
 class Dispatch(IdMixin, TimestampMixin, TenantMixin, Base):

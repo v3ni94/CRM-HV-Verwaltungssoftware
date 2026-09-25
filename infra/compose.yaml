@@ -12,6 +12,7 @@ x-app-env: &app-env
   MHVP_LOG_LEVEL: ${MHVP_LOG_LEVEL:-INFO}
   MHVP_LOG_FORMAT: ${MHVP_LOG_FORMAT:-json}
   MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
+  MHVP_BUILD: ${MHVP_BUILD:-}
   # Runtime role mhvp_app (ADR 0002). Passwords must be URL safe.
   MHVP_DATABASE_URL: ${MHVP_DATABASE_URL:-postgresql+psycopg://mhvp_app:${MHVP_DB_APP_PASSWORD:?MHVP_DB_APP_PASSWORD must be set}@postgres:5432/${MHVP_DB_NAME:-mhvp}}
   MHVP_REDIS_URL: ${MHVP_REDIS_URL:-redis://redis:6379/0}
@@ -186,6 +187,7 @@ services:
       MHVP_DMS_URL: ${MHVP_DMS_URL:-https://uebernahme.muellerhv.de}
       MHVP_UPROTOKOLL_URL: ${MHVP_UPROTOKOLL_URL:-https://uprotokoll.mueller-holding.ag}
       MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
+      MHVP_BUILD: ${MHVP_BUILD:-}
     depends_on:
       api:
         condition: service_healthy

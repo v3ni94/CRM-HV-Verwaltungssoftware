@@ -84,8 +84,8 @@ const icons: Record<string, IconComponent> = {
   ),
   mail: (p) => (
     <Base {...p}>
-      <rect x="3" y="5" width="14" height="10" rx="1.5" />
-      <path d="m3.5 6 6.5 5 6.5-5" />
+      <rect x="3" y="4.5" width="14" height="11" rx="1.6" />
+      <path d="m3.5 5.5 6.5 5 6.5-5" />
     </Base>
   ),
   protocol: (p) => (
@@ -162,6 +162,24 @@ export function ChevronIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Base {...props}>
       <path d="M5.5 7.5 10 12l4.5-4.5" />
+    </Base>
+  );
+}
+
+/** Hamburger glyph for the mobile navigation toggle. */
+export function MenuIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M3 6h14M3 10h14M3 14h14" />
+    </Base>
+  );
+}
+
+/** Close (×) glyph, used by the mobile navigation drawer. */
+export function CloseIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M5 5l10 10M15 5 5 15" />
     </Base>
   );
 }

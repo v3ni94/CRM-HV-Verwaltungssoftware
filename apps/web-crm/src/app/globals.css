@@ -141,6 +141,19 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Opt-in sticky first column for wide, horizontally scrollable tables (e.g. the properties and
+ * contacts lists), so the row identity stays visible while scrolling sideways on a phone. */
+.mhvp-table--sticky-col thead th:first-child,
+.mhvp-table--sticky-col tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--mhvp-color-bg);
+}
+.mhvp-table--sticky-col thead th:first-child {
+  z-index: 3;
+}
+
 /* Soft status pill with a leading dot; used by badge-* helpers in lib/ui.ts. */
 .mhvp-dot {
   display: inline-block;

@@ -17,6 +17,21 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^mail/mailboxes/${ID}$`) },
   { method: "PUT", pattern: new RegExp(`^mail/mailboxes/${ID}/users$`) },
   { method: "POST", pattern: new RegExp(`^mail/mailboxes/${ID}/sync$`) },
+  { method: "GET", pattern: /^mail\/mailboxes$/ },
+  // Mail (M20): message list, thread view, reply drafts and the four-eyes approval flow.
+  { method: "GET", pattern: /^mail\/messages$/ },
+  { method: "GET", pattern: new RegExp(`^mail/messages/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/thread$`) },
+  { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}/draft$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/(reply-draft|submit|approve|reject|ticket)$`) },
+  // KI-Vorschläge und Playbooks (M20 Übernahme aus dem Immoware Hub).
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/suggest$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/apply-playbook$`) },
+  { method: "GET", pattern: /^mail\/playbooks$/ },
+  { method: "POST", pattern: /^mail\/playbooks$/ },
+  { method: "PATCH", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
   { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters)$/ },
   { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|bulk)$/ },
   { method: "PUT", pattern: /^workspace\/filters$/ },
@@ -127,8 +142,27 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^letting/listings/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^letting/listings/${ID}$`) },
   // Makler (M28-01): property and unit pickers for the listing creation form.
+  // Übergabeprotokolle (M30): protocol, sub records, photos, signatures, completion, versions.
+  { method: "GET", pattern: /^handover\/protocols$/ },
+  { method: "GET", pattern: /^handover\/protocols\/prefill$/ },
+  { method: "POST", pattern: /^handover\/protocols$/ },
+  { method: "GET", pattern: new RegExp(`^handover/protocols/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^handover/protocols/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^handover/protocols/${ID}/hints$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(documents|signatures|complete|versions|status|dispatches)$`) },
+  { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(documents|signatures)/${ID}$`) },
+  // Portalzugang eines Beteiligten (M30 Stufe 3): einrichten und beenden.
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/participants/${ID}/portal-access$`) },
+  { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/participants/${ID}/portal-access$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)(/order)?$`) },
+  { method: "PATCH", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
   { method: "GET", pattern: /^properties$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/units$`) },
+  // Makler (M28 stage 4, docs/rules/M28-01.md): FLOW SQL dump import preview and apply.
+  { method: "POST", pattern: /^letting\/flow-import\/preview$/ },
+  { method: "GET", pattern: new RegExp(`^letting/flow-import/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^letting/flow-import/${ID}/apply$`) },
   // Rent law rule set (M26-01): platform administrators only (checked by the API).
   { method: "PUT", pattern: /^platform\/rent-law\/rules\/[a-z_]{2,40}$/ },
   { method: "POST", pattern: /^platform\/rent-law\/cap-areas$/ },
@@ -145,6 +179,27 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^ticket-templates/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/comments$`) },
+  // Paperless-Dokumente in Ticket- und Objektansicht (M31).
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/dms-documents$`) },
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}/dms-documents$`) },
+  { method: "GET", pattern: /^dms-documents\/[0-9]+\/file$/ },
+  // DMS-Anbindung (Einstellungen): Paperless und Google Drive.
+  { method: "GET", pattern: /^dms-connections$/ },
+  { method: "PUT", pattern: /^dms-connections\/(paperless|google_drive)$/ },
+  // SLA und Bereitschaft (M21 Übernahme aus dem Immoware Hub).
+  { method: "GET", pattern: /^sla\/(rules|clocks|on-call|on-call\/current|alerts|calendar)$/ },
+  { method: "GET", pattern: new RegExp(`^sla/rules/${ID}/steps$`) },
+  { method: "GET", pattern: new RegExp(`^sla/tickets/${ID}/sla$`) },
+  { method: "POST", pattern: /^sla\/rules$/ },
+  { method: "PATCH", pattern: new RegExp(`^sla/rules/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^sla/rules/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^sla/rules/${ID}/steps$`) },
+  { method: "DELETE", pattern: new RegExp(`^sla/steps/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^sla/clocks/${ID}/(pause|resume)$`) },
+  { method: "POST", pattern: /^sla\/on-call$/ },
+  { method: "DELETE", pattern: new RegExp(`^sla/on-call/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^sla/alerts/${ID}/ack$`) },
+  { method: "PUT", pattern: /^sla\/calendar$/ },
   // Incoming invoices (M14): capture, review steps, IBAN confirmation, release, posting.
   { method: "POST", pattern: /^accounting\/invoices$/ },
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },
@@ -157,7 +212,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
-const MULTIPART = /^documents$/;
+const MULTIPART = new RegExp(`^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents)$`);
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 

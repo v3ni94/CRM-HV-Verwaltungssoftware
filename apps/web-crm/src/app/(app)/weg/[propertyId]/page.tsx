@@ -4,6 +4,7 @@ import Link from "next/link";
 import { HoaCreate } from "@/components/hoa/HoaForms";
 import { LevyCreate } from "@/components/hoa/LevyForms";
 import { ResolutionTable } from "@/components/hoa/ResolutionTable";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { hoaContext } from "@/lib/hoa";
@@ -28,13 +29,14 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
   ]);
   return (
     <div className="flex flex-col gap-5">
-      <h1 className={ui.title}>
-        {ctx.property.number} {ctx.property.name}
-      </h1>
+      <PageHeader
+        breadcrumb={[{ href: "/weg", label: t("title") }]}
+        title={`${ctx.property.number} ${ctx.property.name}`}
+      />
       <p className={ui.notice}>{t("gateNotice")}</p>
       {!ctx.ledger ? <p className="text-sm text-muted">{tw("noLedger")}</p> : null}
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">{tw("plans")}</h2>
+        <h2 className={ui.h2}>{tw("plans")}</h2>
         <ul className="text-sm">
           {(plans?.data ?? []).map((p) => (
             <li key={String(p.id)}>
@@ -47,7 +49,7 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
         <HoaCreate kind="plan" ledgerId={ctx.ledger?.id} legalEntityId={ctx.entity.id} basePath={base} />
       </section>
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">{tw("statements")}</h2>
+        <h2 className={ui.h2}>{tw("statements")}</h2>
         <ul className="text-sm">
           {(statements?.data ?? []).map((s) => (
             <li key={String(s.id)}>
@@ -60,7 +62,7 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
         <HoaCreate kind="statement" ledgerId={ctx.ledger?.id} legalEntityId={ctx.entity.id} basePath={base} />
       </section>
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">{tw("meetings")}</h2>
+        <h2 className={ui.h2}>{tw("meetings")}</h2>
         <ul className="text-sm">
           {(meetings.data ?? []).map((m) => (
             <li key={String(m.id)}>
@@ -74,7 +76,7 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
         <HoaCreate kind="meeting" legalEntityId={ctx.entity.id} basePath={base} />
       </section>
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">{tw("levies")}</h2>
+        <h2 className={ui.h2}>{tw("levies")}</h2>
         <ul className="text-sm">
           {(levies.data ?? []).map((l) => (
             <li key={String(l.id)}>
@@ -87,7 +89,7 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
         {ctx.ledger ? <LevyCreate ledgerId={ctx.ledger.id} keys={ctx.keys} basePath={base} /> : null}
       </section>
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium">{t("collection")}</h2>
+        <h2 className={ui.h2}>{t("collection")}</h2>
         <ResolutionTable rows={(resolutions.data ?? []) as never} />
       </section>
     </div>

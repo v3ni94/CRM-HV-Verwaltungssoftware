@@ -668,6 +668,14 @@
         "title": "AiTask",
         "type": "string"
       },
+      "AlertChannel": {
+        "enum": [
+          "email",
+          "internal"
+        ],
+        "title": "AlertChannel",
+        "type": "string"
+      },
       "AllocationCategory": {
         "enum": [
           "allocable_heating",
@@ -1253,6 +1261,21 @@
         "title": "ApplyIn",
         "type": "object"
       },
+      "ApplyPlaybookIn": {
+        "additionalProperties": false,
+        "properties": {
+          "playbook_id": {
+            "format": "uuid",
+            "title": "Playbook Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "playbook_id"
+        ],
+        "title": "ApplyPlaybookIn",
+        "type": "object"
+      },
       "AttendanceIn": {
         "additionalProperties": false,
         "properties": {
@@ -1658,6 +1681,20 @@
         "title": "BatchIn",
         "type": "object"
       },
+      "Body_flow_import_preview_api_v1_letting_flow_import_preview_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_flow_import_preview_api_v1_letting_flow_import_preview_post",
+        "type": "object"
+      },
       "Body_token_api_v1_oidc_token_post": {
         "properties": {
           "client_id": {
@@ -1764,6 +1801,106 @@
           "file"
         ],
         "title": "Body_upload_api_v1_portal_uploads_post",
+        "type": "object"
+      },
+      "Body_upload_document_api_v1_handover_protocols__protocol_id__documents_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "pattern": "^(meters|rooms|defects|items)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_document_api_v1_handover_protocols__protocol_id__documents_post",
+        "type": "object"
+      },
+      "Body_upload_document_api_v1_portal_handover__protocol_id__documents_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "pattern": "^(meters|rooms|defects|items)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_document_api_v1_portal_handover__protocol_id__documents_post",
         "type": "object"
       },
       "BookIn": {
@@ -2770,6 +2907,42 @@
         "title": "CalendarEventIn",
         "type": "object"
       },
+      "CalendarIn": {
+        "additionalProperties": false,
+        "properties": {
+          "closes_at": {
+            "default": "16:30",
+            "title": "Closes At",
+            "type": "string"
+          },
+          "holidays": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Holidays",
+            "type": "array"
+          },
+          "opens_at": {
+            "default": "08:00",
+            "title": "Opens At",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "Europe/Berlin",
+            "title": "Timezone",
+            "type": "string"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "title": "CalendarIn",
+        "type": "object"
+      },
       "CalendarItem": {
         "properties": {
           "date": {
@@ -3270,6 +3443,25 @@
         "title": "CircularIn",
         "type": "object"
       },
+      "ClockState": {
+        "enum": [
+          "running",
+          "paused",
+          "breached",
+          "done"
+        ],
+        "title": "ClockState",
+        "type": "string"
+      },
+      "ClockType": {
+        "description": "Zeitbasis der Uhr: Geschäftszeit (Arbeitskalender) oder Kalenderzeit (rund um die Uhr,\nwie im Hub für Notfälle vorgesehen).",
+        "enum": [
+          "business",
+          "calendar"
+        ],
+        "title": "ClockType",
+        "type": "string"
+      },
       "Co2In": {
         "additionalProperties": false,
         "properties": {
@@ -3550,6 +3742,18 @@
           "rent_per_sqm"
         ],
         "title": "ComparisonFlatIn",
+        "type": "object"
+      },
+      "CompleteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "force": {
+            "default": false,
+            "title": "Force",
+            "type": "boolean"
+          }
+        },
+        "title": "CompleteIn",
         "type": "object"
       },
       "Completeness": {
@@ -5876,6 +6080,158 @@
         "title": "DmsConnectionOut",
         "type": "object"
       },
+      "DmsDocumentOut": {
+        "description": "Ein Paperless-Dokument in der Ticket- oder Objektansicht (M31).",
+        "properties": {
+          "added": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Added"
+          },
+          "correspondent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correspondent"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          },
+          "download_url": {
+            "title": "Download Url",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "original_file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original File Name"
+          },
+          "page_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Count"
+          },
+          "preview_url": {
+            "title": "Preview Url",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created",
+          "added",
+          "correspondent",
+          "document_type",
+          "tags",
+          "page_count",
+          "original_file_name",
+          "preview_url",
+          "download_url"
+        ],
+        "title": "DmsDocumentOut",
+        "type": "object"
+      },
+      "DmsDocumentPage": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/DmsDocumentOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/DmsDocumentPageMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "DmsDocumentPage",
+        "type": "object"
+      },
+      "DmsDocumentPageMeta": {
+        "properties": {
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "per_page": {
+            "title": "Per Page",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "per_page",
+          "total"
+        ],
+        "title": "DmsDocumentPageMeta",
+        "type": "object"
+      },
       "DocumentHit": {
         "properties": {
           "category_id": {
@@ -6729,6 +7085,53 @@
         "title": "EntryStatus",
         "type": "string"
       },
+      "EscalationStepIn": {
+        "additionalProperties": false,
+        "properties": {
+          "after_minutes": {
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "After Minutes",
+            "type": "integer"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/AlertChannel",
+            "default": "email"
+          },
+          "notify_role": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notify Role"
+          },
+          "notify_user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Notify User Ids",
+            "type": "array"
+          },
+          "step_no": {
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Step No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "step_no",
+          "after_minutes"
+        ],
+        "title": "EscalationStepIn",
+        "type": "object"
+      },
       "EventOut": {
         "properties": {
           "actor_user_id": {
@@ -7128,6 +7531,58 @@
         "title": "FinapiConnectIn",
         "type": "object"
       },
+      "FlowImportApplyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FlowImportItemIn"
+            },
+            "maxItems": 2000,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "FlowImportApplyIn",
+        "type": "object"
+      },
+      "FlowImportItemIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "pattern": "^(create|skip)$",
+            "title": "Action",
+            "type": "string"
+          },
+          "index": {
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          }
+        },
+        "required": [
+          "index",
+          "action"
+        ],
+        "title": "FlowImportItemIn",
+        "type": "object"
+      },
       "ForwardInvoiceIn": {
         "additionalProperties": false,
         "properties": {
@@ -7340,6 +7795,34 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HandoverDispatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "default": "email",
+            "pattern": "^(email|portal|post)$",
+            "title": "Channel",
+            "type": "string"
+          },
+          "participant_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant Ids"
+          }
+        },
+        "title": "HandoverDispatchIn",
         "type": "object"
       },
       "HealthReport": {
@@ -10236,6 +10719,50 @@
         "title": "MailAssignIn",
         "type": "object"
       },
+      "MailDraftPatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "maxLength": 998,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "to_addresses": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Addresses"
+          }
+        },
+        "title": "MailDraftPatchIn",
+        "type": "object"
+      },
       "MailIngestIn": {
         "additionalProperties": false,
         "properties": {
@@ -10266,6 +10793,40 @@
           "document_id"
         ],
         "title": "MailIngestIn",
+        "type": "object"
+      },
+      "MailRejectIn": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "MailRejectIn",
+        "type": "object"
+      },
+      "MailReplyDraftIn": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          }
+        },
+        "title": "MailReplyDraftIn",
         "type": "object"
       },
       "MailboxIn": {
@@ -12210,6 +12771,76 @@
         "title": "OidcTokenResponse",
         "type": "object"
       },
+      "OnCallIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "starts_at",
+          "ends_at"
+        ],
+        "title": "OnCallIn",
+        "type": "object"
+      },
+      "OrderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "OrderIn",
+        "type": "object"
+      },
       "OrderOut": {
         "properties": {
           "amount": {
@@ -13221,6 +13852,166 @@
         "title": "PlanIn",
         "type": "object"
       },
+      "PlaybookIn": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Keywords",
+            "type": "array"
+          },
+          "reply_template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Template"
+          },
+          "status": {
+            "default": "draft",
+            "pattern": "^(draft|active|archived)$",
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "summary": {
+            "default": "",
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "PlaybookIn",
+        "type": "object"
+      },
+      "PlaybookPatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "keywords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 64,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Keywords"
+          },
+          "reply_template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Template"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "pattern": "^(draft|active|archived)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "PlaybookPatchIn",
+        "type": "object"
+      },
       "PortalAcceptIn": {
         "additionalProperties": false,
         "properties": {
@@ -13242,6 +14033,26 @@
           "password"
         ],
         "title": "PortalAcceptIn",
+        "type": "object"
+      },
+      "PortalAccessIn": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "title": "PortalAccessIn",
         "type": "object"
       },
       "PortalAppointmentIn": {
@@ -14721,6 +15532,495 @@
           }
         },
         "title": "ProspectPatch",
+        "type": "object"
+      },
+      "ProtocolCreateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "kind": {
+            "default": "rental",
+            "pattern": "^(rental|sale|general)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "listing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Id"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          }
+        },
+        "title": "ProtocolCreateIn",
+        "type": "object"
+      },
+      "ProtocolPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "building": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Building"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "current_step": {
+            "anyOf": [
+              {
+                "pattern": "^(object|participants|deposit|internal|meters|rooms|keys|items|notes|attachments|summary|signatures)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Step"
+          },
+          "deposit_account_holder": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Account Holder"
+          },
+          "deposit_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Amount"
+          },
+          "deposit_bank_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Bank Name"
+          },
+          "deposit_bic": {
+            "anyOf": [
+              {
+                "maxLength": 11,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Bic"
+          },
+          "deposit_iban": {
+            "anyOf": [
+              {
+                "maxLength": 34,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Iban"
+          },
+          "deposit_iban_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Iban Verified"
+          },
+          "deposit_note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Note"
+          },
+          "deposit_separate_statement": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Separate Statement"
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
+          },
+          "general_note": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "General Note"
+          },
+          "handover_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handover Date"
+          },
+          "handover_end": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handover End"
+          },
+          "handover_location": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handover Location"
+          },
+          "handover_start": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handover Start"
+          },
+          "hide_time_information": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hide Time Information"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "internal_contact": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Contact"
+          },
+          "internal_note": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Note"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "pattern": "^(rental|sale|general)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "listing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Id"
+          },
+          "management_number": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Management Number"
+          },
+          "object_label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Label"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "reference_number": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Number"
+          },
+          "rental_contract_number": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rental Contract Number"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          },
+          "ticket_number": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Number"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "unit_label": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Label"
+          },
+          "unit_number": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Number"
+          },
+          "unit_position": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Position"
+          }
+        },
+        "title": "ProtocolPatch",
         "type": "object"
       },
       "ReadingIn": {
@@ -16477,6 +17777,135 @@
         "title": "SettlementIn",
         "type": "object"
       },
+      "SignatureIn": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "image": {
+            "description": "PNG als Data-URI",
+            "maxLength": 3000000,
+            "minLength": 100,
+            "title": "Image",
+            "type": "string"
+          },
+          "participant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant Id"
+          },
+          "signed_location": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed Location"
+          },
+          "signer_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer Name"
+          },
+          "signer_role": {
+            "anyOf": [
+              {
+                "pattern": "^(moving_out|moving_in|seller|buyer|handing_over|taking_over|management|broker|caretaker|proxy|witness|relative|expert|craftsman|other)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer Role"
+          }
+        },
+        "required": [
+          "image"
+        ],
+        "title": "SignatureIn",
+        "type": "object"
+      },
+      "SlaColor": {
+        "enum": [
+          "green",
+          "yellow",
+          "red"
+        ],
+        "title": "SlaColor",
+        "type": "string"
+      },
+      "SlaRuleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "clock_type": {
+            "$ref": "#/components/schemas/ClockType",
+            "default": "business"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "resolution_minutes": {
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Resolution Minutes",
+            "type": "integer"
+          },
+          "response_minutes": {
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Response Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "priority",
+          "response_minutes",
+          "resolution_minutes"
+        ],
+        "title": "SlaRuleIn",
+        "type": "object"
+      },
       "SourceIn": {
         "additionalProperties": false,
         "properties": {
@@ -16668,6 +18097,21 @@
           "status"
         ],
         "title": "StatusChange",
+        "type": "object"
+      },
+      "StatusIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "pattern": "^(cancel|archive|unarchive)$",
+            "title": "Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "StatusIn",
         "type": "object"
       },
       "StorageKind": {
@@ -18505,6 +19949,22 @@
           "occupant"
         ],
         "title": "VatOptionIn",
+        "type": "object"
+      },
+      "VersionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "VersionIn",
         "type": "object"
       },
       "VoteIn": {
@@ -27076,6 +28536,57 @@
         ]
       }
     },
+    "/api/v1/dms-documents/{paperless_id}/file": {
+      "get": {
+        "operationId": "dms_document_file_api_v1_dms_documents__paperless_id__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "paperless_id",
+            "required": true,
+            "schema": {
+              "title": "Paperless Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "download",
+              "pattern": "^(download|preview|thumb)$",
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paperless-Datei laden (Proxy, Token bleibt serverseitig)",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
     "/api/v1/document-categories": {
       "get": {
         "operationId": "list_categories_api_v1_document_categories_get",
@@ -27787,6 +29298,1205 @@
         "summary": "Spiegelung erneut anstoßen",
         "tags": [
           "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols": {
+      "get": {
+        "operationId": "list_protocols_api_v1_handover_protocols_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(draft|in_progress|signature_pending|completed|sent|archived|cancelled)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(rental|sale|general)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unit_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Unit Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Protocols Api V1 Handover Protocols Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokolle",
+        "tags": [
+          "handover"
+        ]
+      },
+      "post": {
+        "operationId": "create_protocol_api_v1_handover_protocols_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Protocol Api V1 Handover Protocols Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokoll anlegen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/prefill": {
+      "get": {
+        "operationId": "prefill_api_v1_handover_protocols_prefill_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Prefill Api V1 Handover Protocols Prefill Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorbelegung aus Einheit und Objekt",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}": {
+      "get": {
+        "operationId": "get_protocol_api_v1_handover_protocols__protocol_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Protocol Api V1 Handover Protocols  Protocol Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokoll lesen",
+        "tags": [
+          "handover"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_protocol_api_v1_handover_protocols__protocol_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Protocol Api V1 Handover Protocols  Protocol Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protokollfelder ändern (Autosave)",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/complete": {
+      "post": {
+        "operationId": "complete_api_v1_handover_protocols__protocol_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Complete Api V1 Handover Protocols  Protocol Id  Complete Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verbindlich abschließen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/dispatches": {
+      "post": {
+        "description": "One dispatch (M23) per participant with a CRM contact. E-mail creates a draft in the\noutbox that needs the four-eyes approval (M20-01); nothing leaves the system here.",
+        "operationId": "prepare_dispatches_api_v1_handover_protocols__protocol_id__dispatches_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandoverDispatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Prepare Dispatches Api V1 Handover Protocols  Protocol Id  Dispatches Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zustellung an Beteiligte vorbereiten",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/documents": {
+      "post": {
+        "operationId": "upload_document_api_v1_handover_protocols__protocol_id__documents_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_document_api_v1_handover_protocols__protocol_id__documents_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Upload Document Api V1 Handover Protocols  Protocol Id  Documents Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Foto oder Anhang hochladen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/documents/{document_id}": {
+      "delete": {
+        "operationId": "delete_document_api_v1_handover_protocols__protocol_id__documents__document_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Foto oder Anhang entfernen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/hints": {
+      "get": {
+        "operationId": "hints_api_v1_handover_protocols__protocol_id__hints_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Hints Api V1 Handover Protocols  Protocol Id  Hints Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hinweise vor dem Abschluss",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/participants/{participant_id}/portal-access": {
+      "delete": {
+        "operationId": "revoke_portal_access_api_v1_handover_protocols__protocol_id__participants__participant_id__portal_access_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "participant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Participant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalzugang eines Beteiligten beenden",
+        "tags": [
+          "handover"
+        ]
+      },
+      "post": {
+        "description": "The participant fills in and signs the protocol in the portal (docs/rules/M30-01.md).\n\nNeeds a CRM contact on the participant. Without a portal account one is created (role\nportal_user, invitation token shown once); the grant is ``handover`` / ``edit`` until the\ncompletion. Repeated calls renew the grant.",
+        "operationId": "grant_portal_access_api_v1_handover_protocols__protocol_id__participants__participant_id__portal_access_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "participant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Participant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalAccessIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Grant Portal Access Api V1 Handover Protocols  Protocol Id  Participants  Participant Id  Portal Access Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalzugang für einen Beteiligten (Gehilfe) einrichten",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/pdf": {
+      "get": {
+        "operationId": "get_pdf_api_v1_handover_protocols__protocol_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "download",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Download",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "PDF (gespeicherte Version oder Vorschau als Entwurf)",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/signatures": {
+      "post": {
+        "operationId": "add_signature_api_v1_handover_protocols__protocol_id__signatures_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignatureIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Signature Api V1 Handover Protocols  Protocol Id  Signatures Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unterschrift speichern",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/signatures/{signature_id}": {
+      "delete": {
+        "operationId": "delete_signature_api_v1_handover_protocols__protocol_id__signatures__signature_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "signature_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signature Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unterschrift löschen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/status": {
+      "post": {
+        "operationId": "change_status_api_v1_handover_protocols__protocol_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Change Status Api V1 Handover Protocols  Protocol Id  Status Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stornieren, archivieren, zurückholen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/versions": {
+      "post": {
+        "operationId": "new_version_api_v1_handover_protocols__protocol_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response New Version Api V1 Handover Protocols  Protocol Id  Versions Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neue Version anlegen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/{section}": {
+      "post": {
+        "operationId": "create_item_api_v1_handover_protocols__protocol_id___section__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Item Api V1 Handover Protocols  Protocol Id   Section  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Teildatensatz anlegen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/{section}/order": {
+      "post": {
+        "operationId": "order_items_api_v1_handover_protocols__protocol_id___section__order_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Order Items Api V1 Handover Protocols  Protocol Id   Section  Order Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reihenfolge speichern",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/{section}/{item_id}": {
+      "delete": {
+        "operationId": "delete_item_api_v1_handover_protocols__protocol_id___section___item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Teildatensatz löschen",
+        "tags": [
+          "handover"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_item_api_v1_handover_protocols__protocol_id___section___item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Item Api V1 Handover Protocols  Protocol Id   Section   Item Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Teildatensatz ändern",
+        "tags": [
+          "handover"
         ]
       }
     },
@@ -30708,6 +33418,149 @@
         ]
       }
     },
+    "/api/v1/letting/flow-import/preview": {
+      "post": {
+        "operationId": "flow_import_preview_api_v1_letting_flow_import_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_flow_import_preview_api_v1_letting_flow_import_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Flow Import Preview Api V1 Letting Flow Import Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "FLOW-Datenbankexport (SQL-Dump) prüfen",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/flow-import/{run_id}": {
+      "get": {
+        "operationId": "get_flow_import_run_api_v1_letting_flow_import__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Flow Import Run Api V1 Letting Flow Import  Run Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "FLOW-Importlauf",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/flow-import/{run_id}/apply": {
+      "post": {
+        "operationId": "apply_flow_import_api_v1_letting_flow_import__run_id__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowImportApplyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Apply Flow Import Api V1 Letting Flow Import  Run Id  Apply Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "FLOW-Anzeigen übernehmen",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
     "/api/v1/letting/listings": {
       "get": {
         "operationId": "list_listings_api_v1_letting_listings_get",
@@ -32128,6 +34981,73 @@
           },
           {
             "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(in|out)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Direction"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticket_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticket Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mailbox_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mailbox Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
@@ -32173,6 +35093,49 @@
       }
     },
     "/api/v1/mail/messages/{message_id}": {
+      "get": {
+        "operationId": "get_message_api_v1_mail_messages__message_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Message Api V1 Mail Messages  Message Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einzelne Nachricht",
+        "tags": [
+          "Postfach"
+        ]
+      },
       "patch": {
         "operationId": "assign_api_v1_mail_messages__message_id__patch",
         "parameters": [
@@ -32222,6 +35185,61 @@
           }
         },
         "summary": "Zuordnen oder erledigen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/apply-playbook": {
+      "post": {
+        "operationId": "apply_playbook_api_v1_mail_messages__message_id__apply_playbook_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyPlaybookIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Apply Playbook Api V1 Mail Messages  Message Id  Apply Playbook Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Antwortentwurf aus Playbook",
         "tags": [
           "Postfach"
         ]
@@ -32282,6 +35300,106 @@
         ]
       }
     },
+    "/api/v1/mail/messages/{message_id}/approve": {
+      "post": {
+        "operationId": "approve_api_v1_mail_messages__message_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve Api V1 Mail Messages  Message Id  Approve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entwurf freigeben und senden",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/draft": {
+      "patch": {
+        "operationId": "patch_draft_api_v1_mail_messages__message_id__draft_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailDraftPatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Draft Api V1 Mail Messages  Message Id  Draft Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entwurf bearbeiten",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/messages/{message_id}/forward-invoice": {
       "post": {
         "operationId": "forward_invoice_api_v1_mail_messages__message_id__forward_invoice_post",
@@ -32337,6 +35455,61 @@
         ]
       }
     },
+    "/api/v1/mail/messages/{message_id}/reject": {
+      "post": {
+        "operationId": "reject_api_v1_mail_messages__message_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailRejectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reject Api V1 Mail Messages  Message Id  Reject Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entwurf zurückweisen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/messages/{message_id}/reply-draft": {
       "post": {
         "operationId": "reply_draft_api_v1_mail_messages__message_id__reply_draft_post",
@@ -32352,6 +35525,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/MailReplyDraftIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "content": {
@@ -32382,9 +35572,9 @@
         ]
       }
     },
-    "/api/v1/mail/messages/{message_id}/send": {
+    "/api/v1/mail/messages/{message_id}/submit": {
       "post": {
-        "operationId": "send_api_v1_mail_messages__message_id__send_post",
+        "operationId": "submit_api_v1_mail_messages__message_id__submit_post",
         "parameters": [
           {
             "in": "path",
@@ -32403,7 +35593,7 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": true,
-                  "title": "Response Send Api V1 Mail Messages  Message Id  Send Post",
+                  "title": "Response Submit Api V1 Mail Messages  Message Id  Submit Post",
                   "type": "object"
                 }
               }
@@ -32421,7 +35611,100 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Entwurf senden (nur mit eingerichtetem Postfach)",
+        "summary": "Entwurf zur Freigabe einreichen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/suggest": {
+      "post": {
+        "operationId": "recompute_suggestion_api_v1_mail_messages__message_id__suggest_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Recompute Suggestion Api V1 Mail Messages  Message Id  Suggest Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Vorschlag neu berechnen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/thread": {
+      "get": {
+        "operationId": "message_thread_api_v1_mail_messages__message_id__thread_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Message Thread Api V1 Mail Messages  Message Id  Thread Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Alle Nachrichten des Vorgangs",
         "tags": [
           "Postfach"
         ]
@@ -32556,6 +35839,206 @@
           }
         },
         "summary": "Google-Postfach verbinden (Consent-URL)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/playbooks": {
+      "get": {
+        "operationId": "list_playbooks_api_v1_mail_playbooks_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Playbooks Api V1 Mail Playbooks Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Playbooks",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "post": {
+        "operationId": "create_playbook_api_v1_mail_playbooks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaybookIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Playbook Api V1 Mail Playbooks Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Playbook anlegen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/playbooks/{playbook_id}": {
+      "delete": {
+        "operationId": "delete_playbook_api_v1_mail_playbooks__playbook_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "playbook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Playbook Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Playbook löschen",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_playbook_api_v1_mail_playbooks__playbook_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "playbook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Playbook Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaybookPatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Playbook Api V1 Mail Playbooks  Playbook Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Playbook ändern oder freigeben",
         "tags": [
           "Postfach"
         ]
@@ -34116,6 +37599,757 @@
         ]
       }
     },
+    "/api/v1/portal/handover": {
+      "get": {
+        "operationId": "list_protocols_api_v1_portal_handover_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Protocols Api V1 Portal Handover Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigene Übergabeprotokolle",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}": {
+      "get": {
+        "operationId": "get_protocol_api_v1_portal_handover__protocol_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Protocol Api V1 Portal Handover  Protocol Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokoll lesen",
+        "tags": [
+          "Portal"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_protocol_api_v1_portal_handover__protocol_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Protocol Api V1 Portal Handover  Protocol Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protokollfelder ändern",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/complete": {
+      "post": {
+        "description": "Completion by the participant: PDF on the letterhead, lock, then the grant becomes read\nonly for READ_DAYS so the finished PDF can still be opened; the management prepares the\ndispatch in the CRM (no automatic mail, M20-01).",
+        "operationId": "complete_api_v1_portal_handover__protocol_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Complete Api V1 Portal Handover  Protocol Id  Complete Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protokoll verbindlich abschließen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/documents": {
+      "post": {
+        "operationId": "upload_document_api_v1_portal_handover__protocol_id__documents_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_document_api_v1_portal_handover__protocol_id__documents_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Upload Document Api V1 Portal Handover  Protocol Id  Documents Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Foto oder Anhang hochladen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/documents/{document_id}": {
+      "delete": {
+        "operationId": "delete_document_api_v1_portal_handover__protocol_id__documents__document_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Foto oder Anhang entfernen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/documents/{document_id}/content": {
+      "get": {
+        "description": "Only files linked to the granted protocol; the generic document download of the portal\n(access matrix) does not cover handover files.",
+        "operationId": "document_content_api_v1_portal_handover__protocol_id__documents__document_id__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Foto, Anhang oder Unterschrift anzeigen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/hints": {
+      "get": {
+        "operationId": "hints_api_v1_portal_handover__protocol_id__hints_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Hints Api V1 Portal Handover  Protocol Id  Hints Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hinweise vor dem Abschluss",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/pdf": {
+      "get": {
+        "operationId": "get_pdf_api_v1_portal_handover__protocol_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "download",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Download",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "PDF (Entwurf oder abgeschlossene Fassung)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/signatures": {
+      "post": {
+        "operationId": "add_signature_api_v1_portal_handover__protocol_id__signatures_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignatureIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Signature Api V1 Portal Handover  Protocol Id  Signatures Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unterschrift speichern",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/signatures/{signature_id}": {
+      "delete": {
+        "operationId": "delete_signature_api_v1_portal_handover__protocol_id__signatures__signature_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "signature_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signature Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unterschrift löschen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/{section}": {
+      "post": {
+        "operationId": "create_item_api_v1_portal_handover__protocol_id___section__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Item Api V1 Portal Handover  Protocol Id   Section  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Teildatensatz anlegen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/{section}/order": {
+      "post": {
+        "operationId": "order_items_api_v1_portal_handover__protocol_id___section__order_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Order Items Api V1 Portal Handover  Protocol Id   Section  Order Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reihenfolge speichern",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/{section}/{item_id}": {
+      "delete": {
+        "operationId": "delete_item_api_v1_portal_handover__protocol_id___section___item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Teildatensatz löschen",
+        "tags": [
+          "Portal"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_item_api_v1_portal_handover__protocol_id___section___item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Item Api V1 Portal Handover  Protocol Id   Section   Item Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Teildatensatz ändern",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
     "/api/v1/portal/invitations/accept": {
       "post": {
         "operationId": "accept_api_v1_portal_invitations_accept_post",
@@ -35341,6 +39575,72 @@
         ]
       }
     },
+    "/api/v1/properties/{property_id}/dms-documents": {
+      "get": {
+        "operationId": "property_dms_documents_api_v1_properties__property_id__dms_documents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DmsDocumentPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paperless-Dokumente eines Objekts",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
     "/api/v1/properties/{property_id}/legal-entities": {
       "get": {
         "operationId": "list_entities_api_v1_properties__property_id__legal_entities_get",
@@ -36294,6 +40594,818 @@
         "summary": "SEPA-Mandat widerrufen",
         "tags": [
           "Verträge"
+        ]
+      }
+    },
+    "/api/v1/sla/alerts": {
+      "get": {
+        "operationId": "list_alerts_api_v1_sla_alerts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unacknowledged",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unacknowledged",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Alerts Api V1 Sla Alerts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Notfallalarme",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/alerts/{alert_id}/ack": {
+      "post": {
+        "operationId": "ack_alert_api_v1_sla_alerts__alert_id__ack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alert_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Alert Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ack Alert Api V1 Sla Alerts  Alert Id  Ack Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Notfallalarm bestätigen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/calendar": {
+      "get": {
+        "operationId": "get_calendar_endpoint_api_v1_sla_calendar_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Calendar Endpoint Api V1 Sla Calendar Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Geschäftszeitenkalender",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "put": {
+        "operationId": "put_calendar_api_v1_sla_calendar_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Calendar Api V1 Sla Calendar Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Geschäftszeitenkalender ändern",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/clocks": {
+      "get": {
+        "operationId": "list_clocks_api_v1_sla_clocks_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ClockState"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "color",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SlaColor"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Color"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Clocks Api V1 Sla Clocks Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SLA-Uhren",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/clocks/{clock_id}/pause": {
+      "post": {
+        "operationId": "pause_api_v1_sla_clocks__clock_id__pause_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clock_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Clock Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Pause Api V1 Sla Clocks  Clock Id  Pause Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Uhr pausieren",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/clocks/{clock_id}/resume": {
+      "post": {
+        "operationId": "resume_api_v1_sla_clocks__clock_id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clock_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Clock Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resume Api V1 Sla Clocks  Clock Id  Resume Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Uhr fortsetzen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/on-call": {
+      "get": {
+        "operationId": "list_on_call_api_v1_sla_on_call_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List On Call Api V1 Sla On Call Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Bereitschaftsplan",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "post": {
+        "operationId": "create_on_call_api_v1_sla_on_call_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnCallIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create On Call Api V1 Sla On Call Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bereitschaft eintragen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/on-call/current": {
+      "get": {
+        "operationId": "get_current_on_call_api_v1_sla_on_call_current_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Current On Call Api V1 Sla On Call Current Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Aktuelle Bereitschaft",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/on-call/{on_call_id}": {
+      "delete": {
+        "operationId": "delete_on_call_api_v1_sla_on_call__on_call_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "on_call_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "On Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bereitschaft löschen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/rules": {
+      "get": {
+        "operationId": "list_rules_api_v1_sla_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Rules Api V1 Sla Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "SLA-Regeln",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "post": {
+        "operationId": "create_rule_api_v1_sla_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlaRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Rule Api V1 Sla Rules Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SLA-Regel anlegen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/rules/{rule_id}": {
+      "delete": {
+        "operationId": "delete_rule_api_v1_sla_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SLA-Regel löschen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "patch": {
+        "operationId": "update_rule_api_v1_sla_rules__rule_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlaRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Rule Api V1 Sla Rules  Rule Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SLA-Regel ändern",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/rules/{rule_id}/steps": {
+      "get": {
+        "operationId": "list_steps_api_v1_sla_rules__rule_id__steps_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Steps Api V1 Sla Rules  Rule Id  Steps Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eskalationsstufen einer Regel",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      },
+      "post": {
+        "operationId": "create_step_api_v1_sla_rules__rule_id__steps_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscalationStepIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Step Api V1 Sla Rules  Rule Id  Steps Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eskalationsstufe anlegen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/steps/{step_id}": {
+      "delete": {
+        "operationId": "delete_step_api_v1_sla_steps__step_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eskalationsstufe löschen",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
+    "/api/v1/sla/tickets/{ticket_id}/sla": {
+      "get": {
+        "operationId": "ticket_clock_api_v1_sla_tickets__ticket_id__sla_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ticket Clock Api V1 Sla Tickets  Ticket Id  Sla Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SLA-Uhr eines Tickets",
+        "tags": [
+          "SLA und Bereitschaft"
         ]
       }
     },
@@ -38433,6 +43545,72 @@
         "summary": "Kommentar (intern oder extern)",
         "tags": [
           "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/dms-documents": {
+      "get": {
+        "operationId": "ticket_dms_documents_api_v1_tickets__ticket_id__dms_documents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DmsDocumentPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paperless-Dokumente eines Tickets",
+        "tags": [
+          "Dokumente"
         ]
       }
     },

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { RentIncreaseActions } from "@/components/letting/RentIncreaseForms";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -34,9 +35,10 @@ export default async function RentIncreasePage({ params }: { params: Promise<{ c
   const draft = letter.data as { text?: string } | undefined;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>
-        {t("case")} · {t(`status.${String(data.status)}`)}
-      </h1>
+      <PageHeader
+        breadcrumb={[{ href: "/vermietung", label: t("title") }]}
+        title={`${t("case")} · ${t(`status.${String(data.status)}`)}`}
+      />
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
         <dt className="text-muted">{t("current")}</dt>
         <dd className="tabular-nums">{formatEur(String(data.current_rent))}</dd>

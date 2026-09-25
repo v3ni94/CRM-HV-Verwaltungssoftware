@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
 import { formatEur } from "@/lib/format";
 import { hoaContext } from "@/lib/hoa";
@@ -24,45 +25,50 @@ export default async function PlanPage({ params }: { params: Promise<{ propertyI
   const units = ((data.snapshot as { units?: Unit[] } | null)?.units ?? []) as Unit[];
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>
-        {t("plan")} {String(data.year)} · V{String(data.version)} · {t(`status.${String(data.status)}`)}
-      </h1>
-      <table className="w-full border-collapse text-sm">
+      <PageHeader
+        breadcrumb={[{ href: `/weg/${propertyId}`, label: t("plans") }]}
+        title={`${t("plan")} ${String(data.year)} · V${String(data.version)} · ${t(`status.${String(data.status)}`)}`}
+      />
+      <div className="overflow-x-auto">
+<table className="mhvp-table">
         <tbody>
           {items.map((i) => (
-            <tr key={i.id} className="border-b border-border">
-              <td className="py-1.5 pr-3">{i.label}</td>
-              <td className="py-1.5 pr-3">{t(`components.${i.component}`)}</td>
-              <td className="py-1.5 text-right tabular-nums">{formatEur(i.amount)}</td>
+            <tr key={i.id}>
+              <td>{i.label}</td>
+              <td>{t(`components.${i.component}`)}</td>
+              <td className="num">{formatEur(i.amount)}</td>
             </tr>
           ))}
         </tbody>
       </table>
+</div>
       {data.status === "draft" ? <HoaItemForm target="plan" id={planId} keys={ctx.keys} /> : null}
       <HoaSteps target="plan" id={planId} status={String(data.status)} legalEntityId={ctx.entity.id} snapshotHash={(data.snapshot_hash as string | null) ?? null} />
       {units.length ? (
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("unit")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("annualFee")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("monthlyFee")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("annualReserve")}</th>
-              <th className="py-1.5 text-right font-medium">{t("monthlyReserve")}</th>
+              <th>{t("unit")}</th>
+              <th className="num">{t("annualFee")}</th>
+              <th className="num">{t("monthlyFee")}</th>
+              <th className="num">{t("annualReserve")}</th>
+              <th className="num">{t("monthlyReserve")}</th>
             </tr>
           </thead>
           <tbody>
             {units.map((u) => (
-              <tr key={u.unit_number} className="border-b border-border">
-                <td className="py-1.5 pr-3">{u.unit_number}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(u.annual.hoa_fee)}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(u.monthly.hoa_fee)}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(u.annual.reserve)}</td>
-                <td className="py-1.5 text-right tabular-nums">{formatEur(u.monthly.reserve)}</td>
+              <tr key={u.unit_number}>
+                <td>{u.unit_number}</td>
+                <td className="num">{formatEur(u.annual.hoa_fee)}</td>
+                <td className="num">{formatEur(u.monthly.hoa_fee)}</td>
+                <td className="num">{formatEur(u.annual.reserve)}</td>
+                <td className="num">{formatEur(u.monthly.reserve)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+</div>
       ) : null}
     </div>
   );

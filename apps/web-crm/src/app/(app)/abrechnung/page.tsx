@@ -5,6 +5,8 @@ import { StatementCreate } from "@/components/billing/StatementCreate";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +20,11 @@ export default async function StatementsPage() {
   redirectIfUnauthenticated(list.response);
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("notice")}</p>
       <StatementCreate ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, name: l.name }))} />
       {(list.data ?? []).length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <EmptyState title={t("empty")} />
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
           {(list.data ?? []).map((s) => (

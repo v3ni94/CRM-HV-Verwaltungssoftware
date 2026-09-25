@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { writeTokens } from "@/lib/session";
+import { COOKIE, MFA_MAX_AGE, cookieOptions, writeTokens } from "@/lib/session";
 
 import { guardedJson, publicApi, relayProblem, secureOf, str, unreachable } from "../_shared";
 
 /**
- * Portal login: e-mail and password. Portal users are no administrators, so the API normally
- * answers status "ok" with tokens right away. A user with an MFA duty (mfa_required or
- * mfa_setup_required) cannot finish the login here; the UI shows a note pointing to the CRM.
+ * Login step 1: e-mail and password. Accounts without TOTP are signed in right away
+ * (status "ok" with tokens); otherwise the short lived MFA token is kept in an httpOnly
+ * cookie and the UI continues with the second factor.
  */
 export async function POST(request: Request): Promise<Response> {
   const parsed = await guardedJson(request);
@@ -23,8 +23,11 @@ export async function POST(request: Request): Promise<Response> {
       writeTokens(result.cookies, data.tokens, secureOf(request));
       return result;
     }
-    // No MFA flow in the portal: the short lived mfa_token is discarded on purpose.
-    return NextResponse.json({ status: data.status });
+    const result = NextResponse.json({ status: data.status });
+    if (data.mfa_token) {
+      result.cookies.set(COOKIE.mfa, data.mfa_token, cookieOptions(secureOf(request), MFA_MAX_AGE));
+    }
+    return result;
   } catch {
     return unreachable();
   }

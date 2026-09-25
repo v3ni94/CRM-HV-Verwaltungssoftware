@@ -1,8 +1,8 @@
 """mail_forwarding (M32): forwarding of company invoices to the invoicing mailbox.
 Configuration per tenant, forwarding stamp per message.
 
-Revision ID: 0041
-Revises: 0040
+Revision ID: 0046
+Revises: 0045
 """
 
 from collections.abc import Sequence
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0041"
-down_revision: str | None = "0040"
+revision: str = "0046"
+down_revision: str | None = "0045"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

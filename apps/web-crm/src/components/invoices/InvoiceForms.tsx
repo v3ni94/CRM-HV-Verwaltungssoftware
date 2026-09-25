@@ -112,7 +112,7 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
       <p className="text-sm text-muted" data-testid="gross">
         {Number.isFinite(net) ? t("gross", { gross: fmt(net + vat).replace(".", ","), vat: fmt(vat).replace(".", ",") }) : ""}
       </p>
-      <button type="button" className={ui.primary} onClick={submit} disabled={busy || !valid}>{t("create")}</button>
+      <button type="button" className={`${ui.primary} ${ui.actionFull}`} onClick={submit} disabled={busy || !valid}>{t("create")}</button>
       {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
     </div>
   );

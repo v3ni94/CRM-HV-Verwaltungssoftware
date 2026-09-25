@@ -1,8 +1,8 @@
 """ticket_template_fields: configurable required extra fields per ticket template (e.g. an
 IBAN on a deposit ticket) and their values on the ticket.
 
-Revision ID: 0039
-Revises: 0038
+Revision ID: 0044
+Revises: 0043
 """
 
 from collections.abc import Sequence
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0039"
-down_revision: str | None = "0038"
+revision: str = "0044"
+down_revision: str | None = "0043"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

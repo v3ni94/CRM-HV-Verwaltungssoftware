@@ -309,7 +309,7 @@ export function ContactForm(props: Props) {
       ) : null}
 
       <div className="flex gap-2">
-        <button type="submit" className={ui.primary} disabled={busy || !!candidates}>
+        <button type="submit" className={`${ui.primary} ${ui.actionFull}`} disabled={busy || !!candidates}>
           {busy ? t("saving") : t("save")}
         </button>
         <button type="button" className={ui.button} onClick={() => router.back()}>

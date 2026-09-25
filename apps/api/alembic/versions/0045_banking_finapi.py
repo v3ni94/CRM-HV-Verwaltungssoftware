@@ -1,8 +1,8 @@
 """banking_finapi: read-only aggregator stage (M31). Account source mapping, balance
 snapshots, fetch-run fields on bank_sync_run and provider references on bank_connection.
 
-Revision ID: 0040
-Revises: 0039
+Revision ID: 0045
+Revises: 0044
 """
 
 from collections.abc import Sequence
@@ -13,8 +13,8 @@ from sqlalchemy.dialects import postgresql
 
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
-revision: str = "0040"
-down_revision: str | None = "0039"
+revision: str = "0045"
+down_revision: str | None = "0044"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

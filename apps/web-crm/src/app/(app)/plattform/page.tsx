@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { TenantAdmin } from "@/components/platform/TenantAdmin";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function PlatformPage() {
   );
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("notice")}</p>
       <Link className="text-sm underline" href="/plattform/mietrecht">
         {t("rentLaw")}
@@ -41,7 +42,7 @@ export default async function PlatformPage() {
       <TenantAdmin initialTenants={tenants.data ?? []} />
       {rows.map(({ tenant, readiness }) => (
         <section key={tenant.id} className={ui.card}>
-          <h2 className="font-medium">{tenant.name}</h2>
+          <h2 className={ui.h2}>{tenant.name}</h2>
           {readiness ? (
             <div className="mt-2 grid gap-3 text-sm sm:grid-cols-3">
               <div>

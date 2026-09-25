@@ -2,10 +2,12 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { AssistantMessage } from "@/components/ai/AssistantMessage";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -35,12 +37,12 @@ export default async function ConversationPage({ params }: { params: Promise<{ c
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href="/assistent" className="text-sm text-muted hover:underline">
-          {t("backToOverview")}
-        </Link>
-        <p className={`${ui.subtitle} mt-2`}>{t("transcript")}</p>
-        <h1 className={ui.title}>{data.title}</h1>
-        <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm md:grid-cols-[auto_1fr]">
+        <PageHeader
+          eyebrow={t("transcript")}
+          breadcrumb={[{ href: "/assistent", label: t("backToOverview") }]}
+          title={data.title}
+        />
+        <dl className="mt-4 grid gap-x-6 gap-y-1 text-sm md:grid-cols-[auto_1fr]">
           <dt className="text-muted">{t("colUser")}</dt>
           <dd>{data.created_by_name ?? t("unknownUser")}</dd>
           <dt className="text-muted">{t("colStarted")}</dt>
@@ -59,7 +61,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ c
       </div>
       <p className={ui.notice}>{t("disclaimer")}</p>
       {messages.length === 0 ? (
-        <p className="text-sm text-muted">{t("noMessages")}</p>
+        <EmptyState title={t("noMessages")} />
       ) : (
         <ul className="flex flex-col gap-3" aria-label={t("chat")}>
           {messages.map((m) => (

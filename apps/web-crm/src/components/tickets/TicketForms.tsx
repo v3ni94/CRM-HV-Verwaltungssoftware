@@ -110,7 +110,7 @@ export function TicketCreate() {
             ))}
           </select>
         </label>
-        <button type="button" className={ui.primary} onClick={create} disabled={busy || (title.trim().length < 3 && !template)}>
+        <button type="button" className={`${ui.primary} ${ui.actionFull}`} onClick={create} disabled={busy || (title.trim().length < 3 && !template)}>
           {t("create")}
         </button>
       </div>

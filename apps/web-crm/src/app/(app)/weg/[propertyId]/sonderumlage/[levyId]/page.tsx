@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { LevyAmend, LevySteps } from "@/components/hoa/LevyForms";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -26,9 +27,10 @@ export default async function LevyPage({ params }: { params: Promise<{ propertyI
   const r = report.data as Report | undefined;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>
-        {t("title")}: {String(d.purpose)} · {t(`status.${String(d.status)}`)}
-      </h1>
+      <PageHeader
+        breadcrumb={[{ href: `/weg/${propertyId}`, label: t("title") }]}
+        title={`${String(d.purpose)} · ${t(`status.${String(d.status)}`)}`}
+      />
       <p className="text-sm text-muted">
         {formatEur(String(d.total))} · {t("from", { date: formatDate(String(d.first_due)) })} · {t("rates", { n: Number(d.instalments) })}
       </p>
@@ -48,30 +50,32 @@ export default async function LevyPage({ params }: { params: Promise<{ propertyI
       ) : null}
       {d.status === "applied" ? <LevyAmend id={levyId} basePath={`/weg/${propertyId}/sonderumlage`} /> : null}
       {units.length ? (
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("unit")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("share")}</th>
-              <th className="py-1.5 font-medium">{t("instalmentsCol")}</th>
+              <th>{t("unit")}</th>
+              <th className="num">{t("share")}</th>
+              <th>{t("instalmentsCol")}</th>
             </tr>
           </thead>
           <tbody>
             {units.map((u) => (
-              <tr key={u.unit_number} className="border-b border-border">
-                <td className="py-1.5 pr-3">{u.unit_number}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(u.amount)}</td>
-                <td className="py-1.5 tabular-nums">
+              <tr key={u.unit_number}>
+                <td>{u.unit_number}</td>
+                <td className="num">{formatEur(u.amount)}</td>
+                <td className="tabular-nums">
                   {u.instalments.map((i) => `${formatDate(i.due_month)}: ${formatEur(i.amount)}`).join(" · ")}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+</div>
       ) : null}
       {r ? (
         <section className={ui.card} data-testid="levy-report">
-          <h2 className="font-medium">{t("report")}</h2>
+          <h2 className={ui.h2}>{t("report")}</h2>
           <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
             {(["resolved", "charged", "received", "open", "used", "earmarked_remaining"] as const).map((k) => (
               <div key={k} className="contents">

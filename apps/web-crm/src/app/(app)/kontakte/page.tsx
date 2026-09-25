@@ -7,6 +7,7 @@ import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -116,60 +117,90 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
       ) : data.items.length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <EmptyState title={t("empty")} />
       ) : (
-        <form id="contacts-bulk" className="flex flex-col gap-2">
-          <BulkTagBar formId="contacts-bulk" />
-          <table className="w-full border-collapse text-sm">
-            <thead className="border-b border-border text-left text-xs text-muted">
-              <tr>
-                <th className="w-6 py-1.5 pr-2 font-medium">
-                  <span className="sr-only">{t("select")}</span>
-                </th>
-                <th className="py-1.5 pr-3 font-medium">{t("colName")}</th>
-                <th className="py-1.5 pr-3 font-medium">{t("colKind")}</th>
-                <th className="py-1.5 pr-3 font-medium">{t("colTypes")}</th>
-                <th className="py-1.5 pr-3 font-medium">{t("colEmail")}</th>
-                <th className="py-1.5 pr-3 font-medium">{t("colPhone")}</th>
-                <th className="py-1.5 pr-3 font-medium">{t("colCity")}</th>
-                <th className="py-1.5 font-medium">{t("colTags")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((c) => (
-                <tr key={c.id} className="border-b border-border hover:bg-surface">
-                  <td className="py-1.5 pr-2">
-                    <input type="checkbox" name="bulk-id" value={c.id} aria-label={t("selectRow", { name: c.display_name })} />
-                  </td>
-                  <td className="py-1.5 pr-3">
-                    <Link href={`/kontakte/${c.id}`} className="font-medium hover:underline">
-                      {c.display_name}
-                    </Link>
+        <>
+          <ul className="flex flex-col gap-2 sm:hidden" data-testid="contacts-cards">
+            {data.items.map((c) => (
+              <li key={c.id} className={ui.cardLink} data-testid="contact-card">
+                <Link href={`/kontakte/${c.id}`} className="flex flex-col gap-1">
+                  <span className="font-medium">
+                    {c.display_name}
                     {c.blocked ? <span className="ml-2 text-xs text-danger-fg">{t("blocked")}</span> : null}
                     {c.completeness === "incomplete" ? <span className="ml-2 text-xs text-muted">{t("incomplete")}</span> : null}
-                  </td>
-                  <td className="py-1.5 pr-3">{tl(`kind.${c.kind}`)}</td>
-                  <td className="py-1.5 pr-3">
-                    {c.types.length ? (
-                      <span className="flex flex-wrap gap-1">
-                        {c.types.map((x) => (
-                          <span key={x} className={ui.badge}>
-                            {tl(`type.${x}`)}
+                  </span>
+                  <span className="text-sm text-muted">{tl(`kind.${c.kind}`)}</span>
+                  {c.types.length ? (
+                    <span className="flex flex-wrap gap-1">
+                      {c.types.map((x) => (
+                        <span key={x} className={ui.badge}>
+                          {tl(`type.${x}`)}
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
+                  {c.primary_email ? <span className="text-sm text-muted">{c.primary_email}</span> : null}
+                  {c.primary_phone ? <span className="text-sm text-muted">{c.primary_phone}</span> : null}
+                  {c.city ? <span className="text-sm text-muted">{c.city}</span> : null}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <form id="contacts-bulk" className="hidden flex-col gap-2 sm:flex">
+            <BulkTagBar formId="contacts-bulk" />
+            <div className="overflow-x-auto">
+              <table className="mhvp-table">
+                <thead>
+                  <tr>
+                    <th className="w-6 font-medium">
+                      <span className="sr-only">{t("select")}</span>
+                    </th>
+                    <th>{t("colName")}</th>
+                    <th>{t("colKind")}</th>
+                    <th>{t("colTypes")}</th>
+                    <th>{t("colEmail")}</th>
+                    <th>{t("colPhone")}</th>
+                    <th>{t("colCity")}</th>
+                    <th>{t("colTags")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.items.map((c) => (
+                    <tr key={c.id}>
+                      <td>
+                        <input type="checkbox" name="bulk-id" value={c.id} aria-label={t("selectRow", { name: c.display_name })} />
+                      </td>
+                      <td>
+                        <Link href={`/kontakte/${c.id}`} className="font-medium hover:underline">
+                          {c.display_name}
+                        </Link>
+                        {c.blocked ? <span className="ml-2 text-xs text-danger-fg">{t("blocked")}</span> : null}
+                        {c.completeness === "incomplete" ? <span className="ml-2 text-xs text-muted">{t("incomplete")}</span> : null}
+                      </td>
+                      <td>{tl(`kind.${c.kind}`)}</td>
+                      <td>
+                        {c.types.length ? (
+                          <span className="flex flex-wrap gap-1">
+                            {c.types.map((x) => (
+                              <span key={x} className={ui.badge}>
+                                {tl(`type.${x}`)}
+                              </span>
+                            ))}
                           </span>
-                        ))}
-                      </span>
-                    ) : (
-                      ""
-                    )}
-                  </td>
-                  <td className="py-1.5 pr-3">{c.primary_email ?? ""}</td>
-                  <td className="py-1.5 pr-3">{c.primary_phone ?? ""}</td>
-                  <td className="py-1.5 pr-3">{c.city ?? ""}</td>
-                  <td className="py-1.5">{c.tags.join(", ")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        ) : (
+                          <span className="text-muted">–</span>
+                        )}
+                      </td>
+                      <td>{c.primary_email ?? ""}</td>
+                      <td>{c.primary_phone ?? ""}</td>
+                      <td>{c.city ?? ""}</td>
+                      <td>{c.tags.join(", ")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </form>
           <nav className="flex items-center gap-3 text-sm" aria-label={t("page", { page, pages })}>
             <span className="text-muted">{t("total", { total: data.total })}</span>
             <span className="ml-auto">{t("page", { page, pages })}</span>
@@ -184,7 +215,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
               </Link>
             ) : null}
           </nav>
-        </form>
+        </>
       )}
     </div>
   );

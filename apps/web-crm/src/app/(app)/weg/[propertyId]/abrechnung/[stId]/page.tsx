@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
 import { formatEur } from "@/lib/format";
 import { hoaContext } from "@/lib/hoa";
@@ -35,9 +36,10 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
   const snap = data.snapshot as { units?: Unit[]; reserve?: Reserve } | null;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>
-        {t("statement")} {String(data.year)} · V{String(data.version)} · {t(`status.${String(data.status)}`)}
-      </h1>
+      <PageHeader
+        breadcrumb={[{ href: `/weg/${propertyId}`, label: t("statements") }]}
+        title={`${t("statement")} ${String(data.year)} · V${String(data.version)} · ${t(`status.${String(data.status)}`)}`}
+      />
       <p className={ui.notice}>{t("statementNotice")}</p>
       {blocking.length ? (
         <div className={ui.alert} data-testid="package-blocking">
@@ -49,44 +51,48 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
           </ul>
         </div>
       ) : null}
-      <table className="w-full border-collapse text-sm">
+      <div className="overflow-x-auto">
+<table className="mhvp-table">
         <tbody>
           {items.map((i) => (
-            <tr key={i.id} className="border-b border-border">
-              <td className="py-1.5 pr-3">{i.label}</td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(i.amount)}</td>
-              <td className="py-1.5 text-muted">{i.basis}</td>
+            <tr key={i.id}>
+              <td>{i.label}</td>
+              <td className="num">{formatEur(i.amount)}</td>
+              <td className="text-muted">{i.basis}</td>
             </tr>
           ))}
         </tbody>
       </table>
+</div>
       {data.status === "draft" ? <HoaItemForm target="statement" id={stId} keys={ctx.keys} accounts={costAccounts} /> : null}
       <HoaSteps target="statement" id={stId} status={String(data.status)} legalEntityId={ctx.entity.id} snapshotHash={(data.snapshot_hash as string | null) ?? null} />
       {snap?.units ? (
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1.5 pr-3 font-medium">{t("unit")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("costShare")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("advancesResolved")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("result")}</th>
-              <th className="py-1.5 pr-3 text-right font-medium">{t("arrears")}</th>
-              <th className="py-1.5 text-right font-medium">{t("information")}</th>
+              <th>{t("unit")}</th>
+              <th className="num">{t("costShare")}</th>
+              <th className="num">{t("advancesResolved")}</th>
+              <th className="num">{t("result")}</th>
+              <th className="num">{t("arrears")}</th>
+              <th className="num">{t("information")}</th>
             </tr>
           </thead>
           <tbody>
             {snap.units.map((u) => (
-              <tr key={u.unit_number} className="border-b border-border">
-                <td className="py-1.5 pr-3">{u.unit_number}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(u.cost_share)}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(u.advances_resolved)}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(u.result)}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(u.arrears)}</td>
-                <td className="py-1.5 text-right tabular-nums text-muted">{formatEur(u.information_total)}</td>
+              <tr key={u.unit_number}>
+                <td>{u.unit_number}</td>
+                <td className="num">{formatEur(u.cost_share)}</td>
+                <td className="num">{formatEur(u.advances_resolved)}</td>
+                <td className="num">{formatEur(u.result)}</td>
+                <td className="num">{formatEur(u.arrears)}</td>
+                <td className="text-right tabular-nums text-muted">{formatEur(u.information_total)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+</div>
       ) : null}
       {snap?.reserve ? (
         <p className="text-sm">

@@ -60,7 +60,7 @@ export function PropertyCreate() {
         {field("state")}
       </div>
       <p className="mt-2 text-xs text-muted">{t("createHint")}</p>
-      <button type="button" className={`${ui.primary} mt-3`} disabled={busy || !valid} onClick={submit}>
+      <button type="button" className={`${ui.primary} ${ui.actionFull} mt-3`} disabled={busy || !valid} onClick={submit}>
         {t("createButton")}
       </button>
       {error ? (

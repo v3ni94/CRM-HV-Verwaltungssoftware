@@ -33,6 +33,8 @@ from mhvp.core.problems import install_problem_handlers
 from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGateResolver
 from mhvp.core.storage import create_s3_client
 from mhvp.documents.routers import router as documents_router
+from mhvp.handover.portal import router as handover_portal_router
+from mhvp.handover.routers import router as handover_router
 from mhvp.hoa.levies import router as hoa_levies_router
 from mhvp.hoa.meetings import router as hoa_meetings_router
 from mhvp.hoa.package import router as hoa_package_router
@@ -47,6 +49,7 @@ from mhvp.platform.routers import platform_router, tenant_router
 from mhvp.portal.routers import admin as portal_admin_router
 from mhvp.portal.routers import router as portal_router
 from mhvp.properties.routers import router as properties_router
+from mhvp.sla.routers import router as sla_router
 from mhvp.tickets.routers import router as tickets_router
 from mhvp.workspace.ops import router as ops_router
 from mhvp.workspace.routers import router as workspace_router
@@ -139,6 +142,8 @@ def create_app(
     app.include_router(properties_router, prefix=API_PREFIX)
     app.include_router(contracts_router, prefix=API_PREFIX)
     app.include_router(documents_router, prefix=API_PREFIX)
+    app.include_router(handover_router, prefix=API_PREFIX)
+    app.include_router(handover_portal_router, prefix=API_PREFIX)
     app.include_router(imports_router, prefix=API_PREFIX)
     app.include_router(ai_router, prefix=API_PREFIX)
     app.include_router(workspace_router, prefix=API_PREFIX)
@@ -155,6 +160,7 @@ def create_app(
     app.include_router(rentlaw_platform_router, prefix=API_PREFIX)
     app.include_router(licensing_router, prefix=API_PREFIX)
     app.include_router(tickets_router, prefix=API_PREFIX)
+    app.include_router(sla_router, prefix=API_PREFIX)
     app.include_router(mail_router, prefix=API_PREFIX)
     app.include_router(dispatch_router, prefix=API_PREFIX)
     app.include_router(portal_router, prefix=API_PREFIX)

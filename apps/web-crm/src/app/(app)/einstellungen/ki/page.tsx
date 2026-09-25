@@ -7,6 +7,7 @@ import { UsagePanel } from "@/components/ai/UsagePanel";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function AiSettingsPage() {
   const openai = providers.data?.find((p) => p.provider === "openai") ?? null;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>{t("title")}</h1>
+      <PageHeader title={t("title")} />
       <p className="text-sm text-muted">{t("intro")}</p>
       {usage.data ? <UsagePanel usage={usage.data} /> : null}
       <RoutingSettings initial={(routing.data?.strategy ?? "anthropic_first") as Strategy} />

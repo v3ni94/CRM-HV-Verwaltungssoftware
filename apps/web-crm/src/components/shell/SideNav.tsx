@@ -88,7 +88,7 @@ export function SideNav({
 
   return (
     <aside
-      className={`flex flex-col border-b border-rail-border bg-rail-bg text-rail-fg md:sticky md:top-0 md:h-screen md:shrink-0 md:border-b-0 md:border-r md:transition-[width] md:duration-200 ${
+      className={`hidden flex-col bg-rail-bg text-rail-fg md:sticky md:top-0 md:flex md:h-screen md:shrink-0 md:border-r md:border-rail-border md:transition-[width] md:duration-200 ${
         railCollapsed ? "md:w-[4.5rem]" : "md:w-64"
       }`}
     >

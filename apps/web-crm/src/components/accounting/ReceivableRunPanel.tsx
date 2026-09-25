@@ -93,28 +93,30 @@ export function ReceivableRunPanel({ initialMonth }: { initialMonth: string }) {
               .map(([k, v]) => `${t(`itemStatus.${k}`)}: ${v.count} (${formatEur(v.amount)})`)
               .join(" · ")}
           </p>
-          <table className="w-full border-collapse text-sm">
-            <thead className="border-b border-border text-left text-xs text-muted">
+          <div className="overflow-x-auto">
+<table className="mhvp-table">
+            <thead>
               <tr>
-                <th className="py-1.5 pr-3 font-medium">{t("paymentType")}</th>
-                <th className="py-1.5 pr-3 text-right font-medium">{t("amount")}</th>
-                <th className="py-1.5 pr-3 font-medium">{t("due")}</th>
-                <th className="py-1.5 pr-3 font-medium">{t("status")}</th>
-                <th className="py-1.5 font-medium">{t("message")}</th>
+                <th>{t("paymentType")}</th>
+                <th className="num">{t("amount")}</th>
+                <th>{t("due")}</th>
+                <th>{t("status")}</th>
+                <th>{t("message")}</th>
               </tr>
             </thead>
             <tbody>
               {run.items.map((i, n) => (
-                <tr key={`${i.contract_id}-${i.payment_type_code}-${n}`} className="border-b border-border">
-                  <td className="py-1.5 pr-3">{i.payment_type_code}</td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums">{formatEur(i.amount)}</td>
-                  <td className="py-1.5 pr-3">{formatDate(i.due_date)}</td>
-                  <td className="py-1.5 pr-3">{t(`itemStatus.${i.status}`)}</td>
-                  <td className="py-1.5 text-muted">{i.message}</td>
+                <tr key={`${i.contract_id}-${i.payment_type_code}-${n}`}>
+                  <td>{i.payment_type_code}</td>
+                  <td className="num">{formatEur(i.amount)}</td>
+                  <td>{formatDate(i.due_date)}</td>
+                  <td>{t(`itemStatus.${i.status}`)}</td>
+                  <td className="text-muted">{i.message}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+</div>
         </>
       ) : null}
     </section>

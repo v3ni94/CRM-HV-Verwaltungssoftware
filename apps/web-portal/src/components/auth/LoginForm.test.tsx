@@ -7,6 +7,12 @@ import { LoginForm } from "./LoginForm";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn(), back: vi.fn() }) }));
 
+function fill(email: string, password: string) {
+  fireEvent.change(screen.getByLabelText("E-Mail"), { target: { value: email } });
+  if (password) fireEvent.change(screen.getByLabelText("Passwort"), { target: { value: password } });
+  fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+}
+
 describe("LoginForm", () => {
   const fetchMock = vi.fn<typeof fetch>();
   beforeEach(() => {
@@ -18,41 +24,42 @@ describe("LoginForm", () => {
 
   it("validates e-mail and password before calling the API", async () => {
     renderIntl(<LoginForm />);
-    fireEvent.change(screen.getByLabelText("E-Mail"), { target: { value: "kein-mail" } });
-    fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
+    fill("kein-mail", "");
     expect(await screen.findByText("Bitte eine gültige E-Mail-Adresse eingeben.")).toBeInTheDocument();
     expect(screen.getByText("Bitte das Passwort eingeben.")).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("posts to the BFF and forwards to the start page on ok", async () => {
+  it("posts to the BFF and forwards to the target page on ok", async () => {
     fetchMock.mockImplementation(async () => jsonResponse({ status: "ok" }));
     renderIntl(<LoginForm next="/dokumente" />);
-    fireEvent.change(screen.getByLabelText("E-Mail"), { target: { value: "mieter@example.org" } });
-    fireEvent.change(screen.getByLabelText("Passwort"), { target: { value: "geheim" } });
-    fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
+    fill("mieter@example.org", "geheim");
     await waitFor(() => expect(push).toHaveBeenCalledWith("/dokumente"));
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe("/api/session/login");
     expect(JSON.parse(String(init?.body))).toEqual({ email: "mieter@example.org", password: "geheim" });
   });
 
-  it("shows the MFA note instead of a TOTP step", async () => {
+  it("continues with the second factor on mfa_required", async () => {
     fetchMock.mockImplementation(async () => jsonResponse({ status: "mfa_required" }));
     renderIntl(<LoginForm />);
-    fireEvent.change(screen.getByLabelText("E-Mail"), { target: { value: "mieter@example.org" } });
-    fireEvent.change(screen.getByLabelText("Passwort"), { target: { value: "geheim" } });
-    fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Zwei-Faktor-Anmeldung");
-    expect(push).not.toHaveBeenCalled();
+    fill("mieter@example.org", "geheim");
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/anmelden/zweiter-faktor"));
+  });
+
+  it("continues with the TOTP setup on mfa_setup_required, keeping next", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse({ status: "mfa_setup_required" }));
+    renderIntl(<LoginForm next="/uebergabe" />);
+    fill("gehilfe@example.org", "geheim");
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/anmelden/zweiter-faktor?einrichten=1&next=%2Fuebergabe"),
+    );
   });
 
   it("shows the German problem title of the API", async () => {
     fetchMock.mockImplementation(async () => jsonResponse({ title: "Anmeldung fehlgeschlagen", status: 401 }, 401));
     renderIntl(<LoginForm />);
-    fireEvent.change(screen.getByLabelText("E-Mail"), { target: { value: "mieter@example.org" } });
-    fireEvent.change(screen.getByLabelText("Passwort"), { target: { value: "falsch" } });
-    fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
+    fill("mieter@example.org", "falsch");
     expect(await screen.findByRole("alert")).toHaveTextContent("Anmeldung fehlgeschlagen");
     expect(push).not.toHaveBeenCalled();
   });

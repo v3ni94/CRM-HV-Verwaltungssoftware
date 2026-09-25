@@ -9,6 +9,7 @@ from mhvp.contacts import models as contact_models
 from mhvp.contracts import models as contract_models
 from mhvp.core import events, numbering, webhooks
 from mhvp.documents import models as document_models
+from mhvp.handover import models as handover_models
 from mhvp.hoa import models as hoa_models
 from mhvp.imports import models as import_models
 from mhvp.letting import models as letting_models
@@ -17,6 +18,7 @@ from mhvp.platform import licensing as licensing_models
 from mhvp.platform import models as platform_models
 from mhvp.portal import models as portal_models
 from mhvp.properties import models as property_models
+from mhvp.sla import models as sla_models
 from mhvp.tickets import models as ticket_models
 from mhvp.workspace import models as workspace_models
 
@@ -30,6 +32,7 @@ __all__ = [
     "contract_models",
     "document_models",
     "events",
+    "handover_models",
     "hoa_models",
     "import_models",
     "letting_models",
@@ -39,6 +42,7 @@ __all__ = [
     "portal_models",
     "property_models",
     "rentlaw_models",
+    "sla_models",
     "ticket_models",
     "webhooks",
     "workspace_models",

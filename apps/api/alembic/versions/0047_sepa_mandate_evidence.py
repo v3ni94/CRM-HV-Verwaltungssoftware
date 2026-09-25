@@ -1,8 +1,8 @@
 """sepa_mandate_evidence: mandate evidence either as PDF document or as a recorded
 grant (channel and note). document_id becomes optional accordingly.
 
-Revision ID: 0042
-Revises: 0041
+Revision ID: 0047
+Revises: 0046
 """
 
 from collections.abc import Sequence
@@ -10,8 +10,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0042"
-down_revision: str | None = "0041"
+revision: str = "0047"
+down_revision: str | None = "0046"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -57,34 +57,35 @@ export function ImportResult({
       </div>
       <p className="text-sm">{t("itemCount", { count: items.length })}</p>
       {run.undone_at ? <p className="text-xs text-muted">{t("undoneAt", { at: formatDateTime(run.undone_at) })}</p> : null}
-      {notes.length > 0 ? (
+      {notes.length> 0 ? (
         <ul className="list-disc pl-4 text-sm">
           {notes.map((n, i) => (
             <li key={i}>{n}</li>
           ))}
         </ul>
       ) : null}
-      {kept.length > 0 ? <p className="text-sm">{t("keptHint", { count: kept.length })}</p> : null}
+      {kept.length> 0 ? <p className="text-sm">{t("keptHint", { count: kept.length })}</p> : null}
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
         </p>
       ) : null}
-      {showItems && items.length > 0 ? (
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
+      {showItems && items.length> 0 ? (
+        <div className="overflow-x-auto">
+<table className="mhvp-table">
+          <thead>
             <tr>
-              <th className="py-1 pr-3 font-medium">{t("colSequence")}</th>
-              <th className="py-1 pr-3 font-medium">{t("colEntity")}</th>
-              <th className="py-1 pr-3 font-medium">{t("colState")}</th>
-              <th className="py-1 font-medium">{t("colKept")}</th>
+              <th className="font-medium">{t("colSequence")}</th>
+              <th className="font-medium">{t("colEntity")}</th>
+              <th className="font-medium">{t("colState")}</th>
+              <th className="font-medium">{t("colKept")}</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.sequence} className="border-b border-border">
-                <td className="py-1 pr-3">{item.sequence}</td>
-                <td className="py-1 pr-3">
+              <tr key={item.sequence}>
+                <td>{item.sequence}</td>
+                <td>
                   {item.entity_type === "contact" ? (
                     <a href={`/kontakte/${item.entity_id}`} className="hover:underline">
                       {entity(item.entity_type)}
@@ -93,12 +94,13 @@ export function ImportResult({
                     entity(item.entity_type)
                   )}
                 </td>
-                <td className="py-1 pr-3">{item.undone ? t("itemUndone") : item.kept_reason ? t("itemKept") : t("itemActive")}</td>
-                <td className="py-1">{item.kept_reason ?? ""}</td>
+                <td>{item.undone ? t("itemUndone") : item.kept_reason ? t("itemKept") : t("itemActive")}</td>
+                <td>{item.kept_reason ?? ""}</td>
               </tr>
             ))}
           </tbody>
         </table>
+</div>
       ) : null}
     </section>
   );

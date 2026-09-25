@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("the protected start page redirects to the German login", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/anmelden/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Anmeldung");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Anmelden");
   await expect(page.getByLabel("E-Mail")).toBeVisible();
 });
 

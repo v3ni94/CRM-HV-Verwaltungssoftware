@@ -47,9 +47,17 @@ export default async function BrokerPage({ searchParams }: { searchParams: Promi
       <PageHeader
         title={t("title")}
         action={
-          <Link href="/makler/neu" className={ui.primary}>
-            {t("newListing")}
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/makler/uebergabe" className={ui.button}>
+              {t("handover")}
+            </Link>
+            <Link href="/makler/import" className={ui.button}>
+              {t("import.title")}
+            </Link>
+            <Link href="/makler/neu" className={ui.primary}>
+              {t("newListing")}
+            </Link>
+          </div>
         }
       />
       <p className={ui.notice}>{t("flowfactNotice")}</p>

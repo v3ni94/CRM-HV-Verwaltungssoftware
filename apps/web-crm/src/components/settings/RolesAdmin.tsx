@@ -79,7 +79,7 @@ function RoleCard({ role, allPermissions, canUpdate, onSaved }: { role: Role; al
   return (
     <section className={ui.card}>
       <div className="flex items-center justify-between">
-        <h2 className="font-medium">
+        <h2 className={ui.h2}>
           {role.name} <span className="text-xs text-muted">({role.code})</span>
         </h2>
         {role.is_system ? <span className={ui.badge}>{t("system")}</span> : null}

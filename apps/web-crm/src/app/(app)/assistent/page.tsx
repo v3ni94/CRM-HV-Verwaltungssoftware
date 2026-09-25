@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDateTime } from "@/lib/format";
@@ -92,44 +93,63 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
       ) : data.length === 0 ? (
-        <p className="text-sm text-muted">{t("noConversations")}</p>
+        <EmptyState title={t("noConversations")} />
       ) : (
-        <div className={`${ui.card} overflow-x-auto p-0`}>
-          <table className={ui.table} data-testid="conversations">
-            <thead>
-              <tr>
-                <th>{t("colStarted")}</th>
-                {scope === "all" ? <th>{t("colUser")}</th> : null}
-                <th>{t("colTitle")}</th>
-                <th>{t("colContext")}</th>
-                <th className="text-right">{t("colMessages")}</th>
-                <th>{t("colLast")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((c) => (
-                <tr key={c.id}>
-                  <td className="tabular-nums">
-                    <Link href={`/assistent/${c.id}`} className="font-medium hover:underline">
-                      {formatDateTime(c.created_at)}
-                    </Link>
-                  </td>
-                  {scope === "all" ? <td>{c.created_by_name ?? t("unknownUser")}</td> : null}
-                  <td>
-                    <Link href={`/assistent/${c.id}`} className="hover:underline">
-                      {c.title}
-                    </Link>
-                  </td>
-                  <td>
+        <>
+          <ul className="flex flex-col gap-2 sm:hidden" data-testid="conversations-cards">
+            {data.map((c) => (
+              <li key={c.id} className={ui.cardLink} data-testid="conversation-card">
+                <Link href={`/assistent/${c.id}`} className="flex flex-col gap-1.5">
+                  <span className="font-medium">{c.title}</span>
+                  <span className="text-sm text-muted">
+                    {formatDateTime(c.created_at)}
+                    {scope === "all" ? ` · ${c.created_by_name ?? t("unknownUser")}` : ""}
+                  </span>
+                  <span className="flex items-center gap-2">
                     <span className={ui.badge}>{t(`context.${c.context_type}`)}</span>
-                  </td>
-                  <td className="text-right tabular-nums">{c.message_count}</td>
-                  <td className="text-muted">{formatDateTime(c.last_message_at)}</td>
+                    <span className="text-xs text-muted">{t("colMessages")}: {c.message_count}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className={`${ui.card} hidden overflow-x-auto p-0 sm:block`}>
+            <table className={ui.table} data-testid="conversations">
+              <thead>
+                <tr>
+                  <th>{t("colStarted")}</th>
+                  {scope === "all" ? <th>{t("colUser")}</th> : null}
+                  <th>{t("colTitle")}</th>
+                  <th>{t("colContext")}</th>
+                  <th className="num">{t("colMessages")}</th>
+                  <th>{t("colLast")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {data.map((c) => (
+                  <tr key={c.id}>
+                    <td className="tabular-nums">
+                      <Link href={`/assistent/${c.id}`} className="font-medium hover:underline">
+                        {formatDateTime(c.created_at)}
+                      </Link>
+                    </td>
+                    {scope === "all" ? <td>{c.created_by_name ?? t("unknownUser")}</td> : null}
+                    <td>
+                      <Link href={`/assistent/${c.id}`} className="hover:underline">
+                        {c.title}
+                      </Link>
+                    </td>
+                    <td>
+                      <span className={ui.badge}>{t(`context.${c.context_type}`)}</span>
+                    </td>
+                    <td className="num">{c.message_count}</td>
+                    <td className="text-muted">{formatDateTime(c.last_message_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { redirectIfUnauthenticated, serverGet } from "@/lib/api-server";
-import { hasContracts, isProvider, type PortalMe } from "@/lib/portal";
+import { hasContracts, isHandoverParticipant, isProvider, type PortalMe } from "@/lib/portal";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,9 @@ export default async function StartPage() {
         ]
       : []),
     ...(me && isProvider(me) ? [{ href: "/auftraege", title: t("cardOrders"), text: t("cardOrdersText") }] : []),
+    ...(me && isHandoverParticipant(me)
+      ? [{ href: "/uebergabe", title: t("cardHandover"), text: t("cardHandoverText") }]
+      : []),
   ];
   return (
     <div className="flex flex-col gap-6">

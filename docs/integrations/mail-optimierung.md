@@ -90,8 +90,12 @@ Reihenfolge:
 3. SLA und Notfallkette.
 4. Entwurf, Freigabe und Versand mit Abgleich gegen den Gesendet-Ordner.
 5. Aktionspläne mit Vier-Augen-Freigabe, auf CRM-Stammdaten statt Immoware24.
-6. KI-Vorschläge über `mhvp.ai`, Prompts und Maskierung übernehmen.
-7. Prozessdatenbank (Playbooks).
+6. KI-Vorschläge über `mhvp.ai`, Prompts und Maskierung übernehmen. **Umgesetzt (25.09.2026):**
+   `mhvp.communication.suggest` mit dem Task `classify_email`, siehe `docs/plans/M20.md`.
+7. Prozessdatenbank (Playbooks). **Umgesetzt (25.09.2026):** Tabelle `playbook`, lokale
+   Schlagwort-Zuordnung und KI-Lernen aus geschlossenen Tickets (Task `draft_reply`), siehe
+   `docs/plans/M20.md`. Ähnlichkeitsbewertung bewusst einfach gehalten (Keyword-Score statt
+   Vektorsuche); eine feinere Bewertung ist ein späterer Ausbauschritt.
 8. Paperless- und Drive-Kontext im Vorgang.
 9. Oberfläche im Next.js-Frontend (`apps/web-crm`) als Reiter „Mail“, Domain `mail.mueller-holding.ag` über Traefik.
 
@@ -104,7 +108,7 @@ Datenmigration: keine, das Mailprogramm ist nicht produktiv im Einsatz. Übernom
 1. Vorgang und Ticket (entschieden 25.09.2026): ein gemeinsames Objekt, das CRM-Ticket mit Verknüpfung zu Kontakten, Objekten, Einheiten und Verträgen. Jede eingehende Mail erzeugt ein Ticket, außer sie ist eine Antwort im bestehenden Verlauf oder betrifft erkennbar dasselbe Thema eines offenen Tickets; dann wird sie dort angehängt. Antworten im Verlauf (Message-ID, In-Reply-To) werden automatisch angehängt; bei gleichem Thema ohne Verlaufsbezug erzeugt die Mail ein eigenes Ticket und zeigt „mögliches bestehendes Ticket“ als Vorschlag, den ein Mitarbeiter bestätigt. Zusammenführen: Zwei Tickets zum selben Thema lassen sich nachträglich zusammenführen. Dabei werden beide geschlossen (mit Verweis auf das neue), ein neues Ticket mit neuer Nummer entsteht und erhält alle Inhalte (Mails, Notizen, Aufgaben, Dokumente, Verknüpfungen, Historie). Status: umgesetzt (`POST /api/v1/tickets/merge`, `mhvp.tickets`, siehe `apps/api/src/mhvp/tickets/README.md`).
 2. Erstes Postfach: `info@muellerhv.de` (entschieden 25.09.2026). Offen: welche Gesellschaften das Modul außerdem nutzen.
 3. Gmail bleibt der Mailanbieter, oder ist ein Wechsel geplant?
-4. Freigabe (entschieden 25.09.2026): eigene Berechtigung „Mail freigeben“ (`mail.approve`), im CRM je Benutzer über Rollen vergeben. Vier-Augen-Prinzip: Wer einen Entwurf oder Aktionsplan erstellt, kann ihn nicht selbst freigeben.
+4. Freigabe (entschieden 25.09.2026): eigene Berechtigung „Mail freigeben“, im CRM je Benutzer über Rollen vergeben. Vier-Augen-Prinzip: Wer einen Entwurf oder Aktionsplan erstellt, kann ihn nicht selbst freigeben. Status: für Antwortentwürfe umgesetzt (Berechtigung `communication:approve`, Endpunkte `POST /api/v1/mail/messages/{id}/submit|approve|reject`, `mhvp.communication`, siehe `apps/api/src/mhvp/communication/README.md`); für Aktionspläne noch offen.
 5. Soll `mail.muellerhv.de` nach der Umstellung auf `mail.mueller-holding.ag` weiterleiten?
 
 ## Zusammenfassung

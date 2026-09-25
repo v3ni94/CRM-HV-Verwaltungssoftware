@@ -35,13 +35,13 @@ export function PageHeader({
           ))}
         </nav>
       ) : null}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:justify-between">
         <div className="flex flex-col gap-1">
           {eyebrow ? <p className="mhvp-label">{eyebrow}</p> : null}
           <h1 className="mhvp-title mhvp-display font-semibold text-fg">{title}</h1>
           {description ? <p className="max-w-2xl text-sm text-muted">{description}</p> : null}
         </div>
-        {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
+        {action ? <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">{action}</div> : null}
       </div>
     </div>
   );

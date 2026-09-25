@@ -156,3 +156,27 @@ class Listing(IdMixin, TimestampMixin, TenantMixin, Base):
     source: Mapped[str] = mapped_column(
         String(16), nullable=False, default="crm", server_default=text("'crm'")
     )
+
+
+class FlowImportRun(IdMixin, TimestampMixin, TenantMixin, Base):
+    """FLOW import run (M28 stage 4, docs/rules/M28-01.md): one uploaded SQL dump with the
+    parsed preview rows. No FLOWFACT call; the rows column holds the preview and, after
+    apply, the per-row outcome."""
+
+    __tablename__ = "flow_import_run"
+
+    filename: Mapped[str] = mapped_column(String(300), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="previewed", server_default=text("'previewed'")
+    )
+    row_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=0)
+    created_count: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, default=0, server_default=text("0")
+    )
+    skipped_count: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, default=0, server_default=text("0")
+    )
+    rows: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
