@@ -26,6 +26,13 @@ from mhvp.documents.models import (
     StorageKind,
 )
 from mhvp.documents.text import ALLOWED_MIME_TYPES, extract, sniff_matches
+from mhvp.handover.models import (
+    HandoverDefect,
+    HandoverItem,
+    HandoverMeter,
+    HandoverProtocol,
+    HandoverRoom,
+)
 from mhvp.platform.models import TenantSettings
 from mhvp.properties.models import Building, LegalEntity, Property, Unit
 
@@ -38,6 +45,12 @@ LINKABLE: dict[str, Any] = {
     "contract": Contract,
     # GdWE and other legal entities: administrative documents of the community (§ 18 Abs. 4 WEG).
     "legal_entity": LegalEntity,
+    # Handover protocols (M30): photos, attachments, signatures and the final PDF.
+    "handover_protocol": HandoverProtocol,
+    "handover_meter": HandoverMeter,
+    "handover_room": HandoverRoom,
+    "handover_defect": HandoverDefect,
+    "handover_item": HandoverItem,
 }
 VISIBILITY = frozenset({"tenant", "owner", "provider", "board"})
 

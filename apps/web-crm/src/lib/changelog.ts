@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.7.0",
+    date: "25.09.2026",
+    title: "Übergabeprotokolle im Bereich Makler",
+    changes: [
+      "Neuer Unterpunkt Makler, Übergabeprotokolle: Anlage mit Vorbelegung aus Objekt und Einheit, Beteiligte aus den Kontakten, Zähler, Räume, Mängel, Schlüssel, Gegenstände, Bemerkungen, Fotos und Anhänge als Dokumente",
+      "Unterschriften per Canvas mit Prüfsumme, Hinweise vor dem Abschluss, Abschluss mit PDF auf dem Briefbogen, Festschreibung, neue Versionen ohne Dateiduplikate, Stornierung, Archivierung",
+      "Zustellung an die Beteiligten als E-Mail-Entwurf im Postausgang (Vier-Augen-Freigabe), kein automatischer Versand",
+      "Protokollnummern UP-JJJJMMTT-NNN aus der Nummernfolge je Mandant und Tag",
+      "Migration 0043 (Tabellen handover_*), Regel M30-01, Plan M30; Gehilfenzugang über das Portal folgt als Stufe 3",
+    ],
+  },
+  {
     version: "1.6.0",
     date: "25.09.2026",
     title: "Einstellungsseite DMS-Anbindung",

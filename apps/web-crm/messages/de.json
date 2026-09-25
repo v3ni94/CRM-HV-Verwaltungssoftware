@@ -830,7 +830,8 @@
         "created": "Angelegt",
         "skipped": "Übersprungen"
       }
-    }
+    },
+    "handover": "Übergabeprotokolle"
   },
   "Receivables": {
     "title": "Sollstellungen",
@@ -2059,5 +2060,325 @@
     "yes": "Ja",
     "no": "Nein",
     "notSet": "nicht hinterlegt"
+  },
+  "Handover": {
+    "title": "Übergabeprotokolle",
+    "broker": "Makler",
+    "new": "Neues Übergabeprotokoll",
+    "search": "Suchen",
+    "searchPlaceholder": "Nummer, Ticket, Adresse, Objekt",
+    "statusAll": "Alle",
+    "showArchived": "Archivierte anzeigen",
+    "empty": "Keine Einträge.",
+    "list": {
+      "number": "Protokoll",
+      "object": "Objekt",
+      "participants": "Beteiligte",
+      "date": "Übergabe"
+    },
+    "statusLabel": {
+      "draft": "Entwurf",
+      "in_progress": "In Bearbeitung",
+      "signature_pending": "Unterschrift ausstehend",
+      "completed": "Abgeschlossen",
+      "sent": "Zustellung vorbereitet",
+      "archived": "Archiviert",
+      "cancelled": "Storniert"
+    },
+    "create": {
+      "title": "Neues Übergabeprotokoll",
+      "kind": "Protokollart",
+      "kinds": {
+        "rental": "Wohnungsübergabe (Vermietung)",
+        "sale": "Wohnungsübergabe (Verkauf)",
+        "general": "Allgemeines Übergabeprotokoll"
+      },
+      "property": "Objekt",
+      "noProperty": "Ohne Objektbezug",
+      "unit": "Einheit",
+      "help": "Adresse, Etage und Einheit werden aus den Stammdaten vorbelegt und bleiben im Protokoll änderbar. Kein Feld ist Pflicht.",
+      "submit": "Anlegen"
+    },
+    "steps": "Abschnitte",
+    "tabs": {
+      "object": "Objekt",
+      "participants": "Beteiligte",
+      "deposit": "Kaution",
+      "internal": "Intern",
+      "meters": "Zähler",
+      "rooms": "Räume",
+      "defects": "Mängel",
+      "keys": "Schlüssel",
+      "items": "Gegenstände",
+      "notes": "Bemerkungen",
+      "attachments": "Anhänge",
+      "signatures": "Unterschriften",
+      "summary": "Prüfung und Abschluss"
+    },
+    "saved": "Gespeichert.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "confirmDelete": "Eintrag wirklich löschen?",
+    "locked": "Das Protokoll ist abgeschlossen und schreibgeschützt. Änderungen sind nur über eine neue Version möglich.",
+    "lockedCancelled": "Das Protokoll wurde storniert und ist nicht wirksam.",
+    "deposit": {
+      "notice": "Kautionsangaben werden nur erfasst und im Protokoll ausgegeben. Sie erzeugen keine Forderung und keine Zahlung. Die IBAN wird beim Abschluss formal geprüft."
+    },
+    "internal": {
+      "notice": "Interne Angaben erscheinen nie im PDF und nie in einer Portalansicht."
+    },
+    "participants": {
+      "fromContact": "Beteiligten aus den Kontakten übernehmen",
+      "searchPlaceholder": "Name oder Firma",
+      "search": "Suchen"
+    },
+    "add": {
+      "participants": "Beteiligten hinzufügen",
+      "meters": "Zähler hinzufügen",
+      "rooms": "Raum hinzufügen",
+      "defects": "Mangel hinzufügen",
+      "keys": "Schlüssel hinzufügen",
+      "items": "Gegenstand hinzufügen",
+      "notes": "Bemerkung hinzufügen"
+    },
+    "photos": {
+      "add": "Foto",
+      "uploading": "Wird hochgeladen",
+      "remove": "Foto entfernen"
+    },
+    "attachments": {
+      "add": "Datei hinzufügen"
+    },
+    "fields": {
+      "address": "Adresse",
+      "street": "Straße",
+      "house_number": "Hausnummer",
+      "postal_code": "PLZ",
+      "city": "Ort",
+      "object_label": "Objektbezeichnung",
+      "building": "Gebäude",
+      "floor": "Etage",
+      "unit_number": "Einheit",
+      "unit_label": "Einheit (Bezeichnung)",
+      "unit_position": "Lage",
+      "handover_date": "Übergabedatum",
+      "handover_start": "Beginn",
+      "handover_end": "Ende",
+      "hide_time_information": "Uhrzeit im Protokoll nicht anzeigen",
+      "handover_location": "Ort der Übergabe",
+      "ticket_number": "Ticketnummer",
+      "reference_number": "Referenz",
+      "rental_contract_number": "Mietvertragsnummer",
+      "management_number": "Verwaltungsnummer",
+      "internal_contact": "Interner Ansprechpartner",
+      "internal_note": "Interne Notiz",
+      "general_note": "Allgemeine Bemerkung",
+      "deposit_amount": "Kautionsbetrag (EUR)",
+      "deposit_account_holder": "Kontoinhaber",
+      "deposit_iban": "IBAN",
+      "deposit_bic": "BIC",
+      "deposit_bank_name": "Bank",
+      "deposit_note": "Bemerkung zur Kaution",
+      "deposit_iban_verified": "IBAN wurde geprüft",
+      "deposit_separate_statement": "Kautionsabrechnung erfolgt separat",
+      "role": "Rolle",
+      "salutation": "Anrede",
+      "first_name": "Vorname",
+      "last_name": "Nachname",
+      "company": "Firma",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "comment": "Bemerkung",
+      "meter_type": "Zählerart",
+      "custom_type": "Eigene Bezeichnung",
+      "number": "Zählernummer",
+      "value": "Zählerstand",
+      "unit": "Einheit",
+      "location": "Standort",
+      "read_on": "Abgelesen am",
+      "read_at": "Uhrzeit",
+      "name": "Bezeichnung",
+      "room_type": "Raumart",
+      "condition": "Zustand",
+      "room_id": "Raum",
+      "category": "Kategorie",
+      "title": "Titel",
+      "priority": "Priorität",
+      "defect_status": "Status",
+      "responsibility": "Verantwortlich",
+      "description": "Beschreibung",
+      "key_type": "Schlüsselart",
+      "custom_name": "Eigene Bezeichnung",
+      "quantity": "Anzahl",
+      "key_number": "Schlüsselnummer",
+      "status": "Status",
+      "item_type": "Art",
+      "text": "Text",
+      "responsible_party": "Verantwortlich",
+      "due_date": "Frist",
+      "is_internal": "Intern, nicht im Kunden-PDF"
+    },
+    "roles": {
+      "moving_out": "Ausziehender Mieter",
+      "moving_in": "Einziehender Mieter",
+      "seller": "Verkaufender Eigentümer",
+      "buyer": "Kaufender Eigentümer",
+      "handing_over": "Übergebende Partei",
+      "taking_over": "Übernehmende Partei",
+      "management": "Verwaltung",
+      "broker": "Makler",
+      "caretaker": "Hausmeister",
+      "proxy": "Bevollmächtigter",
+      "witness": "Zeuge",
+      "relative": "Angehöriger",
+      "expert": "Sachverständiger",
+      "craftsman": "Handwerker",
+      "other": "Sonstige Person"
+    },
+    "options": {
+      "participants": {
+        "role": {
+          "moving_out": "Ausziehender Mieter",
+          "moving_in": "Einziehender Mieter",
+          "seller": "Verkaufender Eigentümer",
+          "buyer": "Kaufender Eigentümer",
+          "handing_over": "Übergebende Partei",
+          "taking_over": "Übernehmende Partei",
+          "management": "Verwaltung",
+          "broker": "Makler",
+          "caretaker": "Hausmeister",
+          "proxy": "Bevollmächtigter",
+          "witness": "Zeuge",
+          "relative": "Angehöriger",
+          "expert": "Sachverständiger",
+          "craftsman": "Handwerker",
+          "other": "Sonstige Person"
+        }
+      },
+      "meters": {
+        "meter_type": {
+          "electricity": "Strom",
+          "gas": "Gas",
+          "water": "Wasser",
+          "cold_water": "Kaltwasser",
+          "hot_water": "Warmwasser",
+          "heating": "Heizungszähler",
+          "heat_quantity": "Wärmemengenzähler",
+          "common_electricity": "Allgemeinstrom",
+          "sub_meter": "Zwischenzähler",
+          "photovoltaic": "Photovoltaik",
+          "other": "Sonstiger Zähler"
+        },
+        "unit": {
+          "kWh": "kWh",
+          "m³": "m³",
+          "MWh": "MWh",
+          "Liter": "Liter",
+          "Einheiten": "Einheiten"
+        }
+      },
+      "rooms": {
+        "condition": {
+          "ok": "Mängelfrei",
+          "defective": "Mängel vorhanden",
+          "not_checked": "Nicht geprüft",
+          "not_accessible": "Nicht zugänglich",
+          "not_included": "Nicht Bestandteil der Übergabe"
+        }
+      },
+      "defects": {
+        "priority": {
+          "info": "Hinweis",
+          "low": "Gering",
+          "medium": "Mittel",
+          "high": "Hoch",
+          "urgent": "Dringend"
+        },
+        "defect_status": {
+          "pre_existing": "Bereits vorhanden",
+          "new": "Neu festgestellt",
+          "acknowledged": "Vom Übergebenden anerkannt",
+          "rejected": "Anerkennung abgelehnt",
+          "unclear": "Ungeklärt"
+        }
+      },
+      "keys": {
+        "status": {
+          "handed_over": "Übergeben",
+          "not_handed_over": "Nicht übergeben",
+          "to_follow": "Nachzureichen"
+        }
+      },
+      "notes": {
+        "category": {
+          "agreement": "Vereinbarung",
+          "hint": "Hinweis",
+          "defect": "Mangel",
+          "open_task": "Offene Aufgabe",
+          "follow_up": "Nachreichung",
+          "payment": "Zahlungsangelegenheit",
+          "other": "Sonstiger Punkt"
+        }
+      }
+    },
+    "signature": {
+      "consent": "Mit ihrer Unterschrift bestätigen die Unterzeichnenden die Richtigkeit und Vollständigkeit der Angaben und erklären sich mit der elektronischen Verarbeitung und Speicherung des Protokolls für die Dauer der gesetzlichen Aufbewahrungs- und Verjährungsfristen einverstanden.",
+      "participant": "Beteiligter",
+      "free": "Freie Eingabe",
+      "done": "unterschrieben",
+      "name": "Name",
+      "role": "Rolle",
+      "location": "Ort",
+      "canvas": "Unterschriftsfeld",
+      "clear": "Leeren",
+      "save": "Unterschrift speichern",
+      "saved": "Unterschrift gespeichert.",
+      "empty": "Bitte zuerst unterschreiben.",
+      "none": "Noch keine Unterschrift erfasst.",
+      "noName": "Ohne Namen",
+      "confirmDelete": "Unterschrift wirklich löschen?"
+    },
+    "summary": {
+      "title": "Zusammenfassung"
+    },
+    "hints": {
+      "title": "Hinweise (kein Abschlusshindernis):"
+    },
+    "complete": {
+      "action": "Protokoll verbindlich abschließen",
+      "force": "Trotz Hinweisen verbindlich abschließen",
+      "confirm": "Das Protokoll wird abgeschlossen, festgeschrieben und als PDF abgelegt. Danach sind keine Änderungen mehr möglich. Fortfahren?",
+      "confirmForce": "Es liegen Hinweise vor. Das Protokoll wird trotzdem abgeschlossen und festgeschrieben. Fortfahren?",
+      "help": "Beim Abschluss wird das PDF auf dem Briefbogen des Mandanten erzeugt und in der Dokumentenverwaltung abgelegt."
+    },
+    "pdf": {
+      "preview": "PDF-Vorschau (Entwurf)",
+      "stored": "PDF anzeigen"
+    },
+    "dispatch": {
+      "title": "Zustellung an die Beteiligten",
+      "help": "Für jeden Beteiligten mit Kontakt im CRM wird eine Zustellung mit E-Mail-Entwurf vorbereitet. Der Versand erfolgt über den Postausgang mit Vier-Augen-Freigabe.",
+      "action": "Zustellung vorbereiten",
+      "result": "{created} Zustellung(en) vorbereitet, {skipped} übersprungen (kein Kontakt oder keine E-Mail)."
+    },
+    "versions": {
+      "title": "Versionen",
+      "label": "Version {version}",
+      "reason": "Änderungsgrund für eine neue Version",
+      "reasonRequired": "Bitte einen Änderungsgrund angeben.",
+      "create": "Neue Version anlegen"
+    },
+    "status": {
+      "cancel": "Stornieren",
+      "archive": "Archivieren",
+      "unarchive": "Aus dem Archiv zurückholen",
+      "confirm": {
+        "cancel": "Protokoll wirklich stornieren? Es ist danach nicht mehr wirksam.",
+        "archive": "Protokoll archivieren? Es bleibt über den Filter erreichbar.",
+        "unarchive": "Protokoll aus dem Archiv zurückholen?"
+      }
+    }
   }
 }

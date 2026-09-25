@@ -44,6 +44,9 @@ export default async function BrokerPage({ searchParams }: { searchParams: Promi
         title={t("title")}
         action={
           <div className="flex gap-2">
+            <Link href="/makler/uebergabe" className={ui.button}>
+              {t("handover")}
+            </Link>
             <Link href="/makler/import" className={ui.button}>
               {t("import.title")}
             </Link>
