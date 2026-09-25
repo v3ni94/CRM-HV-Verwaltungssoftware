@@ -381,6 +381,29 @@ def _messages(item: TaskInput, shots: list[dict[str, Any]]) -> list[dict[str, st
     return [{"role": "user", "content": "\n\n".join(parts)}]
 
 
+# Contact extraction of large tables: the 16k output budget truncates long answers, so the
+# rows are processed in batches and the batches are merged (one run, several provider calls).
+CONTACT_BATCH_ROWS = 120
+_ROW_RE = re.compile(r"^Zeile \d+: ")
+
+
+def _contact_chunks(text: str) -> list[str]:
+    lines = text.split("\n")
+    row_idx = [i for i, line in enumerate(lines) if _ROW_RE.match(line)]
+    # The first table row is the column header and is repeated in every batch.
+    if len(row_idx) <= CONTACT_BATCH_ROWS + 1:
+        return [text]
+    header_idx, rows = row_idx[0], row_idx[1:]
+    row_set = set(row_idx)
+    prefix = lines[: header_idx + 1]
+    suffix = [line for i, line in enumerate(lines) if i > rows[-1] and i not in row_set]
+    chunks = []
+    for start in range(0, len(rows), CONTACT_BATCH_ROWS):
+        batch = [lines[i] for i in rows[start : start + CONTACT_BATCH_ROWS]]
+        chunks.append("\n".join(prefix + batch + suffix))
+    return chunks
+
+
 async def execute(
     factory: async_sessionmaker[AsyncSession],
     tenant_id: uuid.UUID,
@@ -467,7 +490,7 @@ async def execute(
         )
     started = time.monotonic()
     schema = tasks.json_schema(task)
-    base_messages = _messages(item, shots)
+    chunk_texts = _contact_chunks(item.text) if task is AiTask.EXTRACT_CONTACTS else [item.text]
     tokens_in = tokens_out = 0
     output: dict[str, Any] | None = None
     error: str | None = None
@@ -475,39 +498,59 @@ async def execute(
         chosen, spent, budget = step
         provider = chosen.config.provider
         client = providers.client_for(provider, keys[provider])
-        messages = base_messages
         provider_failed = False
-        for attempt in range(2):
-            try:
-                completion = await _complete_with_retry(
-                    client, chosen.model, prompt.system, messages, schema
-                )
-            except providers.ProviderError as exc:
-                error = f"Anbieterfehler: {exc}"
-                provider_failed = True
+        outputs: list[dict[str, Any]] = []
+        for chunk_text in chunk_texts:
+            chunk_item = TaskInput(
+                text=chunk_text, document_ids=item.document_ids, context=item.context
+            )
+            messages = _messages(chunk_item, shots)
+            chunk_output: dict[str, Any] | None = None
+            for attempt in range(2):
+                try:
+                    completion = await _complete_with_retry(
+                        client, chosen.model, prompt.system, messages, schema
+                    )
+                except providers.ProviderError as exc:
+                    error = f"Anbieterfehler: {exc}"
+                    provider_failed = True
+                    break
+                tokens_in += completion.tokens_in
+                tokens_out += completion.tokens_out
+                try:
+                    chunk_output = (
+                        tasks.SCHEMAS[task].model_validate(completion.data).model_dump(mode="json")
+                    )
+                    error = None
+                    break
+                except ValidationError as exc:
+                    error = f"Schemafehler: {exc.errors()[0]['msg']} bei {exc.errors()[0]['loc']}"
+                    if attempt == 0:
+                        messages = [
+                            *messages,
+                            {"role": "assistant", "content": completion.raw_text or "{}"},
+                            {
+                                "role": "user",
+                                "content": f"Die Antwort verletzt das Schema: {error}. "
+                                "Bitte vollständig und schemakonform neu antworten.",
+                            },
+                        ]
+            if provider_failed or chunk_output is None:
                 break
-            tokens_in += completion.tokens_in
-            tokens_out += completion.tokens_out
-            try:
-                output = tasks.SCHEMAS[task].model_validate(completion.data).model_dump(mode="json")
-                error = None
-                break
-            except ValidationError as exc:
-                error = f"Schemafehler: {exc.errors()[0]['msg']} bei {exc.errors()[0]['loc']}"
-                if attempt == 0:
-                    messages = [
-                        *messages,
-                        {"role": "assistant", "content": completion.raw_text or "{}"},
-                        {
-                            "role": "user",
-                            "content": f"Die Antwort verletzt das Schema: {error}. "
-                            "Bitte vollständig und schemakonform neu antworten.",
-                        },
-                    ]
-        if not provider_failed:
-            break
-        # Provider error: try the next provider of the strategy (fallback), if any.
-        skipped.append(f"{provider.value}: {error}")
+            outputs.append(chunk_output)
+        if provider_failed:
+            # Provider error: try the next provider of the strategy (fallback), if any.
+            skipped.append(f"{provider.value}: {error}")
+            continue
+        if len(outputs) == len(chunk_texts):
+            if len(outputs) == 1:
+                output = outputs[0]
+            else:
+                output = {
+                    **outputs[0],
+                    "contacts": [c for o in outputs for c in o.get("contacts", [])],
+                }
+        break
     async with tenant_transaction(factory, tenant_id) as session:
         run = await session.get(AiTaskRun, run_id)
         assert run is not None  # noqa: S101 - locked above

@@ -125,3 +125,28 @@ def test_table_text_skips_formatted_empty_area(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(gateway, "MAX_TABLE_ROWS", 1)
     text = gateway._table_text([["a"], ["b"], ["c"]])
     assert text == "Zeile 1: a\n[gekürzt: weitere Zeilen ab Zeile 2 nicht übernommen]"
+
+
+def test_contact_chunks_split_large_tables_and_keep_header() -> None:
+    from mhvp.ai.gateway import CONTACT_BATCH_ROWS, _contact_chunks
+
+    prefix = 'Anweisung des Nutzers: Eigentümer importieren\n\n<datei name="e.csv" id="x">'
+    header = "Zeile 1: id | Name | E-Mail"
+    rows = [f"Zeile {n}: {n} | Person {n} | p{n}@example.org" for n in range(2, 303)]
+    text = "\n".join([prefix, header, *rows, "</datei>"])
+
+    chunks = _contact_chunks(text)
+    assert len(chunks) == 3  # 301 Datenzeilen bei 120 je Stapel
+    for chunk in chunks:
+        assert chunk.startswith(prefix)
+        assert header in chunk
+        assert chunk.endswith("</datei>")
+    # Jede Datenzeile genau einmal über alle Stapel
+    joined = "\n".join(chunks)
+    for row in rows:
+        assert joined.count(row) == 1
+    assert sum(c.count("Zeile ") - 1 for c in chunks) == len(rows)
+
+    # Kleine Tabellen bleiben ein Stapel
+    small = "\n".join([prefix, header, *rows[: CONTACT_BATCH_ROWS - 1], "</datei>"])
+    assert _contact_chunks(small) == [small]

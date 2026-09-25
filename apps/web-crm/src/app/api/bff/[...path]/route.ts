@@ -120,6 +120,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^properties$/ },
   // Tickets (M19).
   { method: "POST", pattern: /^tickets$/ },
+  { method: "GET", pattern: /^tickets\/stats$/ },
+  { method: "POST", pattern: /^tickets\/bulk-status$/ },
+  { method: "GET", pattern: /^ticket-templates$/ },
+  { method: "POST", pattern: /^ticket-templates$/ },
+  { method: "PATCH", pattern: new RegExp(`^ticket-templates/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^ticket-templates/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/comments$`) },
   // Incoming invoices (M14): capture, review steps, IBAN confirmation, release, posting.

@@ -103,7 +103,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main id="inhalt" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8 md:py-10">
           {children}
         </main>
-        <footer className="border-t border-border-soft px-4 py-4 text-xs text-subtle md:px-8">{tHome("footer")}</footer>
+        <footer className="break-words border-t border-border-soft px-4 py-4 pr-20 text-xs text-subtle md:px-8">{tHome("footer")}</footer>
       </div>
       <AiChatWidget />
     </div>
