@@ -749,6 +749,9 @@
   "Broker": {
     "title": "Makler",
     "flowfactNotice": "Die Übergabe an FLOWFACT folgt, sobald die Schnittstellendokumentation vorliegt (M28-01).",
+    "uprotokollTitle": "Übergabeprotokolle (U-Protokoll)",
+    "uprotokollText": "Wohnungsübergaben und Abnahmen werden im U-Protokoll erfasst: mehrstufiger Assistent, Fotos, digitale Unterschriften, PDF-Erzeugung und E-Mail-Versand.",
+    "uprotokollOpen": "U-Protokoll öffnen",
     "tabRental": "Vermietung",
     "tabSale": "Verkauf",
     "statusAll": "Alle",

@@ -101,3 +101,18 @@ services:
       traefik.http.routers.web-portal-api.entrypoints: web
       traefik.http.routers.web-portal-api.middlewares: security-headers@file,api-ratelimit@file
       traefik.http.services.web-portal.loadbalancer.server.port: "3001"
+
+  uprotokoll-migrate:
+    build:
+      context: ../apps/u-protokoll
+    image: mhvp-uprotokoll:dev
+
+  uprotokoll:
+    build:
+      context: ../apps/u-protokoll
+    image: mhvp-uprotokoll:dev
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.uprotokoll.rule: Host(`uprotokoll.localhost`)
+      traefik.http.routers.uprotokoll.entrypoints: web
+      traefik.http.services.uprotokoll.loadbalancer.server.port: "80"

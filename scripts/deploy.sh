@@ -42,7 +42,8 @@ COMPOSE="docker compose -p $PROJECT --env-file .env.$ENV_NAME -f infra/compose.y
 if [[ "$BUILD" == 1 ]]; then
   FETCH="docker build -t $REG/mhvp-api:$TAG apps/api \
     && docker build -f apps/web-crm/Dockerfile -t $REG/mhvp-web-crm:$TAG . \
-    && docker build -f apps/web-portal/Dockerfile -t $REG/mhvp-web-portal:$TAG ."
+    && docker build -f apps/web-portal/Dockerfile -t $REG/mhvp-web-portal:$TAG . \
+    && docker build -t $REG/mhvp-uprotokoll:$TAG apps/u-protokoll"
 else
   FETCH="$COMPOSE pull"
 fi

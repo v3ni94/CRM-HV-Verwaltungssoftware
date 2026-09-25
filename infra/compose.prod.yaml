@@ -176,6 +176,29 @@ services:
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-portal"
       - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal.loadbalancer.server.port=3001"
 
+  uprotokoll-db:
+    <<: *prod
+
+  uprotokoll-migrate:
+    image: ${MHVP_IMAGE_REGISTRY:?MHVP_IMAGE_REGISTRY must be set}/mhvp-uprotokoll:${MHVP_IMAGE_TAG:?MHVP_IMAGE_TAG must be set}
+
+  uprotokoll:
+    <<: *prod
+    image: ${MHVP_IMAGE_REGISTRY:?MHVP_IMAGE_REGISTRY must be set}/mhvp-uprotokoll:${MHVP_IMAGE_TAG:?MHVP_IMAGE_TAG must be set}
+    networks:
+      - default
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:?TRAEFIK_NETWORK must be set}"
+      # Kein Shared-Headers-Middleware-Set (frameDeny wuerde die App-eigenen Header
+      # X-Frame-Options SAMEORIGIN, nosniff, Referrer-Policy aus den .htaccess doppeln).
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-uprotokoll.rule=Host(`${MHVP_HOST_UPROTOKOLL:-uprotokoll.mueller-holding.ag}`)"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-uprotokoll.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-uprotokoll.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-uprotokoll.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-uprotokoll"
+      - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-uprotokoll.loadbalancer.server.port=80"
+
 networks:
   traefik:
     external: true

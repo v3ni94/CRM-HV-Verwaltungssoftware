@@ -23,6 +23,10 @@ type Listing = {
 
 const STATUSES = ["draft", "active", "reserved", "inactive"] as const;
 
+/** U-Protokoll (apps/u-protokoll): separate PHP app for handover protocols, linked here with
+ *  the same pattern as MHVP_DMS_URL on the DMS page; it runs in the stack under its own host. */
+const UPROTOKOLL_URL = (process.env.MHVP_UPROTOKOLL_URL ?? "https://uprotokoll.mueller-holding.ag").replace(/\/+$/, "");
+
 /** Makler (M28-01, stage 2): listings for rent and sale. FLOWFACT is not connected yet;
  *  publication_status stays a placeholder field until its interface is documented. */
 export default async function BrokerPage({ searchParams }: { searchParams: Promise<Params> }) {
@@ -49,6 +53,15 @@ export default async function BrokerPage({ searchParams }: { searchParams: Promi
         }
       />
       <p className={ui.notice}>{t("flowfactNotice")}</p>
+      <section className={`${ui.card} flex flex-wrap items-center justify-between gap-3`}>
+        <div>
+          <h2 className="mhvp-label">{t("uprotokollTitle")}</h2>
+          <p className="mt-1 text-sm">{t("uprotokollText")}</p>
+        </div>
+        <a href={UPROTOKOLL_URL} target="_blank" rel="noopener noreferrer" className={ui.primary}>
+          {t("uprotokollOpen")}
+        </a>
+      </section>
       <nav className="flex gap-2 text-sm">
         <Link href={`/makler?art=rental${params.status ? `&status=${params.status}` : ""}`} className={kind === "rental" ? ui.badgeGold : ui.badge}>
           {t("tabRental")}

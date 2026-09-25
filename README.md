@@ -46,6 +46,7 @@ Details: `docs/runbooks/local-development.md`.
 | --- | --- |
 | `apps/api/` | FastAPI, Alembic, Celery (Python package `mhvp`) |
 | `apps/web-crm/`, `apps/web-portal/` | Next.js 15 apps (administration, portals) |
+| `apps/u-protokoll/` | U-Protokoll: Übergabe-/Abnahmeprotokolle (PHP 8.2, eigene MariaDB), verlinkt aus dem Makler-Bereich, Host `uprotokoll.mueller-holding.ag` |
 | `packages/` | generated API client, shared UI, shared config |
 | `infra/` | Docker Compose, Traefik (dev), PostgreSQL bootstrap, object storage |
 | `scripts/` | helper scripts |

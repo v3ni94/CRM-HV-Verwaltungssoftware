@@ -29,6 +29,28 @@ x-app-env: &app-env
   # uvicorn trusts X-Forwarded-* only from these addresses (set to the Traefik network).
   FORWARDED_ALLOW_IPS: ${MHVP_FORWARDED_ALLOW_IPS:-127.0.0.1}
 
+# U-Protokoll (apps/u-protokoll): eigenstaendige PHP-App fuer Uebergabe-/Abnahmeprotokolle,
+# eingebunden als eigener Dienst mit eigener MariaDB (die App unterstuetzt kein PostgreSQL).
+# Verlinkt aus dem CRM-Bereich Makler (MHVP_UPROTOKOLL_URL); oeffentlicher Host in compose.prod.yaml.
+x-uprotokoll-env: &uprotokoll-env
+  APP_URL: ${UPROTOKOLL_APP_URL:-https://uprotokoll.mueller-holding.ag}
+  APP_DEBUG: ${UPROTOKOLL_APP_DEBUG:-0}
+  APP_TIMEZONE: Europe/Berlin
+  DB_HOST: uprotokoll-db
+  DB_PORT: "3306"
+  DB_NAME: ${UPROTOKOLL_DB_NAME:-u_protokoll}
+  DB_USER: ${UPROTOKOLL_DB_USER:-u_protokoll}
+  DB_PASSWORD: ${UPROTOKOLL_DB_PASSWORD:?UPROTOKOLL_DB_PASSWORD must be set}
+  SMTP_HOST: ${UPROTOKOLL_SMTP_HOST:-}
+  SMTP_PORT: ${UPROTOKOLL_SMTP_PORT:-587}
+  SMTP_ENCRYPTION: ${UPROTOKOLL_SMTP_ENCRYPTION:-tls}
+  SMTP_USER: ${UPROTOKOLL_SMTP_USER:-}
+  SMTP_PASSWORD: ${UPROTOKOLL_SMTP_PASSWORD:-}
+  SMTP_FROM: ${UPROTOKOLL_SMTP_FROM:-u-protokoll@muellerhv.de}
+  SMTP_FROM_NAME: ${UPROTOKOLL_SMTP_FROM_NAME:-Hausverwaltung Müller GmbH}
+  STORAGE_DRIVER: local
+  STORAGE_BASE_PATH: /var/www/html/storage/uploads
+
 x-app-depends: &app-depends
   migrate:
     condition: service_completed_successfully
@@ -156,6 +178,7 @@ services:
     environment:
       MHVP_API_INTERNAL_URL: ${MHVP_API_INTERNAL_URL:-http://api:8000}
       MHVP_DMS_URL: ${MHVP_DMS_URL:-https://uebernahme.muellerhv.de}
+      MHVP_UPROTOKOLL_URL: ${MHVP_UPROTOKOLL_URL:-https://uprotokoll.mueller-holding.ag}
       MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
     depends_on:
       api:
@@ -182,7 +205,56 @@ services:
       retries: 6
       start_period: 20s
 
+  uprotokoll-db:
+    <<: *hardening
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: ${UPROTOKOLL_DB_NAME:-u_protokoll}
+      MARIADB_USER: ${UPROTOKOLL_DB_USER:-u_protokoll}
+      MARIADB_PASSWORD: ${UPROTOKOLL_DB_PASSWORD:?UPROTOKOLL_DB_PASSWORD must be set}
+      MARIADB_ROOT_PASSWORD: ${UPROTOKOLL_DB_ROOT_PASSWORD:?UPROTOKOLL_DB_ROOT_PASSWORD must be set}
+    volumes:
+      - uprotokoll-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  uprotokoll-migrate:
+    # Wendet die SQL-Migrationen idempotent an (Tabelle migrations haelt den Stand).
+    <<: *hardening
+    working_dir: /var/www/html
+    command: ["php", "bin/migrate.php"]
+    environment:
+      <<: *uprotokoll-env
+    depends_on:
+      uprotokoll-db:
+        condition: service_healthy
+    restart: "no"
+
+  uprotokoll:
+    <<: *hardening
+    environment:
+      <<: *uprotokoll-env
+    volumes:
+      - uprotokoll-uploads:/var/www/html/storage/uploads
+    depends_on:
+      uprotokoll-db:
+        condition: service_healthy
+      uprotokoll-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
 volumes:
   postgres-data:
   redis-data:
   objectstore-data:
+  uprotokoll-db-data:
+  uprotokoll-uploads:

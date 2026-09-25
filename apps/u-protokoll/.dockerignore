@@ -1,0 +1,7 @@
+.git
+.env
+storage/logs/*
+storage/cache/*
+storage/uploads/*
+Dockerfile
+.dockerignore
