@@ -2039,6 +2039,9 @@
     "placeholder": "Nachricht schreiben …",
     "placeholderFile": "Datei anhängen, optional Hinweis dazu …",
     "send": "Senden",
+    "stepConversation": "Unterhaltung anlegen",
+    "stepMessage": "Nachricht senden",
+    "stepRun": "Lauf abfragen",
     "uploadFailed": "Die Datei {name} konnte nicht hochgeladen werden.",
     "disclaimer": "Vorschläge der KI. Es wird nichts angelegt, bevor Sie zustimmen."
   },

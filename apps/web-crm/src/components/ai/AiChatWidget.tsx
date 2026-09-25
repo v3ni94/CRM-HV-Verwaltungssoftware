@@ -29,6 +29,11 @@ type PageContext = { area: Area; contextType: "global" | "property" | "contact";
 
 const UUID = /[0-9a-fA-F-]{36}/;
 
+/** Error text with the failing step and HTTP status so a report can be diagnosed. */
+function stepError(step: string, status: number, message: string): string {
+  return `${step} (HTTP ${status}): ${message}`;
+}
+
 export function pageContext(pathname: string): PageContext {
   const id = pathname.match(UUID)?.[0] ?? null;
   if (pathname.startsWith("/kontakte")) return { area: "contacts", contextType: id ? "contact" : "global", contextId: id };
@@ -108,7 +113,7 @@ export function AiChatWidget() {
       method: "POST",
       body: JSON.stringify({ title: t("conversationTitle", { page: t(`area.${ctx.area}`) }), context_type: ctx.contextType, context_id: ctx.contextId }),
     });
-    if (!res.ok) throw new Error(res.message);
+    if (!res.ok) throw new Error(stepError(t("stepConversation"), res.status, res.message));
     setConversation(res.data);
     return res.data;
   };
@@ -132,7 +137,7 @@ export function AiChatWidget() {
     while (isRunPending(current)) {
       await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
       const res = await bff<Run>(`/api/bff/ai/runs/${current.id}`);
-      if (!res.ok) throw new Error(res.message);
+      if (!res.ok) throw new Error(stepError(t("stepRun"), res.status, res.message));
       current = res.data;
       if (isRunPending(current)) setStage(current.status === "running" ? "processing" : "queued");
     }
@@ -146,7 +151,7 @@ export function AiChatWidget() {
       method: "POST",
       body: JSON.stringify({ content, task, document_ids: documentIds }),
     });
-    if (!res.ok) throw new Error(res.message);
+    if (!res.ok) throw new Error(stepError(t("stepMessage"), res.status, res.message));
     return waitForRun(res.data);
   };
 

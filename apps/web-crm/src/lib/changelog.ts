@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.15.1",
+    date: "25.09.2026",
+    title: "KI-Chat: Fehlermeldungen mit Schritt und Status",
+    changes: [
+      "KI-Chat: Fehlermeldungen nennen jetzt den Schritt (Unterhaltung anlegen, Nachricht senden, Lauf abfragen) und den HTTP-Status, damit Abbrüche wie Datensatz nicht gefunden zuzuordnen sind",
+    ],
+  },
+  {
     version: "1.15.0",
     date: "25.09.2026",
     title: "Belegeingang mit KI, OpenImmo, Übergabeprotokoll mit Gehilfen und U-Protokoll-Übernahme",
