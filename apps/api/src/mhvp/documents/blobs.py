@@ -14,6 +14,7 @@ class BlobStore:
     def __init__(self, settings: Settings, client: "S3Client | None" = None) -> None:
         self._client = client or create_s3_client(settings)
         self._bucket = settings.s3_bucket
+        self.settings = settings
 
     @staticmethod
     def key(tenant_id: uuid.UUID, document_id: uuid.UUID) -> str:

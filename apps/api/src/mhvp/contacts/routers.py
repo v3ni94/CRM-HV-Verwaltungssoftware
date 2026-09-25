@@ -15,6 +15,8 @@ from mhvp.contacts.models import (
     ContactRelation,
     ContactTag,
     ContactTagLink,
+    ContactType,
+    ContactTypeCode,
     Party,
     PartyMember,
 )
@@ -49,6 +51,7 @@ async def list_contacts(
     request: Request,
     q: str | None = Query(default=None, max_length=200),
     kind: str | None = None,
+    type: ContactTypeCode | None = None,
     tag: str | None = None,
     include_deleted: bool = False,
     page: Page = 1,
@@ -61,6 +64,10 @@ async def list_contacts(
             query = query.where(Contact.deleted_at.is_(None))
         if kind:
             query = query.where(Contact.kind == kind)
+        if type:
+            query = query.where(
+                Contact.id.in_(select(ContactType.contact_id).where(ContactType.type == type))
+            )
         if tag:
             query = query.where(
                 Contact.id.in_(

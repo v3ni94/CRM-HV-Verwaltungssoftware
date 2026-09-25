@@ -18,6 +18,9 @@ ALGORITHM = "ES256"
 ACCESS_AUDIENCE = "mhvp-api"
 MFA_AUDIENCE = "mhvp-mfa"
 MFA_TTL = timedelta(minutes=5)
+# Trusted device: skips only the TOTP step after a correct password (A-2FA-Policy).
+DEVICE_AUDIENCE = "mhvp-device"
+DEVICE_TTL = timedelta(days=180)
 
 
 class TokenError(Exception):
@@ -149,6 +152,30 @@ def issue_mfa_token(settings: Settings, user_id: uuid.UUID, *, now: datetime | N
 
 def decode_mfa_token(settings: Settings, token: str) -> uuid.UUID:
     return uuid.UUID(_decode(settings, token, MFA_AUDIENCE)["sub"])
+
+
+def issue_device_token(
+    settings: Settings, user_id: uuid.UUID, fingerprint: str, *, now: datetime | None = None
+) -> str:
+    """180 days of trust for this browser. The fingerprint binds the token to the current
+    TOTP secret: resetting the second factor invalidates every remembered device."""
+    now = now or datetime.now(UTC)
+    return _encode(
+        settings,
+        {
+            "iss": settings.jwt_issuer,
+            "aud": DEVICE_AUDIENCE,
+            "sub": str(user_id),
+            "fp": fingerprint,
+            "iat": int(now.timestamp()),
+            "exp": int((now + DEVICE_TTL).timestamp()),
+        },
+    )
+
+
+def decode_device_token(settings: Settings, token: str) -> tuple[uuid.UUID, str]:
+    data = _decode(settings, token, DEVICE_AUDIENCE)
+    return uuid.UUID(data["sub"]), str(data.get("fp", ""))
 
 
 def issue_id_token(

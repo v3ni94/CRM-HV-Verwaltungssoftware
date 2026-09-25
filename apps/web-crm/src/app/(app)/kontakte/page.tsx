@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 25;
 
-type Search = { q?: string; kind?: string; tag?: string; page?: string };
+type Search = { q?: string; kind?: string; type?: string; tag?: string; page?: string };
 
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const [t, tl, params] = await Promise.all([
@@ -22,6 +22,8 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   ]);
   const q = params.q?.trim() ?? "";
   const kind = params.kind === "person" || params.kind === "company" ? params.kind : undefined;
+  const TYPE_CODES = ["tenant", "prospect", "owner", "service_provider", "broker", "manager", "bank", "board_member", "authority", "other"] as const;
+  const type = TYPE_CODES.find((c) => c === params.type);
   const tag = params.tag?.trim() ?? "";
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
@@ -30,6 +32,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       query: {
         ...(q ? { q } : {}),
         ...(kind ? { kind } : {}),
+        ...(type ? { type } : {}),
         ...(tag ? { tag } : {}),
         page,
         page_size: PAGE_SIZE,
@@ -42,6 +45,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     const sp = new URLSearchParams();
     if (q) sp.set("q", q);
     if (kind) sp.set("kind", kind);
+    if (type) sp.set("type", type);
     if (tag) sp.set("tag", tag);
     sp.set("page", String(target));
     return `/kontakte?${sp}`;
@@ -75,6 +79,19 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           </select>
         </div>
         <div>
+          <label htmlFor="type" className={ui.label}>
+            {t("type")}
+          </label>
+          <select id="type" name="type" defaultValue={type ?? ""} className={ui.input}>
+            <option value="">{t("allTypes")}</option>
+            {TYPE_CODES.map((c) => (
+              <option key={c} value={c}>
+                {tl(`type.${c}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label htmlFor="tag" className={ui.label}>
             {t("tag")}
           </label>
@@ -91,7 +108,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       <SavedFilters
         resource="contacts"
         basePath="/kontakte"
-        current={Object.fromEntries(Object.entries({ q, kind: kind ?? "", tag }).filter(([, v]) => v))}
+        current={Object.fromEntries(Object.entries({ q, kind: kind ?? "", type: type ?? "", tag }).filter(([, v]) => v))}
       />
 
       {!data ? (
@@ -111,6 +128,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                 </th>
                 <th className="py-1.5 pr-3 font-medium">{t("colName")}</th>
                 <th className="py-1.5 pr-3 font-medium">{t("colKind")}</th>
+                <th className="py-1.5 pr-3 font-medium">{t("colTypes")}</th>
                 <th className="py-1.5 pr-3 font-medium">{t("colEmail")}</th>
                 <th className="py-1.5 pr-3 font-medium">{t("colPhone")}</th>
                 <th className="py-1.5 pr-3 font-medium">{t("colCity")}</th>
@@ -131,6 +149,19 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                     {c.completeness === "incomplete" ? <span className="ml-2 text-xs text-muted">{t("incomplete")}</span> : null}
                   </td>
                   <td className="py-1.5 pr-3">{tl(`kind.${c.kind}`)}</td>
+                  <td className="py-1.5 pr-3">
+                    {c.types.length ? (
+                      <span className="flex flex-wrap gap-1">
+                        {c.types.map((x) => (
+                          <span key={x} className={ui.badge}>
+                            {tl(`type.${x}`)}
+                          </span>
+                        ))}
+                      </span>
+                    ) : (
+                      ""
+                    )}
+                  </td>
                   <td className="py-1.5 pr-3">{c.primary_email ?? ""}</td>
                   <td className="py-1.5 pr-3">{c.primary_phone ?? ""}</td>
                   <td className="py-1.5 pr-3">{c.city ?? ""}</td>

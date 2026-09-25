@@ -28,12 +28,19 @@ export function LoginForm({ next }: { next?: string }) {
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
-    const result = await bff<{ status: string }>("/api/session/login", {
+    const result = await bff<{ status: string; tenant_id?: string | null }>("/api/session/login", {
       method: "POST",
       body: JSON.stringify(values),
     });
     if (!result.ok) {
       setError(result.message);
+      return;
+    }
+    if (result.data.status === "ok") {
+      // Direkt angemeldet: keine 2FA-Pflicht (Nicht-Admin) oder vertrautes Gerät.
+      const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/start";
+      router.push(result.data.tenant_id ? target : `/mandant?next=${encodeURIComponent(target)}`);
+      router.refresh();
       return;
     }
     const params = new URLSearchParams();

@@ -14,7 +14,15 @@ from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.platform.models import Membership, MembershipStatus, RefreshToken, Tenant, User
+from mhvp.platform.models import (
+    Membership,
+    MembershipRole,
+    MembershipStatus,
+    RefreshToken,
+    Role,
+    Tenant,
+    User,
+)
 
 
 @dataclass(frozen=True)
@@ -77,6 +85,59 @@ async def check_password(
     if failure is not None:
         raise failure
     return result
+
+
+ADMIN_ROLE_CODES = ("tenant_admin",)
+
+
+def totp_fingerprint(user: User) -> str:
+    """Binds a trusted-device token to the current second factor (see tokens.DEVICE_TTL)."""
+    import hashlib
+
+    return hashlib.sha256((user.totp_secret or "").encode()).hexdigest()[:16]
+
+
+async def requires_mfa(factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID) -> bool:
+    """2FA is mandatory for administrators only (platform admin or tenant_admin role);
+    everyone else may log in with password alone until they enable TOTP themselves.
+    Role rows live behind row level security, so each membership is checked in its
+    tenant context."""
+    async with platform_transaction(factory) as session:
+        user = await session.get(User, user_id)
+        if user is None or user.is_platform_admin:
+            return True
+        memberships = (
+            await session.execute(
+                select(Membership.id, Membership.tenant_id).where(
+                    Membership.user_id == user_id,
+                    Membership.status == MembershipStatus.ACTIVE,
+                )
+            )
+        ).all()
+    for membership_id, tenant_id in memberships:
+        async with tenant_transaction(factory, tenant_id) as session:
+            hit = await session.scalar(
+                select(MembershipRole.id)
+                .join(Role, Role.id == MembershipRole.role_id)
+                .where(
+                    MembershipRole.membership_id == membership_id,
+                    Role.code.in_(ADMIN_ROLE_CODES),
+                )
+                .limit(1)
+            )
+            if hit is not None:
+                return True
+    return False
+
+
+async def device_fingerprint(
+    factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID
+) -> str | None:
+    async with platform_transaction(factory) as session:
+        user = await session.get(User, user_id)
+        if user is None or not user.active or not user.totp_enabled:
+            return None
+        return totp_fingerprint(user)
 
 
 async def start_totp_setup(

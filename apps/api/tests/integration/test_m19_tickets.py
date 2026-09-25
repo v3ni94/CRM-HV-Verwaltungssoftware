@@ -314,7 +314,9 @@ def test_ticket_stats_series_and_user_comparison(client: TestClient, world: Worl
 
     # Assignee filter narrows stock and series to that user.
     filtered = _ok(
-        client.get(f"/api/v1/tickets/stats?interval=day&periods=7&assignee_user_id={care}", headers=h)
+        client.get(
+            f"/api/v1/tickets/stats?interval=day&periods=7&assignee_user_id={care}", headers=h
+        )
     )
     assert filtered["open_total"] == 1
     assert filtered["series"][-1]["resolved"] == 0
@@ -419,16 +421,16 @@ def test_ticket_templates_with_required_iban_field(client: TestClient, world: Wo
     assert mine["required_fields"][0]["kind"] == "iban"
 
     # Ohne IBAN: klare Fehlermeldung; mit ungültiger IBAN: formale Prüfung schlägt an
-    r = client.post(
-        "/api/v1/tickets", json={"category": f"kaution-{RUN}"}, headers=admin
-    )
-    assert r.status_code == 422 and "Pflichtfeld fehlt: IBAN" in r.text
+    r = client.post("/api/v1/tickets", json={"category": f"kaution-{RUN}"}, headers=admin)
+    assert r.status_code == 422, r.text
+    assert "Pflichtfeld fehlt: IBAN" in r.text
     r = client.post(
         "/api/v1/tickets",
         json={"category": f"kaution-{RUN}", "extra_fields": {"iban": "DE00 1234"}},
         headers=admin,
     )
-    assert r.status_code == 422 and "keine gültige IBAN" in r.text
+    assert r.status_code == 422, r.text
+    assert "keine gültige IBAN" in r.text
 
     # Gültige IBAN (Testwert, Mod 97 = 1) wird normalisiert gespeichert; Checkliste kommt mit
     ticket = _ok(

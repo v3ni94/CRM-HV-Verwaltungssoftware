@@ -9900,6 +9900,18 @@
       },
       "LoginRequest": {
         "properties": {
+          "device_token": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Token"
+          },
           "email": {
             "format": "email",
             "title": "Email",
@@ -9922,18 +9934,34 @@
       "LoginStep": {
         "properties": {
           "mfa_token": {
-            "title": "Mfa Token",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mfa Token"
           },
           "status": {
-            "description": "mfa_required oder mfa_setup_required",
+            "description": "ok, mfa_required oder mfa_setup_required",
             "title": "Status",
             "type": "string"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokenResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
-          "status",
-          "mfa_token"
+          "status"
         ],
         "title": "LoginStep",
         "type": "object"
@@ -11504,6 +11532,11 @@
           "mfa_token": {
             "title": "Mfa Token",
             "type": "string"
+          },
+          "remember_device": {
+            "default": false,
+            "title": "Remember Device",
+            "type": "boolean"
           },
           "tenant_id": {
             "anyOf": [
@@ -17182,6 +17215,17 @@
           "access_token": {
             "title": "Access Token",
             "type": "string"
+          },
+          "device_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Token"
           },
           "expires_in": {
             "title": "Expires In",
@@ -24547,6 +24591,22 @@
                 }
               ],
               "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ContactTypeCode"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
             }
           },
           {

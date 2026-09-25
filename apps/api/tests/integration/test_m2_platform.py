@@ -146,8 +146,21 @@ def login(
         "/api/v1/auth/login", json={"email": world.email(name), "password": PASSWORD}
     )
     assert step.status_code == 200, step.text
-    mfa = step.json()["mfa_token"]
-    if step.json()["status"] == "mfa_setup_required":
+    step_body = step.json()
+    if step_body["status"] == "ok":
+        # 2FA-Pflicht gilt nur für Administratoren; alle anderen sind direkt angemeldet.
+        issued: dict[str, Any] = dict(step_body["tokens"])
+        if tenant_id and str(issued.get("tenant_id")) != str(tenant_id):
+            switched = client.post(
+                "/api/v1/auth/switch-tenant",
+                json={"tenant_id": str(tenant_id)},
+                headers={"Authorization": f"Bearer {issued['access_token']}"},
+            )
+            assert switched.status_code == 200, switched.text
+            return dict(switched.json())
+        return issued
+    mfa = step_body["mfa_token"]
+    if step_body["status"] == "mfa_setup_required":
         setup = client.post("/api/v1/auth/mfa/setup", json={"mfa_token": mfa})
         assert setup.status_code == 200, setup.text
         world.secrets[name] = setup.json()["secret"]
@@ -208,18 +221,38 @@ def test_login_with_totp_setup_selects_single_tenant(client: TestClient, world: 
 
 
 def test_totp_code_cannot_be_replayed(client: TestClient, world: World) -> None:
-    login(client, world, "reader", reuse=False)
-    mfa = client.post(
-        "/api/v1/auth/login", json={"email": world.email("reader"), "password": PASSWORD}
-    ).json()["mfa_token"]
-    # The code of the current step was used by the first login.
-    replay = client.post(
-        "/api/v1/auth/mfa/verify", json={"mfa_token": mfa, "code": _code(world.secrets["reader"])}
+    # Only administrators are forced into TOTP (admin-only 2FA policy), so the replay
+    # protection is exercised with a fresh tenant admin whose steps no other test consumes.
+    admin = bearer(login(client, world, "admin"))
+    email = f"replay-{RUN}@example.org"
+    created = client.post(
+        "/api/v1/tenant/members",
+        json={
+            "email": email,
+            "display_name": "Replay Admin",
+            "role_codes": ["tenant_admin"],
+            "password": PASSWORD,
+        },
+        headers=admin,
     )
+    assert created.status_code == 201, created.text
+    step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD}).json()
+    assert step["status"] == "mfa_setup_required", step
+    secret = client.post("/api/v1/auth/mfa/setup", json={"mfa_token": step["mfa_token"]}).json()[
+        "secret"
+    ]
+    first = client.post(
+        "/api/v1/auth/mfa/verify", json={"mfa_token": step["mfa_token"], "code": _code(secret)}
+    )
+    assert first.status_code == 200, first.text
+    mfa = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD}).json()[
+        "mfa_token"
+    ]
+    # The code of the current step was used by the first login.
+    replay = client.post("/api/v1/auth/mfa/verify", json={"mfa_token": mfa, "code": _code(secret)})
     assert replay.status_code == 401
     fresh = client.post(
-        "/api/v1/auth/mfa/verify",
-        json={"mfa_token": mfa, "code": _code(world.secrets["reader"], 1)},
+        "/api/v1/auth/mfa/verify", json={"mfa_token": mfa, "code": _code(secret, 1)}
     )
     assert fresh.status_code == 200
 
@@ -725,20 +758,10 @@ def test_tenant_admin_manages_members_and_users_change_password(
     def login_new(password: str) -> Any:
         return client.post("/api/v1/auth/login", json={"email": email, "password": password})
 
-    assert login_new(PASSWORD).json()["status"] == "mfa_setup_required"
-    step = login_new(PASSWORD).json()
-    setup = client.post("/api/v1/auth/mfa/setup", json={"mfa_token": step["mfa_token"]})
-    secret = setup.json()["secret"]
-    verified = client.post(
-        "/api/v1/auth/mfa/verify",
-        json={
-            "mfa_token": step["mfa_token"],
-            "code": _code(secret, 0),
-            "tenant_id": str(world.tenant_a),
-        },
-    )
-    assert verified.status_code == 200, verified.text
-    user = bearer(verified.json())
+    # Standard role: no forced 2FA (the policy binds administrators only), direct session.
+    first = login_new(PASSWORD).json()
+    assert first["status"] == "ok", first
+    user = bearer(first["tokens"])
     wrong = client.post(
         "/api/v1/auth/password",
         json={"current_password": "falsch", "new_password": "ein neues langes Passwort"},
@@ -770,16 +793,13 @@ def test_tenant_admin_manages_members_and_users_change_password(
     )
     assert disabled.status_code == 200, disabled.text
     assert disabled.json()["status"] == "disabled"
+    # Membership disabled: the password still works, but no tenant session exists any more.
     step = login_new("Startpasswort 2026").json()
-    refused = client.post(
-        "/api/v1/auth/mfa/verify",
-        json={
-            "mfa_token": step["mfa_token"],
-            "code": _code(secret, 1),
-            "tenant_id": str(world.tenant_a),
-        },
-    )
-    assert refused.status_code in (401, 403, 404), refused.text
+    assert step["status"] == "ok", step
+    assert step["tokens"]["tenant_id"] is None
+    assert step["tokens"]["tenants"] == []
+    blocked = client.get("/api/v1/tenant/members", headers=bearer(step["tokens"]))
+    assert blocked.status_code == 403, blocked.text
     me = next(
         m
         for m in client.get("/api/v1/tenant/members", headers=admin).json()
@@ -789,3 +809,68 @@ def test_tenant_admin_manages_members_and_users_change_password(
         f"/api/v1/tenant/members/{me['membership_id']}", json={"status": "disabled"}, headers=admin
     )
     assert own.status_code == 422, own.text
+
+
+def test_mfa_policy_admins_only_and_trusted_device(client: TestClient, world: World) -> None:
+    """2FA-Pflicht nur für Administratoren; „Gerät merken" (180 Tage) überspringt nach
+    korrektem Passwort nur den TOTP-Schritt und erlischt beim TOTP-Reset."""
+    admin = bearer(login(client, world, "admin"))
+    email = f"device-{RUN}@example.org"
+    created = client.post(
+        "/api/v1/tenant/members",
+        json={
+            "email": email,
+            "display_name": "Device Admin",
+            "role_codes": ["tenant_admin"],
+            "password": PASSWORD,
+        },
+        headers=admin,
+    )
+    assert created.status_code == 201, created.text
+
+    # Administrator: Einrichtung erzwungen; Verify mit remember_device liefert ein Gerätetoken.
+    step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD}).json()
+    assert step["status"] == "mfa_setup_required", step
+    secret = client.post("/api/v1/auth/mfa/setup", json={"mfa_token": step["mfa_token"]}).json()[
+        "secret"
+    ]
+    verified = client.post(
+        "/api/v1/auth/mfa/verify",
+        json={"mfa_token": step["mfa_token"], "code": _code(secret), "remember_device": True},
+    )
+    assert verified.status_code == 200, verified.text
+    device_token = verified.json()["device_token"]
+    assert device_token
+
+    # Vertrautes Gerät: Passwort + Gerätetoken genügen, kein TOTP-Schritt.
+    trusted = client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": PASSWORD, "device_token": device_token},
+    ).json()
+    assert trusted["status"] == "ok", trusted
+    assert trusted["tokens"]["access_token"]
+
+    # Falsches Passwort bleibt falsch, auch mit Gerätetoken.
+    bad = client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "falsches Passwort", "device_token": device_token},
+    )
+    assert bad.status_code == 401, bad.text
+
+    # Fremdes Gerätetoken (anderer Nutzer) zählt nicht: TOTP bleibt Pflicht.
+    other = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": world.email("admin"),
+            "password": PASSWORD,
+            "device_token": device_token,
+        },
+    ).json()
+    assert other["status"] == "mfa_required", other
+
+    # Manipuliertes Token fällt auf den TOTP-Schritt zurück statt zu scheitern.
+    tampered = client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": PASSWORD, "device_token": device_token[:-2] + "xx"},
+    ).json()
+    assert tampered["status"] == "mfa_required", tampered

@@ -8749,6 +8749,8 @@ export interface components {
         };
         /** LoginRequest */
         LoginRequest: {
+            /** Device Token */
+            device_token?: string | null;
             /**
              * Email
              * Format: email
@@ -8760,12 +8762,13 @@ export interface components {
         /** LoginStep */
         LoginStep: {
             /** Mfa Token */
-            mfa_token: string;
+            mfa_token?: string | null;
             /**
              * Status
-             * @description mfa_required oder mfa_setup_required
+             * @description ok, mfa_required oder mfa_setup_required
              */
             status: string;
+            tokens?: components["schemas"]["TokenResponse"] | null;
         };
         /** MailAppointmentIn */
         MailAppointmentIn: {
@@ -9320,6 +9323,11 @@ export interface components {
             code: string;
             /** Mfa Token */
             mfa_token: string;
+            /**
+             * Remember Device
+             * @default false
+             */
+            remember_device: boolean;
             /** Tenant Id */
             tenant_id?: string | null;
         };
@@ -11153,6 +11161,8 @@ export interface components {
         TokenResponse: {
             /** Access Token */
             access_token: string;
+            /** Device Token */
+            device_token?: string | null;
             /** Expires In */
             expires_in: number;
             /** Refresh Token */
@@ -15333,6 +15343,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 kind?: string | null;
+                type?: components["schemas"]["ContactTypeCode"] | null;
                 tag?: string | null;
                 include_deleted?: boolean;
                 page?: number;

@@ -72,7 +72,7 @@ def test_complete_with_retry_waits_then_falls_through(monkeypatch: pytest.Monkey
     async def fake_sleep(delay: float) -> None:
         slept.append(delay)
 
-    monkeypatch.setattr(gateway.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr("asyncio.sleep", fake_sleep)
     monkeypatch.setattr(gateway, "RETRY_DELAYS_S", (1.0, 2.0))
 
     class Flaky:

@@ -267,7 +267,10 @@ def test_oauth_client_consent_and_mailbox_access(
     # A mail in this box is invisible to a member without a grant.
     fake.add("o1", _eml(f"o{RUN}@example.com", f"OAuth Test {RUN}", f"<o1-{RUN}@x>"))
     assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["created"] == 1
-    subjects = lambda hdr: {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=hdr))}  # noqa: E731
+
+    def subjects(hdr: dict[str, str]) -> set[str]:
+        return {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=hdr))}
+
     assert f"OAuth Test {RUN}" not in subjects(clerk)
 
     # Explicit grant makes it visible; removing the grant hides it again.
@@ -351,22 +354,24 @@ def test_failed_ingest_raises_original_error_not_pending_rollback(
         engine = create_app_engine(settings)
         try:
             factory = create_session_factory(engine)
-            with pytest.raises(ValueError, match="Originalfehler"):
-                async with tenant_transaction(factory, world.tenant_a) as session:
-                    box = Mailbox(
-                        tenant_id=world.tenant_a,
-                        address=f"poison{RUN}@example.com",
-                        kind="gmail",
-                        enabled=True,
-                        secret="rt",
-                    )
-                    session.add(box)
-                    await session.flush()
-                    with mock_aws():
-                        boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                box = Mailbox(
+                    tenant_id=world.tenant_a,
+                    address=f"poison{RUN}@example.com",
+                    kind="gmail",
+                    enabled=True,
+                    secret="rt",
+                )
+                session.add(box)
+                await session.flush()
+                with mock_aws():
+                    boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
+                    with pytest.raises(ValueError, match="Originalfehler"):
                         await gmail.sync_mailbox(
                             session, BlobStore(settings), settings, box, gclient
                         )
+                # The poisoned transaction must not be committed by the context manager.
+                await session.rollback()
             await gclient.aclose()
         finally:
             await engine.dispose()

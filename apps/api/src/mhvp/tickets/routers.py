@@ -659,12 +659,13 @@ async def ticket_stats(
         from mhvp.platform.models import User
 
         ids = [u for u in per_user if u is not None]
-        names = {}
+        names: dict[uuid.UUID, str] = {}
         if ids:
             name_rows = await session.execute(
                 select(User.id, User.display_name).where(User.id.in_(ids))
             )
-            names = dict(name_rows.all())
+            for row_id, display_name in name_rows:
+                names[row_id] = display_name
 
     return {
         "interval": interval,
@@ -677,7 +678,7 @@ async def ticket_stats(
             (
                 {
                     "user_id": str(u) if u else None,
-                    "name": names.get(u),
+                    "name": names.get(u) if u else None,
                     "open": v["open"],
                     "resolved": v["resolved"],
                 }

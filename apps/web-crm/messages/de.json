@@ -34,7 +34,8 @@
     "backToLogin": "Zurück zur Anmeldung",
     "tenantTitle": "Mandant auswählen",
     "tenantHint": "Ihr Zugang ist für mehrere Mandanten freigeschaltet. Bitte den Mandanten für diese Sitzung wählen.",
-    "noTenants": "Für Ihren Zugang ist kein Mandant freigeschaltet."
+    "noTenants": "Für Ihren Zugang ist kein Mandant freigeschaltet.",
+    "rememberDevice": "Diesem Gerät 180 Tage vertrauen (zweiter Faktor wird auf diesem Gerät übersprungen)"
   },
   "Shell": {
     "skip": "Zum Inhalt springen",
@@ -156,7 +157,10 @@
       "dateInvalid": "Bitte ein gültiges Datum angeben."
     },
     "select": "Auswahl",
-    "selectRow": "{name} auswählen"
+    "selectRow": "{name} auswählen",
+    "type": "Art",
+    "allTypes": "Alle Arten",
+    "colTypes": "Art"
   },
   "ContactForm": {
     "titleNew": "Neuer Kontakt",

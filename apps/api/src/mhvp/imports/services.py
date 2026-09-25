@@ -64,7 +64,9 @@ def read_table(
             raise ProblemError(ErrorCodes.VALIDATION, detail=f"Tabellenblatt {sheet!r} fehlt.")
         rows = [list(r) for r in book[sheet or book.sheetnames[0]].iter_rows(values_only=True)]
     elif mime_type in ("text/csv", "text/plain"):
-        text = data.decode("utf-8-sig", errors="replace")
+        from mhvp.ai.gateway import decode_text
+
+        text = decode_text(data)
         dialect = csv.Sniffer().sniff(text[:4096], delimiters=";,\t")
         rows = [list(r) for r in csv.reader(io.StringIO(text), dialect)]
     else:

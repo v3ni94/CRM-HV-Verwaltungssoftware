@@ -36,6 +36,9 @@ def upgrade() -> None:
             server_default="{}",
         ),
     )
+    # Defaults only backfill existing rows; the application sets the values (no model default).
+    op.alter_column("ticket_template", "required_fields", server_default=None)
+    op.alter_column("ticket", "extra_fields", server_default=None)
 
 
 def downgrade() -> None:

@@ -20,11 +20,8 @@ router = APIRouter(prefix="/auth", tags=["Anmeldung"])
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=256)
-
-
-class LoginStep(BaseModel):
-    status: str = Field(description="mfa_required oder mfa_setup_required")
-    mfa_token: str
+    # Token eines vertrauenswürdigen Geräts (180 Tage): überspringt nur den TOTP-Schritt.
+    device_token: str | None = Field(default=None, max_length=4096)
 
 
 class MfaTokenRequest(BaseModel):
@@ -40,6 +37,7 @@ class MfaVerifyRequest(BaseModel):
     mfa_token: str
     code: str = Field(min_length=6, max_length=8)
     tenant_id: uuid.UUID | None = None
+    remember_device: bool = False
 
 
 class TenantOut(BaseModel):
@@ -54,6 +52,15 @@ class TokenResponse(BaseModel):
     refresh_token: str | None
     tenant_id: uuid.UUID | None
     tenants: list[TenantOut]
+    # Nur nach mfa/verify mit remember_device gesetzt (vertrautes Gerät, 180 Tage).
+    device_token: str | None = None
+
+
+class LoginStep(BaseModel):
+    status: str = Field(description="ok, mfa_required oder mfa_setup_required")
+    mfa_token: str | None = None
+    # Bei status "ok" (kein zweiter Faktor nötig oder Gerät vertraut) direkt die Sitzung.
+    tokens: TokenResponse | None = None
 
 
 class RefreshRequest(BaseModel):
@@ -114,16 +121,42 @@ def _mfa_user(settings: Settings, token: str) -> uuid.UUID:
         raise ProblemError(ErrorCodes.NOT_AUTHENTICATED) from None
 
 
+async def _login_ok(request: Request, settings: Settings, user_id: uuid.UUID) -> LoginStep:
+    issued = await service.issue_session(
+        sessions(request),
+        settings,
+        user_id=user_id,
+        tenant_id=None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return LoginStep(status="ok", tokens=_out(issued))
+
+
 @router.post("/login", summary="Anmeldung Schritt 1: E-Mail und Passwort")
 async def login(body: LoginRequest, request: Request) -> LoginStep:
     settings = _settings(request)
     user_id, totp_enabled = await service.check_password(
         sessions(request), body.email, body.password
     )
-    return LoginStep(
-        status="mfa_required" if totp_enabled else "mfa_setup_required",
-        mfa_token=tokens.issue_mfa_token(settings, user_id),
-    )
+    if totp_enabled:
+        # Vertrautes Gerät (180 Tage): nur der TOTP-Schritt entfällt, nie das Passwort.
+        # Der Fingerabdruck bindet das Token an das aktuelle TOTP-Geheimnis.
+        if body.device_token:
+            try:
+                device_user, fingerprint = tokens.decode_device_token(settings, body.device_token)
+            except (tokens.TokenError, ValueError, KeyError):
+                device_user, fingerprint = None, ""
+            if device_user == user_id:
+                expected = await service.device_fingerprint(sessions(request), user_id)
+                if expected is not None and fingerprint == expected:
+                    return await _login_ok(request, settings, user_id)
+        return LoginStep(status="mfa_required", mfa_token=tokens.issue_mfa_token(settings, user_id))
+    # 2FA-Pflicht gilt nur für Administratoren; alle anderen melden sich direkt an.
+    if await service.requires_mfa(sessions(request), user_id):
+        return LoginStep(
+            status="mfa_setup_required", mfa_token=tokens.issue_mfa_token(settings, user_id)
+        )
+    return await _login_ok(request, settings, user_id)
 
 
 @router.post("/mfa/setup", summary="Zweiten Faktor (TOTP) einrichten")
@@ -147,7 +180,12 @@ async def mfa_verify(body: MfaVerifyRequest, request: Request) -> TokenResponse:
         tenant_id=body.tenant_id,
         user_agent=request.headers.get("user-agent"),
     )
-    return _out(issued)
+    result = _out(issued)
+    if body.remember_device:
+        fingerprint = await service.device_fingerprint(sessions(request), user_id)
+        if fingerprint is not None:
+            result.device_token = tokens.issue_device_token(settings, user_id, fingerprint)
+    return result
 
 
 @router.post("/refresh", summary="Token erneuern (Rotation)")

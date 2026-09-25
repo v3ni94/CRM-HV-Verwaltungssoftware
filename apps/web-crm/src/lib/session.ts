@@ -14,12 +14,15 @@ export const COOKIE = {
   refresh: "mhvp_rt",
   mfa: "mhvp_mfa",
   ctx: "mhvp_ctx",
+  device: "mhvp_device",
 } as const;
 
 /** Refresh cookie lifetime; the API default refresh TTL is 30 days (config refresh_token_ttl_days). */
 export const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
 /** The MFA token of login step 1 is short lived. */
 export const MFA_MAX_AGE = 10 * 60;
+/** Trusted device ("Gerät merken"): skips only the TOTP step for 180 days. */
+export const DEVICE_MAX_AGE = 180 * 24 * 60 * 60;
 /** Renew the access token a little before the API rejects it. */
 const ACCESS_SKEW_SECONDS = 30;
 
@@ -63,7 +66,12 @@ export function writeTokens(store: CookieWriter, tokens: TokenResponse, secure: 
 }
 
 export function clearSession(store: CookieWriter, secure: boolean): void {
-  for (const name of Object.values(COOKIE)) store.set(name, "", cookieOptions(secure, 0));
+  // The device-trust cookie survives a logout on purpose: it only skips the TOTP step
+  // after the next correct password, never the login itself.
+  for (const name of Object.values(COOKIE)) {
+    if (name === COOKIE.device) continue;
+    store.set(name, "", cookieOptions(secure, 0));
+  }
 }
 
 export function parseContext(raw: string | undefined): SessionContext {

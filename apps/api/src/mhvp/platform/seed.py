@@ -9,6 +9,10 @@ import asyncio
 import os
 import sys
 
+# Mapper configuration needs every FK target in the registry: membership.contact_id points
+# to the contact table, which a platform-only entry point would otherwise never import.
+from mhvp import contacts as _contacts  # noqa: F401
+from mhvp.contacts import models as _contact_models  # noqa: F401
 from mhvp.core.config import get_settings
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.logging import configure_logging, get_logger

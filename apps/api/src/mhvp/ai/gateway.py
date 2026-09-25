@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.ai import providers, tasks
 from mhvp.ai.models import AiExample, AiProvider, AiProviderConfig, AiTask, AiTaskRun, RunStatus
+from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.events import emit
 from mhvp.documents.blobs import BlobStore
@@ -34,16 +35,12 @@ from mhvp.documents.models import Document, TextStatus
 # MHVP_AI_MAX_DOCUMENT_CHARS). The defaults fit a 200k-token context window; raising them
 # requires a routed model with a matching window (e.g. a 1M-token model), otherwise runs
 # fail at the provider instead of with the clear message here.
-def _max_input_chars() -> int:
-    from mhvp.core.config import get_settings
-
-    return get_settings().ai_max_input_chars
+def _max_input_chars(settings: Settings) -> int:
+    return settings.ai_max_input_chars
 
 
-def _max_document_chars() -> int:
-    from mhvp.core.config import get_settings
-
-    return get_settings().ai_max_document_chars
+def _max_document_chars(settings: Settings) -> int:
+    return settings.ai_max_document_chars
 
 
 MAX_TABLE_ROWS = 2_000  # rows with content; formatted empty rows do not count
@@ -97,10 +94,22 @@ def spreadsheet_text(data: bytes) -> str:
     return "\n\n".join(parts)
 
 
+def decode_text(data: bytes) -> str:
+    """German exports arrive as UTF-8 or Windows-1252; a hard errors="replace" turned every
+    umlaut of a cp1252 file into \ufffd, which the model then echoed into its answers."""
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            return data.decode("cp1252")
+        except UnicodeDecodeError:
+            return data.decode("utf-8-sig", errors="replace")
+
+
 def csv_text(data: bytes) -> str:
     import csv
 
-    text = data.decode("utf-8-sig", errors="replace")
+    text = decode_text(data)
     dialect = csv.Sniffer().sniff(text[:4096], delimiters=";,\t") if text else csv.excel
     return _table_text([list(r) for r in csv.reader(io.StringIO(text), dialect)])
 
@@ -122,9 +131,9 @@ async def document_text(session: AsyncSession, blobs: BlobStore, document_id: uu
         raise GatewayBlockedError(
             f"Für {document.filename} liegt noch kein Text vor (Texterkennung ausstehend)."
         )
-    if len(body) > _max_document_chars():
+    if len(body) > _max_document_chars(blobs.settings):
         note = "\n[gekürzt: Datei länger als das Limit für eine Datei]"
-        body = body[: _max_document_chars()] + note
+        body = body[: _max_document_chars(blobs.settings)] + note
     return f'<datei name="{document.filename}" id="{document.id}">\n{body}\n</datei>'
 
 
@@ -156,12 +165,12 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
     for document_id in document_ids:
         parts.append(await document_text(session, blobs, document_id))
     text = "\n\n".join(parts)
-    if len(text) > _max_input_chars():
+    limit = _max_input_chars(blobs.settings)
+    if len(text) > limit:
         raise GatewayBlockedError(
-            f"Die Unterlagen sind zu umfangreich ({len(text)} Zeichen, höchstens "
-            f"{_max_input_chars()}). Bitte in kleinere Teile aufteilen oder das Limit "
-            "(MHVP_AI_MAX_INPUT_CHARS) zusammen mit einem Modell mit größerem Kontextfenster "
-            "erhöhen."
+            f"Die Unterlagen sind zu umfangreich ({len(text)} Zeichen, höchstens {limit}). "
+            "Bitte in kleinere Teile aufteilen oder das Limit (MHVP_AI_MAX_INPUT_CHARS) "
+            "zusammen mit einem Modell mit größerem Kontextfenster erhöhen."
         )
     return TaskInput(text=text, document_ids=document_ids, context=dict(ref.get("context", {})))
 
