@@ -606,33 +606,38 @@ async def _call_plan(
         client = providers.client_for(provider, keys[provider])
         current_messages = messages
         provider_failed = False
-        for attempt in range(2):
-            try:
-                completion = await _complete_with_retry(
-                    client, chosen.model, system, current_messages, schema
-                )
-            except providers.ProviderError as exc:
-                error = f"Anbieterfehler: {exc}"
-                provider_failed = True
-                break
-            tokens_in += completion.tokens_in
-            tokens_out += completion.tokens_out
-            try:
-                output = tasks.SCHEMAS[task].model_validate(completion.data).model_dump(mode="json")
-                error = None
-                break
-            except ValidationError as exc:
-                error = f"Schemafehler: {exc.errors()[0]['msg']} bei {exc.errors()[0]['loc']}"
-                if attempt == 0:
-                    current_messages = [
-                        *current_messages,
-                        {"role": "assistant", "content": completion.raw_text or "{}"},
-                        {
-                            "role": "user",
-                            "content": f"Die Antwort verletzt das Schema: {error}. "
-                            "Bitte vollständig und schemakonform neu antworten.",
-                        },
-                    ]
+        try:
+            for attempt in range(2):
+                try:
+                    completion = await _complete_with_retry(
+                        client, chosen.model, system, current_messages, schema
+                    )
+                except providers.ProviderError as exc:
+                    error = f"Anbieterfehler: {exc}"
+                    provider_failed = True
+                    break
+                tokens_in += completion.tokens_in
+                tokens_out += completion.tokens_out
+                try:
+                    output = (
+                        tasks.SCHEMAS[task].model_validate(completion.data).model_dump(mode="json")
+                    )
+                    error = None
+                    break
+                except ValidationError as exc:
+                    error = f"Schemafehler: {exc.errors()[0]['msg']} bei {exc.errors()[0]['loc']}"
+                    if attempt == 0:
+                        current_messages = [
+                            *current_messages,
+                            {"role": "assistant", "content": completion.raw_text or "{}"},
+                            {
+                                "role": "user",
+                                "content": f"Die Antwort verletzt das Schema: {error}. "
+                                "Bitte vollständig und schemakonform neu antworten.",
+                            },
+                        ]
+        finally:
+            await providers.close_client(client)
         if not provider_failed:
             break
         skips.append(f"{provider.value}: {error}")

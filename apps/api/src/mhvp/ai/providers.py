@@ -39,11 +39,27 @@ class ProviderClient(Protocol):
     ) -> Completion: ...
 
 
+async def close_client(client: object) -> None:
+    """Closes a provider client at the end of a job. The SDK clients would otherwise schedule
+    their HTTP shutdown from ``__del__`` after ``asyncio.run`` has already closed the loop
+    ("Event loop is closed" in the worker log). Recorded test clients have no ``aclose``."""
+    closer = getattr(client, "aclose", None)
+    if closer is None:
+        return
+    try:
+        await closer()
+    except Exception:  # closing must never mask the job result
+        return
+
+
 class AnthropicClient:
     """Messages API with structured output (``output_config.format`` json_schema)."""
 
     def __init__(self, api_key: str, *, client: anthropic.AsyncAnthropic | None = None) -> None:
         self._client = client or anthropic.AsyncAnthropic(api_key=api_key, max_retries=1)
+
+    async def aclose(self) -> None:
+        await self._client.close()
 
     async def complete(
         self,
@@ -108,6 +124,9 @@ class OpenAIClient:
         self._client = client or openai.AsyncOpenAI(
             api_key=api_key, base_url=base_url, max_retries=1
         )
+
+    async def aclose(self) -> None:
+        await self._client.close()
 
     async def complete(
         self,

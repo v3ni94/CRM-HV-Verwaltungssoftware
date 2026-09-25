@@ -8,6 +8,10 @@ unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge ob
 ## 1.17.1 (25.09.2026) KI-Import: parallele Verarbeitung der Teile
 
 - KI: Teile großer Listen werden parallel verarbeitet (vier gleichzeitige Anfragen an den Anbieter statt nacheinander); ein Import mit 11 Teilen braucht damit statt 5 bis 10 Minuten etwa ein Viertel der Zeit. Fortschrittsanzeige und Aufteilung zu großer Teile bleiben erhalten
+## 1.17.1 (25.09.2026) Worker: KI-Clients sauber schließen
+
+- Die HTTP-Clients der KI-Anbieter (OpenAI, Anthropic) werden nach jedem Anbieterschritt geschlossen. Bisher meldete der Worker nach jedem KI-Lauf "Event loop is closed", weil die SDKs das Schließen erst beim Aufräumen nach Ende der Ereignisschleife anstießen
+
 ## 1.17.0 (25.09.2026) Tickets zusammenführen in der Oberfläche
 
 - Tickets: Aktion Zusammenführen im Ticketdetail mit Suche nach Zielticket (Nummer oder Titel), Vorschau beider Tickets und Bestätigung, danach Weiterleitung zum Zielticket
