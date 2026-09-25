@@ -17,6 +17,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.14.1",
+    date: "25.09.2026",
+    title: "Abschaltplan Immoware Hub",
+    changes: [
+      "Runbook zur vierstufigen Abschaltung des Immoware Hub mit Rückweg je Schritt, Voraussetzungen und Aufbewahrungsfristen",
+      "Weiterleitung der alten Hub-Hostnamen immoware.muellerhv.de und mail.muellerhv.de auf das CRM über Traefik (Zusatzdatei im Deploy)",
+    ],
+  },
+  {
     version: "1.14.0",
     date: "25.09.2026",
     title: "KI-Wissensbasis und Mail-Vorbereitung",

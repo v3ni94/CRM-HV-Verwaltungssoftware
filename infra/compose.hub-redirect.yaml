@@ -1,0 +1,14 @@
+# Zusatzdatei fuer die Abschaltung des Immoware Hub (docs/runbooks/hub-abschaltung.md).
+# Leitet die alten Hub-Hostnamen dauerhaft auf das CRM um. Einbinden mit einem weiteren
+# "-f infra/compose.hub-redirect.yaml" hinter compose.prod.yaml, sobald die Hub-Container gestoppt sind.
+services:
+  web-crm:
+    labels:
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-hub-redirect.rule=Host(`${MHVP_HUB_HOST_MAIL:-mail.muellerhv.de}`) || Host(`${MHVP_HUB_HOST_IMMOWARE:-immoware.muellerhv.de}`)"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-hub-redirect.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-hub-redirect.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-hub-redirect.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-hub-redirect"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-hub-redirect.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-crm"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-hub-redirect.redirectregex.regex=^https?://[^/]+/.*"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-hub-redirect.redirectregex.replacement=https://${MHVP_HOST_CRM:-crm.mueller-holding.ag}/"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-hub-redirect.redirectregex.permanent=true"
