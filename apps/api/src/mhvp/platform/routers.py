@@ -66,6 +66,7 @@ from mhvp.platform.schemas import (
     MemberCompetences,
     MemberCreate,
     MemberInvite,
+    MemberMobilePhone,
     MemberOut,
     MemberRoles,
     MemberStatusIn,
@@ -441,6 +442,7 @@ async def list_members(
                     Membership.status,
                     Membership.contact_id,
                     Membership.competences,
+                    Membership.mobile_phone,
                     User.email,
                     User.display_name,
                     User.last_login_at,
@@ -472,6 +474,7 @@ async def list_members(
             competences=list(r.competences or []),
             contact_id=r.contact_id,
             last_login_at=r.last_login_at,
+            mobile_phone=r.mobile_phone,
         )
         for r in rows
     ]
@@ -715,6 +718,39 @@ async def put_member_competences(
             actor_user_id=principal.user_id,
             changes={"competences": {"old": before, "new": sorted(membership.competences)}},
         )
+    return Response(status_code=204)
+
+
+@tenant_router.put(
+    "/members/{membership_id}/mobile-phone",
+    status_code=204,
+    summary="Mobilnummer eines Mitglieds setzen (SMS-Eskalation, M35)",
+)
+async def put_member_mobile_phone(
+    membership_id: uuid.UUID,
+    body: MemberMobilePhone,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("members:update")),
+) -> Response:
+    async with platform_transaction(sessions(request)) as session:
+        membership = await session.get(Membership, membership_id)
+        if membership is None or membership.tenant_id != principal.tenant_id:
+            raise _not_found()
+        changed = membership.mobile_phone != body.mobile_phone
+        membership.mobile_phone = body.mobile_phone
+        membership.updated_by = principal.user_id
+    if changed:
+        async with tenant_tx(request, principal) as session:
+            # Die Nummer selbst wird nicht ins Ereignisprotokoll geschrieben (Datensparsamkeit).
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="membership.mobile_phone_changed",
+                entity_type="membership",
+                entity_id=membership_id,
+                actor_user_id=principal.user_id,
+                changes={"mobile_phone": {"set": body.mobile_phone is not None}},
+            )
     return Response(status_code=204)
 
 

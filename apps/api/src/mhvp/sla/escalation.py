@@ -8,7 +8,20 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.core.config import Settings, get_settings
 from mhvp.core.events import emit
+from mhvp.platform.models import Membership, User
+from mhvp.properties.models import Property
+from mhvp.sla.channels import (
+    channels_for_level,
+    email_body,
+    email_subject,
+    get_gateway,
+    send_email,
+    send_sms,
+    sms_text,
+    ticket_link,
+)
 from mhvp.sla.models import (
     AlertChannel,
     ClockState,
@@ -18,6 +31,7 @@ from mhvp.sla.models import (
     SlaClock,
     SlaClockLog,
     SlaColor,
+    SlaRule,
 )
 from mhvp.sla.service import recompute_color
 from mhvp.tickets.models import Priority, Ticket
@@ -46,13 +60,17 @@ async def _send_alert(
     level: int,
     sent_to: str,
     channel: AlertChannel,
+    *,
+    delivery_error: str | None = None,
 ) -> EmergencyAlert:
+    """Legt den Alarm an; interne Alarme gelten mit der Benachrichtigung als zugestellt."""
     alert = EmergencyAlert(
         tenant_id=ticket.tenant_id,
         ticket_id=ticket.id,
         level=level,
-        sent_to=sent_to,
+        sent_to=sent_to[:300],
         channel=channel,
+        delivery_error=delivery_error,
     )
     session.add(alert)
     await session.flush()
@@ -72,14 +90,106 @@ async def _send_alert(
                 entity_type="ticket",
                 entity_id=ticket.id,
             )
-    # E-Mail-Versand läuft über den bestehenden Mailversand (Gmail send_raw des Default-
-    # Postfachs oder SMTP, siehe communication.tasks); hier nur protokolliert, da ein
-    # Mandanten-Postfach dafür konfiguriert sein muss.
+            alert.delivered_at = datetime.now(UTC)
     return alert
 
 
-async def check_and_escalate(session: AsyncSession, clock: SlaClock) -> SlaColor:
+async def _user_contacts(
+    session: AsyncSession, tenant_id: uuid.UUID, user_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, tuple[str, str | None]]:
+    """E-Mail-Adresse und Mobilnummer (Mitgliedschaft) je Benutzer."""
+    if not user_ids:
+        return {}
+    rows = await session.execute(
+        select(User.id, User.email, Membership.mobile_phone)
+        .join(Membership, Membership.user_id == User.id)
+        .where(Membership.tenant_id == tenant_id, User.id.in_(user_ids))
+    )
+    return {r.id: (r.email, r.mobile_phone) for r in rows}
+
+
+async def _property_label(session: AsyncSession, ticket: Ticket) -> str | None:
+    if ticket.property_id is None:
+        return None
+    prop = await session.get(Property, ticket.property_id)
+    return f"{prop.number} {prop.name}" if prop is not None else None
+
+
+async def escalate_level(
+    session: AsyncSession,
+    settings: Settings,
+    ticket: Ticket,
+    clock: SlaClock,
+    rule: SlaRule | None,
+    level: int,
+    user_ids: list[uuid.UUID],
+    role: str | None,
+    on_call: OnCallSchedule | None,
+) -> list[EmergencyAlert]:
+    """Alarmiert eine Stufe auf allen Kanälen der Stufe (``channels_for_level``). Empfänger
+    sind die Benutzer der Stufe, bei E-Mail und SMS zusätzlich die aktuelle Bereitschaft; eine
+    Rolle erhält nur den internen Alarm. Versandfehler landen in ``delivery_error``."""
+    alerts: list[EmergencyAlert] = []
+    channels = channels_for_level(rule, level)
+    targets = list(dict.fromkeys(user_ids))
+    external = list(dict.fromkeys([*targets, *([on_call.user_id] if on_call else [])]))
+    contacts = await _user_contacts(session, ticket.tenant_id, external)
+    link = ticket_link(settings, ticket)
+    for channel in channels:
+        if channel == AlertChannel.INTERNAL:
+            for user_id in targets or ([on_call.user_id] if on_call and not role else []):
+                alerts.append(await _send_alert(session, ticket, level, str(user_id), channel))
+            if role:
+                alerts.append(await _send_alert(session, ticket, level, role, channel))
+        elif channel == AlertChannel.EMAIL:
+            subject = email_subject(ticket, level)
+            body = email_body(
+                ticket,
+                level,
+                await _property_label(session, ticket),
+                clock.due_resolution_at or ticket.sla_due_at,
+                link,
+            )
+            for user_id in external:
+                address = contacts.get(user_id, ("", None))[0]
+                error = (
+                    await send_email(session, settings, ticket.tenant_id, address, subject, body)
+                    if address
+                    else "Keine E-Mail-Adresse des Benutzers gefunden."
+                )
+                alert = await _send_alert(
+                    session, ticket, level, address or str(user_id), channel, delivery_error=error
+                )
+                if error is None:
+                    alert.delivered_at = datetime.now(UTC)
+                alerts.append(alert)
+        elif channel == AlertChannel.SMS:
+            gateway = await get_gateway(session, ticket.tenant_id)
+            text = sms_text(ticket, level, link)
+            for user_id in external:
+                number = contacts.get(user_id, ("", None))[1]
+                if on_call is not None and user_id == on_call.user_id and on_call.phone:
+                    number = on_call.phone
+                error = (
+                    await send_sms(gateway, number, text)
+                    if number
+                    else "Keine Mobilnummer des Benutzers hinterlegt."
+                )
+                # Die Mobilnummer wird nicht im Klartext protokolliert, nur der Benutzer.
+                alert = await _send_alert(
+                    session, ticket, level, str(user_id), channel, delivery_error=error
+                )
+                if error is None:
+                    alert.delivered_at = datetime.now(UTC)
+                alerts.append(alert)
+    return alerts
+
+
+async def check_and_escalate(
+    session: AsyncSession, clock: SlaClock, settings: Settings | None = None
+) -> SlaColor:
     """Berechnet die Ampel neu und löst fällige Eskalationsstufen aus."""
+    settings = settings or get_settings()
     color = await recompute_color(session, clock.tenant_id, clock)
     if clock.state != ClockState.BREACHED:
         return color
@@ -93,14 +203,24 @@ async def check_and_escalate(session: AsyncSession, clock: SlaClock) -> SlaColor
             .order_by(EscalationStep.step_no)
         )
     )
+    rule = await session.get(SlaRule, clock.rule_id) if clock.rule_id else None
+    due_steps = [s for s in steps if s.step_no not in clock.escalated_steps]
+    on_call = await current_on_call(session, clock.tenant_id) if due_steps or not steps else None
     elapsed_minutes = int((datetime.now(UTC) - clock.started_at).total_seconds() // 60)
     for step in steps:
         if step.step_no in clock.escalated_steps or elapsed_minutes < step.after_minutes:
             continue
-        for user_id in step.notify_user_ids:
-            await _send_alert(session, ticket, step.step_no, str(user_id), step.channel)
-        if step.notify_role:
-            await _send_alert(session, ticket, step.step_no, step.notify_role, step.channel)
+        await escalate_level(
+            session,
+            settings,
+            ticket,
+            clock,
+            rule,
+            step.step_no,
+            list(step.notify_user_ids),
+            step.notify_role,
+            on_call,
+        )
         clock.escalated_steps = [*clock.escalated_steps, step.step_no]
         session.add(
             SlaClockLog(
@@ -119,17 +239,22 @@ async def check_and_escalate(session: AsyncSession, clock: SlaClock) -> SlaColor
             actor_user_id=None,
             payload={"clock_id": str(clock.id), "step_no": step.step_no},
         )
-    if not steps and ticket.priority in ESCALATED_PRIORITIES and 0 not in clock.escalated_steps:
-        on_call = await current_on_call(session, clock.tenant_id)
-        if on_call is not None:
-            await _send_alert(session, ticket, 0, str(on_call.user_id), AlertChannel.INTERNAL)
-            clock.escalated_steps = [*clock.escalated_steps, 0]
-            session.add(
-                SlaClockLog(
-                    tenant_id=clock.tenant_id,
-                    clock_id=clock.id,
-                    event="escalated",
-                    note="Bereitschaft benachrichtigt",
-                )
+    if (
+        not steps
+        and on_call is not None
+        and ticket.priority in ESCALATED_PRIORITIES
+        and 0 not in clock.escalated_steps
+    ):
+        await escalate_level(
+            session, settings, ticket, clock, rule, 0, [on_call.user_id], None, on_call
+        )
+        clock.escalated_steps = [*clock.escalated_steps, 0]
+        session.add(
+            SlaClockLog(
+                tenant_id=clock.tenant_id,
+                clock_id=clock.id,
+                event="escalated",
+                note="Bereitschaft benachrichtigt",
             )
+        )
     return color

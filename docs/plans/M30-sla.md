@@ -39,3 +39,8 @@ Zuordnung und die Startvorschläge für Reaktions- und Lösungsfristen stehen in
 - Permission-Namensgebung: der Auftrag nennt `sla:manage`; da das Rechtemodell (`ACTIONS`) keine
   Aktion `manage` kennt, wird stattdessen `sla:update` (Regeln, Eskalation, Bereitschaft,
   Kalender) verwendet, analog zu den übrigen Modulen.
+
+## Erweiterung M35
+
+E-Mail- und SMS-Versand der Eskalation, Kanäle je Stufe und SMS-Gateway: siehe
+`docs/plans/M35-sla-eskalation-kanaele.md` (dort auch die Beispiel-Vorlage für seven.io).

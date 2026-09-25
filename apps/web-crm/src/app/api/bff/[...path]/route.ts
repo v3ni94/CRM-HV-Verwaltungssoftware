@@ -65,6 +65,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^tenant/members/${ID}/reset-password$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/roles$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/competences$`) },
+  { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/mobile-phone$`) },
   { method: "GET", pattern: /^tenant\/competence-catalogue$/ },
   { method: "GET", pattern: /^tenant\/roles$/ },
   { method: "POST", pattern: /^tenant\/roles$/ },
@@ -200,6 +201,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^tickets/templates/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}/checklist/[a-zA-Z0-9_-]{1,64}$`) },
   { method: "POST", pattern: /^tickets\/bulk-status$/ },
+  // Tickets zusammenführen (M36): Zielsuche über die Liste (q), Vorschau über das Detail.
+  { method: "GET", pattern: /^tickets$/ },
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}$`) },
+  { method: "POST", pattern: /^tickets\/merge$/ },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}$`) },
   // Zuweiser mit Grund (operator 25.09.2026, mail-optimierung M20).
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/assignees$`) },
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/assignees$`) },
@@ -226,6 +232,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^sla/on-call/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^sla/alerts/${ID}/ack$`) },
   { method: "PUT", pattern: /^sla\/calendar$/ },
+  { method: "GET", pattern: /^sla\/sms-gateway$/ },
+  { method: "PUT", pattern: /^sla\/sms-gateway$/ },
+  { method: "POST", pattern: /^sla\/sms-gateway\/test$/ },
   // Immoware24-Lesezugriff per DAV (M32): Anbindung, Läufe, Dokumente, Kontakte, Termine.
   { method: "GET", pattern: /^immoware\/connection$/ },
   { method: "PUT", pattern: /^immoware\/connection$/ },

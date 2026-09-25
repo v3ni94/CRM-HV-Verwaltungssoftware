@@ -10,7 +10,11 @@
 - `service.py`: Regelauflösung, Uhr starten/pausieren/fortsetzen, Erstantwort, Lösung, Ampel.
 - `escalation.py` / `tasks.py`: Eskalationskette und Celery-Task `mhvp.sla.check_clocks`
   (alle 5 Minuten).
-- `routers.py`: `/api/v1/sla/...` (Regeln, Uhren, Bereitschaft, Alarme, Kalender).
+- `channels.py` (M35): Kanäle je Stufe (`SlaRule.channels_by_level`, Standard Stufe 1 intern,
+  Stufe 2 intern und E-Mail, Stufe 3 intern, E-Mail und SMS), E-Mail als Systemmail über
+  `communication.transport` ohne Freigabeprozess, SMS über das HTTP-Gateway `sla_sms_gateway`.
+  Zustellung in `EmergencyAlert.delivered_at`, Fehler ohne Zugangsdaten in `delivery_error`.
+- `routers.py`: `/api/v1/sla/...` (Regeln, Uhren, Bereitschaft, Alarme, Kalender, SMS-Gateway).
 
 Hooks in anderen Modulen: `tickets.routers.create_ticket` startet die Uhr,
 `communication.routers.approve` setzt `first_response_at`, sobald die erste ausgehende Mail zu

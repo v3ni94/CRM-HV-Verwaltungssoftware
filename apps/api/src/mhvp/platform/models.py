@@ -122,6 +122,8 @@ class Membership(IdMixin, TimestampMixin, Base):
     competences: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
+    # Mobilnummer für SMS-Eskalationen an die Bereitschaft (M35).
+    mobile_phone: Mapped[str | None] = mapped_column(String(40))
 
 
 class RefreshToken(IdMixin, Base):

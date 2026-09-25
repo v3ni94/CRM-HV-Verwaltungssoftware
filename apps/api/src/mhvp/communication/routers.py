@@ -2,8 +2,6 @@
 draft. Sending an outbound draft needs a configured and enabled mailbox (M20-01) and runs
 through a Vier-Augen-Freigabe: submit -> approve (by someone else) -> sent, or reject -> draft."""
 
-import smtplib
-import ssl
 import uuid
 from datetime import UTC, date, datetime
 from email.message import EmailMessage
@@ -17,7 +15,7 @@ from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.ai import schemas as ai_s
-from mhvp.communication import mail
+from mhvp.communication import mail, transport
 from mhvp.communication.models import Mailbox, MailboxUser, Message, Playbook
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.db.tenancy import tenant_transaction
@@ -31,7 +29,6 @@ UPDATE = require_permission("communication:update")
 APPROVE = require_permission("communication:approve")
 ADMIN = require_permission("tenant_settings:update")
 PLAYBOOK_ADMIN = require_permission("tenant_settings:update")
-SMTP_TIMEOUT = 30
 OAUTH_STATE_TTL = 600
 
 
@@ -873,7 +870,6 @@ async def submit(
 async def approve(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
-    from mhvp.communication import gmail
     from mhvp.tickets.models import TicketEvent
 
     async with tenant_tx(request, principal) as session:
@@ -905,34 +901,14 @@ async def approve(
         domain = box.address.rsplit("@", 1)[-1] or None
         msg["Message-ID"] = make_msgid(domain=domain)
 
-        if box.kind == "gmail":
-            try:
-                client_id, client_secret = await gmail.oauth_client(
-                    session, request.app.state.settings
-                )
-                client = gmail.make_client(client_id, client_secret, box)
-                try:
-                    gmail_message_id = await client.send_raw(bytes(msg))
-                finally:
-                    await client.aclose()
-            except gmail.GmailError as exc:
-                raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        try:
+            gmail_message_id = await transport.send_message(
+                session, request.app.state.settings, box, msg
+            )
+        except transport.MailTransportError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        if gmail_message_id is not None:
             row.gmail_message_id = gmail_message_id
-        else:
-            if not box.smtp_host:
-                raise ProblemError(
-                    ErrorCodes.CONFLICT,
-                    detail="Kein eingerichtetes Postfach für den Versand (M20-01).",
-                )
-            try:
-                with smtplib.SMTP(
-                    box.smtp_host, box.smtp_port or 587, timeout=SMTP_TIMEOUT
-                ) as smtp:
-                    smtp.starttls(context=ssl.create_default_context())
-                    smtp.login(box.username or box.address, box.secret)
-                    smtp.send_message(msg)
-            except (smtplib.SMTPException, OSError) as exc:
-                raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
 
         row.status, row.sent_at = "sent", datetime.now(UTC)
         row.approved_by, row.approved_at = principal.user_id, datetime.now(UTC)

@@ -70,6 +70,7 @@ class SlaColor(StrEnum):
 class AlertChannel(StrEnum):
     EMAIL = "email"
     INTERNAL = "internal"
+    SMS = "sms"
 
 
 class SlaRule(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -84,6 +85,9 @@ class SlaRule(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(ClockType, "sla_clock_type"), nullable=False, default=ClockType.BUSINESS
     )
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Kanäle je Eskalationsstufe (M35), z. B. {"1": ["internal"], "2": ["internal", "email"]}.
+    # ``None`` oder fehlende Stufe: Standard aus ``mhvp.sla.channels.DEFAULT_CHANNELS_BY_LEVEL``.
+    channels_by_level: Mapped[dict[str, list[str]] | None] = mapped_column(JSONB)
 
 
 class EscalationStep(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -168,6 +172,30 @@ class EmergencyAlert(IdMixin, TenantMixin, Base):
     )
     acknowledged_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Zustellung (M35): ``delivered_at`` bei erfolgreichem Versand, sonst Fehlerhinweis ohne
+    # Zugangsdaten in ``delivery_error``.
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delivery_error: Mapped[str | None] = mapped_column(Text)
+
+
+class SmsGateway(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Anbieterneutrales HTTP-SMS-Gateway je Mandant (M35). ``body_template`` ist ein JSON-String
+    mit den Platzhaltern ``{to}``, ``{text}`` und optional ``{sender}``."""
+
+    __tablename__ = "sla_sms_gateway"
+    __table_args__ = (UniqueConstraint("tenant_id"),)
+
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    url: Mapped[str | None] = mapped_column(String(500))
+    method: Mapped[str] = mapped_column(
+        String(8), nullable=False, default="POST", server_default="POST"
+    )
+    auth_header_name: Mapped[str | None] = mapped_column(String(100))
+    auth_header_value: Mapped[str | None] = mapped_column(EncryptedText())
+    body_template: Mapped[str | None] = mapped_column(Text)
+    sender: Mapped[str | None] = mapped_column(String(40))
 
 
 class WorkCalendar(IdMixin, TimestampMixin, TenantMixin, Base):

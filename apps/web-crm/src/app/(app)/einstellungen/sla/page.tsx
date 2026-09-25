@@ -7,6 +7,7 @@ import {
   type Member,
   type OnCallSchedule,
   type SlaRule,
+  type SmsGatewayConfig,
   type WorkCalendar,
 } from "@/components/sla/SlaSettings";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
@@ -31,7 +32,7 @@ export default async function SlaSettingsPage() {
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("sla:read")) notFound();
   const canManage = permissions.includes("sla:update");
-  const [rules, onCall, currentOnCall, calendar, alerts, members] = await Promise.all([
+  const [rules, onCall, currentOnCall, calendar, alerts, members, smsGateway] = await Promise.all([
     getJson<SlaRule[]>("/api/v1/sla/rules", []),
     getJson<OnCallSchedule[]>("/api/v1/sla/on-call", []),
     getJson<OnCallSchedule | null>("/api/v1/sla/on-call/current", null),
@@ -44,6 +45,15 @@ export default async function SlaSettingsPage() {
     }),
     getJson<EmergencyAlert[]>("/api/v1/sla/alerts", []),
     api.GET("/api/v1/tenant/members"),
+    getJson<SmsGatewayConfig>("/api/v1/sla/sms-gateway", {
+      enabled: false,
+      url: null,
+      method: "POST",
+      auth_header_name: null,
+      auth_header_set: false,
+      body_template: null,
+      sender: null,
+    }),
   ]);
   return (
     <div className="flex flex-col gap-4">
@@ -56,6 +66,7 @@ export default async function SlaSettingsPage() {
         alerts={alerts}
         members={(members.data ?? []) as Member[]}
         canManage={canManage}
+        smsGateway={smsGateway}
       />
     </div>
   );
