@@ -178,3 +178,16 @@ def test_on_call_and_calendar(client: TestClient, world: World) -> None:
 
     alerts = _ok(client.get("/api/v1/sla/alerts", headers=h))
     assert isinstance(alerts, list)
+
+
+def test_presets_create_rules_once_and_keep_existing(client: TestClient, world: World) -> None:
+    h = bearer(login(client, world, "m21admin"))
+    first = _ok(client.post("/api/v1/sla/rules/presets", headers=h), 201)
+    assert {r["priority"] for r in first} == {"immediate", "urgent", "high", "normal", "low"}
+    assert all(r["active"] for r in first)
+    listed = _ok(client.get("/api/v1/sla/rules", headers=h))
+    assert len(listed) >= 5
+    second = _ok(client.post("/api/v1/sla/rules/presets", headers=h), 201)
+    assert {r["id"] for r in second} == {r["id"] for r in first}
+    calendar = _ok(client.get("/api/v1/sla/calendar", headers=h))
+    assert calendar["closes_at"].startswith("17:00")
