@@ -149,9 +149,49 @@ class GmailClient:
             raise GmailError(f"Versand fehlgeschlagen (HTTP {r.status_code}).")
         return str(r.json()["id"])
 
+    async def archive(self, message_id: str) -> None:
+        """Removes the ``INBOX`` label (M20-03, "Erledigt archiviert Mail"). ``gmail.readonly``
+        cannot modify labels, so this needs the ``gmail.modify`` scope added to ``SCOPES``
+        below; a mailbox connected before that change lacks it on its stored consent. On
+        HTTP 403 this raises ``GmailScopeMissingError`` so the caller can record a notice on
+        the mailbox instead of failing the whole job."""
+        token = await self._access_token()
+
+        async def _post(bearer: str) -> httpx.Response:
+            return await self._http.post(
+                f"{API}/messages/{message_id}/modify",
+                json={"removeLabelIds": ["INBOX"]},
+                headers={"Authorization": f"Bearer {bearer}"},
+            )
+
+        r = await _post(token)
+        if r.status_code == 401:
+            self._token = None
+            token = await self._access_token()
+            r = await _post(token)
+        if r.status_code == 404:
+            return  # already gone (deleted or previously archived)
+        if r.status_code == 403:
+            raise GmailScopeMissingError(
+                "Berechtigung gmail.modify fehlt, Postfach unter Einstellungen, Postfächer "
+                "erneut mit Google verbinden."
+            )
+        if r.status_code != 200:
+            raise GmailError(f"Archivieren fehlgeschlagen (HTTP {r.status_code}).")
+
+
+class GmailScopeMissingError(GmailError):
+    """The stored consent does not include ``gmail.modify`` (older mailbox connection)."""
+
 
 OAUTH_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send"
+SCOPES = (
+    "https://www.googleapis.com/auth/gmail.readonly "
+    "https://www.googleapis.com/auth/gmail.modify "
+    "https://www.googleapis.com/auth/gmail.send "
+    "https://www.googleapis.com/auth/calendar.events "
+    "https://www.googleapis.com/auth/calendar.readonly"
+)
 # Drive: nur Dateien, die das CRM selbst anlegt (kein Zugriff auf den restlichen Drive-Inhalt).
 DRIVE_SCOPES = "https://www.googleapis.com/auth/drive.file openid email"
 

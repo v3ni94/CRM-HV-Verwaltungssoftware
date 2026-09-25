@@ -17,11 +17,13 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import emit
 from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.tickets.competences import is_known_code
 from mhvp.tickets.models import (
     OrderStatus,
     Priority,
     Team,
     Ticket,
+    TicketAssignee,
     TicketComment,
     TicketEvent,
     TicketSource,
@@ -131,6 +133,8 @@ class TicketTemplateIn(_In):
     checklist: list[ChecklistItemIn] = Field(default_factory=list, max_length=50)
     extra_fields: list[ExtraFieldIn] = Field(default_factory=list, max_length=50)
     default_priority: Priority = Priority.NORMAL
+    # Thema (operator 25.09.2026): Code aus dem Kompetenzkatalog, s. mhvp.tickets.competences.
+    topic: str | None = Field(default=None, max_length=32)
     default_team_id: uuid.UUID | None = None
     default_assignee_user_id: uuid.UUID | None = None
     sla_hours: int | None = Field(default=None, ge=1, le=8760)
@@ -143,6 +147,7 @@ class TicketTemplatePatch(_In):
     checklist: list[ChecklistItemIn] | None = Field(default=None, max_length=50)
     extra_fields: list[ExtraFieldIn] | None = Field(default=None, max_length=50)
     default_priority: Priority | None = None
+    topic: str | None = Field(default=None, max_length=32)
     default_team_id: uuid.UUID | None = None
     default_assignee_user_id: uuid.UUID | None = None
     sla_hours: int | None = Field(default=None, ge=1, le=8760)
@@ -155,6 +160,8 @@ class TicketIn(_In):
     template_id: uuid.UUID | None = None
     property_id: uuid.UUID | None = None
     unit_id: uuid.UUID | None = None
+    contact_id: uuid.UUID | None = None
+    topic: str | None = Field(default=None, max_length=32)
     public_description: str | None = Field(default=None, max_length=20000)
     internal_description: str | None = Field(default=None, max_length=20000)
     priority: Priority | None = None
@@ -171,6 +178,16 @@ class TicketPatch(_In):
     time_spent_minutes: int | None = Field(default=None, ge=0)
     checklist_done: list[int] | None = None
     extra_fields: dict[str, Any] | None = None
+    topic: str | None = Field(default=None, max_length=32)
+    contact_id: uuid.UUID | None = None
+    property_id: uuid.UUID | None = None
+    unit_id: uuid.UUID | None = None
+
+
+class AssigneeIn(_In):
+    user_id: uuid.UUID
+    reason: str = Field(default="manuell", max_length=64)
+    primary: bool = False
 
 
 class BulkStatusIn(_In):
@@ -223,8 +240,10 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             "number",
             "property_id",
             "unit_id",
+            "contact_id",
             "template_id",
             "category",
+            "topic",
             "title",
             "public_description",
             "status",
@@ -245,6 +264,32 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
         "sla_breached": bool(
             t.sla_due_at and not t.resolved_at and datetime.now(UTC) > t.sla_due_at
         )
+    }
+
+
+async def _assert_known_topic(
+    session: AsyncSession, tenant_id: uuid.UUID, topic: str | None
+) -> None:
+    if topic is None:
+        return
+    from mhvp.platform.models import TenantSettings
+
+    extra = await session.scalar(
+        select(TenantSettings.competence_catalogue_extra).where(
+            TenantSettings.tenant_id == tenant_id
+        )
+    )
+    if not is_known_code(topic, list(extra or [])):
+        raise ProblemError(ErrorCodes.VALIDATION, detail=f"Unbekanntes Thema: {topic}")
+
+
+def _assignee_out(row: TicketAssignee) -> dict[str, Any]:
+    return {
+        "id": row.id,
+        "user_id": row.user_id,
+        "primary": row.primary,
+        "reason": row.reason,
+        "created_at": row.created_at,
     }
 
 
@@ -313,6 +358,7 @@ def _template_out(tpl: TicketTemplate) -> dict[str, Any]:
             "checklist",
             "extra_fields",
             "default_priority",
+            "topic",
             "default_team_id",
             "default_assignee_user_id",
             "sla_hours",
@@ -354,6 +400,7 @@ async def create_template(
     body: TicketTemplateIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
+        await _assert_known_topic(session, principal.tenant_id, body.topic)
         tpl = TicketTemplate(
             tenant_id=principal.tenant_id,
             **body.model_dump(exclude={"checklist", "extra_fields"}),
@@ -384,6 +431,7 @@ async def create_template_v2(
 ) -> dict[str, Any]:
     _require_template_manage(principal)
     async with tenant_tx(request, principal) as session:
+        await _assert_known_topic(session, principal.tenant_id, body.topic)
         tpl = TicketTemplate(
             tenant_id=principal.tenant_id,
             **body.model_dump(exclude={"checklist", "extra_fields"}),
@@ -418,6 +466,8 @@ async def patch_template(
         tpl = await session.get(TicketTemplate, template_id, with_for_update=True)
         if tpl is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if "topic" in body.model_fields_set:
+            await _assert_known_topic(session, principal.tenant_id, body.topic)
         data = body.model_dump(exclude_unset=True)
         if "checklist" in data and data["checklist"] is not None:
             tpl.checklist = [c.model_dump() for c in body.checklist]  # type: ignore[union-attr]
@@ -454,6 +504,7 @@ async def create_ticket(
         title = body.title or (tpl.title if tpl else None)
         if not title:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Titel fehlt.")
+        await _assert_known_topic(session, principal.tenant_id, body.topic)
         priority = body.priority or (tpl.default_priority if tpl else Priority.NORMAL)
         hours = tpl.sla_hours if tpl and tpl.sla_hours else SLA_HOURS[priority]
         checklist = (
@@ -482,7 +533,8 @@ async def create_ticket(
             assignee_user_id=tpl.default_assignee_user_id if tpl else None,
             checklist=checklist,
             sla_due_at=datetime.now(UTC) + timedelta(hours=hours),
-            **body.model_dump(exclude={"title", "priority", "template_id"}),
+            **body.model_dump(exclude={"title", "priority", "template_id", "topic"}),
+            topic=body.topic or (tpl.topic if tpl else None),
         )
         session.add(ticket)
         await session.flush()
@@ -631,6 +683,8 @@ async def list_tickets(
     request: Request,
     status: TicketStatus | None = None,
     property_id: uuid.UUID | None = None,
+    unit_id: uuid.UUID | None = None,
+    contact_id: uuid.UUID | None = None,
     mine: bool = False,
     limit: int = Query(default=100, ge=1, le=500),
     principal: TenantPrincipal = Depends(READ),
@@ -641,9 +695,76 @@ async def list_tickets(
             query = query.where(Ticket.status == status)
         if property_id:
             query = query.where(Ticket.property_id == property_id)
+        if unit_id:
+            query = query.where(Ticket.unit_id == unit_id)
+        if contact_id:
+            query = query.where(
+                (Ticket.contact_id == contact_id) | (Ticket.initiator_contact_id == contact_id)
+            )
         if mine:
             query = query.where(Ticket.assignee_user_id == principal.user_id)
         return [_ticket_out(t) for t in (await session.scalars(query.limit(limit))).all()]
+
+
+@router.get("/tickets/{ticket_id}/assignees", summary="Zuweiser eines Tickets mit Grund")
+async def list_assignees(
+    ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(
+            select(TicketAssignee)
+            .where(TicketAssignee.ticket_id == ticket_id)
+            .order_by(TicketAssignee.created_at)
+        )
+        return [_assignee_out(r) for r in rows.all()]
+
+
+@router.post(
+    "/tickets/{ticket_id}/assignees", status_code=201, summary="Zuweiser hinzufügen (manuell)"
+)
+async def add_assignee_endpoint(
+    ticket_id: uuid.UUID,
+    body: AssigneeIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    from mhvp.communication.assignment import add_assignee
+
+    async with tenant_tx(request, principal) as session:
+        ticket = await session.get(Ticket, ticket_id, with_for_update=True)
+        if ticket is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await add_assignee(session, ticket, body.user_id, body.reason, primary=body.primary)
+        if body.primary:
+            ticket.assignee_user_id = body.user_id
+        await session.flush()
+        row = await session.scalar(
+            select(TicketAssignee).where(
+                TicketAssignee.ticket_id == ticket_id, TicketAssignee.user_id == body.user_id
+            )
+        )
+        assert row is not None  # noqa: S101 - just inserted or already existed
+        return _assignee_out(row)
+
+
+@router.delete(
+    "/tickets/{ticket_id}/assignees/{user_id}", status_code=204, summary="Zuweiser entfernen"
+)
+async def remove_assignee(
+    ticket_id: uuid.UUID,
+    user_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> None:
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(TicketAssignee).where(
+                TicketAssignee.ticket_id == ticket_id, TicketAssignee.user_id == user_id
+            )
+        )
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await session.delete(row)
 
 
 async def _queue_learn_playbook(session: AsyncSession, settings: Any, ticket: Ticket) -> None:
@@ -722,6 +843,11 @@ async def patch_ticket(
             )
             if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
                 await _queue_learn_playbook(session, request.app.state.settings, ticket)
+                from mhvp.communication.services import enqueue_archive_for_ticket
+
+                await enqueue_archive_for_ticket(
+                    session, request.app.state.settings, principal.tenant_id, ticket.id
+                )
         if body.assignee_user_id and body.assignee_user_id != ticket.assignee_user_id:
             ticket.assignee_user_id = body.assignee_user_id
             await _event(
@@ -746,6 +872,15 @@ async def patch_ticket(
             ticket.team_id = body.team_id
         if body.time_spent_minutes is not None:
             ticket.time_spent_minutes = body.time_spent_minutes
+        if body.topic is not None:
+            await _assert_known_topic(session, principal.tenant_id, body.topic)
+            ticket.topic = body.topic
+        if body.contact_id is not None:
+            ticket.contact_id = body.contact_id
+        if body.property_id is not None:
+            ticket.property_id = body.property_id
+        if body.unit_id is not None:
+            ticket.unit_id = body.unit_id
         await session.flush()
         return _ticket_out(ticket)
 
@@ -844,6 +979,11 @@ async def bulk_status(
             )
             if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
                 await _queue_learn_playbook(session, request.app.state.settings, ticket)
+                from mhvp.communication.services import enqueue_archive_for_ticket
+
+                await enqueue_archive_for_ticket(
+                    session, request.app.state.settings, principal.tenant_id, ticket.id
+                )
             changed.append({"id": str(ticket.id), "status": ticket.status.value})
         await session.flush()
     return {"changed": changed, "failed": failed}
@@ -898,6 +1038,13 @@ async def get_ticket(
         orders = (
             await session.scalars(select(WorkOrder).where(WorkOrder.ticket_id == ticket.id))
         ).all()
+        assignees = (
+            await session.scalars(
+                select(TicketAssignee)
+                .where(TicketAssignee.ticket_id == ticket.id)
+                .order_by(TicketAssignee.created_at)
+            )
+        ).all()
         return _ticket_out(ticket) | {
             "comments": [
                 {"body": c.body, "internal": c.internal, "created_at": c.created_at}
@@ -905,6 +1052,7 @@ async def get_ticket(
             ],
             "events": [{"kind": e.kind, "data": e.data, "at": e.created_at} for e in events],
             "work_orders": [_order_out(o) for o in orders],
+            "assignees": [_assignee_out(a) for a in assignees],
         }
 
 

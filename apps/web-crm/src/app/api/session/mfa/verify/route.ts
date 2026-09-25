@@ -15,9 +15,15 @@ export async function POST(request: Request): Promise<Response> {
     return problemJson(401, "Anmeldung erforderlich", "Bitte zuerst E-Mail und Passwort eingeben.");
   }
   const tenantId = str(parsed.body.tenant_id) || null;
+  const rememberDevice = parsed.body.remember_device === true;
   try {
     const { data, error, response } = await publicApi().POST("/api/v1/auth/mfa/verify", {
-      body: { mfa_token: mfaToken, code: str(parsed.body.code).trim(), tenant_id: tenantId },
+      body: {
+        mfa_token: mfaToken,
+        code: str(parsed.body.code).trim(),
+        tenant_id: tenantId,
+        remember_device: rememberDevice,
+      },
       headers: { "user-agent": request.headers.get("user-agent") ?? "" },
     });
     if (!data) return relayProblem(response.status, error);

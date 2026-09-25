@@ -4,6 +4,8 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { BulkTagBar } from "@/components/workspace/BulkTagBar";
 import { SavedFilters } from "@/components/workspace/SavedFilters";
+import { RolePills } from "@/components/contacts/RolePills";
+import { CONTACT_ROLES, parseRoleFilter } from "@/lib/contact-schema";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -13,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 25;
 
-type Search = { q?: string; kind?: string; tag?: string; page?: string };
+type Search = { q?: string; kind?: string; tag?: string; role?: string; page?: string };
 
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const [t, tl, params] = await Promise.all([
@@ -24,6 +26,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   const q = params.q?.trim() ?? "";
   const kind = params.kind === "person" || params.kind === "company" ? params.kind : undefined;
   const tag = params.tag?.trim() ?? "";
+  const role = parseRoleFilter(params.role);
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
   const { data, error, response } = await serverApi().GET("/api/v1/contacts", {
@@ -32,6 +35,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         ...(q ? { q } : {}),
         ...(kind ? { kind } : {}),
         ...(tag ? { tag } : {}),
+        ...(role ? { role } : {}),
         page,
         page_size: PAGE_SIZE,
       },
@@ -44,7 +48,16 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     if (q) sp.set("q", q);
     if (kind) sp.set("kind", kind);
     if (tag) sp.set("tag", tag);
+    if (role) sp.set("role", role);
     sp.set("page", String(target));
+    return `/kontakte?${sp}`;
+  };
+  const roleLink = (target?: string) => {
+    const sp = new URLSearchParams();
+    if (q) sp.set("q", q);
+    if (kind) sp.set("kind", kind);
+    if (tag) sp.set("tag", tag);
+    if (target) sp.set("role", target);
     return `/kontakte?${sp}`;
   };
 
@@ -89,10 +102,30 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         </Link>
       </form>
 
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t("role")}>
+        <Link
+          href={roleLink()}
+          aria-current={!role ? "true" : undefined}
+          className={`rounded-full px-3 py-1 text-xs ${!role ? "bg-accent text-accent-fg" : "bg-surface text-muted hover:text-fg"}`}
+        >
+          {t("allRoles")}
+        </Link>
+        {CONTACT_ROLES.map((r) => (
+          <Link
+            key={r}
+            href={roleLink(r)}
+            aria-current={role === r ? "true" : undefined}
+            className={`rounded-full px-3 py-1 text-xs ${role === r ? "bg-accent text-accent-fg" : "bg-surface text-muted hover:text-fg"}`}
+          >
+            {tl(`role.${r}`)}
+          </Link>
+        ))}
+      </div>
+
       <SavedFilters
         resource="contacts"
         basePath="/kontakte"
-        current={Object.fromEntries(Object.entries({ q, kind: kind ?? "", tag }).filter(([, v]) => v))}
+        current={Object.fromEntries(Object.entries({ q, kind: kind ?? "", tag, role: role ?? "" }).filter(([, v]) => v))}
       />
 
       {!data ? (
@@ -113,6 +146,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                     {c.completeness === "incomplete" ? <span className="ml-2 text-xs text-muted">{t("incomplete")}</span> : null}
                   </span>
                   <span className="text-sm text-muted">{tl(`kind.${c.kind}`)}</span>
+                  <RolePills roles={c.roles} />
                   {c.primary_email ? <span className="text-sm text-muted">{c.primary_email}</span> : null}
                   {c.primary_phone ? <span className="text-sm text-muted">{c.primary_phone}</span> : null}
                   {c.city ? <span className="text-sm text-muted">{c.city}</span> : null}
@@ -131,6 +165,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                     </th>
                     <th>{t("colName")}</th>
                     <th>{t("colKind")}</th>
+                    <th>{t("role")}</th>
                     <th>{t("colEmail")}</th>
                     <th>{t("colPhone")}</th>
                     <th>{t("colCity")}</th>
@@ -151,6 +186,9 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                         {c.completeness === "incomplete" ? <span className="ml-2 text-xs text-muted">{t("incomplete")}</span> : null}
                       </td>
                       <td>{tl(`kind.${c.kind}`)}</td>
+                      <td>
+                        <RolePills roles={c.roles} />
+                      </td>
                       <td>{c.primary_email ?? ""}</td>
                       <td>{c.primary_phone ?? ""}</td>
                       <td>{c.city ?? ""}</td>

@@ -117,6 +117,10 @@ def _mailbox_out(m: Mailbox, user_ids: list[uuid.UUID] | None = None) -> dict[st
         "last_synced_at": m.last_synced_at,
         "last_error": m.last_error,
         "is_default": m.is_default,
+        "calendar_enabled": m.calendar_enabled,
+        "calendar_id": m.calendar_id,
+        "archive_on_ticket_done": m.archive_on_ticket_done,
+        "archive_scope_missing": m.archive_scope_missing,
         "user_ids": user_ids or [],
     }
 
@@ -203,6 +207,9 @@ class MailboxPatchIn(_In):
     enabled: bool | None = None
     kind: str | None = Field(default=None, pattern="^(imap|gmail)$")
     is_default: bool | None = None
+    calendar_enabled: bool | None = None
+    calendar_id: str | None = Field(default=None, min_length=1, max_length=320)
+    archive_on_ticket_done: bool | None = None
 
 
 class MailboxUsersIn(_In):
@@ -638,6 +645,103 @@ async def to_ticket(
         row = await _message(session, message_id)
         ticket = await create_ticket(session, row, principal.user_id)
         return {"ticket_id": ticket.id, "number": ticket.number, "priority": ticket.priority.value}
+
+
+class InvoiceForwardSettingsIn(_In):
+    enabled: bool = True
+    forward_address: str | None = Field(default=None, max_length=320)
+    sender_allowlist: list[str] = Field(default_factory=list, max_length=200)
+
+
+@router.get("/invoice-forwarding", summary="Rechnungs-Weiterleitung: Einstellungen (Postfächer)")
+async def get_invoice_forwarding(
+    request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> dict[str, Any]:
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(TenantSettings).where(TenantSettings.tenant_id == principal.tenant_id)
+        )
+        cfg = row.invoice_forwarding if row else {}
+    return {
+        "enabled": bool(cfg.get("enabled", False)),
+        "forward_address": cfg.get("forward_address"),
+        "sender_allowlist": list(cfg.get("sender_allowlist", [])),
+        "learning_list": list(cfg.get("learning_list", [])),
+    }
+
+
+@router.put(
+    "/invoice-forwarding", summary="Rechnungs-Weiterleitung: Einstellungen speichern (Postfächer)"
+)
+async def put_invoice_forwarding(
+    body: InvoiceForwardSettingsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(ADMIN),
+) -> dict[str, Any]:
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(TenantSettings).where(TenantSettings.tenant_id == principal.tenant_id)
+        )
+        if row is None:
+            row = TenantSettings(tenant_id=principal.tenant_id, created_by=principal.user_id)
+            session.add(row)
+            await session.flush()
+        cfg = dict(row.invoice_forwarding)
+        cfg["enabled"] = body.enabled
+        cfg["forward_address"] = body.forward_address
+        cfg["sender_allowlist"] = sorted(
+            {s.lower().strip() for s in body.sender_allowlist if s.strip()}
+        )
+        cfg.setdefault("learning_list", [])
+        cfg.setdefault("confirmed_counts", {})
+        row.invoice_forwarding = cfg
+        row.updated_by = principal.user_id
+        await session.flush()
+    return await get_invoice_forwarding(request, principal)
+
+
+@router.post(
+    "/messages/{message_id}/forward-invoice",
+    summary='Rechnung weiterleiten ("Weiterleiten?"-Vorschlag bestätigen)',
+)
+async def forward_invoice(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    """Der Operator bestätigt einen Weiterleitungs-Vorschlag manuell; nach der zweiten
+    Bestätigung eines Absenders landet dieser auf der Lernliste (operator 25.09.2026) und
+    künftige Mails desselben Absenders werden automatisch weitergeleitet."""
+    from mhvp.communication.forwarding import register_confirmation
+    from mhvp.communication.forwarding_dispatch import forward_and_archive
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)
+        settings_row = await session.scalar(
+            select(TenantSettings).where(TenantSettings.tenant_id == principal.tenant_id)
+        )
+        if settings_row is None or not settings_row.invoice_forwarding.get("forward_address"):
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Keine Zieladresse für die Weiterleitung hinterlegt (Postfächer).",
+            )
+        forward_address = settings_row.invoice_forwarding["forward_address"]
+        await forward_and_archive(
+            session,
+            request.app.state.settings,
+            principal.tenant_id,
+            principal.user_id,
+            row,
+            forward_address,
+        )
+        settings_row.invoice_forwarding = register_confirmation(
+            settings_row.invoice_forwarding, row.from_address or ""
+        )
+        await session.flush()
+        return {"forwarded_to": forward_address}
 
 
 @router.post(

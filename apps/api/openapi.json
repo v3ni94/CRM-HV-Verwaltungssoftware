@@ -1211,6 +1211,47 @@
         "title": "ApplyPlaybookIn",
         "type": "object"
       },
+      "AssignAccountIn": {
+        "additionalProperties": false,
+        "properties": {
+          "property_bank_account_id": {
+            "format": "uuid",
+            "title": "Property Bank Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "property_bank_account_id"
+        ],
+        "title": "AssignAccountIn",
+        "type": "object"
+      },
+      "AssigneeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "primary": {
+            "default": false,
+            "title": "Primary",
+            "type": "boolean"
+          },
+          "reason": {
+            "default": "manuell",
+            "maxLength": 64,
+            "title": "Reason",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "AssigneeIn",
+        "type": "object"
+      },
       "AttendanceIn": {
         "additionalProperties": false,
         "properties": {
@@ -2754,6 +2795,18 @@
             "title": "All Day",
             "type": "boolean"
           },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
           "ends_on": {
             "anyOf": [
               {
@@ -2795,9 +2848,27 @@
             "title": "Shared",
             "type": "boolean"
           },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
           "starts_on": {
             "format": "date",
             "title": "Starts On",
+            "type": "string"
+          },
+          "target": {
+            "default": "internal",
+            "pattern": "^(internal|default|own)$",
+            "title": "Target",
             "type": "string"
           },
           "title": {
@@ -2852,6 +2923,17 @@
       },
       "CalendarItem": {
         "properties": {
+          "calendar_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Label"
+          },
           "date": {
             "format": "date",
             "title": "Date",
@@ -2897,9 +2979,32 @@
             ],
             "title": "Entity Type"
           },
+          "google_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Google Event Id"
+          },
           "kind": {
             "title": "Kind",
             "type": "string"
+          },
+          "mailbox_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mailbox Id"
           },
           "property_id": {
             "anyOf": [
@@ -2913,6 +3018,11 @@
             ],
             "title": "Property Id"
           },
+          "source": {
+            "default": "internal",
+            "title": "Source",
+            "type": "string"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -2924,6 +3034,52 @@
           "date"
         ],
         "title": "CalendarItem",
+        "type": "object"
+      },
+      "CalendarNotice": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "address",
+          "connected"
+        ],
+        "title": "CalendarNotice",
+        "type": "object"
+      },
+      "CalendarOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "notices": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarNotice"
+            },
+            "title": "Notices",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CalendarOut",
         "type": "object"
       },
       "CapAreaIn": {
@@ -3842,7 +3998,9 @@
           "active",
           "error",
           "consent_expired",
-          "disabled"
+          "disabled",
+          "web_form_pending",
+          "update_required"
         ],
         "title": "ConnectionStatus",
         "type": "string"
@@ -4184,6 +4342,14 @@
               }
             ]
           },
+          "roles": {
+            "description": "Manuelle Klassifizierung; automatisch abgeleitete Rollen aus Verträgen werden zusätzlich beibehalten.",
+            "items": {
+              "$ref": "#/components/schemas/ContactRoleCode"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
           "salutation": {
             "anyOf": [
               {
@@ -4236,6 +4402,14 @@
           "company"
         ],
         "title": "ContactKind",
+        "type": "string"
+      },
+      "ContactMandateStatus": {
+        "enum": [
+          "active",
+          "revoked"
+        ],
+        "title": "ContactMandateStatus",
         "type": "string"
       },
       "ContactOut": {
@@ -4410,6 +4584,13 @@
               }
             ]
           },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/ContactRoleCode"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
           "salutation": {
             "anyOf": [
               {
@@ -4480,6 +4661,7 @@
           "identifiers",
           "bank_accounts",
           "types",
+          "roles",
           "tags",
           "version",
           "created_at",
@@ -4519,6 +4701,19 @@
         ],
         "title": "ContactPage",
         "type": "object"
+      },
+      "ContactRoleCode": {
+        "description": "Operator classification, multiple values allowed (task M3-02). Distinct from `kind`\n(person/organisation) and from `ContactTypeCode` (process derived contact types).",
+        "enum": [
+          "eigentuemer",
+          "mieter",
+          "verwalter",
+          "dienstleister",
+          "bank",
+          "sonstiges"
+        ],
+        "title": "ContactRoleCode",
+        "type": "string"
       },
       "ContactSummary": {
         "properties": {
@@ -4578,6 +4773,13 @@
             ],
             "title": "Primary Phone"
           },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/ContactRoleCode"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
           "tags": {
             "items": {
               "type": "string"
@@ -4604,6 +4806,7 @@
           "blocked",
           "tags",
           "types",
+          "roles",
           "deleted"
         ],
         "title": "ContactSummary",
@@ -7482,6 +7685,347 @@
         "title": "FilterOut",
         "type": "object"
       },
+      "FinApiAccountOut": {
+        "properties": {
+          "account_holder_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Holder Name"
+          },
+          "account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Name"
+          },
+          "account_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Type"
+          },
+          "balance_as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance As Of"
+          },
+          "balance_available": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Available"
+          },
+          "balance_booked": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Booked"
+          },
+          "balance_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Currency"
+          },
+          "balance_fetched_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Fetched At"
+          },
+          "finapi_account_id": {
+            "title": "Finapi Account Id",
+            "type": "string"
+          },
+          "iban_suffix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iban Suffix"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_transactions_fetch_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Transactions Fetch At"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          }
+        },
+        "required": [
+          "id",
+          "finapi_account_id",
+          "account_holder_name",
+          "account_type",
+          "account_name",
+          "iban_suffix",
+          "property_bank_account_id",
+          "balance_booked",
+          "balance_available",
+          "balance_currency",
+          "balance_as_of",
+          "balance_fetched_at",
+          "last_transactions_fetch_at"
+        ],
+        "title": "FinApiAccountOut",
+        "type": "object"
+      },
+      "FinApiConfigIn": {
+        "additionalProperties": false,
+        "properties": {
+          "base_url": {
+            "maxLength": 300,
+            "minLength": 8,
+            "title": "Base Url",
+            "type": "string"
+          },
+          "client_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_secret": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Client Secret",
+            "type": "string"
+          },
+          "mandator_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandator Id"
+          },
+          "sandbox": {
+            "default": true,
+            "title": "Sandbox",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "client_id",
+          "client_secret",
+          "base_url"
+        ],
+        "title": "FinApiConfigIn",
+        "type": "object"
+      },
+      "FinApiConfigOut": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "mandator_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandator Id"
+          },
+          "sandbox": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox"
+          }
+        },
+        "required": [
+          "configured"
+        ],
+        "title": "FinApiConfigOut",
+        "type": "object"
+      },
+      "FinApiConnectionOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/FinApiAccountOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "auto_update_enabled": {
+            "title": "Auto Update Enabled",
+            "type": "boolean"
+          },
+          "bank_connection_id": {
+            "format": "uuid",
+            "title": "Bank Connection Id",
+            "type": "string"
+          },
+          "bank_name": {
+            "title": "Bank Name",
+            "type": "string"
+          },
+          "consent_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Valid Until"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ConnectionStatus"
+          },
+          "web_form_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Web Form Status"
+          },
+          "web_form_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Web Form Url"
+          }
+        },
+        "required": [
+          "id",
+          "bank_connection_id",
+          "bank_name",
+          "status",
+          "web_form_url",
+          "web_form_status",
+          "consent_valid_until",
+          "last_error",
+          "auto_update_enabled",
+          "accounts"
+        ],
+        "title": "FinApiConnectionOut",
+        "type": "object"
+      },
       "FlowImportApplyIn": {
         "additionalProperties": false,
         "properties": {
@@ -7689,6 +8233,97 @@
           "scopes"
         ],
         "title": "GateStateOut",
+        "type": "object"
+      },
+      "GoogleCalendarPatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "all_day": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Day"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "ends_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends On"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "starts_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts On"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "GoogleCalendarPatchIn",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -8733,6 +9368,38 @@
           "invited_at"
         ],
         "title": "InviteIn",
+        "type": "object"
+      },
+      "InvoiceForwardSettingsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "forward_address": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forward Address"
+          },
+          "sender_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Sender Allowlist",
+            "type": "array"
+          }
+        },
+        "title": "InvoiceForwardSettingsIn",
         "type": "object"
       },
       "InvoiceIn": {
@@ -10866,6 +11533,18 @@
       },
       "LoginRequest": {
         "properties": {
+          "device_token": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Token"
+          },
           "email": {
             "format": "email",
             "title": "Email",
@@ -10876,6 +11555,18 @@
             "minLength": 1,
             "title": "Password",
             "type": "string"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
           }
         },
         "required": [
@@ -10887,19 +11578,82 @@
       },
       "LoginStep": {
         "properties": {
+          "access_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Token"
+          },
+          "expires_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires In"
+          },
           "mfa_token": {
-            "title": "Mfa Token",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mfa Token"
+          },
+          "refresh_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Token"
           },
           "status": {
-            "description": "mfa_required oder mfa_setup_required",
+            "description": "ok, mfa_required oder mfa_setup_required",
             "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          },
+          "tenants": {
+            "items": {
+              "$ref": "#/components/schemas/mhvp__core__auth__routers__TenantOut"
+            },
+            "title": "Tenants",
+            "type": "array"
+          },
+          "token_type": {
+            "default": "Bearer",
+            "title": "Token Type",
             "type": "string"
           }
         },
         "required": [
-          "status",
-          "mfa_token"
+          "status"
         ],
         "title": "LoginStep",
         "type": "object"
@@ -11184,6 +11938,41 @@
       "MailboxPatchIn": {
         "additionalProperties": false,
         "properties": {
+          "archive_on_ticket_done": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archive On Ticket Done"
+          },
+          "calendar_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Enabled"
+          },
+          "calendar_id": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Id"
+          },
           "enabled": {
             "anyOf": [
               {
@@ -11549,6 +12338,17 @@
         "title": "ManagementType",
         "type": "string"
       },
+      "MandateGrantedVia": {
+        "enum": [
+          "telefon",
+          "brief",
+          "email",
+          "portal",
+          "persoenlich"
+        ],
+        "title": "MandateGrantedVia",
+        "type": "string"
+      },
       "MandateIn": {
         "additionalProperties": false,
         "properties": {
@@ -11708,6 +12508,14 @@
         ],
         "title": "MandateOut",
         "type": "object"
+      },
+      "MandateScheme": {
+        "enum": [
+          "core",
+          "b2b"
+        ],
+        "title": "MandateScheme",
+        "type": "string"
       },
       "MandateSequence": {
         "enum": [
@@ -12006,6 +12814,21 @@
         "title": "MeetingIn",
         "type": "object"
       },
+      "MemberCompetences": {
+        "description": "Kompetenzcodes des Mitglieds (operator 25.09.2026). Werden gegen den Katalog\n(``mhvp.tickets.competences``, ggf. um die Mandantenerweiterung) geprüft.",
+        "properties": {
+          "competence_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Competence Codes",
+            "type": "array"
+          }
+        },
+        "title": "MemberCompetences",
+        "type": "object"
+      },
       "MemberCreate": {
         "properties": {
           "role_codes": {
@@ -12075,6 +12898,13 @@
       },
       "MemberOut": {
         "properties": {
+          "competences": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Competences",
+            "type": "array"
+          },
           "contact_id": {
             "anyOf": [
               {
@@ -12563,6 +13393,11 @@
           "mfa_token": {
             "title": "Mfa Token",
             "type": "string"
+          },
+          "remember_device": {
+            "default": false,
+            "title": "Remember Device",
+            "type": "boolean"
           },
           "tenant_id": {
             "anyOf": [
@@ -17801,6 +18636,72 @@
         "title": "SearchHit",
         "type": "object"
       },
+      "SepaMandateOut": {
+        "description": "Compact list for GET /contacts/{id}/sepa-mandates.",
+        "properties": {
+          "bank_account_id": {
+            "format": "uuid",
+            "title": "Bank Account Id",
+            "type": "string"
+          },
+          "iban_masked": {
+            "title": "Iban Masked",
+            "type": "string"
+          },
+          "mandate_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Reference"
+          },
+          "mandate_revoked_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Revoked On"
+          },
+          "mandate_scheme": {
+            "$ref": "#/components/schemas/MandateScheme"
+          },
+          "mandate_signed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Signed On"
+          },
+          "mandate_status": {
+            "$ref": "#/components/schemas/ContactMandateStatus"
+          }
+        },
+        "required": [
+          "bank_account_id",
+          "iban_masked",
+          "mandate_reference",
+          "mandate_signed_on",
+          "mandate_scheme",
+          "mandate_status",
+          "mandate_revoked_on"
+        ],
+        "title": "SepaMandateOut",
+        "type": "object"
+      },
       "SerialDispatchIn": {
         "additionalProperties": false,
         "properties": {
@@ -18764,6 +19665,18 @@
             ],
             "title": "Category"
           },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
           "initiator_contact_id": {
             "anyOf": [
               {
@@ -18850,6 +19763,18 @@
             ],
             "title": "Title"
           },
+          "topic": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          },
           "unit_id": {
             "anyOf": [
               {
@@ -18933,6 +19858,18 @@
             ],
             "title": "Checklist Done"
           },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
           "extra_fields": {
             "anyOf": [
               {
@@ -18954,6 +19891,18 @@
                 "type": "null"
               }
             ]
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
           },
           "status": {
             "anyOf": [
@@ -18988,6 +19937,30 @@
               }
             ],
             "title": "Time Spent Minutes"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
           }
         },
         "title": "TicketPatch",
@@ -19106,6 +20079,18 @@
             "minLength": 1,
             "title": "Title",
             "type": "string"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
           }
         },
         "required": [
@@ -19230,6 +20215,18 @@
               }
             ],
             "title": "Title"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
           }
         },
         "title": "TicketTemplatePatch",
@@ -19284,6 +20281,17 @@
           "access_token": {
             "title": "Access Token",
             "type": "string"
+          },
+          "device_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Token"
           },
           "expires_in": {
             "title": "Expires In",
@@ -19552,6 +20560,57 @@
           "target"
         ],
         "title": "TransitionIn",
+        "type": "object"
+      },
+      "TrustedDeviceOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "created_at",
+          "expires_at",
+          "last_used_at"
+        ],
+        "title": "TrustedDeviceOut",
         "type": "object"
       },
       "UnitIn": {
@@ -20336,6 +21395,22 @@
         "title": "VoteIn",
         "type": "object"
       },
+      "WebFormRefIn": {
+        "additionalProperties": false,
+        "properties": {
+          "bank_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Bank Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bank_name"
+        ],
+        "title": "WebFormRefIn",
+        "type": "object"
+      },
       "WebhookCreate": {
         "properties": {
           "description": {
@@ -20858,6 +21933,89 @@
             ],
             "title": "Label"
           },
+          "mandate_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Document Id"
+          },
+          "mandate_granted_via": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MandateGrantedVia"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mandate_note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Note"
+          },
+          "mandate_reference": {
+            "anyOf": [
+              {
+                "maxLength": 35,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Reference"
+          },
+          "mandate_revoked_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Revoked On"
+          },
+          "mandate_scheme": {
+            "$ref": "#/components/schemas/MandateScheme",
+            "default": "core"
+          },
+          "mandate_signed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Signed On"
+          },
+          "mandate_status": {
+            "$ref": "#/components/schemas/ContactMandateStatus",
+            "default": "active"
+          },
+          "sepa_enabled": {
+            "default": false,
+            "title": "Sepa Enabled",
+            "type": "boolean"
+          },
           "valid_from": {
             "format": "date",
             "title": "Valid From",
@@ -20938,6 +22096,84 @@
             ],
             "title": "Label"
           },
+          "mandate_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Document Id"
+          },
+          "mandate_granted_via": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MandateGrantedVia"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mandate_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Note"
+          },
+          "mandate_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Reference"
+          },
+          "mandate_revoked_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Revoked On"
+          },
+          "mandate_scheme": {
+            "$ref": "#/components/schemas/MandateScheme"
+          },
+          "mandate_signed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandate Signed On"
+          },
+          "mandate_status": {
+            "$ref": "#/components/schemas/ContactMandateStatus"
+          },
+          "sepa_enabled": {
+            "title": "Sepa Enabled",
+            "type": "boolean"
+          },
           "valid_from": {
             "format": "date",
             "title": "Valid From",
@@ -20964,7 +22200,16 @@
           "bank_name",
           "holder",
           "valid_from",
-          "valid_to"
+          "valid_to",
+          "sepa_enabled",
+          "mandate_reference",
+          "mandate_signed_on",
+          "mandate_granted_via",
+          "mandate_note",
+          "mandate_document_id",
+          "mandate_scheme",
+          "mandate_status",
+          "mandate_revoked_on"
         ],
         "title": "BankAccountOut",
         "type": "object"
@@ -24874,6 +26119,7 @@
     },
     "/api/v1/auth/login": {
       "post": {
+        "description": "TOTP is mandatory only for administrators (operator 25.09.2026); other users continue\nstraight to a session unless they enabled TOTP themselves, or a trusted device stands in\nfor it.",
         "operationId": "login_api_v1_auth_login_post",
         "requestBody": {
           "content": {
@@ -25228,6 +26474,67 @@
         ]
       }
     },
+    "/api/v1/auth/trusted-devices": {
+      "get": {
+        "operationId": "list_trusted_devices_api_v1_auth_trusted_devices_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrustedDeviceOut"
+                  },
+                  "title": "Response List Trusted Devices Api V1 Auth Trusted Devices Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Gemerkte Geräte (TOTP-Ausnahme)",
+        "tags": [
+          "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/auth/trusted-devices/{device_id}": {
+      "delete": {
+        "operationId": "revoke_trusted_device_api_v1_auth_trusted_devices__device_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Device Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gemerktes Gerät widerrufen",
+        "tags": [
+          "Anmeldung"
+        ]
+      }
+    },
     "/api/v1/banking/accounts/{bank_account_id}/reconciliation": {
       "get": {
         "operationId": "reconciliation_api_v1_banking_accounts__bank_account_id__reconciliation_get",
@@ -25446,6 +26753,359 @@
           }
         },
         "summary": "Bankverbindung anlegen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/accounts/{link_id}/assign": {
+      "post": {
+        "operationId": "assign_finapi_account_api_v1_banking_finapi_accounts__link_id__assign_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignAccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinApiAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Konto einem Buchungskreis/Objekt zuordnen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/accounts/{link_id}/fetch": {
+      "post": {
+        "description": "A real click only: this never runs on a schedule (master prompt section 2). The fetch\nitself completes asynchronously in the existing Celery worker (`banking.finapi_fetch`).",
+        "operationId": "fetch_finapi_transactions_api_v1_banking_finapi_accounts__link_id__fetch_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umsätze abrufen (asynchron, nur auf Klick)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/config": {
+      "get": {
+        "operationId": "get_finapi_config_api_v1_banking_finapi_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinApiConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "finAPI-Konfigurationsstatus (ohne Zugangsdaten)",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "put": {
+        "operationId": "set_finapi_config_api_v1_banking_finapi_config_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinApiConfigIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinApiConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "finAPI-Zugangsdaten hinterlegen (Einstellungen, Bank)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/connections": {
+      "get": {
+        "operationId": "list_finapi_connections_api_v1_banking_finapi_connections_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FinApiConnectionOut"
+                  },
+                  "title": "Response List Finapi Connections Api V1 Banking Finapi Connections Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Bankverbindungen (finAPI) mit Konten",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "post": {
+        "description": "Starts the documented WebForm import (docs/integrations/finapi.md section 2). The\nbrowser redirect that follows is not itself an authorization result: `get_connection`\nbelow re-checks the WebForm and bank connection status with the provider before any\naccount is trusted (banking master prompt section 6).",
+        "operationId": "create_finapi_connection_api_v1_banking_finapi_connections_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebFormRefIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinApiConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankverbindung anlegen (WebForm)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/connections/{finapi_connection_id}/check": {
+      "post": {
+        "description": "A browser return from the WebForm is not proof of success (master prompt section 6):\nthis endpoint re-reads the WebForm and, once it finished, the bank connection and its\naccounts directly from finAPI with the tenant's own credentials.",
+        "operationId": "check_finapi_connection_api_v1_banking_finapi_connections__finapi_connection_id__check_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "finapi_connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Finapi Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinApiConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "WebForm-/Verbindungsstatus serverseitig prüfen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/connections/{finapi_connection_id}/disconnect": {
+      "post": {
+        "description": "Blocks further use locally first (master prompt section 12). The provider side\n(revoking the finAPI bank connection) uses an endpoint marked \"zu prüfen\" in\ndocs/integrations/finapi.md, so this only records that the provider side is unconfirmed;\nit never claims the bank-side consent was revoked.",
+        "operationId": "disconnect_finapi_connection_api_v1_banking_finapi_connections__finapi_connection_id__disconnect_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "finapi_connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Finapi Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinApiConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verbindung trennen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/finapi/connections/{finapi_connection_id}/reauthorize": {
+      "post": {
+        "operationId": "reauthorize_finapi_connection_api_v1_banking_finapi_connections__finapi_connection_id__reauthorize_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "finapi_connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Finapi Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinApiConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Erneute Freigabe (WebForm erneut starten)",
         "tags": [
           "Bank"
         ]
@@ -26684,6 +28344,24 @@
             }
           },
           {
+            "description": "Filter: eigentuemer, mieter, ...",
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter: eigentuemer, mieter, ...",
+              "title": "Role"
+            }
+          },
+          {
             "in": "query",
             "name": "include_deleted",
             "required": false,
@@ -27056,6 +28734,59 @@
           }
         },
         "summary": "Kontakt ändern (vollständig)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/mandate/revoke": {
+      "post": {
+        "operationId": "revoke_mandate_api_v1_contacts__contact_id__bank_accounts__account_id__mandate_revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SepaMandateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SEPA-Mandat widerrufen",
         "tags": [
           "Kontakte"
         ]
@@ -27445,6 +29176,53 @@
           }
         },
         "summary": "Beziehung anlegen",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/sepa-mandates": {
+      "get": {
+        "operationId": "list_sepa_mandates_api_v1_contacts__contact_id__sepa_mandates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SepaMandateOut"
+                  },
+                  "title": "Response List Sepa Mandates Api V1 Contacts  Contact Id  Sepa Mandates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SEPA-Mandate eines Kontakts (kompakt)",
         "tags": [
           "Kontakte"
         ]
@@ -34979,6 +36757,70 @@
         ]
       }
     },
+    "/api/v1/mail/invoice-forwarding": {
+      "get": {
+        "operationId": "get_invoice_forwarding_api_v1_mail_invoice_forwarding_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Invoice Forwarding Api V1 Mail Invoice Forwarding Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rechnungs-Weiterleitung: Einstellungen (Postfächer)",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "put": {
+        "operationId": "put_invoice_forwarding_api_v1_mail_invoice_forwarding_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceForwardSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Invoice Forwarding Api V1 Mail Invoice Forwarding Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rechnungs-Weiterleitung: Einstellungen speichern (Postfächer)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/mailboxes": {
       "get": {
         "operationId": "list_mailboxes_api_v1_mail_mailboxes_get",
@@ -35689,6 +37531,52 @@
           }
         },
         "summary": "Entwurf bearbeiten",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/forward-invoice": {
+      "post": {
+        "description": "Der Operator bestätigt einen Weiterleitungs-Vorschlag manuell; nach der zweiten\nBestätigung eines Absenders landet dieser auf der Lernliste (operator 25.09.2026) und\nkünftige Mails desselben Absenders werden automatisch weitergeleitet.",
+        "operationId": "forward_invoice_api_v1_mail_messages__message_id__forward_invoice_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Forward Invoice Api V1 Mail Messages  Message Id  Forward Invoice Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rechnung weiterleiten (\"Weiterleiten?\"-Vorschlag bestätigen)",
         "tags": [
           "Postfach"
         ]
@@ -41387,6 +43275,33 @@
         ]
       }
     },
+    "/api/v1/sla/rules/presets": {
+      "post": {
+        "description": "Setzt für jede Priorität ohne bestehende Regel eine Vorschlagsregel (Antwort-/Lösungszeit)\nund den Geschäftszeitenkalender Mo-Fr 08:00-17:00 Europe/Berlin; bestehende Regeln und ein\nbereits gepflegter Kalender bleiben unverändert. Feiertage NRW pflegt der Betreiber selbst\n(``holidays`` bleibt eine einfache Liste, kein Automatismus).",
+        "operationId": "load_presets_api_v1_sla_rules_presets_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Load Presets Api V1 Sla Rules Presets Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Vorschlagswerte laden (Produktschutz-Vorschlag, keine Rechtsvorschrift)",
+        "tags": [
+          "SLA und Bereitschaft"
+        ]
+      }
+    },
     "/api/v1/sla/rules/{rule_id}": {
       "delete": {
         "operationId": "delete_rule_api_v1_sla_rules__rule_id__delete",
@@ -42332,6 +44247,34 @@
         ]
       }
     },
+    "/api/v1/tenant/competence-catalogue": {
+      "get": {
+        "operationId": "get_competence_catalogue_api_v1_tenant_competence_catalogue_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  "title": "Response Get Competence Catalogue Api V1 Tenant Competence Catalogue Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Kompetenzkatalog (Basis und Mandant)",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/tenant/events": {
       "get": {
         "operationId": "list_events_api_v1_tenant_events_get",
@@ -42522,6 +44465,52 @@
           }
         },
         "summary": "Mitglied aktivieren oder sperren",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/members/{membership_id}/competences": {
+      "put": {
+        "operationId": "put_member_competences_api_v1_tenant_members__membership_id__competences_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberCompetences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kompetenzen eines Mitglieds setzen",
         "tags": [
           "Mandant"
         ]
@@ -43267,6 +45256,40 @@
           },
           {
             "in": "query",
+            "name": "unit_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Unit Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contact Id"
+            }
+          },
+          {
+            "in": "query",
             "name": "mine",
             "required": false,
             "schema": {
@@ -43734,6 +45757,153 @@
           }
         },
         "summary": "Status, Zuweisung, Checkliste",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/assignees": {
+      "get": {
+        "operationId": "list_assignees_api_v1_tickets__ticket_id__assignees_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Assignees Api V1 Tickets  Ticket Id  Assignees Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuweiser eines Tickets mit Grund",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      },
+      "post": {
+        "operationId": "add_assignee_endpoint_api_v1_tickets__ticket_id__assignees_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssigneeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Assignee Endpoint Api V1 Tickets  Ticket Id  Assignees Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuweiser hinzufügen (manuell)",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/assignees/{user_id}": {
+      "delete": {
+        "operationId": "remove_assignee_api_v1_tickets__ticket_id__assignees__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuweiser entfernen",
         "tags": [
           "Tickets und Aufträge"
         ]
@@ -44375,11 +46545,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/CalendarItem"
-                  },
-                  "title": "Response Calendar Api V1 Workspace Calendar Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/CalendarOut"
                 }
               }
             },
@@ -44457,6 +46623,134 @@
         "summary": "Kalender als ICS (eigene, geteilte Termine, Fristen)",
         "tags": [
           "Kommunikation"
+        ]
+      }
+    },
+    "/api/v1/workspace/calendar/google/{source}/{event_id}": {
+      "delete": {
+        "operationId": "delete_google_entry_api_v1_workspace_calendar_google__source___event_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "title": "Source",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Google-Termin löschen",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_google_entry_api_v1_workspace_calendar_google__source___event_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "title": "Source",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleCalendarPatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Google-Termin ändern",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/calendar/refresh": {
+      "post": {
+        "operationId": "refresh_calendar_api_v1_workspace_calendar_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Refresh Calendar Api V1 Workspace Calendar Refresh Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Google-Kalender jetzt neu abrufen",
+        "tags": [
+          "Arbeitsplatz"
         ]
       }
     },

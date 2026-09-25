@@ -17,7 +17,7 @@ import pyotp
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from sqlalchemy import Engine, text
+from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.exc import DBAPIError
 
 from mhvp.core import crypto
@@ -146,6 +146,10 @@ def login(
         "/api/v1/auth/login", json={"email": world.email(name), "password": PASSWORD}
     )
     assert step.status_code == 200, step.text
+    # TOTP is mandatory only for administrators (operator 25.09.2026); other roles may log in
+    # directly with an already issued session (status "ok").
+    if step.json()["status"] == "ok":
+        return dict(step.json())
     mfa = step.json()["mfa_token"]
     if step.json()["status"] == "mfa_setup_required":
         setup = client.post("/api/v1/auth/mfa/setup", json={"mfa_token": mfa})
@@ -161,6 +165,21 @@ def login(
 
 def bearer(tokens_: dict[str, Any]) -> dict[str, str]:
     return {"Authorization": f"Bearer {tokens_['access_token']}"}
+
+
+def login_password_only(
+    client: TestClient, world: World, name: str, device_token: str | None = None
+) -> dict[str, Any]:
+    """Login of a non-administrator without TOTP (operator 25.09.2026): status "ok" already
+    carries the issued session."""
+    body: dict[str, Any] = {"email": world.email(name), "password": PASSWORD}
+    if device_token:
+        body["device_token"] = device_token
+    step = client.post("/api/v1/auth/login", json=body)
+    assert step.status_code == 200, step.text
+    payload = step.json()
+    assert payload["status"] == "ok", payload
+    return dict(payload)
 
 
 # Seeds -----------------------------------------------------------------------------------
@@ -208,18 +227,19 @@ def test_login_with_totp_setup_selects_single_tenant(client: TestClient, world: 
 
 
 def test_totp_code_cannot_be_replayed(client: TestClient, world: World) -> None:
-    login(client, world, "reader", reuse=False)
+    # "admin" holds the tenant_admin role, for which TOTP stays mandatory (operator 25.09.2026).
+    login(client, world, "admin")
     mfa = client.post(
-        "/api/v1/auth/login", json={"email": world.email("reader"), "password": PASSWORD}
+        "/api/v1/auth/login", json={"email": world.email("admin"), "password": PASSWORD}
     ).json()["mfa_token"]
     # The code of the current step was used by the first login.
     replay = client.post(
-        "/api/v1/auth/mfa/verify", json={"mfa_token": mfa, "code": _code(world.secrets["reader"])}
+        "/api/v1/auth/mfa/verify", json={"mfa_token": mfa, "code": _code(world.secrets["admin"])}
     )
     assert replay.status_code == 401
     fresh = client.post(
         "/api/v1/auth/mfa/verify",
-        json={"mfa_token": mfa, "code": _code(world.secrets["reader"], 1)},
+        json={"mfa_token": mfa, "code": _code(world.secrets["admin"], 1)},
     )
     assert fresh.status_code == 200
 
@@ -259,6 +279,167 @@ def test_refresh_rotation_and_reuse_detection(client: TestClient, world: World) 
     # Reusing the rotated token ends the whole session family.
     assert client.post("/api/v1/auth/refresh", json={"refresh_token": first}).status_code == 401
     assert client.post("/api/v1/auth/refresh", json={"refresh_token": second}).status_code == 401
+
+
+# TOTP mandatory only for administrators, trusted devices (operator 25.09.2026) -------------
+
+
+def test_standard_user_logs_in_without_totp(client: TestClient, world: World) -> None:
+    issued = login_password_only(client, world, "reader")
+    assert issued["mfa_token"] is None
+    me = client.get("/api/v1/auth/me", headers=bearer(issued)).json()
+    assert me["roles"] == ["read_only"]
+
+
+def test_admin_still_needs_totp(client: TestClient, world: World) -> None:
+    step = client.post(
+        "/api/v1/auth/login", json={"email": world.email("admin"), "password": PASSWORD}
+    )
+    assert step.status_code == 200
+    body = step.json()
+    assert body["status"] in ("mfa_required", "mfa_setup_required")
+    assert body["access_token"] is None
+    assert body["mfa_token"]
+
+
+def test_trusted_device_skips_totp_and_expires(client: TestClient, world: World) -> None:
+    login(client, world, "padmin2")  # ensures the TOTP secret exists
+    world.allow_code_reuse("padmin2")
+    step = client.post(
+        "/api/v1/auth/login", json={"email": world.email("padmin2"), "password": PASSWORD}
+    ).json()
+    verified = client.post(
+        "/api/v1/auth/mfa/verify",
+        json={
+            "mfa_token": step["mfa_token"],
+            "code": _code(world.secrets["padmin2"]),
+            "remember_device": True,
+        },
+    )
+    assert verified.status_code == 200, verified.text
+    device_token = verified.json()["device_token"]
+    assert device_token
+
+    # The remembered device skips TOTP on the next login.
+    again = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": world.email("padmin2"),
+            "password": PASSWORD,
+            "device_token": device_token,
+        },
+    )
+    assert again.status_code == 200
+    assert again.json()["status"] == "ok"
+    assert again.json()["access_token"]
+
+    # An expired device token no longer skips TOTP.
+    engine = create_engine(world.app_url)
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "UPDATE trusted_device SET expires_at = now() - interval '1 day' "
+                "WHERE user_id = :id"
+            ),
+            {"id": world.users["padmin2"]},
+        )
+    engine.dispose()
+    expired = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": world.email("padmin2"),
+            "password": PASSWORD,
+            "device_token": device_token,
+        },
+    )
+    assert expired.status_code == 200
+    assert expired.json()["status"] in ("mfa_required", "mfa_setup_required")
+
+
+def test_trusted_device_can_be_listed_and_revoked(client: TestClient, world: World) -> None:
+    login(client, world, "padmin2")
+    world.allow_code_reuse("padmin2")
+    step = client.post(
+        "/api/v1/auth/login", json={"email": world.email("padmin2"), "password": PASSWORD}
+    ).json()
+    verified = client.post(
+        "/api/v1/auth/mfa/verify",
+        json={
+            "mfa_token": step["mfa_token"],
+            "code": _code(world.secrets["padmin2"]),
+            "remember_device": True,
+        },
+    ).json()
+    headers = bearer(verified)
+    devices = client.get("/api/v1/auth/trusted-devices", headers=headers).json()
+    assert any(d["id"] for d in devices)
+    device_id = devices[0]["id"]
+    assert (
+        client.delete(f"/api/v1/auth/trusted-devices/{device_id}", headers=headers).status_code
+        == 204
+    )
+    remaining = {
+        d["id"] for d in client.get("/api/v1/auth/trusted-devices", headers=headers).json()
+    }
+    assert device_id not in remaining
+
+    # Revoked: the device no longer skips TOTP.
+    again = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": world.email("padmin2"),
+            "password": PASSWORD,
+            "device_token": verified["device_token"],
+        },
+    )
+    assert again.json()["status"] in ("mfa_required", "mfa_setup_required")
+
+
+def test_trusted_device_rejected_for_other_user_tenant_isolation(
+    client: TestClient, world: World
+) -> None:
+    """A device token is bound to exactly one user: neither another user, nor a fresh login of
+    a different member of the same tenant, may use it to skip TOTP (tenant separation)."""
+    login(client, world, "padmin2")
+    world.allow_code_reuse("padmin2")
+    step = client.post(
+        "/api/v1/auth/login", json={"email": world.email("padmin2"), "password": PASSWORD}
+    ).json()
+    verified = client.post(
+        "/api/v1/auth/mfa/verify",
+        json={
+            "mfa_token": step["mfa_token"],
+            "code": _code(world.secrets["padmin2"]),
+            "remember_device": True,
+        },
+    ).json()
+    device_token = verified["device_token"]
+    # "both" is a different administrator (tenant_admin in tenant A): the token stays refused.
+    other = client.post(
+        "/api/v1/auth/login",
+        json={"email": world.email("both"), "password": PASSWORD, "device_token": device_token},
+    )
+    assert other.status_code == 200
+    assert other.json()["status"] in ("mfa_required", "mfa_setup_required")
+    # Devices listed for "both" never include padmin2's device.
+    other_headers = bearer(login(client, world, "both"))
+    other_devices = client.get("/api/v1/auth/trusted-devices", headers=other_headers).json()
+    own_headers = bearer(
+        client.post(
+            "/api/v1/auth/mfa/verify",
+            json={
+                "mfa_token": client.post(
+                    "/api/v1/auth/login",
+                    json={"email": world.email("padmin2"), "password": PASSWORD},
+                ).json()["mfa_token"],
+                "code": _code(world.secrets["padmin2"], 1),
+            },
+        ).json()
+    )
+    own_devices = {
+        d["id"] for d in client.get("/api/v1/auth/trusted-devices", headers=own_headers).json()
+    }
+    assert not ({d["id"] for d in other_devices} & own_devices)
 
 
 def test_sessions_list_and_logout(client: TestClient, world: World) -> None:
@@ -353,7 +534,8 @@ def test_host_and_token_tenant_must_match(client: TestClient, world: World) -> N
 
 
 def test_read_only_user_cannot_change_anything(client: TestClient, world: World) -> None:
-    issued = login(client, world, "reader", offset=-1)
+    # "reader" (read_only, non-admin) logs in with password only (operator 25.09.2026).
+    issued = login_password_only(client, world, "reader")
     headers = bearer(issued)
     assert client.get("/api/v1/tenant/settings", headers=headers).status_code == 200
     for method, url, body in [
@@ -725,20 +907,10 @@ def test_tenant_admin_manages_members_and_users_change_password(
     def login_new(password: str) -> Any:
         return client.post("/api/v1/auth/login", json={"email": email, "password": password})
 
-    assert login_new(PASSWORD).json()["status"] == "mfa_setup_required"
-    step = login_new(PASSWORD).json()
-    setup = client.post("/api/v1/auth/mfa/setup", json={"mfa_token": step["mfa_token"]})
-    secret = setup.json()["secret"]
-    verified = client.post(
-        "/api/v1/auth/mfa/verify",
-        json={
-            "mfa_token": step["mfa_token"],
-            "code": _code(secret, 0),
-            "tenant_id": str(world.tenant_a),
-        },
-    )
-    assert verified.status_code == 200, verified.text
-    user = bearer(verified.json())
+    # "standard" is not an administrator (operator 25.09.2026): password alone logs in.
+    first = login_new(PASSWORD).json()
+    assert first["status"] == "ok"
+    user = bearer(first)
     wrong = client.post(
         "/api/v1/auth/password",
         json={"current_password": "falsch", "new_password": "ein neues langes Passwort"},
@@ -770,16 +942,20 @@ def test_tenant_admin_manages_members_and_users_change_password(
     )
     assert disabled.status_code == 200, disabled.text
     assert disabled.json()["status"] == "disabled"
-    step = login_new("Startpasswort 2026").json()
-    refused = client.post(
-        "/api/v1/auth/mfa/verify",
+    # The password is still valid, but the disabled membership leaves no tenant to enter.
+    after_disable = login_new("Startpasswort 2026").json()
+    assert after_disable["status"] == "ok"
+    assert after_disable["tenant_id"] is None
+    assert after_disable["tenants"] == []
+    explicit = client.post(
+        "/api/v1/auth/login",
         json={
-            "mfa_token": step["mfa_token"],
-            "code": _code(secret, 1),
+            "email": email,
+            "password": "Startpasswort 2026",
             "tenant_id": str(world.tenant_a),
         },
     )
-    assert refused.status_code in (401, 403, 404), refused.text
+    assert explicit.status_code == 403, explicit.text
     me = next(
         m
         for m in client.get("/api/v1/tenant/members", headers=admin).json()

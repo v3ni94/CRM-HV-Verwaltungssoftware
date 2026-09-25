@@ -4,6 +4,7 @@ reminder 10 days before expiry."""
 import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 from celery import shared_task
 from sqlalchemy import select
@@ -86,3 +87,122 @@ async def sync_all_once(settings: Settings) -> dict[str, int]:
 @shared_task(name="mhvp.banking.sync_all")
 def sync_all() -> dict[str, int]:
     return asyncio.run(sync_all_once(get_settings()))
+
+
+async def _finapi_fetch_once(
+    settings: Settings, tenant_id: uuid.UUID, run_id: uuid.UUID, link_id: uuid.UUID
+) -> dict[str, int]:
+    """Runs the update that a user click queued (M11-finapi, master prompt sections 7 to 9).
+
+    Never runs on a schedule; `create_finapi_connection`/`fetch_finapi_transactions` in
+    `mhvp.banking.routers` are its only callers.
+    """
+    from mhvp.banking import finapi as finapi_client
+    from mhvp.banking import services as svc
+    from mhvp.banking.camt import RawTransaction
+    from mhvp.banking.models import (
+        BankSyncRun,
+        FinApiAccountLink,
+        FinApiConnection,
+        FinApiTenantConfig,
+    )
+    from mhvp.properties.models import PropertyBankAccount
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            run = await session.get(BankSyncRun, run_id, with_for_update=True)
+            link = await session.get(FinApiAccountLink, link_id, with_for_update=True)
+            if run is None or link is None or link.property_bank_account_id is None:
+                if run is not None:
+                    run.status, run.errors = (
+                        "failed",
+                        ["Konto nicht gefunden oder nicht zugeordnet."],
+                    )
+                    await session.flush()
+                return {"new": 0}
+            fa = await session.get(FinApiConnection, link.finapi_connection_id)
+            cfg = await session.scalar(select(FinApiTenantConfig))
+            account = await session.get(PropertyBankAccount, link.property_bank_account_id)
+            if fa is None or cfg is None or account is None:
+                run.status, run.errors = "failed", ["Konfiguration oder Konto fehlt."]
+                await session.flush()
+                return {"new": 0}
+            run.status = "running"
+            await session.flush()
+            client = finapi_client.FinApiClient(
+                finapi_client.FinApiCredentials(
+                    client_id=cfg.client_id,
+                    client_secret=cfg.client_secret,
+                    base_url=cfg.base_url,
+                    mandator_id=cfg.mandator_id,
+                )
+            )
+            try:
+                page, counts = (
+                    1,
+                    {"new": 0, "duplicates": 0, "possible_duplicates": 0, "transfers": 0},
+                )
+                while True:
+                    items, has_more = client.list_transactions(
+                        account_ids=[link.finapi_account_id], page=page
+                    )
+                    raw = [
+                        RawTransaction(
+                            bank_reference=f"finapi:{t.transaction_id}",
+                            booking_date=datetime.fromisoformat(t.booking_date).date(),
+                            value_date=(
+                                datetime.fromisoformat(t.value_date).date()
+                                if t.value_date
+                                else None
+                            ),
+                            amount=Decimal(t.amount),
+                            currency=t.currency,
+                            counterpart_name=t.counterpart_name,
+                            counterpart_iban=t.counterpart_iban,
+                            counterpart_bic=t.counterpart_bic,
+                            purpose=t.purpose,
+                            end_to_end_id=t.end_to_end_id,
+                            mandate_reference=t.mandate_reference,
+                            creditor_id=t.creditor_id,
+                            transaction_code=None,
+                            raw={"finapi_transaction_id": t.transaction_id},
+                        )
+                        for t in items
+                        if not t.is_removed
+                    ]
+                    page_counts = await svc.import_finapi_transactions(
+                        session,
+                        tenant_id=tenant_id,
+                        property_bank_account_id=account.id,
+                        legal_entity_id=account.legal_entity_id,
+                        iban_fingerprint=account.iban_fingerprint,
+                        run=run,
+                        transactions=raw,
+                    )
+                    for k, v in page_counts.items():
+                        counts[k] += v
+                    if not has_more:
+                        break
+                    page += 1
+                link.last_transactions_fetch_at = datetime.now(UTC)
+                run.status, run.counts = "done", counts
+            except Exception as exc:
+                run.status, run.errors = "failed", [str(exc)]
+                counts = {"new": 0}
+            await session.flush()
+            return counts
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.banking.finapi_fetch")
+def finapi_fetch(tenant_id: str, run_id: str, link_id: str) -> dict[str, int]:
+    return asyncio.run(
+        _finapi_fetch_once(
+            get_settings(), uuid.UUID(tenant_id), uuid.UUID(run_id), uuid.UUID(link_id)
+        )
+    )

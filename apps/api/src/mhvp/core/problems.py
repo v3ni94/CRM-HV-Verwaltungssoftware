@@ -174,6 +174,33 @@ class ErrorCodes:
         "Schreibversuch blockiert",
         "Write path to Immoware24 is hard-blocked; only PROPFIND/REPORT/GET are allowed.",
     )
+    FINAPI_NOT_CONFIGURED = ErrorCode(
+        "MHVP-BANK-0001",
+        502,
+        "finAPI ist für diesen Mandanten nicht eingerichtet",
+        "No FinApiTenantConfig with client credentials for this tenant.",
+    )
+    FINAPI_UNAVAILABLE = ErrorCode(
+        "MHVP-BANK-0002",
+        503,
+        "finAPI nicht erreichbar",
+        "Request to the finAPI Access API failed or was rejected.",
+    )
+    FINAPI_NOT_VERIFIED = ErrorCode(
+        "MHVP-BANK-0003",
+        501,
+        "finAPI-Funktion noch nicht freigegeben",
+        (
+            "Endpoint or field is marked 'zu prüfen' in docs/integrations/finapi.md and is not "
+            "called until confirmed against the official documentation."
+        ),
+    )
+    FINAPI_STATE = ErrorCode(
+        "MHVP-BANK-0004",
+        409,
+        "Bankverbindung ist im falschen Zustand",
+        "The requested action does not match the connection's current finAPI state.",
+    )
 
 
 def _build_registry() -> dict[str, ErrorCode]:

@@ -30,6 +30,9 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M26-RL](M26-rent-law.md) | Mieterhöhung Regelwerk | 8, M26 | implemented, not accepted |
 | [M28-01](M28-01.md) | Makler: Anzeigen, keine FLOWFACT-Anbindung | M28 | implemented, not accepted |
 | [M30-01](M30-01.md) | Übergabeprotokoll: Festschreibung, Versionen, Zustellung | M30 | implemented, not accepted |
+| [M11-finapi-dedup](M11-finapi-dedup.md) | finAPI Umsatzabgleich (Bankreferenz vorrangig, D05) | M11 | implemented, not accepted |
+| [M11-finapi-authorization](M11-finapi-authorization.md) | finAPI: Recht `banking:approve`, unzugeordnete Konten verborgen | M11 | implemented, not accepted |
+| [M3-02](M3-02-sepa-mandate.md) | SEPA-Mandat auf der Bankverbindung des Kontakts | M3, 6.1 | implemented, not accepted |
 | [B01](B01.md) | Richtiger Rechtsträger | 7.1 | implemented, not accepted |
 | [B02](B02.md) | Entwurf und Buchung | 7.1 | implemented, not accepted |
 | [B03](B03.md) | Korrektur statt Überschreiben | 7.1 | implemented, not accepted |

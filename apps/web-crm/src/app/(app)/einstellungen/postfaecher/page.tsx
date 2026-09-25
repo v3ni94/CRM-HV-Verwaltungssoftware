@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { InvoiceForwardingSettings, type InvoiceForwarding } from "@/components/mail/InvoiceForwardingSettings";
 import { MailboxSettings, type Mailbox, type Member, type OAuthStatus } from "@/components/mail/MailboxSettings";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
@@ -21,10 +22,11 @@ export default async function MailboxSettingsPage({
   const me = await api.GET("/api/v1/auth/me");
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
-  const [oauth, mailboxes, members] = await Promise.all([
+  const [oauth, mailboxes, members, invoiceForwarding] = await Promise.all([
     api.GET("/api/v1/mail/oauth/google"),
     api.GET("/api/v1/mail/mailboxes"),
     api.GET("/api/v1/tenant/members"),
+    api.GET("/api/v1/mail/invoice-forwarding"),
   ]);
   return (
     <div className="flex flex-col gap-4">
@@ -40,6 +42,16 @@ export default async function MailboxSettingsPage({
         oauth={(oauth.data ?? { client_id: null, configured: false, source: null, redirect_uri: "" }) as OAuthStatus}
         mailboxes={(mailboxes.data ?? []) as Mailbox[]}
         members={(members.data ?? []) as Member[]}
+      />
+      <InvoiceForwardingSettings
+        initial={
+          (invoiceForwarding.data ?? {
+            enabled: false,
+            forward_address: null,
+            sender_allowlist: [],
+            learning_list: [],
+          }) as InvoiceForwarding
+        }
       />
     </div>
   );

@@ -9,6 +9,7 @@ import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 type SessionRow = components["schemas"]["SessionOut"];
+type TrustedDeviceRow = components["schemas"]["TrustedDeviceOut"];
 
 function PasswordForm() {
   const t = useTranslations("Profile");
@@ -102,18 +103,55 @@ function Sessions({ initial }: { initial: SessionRow[] }) {
   );
 }
 
+function TrustedDevices({ initial }: { initial: TrustedDeviceRow[] }) {
+  const t = useTranslations("Profile");
+  const [devices, setDevices] = useState(initial);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function revoke(id: string) {
+    setBusyId(id);
+    const res = await bff<null>(`/api/bff/auth/trusted-devices/${id}`, { method: "DELETE" });
+    setBusyId(null);
+    if (res.ok) setDevices((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  return (
+    <section className={ui.card}>
+      <h2 className="text-sm font-semibold">{t("devicesTitle")}</h2>
+      {devices.length === 0 ? (
+        <p className="mt-2 text-sm text-muted">{t("noDevices")}</p>
+      ) : (
+        <ul className="mt-2 flex flex-col gap-2 text-sm">
+          {devices.map((d) => (
+            <li key={d.id} className="flex items-center justify-between gap-2 border-b border-border pb-2 last:border-0">
+              <span className="text-muted">
+                {d.label ?? t("unknownDevice")} · {t("deviceExpires")} {formatDateTime(d.expires_at)}
+              </span>
+              <button type="button" className={ui.buttonSm} disabled={busyId === d.id} onClick={() => void revoke(d.id)}>
+                {t("revoke")}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function ProfileSettings({
   displayName,
   email,
   roles,
   tenantName,
   initialSessions,
+  initialDevices,
 }: {
   displayName: string;
   email: string;
   roles: string[];
   tenantName: string;
   initialSessions: SessionRow[];
+  initialDevices: TrustedDeviceRow[];
 }) {
   const t = useTranslations("Profile");
   return (
@@ -140,6 +178,7 @@ export function ProfileSettings({
       </section>
       <PasswordForm />
       <Sessions initial={initialSessions} />
+      <TrustedDevices initial={initialDevices} />
     </div>
   );
 }

@@ -15,7 +15,11 @@ export default async function MembersPage() {
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
   if (!can("members:read")) notFound();
-  const [members, roles] = await Promise.all([api.GET("/api/v1/tenant/members"), api.GET("/api/v1/tenant/roles")]);
+  const [members, roles, competenceCatalogue] = await Promise.all([
+    api.GET("/api/v1/tenant/members"),
+    api.GET("/api/v1/tenant/roles"),
+    api.GET("/api/v1/tenant/competence-catalogue"),
+  ]);
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
@@ -23,6 +27,7 @@ export default async function MembersPage() {
       <MembersAdmin
         initialMembers={members.data ?? []}
         roles={roles.data ?? []}
+        competenceCatalogue={(competenceCatalogue.data ?? []) as { code: string; label: string }[]}
         canCreate={can("members:create")}
         canUpdate={can("members:update")}
       />

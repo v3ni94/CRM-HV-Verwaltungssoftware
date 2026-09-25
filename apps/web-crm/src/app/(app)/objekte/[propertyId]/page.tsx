@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
+import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -21,11 +22,12 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
   const t = await getTranslations("Properties");
   const api = serverApi();
   const path = { params: { path: { property_id: propertyId } } };
-  const [{ data, error, response }, units, contacts, maintenance] = await Promise.all([
+  const [{ data, error, response }, units, contacts, maintenance, tickets] = await Promise.all([
     api.GET("/api/v1/properties/{property_id}", path),
     api.GET("/api/v1/properties/{property_id}/units", path),
     api.GET("/api/v1/properties/{property_id}/contacts", path),
     api.GET("/api/v1/properties/{property_id}/maintenance", path),
+    api.GET("/api/v1/tickets", { params: { query: { property_id: propertyId, limit: 50 } } }),
   ]);
   redirectIfUnauthenticated(response);
   if (!data) {
@@ -165,6 +167,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       </div>
 
       <DmsDocumentsPanel entity="property" id={propertyId} />
+      <TicketsSection tickets={(tickets.data ?? []) as TicketSummary[]} />
     </div>
   );
 }

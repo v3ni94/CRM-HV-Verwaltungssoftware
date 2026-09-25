@@ -139,7 +139,59 @@ async def ingest_parsed(
         await create_ticket(session, row, actor_user_id)
     if row.ticket_id is not None:
         await _queue_suggestion(session, settings, tenant_id, row)
+    if property_id is None:  # Objektrechnungen laufen nie über die Weiterleitung.
+        await _classify_and_maybe_forward(
+            session, settings, tenant_id, actor_user_id, row, attachments
+        )
     return row, True
+
+
+async def _classify_and_maybe_forward(
+    session: AsyncSession,
+    settings: Settings,
+    tenant_id: uuid.UUID,
+    actor_user_id: uuid.UUID | None,
+    row: Message,
+    attachment_ids: list[uuid.UUID],
+) -> None:
+    """Rechnungs-Weiterleitung (M20, operator 25.09.2026): siehe ``mhvp.communication.forwarding``.
+    Ein automatischer Versand fasst nur eine ohnehin schon eingetroffene Mail zusammen (keine neue
+    fachliche Erklärung); dennoch wird jede Weiterleitung protokolliert (``message.forwarded``)."""
+    from mhvp.communication.forwarding import classify_invoice
+    from mhvp.documents.models import Document
+    from mhvp.platform.models import TenantSettings
+
+    tenant_settings = await session.scalar(
+        select(TenantSettings).where(TenantSettings.tenant_id == tenant_id)
+    )
+    cfg = tenant_settings.invoice_forwarding if tenant_settings else {}
+    if not cfg.get("enabled") or not cfg.get("forward_address"):
+        return
+    attachment_names = []
+    for doc_id in attachment_ids:
+        doc = await session.get(Document, doc_id)
+        if doc is not None:
+            attachment_names.append(doc.filename or doc.title or "")
+    result = classify_invoice(
+        sender=row.from_address,
+        subject=row.subject,
+        body=row.body,
+        attachment_names=attachment_names,
+        sender_allowlist=list(cfg.get("sender_allowlist", [])) + list(cfg.get("learning_list", [])),
+    )
+    classification = dict(row.classification)
+    classification["invoice_forward"] = {"decision": result.decision, "reason": result.reason}
+    row.classification = classification
+    if result.decision != "forward":
+        return
+    from mhvp.communication.forwarding_dispatch import forward_and_archive
+
+    try:
+        await forward_and_archive(
+            session, settings, tenant_id, actor_user_id, row, cfg["forward_address"]
+        )
+    except Exception:
+        log.warning("invoice forward failed", extra={"message_id": str(row.id)})
 
 
 async def _queue_suggestion(
@@ -221,6 +273,33 @@ async def ingest_raw(
     )
 
 
+async def enqueue_archive_for_ticket(
+    session: AsyncSession, settings: Settings, tenant_id: uuid.UUID, ticket_id: uuid.UUID
+) -> None:
+    """ "Erledigt archiviert Mail" (M20-03, operator 25.09.2026): beim Setzen eines Tickets auf
+    erledigt/geschlossen werden dessen Gmail-Nachrichten archiviert. Läuft synchron (Tests,
+    ``ai_inline`` wird hier als "ohne Worker" gelesen) oder über die Queue ``mail``; ein Fehler
+    beim Anstoßen darf den Statuswechsel nie stören."""
+    if settings.ai_inline:
+        from mhvp.communication.tasks import archive_ticket_messages_once
+
+        try:
+            await archive_ticket_messages_once(settings, tenant_id, ticket_id)
+        except Exception:
+            log.warning("archive job failed inline", extra={"ticket_id": str(ticket_id)})
+    else:
+        try:
+            from mhvp.worker import get_celery
+
+            get_celery().send_task(
+                "mhvp.communication.archive_ticket_messages",
+                args=[str(tenant_id), str(ticket_id)],
+                queue="mail",
+            )
+        except Exception:
+            log.warning("could not queue archive job", extra={"ticket_id": str(ticket_id)})
+
+
 async def attach_to_ticket(
     session: AsyncSession, row: Message, ticket_id: uuid.UUID, actor_user_id: uuid.UUID | None
 ) -> None:
@@ -280,6 +359,9 @@ async def create_ticket(
     )
     session.add(ticket)
     await session.flush()
+    from mhvp.communication.assignment import auto_assign_new_ticket
+
+    await auto_assign_new_ticket(session, row.tenant_id, row, ticket)
     row.ticket_id, row.status = ticket.id, "assigned"
     await session.flush()
     return ticket

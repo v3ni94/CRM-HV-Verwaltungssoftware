@@ -21,9 +21,12 @@ export const CONTACT_TYPES = [
   "authority",
   "other",
 ] as const;
+export const CONTACT_ROLES = ["eigentuemer", "mieter", "verwalter", "dienstleister", "bank", "sonstiges"] as const;
 export const ADDRESS_LABELS = ["postal", "private", "work", "public"] as const;
 export const PHONE_LABELS = ["work", "mobile", "private", "fax", "other"] as const;
 export const CHANNELS = ["post", "email", "portal"] as const;
+export const MANDATE_GRANTED_VIA = ["telefon", "brief", "email", "portal", "persoenlich"] as const;
+export const MANDATE_SCHEMES = ["core", "b2b"] as const;
 
 const IBAN_LENGTHS: Record<string, number> = {
   DE: 22, AT: 20, CH: 21, NL: 18, BE: 16, FR: 27, LU: 20, IT: 27, ES: 24,
@@ -86,10 +89,29 @@ export function buildContactSchema(t: Messages) {
       holder: optional(200, t),
       valid_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, t("dateRequired")),
       valid_to: z.string(),
+      sepa_enabled: z.boolean(),
+      mandate_reference: optional(100, t),
+      mandate_signed_on: z.string(),
+      mandate_granted_via: z.union([z.enum(MANDATE_GRANTED_VIA), z.literal("")]),
+      mandate_note: optional(2000, t),
+      mandate_document_id: z.string(),
+      mandate_scheme: z.enum(MANDATE_SCHEMES),
     })
-    .refine((b) => !b.valid_to || b.valid_to >= b.valid_from, {
-      message: t("periodInvalid"),
-      path: ["valid_to"],
+    .superRefine((b, ctx) => {
+      if (b.valid_to && b.valid_to < b.valid_from) {
+        ctx.addIssue({ code: "custom", message: t("periodInvalid"), path: ["valid_to"] });
+      }
+      if (b.sepa_enabled) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(b.mandate_signed_on)) {
+          ctx.addIssue({ code: "custom", message: t("sepaSignedRequired"), path: ["mandate_signed_on"] });
+        }
+        if (!b.mandate_granted_via) {
+          ctx.addIssue({ code: "custom", message: t("sepaGrantedViaRequired"), path: ["mandate_granted_via"] });
+        }
+        if (!b.mandate_document_id && !b.mandate_note.trim()) {
+          ctx.addIssue({ code: "custom", message: t("sepaProofRequired"), path: ["mandate_note"] });
+        }
+      }
     });
 
   return z
@@ -108,6 +130,7 @@ export function buildContactSchema(t: Messages) {
       notes: optional(10_000, t),
       blocked: z.boolean(),
       types: z.array(z.enum(CONTACT_TYPES)),
+      roles: z.array(z.enum(CONTACT_ROLES)),
       tags: z.string(),
       addresses: z.array(address).max(20),
       phones: z.array(phone).max(20),
@@ -142,6 +165,7 @@ export function emptyContact(): ContactFormValues {
     notes: "",
     blocked: false,
     types: [],
+    roles: [],
     tags: "",
     addresses: [],
     phones: [],
@@ -169,6 +193,7 @@ export function fromContact(c: ContactOut): ContactFormValues {
     notes: s(c.notes),
     blocked: c.blocked,
     types: c.types,
+    roles: c.roles,
     tags: c.tags.join(", "),
     addresses: c.addresses.map((a) => ({
       label: a.label ?? "postal",
@@ -213,6 +238,7 @@ export function toContactIn(v: ContactFormValues, existing?: ContactOut): Contac
     completeness: existing?.completeness ?? "complete",
     identifiers: existing?.identifiers.map(({ kind, value }) => ({ kind, value })) ?? [],
     types: v.types,
+    roles: v.roles,
     tags: v.tags
       .split(",")
       .map((tag) => tag.trim())
@@ -243,8 +269,21 @@ export function toContactIn(v: ContactFormValues, existing?: ContactOut): Contac
       holder: n(b.holder),
       valid_from: b.valid_from,
       valid_to: b.valid_to || null,
+      sepa_enabled: b.sepa_enabled,
+      mandate_reference: n(b.mandate_reference),
+      mandate_signed_on: b.mandate_signed_on || null,
+      mandate_granted_via: b.mandate_granted_via || null,
+      mandate_note: n(b.mandate_note),
+      mandate_document_id: b.mandate_document_id || null,
+      mandate_scheme: b.mandate_scheme,
+      mandate_status: "active" as const,
     })),
   };
+}
+
+/** Validates a `role` query/search param against the known role codes (list filter). */
+export function parseRoleFilter(role: string | undefined): (typeof CONTACT_ROLES)[number] | undefined {
+  return (CONTACT_ROLES as readonly string[]).includes(role ?? "") ? (role as (typeof CONTACT_ROLES)[number]) : undefined;
 }
 
 /** Query for GET /contacts/duplicates from the first entries of the form. */

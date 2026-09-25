@@ -4,6 +4,9 @@ import Link from "next/link";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
+import { RolePills } from "@/components/contacts/RolePills";
+import { SepaMandatesPanel } from "@/components/contacts/SepaMandatesPanel";
+import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { serverApi } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
 
@@ -57,6 +60,14 @@ export default async function ContactDetailPage({
     tab === "einwilligungen"
       ? ((await api.GET("/api/v1/contacts/{contact_id}/consents", { params: { path: { contact_id: id } } })).data ?? [])
       : [];
+  const mandates =
+    tab === "bankverbindungen"
+      ? ((await api.GET("/api/v1/contacts/{contact_id}/sepa-mandates", { params: { path: { contact_id: id } } })).data ?? [])
+      : [];
+  const tickets =
+    tab === "kommunikation"
+      ? ((await api.GET("/api/v1/tickets", { params: { query: { contact_id: id, limit: 50 } } })).data ?? [])
+      : [];
   const person = contact.kind === "person";
 
   return (
@@ -71,6 +82,9 @@ export default async function ContactDetailPage({
             {tl(`kind.${contact.kind}`)}
             {contact.types.length ? `, ${contact.types.map((x) => tl(`type.${x}`)).join(", ")}` : ""}
             {contact.blocked ? `, ${t("blocked")}` : ""}
+          </p>
+          <p className="mt-1">
+            <RolePills roles={contact.roles} />
           </p>
         </div>
         <div className="ml-auto">
@@ -218,6 +232,14 @@ export default async function ContactDetailPage({
         )
       ) : null}
 
+      {tab === "bankverbindungen" ? (
+        <section className="mt-4">
+          <h2 className="mb-1 text-sm font-semibold">{t("sepaMandates.title")}</h2>
+          <SepaMandatesPanel contactId={contact.id} mandates={mandates} />
+        </section>
+      ) : null}
+
+      {tab === "kommunikation" ? <TicketsSection tickets={tickets as TicketSummary[]} /> : null}
       {tab === "notizen" ? <NotesPanel contactId={contact.id} notes={notes} /> : null}
       {tab === "einwilligungen" ? <ConsentsPanel contactId={contact.id} consents={consents} /> : null}
     </div>

@@ -1,7 +1,8 @@
 """Platform and tenant administration models (section 5, milestone M2).
 
 Platform tables (no RLS, section 5.3): tenant, tenant_domain, app_user, membership,
-refresh_token, oidc_client, oidc_authorization_code. All other tables are tenant scoped.
+refresh_token, trusted_device, oidc_client, oidc_authorization_code. All other tables are
+tenant scoped.
 """
 
 import uuid
@@ -19,6 +20,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -112,6 +115,13 @@ class Membership(IdMixin, TimestampMixin, Base):
     contact_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("contact.id", ondelete="SET NULL")
     )
+    # Kompetenzen des Mitglieds (operator 25.09.2026, docs/rules): Liste von Codes aus dem
+    # Katalog ``mhvp.tickets.competences.COMPETENCE_CATALOGUE`` (ggf. um mandantenspezifische
+    # Codes aus ``TenantSettings.competence_catalogue_extra`` erweitert). Steuert die
+    # Themen-Zuweisung eingehender Tickets (E-Mail-Optimierung M20).
+    competences: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class RefreshToken(IdMixin, Base):
@@ -132,6 +142,33 @@ class RefreshToken(IdMixin, Base):
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class TrustedDevice(IdMixin, Base):
+    """Trusted device for skipping TOTP after a successful login (Produktschutz, operator
+    decision 25.09.2026). Platform table: it is checked before a tenant context exists, like
+    ``refresh_token``. ``tenant_id`` is only informational (the tenant of the login it was
+    created on) and never restricts which tenant the device may be used for."""
+
+    __tablename__ = "trusted_device"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("app_user.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tenant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenant.id", ondelete="SET NULL")
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    label: Mapped[str | None] = mapped_column(String(300))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
@@ -223,6 +260,19 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # platform wide fallback. The secret is encrypted and never returned by the API.
     google_client_id: Mapped[str | None] = mapped_column(String(200))
     google_client_secret: Mapped[str | None] = mapped_column(EncryptedText())
+    # Kompetenzkatalog-Erweiterung des Mandanten (operator 25.09.2026): zusätzliche Codes, Shape
+    # je Eintrag {"code": str, "label": str}. Keine Migration nötig, um weitere Kompetenzen
+    # aufzunehmen; siehe ``mhvp.tickets.competences``.
+    competence_catalogue_extra: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    # Rechnungs-Weiterleitung (M20, operator 25.09.2026): Zieladresse, Absender-Positivliste und
+    # Lernliste bestätigter Absender (siehe ``mhvp.communication.forwarding``). Shape:
+    # {"enabled": bool, "forward_address": str | None, "sender_allowlist": [str],
+    #  "learning_list": [str], "confirmed_counts": {str: int}}.
+    invoice_forwarding: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 

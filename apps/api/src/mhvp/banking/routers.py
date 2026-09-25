@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 from mhvp.accounting.models import EntrySource
 from mhvp.banking import camt, matching, payments
+from mhvp.banking import finapi as finapi_client
 from mhvp.banking import services as svc
 from mhvp.banking.models import (
     BankConnection,
@@ -21,6 +22,9 @@ from mhvp.banking.models import (
     BankTransaction,
     ConnectionStatus,
     Connector,
+    FinApiAccountLink,
+    FinApiConnection,
+    FinApiTenantConfig,
     OrderStatus,
     PaymentBatch,
     PaymentOrder,
@@ -33,6 +37,9 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
 from mhvp.workspace.services import local_today
+
+BANKING_APPROVE = require_permission("banking:approve")
+FINAPI_SETTINGS = require_permission("tenant_settings:update")
 
 router = APIRouter(prefix="/banking", tags=["Bank"])
 READ = require_permission("accounting:read")
@@ -959,3 +966,529 @@ async def bank_status(
         batch.status = body.status
         await session.flush()
         return [await _order_out(session, o) for o in orders]
+
+
+# --- finAPI (M11-finapi, read only): connect, assign, refresh on click, disconnect --------
+
+finapi_router = APIRouter(prefix="/banking/finapi", tags=["Bank"])
+
+
+class FinApiConfigIn(_In):
+    client_id: str = Field(min_length=1, max_length=200)
+    client_secret: str = Field(min_length=1, max_length=200)
+    mandator_id: str | None = Field(default=None, max_length=64)
+    base_url: str = Field(min_length=8, max_length=300)
+    sandbox: bool = True
+
+
+class FinApiConfigOut(BaseModel):
+    configured: bool
+    base_url: str | None = None
+    mandator_id: str | None = None
+    sandbox: bool | None = None
+
+
+class FinApiAccountOut(BaseModel):
+    id: uuid.UUID
+    finapi_account_id: str
+    account_holder_name: str | None
+    account_type: str | None
+    account_name: str | None
+    iban_suffix: str | None
+    property_bank_account_id: uuid.UUID | None
+    balance_booked: Decimal | None
+    balance_available: Decimal | None
+    balance_currency: str | None
+    balance_as_of: datetime | None
+    balance_fetched_at: datetime | None
+    last_transactions_fetch_at: datetime | None
+
+
+class FinApiConnectionOut(BaseModel):
+    id: uuid.UUID
+    bank_connection_id: uuid.UUID
+    bank_name: str
+    status: ConnectionStatus
+    web_form_url: str | None
+    web_form_status: str | None
+    consent_valid_until: date | None
+    last_error: str | None
+    auto_update_enabled: bool
+    accounts: list[FinApiAccountOut]
+
+
+class WebFormRefIn(_In):
+    bank_name: str = Field(min_length=1, max_length=200)
+
+
+class AssignAccountIn(_In):
+    property_bank_account_id: uuid.UUID
+
+
+async def _finapi_credentials(session: Any, tenant_id: uuid.UUID) -> FinApiTenantConfig:
+    cfg: FinApiTenantConfig | None = await session.scalar(select(FinApiTenantConfig))
+    if cfg is None:
+        raise ProblemError(ErrorCodes.FINAPI_NOT_CONFIGURED)
+    return cfg
+
+
+def _finapi_client(cfg: FinApiTenantConfig) -> finapi_client.FinApiClient:
+    return finapi_client.FinApiClient(
+        finapi_client.FinApiCredentials(
+            client_id=cfg.client_id,
+            client_secret=cfg.client_secret,
+            base_url=cfg.base_url,
+            mandator_id=cfg.mandator_id,
+        )
+    )
+
+
+def _can_see_unassigned(principal: TenantPrincipal) -> bool:
+    return principal.has("banking:approve") or principal.has("tenant_settings:update")
+
+
+async def _account_out(
+    session: Any, link: FinApiAccountLink, principal: TenantPrincipal
+) -> FinApiAccountOut | None:
+    if link.property_bank_account_id is None and not _can_see_unassigned(principal):
+        return None  # 6.9.7 / prompt section 4: unassigned accounts stay hidden
+
+    iban_suffix = None
+    if link.iban_fingerprint and link.account_name:
+        iban_suffix = None  # fingerprint is not reversible; suffix comes only from source data
+    return FinApiAccountOut(
+        id=link.id,
+        finapi_account_id=link.finapi_account_id,
+        account_holder_name=link.account_holder_name,
+        account_type=link.account_type,
+        account_name=link.account_name,
+        iban_suffix=iban_suffix,
+        property_bank_account_id=link.property_bank_account_id,
+        balance_booked=link.balance_booked,
+        balance_available=link.balance_available,
+        balance_currency=link.balance_currency,
+        balance_as_of=link.balance_as_of,
+        balance_fetched_at=link.balance_fetched_at,
+        last_transactions_fetch_at=link.last_transactions_fetch_at,
+    )
+
+
+@finapi_router.put("/config", summary="finAPI-Zugangsdaten hinterlegen (Einstellungen, Bank)")
+async def set_finapi_config(
+    body: FinApiConfigIn, request: Request, principal: TenantPrincipal = Depends(FINAPI_SETTINGS)
+) -> FinApiConfigOut:
+    async with tenant_tx(request, principal) as session:
+        cfg = await session.scalar(select(FinApiTenantConfig))
+        if cfg is None:
+            cfg = FinApiTenantConfig(tenant_id=principal.tenant_id, created_by=principal.user_id)
+            session.add(cfg)
+        cfg.client_id = body.client_id
+        cfg.client_secret = body.client_secret
+        cfg.mandator_id = body.mandator_id
+        cfg.base_url = body.base_url.rstrip("/")
+        cfg.sandbox = body.sandbox
+        cfg.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="finapi.config_changed",
+            entity_type="finapi_tenant_config",
+            entity_id=cfg.id,
+            actor_user_id=principal.user_id,
+            payload={"base_url": cfg.base_url, "sandbox": cfg.sandbox},
+        )
+        await session.flush()
+        return FinApiConfigOut(
+            configured=True, base_url=cfg.base_url, mandator_id=cfg.mandator_id, sandbox=cfg.sandbox
+        )
+
+
+@finapi_router.get("/config", summary="finAPI-Konfigurationsstatus (ohne Zugangsdaten)")
+async def get_finapi_config(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> FinApiConfigOut:
+    async with tenant_tx(request, principal) as session:
+        cfg = await session.scalar(select(FinApiTenantConfig))
+        if cfg is None:
+            return FinApiConfigOut(configured=False)
+        return FinApiConfigOut(
+            configured=True, base_url=cfg.base_url, mandator_id=cfg.mandator_id, sandbox=cfg.sandbox
+        )
+
+
+@finapi_router.post("/connections", status_code=201, summary="Bankverbindung anlegen (WebForm)")
+async def create_finapi_connection(
+    body: WebFormRefIn, request: Request, principal: TenantPrincipal = Depends(BANKING_APPROVE)
+) -> FinApiConnectionOut:
+    """Starts the documented WebForm import (docs/integrations/finapi.md section 2). The
+    browser redirect that follows is not itself an authorization result: `get_connection`
+    below re-checks the WebForm and bank connection status with the provider before any
+    account is trusted (banking master prompt section 6)."""
+    async with tenant_tx(request, principal) as session:
+        cfg = await _finapi_credentials(session, principal.tenant_id)
+        conn = BankConnection(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            connector=Connector.AGGREGATOR_FINAPI,
+            bank_name=body.bank_name,
+            status=ConnectionStatus.NOT_CONFIGURED,
+        )
+        session.add(conn)
+        await session.flush()
+        fa = FinApiConnection(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            bank_connection_id=conn.id,
+            responsible_user_id=principal.user_id,
+            auto_update_enabled=False,  # provider auto update stays off (master prompt section 2)
+        )
+        session.add(fa)
+        try:
+            web_form = _finapi_client(cfg).create_bank_connection_import_web_form()
+        except finapi_client.FinApiNotVerifiedError:
+            raise
+        conn.status = ConnectionStatus.WEB_FORM_PENDING
+        fa.web_form_id = web_form.web_form_id
+        fa.web_form_url = web_form.url
+        fa.web_form_status = web_form.status
+        fa.finapi_bank_connection_id = web_form.finapi_bank_connection_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="finapi_connection.created",
+            entity_type="bank_connection",
+            entity_id=conn.id,
+            actor_user_id=principal.user_id,
+            payload={"web_form_id": web_form.web_form_id},
+        )
+        await session.flush()
+        return FinApiConnectionOut(
+            id=fa.id,
+            bank_connection_id=conn.id,
+            bank_name=conn.bank_name,
+            status=conn.status,
+            web_form_url=fa.web_form_url,
+            web_form_status=fa.web_form_status,
+            consent_valid_until=fa.consent_valid_until,
+            last_error=fa.last_error,
+            auto_update_enabled=fa.auto_update_enabled,
+            accounts=[],
+        )
+
+
+@finapi_router.get("/connections", summary="Bankverbindungen (finAPI) mit Konten")
+async def list_finapi_connections(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[FinApiConnectionOut]:
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.scalars(
+                select(FinApiConnection).join(
+                    BankConnection, BankConnection.id == FinApiConnection.bank_connection_id
+                )
+            )
+        ).all()
+        out = []
+        for fa in rows:
+            conn = await session.get(BankConnection, fa.bank_connection_id)
+            if conn is None:  # pragma: no cover
+                continue
+            links = (
+                await session.scalars(
+                    select(FinApiAccountLink).where(FinApiAccountLink.finapi_connection_id == fa.id)
+                )
+            ).all()
+            accounts = [
+                a for a in [await _account_out(session, link, principal) for link in links] if a
+            ]
+            out.append(
+                FinApiConnectionOut(
+                    id=fa.id,
+                    bank_connection_id=conn.id,
+                    bank_name=conn.bank_name,
+                    status=conn.status,
+                    web_form_url=fa.web_form_url,
+                    web_form_status=fa.web_form_status,
+                    consent_valid_until=fa.consent_valid_until,
+                    last_error=fa.last_error,
+                    auto_update_enabled=fa.auto_update_enabled,
+                    accounts=accounts,
+                )
+            )
+        return out
+
+
+@finapi_router.post(
+    "/connections/{finapi_connection_id}/check",
+    summary="WebForm-/Verbindungsstatus serverseitig prüfen",
+)
+async def check_finapi_connection(
+    finapi_connection_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(BANKING_APPROVE),
+) -> FinApiConnectionOut:
+    """A browser return from the WebForm is not proof of success (master prompt section 6):
+    this endpoint re-reads the WebForm and, once it finished, the bank connection and its
+    accounts directly from finAPI with the tenant's own credentials."""
+    async with tenant_tx(request, principal) as session:
+        fa = await session.get(FinApiConnection, finapi_connection_id, with_for_update=True)
+        if fa is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        conn = await session.get(BankConnection, fa.bank_connection_id, with_for_update=True)
+        if conn is None:  # pragma: no cover
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        cfg = await _finapi_credentials(session, principal.tenant_id)
+        client = _finapi_client(cfg)
+        if fa.web_form_id and conn.status in (
+            ConnectionStatus.WEB_FORM_PENDING,
+            ConnectionStatus.UPDATE_REQUIRED,
+        ):
+            web_form = client.get_web_form(fa.web_form_id)
+            fa.web_form_status = web_form.status
+            fa.finapi_bank_connection_id = (
+                web_form.finapi_bank_connection_id or fa.finapi_bank_connection_id
+            )
+            if web_form.status not in ("FINISHED",):
+                await session.flush()
+                return await _finapi_connection_out(session, fa, conn, principal)
+        if fa.finapi_bank_connection_id:
+            details = client.get_bank_connection(fa.finapi_bank_connection_id)
+            fa.last_update_status = str(details.get("status") or fa.last_update_status)
+            fa.last_error = details.get("errorMessage")
+            conn.status = ConnectionStatus.ACTIVE if not fa.last_error else ConnectionStatus.ERROR
+            conn.error_message = fa.last_error
+            accounts = client.list_accounts(bank_connection_id=fa.finapi_bank_connection_id)
+            for acc in accounts:
+                link = await session.scalar(
+                    select(FinApiAccountLink).where(
+                        FinApiAccountLink.finapi_connection_id == fa.id,
+                        FinApiAccountLink.finapi_account_id == acc.account_id,
+                    )
+                )
+                if link is None:
+                    link = FinApiAccountLink(
+                        tenant_id=principal.tenant_id,
+                        created_by=principal.user_id,
+                        finapi_connection_id=fa.id,
+                        finapi_account_id=acc.account_id,
+                    )
+                    session.add(link)
+                from mhvp.core import crypto as _crypto
+
+                link.iban_fingerprint = _crypto.fingerprint(acc.iban) if acc.iban else None
+                link.account_holder_name = acc.account_holder_name
+                link.account_type = acc.account_type
+                link.account_name = acc.account_name
+                link.balance_booked = Decimal(acc.balance_booked) if acc.balance_booked else None
+                link.balance_available = (
+                    Decimal(acc.balance_available) if acc.balance_available else None
+                )
+                link.balance_currency = acc.balance_currency
+                link.balance_fetched_at = datetime.now(UTC)
+                await session.flush()
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="finapi_connection.checked",
+                entity_type="bank_connection",
+                entity_id=conn.id,
+                actor_user_id=principal.user_id,
+                payload={"status": conn.status.value, "accounts": len(accounts)},
+            )
+        await session.flush()
+        return await _finapi_connection_out(session, fa, conn, principal)
+
+
+async def _finapi_connection_out(
+    session: Any, fa: FinApiConnection, conn: BankConnection, principal: TenantPrincipal
+) -> FinApiConnectionOut:
+    links = (
+        await session.scalars(
+            select(FinApiAccountLink).where(FinApiAccountLink.finapi_connection_id == fa.id)
+        )
+    ).all()
+    accounts = [a for a in [await _account_out(session, link, principal) for link in links] if a]
+    return FinApiConnectionOut(
+        id=fa.id,
+        bank_connection_id=conn.id,
+        bank_name=conn.bank_name,
+        status=conn.status,
+        web_form_url=fa.web_form_url,
+        web_form_status=fa.web_form_status,
+        consent_valid_until=fa.consent_valid_until,
+        last_error=fa.last_error,
+        auto_update_enabled=fa.auto_update_enabled,
+        accounts=accounts,
+    )
+
+
+@finapi_router.post(
+    "/connections/{finapi_connection_id}/reauthorize",
+    summary="Erneute Freigabe (WebForm erneut starten)",
+)
+async def reauthorize_finapi_connection(
+    finapi_connection_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(BANKING_APPROVE),
+) -> FinApiConnectionOut:
+    async with tenant_tx(request, principal) as session:
+        fa = await session.get(FinApiConnection, finapi_connection_id, with_for_update=True)
+        if fa is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        conn = await session.get(BankConnection, fa.bank_connection_id, with_for_update=True)
+        if conn is None:  # pragma: no cover
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        cfg = await _finapi_credentials(session, principal.tenant_id)
+        web_form = _finapi_client(cfg).create_bank_connection_import_web_form()
+        fa.web_form_id = web_form.web_form_id
+        fa.web_form_url = web_form.url
+        fa.web_form_status = web_form.status
+        conn.status = ConnectionStatus.UPDATE_REQUIRED
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="finapi_connection.reauthorize_started",
+            entity_type="bank_connection",
+            entity_id=conn.id,
+            actor_user_id=principal.user_id,
+        )
+        await session.flush()
+        return await _finapi_connection_out(session, fa, conn, principal)
+
+
+@finapi_router.post(
+    "/accounts/{link_id}/assign", summary="Konto einem Buchungskreis/Objekt zuordnen"
+)
+async def assign_finapi_account(
+    link_id: uuid.UUID,
+    body: AssignAccountIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(BANKING_APPROVE),
+) -> FinApiAccountOut:
+    from mhvp.properties.models import PropertyBankAccount
+
+    async with tenant_tx(request, principal) as session:
+        link = await session.get(FinApiAccountLink, link_id, with_for_update=True)
+        if link is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        target = await session.get(PropertyBankAccount, body.property_bank_account_id)
+        if target is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Kein passendes internes Konto.")
+        link.property_bank_account_id = target.id
+        link.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="finapi_account.assigned",
+            entity_type="finapi_account_link",
+            entity_id=link.id,
+            actor_user_id=principal.user_id,
+            payload={"property_bank_account_id": str(target.id)},
+        )
+        await session.flush()
+        out = await _account_out(session, link, principal)
+        if out is None:  # pragma: no cover - principal just assigned/approved this link
+            raise ProblemError(ErrorCodes.INTERNAL)
+        return out
+
+
+@finapi_router.post(
+    "/accounts/{link_id}/fetch", summary="Umsätze abrufen (asynchron, nur auf Klick)"
+)
+async def fetch_finapi_transactions(
+    link_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> SyncRunOut:
+    """A real click only: this never runs on a schedule (master prompt section 2). The fetch
+    itself completes asynchronously in the existing Celery worker (`banking.finapi_fetch`)."""
+    from mhvp.banking.tasks import finapi_fetch
+
+    async with tenant_tx(request, principal) as session:
+        link = await session.get(FinApiAccountLink, link_id)
+        if link is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if link.property_bank_account_id is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Konto ist noch keinem Buchungskreis zugeordnet."
+            )
+        fa = await session.get(FinApiConnection, link.finapi_connection_id)
+        conn = await session.get(BankConnection, fa.bank_connection_id) if fa else None
+        if (
+            fa is None
+            or conn is None
+            or conn.status
+            not in (
+                ConnectionStatus.ACTIVE,
+                ConnectionStatus.ERROR,
+            )
+        ):
+            raise ProblemError(
+                ErrorCodes.FINAPI_STATE, detail="Bankverbindung ist nicht abrufbereit."
+            )
+        run = BankSyncRun(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            connection_id=conn.id,
+            property_bank_account_id=link.property_bank_account_id,
+            source="aggregator_finapi",
+            status="queued",
+            counts={},
+        )
+        session.add(run)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="bank_sync_run.queued",
+            entity_type="bank_sync_run",
+            entity_id=run.id,
+            actor_user_id=principal.user_id,
+            payload={"trigger": "user_click", "finapi_account_link_id": str(link.id)},
+        )
+        await session.flush()
+        run_id = run.id
+        tenant_id = principal.tenant_id
+        bank_account_id = link.property_bank_account_id
+    finapi_fetch.delay(str(tenant_id), str(run_id), str(link_id))
+    return SyncRunOut(
+        id=run_id,
+        source="aggregator_finapi",
+        status="queued",
+        counts={},
+        errors=[],
+        property_bank_account_id=bank_account_id,
+        document_id=None,
+    )
+
+
+@finapi_router.post("/connections/{finapi_connection_id}/disconnect", summary="Verbindung trennen")
+async def disconnect_finapi_connection(
+    finapi_connection_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(BANKING_APPROVE),
+) -> FinApiConnectionOut:
+    """Blocks further use locally first (master prompt section 12). The provider side
+    (revoking the finAPI bank connection) uses an endpoint marked "zu prüfen" in
+    docs/integrations/finapi.md, so this only records that the provider side is unconfirmed;
+    it never claims the bank-side consent was revoked."""
+    async with tenant_tx(request, principal) as session:
+        fa = await session.get(FinApiConnection, finapi_connection_id, with_for_update=True)
+        if fa is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        conn = await session.get(BankConnection, fa.bank_connection_id, with_for_update=True)
+        if conn is None:  # pragma: no cover
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        conn.status = ConnectionStatus.DISABLED
+        provider_note = (
+            "Provider-Trennung nicht bestätigt (Endpunkt zu prüfen, docs/integrations/finapi.md)."
+        )
+        fa.last_error = provider_note
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="finapi_connection.disconnected",
+            entity_type="bank_connection",
+            entity_id=conn.id,
+            actor_user_id=principal.user_id,
+            payload={"provider_note": provider_note},
+        )
+        await session.flush()
+        return await _finapi_connection_out(session, fa, conn, principal)

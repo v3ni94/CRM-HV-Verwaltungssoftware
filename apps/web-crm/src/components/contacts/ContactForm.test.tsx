@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { ContactOut } from "@/lib/contact-schema";
@@ -36,6 +36,7 @@ function contact(overrides: Partial<ContactOut> = {}): ContactOut {
     identifiers: [],
     bank_accounts: [],
     types: [],
+    roles: [],
     tags: [],
     version: 3,
     created_at: "2026-09-01T10:00:00Z",
@@ -151,7 +152,25 @@ describe("ContactForm", () => {
         mode="edit"
         contact={contact({
           bank_accounts: [
-            { id: ID, label: null, iban_masked: "DE89 **** **** 3000", bic: null, bank_name: null, holder: null, valid_from: "2026-01-01", valid_to: null },
+            {
+              id: ID,
+              label: null,
+              iban_masked: "DE89 **** **** 3000",
+              bic: null,
+              bank_name: null,
+              holder: null,
+              valid_from: "2026-01-01",
+              valid_to: null,
+              sepa_enabled: false,
+              mandate_reference: null,
+              mandate_signed_on: null,
+              mandate_granted_via: null,
+              mandate_note: null,
+              mandate_document_id: null,
+              mandate_scheme: "core",
+              mandate_status: "active",
+              mandate_revoked_on: null,
+            },
           ],
         })}
       />,
@@ -164,5 +183,58 @@ describe("ContactForm", () => {
     const init = fetchMock.mock.calls[0]![1]!;
     expect(init.method).toBe("PUT");
     expect(JSON.parse(String(init.body))).not.toHaveProperty("bank_accounts");
+  });
+
+  it("requires signing date, granted via and a document or note when SEPA is enabled", async () => {
+    renderIntl(<ContactForm mode="create" />);
+    await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
+    await userEvent.click(screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }));
+    await userEvent.type(screen.getByLabelText("IBAN"), "DE89370400440532013000");
+    await userEvent.click(screen.getByLabelText("SEPA-Lastschrift aktiv"));
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(await screen.findByText("Bitte das Datum der Erteilung angeben.")).toBeInTheDocument();
+    expect(screen.getByText("Bitte die Erteilungsart angeben.")).toBeInTheDocument();
+    expect(screen.getByText("Bitte das Mandat als PDF hinterlegen oder einen Vermerk eintragen.")).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("submits the SEPA mandate fields for a new bank account", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([])).mockResolvedValueOnce(jsonResponse(contact(), 201));
+    renderIntl(<ContactForm mode="create" />);
+    await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
+    await userEvent.click(screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }));
+    await userEvent.type(screen.getByLabelText("IBAN"), "DE89370400440532013000");
+    await userEvent.click(screen.getByLabelText("SEPA-Lastschrift aktiv"));
+    await userEvent.type(screen.getByLabelText("Mandatsreferenz"), "M-2026-001");
+    await userEvent.type(screen.getByLabelText("Datum der Erteilung"), "2026-09-01");
+    await userEvent.selectOptions(screen.getByLabelText("Erteilungsart"), "email");
+    await userEvent.type(screen.getByLabelText("Vermerk"), "Per E-Mail bestätigt");
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const body = JSON.parse(String(fetchMock.mock.calls[1]![1]!.body));
+    expect(body.bank_accounts).toMatchObject([
+      {
+        iban: "DE89370400440532013000",
+        sepa_enabled: true,
+        mandate_reference: "M-2026-001",
+        mandate_signed_on: "2026-09-01",
+        mandate_granted_via: "email",
+        mandate_note: "Per E-Mail bestätigt",
+        mandate_scheme: "core",
+      },
+    ]);
+  });
+
+  it("submits the selected roles", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([])).mockResolvedValueOnce(jsonResponse(contact(), 201));
+    renderIntl(<ContactForm mode="create" />);
+    await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
+    const rolesGroup = screen.getByRole("group", { name: "Klassifizierung" });
+    await userEvent.click(within(rolesGroup).getByLabelText("Mieter"));
+    await userEvent.click(within(rolesGroup).getByLabelText("Eigentümer"));
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const body = JSON.parse(String(fetchMock.mock.calls[1]![1]!.body));
+    expect(body.roles.sort()).toEqual(["eigentuemer", "mieter"]);
   });
 });

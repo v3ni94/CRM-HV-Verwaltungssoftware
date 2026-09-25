@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from mhvp.accounting.routers import router as accounting_router
 from mhvp.ai.routers import router as ai_router
+from mhvp.banking.routers import finapi_router
 from mhvp.banking.routers import router as banking_router
 from mhvp.billing.routers import router as billing_router
 from mhvp.communication.dispatch import router as dispatch_router
@@ -151,6 +152,7 @@ def create_app(
     app.include_router(ops_router, prefix=API_PREFIX)
     app.include_router(accounting_router, prefix=API_PREFIX)
     app.include_router(banking_router, prefix=API_PREFIX)
+    app.include_router(finapi_router, prefix=API_PREFIX)
     app.include_router(billing_router, prefix=API_PREFIX)
     app.include_router(hoa_router, prefix=API_PREFIX)
     app.include_router(hoa_meetings_router, prefix=API_PREFIX)

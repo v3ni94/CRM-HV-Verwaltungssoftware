@@ -51,7 +51,9 @@ export function MailDetail({
   onCreated: (next: Message) => void;
 }) {
   const t = useTranslations("Mail");
+  const ts = useTranslations("MailSettings");
   const router = useRouter();
+  const [forwarded, setForwarded] = useState(false);
   const [thread, setThread] = useState<Message[] | null>(null);
   const [members, setMembers] = useState<Member[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -114,6 +116,20 @@ export function MailDetail({
     const next = await act("/approve", "POST");
     if (next) onUpdated(next);
   };
+  const forwardInvoice = async () => {
+    if (!window.confirm(ts("forwardInvoiceConfirm"))) return;
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ forwarded_to: string }>(`/api/bff/mail/messages/${message.id}/forward-invoice`, {
+      method: "POST",
+    });
+    setBusy(false);
+    if (res.ok) setForwarded(true);
+    else setError(res.message);
+  };
+  const invoiceForward = message.classification?.invoice_forward as
+    | { decision: string; reason: string }
+    | undefined;
   const reject = async () => {
     if (!rejectNote.trim()) return;
     const next = await act("/reject", "POST", { note: rejectNote.trim() });
@@ -155,6 +171,16 @@ export function MailDetail({
       </div>
 
       {message.direction === "in" ? <SuggestionCard message={message} onUpdated={onUpdated} onDraftCreated={onCreated} /> : null}
+
+      {message.direction === "in" && invoiceForward?.decision === "suggest" && !forwarded ? (
+        <div className={`${ui.card} flex flex-wrap items-center justify-between gap-2`}>
+          <span className="text-sm">{invoiceForward.reason}</span>
+          <button type="button" className={ui.button} disabled={busy} onClick={() => void forwardInvoice()}>
+            {ts("forwardInvoice")}
+          </button>
+        </div>
+      ) : null}
+      {forwarded ? <p className="text-xs text-success-fg">{ts("forwardInvoiceDone")}</p> : null}
 
       {message.status === "draft" ? (
         <DraftEditor message={message} onUpdated={onUpdated} />

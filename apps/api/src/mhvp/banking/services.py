@@ -149,6 +149,76 @@ async def import_file(
     return run
 
 
+async def import_finapi_transactions(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    property_bank_account_id: uuid.UUID,
+    legal_entity_id: uuid.UUID,
+    iban_fingerprint: str,
+    run: BankSyncRun,
+    transactions: list[RawTransaction],
+) -> dict[str, int]:
+    """Same dedup rule as the file import (bank_reference primary, hash secondary, D05): the
+    finAPI transaction id is the ``bank_reference``. A changed reference on re-fetch never
+    overwrites an already posted match (``journal_entry_id`` set), it is only recorded as a
+    possible duplicate for review."""
+    counts = {"new": 0, "duplicates": 0, "possible_duplicates": 0, "transfers": 0}
+    for tx in transactions:
+        if tx.bank_reference:
+            known = await session.scalar(
+                select(BankTransaction).where(
+                    BankTransaction.property_bank_account_id == property_bank_account_id,
+                    BankTransaction.bank_reference == tx.bank_reference,
+                )
+            )
+            if known is not None:
+                counts["duplicates"] += 1
+                continue
+        digest = content_hash(iban_fingerprint, tx)
+        same = await session.scalar(
+            select(BankTransaction.id)
+            .where(
+                BankTransaction.property_bank_account_id == property_bank_account_id,
+                BankTransaction.hash == digest,
+            )
+            .limit(1)
+        )
+        review = same is not None and tx.bank_reference is None
+        row = BankTransaction(
+            tenant_id=tenant_id,
+            property_bank_account_id=property_bank_account_id,
+            legal_entity_id=legal_entity_id,
+            sync_run_id=run.id,
+            bank_reference=tx.bank_reference,
+            booking_date=tx.booking_date,
+            value_date=tx.value_date,
+            amount=tx.amount,
+            currency=tx.currency,
+            counterpart_name=tx.counterpart_name,
+            counterpart_iban=tx.counterpart_iban,
+            counterpart_iban_fingerprint=(
+                crypto.fingerprint(tx.counterpart_iban) if tx.counterpart_iban else None
+            ),
+            counterpart_bic=tx.counterpart_bic,
+            purpose=tx.purpose,
+            end_to_end_id=tx.end_to_end_id,
+            mandate_reference=tx.mandate_reference,
+            creditor_id=tx.creditor_id,
+            transaction_code=tx.transaction_code,
+            hash=digest,
+            possible_duplicate_of_id=same,
+            raw=tx.raw,
+            status=TransactionStatus.NEEDS_REVIEW if review else TransactionStatus.NEW,
+        )
+        session.add(row)
+        await session.flush()
+        counts["new"] += 1
+        counts["possible_duplicates"] += int(same is not None)
+        counts["transfers"] += int(await pair_transfer(session, row))
+    return counts
+
+
 async def pair_transfer(session: AsyncSession, tx: BankTransaction) -> bool:
     """Link an internal transfer between own accounts of the same legal entity (D04)."""
     from mhvp.properties.models import PropertyBankAccount

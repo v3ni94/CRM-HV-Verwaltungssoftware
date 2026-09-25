@@ -11,6 +11,8 @@ from mhvp.contacts import schemas, services
 from mhvp.contacts.models import (
     Consent,
     Contact,
+    ContactBankAccount,
+    ContactMandateStatus,
     ContactNote,
     ContactRelation,
     ContactTag,
@@ -18,6 +20,7 @@ from mhvp.contacts.models import (
     Party,
     PartyMember,
 )
+from mhvp.contacts.validation import mask_iban
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import diff, emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -50,6 +53,7 @@ async def list_contacts(
     q: str | None = Query(default=None, max_length=200),
     kind: str | None = None,
     tag: str | None = None,
+    role: str | None = Query(default=None, description="Filter: eigentuemer, mieter, ..."),
     include_deleted: bool = False,
     page: Page = 1,
     page_size: PageSize = 50,
@@ -61,6 +65,8 @@ async def list_contacts(
             query = query.where(Contact.deleted_at.is_(None))
         if kind:
             query = query.where(Contact.kind == kind)
+        if role:
+            query = query.where(Contact.roles.contains([role]))
         if tag:
             query = query.where(
                 Contact.id.in_(
@@ -178,7 +184,33 @@ async def replace_contact(
             raise ProblemError(ErrorCodes.VERSION_CONFLICT)
         before = await services.load(session, contact_id)
         services.apply_fields(contact, body, await services.iban_suffixes(session, contact_id))
-        await services.write_children(session, principal.tenant_id, contact.id, body)
+        changed_mandate_references = await services.write_children(
+            session, principal.tenant_id, contact.id, body
+        )
+        for reference in changed_mandate_references:
+            session.add(
+                ContactNote(
+                    tenant_id=principal.tenant_id,
+                    contact_id=contact.id,
+                    created_by=principal.user_id,
+                    category="sepa_mandate",
+                    body=(
+                        f"IBAN der Bankverbindung mit SEPA-Mandat {reference} wurde geändert. "
+                        "Ein neues Mandat kann erforderlich sein; das bestehende Mandat wurde "
+                        "nicht automatisch widerrufen."
+                    ),
+                    pinned=True,
+                )
+            )
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="contact.mandate_iban_changed",
+                entity_type="contact",
+                entity_id=contact.id,
+                actor_user_id=principal.user_id,
+                payload={"mandate_reference": reference},
+            )
         contact.version += 1
         contact.updated_by = principal.user_id
         after = await services.load(session, contact_id)
@@ -266,6 +298,79 @@ async def export_contact(
             payload={"purpose": "data_subject_access"},
         )
         return data
+
+
+@router.get("/contacts/{contact_id}/sepa-mandates", summary="SEPA-Mandate eines Kontakts (kompakt)")
+async def list_sepa_mandates(
+    contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[schemas.SepaMandateOut]:
+    async with tenant_tx(request, principal) as session:
+        await _active(session, contact_id)
+        rows = (
+            await session.scalars(
+                select(ContactBankAccount).where(
+                    ContactBankAccount.contact_id == contact_id,
+                    ContactBankAccount.sepa_enabled.is_(True),
+                )
+            )
+        ).all()
+        return [
+            schemas.SepaMandateOut(
+                bank_account_id=b.id,
+                iban_masked=mask_iban(b.iban),
+                mandate_reference=b.mandate_reference,
+                mandate_signed_on=b.mandate_signed_on,
+                mandate_scheme=b.mandate_scheme,
+                mandate_status=b.mandate_status,
+                mandate_revoked_on=b.mandate_revoked_on,
+            )
+            for b in rows
+        ]
+
+
+@router.post(
+    "/contacts/{contact_id}/bank-accounts/{account_id}/mandate/revoke",
+    summary="SEPA-Mandat widerrufen",
+)
+async def revoke_mandate(
+    contact_id: uuid.UUID,
+    account_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> schemas.SepaMandateOut:
+    async with tenant_tx(request, principal) as session:
+        await _active(session, contact_id)
+        account = await session.get(ContactBankAccount, account_id)
+        if account is None or account.contact_id != contact_id:
+            raise _not_found()
+        if not account.sepa_enabled or account.mandate_status == ContactMandateStatus.REVOKED:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Kein aktives SEPA-Mandat auf dieser Bankverbindung."
+            )
+        account.mandate_status = ContactMandateStatus.REVOKED
+        account.mandate_revoked_on = datetime.now(UTC).date()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="contact.mandate_revoked",
+            entity_type="contact",
+            entity_id=contact_id,
+            actor_user_id=principal.user_id,
+            payload={
+                "mandate_reference": account.mandate_reference,
+                "bank_account_id": str(account.id),
+            },
+        )
+        await session.flush()
+        return schemas.SepaMandateOut(
+            bank_account_id=account.id,
+            iban_masked=mask_iban(account.iban),
+            mandate_reference=account.mandate_reference,
+            mandate_signed_on=account.mandate_signed_on,
+            mandate_scheme=account.mandate_scheme,
+            mandate_status=account.mandate_status,
+            mandate_revoked_on=account.mandate_revoked_on,
+        )
 
 
 # Notes, relations, consents ------------------------------------------------------------

@@ -344,6 +344,13 @@ function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members
     return false;
   };
 
+  const loadPresets = async () => {
+    setError(null);
+    const res = await bff<SlaRule[]>("/api/bff/sla/rules/presets", { method: "POST" });
+    if (res.ok) setRules(res.data);
+    else setError(res.message);
+  };
+
   const toggleActive = async (rule: SlaRule) => {
     setError(null);
     const { id, ...rest } = rule;
@@ -360,9 +367,14 @@ function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">{t("rules.title")}</h2>
         {canManage && !creating ? (
-          <button type="button" className={ui.primary} onClick={() => setCreating(true)}>
-            {t("rules.create")}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={ui.button} onClick={() => void loadPresets()}>
+              {t("rules.loadPresets")}
+            </button>
+            <button type="button" className={ui.primary} onClick={() => setCreating(true)}>
+              {t("rules.create")}
+            </button>
+          </div>
         ) : null}
       </div>
       {error ? (

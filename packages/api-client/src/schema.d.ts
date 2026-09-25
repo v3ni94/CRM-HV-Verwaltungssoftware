@@ -1039,7 +1039,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Anmeldung Schritt 1: E-Mail und Passwort */
+        /**
+         * Anmeldung Schritt 1: E-Mail und Passwort
+         * @description TOTP is mandatory only for administrators (operator 25.09.2026); other users continue
+         *     straight to a session unless they enabled TOTP themselves, or a trusted device stands in
+         *     for it.
+         */
         post: operations["login_api_v1_auth_login_post"];
         delete?: never;
         options?: never;
@@ -1204,6 +1209,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/trusted-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gemerkte Geräte (TOTP-Ausnahme) */
+        get: operations["list_trusted_devices_api_v1_auth_trusted_devices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/trusted-devices/{device_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Gemerktes Gerät widerrufen */
+        delete: operations["revoke_trusted_device_api_v1_auth_trusted_devices__device_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/accounts/{bank_account_id}/reconciliation": {
         parameters: {
             query?: never;
@@ -1284,6 +1323,148 @@ export interface paths {
         put?: never;
         /** Bankverbindung anlegen */
         post: operations["create_connection_api_v1_banking_connections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/accounts/{link_id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Konto einem Buchungskreis/Objekt zuordnen */
+        post: operations["assign_finapi_account_api_v1_banking_finapi_accounts__link_id__assign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/accounts/{link_id}/fetch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Umsätze abrufen (asynchron, nur auf Klick)
+         * @description A real click only: this never runs on a schedule (master prompt section 2). The fetch
+         *     itself completes asynchronously in the existing Celery worker (`banking.finapi_fetch`).
+         */
+        post: operations["fetch_finapi_transactions_api_v1_banking_finapi_accounts__link_id__fetch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** finAPI-Konfigurationsstatus (ohne Zugangsdaten) */
+        get: operations["get_finapi_config_api_v1_banking_finapi_config_get"];
+        /** finAPI-Zugangsdaten hinterlegen (Einstellungen, Bank) */
+        put: operations["set_finapi_config_api_v1_banking_finapi_config_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bankverbindungen (finAPI) mit Konten */
+        get: operations["list_finapi_connections_api_v1_banking_finapi_connections_get"];
+        put?: never;
+        /**
+         * Bankverbindung anlegen (WebForm)
+         * @description Starts the documented WebForm import (docs/integrations/finapi.md section 2). The
+         *     browser redirect that follows is not itself an authorization result: `get_connection`
+         *     below re-checks the WebForm and bank connection status with the provider before any
+         *     account is trusted (banking master prompt section 6).
+         */
+        post: operations["create_finapi_connection_api_v1_banking_finapi_connections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/connections/{finapi_connection_id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * WebForm-/Verbindungsstatus serverseitig prüfen
+         * @description A browser return from the WebForm is not proof of success (master prompt section 6):
+         *     this endpoint re-reads the WebForm and, once it finished, the bank connection and its
+         *     accounts directly from finAPI with the tenant's own credentials.
+         */
+        post: operations["check_finapi_connection_api_v1_banking_finapi_connections__finapi_connection_id__check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/connections/{finapi_connection_id}/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verbindung trennen
+         * @description Blocks further use locally first (master prompt section 12). The provider side
+         *     (revoking the finAPI bank connection) uses an endpoint marked "zu prüfen" in
+         *     docs/integrations/finapi.md, so this only records that the provider side is unconfirmed;
+         *     it never claims the bank-side consent was revoked.
+         */
+        post: operations["disconnect_finapi_connection_api_v1_banking_finapi_connections__finapi_connection_id__disconnect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/finapi/connections/{finapi_connection_id}/reauthorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Erneute Freigabe (WebForm erneut starten) */
+        post: operations["reauthorize_finapi_connection_api_v1_banking_finapi_connections__finapi_connection_id__reauthorize_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1717,6 +1898,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/mandate/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** SEPA-Mandat widerrufen */
+        post: operations["revoke_mandate_api_v1_contacts__contact_id__bank_accounts__account_id__mandate_revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts/{contact_id}/consents": {
         parameters: {
             query?: never;
@@ -1815,6 +2013,23 @@ export interface paths {
         put?: never;
         /** Beziehung anlegen */
         post: operations["add_relation_api_v1_contacts__contact_id__relations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/sepa-mandates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SEPA-Mandate eines Kontakts (kompakt) */
+        get: operations["list_sepa_mandates_api_v1_contacts__contact_id__sepa_mandates_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4045,6 +4260,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/invoice-forwarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rechnungs-Weiterleitung: Einstellungen (Postfächer) */
+        get: operations["get_invoice_forwarding_api_v1_mail_invoice_forwarding_get"];
+        /** Rechnungs-Weiterleitung: Einstellungen speichern (Postfächer) */
+        put: operations["put_invoice_forwarding_api_v1_mail_invoice_forwarding_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/mailboxes": {
         parameters: {
             query?: never;
@@ -4219,6 +4452,28 @@ export interface paths {
         head?: never;
         /** Entwurf bearbeiten */
         patch: operations["patch_draft_api_v1_mail_messages__message_id__draft_patch"];
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/forward-invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rechnung weiterleiten ("Weiterleiten?"-Vorschlag bestätigen)
+         * @description Der Operator bestätigt einen Weiterleitungs-Vorschlag manuell; nach der zweiten
+         *     Bestätigung eines Absenders landet dieser auf der Lernliste (operator 25.09.2026) und
+         *     künftige Mails desselben Absenders werden automatisch weitergeleitet.
+         */
+        post: operations["forward_invoice_api_v1_mail_messages__message_id__forward_invoice_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/mail/messages/{message_id}/reject": {
@@ -5865,6 +6120,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sla/rules/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vorschlagswerte laden (Produktschutz-Vorschlag, keine Rechtsvorschrift)
+         * @description Setzt für jede Priorität ohne bestehende Regel eine Vorschlagsregel (Antwort-/Lösungszeit)
+         *     und den Geschäftszeitenkalender Mo-Fr 08:00-17:00 Europe/Berlin; bestehende Regeln und ein
+         *     bereits gepflegter Kalender bleiben unverändert. Feiertage NRW pflegt der Betreiber selbst
+         *     (``holidays`` bleibt eine einfache Liste, kein Automatismus).
+         */
+        post: operations["load_presets_api_v1_sla_rules_presets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sla/rules/{rule_id}": {
         parameters: {
             query?: never;
@@ -6161,6 +6439,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant/competence-catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kompetenzkatalog (Basis und Mandant) */
+        get: operations["get_competence_catalogue_api_v1_tenant_competence_catalogue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/events": {
         parameters: {
             query?: never;
@@ -6219,6 +6514,23 @@ export interface paths {
          *     tenant and its sessions are revoked. Nobody disables their own membership.
          */
         patch: operations["patch_member_status_api_v1_tenant_members__membership_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/tenant/members/{membership_id}/competences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Kompetenzen eines Mitglieds setzen */
+        put: operations["put_member_competences_api_v1_tenant_members__membership_id__competences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/tenant/members/{membership_id}/reset-password": {
@@ -6556,6 +6868,41 @@ export interface paths {
         patch: operations["patch_ticket_api_v1_tickets__ticket_id__patch"];
         trace?: never;
     };
+    "/api/v1/tickets/{ticket_id}/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zuweiser eines Tickets mit Grund */
+        get: operations["list_assignees_api_v1_tickets__ticket_id__assignees_get"];
+        put?: never;
+        /** Zuweiser hinzufügen (manuell) */
+        post: operations["add_assignee_endpoint_api_v1_tickets__ticket_id__assignees_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/assignees/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Zuweiser entfernen */
+        delete: operations["remove_assignee_api_v1_tickets__ticket_id__assignees__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tickets/{ticket_id}/checklist/{key}": {
         parameters: {
             query?: never;
@@ -6743,6 +7090,41 @@ export interface paths {
         get: operations["calendar_ics_api_v1_workspace_calendar_ics_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/calendar/google/{source}/{event_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Google-Termin löschen */
+        delete: operations["delete_google_entry_api_v1_workspace_calendar_google__source___event_id__delete"];
+        options?: never;
+        head?: never;
+        /** Google-Termin ändern */
+        patch: operations["patch_google_entry_api_v1_workspace_calendar_google__source___event_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workspace/calendar/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Google-Kalender jetzt neu abrufen */
+        post: operations["refresh_calendar_api_v1_workspace_calendar_refresh_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7291,6 +7673,32 @@ export interface components {
              */
             playbook_id: string;
         };
+        /** AssignAccountIn */
+        AssignAccountIn: {
+            /**
+             * Property Bank Account Id
+             * Format: uuid
+             */
+            property_bank_account_id: string;
+        };
+        /** AssigneeIn */
+        AssigneeIn: {
+            /**
+             * Primary
+             * @default false
+             */
+            primary: boolean;
+            /**
+             * Reason
+             * @default manuell
+             */
+            reason: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
         /** AttendanceIn */
         AttendanceIn: {
             /**
@@ -7689,6 +8097,8 @@ export interface components {
              * @default true
              */
             all_day: boolean;
+            /** Ends At */
+            ends_at?: string | null;
             /** Ends On */
             ends_on?: string | null;
             /** Notes */
@@ -7700,11 +8110,18 @@ export interface components {
              * @default false
              */
             shared: boolean;
+            /** Starts At */
+            starts_at?: string | null;
             /**
              * Starts On
              * Format: date
              */
             starts_on: string;
+            /**
+             * Target
+             * @default internal
+             */
+            target: string;
             /** Title */
             title: string;
         };
@@ -7732,6 +8149,8 @@ export interface components {
         };
         /** CalendarItem */
         CalendarItem: {
+            /** Calendar Label */
+            calendar_label?: string | null;
             /**
              * Date
              * Format: date
@@ -7748,12 +8167,37 @@ export interface components {
             entity_id?: string | null;
             /** Entity Type */
             entity_type?: string | null;
+            /** Google Event Id */
+            google_event_id?: string | null;
             /** Kind */
             kind: string;
+            /** Mailbox Id */
+            mailbox_id?: string | null;
             /** Property Id */
             property_id?: string | null;
+            /**
+             * Source
+             * @default internal
+             */
+            source: string;
             /** Title */
             title: string;
+        };
+        /** CalendarNotice */
+        CalendarNotice: {
+            /** Address */
+            address: string;
+            /** Connected */
+            connected: boolean;
+            /** Source */
+            source: string;
+        };
+        /** CalendarOut */
+        CalendarOut: {
+            /** Items */
+            items: components["schemas"]["CalendarItem"][];
+            /** Notices */
+            notices?: components["schemas"]["CalendarNotice"][];
         };
         /** CapAreaIn */
         CapAreaIn: {
@@ -8058,7 +8502,7 @@ export interface components {
          * ConnectionStatus
          * @enum {string}
          */
-        ConnectionStatus: "not_configured" | "active" | "error" | "consent_expired" | "disabled";
+        ConnectionStatus: "not_configured" | "active" | "error" | "consent_expired" | "disabled" | "web_form_pending" | "update_required";
         /**
          * Connector
          * @enum {string}
@@ -8172,6 +8616,11 @@ export interface components {
             /** Position */
             position?: string | null;
             preferred_channel?: components["schemas"]["PreferredChannel"] | null;
+            /**
+             * Roles
+             * @description Manuelle Klassifizierung; automatisch abgeleitete Rollen aus Verträgen werden zusätzlich beibehalten.
+             */
+            roles?: components["schemas"]["ContactRoleCode"][];
             /** Salutation */
             salutation?: string | null;
             /** Tags */
@@ -8186,6 +8635,11 @@ export interface components {
          * @enum {string}
          */
         ContactKind: "person" | "company";
+        /**
+         * ContactMandateStatus
+         * @enum {string}
+         */
+        ContactMandateStatus: "active" | "revoked";
         /** ContactOut */
         ContactOut: {
             /** Addresses */
@@ -8237,6 +8691,8 @@ export interface components {
             /** Position */
             position: string | null;
             preferred_channel: components["schemas"]["PreferredChannel"] | null;
+            /** Roles */
+            roles: components["schemas"]["ContactRoleCode"][];
             /** Salutation */
             salutation: string | null;
             /** Tags */
@@ -8264,6 +8720,13 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * ContactRoleCode
+         * @description Operator classification, multiple values allowed (task M3-02). Distinct from `kind`
+         *     (person/organisation) and from `ContactTypeCode` (process derived contact types).
+         * @enum {string}
+         */
+        ContactRoleCode: "eigentuemer" | "mieter" | "verwalter" | "dienstleister" | "bank" | "sonstiges";
         /** ContactSummary */
         ContactSummary: {
             /** Blocked */
@@ -8285,6 +8748,8 @@ export interface components {
             primary_email: string | null;
             /** Primary Phone */
             primary_phone: string | null;
+            /** Roles */
+            roles: components["schemas"]["ContactRoleCode"][];
             /** Tags */
             tags: string[];
             /** Types */
@@ -9275,6 +9740,93 @@ export interface components {
             /** Resource */
             resource: string;
         };
+        /** FinApiAccountOut */
+        FinApiAccountOut: {
+            /** Account Holder Name */
+            account_holder_name: string | null;
+            /** Account Name */
+            account_name: string | null;
+            /** Account Type */
+            account_type: string | null;
+            /** Balance As Of */
+            balance_as_of: string | null;
+            /** Balance Available */
+            balance_available: string | null;
+            /** Balance Booked */
+            balance_booked: string | null;
+            /** Balance Currency */
+            balance_currency: string | null;
+            /** Balance Fetched At */
+            balance_fetched_at: string | null;
+            /** Finapi Account Id */
+            finapi_account_id: string;
+            /** Iban Suffix */
+            iban_suffix: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Transactions Fetch At */
+            last_transactions_fetch_at: string | null;
+            /** Property Bank Account Id */
+            property_bank_account_id: string | null;
+        };
+        /** FinApiConfigIn */
+        FinApiConfigIn: {
+            /** Base Url */
+            base_url: string;
+            /** Client Id */
+            client_id: string;
+            /** Client Secret */
+            client_secret: string;
+            /** Mandator Id */
+            mandator_id?: string | null;
+            /**
+             * Sandbox
+             * @default true
+             */
+            sandbox: boolean;
+        };
+        /** FinApiConfigOut */
+        FinApiConfigOut: {
+            /** Base Url */
+            base_url?: string | null;
+            /** Configured */
+            configured: boolean;
+            /** Mandator Id */
+            mandator_id?: string | null;
+            /** Sandbox */
+            sandbox?: boolean | null;
+        };
+        /** FinApiConnectionOut */
+        FinApiConnectionOut: {
+            /** Accounts */
+            accounts: components["schemas"]["FinApiAccountOut"][];
+            /** Auto Update Enabled */
+            auto_update_enabled: boolean;
+            /**
+             * Bank Connection Id
+             * Format: uuid
+             */
+            bank_connection_id: string;
+            /** Bank Name */
+            bank_name: string;
+            /** Consent Valid Until */
+            consent_valid_until: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Error */
+            last_error: string | null;
+            status: components["schemas"]["ConnectionStatus"];
+            /** Web Form Status */
+            web_form_status: string | null;
+            /** Web Form Url */
+            web_form_url: string | null;
+        };
         /** FlowImportApplyIn */
         FlowImportApplyIn: {
             /** Items */
@@ -9346,6 +9898,23 @@ export interface components {
             open: boolean;
             /** Scopes */
             scopes: string[];
+        };
+        /** GoogleCalendarPatchIn */
+        GoogleCalendarPatchIn: {
+            /** All Day */
+            all_day?: boolean | null;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Ends On */
+            ends_on?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Starts On */
+            starts_on?: string | null;
+            /** Title */
+            title?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -9708,6 +10277,18 @@ export interface components {
             invited_at: string;
             /** Urgency Reason */
             urgency_reason?: string | null;
+        };
+        /** InvoiceForwardSettingsIn */
+        InvoiceForwardSettingsIn: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Forward Address */
+            forward_address?: string | null;
+            /** Sender Allowlist */
+            sender_allowlist?: string[];
         };
         /** InvoiceIn */
         InvoiceIn: {
@@ -10285,6 +10866,8 @@ export interface components {
         };
         /** LoginRequest */
         LoginRequest: {
+            /** Device Token */
+            device_token?: string | null;
             /**
              * Email
              * Format: email
@@ -10292,16 +10875,33 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+            /** Tenant Id */
+            tenant_id?: string | null;
         };
         /** LoginStep */
         LoginStep: {
+            /** Access Token */
+            access_token?: string | null;
+            /** Expires In */
+            expires_in?: number | null;
             /** Mfa Token */
-            mfa_token: string;
+            mfa_token?: string | null;
+            /** Refresh Token */
+            refresh_token?: string | null;
             /**
              * Status
-             * @description mfa_required oder mfa_setup_required
+             * @description ok, mfa_required oder mfa_setup_required
              */
             status: string;
+            /** Tenant Id */
+            tenant_id?: string | null;
+            /** Tenants */
+            tenants?: components["schemas"]["mhvp__core__auth__routers__TenantOut"][];
+            /**
+             * Token Type
+             * @default Bearer
+             */
+            token_type: string;
         };
         /** MailAppointmentIn */
         MailAppointmentIn: {
@@ -10382,6 +10982,12 @@ export interface components {
         };
         /** MailboxPatchIn */
         MailboxPatchIn: {
+            /** Archive On Ticket Done */
+            archive_on_ticket_done?: boolean | null;
+            /** Calendar Enabled */
+            calendar_enabled?: boolean | null;
+            /** Calendar Id */
+            calendar_id?: string | null;
             /** Enabled */
             enabled?: boolean | null;
             /** Is Default */
@@ -10485,6 +11091,11 @@ export interface components {
          * @enum {string}
          */
         ManagementType: "rental" | "hoa" | "hoa_with_sev";
+        /**
+         * MandateGrantedVia
+         * @enum {string}
+         */
+        MandateGrantedVia: "telefon" | "brief" | "email" | "portal" | "persoenlich";
         /** MandateIn */
         MandateIn: {
             /**
@@ -10568,6 +11179,11 @@ export interface components {
             /** Valid Until */
             valid_until: string | null;
         };
+        /**
+         * MandateScheme
+         * @enum {string}
+         */
+        MandateScheme: "core" | "b2b";
         /**
          * MandateSequence
          * @enum {string}
@@ -10685,6 +11301,15 @@ export interface components {
             /** Voting Principle Basis */
             voting_principle_basis?: string | null;
         };
+        /**
+         * MemberCompetences
+         * @description Kompetenzcodes des Mitglieds (operator 25.09.2026). Werden gegen den Katalog
+         *     (``mhvp.tickets.competences``, ggf. um die Mandantenerweiterung) geprüft.
+         */
+        MemberCompetences: {
+            /** Competence Codes */
+            competence_codes?: string[];
+        };
         /** MemberCreate */
         MemberCreate: {
             /** Role Codes */
@@ -10718,6 +11343,8 @@ export interface components {
         };
         /** MemberOut */
         MemberOut: {
+            /** Competences */
+            competences?: string[];
             /** Contact Id */
             contact_id?: string | null;
             /** Display Name */
@@ -10883,6 +11510,11 @@ export interface components {
             code: string;
             /** Mfa Token */
             mfa_token: string;
+            /**
+             * Remember Device
+             * @default false
+             */
+            remember_device: boolean;
             /** Tenant Id */
             tenant_id?: string | null;
         };
@@ -12500,6 +13132,27 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * SepaMandateOut
+         * @description Compact list for GET /contacts/{id}/sepa-mandates.
+         */
+        SepaMandateOut: {
+            /**
+             * Bank Account Id
+             * Format: uuid
+             */
+            bank_account_id: string;
+            /** Iban Masked */
+            iban_masked: string;
+            /** Mandate Reference */
+            mandate_reference: string | null;
+            /** Mandate Revoked On */
+            mandate_revoked_on: string | null;
+            mandate_scheme: components["schemas"]["MandateScheme"];
+            /** Mandate Signed On */
+            mandate_signed_on: string | null;
+            mandate_status: components["schemas"]["ContactMandateStatus"];
+        };
         /** SerialDispatchIn */
         SerialDispatchIn: {
             /** Items */
@@ -12844,6 +13497,8 @@ export interface components {
         TicketIn: {
             /** Category */
             category?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
             /** Initiator Contact Id */
             initiator_contact_id?: string | null;
             /** Internal Description */
@@ -12859,6 +13514,8 @@ export interface components {
             template_id?: string | null;
             /** Title */
             title?: string | null;
+            /** Topic */
+            topic?: string | null;
             /** Unit Id */
             unit_id?: string | null;
             /** Visible For */
@@ -12877,16 +13534,24 @@ export interface components {
             assignee_user_id?: string | null;
             /** Checklist Done */
             checklist_done?: number[] | null;
+            /** Contact Id */
+            contact_id?: string | null;
             /** Extra Fields */
             extra_fields?: {
                 [key: string]: unknown;
             } | null;
             priority?: components["schemas"]["Priority"] | null;
+            /** Property Id */
+            property_id?: string | null;
             status?: components["schemas"]["TicketStatus"] | null;
             /** Team Id */
             team_id?: string | null;
             /** Time Spent Minutes */
             time_spent_minutes?: number | null;
+            /** Topic */
+            topic?: string | null;
+            /** Unit Id */
+            unit_id?: string | null;
         };
         /**
          * TicketSource
@@ -12923,6 +13588,8 @@ export interface components {
             sla_hours?: number | null;
             /** Title */
             title: string;
+            /** Topic */
+            topic?: string | null;
         };
         /** TicketTemplatePatch */
         TicketTemplatePatch: {
@@ -12943,6 +13610,8 @@ export interface components {
             sla_hours?: number | null;
             /** Title */
             title?: string | null;
+            /** Topic */
+            topic?: string | null;
         };
         /** TierModel */
         TierModel: {
@@ -12957,6 +13626,8 @@ export interface components {
         TokenResponse: {
             /** Access Token */
             access_token: string;
+            /** Device Token */
+            device_token?: string | null;
             /** Expires In */
             expires_in: number;
             /** Refresh Token */
@@ -13031,6 +13702,28 @@ export interface components {
             /** Note */
             note?: string | null;
             target: components["schemas"]["StatementStatus"];
+        };
+        /** TrustedDeviceOut */
+        TrustedDeviceOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string | null;
+            /** Last Used At */
+            last_used_at: string | null;
         };
         /** UnitIn */
         UnitIn: {
@@ -13280,6 +13973,11 @@ export interface components {
              */
             excluded: boolean;
         };
+        /** WebFormRefIn */
+        WebFormRefIn: {
+            /** Bank Name */
+            bank_name: string;
+        };
         /** WebhookCreate */
         WebhookCreate: {
             /** Description */
@@ -13445,6 +14143,26 @@ export interface components {
             iban: string;
             /** Label */
             label?: string | null;
+            /** Mandate Document Id */
+            mandate_document_id?: string | null;
+            mandate_granted_via?: components["schemas"]["MandateGrantedVia"] | null;
+            /** Mandate Note */
+            mandate_note?: string | null;
+            /** Mandate Reference */
+            mandate_reference?: string | null;
+            /** Mandate Revoked On */
+            mandate_revoked_on?: string | null;
+            /** @default core */
+            mandate_scheme: components["schemas"]["MandateScheme"];
+            /** Mandate Signed On */
+            mandate_signed_on?: string | null;
+            /** @default active */
+            mandate_status: components["schemas"]["ContactMandateStatus"];
+            /**
+             * Sepa Enabled
+             * @default false
+             */
+            sepa_enabled: boolean;
             /**
              * Valid From
              * Format: date
@@ -13470,6 +14188,21 @@ export interface components {
             id: string;
             /** Label */
             label: string | null;
+            /** Mandate Document Id */
+            mandate_document_id: string | null;
+            mandate_granted_via: components["schemas"]["MandateGrantedVia"] | null;
+            /** Mandate Note */
+            mandate_note: string | null;
+            /** Mandate Reference */
+            mandate_reference: string | null;
+            /** Mandate Revoked On */
+            mandate_revoked_on: string | null;
+            mandate_scheme: components["schemas"]["MandateScheme"];
+            /** Mandate Signed On */
+            mandate_signed_on: string | null;
+            mandate_status: components["schemas"]["ContactMandateStatus"];
+            /** Sepa Enabled */
+            sepa_enabled: boolean;
             /**
              * Valid From
              * Format: date
@@ -16187,6 +16920,55 @@ export interface operations {
             };
         };
     };
+    list_trusted_devices_api_v1_auth_trusted_devices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrustedDeviceOut"][];
+                };
+            };
+        };
+    };
+    revoke_trusted_device_api_v1_auth_trusted_devices__device_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     reconciliation_api_v1_banking_accounts__bank_account_id__reconciliation_get: {
         parameters: {
             query?: never;
@@ -16352,6 +17134,271 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_finapi_account_api_v1_banking_finapi_accounts__link_id__assign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignAccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinApiAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fetch_finapi_transactions_api_v1_banking_finapi_accounts__link_id__fetch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_finapi_config_api_v1_banking_finapi_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinApiConfigOut"];
+                };
+            };
+        };
+    };
+    set_finapi_config_api_v1_banking_finapi_config_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinApiConfigIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinApiConfigOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_finapi_connections_api_v1_banking_finapi_connections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinApiConnectionOut"][];
+                };
+            };
+        };
+    };
+    create_finapi_connection_api_v1_banking_finapi_connections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebFormRefIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinApiConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_finapi_connection_api_v1_banking_finapi_connections__finapi_connection_id__check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                finapi_connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinApiConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_finapi_connection_api_v1_banking_finapi_connections__finapi_connection_id__disconnect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                finapi_connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinApiConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reauthorize_finapi_connection_api_v1_banking_finapi_connections__finapi_connection_id__reauthorize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                finapi_connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinApiConnectionOut"];
                 };
             };
             /** @description Validation Error */
@@ -17143,6 +18190,8 @@ export interface operations {
                 q?: string | null;
                 kind?: string | null;
                 tag?: string | null;
+                /** @description Filter: eigentuemer, mieter, ... */
+                role?: string | null;
                 include_deleted?: boolean;
                 page?: number;
                 page_size?: number;
@@ -17327,6 +18376,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_mandate_api_v1_contacts__contact_id__bank_accounts__account_id__mandate_revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SepaMandateOut"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -17590,6 +18671,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RelationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sepa_mandates_api_v1_contacts__contact_id__sepa_mandates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SepaMandateOut"][];
                 };
             };
             /** @description Validation Error */
@@ -22686,6 +23798,63 @@ export interface operations {
             };
         };
     };
+    get_invoice_forwarding_api_v1_mail_invoice_forwarding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_invoice_forwarding_api_v1_mail_invoice_forwarding_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceForwardSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_mailboxes_api_v1_mail_mailboxes_get: {
         parameters: {
             query?: never;
@@ -23109,6 +24278,39 @@ export interface operations {
                 "application/json": components["schemas"]["MailDraftPatchIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forward_invoice_api_v1_mail_messages__message_id__forward_invoice_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -27004,6 +28206,28 @@ export interface operations {
             };
         };
     };
+    load_presets_api_v1_sla_rules_presets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
     delete_rule_api_v1_sla_rules__rule_id__delete: {
         parameters: {
             query?: never;
@@ -27681,6 +28905,28 @@ export interface operations {
             };
         };
     };
+    get_competence_catalogue_api_v1_tenant_competence_catalogue_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    }[];
+                };
+            };
+        };
+    };
     list_events_api_v1_tenant_events_get: {
         parameters: {
             query?: {
@@ -27790,6 +29036,39 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MemberOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_member_competences_api_v1_tenant_members__membership_id__competences_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberCompetences"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -28312,6 +29591,8 @@ export interface operations {
             query?: {
                 status?: components["schemas"]["TicketStatus"] | null;
                 property_id?: string | null;
+                unit_id?: string | null;
+                contact_id?: string | null;
                 mine?: boolean;
                 limit?: number;
             };
@@ -28644,6 +29925,106 @@ export interface operations {
                         [key: string]: unknown;
                     };
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_assignees_api_v1_tickets__ticket_id__assignees_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_assignee_endpoint_api_v1_tickets__ticket_id__assignees_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssigneeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_assignee_api_v1_tickets__ticket_id__assignees__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -29061,7 +30442,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CalendarItem"][];
+                    "application/json": components["schemas"]["CalendarOut"];
                 };
             };
             /** @description Validation Error */
@@ -29124,6 +30505,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    delete_google_entry_api_v1_workspace_calendar_google__source___event_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_google_entry_api_v1_workspace_calendar_google__source___event_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleCalendarPatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_calendar_api_v1_workspace_calendar_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
                 };
             };
         };
