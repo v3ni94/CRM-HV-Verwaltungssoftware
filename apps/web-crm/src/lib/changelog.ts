@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.17.4",
+    date: "25.09.2026",
+    title: "Google-Verbindung ohne Abmeldung",
+    changes: [
+      "Google-Verbindung (DMS und Postfächer): die Rückleitung von Google landet auf einer same-site Zwischenseite, damit die Sitzung erhalten bleibt; bisher erschien nach dem Google-Login die Anmeldeseite des CRM, obwohl die Verbindung gespeichert war",
+    ],
+  },
+  {
     version: "1.17.3",
     date: "25.09.2026",
     title: "Datenschutz: Ticket-Vorschau lädt nur den Kontaktnamen",

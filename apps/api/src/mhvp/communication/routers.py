@@ -482,7 +482,10 @@ def _oauth_result(
         else:
             query = {"oauth_error": error or ""}
         base = settings.web_crm_url.rstrip("/")
-        return RedirectResponse(f"{base}/einstellungen/{target}?{urlencode(query)}", 302)
+        # Land on the same-site return page first: session cookies are SameSite=Strict and
+        # would not accompany a redirect chain that started at Google (login page otherwise).
+        inner = f"/einstellungen/{target}?{urlencode(query)}"
+        return RedirectResponse(f"{base}/api/session/return?{urlencode({'next': inner})}", 302)
     text = f"Konto {address} verbunden." if address else f"Fehler: {error}"
     return HTMLResponse(f"<p>{text}</p>", status_code=200 if address else 400)
 
