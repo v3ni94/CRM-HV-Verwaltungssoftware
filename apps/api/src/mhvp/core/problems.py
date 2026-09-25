@@ -207,6 +207,30 @@ class ErrorCodes:
         "Bankverbindung ist im falschen Zustand",
         "The requested action does not match the connection's current finAPI state.",
     )
+    BILLING_PREFIX_MISSING = ErrorCode(
+        "MHVP-BILL-0001",
+        409,
+        "Rechnungskürzel fehlt",
+        "TenantBillingSettings.invoice_prefix is not configured (M13-04).",
+    )
+    BILLING_VAT_STATUS_MISSING = ErrorCode(
+        "MHVP-BILL-0002",
+        409,
+        "Umsatzsteuerstatus fehlt",
+        "TenantBillingSettings.vat_status is unset; XRechnung is blocked (M13-04).",
+    )
+    BILLING_TAX_DATA_MISSING = ErrorCode(
+        "MHVP-BILL-0003",
+        409,
+        "Steuerdaten unvollständig",
+        "Required tax data for the tenant's vat_status is missing (M13-04).",
+    )
+    DATEV_NOT_CONFIGURED = ErrorCode(
+        "MHVP-BILL-0004",
+        409,
+        "DATEV-Parameter fehlen",
+        "consultant_number, client_number or chart_of_accounts not set (M18-01).",
+    )
 
 
 def _build_registry() -> dict[str, ErrorCode]:

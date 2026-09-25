@@ -35,3 +35,4 @@ blob-report/
 /data/
 *.log
 apps/web-crm/.e2e-auth.json
+.e2e-portal-auth.json

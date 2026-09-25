@@ -21,6 +21,7 @@ from mhvp.accounting.models import (
     LedgerAccount,
     OpenItemSettlement,
 )
+from mhvp.workspace.services import local_today
 
 HORIZON_DAYS = 90
 
@@ -206,3 +207,103 @@ async def journal_csv(
 
 def checksum(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+# DATEV Buchungsstapel (M18-01) ----------------------------------------------------------
+#
+# Only emitted once consultant_number, client_number and chart_of_accounts are set on the
+# tenant's TenantBillingSettings (operator decision 25.09.2026). The CRM account numbers are
+# emitted as they are; no mapping to a DATEV Kontenrahmen account is invented (see
+# docs/rules/M18-02.md). Fields implemented in the EXTF header follow the parts of the DATEV
+# "Buchungsstapel" format description that are unambiguous from the repository's integration
+# notes; every other header field is left empty and documented there rather than guessed.
+
+DATEV_FORMAT_NAME = "Buchungsstapel"
+DATEV_FORMAT_VERSION = 7
+DATEV_CATEGORY = 21
+
+
+async def datev_csv(
+    session: AsyncSession,
+    ledger: Ledger,
+    start: date,
+    end: date,
+    *,
+    consultant_number: str,
+    client_number: str,
+    chart_of_accounts: str,
+    account_length: int | None,
+    fiscal_year_start_month: int,
+) -> tuple[bytes, int]:
+    """DATEV EXTF Buchungsstapel CSV. Requires the three operator-entered parameters; the caller
+    checks their presence (MHVP-BILL-0004) before calling this. Account numbers are the CRM's
+    own ledger account numbers, unchanged; the export log marks "Kontenzuordnung zu prüfen"."""
+    rows = (
+        await session.execute(
+            select(JournalEntry, JournalLine, LedgerAccount)
+            .join(JournalLine, JournalLine.journal_entry_id == JournalEntry.id)
+            .join(LedgerAccount, LedgerAccount.id == JournalLine.account_id)
+            .where(
+                JournalEntry.ledger_id == ledger.id,
+                JournalEntry.status == EntryStatus.POSTED,
+                JournalEntry.booking_date.between(start, end),
+            )
+            .order_by(JournalEntry.fiscal_year, JournalEntry.number, JournalLine.line_no)
+        )
+    ).all()
+    fiscal_year_start = date(start.year, fiscal_year_start_month, 1)
+    if fiscal_year_start > start:
+        fiscal_year_start = date(start.year - 1, fiscal_year_start_month, 1)
+    generated = f"{local_today():%Y%m%d}000000000"
+    header = [
+        "EXTF",
+        str(DATEV_FORMAT_VERSION),
+        str(DATEV_CATEGORY),
+        DATEV_FORMAT_NAME,
+        "9",
+        generated,
+        "",
+        "RE",
+        "",
+        "",
+        consultant_number,
+        client_number,
+        f"{fiscal_year_start:%Y%m%d}",
+        str(account_length or ""),
+        f"{start:%Y%m%d}",
+        f"{end:%Y%m%d}",
+        "",
+        "",
+        "1",
+        chart_of_accounts.upper(),
+        "0",
+    ]
+    out = io.StringIO()
+    writer = csv.writer(out, delimiter=";", lineterminator="\r\n", quoting=csv.QUOTE_ALL)
+    writer.writerow(header)
+    writer.writerow(
+        [
+            "Umsatz (ohne Soll/Haben-Kz)",
+            "Soll/Haben-Kennzeichen",
+            "Konto",
+            "Gegenkonto (ohne BU-Schlüssel)",
+            "Belegdatum",
+            "Buchungstext",
+            "Belegfeld 1",
+        ]
+    )
+    for entry, line, account in rows:
+        amount = line.debit if line.debit else line.credit
+        soll_haben = "S" if line.debit else "H"
+        writer.writerow(
+            [
+                str(amount).replace(".", ","),
+                soll_haben,
+                account.number,
+                "",
+                f"{entry.booking_date:%d%m}",
+                (line.text or entry.text or "")[:60],
+                entry.reference or "",
+            ]
+        )
+    return out.getvalue().encode("utf-8"), len(rows)

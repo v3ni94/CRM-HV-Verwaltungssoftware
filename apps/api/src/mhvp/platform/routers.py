@@ -489,7 +489,14 @@ async def patch_billing_settings(
             await session.flush()
         if if_match is not None and if_match.strip('"') != str(row.version):
             raise ProblemError(ErrorCodes.VERSION_CONFLICT)
-        fields = body.model_dump(exclude_unset=True)
+        from mhvp.platform.models import ChartOfAccountsKind, VatStatus
+
+        fields: dict[str, Any] = body.model_dump(exclude_unset=True)
+        if "vat_status" in fields and fields["vat_status"] is not None:
+            fields["vat_status"] = VatStatus(fields["vat_status"])
+        coa = fields.get("datev_chart_of_accounts")
+        if coa is not None:
+            fields["datev_chart_of_accounts"] = ChartOfAccountsKind(coa)
         changed: set[str] = set()
         for name, value in fields.items():
             if getattr(row, name) != value:

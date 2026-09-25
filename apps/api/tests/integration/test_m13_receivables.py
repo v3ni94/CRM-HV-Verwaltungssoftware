@@ -233,3 +233,33 @@ def test_receivable_run(client: TestClient, world: World) -> None:
     assert preview["vat"] == "19.00"
     assert preview["gross"] == "119.00"
     assert preview["status"] == "draft"
+
+    # M13-04: issuing an invoice number is blocked without a configured prefix, and blocked for
+    # XRechnung until the VAT status (and, for regelbesteuert, tax data) is entered.
+    assert (
+        client.post(f"{A}/admin-fees/{fee['id']}/invoice-issue", headers=h).status_code == 409
+    )
+    _ok(
+        client.patch(
+            "/api/v1/tenant/billing-settings",
+            json={"invoice_prefix": "HVM"},
+            headers=h,
+        )
+    )
+    assert (
+        client.post(f"{A}/admin-fees/{fee['id']}/invoice-issue", headers=h).status_code == 409
+    )
+    _ok(
+        client.patch(
+            "/api/v1/tenant/billing-settings",
+            json={"vat_status": "regelbesteuert", "vat_id": "DE123456789"},
+            headers=h,
+        )
+    )
+    issued = _ok(client.post(f"{A}/admin-fees/{fee['id']}/invoice-issue", headers=h), 200)
+    assert issued["number"] == f"HVM-{issued['invoice_date'][:4]}-000001"
+    issued_2 = _ok(client.post(f"{A}/admin-fees/{fee['id']}/invoice-issue", headers=h), 200)
+    assert issued_2["number"] == f"HVM-{issued['invoice_date'][:4]}-000002"
+
+    billing = _ok(client.get("/api/v1/tenant/billing-settings", headers=h))
+    assert billing["vat_id_masked"] == "…6789"

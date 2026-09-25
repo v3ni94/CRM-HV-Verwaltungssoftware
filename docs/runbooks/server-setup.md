@@ -82,6 +82,53 @@ with `PermissionError`. Fix: `chmod -R u=rwX,go=rX apps packages infra scripts`,
 * Rollback: deploy the previous tag. If a migration failed, restore the backup taken right
   before it, then deploy the previous tag.
 
+## 7. Update einspielen (Standardblock des Betreibers)
+
+Der laufende Betrieb aktualisiert direkt auf dem Server (`/opt/mhvp`), gleicher Ablauf für
+Staging und Produktion, jeweils mit dem passenden `.env.<env>`:
+
+    cd /opt/mhvp
+    umask 022
+    git fetch origin
+    git checkout -B deploy origin/main   # oder der freizugebende Tag/Branch
+    chmod -R u=rwX,go=rX apps packages infra scripts
+
+    docker compose -p mhvp --env-file .env.prod -f infra/compose.yaml -f infra/compose.prod.yaml \
+      build api web-crm web-portal
+
+    docker compose -p mhvp --env-file .env.prod -f infra/compose.yaml -f infra/compose.prod.yaml \
+      run --rm migrate
+
+    docker compose -p mhvp --env-file .env.prod -f infra/compose.yaml -f infra/compose.prod.yaml \
+      up -d
+
+    curl -fsS https://<api-host>/api/v1/health/ready
+
+Die drei Images (`api`, `web-crm`, `web-portal`; `worker` und `beat` teilen sich das
+`api`-Image und laufen nach dem `up -d` automatisch mit der neuen Version) werden bei
+jedem Update neu gebaut, da der Server ohne eigene Registry arbeitet (Abschnitt 4). Vor
+der Migration sichert `make deploy` automatisch; beim manuellen Block ist vorher gezielt
+`systemctl start mhvp-backup.service` auszuführen, wenn seit dem letzten planmäßigen
+Lauf produktive Daten hinzugekommen sind.
+
+### Prüfliste nach dem Update
+
+1. **Gmail-Postfächer neu verbinden**: Wurde mit dem Update ein neuer OAuth-Scope
+   eingeführt (zum Beispiel Kalenderfreigabe, siehe `docs/handbuch/kalender.md`), zeigen
+   betroffene Postfächer weiterhin den alten Stand, bis sie unter Einstellungen,
+   Postfächer erneut mit Google verbunden werden. Dies ist normal und kein Fehler des
+   Updates.
+2. **Offene Browser-Tabs mit Neu laden (harter Reload)** aktualisieren, damit alte,
+   zwischengespeicherte Programmversionen nicht mit der neuen API sprechen
+   (Tastenkombination `Strg+Umschalt+R` bzw. `Cmd+Umschalt+R`).
+3. **Versionsstand unter `/version` prüfen**: Die Seite zeigt die aktuell ausgelieferte
+   Version und den Versionsverlauf aus `CHANGELOG.md`; sie muss der soeben eingespielten
+   Version entsprechen.
+
+Rollback bleibt wie in Abschnitt 6 beschrieben: vorherigen Tag auschecken und denselben
+Block erneut ausführen; bei fehlgeschlagener Migration zuerst die zuvor gezogene
+Sicherung einspielen.
+
 ## Mehrkernbetrieb (25.09.2026)
 
 Das Produktions-Overlay startet die API mit `MHVP_API_WORKERS` Uvicorn-Prozessen (Vorgabe 8), den

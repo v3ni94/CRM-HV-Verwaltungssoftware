@@ -218,4 +218,33 @@ def test_reports_and_exports(client: TestClient, world: World) -> None:
         ).status_code
         == 403
     )
-    assert client.post(f"{A}/ledgers/{ledger}/exports/datev", headers=tax).status_code == 409
+    assert (
+        client.post(
+            f"{A}/ledgers/{ledger}/exports/datev",
+            params={"start": "2026-01-01", "end": "2026-12-31"},
+            headers=tax,
+        ).status_code
+        == 409
+    )
+    _ok(
+        client.patch(
+            "/api/v1/tenant/billing-settings",
+            json={
+                "datev_consultant_number": "12345",
+                "datev_client_number": "6789",
+                "datev_chart_of_accounts": "skr03",
+                "datev_account_length": 4,
+            },
+            headers=h,
+        )
+    )
+    datev = _ok(
+        client.post(
+            f"{A}/ledgers/{ledger}/exports/datev",
+            params={"start": "2026-01-01", "end": "2026-12-31"},
+            headers=tax,
+        ),
+        201,
+    )
+    assert datev["content"].startswith('"EXTF";"7";"21";"Buchungsstapel"')
+    assert "001200" in datev["content"]  # CRM account number emitted unmapped (M18-02)

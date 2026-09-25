@@ -1,6 +1,22 @@
-# Handbuch Phase 1
+# Handbuch
 
-Stand: 23.09.2026, Meilenstein M9. Produktive Buchführung, Zahlungen und Abrechnungen sind gesperrt (Freigabestufen G1 bis G5, Abschnitt 18.0). Die Plattform zeigt keine Geldkennzahlen, solange G1 nicht freigegeben ist.
+Stand: 25.09.2026, Version 1.17.1. Produktive Buchführung, Zahlungen und Abrechnungen sind gesperrt (Freigabestufen G1 bis G5, Abschnitt 18.0). Die Plattform zeigt keine Geldkennzahlen, solange G1 nicht freigegeben ist.
+
+Dieses Handbuch richtet sich an Mitarbeiterinnen und Mitarbeiter der Hausverwaltung Müller GmbH. Es beschreibt die Oberfläche mit den dort verwendeten Bezeichnungen, nicht den Programmcode. Weiterführende Kapitel je Bereich:
+
+- [Start und Auswertungen](start-auswertungen.md)
+- [Tickets](tickets.md)
+- [Mail](mail.md)
+- [Kalender](kalender.md)
+- [Kontakte](kontakte.md)
+- [Belegeingang](belegeingang.md)
+- [Banking](banking.md)
+- [Makler](makler.md)
+- [Portal](portal.md)
+- [Einstellungen](einstellungen.md)
+- [Datenübernahmen](datenuebernahmen.md)
+
+Die folgenden Abschnitte fassen die Grundfunktionen der Startseite zusammen; Einzelheiten zu Auswertungen stehen im verlinkten Kapitel.
 
 ## Anmelden und Mandant wählen
 
