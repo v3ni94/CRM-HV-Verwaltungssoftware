@@ -23,4 +23,30 @@ describe("session return landing", () => {
       expect(await res.text()).toContain('location.replace("/start")');
     }
   });
+  it("refuses a path carrying a scheme before the query", async () => {
+    for (const next of [
+      "/\tevil.example",
+      "/\t/evil.example",
+      "javascript:alert(1)",
+      "/redirect:evil",
+      "/a\nb",
+    ]) {
+      const res = await GET(
+        new Request(
+          `https://crm.example/api/session/return?next=${encodeURIComponent(next)}`,
+        ),
+      );
+      expect(await res.text()).toContain('location.replace("/start")');
+    }
+  });
+  it("allows a colon in the query string but not in the path", async () => {
+    const res = await GET(
+      new Request(
+        `https://crm.example/api/session/return?next=${encodeURIComponent("/start?redirect=http://x")}`,
+      ),
+    );
+    expect(await res.text()).toContain(
+      'location.replace("/start?redirect=http://x")',
+    );
+  });
 });

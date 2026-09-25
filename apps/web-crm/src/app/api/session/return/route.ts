@@ -7,12 +7,17 @@
  *  paths are accepted so the route cannot be used as an open redirect. */
 export const dynamic = "force-dynamic";
 
+const SAFE_NEXT_PATTERN = /^\/[A-Za-z0-9._~/-]*(\?[^#\s]*)?$/;
+
 function safeNext(raw: string | null): string {
+  const path = raw?.split("?", 1)[0] ?? "";
   if (
     !raw ||
     !raw.startsWith("/") ||
     raw.startsWith("//") ||
-    raw.includes("\\")
+    raw.includes("\\") ||
+    path.includes(":") ||
+    !SAFE_NEXT_PATTERN.test(raw)
   )
     return "/start";
   return raw;
