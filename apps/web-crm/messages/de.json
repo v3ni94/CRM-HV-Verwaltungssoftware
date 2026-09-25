@@ -707,7 +707,45 @@
       "posted": "gebucht"
     },
     "receivablesLink": "Sollstellungen",
-    "dunningLink": "Mahnwesen"
+    "dunningLink": "Mahnwesen",
+    "reports": {
+      "link": "Auswertungen",
+      "title": "Auswertungen",
+      "description": "Liquiditätsvorschau, Zahlungen je Debitor und Erträge je Erlöskonto.",
+      "asOf": "Stichtag",
+      "start": "Zeitraum von",
+      "end": "Zeitraum bis",
+      "filter": "Anzeigen",
+      "liquidity": {
+        "title": "Liquiditätsvorschau 90 Tage",
+        "empty": "Keine Bank- oder Kassenkonten für diesen Buchungskreis.",
+        "freeFunds": "Freie Mittel",
+        "reserveFunds": "Rücklagen",
+        "segregatedDeposits": "Mietkautionen (getrennt verwahrt)",
+        "expectedInflows": "Erwartete Einzahlungen",
+        "expectedOutflows": "Erwartete Auszahlungen",
+        "projectedFreeFunds": "Projizierte freie Mittel",
+        "horizon": "Stichtag {asOf}, Vorschauhorizont bis {horizon}",
+        "kind": "Art",
+        "kinds": {
+          "free": "frei",
+          "reserve": "Rücklage",
+          "deposit": "Mietkaution"
+        }
+      },
+      "paymentsByDebtor": {
+        "title": "Zahlungen je Debitor ({start} bis {end})",
+        "empty": "Keine Zahlungseingänge im gewählten Zeitraum.",
+        "settled": "Ausgeglichen",
+        "total": "Summe"
+      },
+      "revenue": {
+        "title": "Erträge je Erlöskonto ({start} bis {end})",
+        "empty": "Keine Erträge im gewählten Zeitraum.",
+        "amount": "Betrag",
+        "total": "Summe"
+      }
+    }
   },
   "Hoa": {
     "title": "WEG-Verwaltung",
@@ -783,9 +821,48 @@
       "listingTitle": "Titel",
       "description": "Beschreibung",
       "price": "Preis",
+      "coldRent": "Kaltmiete",
+      "purchasePrice": "Kaufpreis",
       "additionalCosts": "Nebenkosten",
+      "heatingCosts": "Heizkosten",
+      "heatingInAdditionalCosts": "Heizkosten sind bereits Teil der Nebenkosten",
       "deposit": "Kaution",
+      "hoaFee": "Hausgeld",
+      "parkingPrice": "Stellplatzpreis",
+      "warmRent": "Warmmiete",
+      "warmRentHelp": "Wird serverseitig berechnet: Kaltmiete plus Nebenkosten plus Heizkosten, außer die Heizkosten sind bereits Teil der Nebenkosten. Anzeigewert bis zum Speichern nur eine Vorschau.",
       "availableFrom": "Verfügbar ab",
+      "objectType": "Objektart",
+      "objectTypeValues": {
+        "wohnung": "Wohnung",
+        "haus": "Haus",
+        "gewerbe": "Gewerbe",
+        "stellplatz": "Stellplatz",
+        "grundstueck": "Grundstück"
+      },
+      "addressRelease": "Adressfreigabe",
+      "addressReleaseValues": {
+        "vollstaendig": "Vollständige Adresse",
+        "nur_plz_ort": "Nur PLZ und Ort"
+      },
+      "addressReleaseHelp": "Bestimmt, ob die vollständige Anschrift oder nur PLZ und Ort in der Anzeige erscheinen.",
+      "energyStatus": "Energieausweis Status",
+      "energyStatusValues": {
+        "liegt_vor": "Liegt vor",
+        "nicht_erforderlich": "Nicht erforderlich",
+        "in_erstellung": "Wird erstellt"
+      },
+      "energyType": "Energieausweistyp",
+      "energyTypeValues": {
+        "bedarf": "Bedarfsausweis",
+        "verbrauch": "Verbrauchsausweis"
+      },
+      "energyValue": "Energiekennwert",
+      "energyClass": "Energieeffizienzklasse",
+      "energyYearOfInstallation": "Baujahr Heizanlage",
+      "energyValidUntil": "Gültig bis",
+      "energyIncludesHotWater": "Warmwasser enthalten",
+      "commissionType": "Provisionsart",
       "commissionNote": "Provisionshinweis",
       "energyNote": "Energieausweis (Hinweis)",
       "livingArea": "Wohnfläche (m²)",
@@ -794,7 +871,26 @@
       "notes": "Notizen",
       "submit": "Anlegen",
       "selectProperty": "Bitte Objekt wählen.",
-      "selectUnit": "Bitte Einheit wählen."
+      "selectUnit": "Bitte Einheit wählen.",
+      "sectionObject": "Objekt",
+      "sectionAddress": "Adresse und Freigabe",
+      "sectionPrices": "Preise",
+      "sectionEnergy": "Energieausweis",
+      "sectionFeatures": "Ausstattung",
+      "sectionMarketing": "Vermarktung",
+      "featureValues": {
+        "balkon": "Balkon",
+        "terrasse": "Terrasse",
+        "garten": "Garten",
+        "keller": "Keller",
+        "aufzug": "Aufzug",
+        "einbaukueche": "Einbauküche",
+        "gaeste_wc": "Gäste-WC",
+        "barrierefrei": "Barrierefrei",
+        "moebliert": "Möbliert",
+        "wg_geeignet": "WG-geeignet",
+        "haustiere_erlaubt": "Haustiere erlaubt"
+      }
     },
     "detail": {
       "back": "Zur Einheit",

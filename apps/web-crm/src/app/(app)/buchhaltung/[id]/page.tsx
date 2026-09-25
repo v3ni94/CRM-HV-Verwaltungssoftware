@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 
 import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -44,6 +45,9 @@ export default async function LedgerPage({ params }: { params: Promise<{ id: str
         }`}
       />
       {ledger.data.leading_system !== "mhvp" ? <p className={ui.notice}>{t("parallelNotice")}</p> : null}
+      <Link href={`/buchhaltung/${id}/auswertungen`} className={ui.button}>
+        {t("reports.link")}
+      </Link>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("trialBalance", { date: formatDate(today) })}</h2>
         <div className="overflow-x-auto">
