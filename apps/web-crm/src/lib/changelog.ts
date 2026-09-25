@@ -145,6 +145,20 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    version: "1.2.1",
+    date: "25.09.2026",
+    title: "SLA, Notfallkette und Bereitschaft",
+    changes: [
+      "SLA-Regeln je Ticketpriorität mit Reaktions- und Lösungszeit, Uhren laufen nur in der Geschäftszeit",
+      "Arbeitskalender mit Feiertagen, Uhren lassen sich pausieren und fortsetzen",
+      "Eskalationsstufen mit Benachrichtigung an Zuständige und Bereitschaft",
+      "Bereitschaftsplan mit aktueller Bereitschaft und Alarmen zum Quittieren",
+      "Einstellungsseite SLA und Bereitschaft, SLA-Ampel im Ticket",
+      "Erste Antwort per freigegebener Mail stoppt die Reaktionsuhr",
+      "Migration 0042, Plan docs/plans/M30-sla.md",
+    ],
+  },
+  {
     version: "1.2.0",
     date: "24.09.2026",
     title: "Postfach im CRM",
@@ -181,20 +195,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Tickets und Aufträge, Postfach, Portale für Mieter, Eigentümer und Dienstleister",
       "WEG-Wirtschaftsplan und Abrechnung, Versammlung, Beiratsprüfung, Mieterhöhung und Vermietung",
       "Immoware24-Import und KI-Onboarding",
-    ],
-  },
-  {
-    version: "1.4.0",
-    date: "25.09.2026",
-    title: "SLA, Notfallkette und Bereitschaft",
-    changes: [
-      "SLA-Regeln je Ticketpriorität mit Reaktions- und Lösungszeit, Uhren laufen nur in der Geschäftszeit",
-      "Arbeitskalender mit Feiertagen, Uhren lassen sich pausieren und fortsetzen",
-      "Eskalationsstufen mit Benachrichtigung an Zuständige und Bereitschaft",
-      "Bereitschaftsplan mit aktueller Bereitschaft und Alarmen zum Quittieren",
-      "Einstellungsseite SLA und Bereitschaft, SLA-Ampel im Ticket",
-      "Erste Antwort per freigegebener Mail stoppt die Reaktionsuhr",
-      "Migration 0042, Plan docs/plans/M30-sla.md",
     ],
   },
 ];
