@@ -30,8 +30,8 @@ async def _world(settings: Any) -> World:
         a, _ = await services.provision_tenant(factory, slug=f"sla-{RUN}", name=f"SLA {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
         for name, role in [
-            ("m21admin", "tenant_admin"),
-            ("m21read", "read_only"),
+            ("m21sla", "tenant_admin"),
+            ("m21slaread", "read_only"),
         ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
@@ -62,8 +62,8 @@ def _ok(response: Any, status: int = 200) -> Any:
 
 
 def test_ticket_creation_starts_clock_and_rules_govern_it(client: TestClient, world: World) -> None:
-    h = bearer(login(client, world, "m21admin"))
-    reader = bearer(login(client, world, "m21read"))
+    h = bearer(login(client, world, "m21sla"))
+    reader = bearer(login(client, world, "m21slaread"))
 
     rule = _ok(
         client.post(
@@ -99,7 +99,7 @@ def test_ticket_creation_starts_clock_and_rules_govern_it(client: TestClient, wo
             json={
                 "step_no": 1,
                 "after_minutes": 0,
-                "notify_user_ids": [str(world.users["m21admin"])],
+                "notify_user_ids": [str(world.users["m21sla"])],
                 "channel": "internal",
             },
             headers=h,
@@ -138,7 +138,7 @@ def test_ticket_creation_starts_clock_and_rules_govern_it(client: TestClient, wo
 
 
 def test_on_call_and_calendar(client: TestClient, world: World) -> None:
-    h = bearer(login(client, world, "m21admin"))
+    h = bearer(login(client, world, "m21sla"))
     from datetime import UTC, datetime, timedelta
 
     now = datetime.now(UTC)
@@ -146,7 +146,7 @@ def test_on_call_and_calendar(client: TestClient, world: World) -> None:
         client.post(
             "/api/v1/sla/on-call",
             json={
-                "user_id": str(world.users["m21admin"]),
+                "user_id": str(world.users["m21sla"]),
                 "starts_at": (now - timedelta(hours=1)).isoformat(),
                 "ends_at": (now + timedelta(hours=8)).isoformat(),
                 "note": "Wochenendbereitschaft",

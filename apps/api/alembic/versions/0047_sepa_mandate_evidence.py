@@ -25,4 +25,10 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_column("sepa_mandate", "evidence_note")
     op.drop_column("sepa_mandate", "evidence_channel")
+    # Mandates recorded without a PDF cannot exist in the old schema (document_id NOT NULL);
+    # the downgrade removes them explicitly instead of failing on SET NOT NULL. Forced RLS
+    # would hide every row from the migrator, so it is lifted for this one statement.
+    op.execute("ALTER TABLE sepa_mandate NO FORCE ROW LEVEL SECURITY")
+    op.execute("DELETE FROM sepa_mandate WHERE document_id IS NULL")
+    op.execute("ALTER TABLE sepa_mandate FORCE ROW LEVEL SECURITY")
     op.alter_column("sepa_mandate", "document_id", nullable=False)
