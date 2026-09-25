@@ -15,6 +15,40 @@ export type ProviderIn = S["mhvp__ai__schemas__ProviderIn"];
 export type ContactChoice = S["ContactChoice"];
 export type PropertyChoice = S["PropertyChoice"];
 export type DocumentOut = S["DocumentOut"];
+export type KnowledgeEntry = S["KnowledgeEntryOut"];
+export type KnowledgeEntryIn = S["KnowledgeEntryIn"];
+export type PreparationCorrectionIn = S["PreparationCorrectionIn"];
+
+/** Mail preparation result (Welle 3 item 14, `mhvp.communication.preparation`). The API returns
+ * it as a plain object (no dedicated OpenAPI schema, see `mhvp.communication.routers`). */
+export type PreparationDocument = {
+  document_id: string | null;
+  title: string;
+  source: "local" | "dms";
+  matched_keyword: string | null;
+  ref?: string;
+  url?: string | null;
+};
+export type Preparation = {
+  contact_id: string | null;
+  unit_id: string | null;
+  property_id: string | null;
+  role: string | null;
+  documents: PreparationDocument[];
+  draft: string | null;
+  confidence: string | null;
+  reasons: string[];
+  status: "ready" | "skipped" | "failed" | "none";
+  computed_at?: string | null;
+  correction?: {
+    contact_id: string | null;
+    unit_id: string | null;
+    property_id: string | null;
+    note: string;
+    corrected_by: string | null;
+    corrected_at: string;
+  };
+};
 
 export const CHAT_TASKS = ["extract_contacts", "extract_property", "answer_question", "summarize"] as const;
 export type ChatTask = (typeof CHAT_TASKS)[number];

@@ -7,7 +7,15 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from mhvp.ai.models import AiProvider, AiTask, Decision, ImportStatus, RunStatus
+from mhvp.ai.models import (
+    AiKnowledgeKind,
+    AiKnowledgeSource,
+    AiProvider,
+    AiTask,
+    Decision,
+    ImportStatus,
+    RunStatus,
+)
 
 
 class _In(BaseModel):
@@ -188,3 +196,56 @@ class ImportOut(_Out):
     created_at: datetime
     undone_at: datetime | None
     items: list[ImportItemOut] = Field(default_factory=list)
+
+
+# Knowledge base (Welle 3 item 14) --------------------------------------------------------
+
+
+class KnowledgeEntryIn(_In):
+    property_id: uuid.UUID | None = None
+    kind: AiKnowledgeKind
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=1)
+
+
+class KnowledgeEntryOut(_Out):
+    id: uuid.UUID
+    property_id: uuid.UUID | None
+    kind: AiKnowledgeKind
+    title: str
+    content: str
+    source: AiKnowledgeSource
+    created_at: datetime
+    updated_at: datetime
+    created_by: uuid.UUID | None
+
+
+# Mail preparation (Welle 3 item 14) -------------------------------------------------------
+
+
+class DocumentRef(_Out):
+    document_id: uuid.UUID
+    title: str
+    source: str  # "dms" or "local"
+    matched_keyword: str | None = None
+
+
+class PreparationOut(_Out):
+    message_id: uuid.UUID
+    contact_id: uuid.UUID | None
+    unit_id: uuid.UUID | None
+    property_id: uuid.UUID | None
+    role: str | None = Field(default=None, description="owner, tenant oder unbekannt")
+    documents: list[DocumentRef] = Field(default_factory=list)
+    draft: str | None = None
+    confidence: Decimal | None = None
+    reasons: list[str] = Field(default_factory=list)
+    status: str  # ready, skipped, failed, none
+    computed_at: datetime | None = None
+
+
+class PreparationCorrectionIn(_In):
+    contact_id: uuid.UUID | None = None
+    unit_id: uuid.UUID | None = None
+    property_id: uuid.UUID | None = None
+    note: str = Field(min_length=1, description="Was war falsch, was ist richtig")

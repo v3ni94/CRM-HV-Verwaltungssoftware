@@ -101,6 +101,46 @@ def suggest_message(tenant_id: str, message_id: str) -> str:
     )
 
 
+async def prepare_mail_once(
+    settings: Settings, tenant_id: uuid.UUID, message_id: uuid.UUID
+) -> str:
+    """Computes the mail preparation (contact/unit/property, scoped document search, reply
+    draft, Welle 3 item 14) and stores it under ``message.suggestion["preparation"]``. A failure
+    never leaves this function as an exception, matching ``suggest_message_once``."""
+    from mhvp.communication import preparation
+    from mhvp.communication.models import Message
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    try:
+        factory = create_session_factory(engine)
+        async with tenant_transaction(factory, tenant_id) as session:
+            message = await session.get(Message, message_id, with_for_update=True)
+            if message is None:
+                return "not_found"
+            try:
+                result = await preparation.prepare_for_message(session, settings, message)
+            except Exception as exc:
+                log.warning("mail preparation failed", extra={"message_id": str(message_id)})
+                result = {"status": "failed", "reason": str(exc)[:500]}
+            status = str(result.pop("status"))
+            suggestion = dict(message.suggestion or {})
+            suggestion["preparation"] = result
+            message.suggestion = suggestion
+            message.suggestion_status = message.suggestion_status or status
+            return status
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.communication.prepare_mail")
+def prepare_mail(tenant_id: str, message_id: str) -> str:
+    return asyncio.run(
+        prepare_mail_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(message_id))
+    )
+
+
 async def learn_playbook_once(
     settings: Settings, tenant_id: uuid.UUID, ticket_id: uuid.UUID
 ) -> str:

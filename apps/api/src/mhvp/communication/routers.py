@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.ai import schemas as ai_s
 from mhvp.communication import mail
 from mhvp.communication.models import Mailbox, MailboxUser, Message, Playbook
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
@@ -991,6 +992,73 @@ async def recompute_suggestion(
         row.suggestion, row.suggestion_status = result, status
         await session.flush()
         return _out(row)
+
+
+@router.post("/messages/{message_id}/preparation", summary="Mail-Vorbereitung berechnen")
+async def compute_preparation(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    """Resolves contact/unit/property, searches this property's documents (local and scoped
+    external DMS) and drafts a reply from the tenant's and property's knowledge base (Welle 3
+    item 14). A proposal only; never sent (rule 0.1.6)."""
+    from mhvp.communication import preparation
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)
+        result = await preparation.prepare_for_message(session, request.app.state.settings, row)
+        suggestion = dict(row.suggestion or {})
+        suggestion["preparation"] = result
+        row.suggestion = suggestion
+        await session.flush()
+        return result
+
+
+@router.get("/messages/{message_id}/preparation", summary="Mail-Vorbereitung lesen")
+async def get_preparation(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)
+        preparation_result = (row.suggestion or {}).get("preparation")
+        if preparation_result is None:
+            return {"status": "none"}
+        return dict(preparation_result)
+
+
+@router.post(
+    "/messages/{message_id}/preparation/correct", summary="Mail-Vorbereitung korrigieren"
+)
+async def correct_preparation(
+    message_id: uuid.UUID,
+    body: ai_s.PreparationCorrectionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Records a person's correction of the automatic resolution as a learned knowledge base
+    entry (kind ``correction``); the AI never approves this alone (rule 0.1.6)."""
+    from mhvp.communication import preparation
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)
+        entry = await preparation.record_correction(
+            session,
+            row,
+            contact_id=body.contact_id,
+            unit_id=body.unit_id,
+            property_id=body.property_id,
+            note=body.note,
+            user_id=principal.user_id,
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="message.preparation_corrected",
+            entity_type="message",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"knowledge_entry_id": str(entry.id)},
+        )
+        return {"knowledge_entry_id": entry.id}
 
 
 @router.get("/playbooks", summary="Playbooks")

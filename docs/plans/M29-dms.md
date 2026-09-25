@@ -40,3 +40,19 @@ das CRM bekommt den Reiter DMS, objektakte bleibt das System für Übernahme und
   Schreibzugriff auf dieses Repository in einer eigenen Sitzung).
 - Drive-Ordner-IDs je Objekt für den Absprung (liefert objektakte aus drive_nodes).
 - Datenschutz: Zugriff des CRM nur auf maskierte Felder; keine IBAN im Klartext.
+
+## Ergänzung 25.09.2026: Mail-Vorbereitung liest Paperless und Drive strikt je Objekt (M33, M20-05)
+
+Für die Mail-Vorbereitung (Welle 3 Punkt 14, `docs/plans/M33-ki-wissensbasis.md`) muss die
+Dokumentsuche eines eingehenden Vorgangs auf genau ein Objekt beschränkt bleiben, unabhängig von
+den Stufen oben:
+
+- **Paperless**: wiederverwendet die bestehende, bereits objektbeschränkte Suche aus M31
+  (`mhvp.documents.paperless_search.PaperlessSearch.list_by_object_number`, Custom-Field
+  `object_field_id`). Keine neue Schnittstelle.
+- **Google Drive**: neu, `mhvp.documents.dms.GoogleDriveStore.search`. Sucht zuerst den
+  Objektordner (`property_folder_name`, dieselbe Benennung wie beim Mirror-Job) unterhalb des
+  konfigurierten Wurzelordners, fragt danach nur Dateien innerhalb dieses einen Ordners ab. Kein
+  Zugriff auf den gesamten Drive-Bestand des Mandanten, siehe Regel `docs/rules/M20-05.md`.
+- Ohne verbundenes DMS oder ohne auflösbares Objekt bleibt die Dokumentliste leer; ein DMS-Fehler
+  unterbricht die Vorbereitung nicht.

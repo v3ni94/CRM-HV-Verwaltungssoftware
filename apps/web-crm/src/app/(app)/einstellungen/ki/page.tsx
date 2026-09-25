@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { KnowledgeSettings } from "@/components/ai/KnowledgeSettings";
 import { ProviderSettings } from "@/components/ai/ProviderSettings";
 import { RoutingSettings, type Strategy } from "@/components/ai/RoutingSettings";
 import { UsagePanel } from "@/components/ai/UsagePanel";
@@ -17,13 +18,16 @@ export default async function AiSettingsPage() {
   const me = await api.GET("/api/v1/auth/me");
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
-  const [providers, usage, routing] = await Promise.all([
+  const [providers, usage, routing, knowledge, properties] = await Promise.all([
     api.GET("/api/v1/ai/providers"),
     api.GET("/api/v1/ai/usage"),
     api.GET("/api/v1/ai/routing"),
+    api.GET("/api/v1/ai/knowledge"),
+    api.GET("/api/v1/properties"),
   ]);
   const anthropic = providers.data?.find((p) => p.provider === "anthropic") ?? null;
   const openai = providers.data?.find((p) => p.provider === "openai") ?? null;
+  const propertyOptions = (properties.data?.items ?? []).map((p) => ({ id: p.id, number: p.number, name: p.name }));
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
@@ -41,6 +45,7 @@ export default async function AiSettingsPage() {
         </>
       )}
       <p className="text-xs text-muted">{t("openaiHint")}</p>
+      <KnowledgeSettings initial={knowledge.data ?? []} properties={propertyOptions} />
     </div>
   );
 }

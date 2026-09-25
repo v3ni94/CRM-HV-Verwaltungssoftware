@@ -202,3 +202,43 @@ class AiMessage(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     task_run_id: Mapped[uuid.UUID | None] = _fk("ai_task_run.id", nullable=True)
     proposal_id: Mapped[uuid.UUID | None] = _fk("ai_proposal.id", nullable=True)
+
+
+class AiKnowledgeKind(StrEnum):
+    FILING_RULE = "filing_rule"
+    WORKFLOW = "workflow"
+    CORRECTION = "correction"
+    FACT = "fact"
+
+
+class AiKnowledgeSource(StrEnum):
+    MANUAL = "manual"
+    LEARNED = "learned"
+
+
+class AiKnowledgeEntry(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Knowledge base per tenant, optionally scoped to one property (Welle 3 item 14). Read only
+    context handed to AI runs (mail preparation, chat); never written by AI on its own (rule
+    0.1.6), only through a manual entry or a recorded correction (source ``learned``)."""
+
+    __tablename__ = "ai_knowledge_entry"
+    __table_args__ = (
+        Index("ix_ai_knowledge_entry_tenant_property", "tenant_id", "property_id"),
+        Index("ix_ai_knowledge_entry_tenant_kind", "tenant_id", "kind"),
+    )
+
+    property_id: Mapped[uuid.UUID | None] = _fk(
+        "property.id", nullable=True, ondelete="CASCADE"
+    )
+    kind: Mapped[AiKnowledgeKind] = mapped_column(
+        _enum(AiKnowledgeKind, "ai_knowledge_kind"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[AiKnowledgeSource] = mapped_column(
+        _enum(AiKnowledgeSource, "ai_knowledge_source"),
+        nullable=False,
+        default=AiKnowledgeSource.MANUAL,
+        server_default=AiKnowledgeSource.MANUAL.value,
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

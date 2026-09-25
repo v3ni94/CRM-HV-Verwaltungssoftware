@@ -54,6 +54,15 @@ class DocumentStore(Protocol):
     async def resolve(self, ref: str) -> str | None: ...
 
 
+@dataclass
+class MirrorHit:
+    """One document found in a mirror, scoped to a single property (11.2, M20-05)."""
+
+    ref: str
+    title: str
+    url: str | None = None
+
+
 def property_folder_name(
     number: str, city: str | None, street: str | None, house: str | None
 ) -> str:
@@ -221,3 +230,48 @@ class GoogleDriveStore:
 
     async def resolve(self, ref: str) -> str | None:
         return ref
+
+    async def search(self, property_folder: str, keywords: list[str]) -> list[MirrorHit]:
+        """Documents in exactly one object's Drive folder (11.2, M20-05): the query is scoped to
+        that folder's subtree and never lists the whole Drive account. Files under the
+        Vertretungsakte and every sub folder of ``DRIVE_FOLDERS`` are searched by name."""
+        escaped = property_folder.replace("\\", "\\\\").replace("'", "\\'")
+        folder_query = (
+            f"name = '{escaped}' and '{self._root}' in parents and mimeType = '{_FOLDER_MIME}' "
+            "and trashed = false"
+        )
+        found = await self._client.get(
+            self.FILES_URL,
+            params={
+                "q": folder_query,
+                "fields": "files(id,name)",
+                "supportsAllDrives": "true",
+                "includeItemsFromAllDrives": "true",
+            },
+            headers=await self._auth(),
+        )
+        _raise_for(found, "folder lookup")
+        folders = found.json().get("files", [])
+        if not folders:
+            return []
+        parent = str(folders[0]["id"])
+        name_query = " or ".join(f"name contains '{k}'" for k in keywords) if keywords else ""
+        query = f"'{parent}' in parents and trashed = false"
+        if name_query:
+            query += f" and ({name_query})"
+        response = await self._client.get(
+            self.FILES_URL,
+            params={
+                "q": query,
+                "fields": "files(id,name,webViewLink)",
+                "supportsAllDrives": "true",
+                "includeItemsFromAllDrives": "true",
+                "corpora": "allDrives",
+            },
+            headers=await self._auth(),
+        )
+        _raise_for(response, "search")
+        return [
+            MirrorHit(ref=str(f["id"]), title=str(f.get("name") or ""), url=f.get("webViewLink"))
+            for f in response.json().get("files", [])
+        ]

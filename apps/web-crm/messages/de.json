@@ -584,6 +584,35 @@
       "alternate": "Die Aufträge wechseln zwischen beiden Anbietern. Fällt einer aus oder ist sein Budget aufgebraucht, übernimmt der andere.",
       "anthropic_only": "Nur Anthropic wird genutzt. Ist das Budget aufgebraucht, werden neue Aufträge gesperrt, es findet kein Wechsel statt.",
       "openai_only": "Nur OpenAI wird genutzt. Ist das Budget aufgebraucht, werden neue Aufträge gesperrt, es findet kein Wechsel statt."
+    },
+    "knowledge": {
+      "title": "Wissensbasis",
+      "intro": "Ablageregeln, Arbeitsabläufe, Korrekturen und Fakten je Mandant und optional je Objekt. Fließt als Kontext in KI-Läufe ein, wird nie automatisch geschrieben.",
+      "filterProperty": "Objekt",
+      "filterKind": "Art",
+      "allProperties": "Alle Objekte",
+      "allKinds": "Alle Arten",
+      "global": "Mandantenweit",
+      "learned": "gelernt",
+      "empty": "Keine Einträge.",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "editTitle": "Eintrag bearbeiten",
+      "newTitle": "Neuer Eintrag",
+      "property": "Objekt (optional)",
+      "kindLabel": "Art",
+      "titleLabel": "Titel",
+      "contentLabel": "Inhalt",
+      "save": "Speichern",
+      "create": "Anlegen",
+      "cancel": "Abbrechen",
+      "required": "Titel und Inhalt sind erforderlich.",
+      "kind": {
+        "filing_rule": "Ablageregel",
+        "workflow": "Arbeitsablauf",
+        "correction": "Korrektur",
+        "fact": "Fakt"
+      }
     }
   },
   "Immoware24": {
@@ -1627,6 +1656,35 @@
         "failed": "Vorschlag fehlgeschlagen: {reason}",
         "skipped": "Kein Vorschlag: {reason}"
       }
+    },
+    "preparation": {
+      "title": "Vorbereitung",
+      "compute": "Vorbereiten",
+      "recompute": "Neu vorbereiten",
+      "empty": "Noch nicht vorbereitet.",
+      "role": "Rolle",
+      "roleUnknown": "unbekannt",
+      "roleValue": {
+        "owner": "Eigentümer",
+        "tenant": "Mieter"
+      },
+      "status": {
+        "ready": "bereit",
+        "skipped": "übersprungen",
+        "failed": "fehlgeschlagen",
+        "none": "keine"
+      },
+      "documents": "Gefundene Dokumente",
+      "documentSource": {
+        "local": "Ablage",
+        "dms": "DMS"
+      },
+      "draft": "Antwortentwurf",
+      "apply": "Übernehmen",
+      "correct": "Korrigieren",
+      "correctionNote": "Was war falsch, was ist richtig?",
+      "correctionSave": "Korrektur speichern",
+      "correctionRecorded": "Zuletzt korrigiert"
     }
   },
   "Platform": {

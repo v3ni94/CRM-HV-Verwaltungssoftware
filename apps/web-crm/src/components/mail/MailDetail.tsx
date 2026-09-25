@@ -12,6 +12,7 @@ import { ui } from "@/lib/ui";
 
 import { DraftEditor } from "./DraftEditor";
 import type { Message } from "./MailWorkspace";
+import { PreparationCard } from "./PreparationCard";
 import { SuggestionCard } from "./SuggestionCard";
 
 type Member = { user_id: string; display_name: string; email: string };
@@ -171,6 +172,7 @@ export function MailDetail({
       </div>
 
       {message.direction === "in" ? <SuggestionCard message={message} onUpdated={onUpdated} onDraftCreated={onCreated} /> : null}
+      {message.direction === "in" ? <PreparationCard message={message} onDraftCreated={onCreated} /> : null}
 
       {message.direction === "in" && invoiceForward?.decision === "suggest" && !forwarded ? (
         <div className={`${ui.card} flex flex-wrap items-center justify-between gap-2`}>

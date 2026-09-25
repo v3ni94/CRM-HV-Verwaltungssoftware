@@ -849,6 +849,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/knowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Wissensbasis */
+        get: operations["list_knowledge_api_v1_ai_knowledge_get"];
+        put?: never;
+        /** Wissenseintrag anlegen */
+        post: operations["create_knowledge_api_v1_ai_knowledge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/knowledge/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Wissenseintrag ändern */
+        put: operations["update_knowledge_api_v1_ai_knowledge__entry_id__put"];
+        post?: never;
+        /** Wissenseintrag löschen */
+        delete: operations["delete_knowledge_api_v1_ai_knowledge__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/proposals/{proposal_id}": {
         parameters: {
             query?: never;
@@ -4476,6 +4512,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/messages/{message_id}/preparation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mail-Vorbereitung lesen */
+        get: operations["get_preparation_api_v1_mail_messages__message_id__preparation_get"];
+        put?: never;
+        /**
+         * Mail-Vorbereitung berechnen
+         * @description Resolves contact/unit/property, searches this property's documents (local and scoped
+         *     external DMS) and drafts a reply from the tenant's and property's knowledge base (Welle 3
+         *     item 14). A proposal only; never sent (rule 0.1.6).
+         */
+        post: operations["compute_preparation_api_v1_mail_messages__message_id__preparation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/preparation/correct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail-Vorbereitung korrigieren
+         * @description Records a person's correction of the automatic resolution as a learned knowledge base
+         *     entry (kind ``correction``); the AI never approves this alone (rule 0.1.6).
+         */
+        post: operations["correct_preparation_api_v1_mail_messages__message_id__preparation_correct_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/messages/{message_id}/reject": {
         parameters: {
             query?: never;
@@ -7459,6 +7539,16 @@ export interface components {
             title: string;
         };
         /**
+         * AiKnowledgeKind
+         * @enum {string}
+         */
+        AiKnowledgeKind: "filing_rule" | "workflow" | "correction" | "fact";
+        /**
+         * AiKnowledgeSource
+         * @enum {string}
+         */
+        AiKnowledgeSource: "manual" | "learned";
+        /**
          * AiProvider
          * @enum {string}
          */
@@ -10422,6 +10512,44 @@ export interface components {
             /** Value Date */
             value_date?: string | null;
         };
+        /** KnowledgeEntryIn */
+        KnowledgeEntryIn: {
+            /** Content */
+            content: string;
+            kind: components["schemas"]["AiKnowledgeKind"];
+            /** Property Id */
+            property_id?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** KnowledgeEntryOut */
+        KnowledgeEntryOut: {
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["AiKnowledgeKind"];
+            /** Property Id */
+            property_id: string | null;
+            source: components["schemas"]["AiKnowledgeSource"];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** LeadingIn */
         LeadingIn: {
             leading_system: components["schemas"]["LeadingSystem"];
@@ -12205,6 +12333,20 @@ export interface components {
          * @enum {string}
          */
         PreferredChannel: "post" | "email" | "portal";
+        /** PreparationCorrectionIn */
+        PreparationCorrectionIn: {
+            /** Contact Id */
+            contact_id?: string | null;
+            /**
+             * Note
+             * @description Was war falsch, was ist richtig
+             */
+            note: string;
+            /** Property Id */
+            property_id?: string | null;
+            /** Unit Id */
+            unit_id?: string | null;
+        };
         /** PriceIn */
         PriceIn: {
             /** Module */
@@ -16305,6 +16447,135 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RunOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_knowledge_api_v1_ai_knowledge_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+                kind?: components["schemas"]["AiKnowledgeKind"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeEntryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_knowledge_api_v1_ai_knowledge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeEntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_knowledge_api_v1_ai_knowledge__entry_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeEntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_knowledge_api_v1_ai_knowledge__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -24311,6 +24582,109 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_preparation_api_v1_mail_messages__message_id__preparation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compute_preparation_api_v1_mail_messages__message_id__preparation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    correct_preparation_api_v1_mail_messages__message_id__preparation_correct_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreparationCorrectionIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

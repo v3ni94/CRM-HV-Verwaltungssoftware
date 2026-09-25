@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useTranslations } from "next-intl";
 
+import type { Preparation } from "@/lib/ai";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
@@ -46,6 +47,7 @@ export type Message = {
     playbook_id?: string | null;
     playbook_score?: number | null;
     reason?: string;
+    preparation?: Preparation;
   };
   suggestion_status: "none" | "pending" | "ready" | "failed" | "skipped";
 };

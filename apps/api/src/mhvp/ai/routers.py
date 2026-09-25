@@ -12,6 +12,8 @@ from mhvp.ai import gateway, imports, jobs, tasks
 from mhvp.ai import schemas as s
 from mhvp.ai.models import (
     AiConversation,
+    AiKnowledgeEntry,
+    AiKnowledgeKind,
     AiMessage,
     AiProposal,
     AiProvider,
@@ -562,3 +564,92 @@ async def undo_import(
         await imports.undo(session, row, principal.user_id)
         await _event(session, principal, "import_run.undone", row.id, status=row.status.value)
         return await _import_out(session, row)
+
+
+# Knowledge base (Welle 3 item 14): manually curated per tenant and optionally per property,
+# plus entries learned from mail preparation corrections (mhvp.communication.preparation). Read
+# only context for AI runs; never written by AI on its own (rule 0.1.6).
+
+
+async def _knowledge_entry(session: Any, entry_id: uuid.UUID) -> Any:
+    row = await session.get(AiKnowledgeEntry, entry_id)
+    if row is None or row.deleted_at is not None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    return row
+
+
+@router.get("/ai/knowledge", summary="Wissensbasis")
+async def list_knowledge(
+    request: Request,
+    property_id: uuid.UUID | None = None,
+    kind: AiKnowledgeKind | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[s.KnowledgeEntryOut]:
+    async with tenant_tx(request, principal) as session:
+        query = select(AiKnowledgeEntry).where(AiKnowledgeEntry.deleted_at.is_(None))
+        if property_id is not None:
+            query = query.where(AiKnowledgeEntry.property_id == property_id)
+        if kind is not None:
+            query = query.where(AiKnowledgeEntry.kind == kind)
+        rows = (
+            await session.scalars(query.order_by(AiKnowledgeEntry.created_at.desc()))
+        ).all()
+        return [s.KnowledgeEntryOut.model_validate(r) for r in rows]
+
+
+@router.post("/ai/knowledge", status_code=201, summary="Wissenseintrag anlegen")
+async def create_knowledge(
+    body: s.KnowledgeEntryIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> s.KnowledgeEntryOut:
+    from mhvp.properties.models import Property
+
+    async with tenant_tx(request, principal) as session:
+        if body.property_id is not None:
+            await _get(session, Property, body.property_id)
+        row = AiKnowledgeEntry(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            property_id=body.property_id,
+            kind=body.kind,
+            title=body.title,
+            content=body.content,
+        )
+        session.add(row)
+        await session.flush()
+        await _event(session, principal, "ai_knowledge.created", row.id, kind=body.kind.value)
+        return s.KnowledgeEntryOut.model_validate(row)
+
+
+@router.put("/ai/knowledge/{entry_id}", summary="Wissenseintrag ändern")
+async def update_knowledge(
+    entry_id: uuid.UUID,
+    body: s.KnowledgeEntryIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> s.KnowledgeEntryOut:
+    from mhvp.properties.models import Property
+
+    async with tenant_tx(request, principal) as session:
+        row = await _knowledge_entry(session, entry_id)
+        if body.property_id is not None:
+            await _get(session, Property, body.property_id)
+        row.property_id = body.property_id
+        row.kind = body.kind
+        row.title = body.title
+        row.content = body.content
+        row.updated_by = principal.user_id
+        await session.flush()
+        await _event(session, principal, "ai_knowledge.updated", row.id, kind=body.kind.value)
+        await session.refresh(row)
+        return s.KnowledgeEntryOut.model_validate(row)
+
+
+@router.delete("/ai/knowledge/{entry_id}", status_code=204, summary="Wissenseintrag löschen")
+async def delete_knowledge(
+    entry_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UNDO)
+) -> None:
+    async with tenant_tx(request, principal) as session:
+        row = await _knowledge_entry(session, entry_id)
+        row.deleted_at = datetime.now(UTC)
+        row.updated_by = principal.user_id
+        await _event(session, principal, "ai_knowledge.deleted", row.id)

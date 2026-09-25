@@ -90,6 +90,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^ai\/routing$/ },
   { method: "PUT", pattern: /^ai\/providers\/(anthropic|openai)$/ },
   { method: "POST", pattern: /^ai\/providers\/(anthropic|openai)\/release$/ },
+  // Wissensbasis je Mandant und Objekt (Welle 3 Punkt 14, M33).
+  { method: "GET", pattern: /^ai\/knowledge$/ },
+  { method: "POST", pattern: /^ai\/knowledge$/ },
+  { method: "PUT", pattern: new RegExp(`^ai/knowledge/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^ai/knowledge/${ID}$`) },
+  // Mail-Vorbereitung (M33).
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/preparation$`) },
+  { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/preparation$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/preparation/correct$`) },
   { method: "GET", pattern: /^imports$/ },
   { method: "GET", pattern: new RegExp(`^imports/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^imports/${ID}/undo$`) },
