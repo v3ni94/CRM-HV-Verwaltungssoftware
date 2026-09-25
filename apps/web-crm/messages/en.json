@@ -959,6 +959,10 @@
     "sla": {
       "title": "SLA and on-call",
       "description": "Rules, escalation steps, on-call schedule, calendar and emergency alerts."
+    },
+    "dms": {
+      "title": "DMS connection",
+      "description": "Manage Paperless credentials and field IDs, view Google Drive."
     }
   },
   "MailPlaybooks": {
@@ -1136,5 +1140,26 @@
       "unreachable": "Paperless unreachable",
       "notConfigured": "Paperless not configured"
     }
+  },
+  "DmsSettings": {
+    "title": "DMS connection",
+    "intro": "Connection between the CRM and document management. Immoware24 remains the master of record.",
+    "paperlessTitle": "Paperless",
+    "googleDriveTitle": "Google Drive",
+    "googleDriveHint": "Read only. This connection is not configured on this page.",
+    "enabled": "Active",
+    "baseUrl": "Base URL",
+    "baseUrlHint": "Only https is allowed.",
+    "token": "API token",
+    "tokenStored": "Token stored, enter a new one to change it",
+    "tokenMissing": "not stored",
+    "tokenHint": "The token is write only and never shown again. Leave empty to keep the stored token.",
+    "objectFieldId": "Field ID property number",
+    "companyFieldId": "Field ID company",
+    "save": "Save",
+    "saved": "Saved.",
+    "yes": "Yes",
+    "no": "No",
+    "notSet": "not set"
   }
 }

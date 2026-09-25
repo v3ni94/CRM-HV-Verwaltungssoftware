@@ -1699,6 +1699,10 @@
     "sla": {
       "title": "SLA und Bereitschaft",
       "description": "Regeln, Eskalationsstufen, Bereitschaftsplan, Kalender und Notfallalarme."
+    },
+    "dms": {
+      "title": "DMS-Anbindung",
+      "description": "Paperless-Zugangsdaten und Feld-IDs pflegen, Google Drive anzeigen."
     }
   },
   "Members": {
@@ -2034,5 +2038,26 @@
       "unreachable": "Paperless nicht erreichbar",
       "notConfigured": "Paperless nicht eingerichtet"
     }
+  },
+  "DmsSettings": {
+    "title": "DMS-Anbindung",
+    "intro": "Verbindung des CRM zum Dokumentenmanagement. Immoware24 bleibt Master der Stammdaten.",
+    "paperlessTitle": "Paperless",
+    "googleDriveTitle": "Google Drive",
+    "googleDriveHint": "Nur zur Anzeige. Die Anbindung wird nicht über diese Seite eingerichtet.",
+    "enabled": "Aktiv",
+    "baseUrl": "Basis-URL",
+    "baseUrlHint": "Nur https zulässig.",
+    "token": "API-Token",
+    "tokenStored": "Token hinterlegt, zum Ändern neu eingeben",
+    "tokenMissing": "nicht hinterlegt",
+    "tokenHint": "Der Token wird nur geschrieben und nie wieder angezeigt. Leer lassen, um den hinterlegten Token zu behalten.",
+    "objectFieldId": "Feld-ID Objektnummer",
+    "companyFieldId": "Feld-ID Gesellschaft",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "yes": "Ja",
+    "no": "Nein",
+    "notSet": "nicht hinterlegt"
   }
 }

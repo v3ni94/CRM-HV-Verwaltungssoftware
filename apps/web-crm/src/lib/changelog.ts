@@ -17,6 +17,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.6.0",
+    date: "25.09.2026",
+    title: "Einstellungsseite DMS-Anbindung",
+    changes: [
+      "Neue Einstellungsseite DMS-Anbindung: Paperless-Basis-URL, API-Token und die Feld-IDs Objektnummer und Gesellschaft im Browser pflegbar",
+      "Google Drive wird auf derselben Seite nur lesend angezeigt (aktiv, Basis-URL, Token hinterlegt)",
+      "Karte DMS-Anbindung in den Einstellungen, sichtbar mit dem Recht tenant_settings:update",
+    ],
+  },
+  {
     version: "1.5.1",
     date: "25.09.2026",
     title: "Korrektur Migration SLA",
