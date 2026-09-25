@@ -55,6 +55,10 @@ Fehlermeldungen aus `paperless_search.py` enthalten nie den Token (getestet in
 Aus Zeit-/Umgebungsgründen in dieser Sitzung umgesetzt: Backend-Service, Endpunkte, BFF-Allowlist,
 Unit-Tests für `PaperlessSearch`, Doku. **Nicht umgesetzt** (siehe Bericht des Agenten): die
 Frontend-Komponente `DmsDocumentsPanel.tsx`, die Einbindung in Ticket- und Objektseite, die
-Pflege der Feld-IDs in der DMS-Einstellungsseite, Übersetzungen de/en, sowie eine
-Integrationstest-Datei für die Router-Endpunkte (in dieser Umgebung ohne lokales Postgres nicht
-lauffähig zu verifizieren). Das sollte in einem Folgeschritt nachgezogen werden.
+Pflege der Feld-IDs in der DMS-Einstellungsseite, sowie Übersetzungen de/en. Das sollte in einem
+Folgeschritt nachgezogen werden.
+
+Integrationstests für die Router-Endpunkte liegen inzwischen vor: `tests/integration/
+test_m31_dms.py` (Paperless per `httpx.MockTransport` gefakt; Happy Path Objekt- und
+Ticketsuche, Datei-Proxy, Berechtigung, Mandantentrennung, Validierung, Verhalten ohne
+gepflegte `object_field_id` bzw. ohne eingerichtete Anbindung).

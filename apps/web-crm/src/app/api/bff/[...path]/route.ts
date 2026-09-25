@@ -85,6 +85,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^imports\/immoware24\/(mappings|files)$/ },
   { method: "GET", pattern: new RegExp(`^imports/immoware24/files/${ID}(/rows|/reconciliation)?$`) },
   { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/(validate|test-run|apply)$`) },
+  // Evaluations (M18, 7.5): liquidity, payments by debtor, revenue; read only.
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/liquidity$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/payments-by-debtor$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/revenue$`) },
   // Receivable runs (M13): preview and posting; postings stay non leading until G1.
   { method: "POST", pattern: /^accounting\/receivable-runs$/ },
   { method: "GET", pattern: new RegExp(`^accounting/receivable-runs/${ID}$`) },
