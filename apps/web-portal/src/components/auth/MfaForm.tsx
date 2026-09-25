@@ -47,7 +47,7 @@ export function MfaForm({ setup, next }: { setup: boolean; next?: string }) {
       setError(result.message);
       return;
     }
-    const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/uebergabe";
+    const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/start";
     // Portal users belong to exactly one tenant; without a tenant in the token nothing works.
     if (!result.data.tenant_id) {
       setError(t("noTenant"));
