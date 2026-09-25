@@ -245,3 +245,62 @@ def test_sms_gateway_config_hides_secret_and_test_reports_errors(
     reader = bearer(login(client, world, "m21read"))
     denied = client.put("/api/v1/sla/sms-gateway", json={"enabled": False}, headers=reader)
     assert denied.status_code == 403
+
+
+def test_whatsapp_config_hides_secret_and_test_reports_errors(
+    client: TestClient, world: World
+) -> None:
+    """M35: GET/PUT /sla/whatsapp-config ohne Secret in der Antwort, ausgeschaltete
+    Konfiguration verlangt keine Vollständigkeit, eine Testnachricht ohne aktive Konfiguration
+    liefert einen Fehlertext, Lesende dürfen nicht ändern."""
+    h = bearer(login(client, world, "m21admin"))
+    empty = _ok(client.get("/api/v1/sla/whatsapp-config", headers=h))
+    assert empty["enabled"] is False
+    assert empty["access_token_set"] is False
+    assert empty["template_names"] == {}
+
+    incomplete = client.put(
+        "/api/v1/sla/whatsapp-config",
+        json={"enabled": True, "phone_number_id": "123"},
+        headers=h,
+    )
+    assert incomplete.status_code == 422, incomplete.text
+
+    saved = _ok(
+        client.put(
+            "/api/v1/sla/whatsapp-config",
+            json={
+                "enabled": False,
+                "phone_number_id": "1234567890",
+                "whatsapp_business_account_id": "999",
+                "access_token": "geheim-wa-m35",
+                "template_names": {"sla_escalation": "sla_eskalation_de", "test": "test_de"},
+                "template_language": "de",
+                "sms_fallback": True,
+            },
+            headers=h,
+        )
+    )
+    assert saved["access_token_set"] is True
+    assert "geheim-wa-m35" not in str(saved)
+    kept = _ok(
+        client.put(
+            "/api/v1/sla/whatsapp-config",
+            json={**{k: v for k, v in saved.items() if k != "access_token_set"}},
+            headers=h,
+        )
+    )
+    assert kept["access_token_set"] is True
+
+    result = _ok(
+        client.post(
+            "/api/v1/sla/whatsapp-config/test", json={"to": "+49 170 1234567"}, headers=h
+        )
+    )
+    assert result["ok"] is False
+    assert "deaktiviert" in result["error"]
+    assert "geheim-wa-m35" not in str(result)
+
+    reader = bearer(login(client, world, "m21read"))
+    denied = client.put("/api/v1/sla/whatsapp-config", json={"enabled": False}, headers=reader)
+    assert denied.status_code == 403

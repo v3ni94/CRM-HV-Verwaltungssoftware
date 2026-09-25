@@ -8,6 +8,7 @@ import {
   type OnCallSchedule,
   type SlaRule,
   type SmsGatewayConfig,
+  type WhatsAppConfig,
   type WorkCalendar,
 } from "@/components/sla/SlaSettings";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
@@ -32,7 +33,7 @@ export default async function SlaSettingsPage() {
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("sla:read")) notFound();
   const canManage = permissions.includes("sla:update");
-  const [rules, onCall, currentOnCall, calendar, alerts, members, smsGateway] = await Promise.all([
+  const [rules, onCall, currentOnCall, calendar, alerts, members, smsGateway, whatsappConfig] = await Promise.all([
     getJson<SlaRule[]>("/api/v1/sla/rules", []),
     getJson<OnCallSchedule[]>("/api/v1/sla/on-call", []),
     getJson<OnCallSchedule | null>("/api/v1/sla/on-call/current", null),
@@ -54,6 +55,15 @@ export default async function SlaSettingsPage() {
       body_template: null,
       sender: null,
     }),
+    getJson<WhatsAppConfig>("/api/v1/sla/whatsapp-config", {
+      enabled: false,
+      phone_number_id: null,
+      whatsapp_business_account_id: null,
+      access_token_set: false,
+      template_names: {},
+      template_language: "de",
+      sms_fallback: true,
+    }),
   ]);
   return (
     <div className="flex flex-col gap-4">
@@ -67,6 +77,7 @@ export default async function SlaSettingsPage() {
         members={(members.data ?? []) as Member[]}
         canManage={canManage}
         smsGateway={smsGateway}
+        whatsappConfig={whatsappConfig}
       />
     </div>
   );

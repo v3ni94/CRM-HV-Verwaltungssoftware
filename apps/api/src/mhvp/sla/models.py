@@ -71,6 +71,7 @@ class AlertChannel(StrEnum):
     EMAIL = "email"
     INTERNAL = "internal"
     SMS = "sms"
+    WHATSAPP = "whatsapp"
 
 
 class SlaRule(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -196,6 +197,60 @@ class SmsGateway(IdMixin, TimestampMixin, TenantMixin, Base):
     auth_header_value: Mapped[str | None] = mapped_column(EncryptedText())
     body_template: Mapped[str | None] = mapped_column(Text)
     sender: Mapped[str | None] = mapped_column(String(40))
+
+
+class WhatsAppConfig(IdMixin, TimestampMixin, TenantMixin, Base):
+    """WhatsApp Business Platform (Meta Cloud API) je Mandant (M35). Der Versand ist ohne
+    freigegebene Vorlage nicht möglich (kein Freitext, docs/rules/M21-05.md): ``template_names``
+    ordnet einen Alarmtyp (``sla_escalation``, ``emergency``, ``test``) einem bei Meta
+    freigegebenen Vorlagennamen zu. ``access_token`` ist wie andere Zugangsdaten verschlüsselt
+    und wird nie protokolliert (rule 0.1.13)."""
+
+    __tablename__ = "sla_whatsapp_config"
+    __table_args__ = (UniqueConstraint("tenant_id"),)
+
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    phone_number_id: Mapped[str | None] = mapped_column(String(64))
+    whatsapp_business_account_id: Mapped[str | None] = mapped_column(String(64))
+    access_token: Mapped[str | None] = mapped_column(EncryptedText())
+    # {"sla_escalation": "sla_eskalation_de", "emergency": "notfall_de", "test": "test_de"}
+    template_names: Mapped[dict[str, str]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'")
+    )
+    template_language: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="de", server_default="de"
+    )
+    # SMS bleibt Rückfallkanal, wenn WhatsApp-Zustellung fehlschlägt (Betreiberwunsch 25.09.2026).
+    sms_fallback: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+
+
+class WhatsAppDelivery(IdMixin, TenantMixin, Base):
+    """Zustellstatus einer WhatsApp-Nachricht (Meta-Nachrichten-ID, Status aus Antwort und
+    späteren Statuswebhooks: sent, delivered, read, failed)."""
+
+    __tablename__ = "sla_whatsapp_delivery"
+
+    alert_id: Mapped[uuid.UUID | None] = _fk("sla_emergency_alert.id", ondelete="CASCADE")
+    wa_message_id: Mapped[str | None] = mapped_column(String(128), index=True)
+    to: Mapped[str] = mapped_column(String(40), nullable=False)
+    template_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="queued", server_default="queued"
+    )
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=text("now()"),
+        onupdate=text("now()"),
+        nullable=False,
+    )
 
 
 class WorkCalendar(IdMixin, TimestampMixin, TenantMixin, Base):

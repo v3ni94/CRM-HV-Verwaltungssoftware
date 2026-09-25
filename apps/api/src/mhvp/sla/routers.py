@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.config import get_settings
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.sla.channels import (
     SMS_TEST_TEXT,
@@ -29,9 +30,12 @@ from mhvp.sla.models import (
     SlaColor,
     SlaRule,
     SmsGateway,
+    WhatsAppConfig,
     WorkCalendar,
 )
 from mhvp.sla.service import get_calendar, pause_clock, recompute_color, resume_clock
+from mhvp.sla.whatsapp import WHATSAPP_TEST_TEMPLATE_KEY, send_whatsapp
+from mhvp.sla.whatsapp import get_config as get_whatsapp_config
 from mhvp.tickets.models import Priority
 
 router = APIRouter(prefix="/sla", tags=["SLA und Bereitschaft"])
@@ -97,6 +101,25 @@ class SmsGatewayIn(_In):
 
 
 class SmsTestIn(_In):
+    to: str = Field(min_length=3, max_length=40, pattern=r"^\+?[0-9 ()/-]+$")
+
+
+class WhatsAppConfigIn(_In):
+    enabled: bool = False
+    phone_number_id: str | None = Field(default=None, max_length=64)
+    whatsapp_business_account_id: str | None = Field(default=None, max_length=64)
+    access_token: str | None = Field(
+        default=None,
+        max_length=4000,
+        description="Nur beim Setzen übertragen; leer lassen behält den gespeicherten Wert, "
+        "leerer String löscht ihn. Wird nie zurückgegeben.",
+    )
+    template_names: dict[str, str] = Field(default_factory=dict)
+    template_language: str = Field(default="de", max_length=10)
+    sms_fallback: bool = True
+
+
+class WhatsAppTestIn(_In):
     to: str = Field(min_length=3, max_length=40, pattern=r"^\+?[0-9 ()/-]+$")
 
 
@@ -183,6 +206,19 @@ def _gateway_out(row: SmsGateway | None) -> dict[str, Any]:
         "auth_header_set": bool(row and row.auth_header_value),
         "body_template": row.body_template if row else None,
         "sender": row.sender if row else None,
+    }
+
+
+def _whatsapp_out(row: WhatsAppConfig | None) -> dict[str, Any]:
+    """Konfiguration ohne Secret; ``access_token_set`` zeigt nur, ob ein Wert gespeichert ist."""
+    return {
+        "enabled": bool(row and row.enabled),
+        "phone_number_id": row.phone_number_id if row else None,
+        "whatsapp_business_account_id": row.whatsapp_business_account_id if row else None,
+        "access_token_set": bool(row and row.access_token),
+        "template_names": (row.template_names if row else None) or {},
+        "template_language": row.template_language if row else "de",
+        "sms_fallback": row.sms_fallback if row else True,
     }
 
 
@@ -574,6 +610,70 @@ async def send_test_sms(
     async with tenant_tx(request, principal) as session:
         gateway = await get_gateway(session, principal.tenant_id)
         error = await send_sms(gateway, body.to, SMS_TEST_TEXT)
+    return {"ok": error is None, "error": error}
+
+
+# --- WhatsApp (M35) --------------------------------------------------------------
+# Kein Freitext: der Versand geht ausschließlich über bei Meta freigegebene Vorlagen, da eine
+# vom Unternehmen begonnene Nachricht außerhalb des 24-Stunden-Servicefensters bei WhatsApp nur
+# als Vorlagennachricht möglich ist (docs/rules/M21-05.md, docs/integrations/whatsapp.md).
+
+
+@router.get("/whatsapp-config", summary="WhatsApp-Konfiguration des Mandanten (ohne Secret)")
+async def get_whatsapp_config_endpoint(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        return _whatsapp_out(await get_whatsapp_config(session, principal.tenant_id))
+
+
+@router.put("/whatsapp-config", summary="WhatsApp-Konfiguration einrichten oder ändern")
+async def put_whatsapp_config(
+    body: WhatsAppConfigIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> dict[str, Any]:
+    if body.enabled and (not body.phone_number_id or not body.whatsapp_business_account_id):
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Für eine aktive Konfiguration sind Telefonnummer-ID und WABA-ID nötig.",
+        )
+    async with tenant_tx(request, principal) as session:
+        row = await get_whatsapp_config(session, principal.tenant_id)
+        if row is None:
+            row = WhatsAppConfig(tenant_id=principal.tenant_id, created_by=principal.user_id)
+            session.add(row)
+        row.enabled = body.enabled
+        row.phone_number_id = body.phone_number_id
+        row.whatsapp_business_account_id = body.whatsapp_business_account_id
+        if body.access_token is not None:
+            row.access_token = body.access_token or None
+        row.template_names = body.template_names
+        row.template_language = body.template_language
+        row.sms_fallback = body.sms_fallback
+        row.updated_by = principal.user_id
+        await session.flush()
+        return _whatsapp_out(row)
+
+
+@router.post(
+    "/whatsapp-config/test",
+    summary="Testnachricht (freigegebene Vorlage) an eine Mitarbeiter-Mobilnummer senden",
+)
+async def send_whatsapp_test(
+    body: WhatsAppTestIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        config = await get_whatsapp_config(session, principal.tenant_id)
+        if config is None or not config.enabled:
+            return {"ok": False, "error": "WhatsApp nicht eingerichtet oder deaktiviert."}
+        error = await send_whatsapp(
+            session,
+            get_settings(),
+            config,
+            alert_id=None,
+            to=body.to,
+            alert_type=WHATSAPP_TEST_TEMPLATE_KEY,
+            params=["Testnachricht MH Verwaltungsplattform"],
+        )
     return {"ok": error is None, "error": error}
 
 

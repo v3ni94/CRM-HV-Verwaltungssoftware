@@ -138,6 +138,7 @@ class ConsentKind(StrEnum):
     PORTAL_TERMS = "portal_terms"
     EMAIL_DELIVERY = "email_delivery"
     MARKETING = "marketing"
+    WHATSAPP = "whatsapp"
 
 
 class Contact(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -156,6 +157,14 @@ class Contact(IdMixin, TimestampMixin, TenantMixin, Base):
             "roles <@ ARRAY['eigentuemer', 'mieter', 'verwalter', 'dienstleister', 'bank', "
             "'sonstiges']::text[]",
             name="ck_contact_roles_values",
+        ),
+        Index(
+            "uq_contact_source",
+            "tenant_id",
+            "source_system",
+            "source_id",
+            unique=True,
+            postgresql_where=text("source_system IS NOT NULL AND source_id IS NOT NULL"),
         ),
     )
 
@@ -192,6 +201,8 @@ class Contact(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    source_system: Mapped[str | None] = mapped_column(String(32))
+    source_id: Mapped[str | None] = mapped_column(String(64))
 
 
 def _contact_fk() -> Mapped[uuid.UUID]:

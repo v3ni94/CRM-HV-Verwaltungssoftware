@@ -9,7 +9,7 @@ import { ui } from "@/lib/ui";
 
 export type Priority = "low" | "normal" | "high" | "urgent" | "immediate";
 export type ClockType = "business" | "calendar";
-export type AlertChannel = "email" | "internal" | "sms";
+export type AlertChannel = "email" | "internal" | "sms" | "whatsapp";
 
 export type SlaRule = {
   id: string;
@@ -72,6 +72,26 @@ export const EMPTY_SMS_GATEWAY: SmsGatewayConfig = {
   sender: null,
 };
 
+export type WhatsAppConfig = {
+  enabled: boolean;
+  phone_number_id: string | null;
+  whatsapp_business_account_id: string | null;
+  access_token_set: boolean;
+  template_names: Record<string, string>;
+  template_language: string;
+  sms_fallback: boolean;
+};
+
+export const EMPTY_WHATSAPP_CONFIG: WhatsAppConfig = {
+  enabled: false,
+  phone_number_id: null,
+  whatsapp_business_account_id: null,
+  access_token_set: false,
+  template_names: {},
+  template_language: "de",
+  sms_fallback: true,
+};
+
 export type WorkCalendar = {
   weekdays: number[];
   opens_at: string;
@@ -84,7 +104,8 @@ export type Member = { user_id: string; email: string; display_name: string; sta
 
 const PRIORITIES: Priority[] = ["low", "normal", "high", "urgent", "immediate"];
 const CLOCK_TYPES: ClockType[] = ["business", "calendar"];
-const CHANNELS: AlertChannel[] = ["email", "internal", "sms"];
+const CHANNELS: AlertChannel[] = ["email", "internal", "sms", "whatsapp"];
+const WHATSAPP_ALERT_TYPES = ["sla_escalation", "emergency", "test"] as const;
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 
 function memberLabel(members: Member[], userId: string): string {
@@ -946,7 +967,180 @@ function SmsGatewayTab({ initial, canManage }: { initial: SmsGatewayConfig; canM
   );
 }
 
-const TABS = ["rules", "onCall", "calendar", "sms", "alerts"] as const;
+function WhatsAppTab({ initial, canManage }: { initial: WhatsAppConfig; canManage: boolean }) {
+  const t = useTranslations("Sla");
+  const [config, setConfig] = useState(initial);
+  const [secret, setSecret] = useState("");
+  const [clearSecret, setClearSecret] = useState(false);
+  const [testTo, setTestTo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const set = <K extends keyof WhatsAppConfig>(key: K, value: WhatsAppConfig[K]) =>
+    setConfig((prev) => ({ ...prev, [key]: value }));
+
+  const setTemplate = (alertType: string, name: string) =>
+    setConfig((prev) => ({ ...prev, template_names: { ...prev.template_names, [alertType]: name } }));
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const res = await bff<WhatsAppConfig>("/api/bff/sla/whatsapp-config", {
+      method: "PUT",
+      body: JSON.stringify({
+        enabled: config.enabled,
+        phone_number_id: config.phone_number_id?.trim() || null,
+        whatsapp_business_account_id: config.whatsapp_business_account_id?.trim() || null,
+        access_token: clearSecret ? "" : secret || null,
+        template_names: config.template_names,
+        template_language: config.template_language,
+        sms_fallback: config.sms_fallback,
+      }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      setConfig(res.data);
+      setSecret("");
+      setClearSecret(false);
+      setNotice(t("whatsapp.saved"));
+    } else setError(res.message);
+  };
+
+  const test = async () => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const res = await bff<{ ok: boolean; error: string | null }>("/api/bff/sla/whatsapp-config/test", {
+      method: "POST",
+      body: JSON.stringify({ to: testTo.trim() }),
+    });
+    setBusy(false);
+    if (!res.ok) setError(res.message);
+    else if (res.data.ok) setNotice(t("whatsapp.testOk"));
+    else setError(t("whatsapp.testFailed", { error: res.data.error ?? "" }));
+  };
+
+  return (
+    <section className={`${ui.card} flex flex-col gap-3`}>
+      <h2 className="text-sm font-semibold">{t("whatsapp.title")}</h2>
+      <p className="text-xs text-muted">{t("whatsapp.intro")}</p>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          disabled={!canManage}
+          checked={config.enabled}
+          onChange={(e) => set("enabled", e.target.checked)}
+        />
+        {t("whatsapp.enabled")}
+      </label>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("whatsapp.phoneNumberId")}</span>
+          <input
+            className={ui.input}
+            disabled={!canManage}
+            value={config.phone_number_id ?? ""}
+            onChange={(e) => set("phone_number_id", e.target.value)}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("whatsapp.wabaId")}</span>
+          <input
+            className={ui.input}
+            disabled={!canManage}
+            value={config.whatsapp_business_account_id ?? ""}
+            onChange={(e) => set("whatsapp_business_account_id", e.target.value)}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("whatsapp.accessToken")}</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            className={ui.input}
+            disabled={!canManage || clearSecret}
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("whatsapp.templateLanguage")}</span>
+          <input
+            className={ui.input}
+            maxLength={10}
+            disabled={!canManage}
+            value={config.template_language}
+            onChange={(e) => set("template_language", e.target.value)}
+          />
+        </label>
+      </div>
+      {config.access_token_set ? (
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+          <span>{t("whatsapp.accessTokenSet")}</span>
+          {canManage ? (
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={clearSecret} onChange={(e) => setClearSecret(e.target.checked)} />
+              {t("whatsapp.accessTokenClear")}
+            </label>
+          ) : null}
+        </div>
+      ) : null}
+      <fieldset className="flex flex-col gap-2">
+        <legend className={ui.label}>{t("whatsapp.templates")}</legend>
+        <p className="text-xs text-muted">{t("whatsapp.templatesHint")}</p>
+        {WHATSAPP_ALERT_TYPES.map((alertType) => (
+          <label key={alertType} className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="w-40 shrink-0">{t(`whatsapp.alertType.${alertType}`)}</span>
+            <input
+              className={ui.input}
+              disabled={!canManage}
+              value={config.template_names[alertType] ?? ""}
+              onChange={(e) => setTemplate(alertType, e.target.value)}
+            />
+          </label>
+        ))}
+      </fieldset>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          disabled={!canManage}
+          checked={config.sms_fallback}
+          onChange={(e) => set("sms_fallback", e.target.checked)}
+        />
+        {t("whatsapp.smsFallback")}
+      </label>
+      {canManage ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <button type="button" className={ui.primary} disabled={busy} onClick={() => void save()}>
+            {t("whatsapp.save")}
+          </button>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("whatsapp.testTo")}</span>
+            <input type="tel" className={ui.input} value={testTo} onChange={(e) => setTestTo(e.target.value)} />
+          </label>
+          <button
+            type="button"
+            className={ui.button}
+            disabled={busy || testTo.trim().length < 3}
+            onClick={() => void test()}
+          >
+            {t("whatsapp.test")}
+          </button>
+        </div>
+      ) : null}
+      {notice ? <p className="text-xs text-success-fg">{notice}</p> : null}
+      {error ? (
+        <p role="alert" className={ui.alert}>
+          {error}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+const TABS = ["rules", "onCall", "calendar", "sms", "whatsapp", "alerts"] as const;
 type Tab = (typeof TABS)[number];
 
 export function SlaSettings({
@@ -958,6 +1152,7 @@ export function SlaSettings({
   members,
   canManage,
   smsGateway = EMPTY_SMS_GATEWAY,
+  whatsappConfig = EMPTY_WHATSAPP_CONFIG,
 }: {
   rules: SlaRule[];
   onCall: OnCallSchedule[];
@@ -967,6 +1162,7 @@ export function SlaSettings({
   members: Member[];
   canManage: boolean;
   smsGateway?: SmsGatewayConfig;
+  whatsappConfig?: WhatsAppConfig;
 }) {
   const t = useTranslations("Sla");
   const [tab, setTab] = useState<Tab>("rules");
@@ -992,6 +1188,7 @@ export function SlaSettings({
       ) : null}
       {tab === "calendar" ? <CalendarTab initial={calendar} canManage={canManage} /> : null}
       {tab === "sms" ? <SmsGatewayTab initial={smsGateway} canManage={canManage} /> : null}
+      {tab === "whatsapp" ? <WhatsAppTab initial={whatsappConfig} canManage={canManage} /> : null}
       {tab === "alerts" ? <AlertsTab initial={alerts} /> : null}
     </div>
   );

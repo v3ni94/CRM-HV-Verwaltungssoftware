@@ -433,6 +433,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | M30 Folgeausbau |
 | Datum | 25.09.2026 |
 
+## A-040
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Mitarbeiter (Mandanten-Mitglieder mit hinterlegter Mobilnummer) benötigen für eine WhatsApp-Nachricht der SLA-Eskalation keine erfasste Einwilligung nach dem Kontakt-Einwilligungsmodell (`ConsentKind.WHATSAPP`); sie gelten als interner Kanal, wie bereits bei SMS und E-Mail der Eskalation. Eine Einwilligung ist nur für den Versand an Kontakte (Mieter, Eigentümer) vorgesehen (`mhvp.sla.whatsapp.has_whatsapp_consent`), wird aber von der SLA-Eskalation aktuell nicht aufgerufen, da diese ausschließlich Mitarbeiter und Bereitschaft benachrichtigt. |
+| Begründung | Auftrag 25.09.2026 (WhatsApp-Kanal neben SMS); gleiche Einordnung wie die bestehenden internen Eskalationskanäle, keine eigenständige rechtliche Prüfung des arbeitsrechtlichen Einzelfalls |
+| Kennzeichnung | unkritisch für den jetzigen Umfang (nur interne Eskalation); bei künftiger Nutzung des Kanals für Kontakt-Benachrichtigungen zu überprüfen |
+| Betroffene Bereiche | SLA-Eskalation, WhatsApp-Kanal (docs/rules/M21-05.md) |
+| Überprüfung spätestens bei Meilenstein | vor einer Erweiterung auf Kontakt-Benachrichtigungen außerhalb der SLA-Eskalation |
+| Datum | 25.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

@@ -14,7 +14,15 @@
   Stufe 2 intern und E-Mail, Stufe 3 intern, E-Mail und SMS), E-Mail als Systemmail über
   `communication.transport` ohne Freigabeprozess, SMS über das HTTP-Gateway `sla_sms_gateway`.
   Zustellung in `EmergencyAlert.delivered_at`, Fehler ohne Zugangsdaten in `delivery_error`.
-- `routers.py`: `/api/v1/sla/...` (Regeln, Uhren, Bereitschaft, Alarme, Kalender, SMS-Gateway).
+- `whatsapp.py` / `whatsapp_webhook.py` (M21-05, Betreiberauftrag 25.09.2026): zusätzlicher
+  Kanal `AlertChannel.WHATSAPP` über die Meta Cloud API (`sla_whatsapp_config` je Mandant,
+  Standard aus), ausschließlich freigegebene Vorlagen (kein Freitext), SMS als abschaltbarer
+  Rückfall (`sms_fallback`). Zustellstatus in `sla_whatsapp_delivery`, aktualisiert durch den
+  Statuswebhook `/api/v1/whatsapp/webhook` (Verifizierung per `hub.verify_token`, Statusupdate
+  per `X-Hub-Signature-256`). Regeln und Setup: `docs/rules/M21-05.md`,
+  `docs/integrations/whatsapp.md`.
+- `routers.py`: `/api/v1/sla/...` (Regeln, Uhren, Bereitschaft, Alarme, Kalender, SMS-Gateway,
+  WhatsApp-Konfiguration).
 
 Hooks in anderen Modulen: `tickets.routers.create_ticket` startet die Uhr,
 `communication.routers.approve` setzt `first_response_at`, sobald die erste ausgehende Mail zu

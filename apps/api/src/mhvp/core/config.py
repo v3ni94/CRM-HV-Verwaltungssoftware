@@ -81,6 +81,14 @@ class Settings(BaseSettings):
     # Public URLs for the OAuth redirect (API callback) and the return to the CRM screen.
     api_public_url: str | None = None
     web_crm_url: str | None = None
+    # WhatsApp Business Platform (Meta Cloud API, M35): app level secrets shared by all
+    # tenants of this Meta App; per tenant config (phone_number_id, access token, templates)
+    # lives in ``mhvp.sla.models.WhatsAppConfig``. Webhook verification (GET) compares
+    # ``hub.verify_token`` against this value; status updates (POST) are checked against
+    # ``whatsapp_app_secret`` via the ``X-Hub-Signature-256`` header.
+    whatsapp_verify_token: SecretStr | None = None
+    whatsapp_app_secret: SecretStr | None = None
+    whatsapp_api_base_url: str = "https://graph.facebook.com/v21.0"
 
     @model_validator(mode="after")
     def _guard_shared_environments(self) -> "Settings":

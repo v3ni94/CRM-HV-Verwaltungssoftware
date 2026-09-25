@@ -34,6 +34,8 @@ from mhvp.sla.models import (
     SlaRule,
 )
 from mhvp.sla.service import recompute_color
+from mhvp.sla.whatsapp import get_config as get_whatsapp_config
+from mhvp.sla.whatsapp import send_whatsapp
 from mhvp.tickets.models import Priority, Ticket
 from mhvp.workspace.services import notify
 
@@ -180,6 +182,44 @@ async def escalate_level(
                     session, ticket, level, str(user_id), channel, delivery_error=error
                 )
                 if error is None:
+                    alert.delivered_at = datetime.now(UTC)
+                alerts.append(alert)
+        elif channel == AlertChannel.WHATSAPP:
+            wa_config = await get_whatsapp_config(session, ticket.tenant_id)
+            alert_type = "emergency" if level == 0 else "sla_escalation"
+            params = [f"#{ticket.number}", str(level), ticket.title[:60]]
+            for user_id in external:
+                number = contacts.get(user_id, ("", None))[1]
+                if on_call is not None and user_id == on_call.user_id and on_call.phone:
+                    number = on_call.phone
+                wa_error: str | None
+                if wa_config is None or not wa_config.enabled:
+                    wa_error = "WhatsApp nicht eingerichtet oder deaktiviert."
+                elif not number:
+                    wa_error = "Keine Mobilnummer des Benutzers hinterlegt."
+                else:
+                    wa_error = await send_whatsapp(
+                        session,
+                        settings,
+                        wa_config,
+                        alert_id=None,
+                        to=number,
+                        alert_type=alert_type,
+                        params=params,
+                    )
+                    if wa_error is not None and wa_config.sms_fallback:
+                        gateway = await get_gateway(session, ticket.tenant_id)
+                        fallback_error = await send_sms(
+                            gateway, number, sms_text(ticket, level, link)
+                        )
+                        if fallback_error is None:
+                            wa_error = None
+                        else:
+                            wa_error = f"{wa_error} SMS-Rückfall: {fallback_error}"
+                alert = await _send_alert(
+                    session, ticket, level, str(user_id), channel, delivery_error=wa_error
+                )
+                if wa_error is None:
                     alert.delivered_at = datetime.now(UTC)
                 alerts.append(alert)
     return alerts
