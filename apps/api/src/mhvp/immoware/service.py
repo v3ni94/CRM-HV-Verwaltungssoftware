@@ -46,11 +46,15 @@ def dav_client(connection: ImmowareConnection) -> ReadOnlyDavClient:
 
 
 def carddav_url(connection: ImmowareConnection) -> str:
-    return connection.carddav_url or derive_carddav_url(connection.base_url or "")
+    return connection.carddav_url or derive_carddav_url(
+        connection.base_url or "", connection.username
+    )
 
 
 def caldav_url(connection: ImmowareConnection) -> str:
-    return connection.caldav_url or derive_caldav_url(connection.base_url or "")
+    return connection.caldav_url or derive_caldav_url(
+        connection.base_url or "", connection.username
+    )
 
 
 async def check_connection(
