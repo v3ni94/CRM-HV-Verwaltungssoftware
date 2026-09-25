@@ -20,6 +20,8 @@ describe("portal bff", () => {
     );
     expect((await GET(new Request("http://portal.localhost/x"), ctx("portal/handover"))).status).toBe(200);
     expect(serverFetch.mock.calls[0]![0]).toBe("/api/v1/portal/handover");
+    expect((await GET(new Request("http://portal.localhost/x"), ctx("portal/handover/protocols"))).status).toBe(200);
+    expect(serverFetch.mock.calls[1]![0]).toBe("/api/v1/portal/handover/protocols");
     const post = await POST(
       new Request("http://portal.localhost/x", {
         method: "POST",

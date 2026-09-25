@@ -76,6 +76,16 @@ export type Item = Record<string, string | number | boolean | null> & {
   id: string;
 };
 
+/** Row of the staff listing (GET /api/v1/portal/handover/protocols, M2-08 entschieden):
+ *  minimal fields for every protocol of the tenant, independent of a participant grant. */
+export type StaffListed = {
+  id: string;
+  number: string;
+  address: string;
+  handover_date: string | null;
+  status: Status;
+};
+
 export type Doc = {
   id: string;
   title: string;

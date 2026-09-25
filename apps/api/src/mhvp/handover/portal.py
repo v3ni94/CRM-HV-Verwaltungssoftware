@@ -23,6 +23,7 @@ from mhvp.documents.models import Document, DocumentLink
 from mhvp.handover import routers as crm
 from mhvp.handover import services as svc
 from mhvp.handover.models import HandoverNote, HandoverProtocol
+from mhvp.portal import access
 from mhvp.portal.models import AccessGrant, PortalAccount
 from mhvp.portal.routers import Portal, portal_user
 from mhvp.workspace.services import local_today
@@ -78,6 +79,34 @@ async def _granted(
             detail="Das Protokoll ist abgeschlossen, Änderungen sind nicht mehr möglich.",
         )
     return p, grant
+
+
+# Staff (tenant members with the portal permission "handover:read", M2-08 entschieden) --------
+
+
+@router.get("/protocols", summary="Übergabeprotokolle (Mitarbeiter)")
+async def list_protocols_staff(request: Request, ctx: Ctx) -> list[dict[str, Any]]:
+    """List of every protocol of the tenant for staff with "handover:read"; minimal fields
+    only, the full record still goes through the participant/staff detail path below. External
+    portal users never reach this endpoint (no tenant wide grant, no staff permission set)."""
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        staff_perms = await access.staff_permissions(session, account)
+        if "handover:read" not in staff_perms:
+            raise ProblemError(ErrorCodes.FORBIDDEN)
+        rows = await session.scalars(
+            select(HandoverProtocol).order_by(HandoverProtocol.number.desc())
+        )
+        return [
+            {
+                "id": p.id,
+                "number": p.number,
+                "address": svc.address_line(p),
+                "handover_date": p.handover_date,
+                "status": p.status,
+            }
+            for p in rows.all()
+        ]
 
 
 def _public(full: dict[str, Any], grant: AccessGrant) -> dict[str, Any]:
@@ -144,6 +173,16 @@ async def list_protocols(request: Request, ctx: Ctx) -> list[dict[str, Any]]:
 async def get_protocol(protocol_id: uuid.UUID, request: Request, ctx: Ctx) -> dict[str, Any]:
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
+        staff_perms = await access.staff_permissions(session, account)
+        if "handover:read" in staff_perms:
+            # Staff (M2-08 entschieden) reads every protocol of the tenant, read only; no
+            # participant grant required. Presented as a read grant so _public applies the same
+            # hidden field filter as for participants.
+            p = await session.get(HandoverProtocol, protocol_id)
+            if p is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+            grant = AccessGrant(right="read", valid_to=None)
+            return _public(await crm._full_out(session, p), grant)
         p, grant = await _granted(session, account, protocol_id)
         return _public(await crm._full_out(session, p), grant)
 

@@ -9,6 +9,7 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { HandoverAppointmentButton } from "./HandoverAppointmentButton";
 import { HelperAccessSection } from "./HelperAccessSection";
 import { PortalAccessBox } from "./PortalAccessBox";
 import { SignaturePad } from "./SignaturePad";
@@ -386,6 +387,11 @@ export function HandoverEditor({ initial }: { initial: Full }) {
         >
           {p.finalized ? t("pdf.stored") : t("pdf.preview")}
         </a>
+        <HandoverAppointmentButton
+          protocolId={p.id}
+          address={p.address || null}
+          handoverDate={p.handover_date}
+        />
         {!locked ? (
           <button
             type="button"

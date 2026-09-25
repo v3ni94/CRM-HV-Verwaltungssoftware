@@ -876,3 +876,116 @@ def test_uprotokoll_import_preview_apply_and_files(client: TestClient, world: Wo
     )
     assert len(matched["matched"]) == 1
     assert matched["unmatched_in_zip"] == []
+
+
+def test_handover_portal_staff_lists_all_protocols(client: TestClient, world: World) -> None:
+    """M2-08 entschieden (docs/rules/M2-07.md): staff members with the portal permission
+    "handover:read" (CRM role "standard" by default) see every handover protocol of the tenant
+    through /api/v1/portal/handover/protocols and the existing detail path, without an own
+    participant grant; an external portal user (no staff grant) gets 403 on the staff listing
+    and 404 on a protocol they hold no grant for, and never sees another tenant's protocols."""
+    h = bearer(login(client, world, "m30admin"))
+    _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h))
+    pid = _ok(client.post(H, json={"kind": "rental"}, headers=h), 201)["id"]
+    _ok(
+        client.patch(
+            f"{H}/{pid}",
+            json={
+                "street": "Stabsweg",
+                "house_number": "3",
+                "postal_code": "40789",
+                "city": "Monheim",
+            },
+            headers=h,
+        )
+    )
+
+    email = f"m30staff-{RUN}@example.org"
+    _ok(
+        client.post(
+            "/api/v1/tenant/members",
+            json={
+                "email": email,
+                "display_name": "M30 Staff",
+                "password": PASSWORD,
+                "role_codes": ["standard"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    login_step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+    assert login_step.status_code == 200, login_step.text
+    staff = {"Authorization": f"Bearer {login_step.json()['access_token']}"}
+
+    listed = _ok(client.get(f"{PH}/protocols", headers=staff))
+    assert any(row["id"] == pid for row in listed)
+    row = next(row for row in listed if row["id"] == pid)
+    assert row["address"].startswith("Stabsweg")
+    assert set(row) == {"id", "number", "address", "handover_date", "status"}
+
+    detail = _ok(client.get(f"{PH}/{pid}", headers=staff))
+    assert detail["id"] == pid
+    assert "internal_note" not in detail
+
+    # An external portal user (participant with a CRM contact) is no staff account: the staff
+    # listing is forbidden, and without a grant on this protocol the detail path is a 404.
+    contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "person",
+                "first_name": "Petra",
+                "last_name": f"Portal{RUN}",
+                "emails": [{"email": world.email("m30extern"), "is_primary": True}],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    mover = _ok(
+        client.post(
+            f"{H}/{pid}/participants",
+            json={"contact_id": contact["id"], "role": "moving_in"},
+            headers=h,
+        ),
+        201,
+    )
+    grant = _ok(
+        client.post(f"{H}/{pid}/participants/{mover['id']}/portal-access", json={}, headers=h),
+        201,
+    )
+    _ok(
+        client.post(
+            "/api/v1/portal/invitations/accept",
+            json={"token": grant["invitation_token"], "password": PASSWORD},
+        )
+    )
+    extern = bearer(login(client, world, "m30extern"))
+    assert client.get(f"{PH}/protocols", headers=extern).status_code == 403
+
+    other_pid = _ok(client.post(H, json={"kind": "sale"}, headers=h), 201)["id"]
+    assert client.get(f"{PH}/{other_pid}", headers=extern).status_code == 404
+
+    # Tenant separation: a staff account of another tenant never sees this protocol.
+    h2 = bearer(login(client, world, "m30other"))
+    email2 = f"m30staff2-{RUN}@example.org"
+    _ok(
+        client.post(
+            "/api/v1/tenant/members",
+            json={
+                "email": email2,
+                "display_name": "M30 Staff Other",
+                "password": PASSWORD,
+                "role_codes": ["standard"],
+            },
+            headers=h2,
+        ),
+        201,
+    )
+    login_step2 = client.post("/api/v1/auth/login", json={"email": email2, "password": PASSWORD})
+    assert login_step2.status_code == 200, login_step2.text
+    staff2 = {"Authorization": f"Bearer {login_step2.json()['access_token']}"}
+    listed2 = _ok(client.get(f"{PH}/protocols", headers=staff2))
+    assert all(row["id"] != pid for row in listed2)
+    assert client.get(f"{PH}/{pid}", headers=staff2).status_code == 404

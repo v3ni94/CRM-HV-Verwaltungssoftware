@@ -29,6 +29,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/invoice$`) },
   // Übergabeprotokolle (M30 Stufe 3): fill in, photos, signatures, completion.
   { method: "GET", pattern: /^portal\/handover$/ },
+  // Staff mit Portalrecht handover:read (M2-08 entschieden): Liste aller Protokolle des Mandanten.
+  { method: "GET", pattern: /^portal\/handover\/protocols$/ },
   { method: "GET", pattern: new RegExp(`^portal/handover/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^portal/handover/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^portal/handover/${ID}/hints$`) },

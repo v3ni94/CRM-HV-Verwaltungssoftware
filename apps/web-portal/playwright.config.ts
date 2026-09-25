@@ -6,10 +6,16 @@ const port = 3001;
 // where the workflow installs matching browsers).
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 
+// Tests tagged @backend need a running API with seeded data (scripts/e2e-backend.sh style
+// setup; see apps/web-crm/scripts and apps/web-portal/e2e/auth.ts).
+const withBackend = process.env.E2E_BACKEND === "1";
+
 export default defineConfig({
   testDir: "./e2e",
+  ...(withBackend ? {} : { grepInvert: /@backend/ }),
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  ...(withBackend ? { workers: 1 } : {}),
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: `http://127.0.0.1:${port}`,

@@ -1,13 +1,23 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 import Link from "next/link";
 
-import type { Listed } from "@/components/handover/types";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import type { Listed, StaffListed } from "@/components/handover/types";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
+/** Staff with the portal permission "handover:read" (M2-08 entschieden) see every protocol of
+ *  the tenant here instead of only their own participant grants; participants (external portal
+ *  users) keep the grant based list below unchanged. */
 export default async function HandoverListPage() {
+  const staffResponse = await serverFetch("/api/v1/portal/handover/protocols");
+  redirectIfUnauthenticated(staffResponse);
+  if (staffResponse.status === 200) {
+    const rows = (await staffResponse.json()) as StaffListed[];
+    return <StaffListRows rows={rows} />;
+  }
+
   const [t, format] = await Promise.all([getTranslations("Handover"), getFormatter()]);
   const { data, error, response } = await serverApi().GET("/api/v1/portal/handover");
   redirectIfUnauthenticated(response);
@@ -40,6 +50,34 @@ export default async function HandoverListPage() {
                   : row.right === "edit"
                     ? ` · ${t("access.edit")}`
                     : null}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+async function StaffListRows({ rows }: { rows: StaffListed[] }) {
+  const [t, format] = await Promise.all([getTranslations("Handover"), getFormatter()]);
+  return (
+    <div className={ui.pageGap}>
+      <h1 className={ui.title}>{t("title")}</h1>
+      {rows.length === 0 ? <p className={ui.notice}>{t("access.none")}</p> : null}
+      <ul className="flex flex-col gap-3">
+        {rows.map((row) => (
+          <li key={row.id}>
+            <Link href={`/uebergabe/${row.id}`} className={`${ui.cardLink} flex flex-col gap-1`}>
+              <span className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium">{row.number}</span>
+                <span className={ui.badge}>{t(`statusLabel.${row.status}`)}</span>
+              </span>
+              <span className="text-sm text-muted">{row.address || t("list.object")}</span>
+              <span className="text-xs text-subtle">
+                {row.handover_date
+                  ? `${t("list.date")} ${format.dateTime(new Date(row.handover_date), { day: "2-digit", month: "2-digit", year: "numeric" })}`
+                  : null}
               </span>
             </Link>
           </li>
