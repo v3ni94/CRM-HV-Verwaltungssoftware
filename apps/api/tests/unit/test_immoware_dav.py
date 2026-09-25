@@ -132,7 +132,9 @@ async def test_allowed_methods_pass_through() -> None:
         return httpx.Response(207, content=b"<D:multistatus xmlns:D='DAV:'/>")
 
     transport = httpx.MockTransport(_handler)
-    client = ReadOnlyDavClient(httpx.AsyncClient(transport=transport, base_url="https://dav.example"))
+    client = ReadOnlyDavClient(
+        httpx.AsyncClient(transport=transport, base_url="https://dav.example")
+    )
     try:
         response = await client.request("PROPFIND", "/x", headers={"Depth": "0"})
         assert response.status_code == 207

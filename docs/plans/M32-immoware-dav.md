@@ -77,6 +77,9 @@ Migration `alembic/versions/0044_immoware_dav.py` (RLS ueber `tenant_rls_stateme
   drei Reitern Dokumente/Kontakte/Termine, Navigationseintrag, Uebersetzungen) ist mit diesem
   Meilenstein noch nicht umgesetzt; das Backend ist vollstaendig und ueber die BFF-Allowlist
   erreichbar, siehe Bericht des Auftrags fuer den Stand.
-- Integrationstest (`tests/integration/test_m32_immoware.py`) wurde aus Zeitgruenden nicht
-  angelegt; die Unit-Tests in `tests/unit/test_immoware_dav.py` decken Parser, Methodensperre
-  und Fehlerbereinigung ab.
+- Integrationstest (`tests/integration/test_m32_immoware.py`) liegt inzwischen vor: WebDAV/
+  CardDAV/CalDAV per `httpx.MockTransport` gefakt, Happy Path (Sync, Dokument-/Kontakt-/
+  Termin-Listen, Datei-Proxy), Berechtigung, Mandantentrennung, Validierung sowie die
+  Read-only-Garantie (kein Schreib-Endpunkt, `ReadOnlyDavClient` blockiert Schreibmethoden vor
+  jeder Anfrage). Die Unit-Tests in `tests/unit/test_immoware_dav.py` decken weiterhin Parser,
+  Methodensperre und Fehlerbereinigung ab.
