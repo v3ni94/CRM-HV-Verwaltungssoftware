@@ -47,6 +47,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
+from mhvp.properties.models import ManagementType
 
 
 def _enum_col(cls: type[StrEnum], name: str) -> Enum:
@@ -312,3 +313,29 @@ class ObjektakteClassificationRule(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     source_system: Mapped[str | None] = mapped_column(String(32))
     source_id: Mapped[str | None] = mapped_column(String(64))
+
+
+class ObjektakteRequiredDocument(IdMixin, TimestampMixin, TenantMixin, Base):
+    """M35 Stufe 3 part 4 (docs/plans/M35-objektakte-uebernahme.md section 4, completeness
+    check): a per tenant required document set per management type, mirroring the CRM's own
+    `mhvp.properties.models.ManagementType` (`rental`, `hoa`, `hoa_with_sev`) rather than
+    inventing a parallel "weg"/"rental" vocabulary, so a property's `management_type` compares
+    directly against `management_type` here without a translation table.
+
+    `document_category_id` is the CRM category a property must have at least one filed
+    document in; `mandatory` lets a tenant record an optional/informational class without it
+    ever appearing as "missing" in the completeness check.
+    """
+
+    __tablename__ = "objektakte_required_document"
+    __table_args__ = (UniqueConstraint("tenant_id", "management_type", "document_category_id"),)
+
+    management_type: Mapped[ManagementType] = mapped_column(
+        _enum_col(ManagementType, "management_type"), nullable=False
+    )
+    document_category_id: Mapped[uuid.UUID] = _fk(
+        "document_category.id", nullable=False, ondelete="CASCADE"
+    )
+    mandatory: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )

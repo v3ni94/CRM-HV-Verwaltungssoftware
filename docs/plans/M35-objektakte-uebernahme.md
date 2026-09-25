@@ -348,6 +348,57 @@ prüfungsregeln, Textbausteine der Nachforderungsschreiben werden als Spezifikat
   Drive-Sync-Modul schreibt diese `source_meta`-Schlüssel), sie sind erst nutzbar, sobald ein
   solches Modul sie befüllt.
 
+**Ergebnis Stufe 3, Teil 2, 4 und 5 (25.09.2026)**
+
+- KI-Stufe (Teil 2, Stufe 3 von drei): neuer AI-Task `classify_document`
+  (`mhvp.ai.models.AiTask.CLASSIFY_DOCUMENT`, Migration `0070_objektakte_ai_classification`,
+  `ALTER TYPE ai_task ADD VALUE`), Prompt `mhvp.ai.prompts.classify_document.v1`, Schema
+  `ClassifyDocumentResult` (`document_class`, `category`, `confidence`, `reasons`) in
+  `mhvp.ai.tasks`. Maskierung vor jedem Versand: `mhvp.objektakte.masking.mask_text` (kein
+  vorhandener Masker gefunden) ersetzt IBAN, E-Mail, deutsche Telefonnummern und
+  wahrscheinliche Personennamen durch feste Platzhalter; der `AiTaskRun` trägt den bereits
+  maskierten Text als `input_ref["instruction"]` und `document_ids=[]`, sodass der generische
+  Gateway-Pfad nie erneut den unmaskierten Dokumenttext liest. Endpunkt
+  `POST /api/v1/objektakte/review/{case_id}/ask-ai` (`documents:update`): Ergebnis immer ein
+  Vorschlag (`document.source_meta["classification"]["stage"]="ai"`,
+  `case.candidates["ai"]`), nie automatisch angewandt (rule 0.1.6). Details und die
+  Maskierungsregeln in `docs/rules/M35-02.md` (Ergänzung).
+- Vollständigkeitsprüfung (Teil 4): neue Tabelle `objektakte_required_document` (Mandant,
+  `management_type` — bewusst das bestehende `mhvp.properties.models.ManagementType`
+  wiederverwendet, keine eigene "weg"/"rental"-Vokabular, siehe Modell-Docstring —,
+  Dokumentkategorie, `mandatory`), Migration `0073_objektakte_required_document`. Endpunkte
+  `/api/v1/objektakte/required-documents` (Einstellungen, Liste/Anlegen/Löschen),
+  `GET /api/v1/objektakte/properties/{id}/completeness` (fehlende/erfüllte Kategorien, prüft
+  nur Vorhandensein eines verknüpften Dokuments der Kategorie, keine Aktualität oder Inhalt)
+  und `POST .../completeness/nachforderungsschreiben` (deutscher Textentwurf, klar als
+  "ENTWURF" markiert, nie automatisch versendet, Auftragsteil erlaubt diesen einfacheren
+  Textweg ausdrücklich als Alternative zur Briefvorlagen-Mechanik).
+- Regel-CRUD (Grundlage für Teil 5): `/api/v1/objektakte/classification-rules` (Liste,
+  Anlegen, Ändern/Aktivieren, Löschen), da Teil 1 nur den Lesepfad (`classify_document`)
+  gebaut hatte, aber keine Verwaltungsoberfläche brauchte.
+- CRM-Oberfläche (Teil 5, `apps/web-crm`): Menüpunkt "Objektakte" (`app/(app)/layout.tsx`,
+  additiv, Berechtigung `documents:read`), Review-Center-Seite
+  (`app/(app)/objektakte/page.tsx` + `components/objektakte/ReviewCenter.tsx`: Filter,
+  Kandidaten, "KI fragen", Dokumentlink, Sammelentscheidung), Regeln-Einstellungsseite
+  (`app/(app)/einstellungen/objektakte/page.tsx` + `components/objektakte/RulesSettings.tsx`:
+  Liste, Anlegen, Bearbeiten, Aktivieren/Deaktivieren) und eine additive
+  Vollständigkeits-Karte auf der Objektseite (`components/objektakte/CompletenessPanel.tsx`,
+  eingefügt nach dem bestehenden DMS-Panel). BFF-Allowlist ergänzt
+  (`app/api/bff/[...path]/route.ts`), deutsche Texte in `messages/de.json`/`en.json` unter dem
+  neuen Namensraum `Objektakte` sowie `Shell.objektakte`/`Settings.objektakte`.
+- Tests: `apps/api/tests/unit/test_m35_masking.py`,
+  `apps/api/tests/integration/test_m35_ai_classification.py` (Fake-Provider, prüft
+  ausdrücklich, dass keine IBAN, E-Mail oder Name den simulierten Aufruf erreicht),
+  `apps/api/tests/integration/test_m35_completeness.py`,
+  `apps/api/tests/integration/test_m35_rules_crud.py`; im Frontend
+  `components/objektakte/ReviewCenter.test.tsx` (Kandidat übernehmen, Sammelentscheidung) und
+  `components/objektakte/RulesSettings.test.tsx` (Regel anlegen, deaktivieren). Alle
+  bestehenden Vitest-Suiten (304 Tests) und `tsc`/`eslint` weiterhin grün.
+- Offene Punkte: die Namensheuristik der Maskierung ist kein NER-Modell (Übermaskierung
+  bewusst in Kauf genommen, siehe `docs/rules/M35-02.md`); die Vollständigkeitsprüfung prüft
+  nur Vorhandensein, keine Aktualität; kein Seeding der zwei referenzierten Klassifikations-
+  regeln in eine Mandanten-Instanz (nur als Spezifikation dokumentiert).
+
 ## 5. Risiken
 
 - **OCR-Last auf dem CRM-Worker**: objektakte hat dedizierte OCR-Worker (`worker-ocr`).

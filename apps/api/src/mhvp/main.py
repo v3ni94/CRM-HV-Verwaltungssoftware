@@ -47,8 +47,10 @@ from mhvp.imports.routers import router as imports_router
 from mhvp.letting.rentlaw import platform_router as rentlaw_platform_router
 from mhvp.letting.rentlaw import tenant_router as rentlaw_router
 from mhvp.letting.routers import router as letting_router
+from mhvp.objektakte.completeness_routers import router as objektakte_completeness_router
 from mhvp.objektakte.review_routers import router as objektakte_review_router
 from mhvp.objektakte.routers import router as objektakte_router
+from mhvp.objektakte.rules_routers import router as objektakte_rules_router
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.licensing import router as licensing_router
 from mhvp.platform.routers import platform_router, tenant_router
@@ -175,6 +177,8 @@ def create_app(
     app.include_router(immoware_router, prefix=API_PREFIX)
     app.include_router(objektakte_router, prefix=API_PREFIX)
     app.include_router(objektakte_review_router, prefix=API_PREFIX)
+    app.include_router(objektakte_completeness_router, prefix=API_PREFIX)
+    app.include_router(objektakte_rules_router, prefix=API_PREFIX)
     app.include_router(mail_router, prefix=API_PREFIX)
     app.include_router(dispatch_router, prefix=API_PREFIX)
     app.include_router(portal_router, prefix=API_PREFIX)

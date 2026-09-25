@@ -24,9 +24,13 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.ai import gateway, jobs, tasks
+from mhvp.ai.models import AiTask, AiTaskRun, RunStatus
+from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentLink
+from mhvp.objektakte.masking import mask_text
 from mhvp.objektakte.models import (
     DocumentReviewCase,
     DocumentReviewDecision,
@@ -275,3 +279,88 @@ async def bulk_decide(
             )
             decided.append(str(case.id))
         return {"decided": decided, "skipped": skipped, "missing": missing}
+
+
+@router.post("/{case_id}/ask-ai", summary="KI-Vorschlag anfordern (Stufe 3 von drei)")
+async def ask_ai(
+    request: Request, case_id: uuid.UUID, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    """M35 Stufe 3 part 2: masked filename plus OCR text only (rule 0.1.13, no IBAN, e-mail,
+    phone number or probable name ever leaves the CRM); the model's answer is written back as
+    a proposal only, in `document.source_meta["classification"]` (`stage="ai"`) — never
+    applied to `document.category_id` (rule 0.1.6). Only for an open case with a document."""
+    settings = request.app.state.settings
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(DocumentReviewCase, case_id)
+        if case is None:
+            raise ProblemError(ErrorCodes.NOT_FOUND)
+        if case.status not in (ReviewCaseStatus.OPEN, ReviewCaseStatus.IN_PROGRESS):
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Prüffall ist bereits abgeschlossen.")
+        if case.document_id is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Prüffall ohne Dokument kann nicht angefragt werden."
+            )
+        document = await session.get(Document, case.document_id)
+        if document is None:
+            raise ProblemError(ErrorCodes.NOT_FOUND)
+        masked_filename = mask_text(document.filename)
+        masked_body = mask_text(document.ocr_text)
+        content = f"Dateiname: {masked_filename}\n\n{masked_body}".strip()
+        prompt = tasks.prompt(AiTask.CLASSIFY_DOCUMENT)
+        ref = {"instruction": content, "document_ids": [], "context": {}}
+        run = AiTaskRun(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            task=AiTask.CLASSIFY_DOCUMENT,
+            conversation_id=None,
+            prompt_version=prompt.version,
+            input_hash=gateway.input_hash(
+                AiTask.CLASSIFY_DOCUMENT, prompt.version, content, {"case_id": str(case_id)}
+            ),
+            input_ref=ref,
+            status=RunStatus.QUEUED,
+        )
+        session.add(run)
+        await session.flush()
+        run_id = run.id
+    await jobs.run_and_propose(
+        sessions(request), principal.tenant_id, run_id, BlobStore(settings), principal.user_id
+    )
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(DocumentReviewCase, case_id)
+        run_row = await session.get(AiTaskRun, run_id)
+        assert case is not None  # noqa: S101
+        assert run_row is not None  # noqa: S101
+        document = await session.get(Document, case.document_id) if case.document_id else None
+        if run_row.status is RunStatus.SUCCEEDED and document is not None:
+            output = run_row.output or {}
+            meta = dict(document.source_meta or {})
+            meta["classification"] = {
+                **(meta.get("classification") or {}),
+                "stage": "ai",
+                "status": "proposal",
+                "document_class": output.get("document_class"),
+                "category": output.get("category"),
+                "confidence": output.get("confidence"),
+                "reasons": output.get("reasons"),
+                "ai_task_run_id": str(run_row.id),
+            }
+            document.source_meta = meta
+            case.candidates = {
+                **(case.candidates or {}),
+                "ai": {
+                    "document_class": output.get("document_class"),
+                    "category": output.get("category"),
+                    "confidence": output.get("confidence"),
+                    "reasons": output.get("reasons"),
+                },
+            }
+            await session.flush()
+            # See the note in `_apply_and_record`: `case.updated_at` (onupdate) is expired by
+            # the flush above and must not be read implicitly outside this awaited call.
+            await session.refresh(case)
+        return {
+            "run_status": run_row.status.value,
+            "run_error": run_row.error,
+            "case": _case_dict(case, document),
+        }

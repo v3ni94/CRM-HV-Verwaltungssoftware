@@ -4974,6 +4974,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/objektakte/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * objektakte-Export prüfen oder übernehmen
+         * @description `mode=preview` (default) only parses and reports, changes nothing. `mode=apply` creates
+         *     the rows; call it only after reviewing the preview, since the operator (not this endpoint)
+         *     decides whether the unmatched properties and duplicates it reports are acceptable.
+         */
+        post: operations["preview_or_apply_api_v1_objektakte_imports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/objektakte/imports/{import_run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ergebnis eines objektakte-Imports abrufen */
+        get: operations["get_import_api_v1_objektakte_imports__import_run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/oidc/authorize": {
         parameters: {
             query?: never;
@@ -6930,6 +6969,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant/portal-role-permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Portalrechte je Rolle */
+        get: operations["get_portal_role_permissions_api_v1_tenant_portal_role_permissions_get"];
+        /**
+         * Portalrechte je Rolle ändern
+         * @description Replaces the tenant's overrides (a role code missing from ``body`` falls back to the
+         *     built in default). Operator decision 25.09.2026 (M2-08 entschieden).
+         */
+        put: operations["put_portal_role_permissions_api_v1_tenant_portal_role_permissions_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/portal-role-permissions/resync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Portalrechte auf bestehende Zugänge anwenden
+         * @description Applies the current matrix to every existing staff access grant of the tenant; grants of
+         *     external portal users (tenants, owners, providers, handover participants) are untouched,
+         *     since only ``legal_basis == "staff_access"`` accounts are considered. Also creates the
+         *     missing staff grant for a member who has none yet (e.g. a role change out of the exempt
+         *     set). Operator decision 25.09.2026 (M2-08 entschieden).
+         */
+        post: operations["resync_portal_role_permissions_api_v1_tenant_portal_role_permissions_resync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/release-gates": {
         parameters: {
             query?: never;
@@ -7478,6 +7563,23 @@ export interface paths {
         head?: never;
         /** Google-Termin ändern */
         patch: operations["patch_google_entry_api_v1_workspace_calendar_google__source___event_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workspace/calendar/google/{source}/{event_id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Einladung an externe Teilnehmer senden (nur nach Bestätigung) */
+        post: operations["send_invite_api_v1_workspace_calendar_google__source___event_id__invite_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/workspace/calendar/refresh": {
@@ -8218,6 +8320,11 @@ export interface components {
             /** File */
             file: string;
         };
+        /** Body_preview_or_apply_api_v1_objektakte_imports_post */
+        Body_preview_or_apply_api_v1_objektakte_imports_post: {
+            /** File */
+            file: string;
+        };
         /** Body_token_api_v1_oidc_token_post */
         Body_token_api_v1_oidc_token_post: {
             /** Client Id */
@@ -8484,10 +8591,16 @@ export interface components {
              * @default true
              */
             all_day: boolean;
+            /** Attendees */
+            attendees?: {
+                [key: string]: string;
+            }[];
             /** Ends At */
             ends_at?: string | null;
             /** Ends On */
             ends_on?: string | null;
+            /** Location */
+            location?: string | null;
             /** Notes */
             notes?: string | null;
             /** Property Id */
@@ -8497,6 +8610,13 @@ export interface components {
              * @default false
              */
             shared: boolean;
+            /** Source Id */
+            source_id?: string | null;
+            /**
+             * Source Type
+             * @default manual
+             */
+            source_type: string;
             /** Starts At */
             starts_at?: string | null;
             /**
@@ -8534,8 +8654,22 @@ export interface components {
             /** Weekdays */
             weekdays?: number[];
         };
+        /** CalendarInviteIn */
+        CalendarInviteIn: {
+            /**
+             * Confirm
+             * @description Muss true sein: ausdrückliche Bestätigung des Nutzers.
+             */
+            confirm: boolean;
+        };
         /** CalendarItem */
         CalendarItem: {
+            /** Attendees */
+            attendees?: {
+                [key: string]: string;
+            }[];
+            /** Calendar Event Id */
+            calendar_event_id?: string | null;
             /** Calendar Label */
             calendar_label?: string | null;
             /**
@@ -8556,6 +8690,13 @@ export interface components {
             entity_type?: string | null;
             /** Google Event Id */
             google_event_id?: string | null;
+            /** Invite Status */
+            invite_status?: string | null;
+            /**
+             * Is Stale
+             * @default false
+             */
+            is_stale: boolean;
             /** Kind */
             kind: string;
             /** Mailbox Id */
@@ -26157,6 +26298,76 @@ export interface operations {
             };
         };
     };
+    preview_or_apply_api_v1_objektakte_imports_post: {
+        parameters: {
+            query?: {
+                mode?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_preview_or_apply_api_v1_objektakte_imports_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_import_api_v1_objektakte_imports__import_run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     authorize_api_v1_oidc_authorize_get: {
         parameters: {
             query: {
@@ -30596,6 +30807,87 @@ export interface operations {
             };
         };
     };
+    get_portal_role_permissions_api_v1_tenant_portal_role_permissions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_portal_role_permissions_api_v1_tenant_portal_role_permissions_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resync_portal_role_permissions_api_v1_tenant_portal_role_permissions_resync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+        };
+    };
     gate_state_api_v1_tenant_release_gates_get: {
         parameters: {
             query?: never;
@@ -32007,6 +32299,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["GoogleCalendarPatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_invite_api_v1_workspace_calendar_google__source___event_id__invite_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarInviteIn"];
             };
         };
         responses: {

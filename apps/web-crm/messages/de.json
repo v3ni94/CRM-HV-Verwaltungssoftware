@@ -95,7 +95,8 @@
     "dms": "DMS",
     "openNav": "Navigation öffnen",
     "immoware": "Immoware24",
-    "immowareLearning": "Lernphase"
+    "immowareLearning": "Lernphase",
+    "objektakte": "Objektakte"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -825,7 +826,25 @@
     "toMailboxSettings": "Zu den Postfächern",
     "allDay": "Ganztägig",
     "notes": "Notiz",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "location": "Ort",
+    "attendees": "Teilnehmer",
+    "attendeeSearch": "Teilnehmer suchen",
+    "attendeeSearchPlaceholder": "Name oder E-Mail",
+    "removeAttendee": "{name} entfernen",
+    "attendeesHint": "Teilnehmer werden gespeichert, aber ohne Einladung angelegt. Die Einladung wird erst nach Bestätigung im Termin verschickt.",
+    "search": "Suchen",
+    "details": "Details",
+    "eventDetails": "Termin-Details",
+    "staleBadge": "Google-Stand abweichend",
+    "staleNotice": "Google-Stand abweichend: Der Termin wurde direkt in Google Kalender geändert. Die Anzeige zeigt den Google-Stand; nichts wurde automatisch überschrieben.",
+    "inviteSent": "Einladung wurde verschickt.",
+    "inviteNotSentYet": "Einladung noch nicht verschickt.",
+    "sendInvite": "Einladung senden",
+    "confirmInviteTitle": "Einladung senden",
+    "confirmInviteBody": "Die hinterlegten Teilnehmer erhalten jetzt eine Kalendereinladung per E-Mail. Fortfahren?",
+    "confirmInviteAction": "Einladung jetzt senden",
+    "close": "Schließen"
   },
   "Accounting": {
     "title": "Buchhaltung",
@@ -1188,13 +1207,15 @@
     "runs": "Letzte Mahnläufe",
     "empty": "Noch keine Mahnläufe.",
     "run": "Mahnlauf zum {date}",
-    "feesLocked": "Mahngebühren und Verzugszinsen sind bis zur Klärung von V7 gesperrt und werden nicht berechnet.",
+    "feesLocked": "Mahngebühr und Verzugszins wirken je Stufe erst, wenn der Betreiber einen Betrag beziehungsweise einen Basiszinssatz hinterlegt hat (Betreiberentscheidung 25.09.2026, V7 teilweise entschieden). Ohne Wert bleibt die Position 0,00 EUR.",
     "approve": "Mahnlauf freigeben",
     "confirmApprove": "Mahnlauf jetzt freigeben? Die Freigabe ist nicht rücknehmbar.",
     "level": "Stufe",
     "total": "Betrag",
+    "fee": "Mahngebühr",
     "status": "Status",
     "reason": "Begründung",
+    "settings": "Mahnstufen und Gebühren",
     "runStatus": {
       "preview": "Vorschau",
       "approved": "freigegeben"
@@ -1203,7 +1224,39 @@
       "proposed": "vorgeschlagen",
       "excluded": "ausgeschlossen",
       "sent": "versandt"
-    }
+    },
+    "markSent": "Als versendet markieren",
+    "markSentChannel": "Versandweg",
+    "channel": {
+      "post": "Post",
+      "email": "E-Mail",
+      "portal": "Portal"
+    },
+    "mahnbescheid": "Mahnbescheid vorbereiten",
+    "mahnbescheidHint": "Vorbereitung, Prüfung durch Rechtsanwalt. Keine Antragstellung durch die Plattform.",
+    "mahnbescheidDownload": "Vorbereitung herunterladen (JSON)",
+    "mahnbescheidOnlyHighest": "Nur auf der höchsten konfigurierten Mahnstufe möglich.",
+    "settingsTitle": "Mahnstufen, Gebühren und Verzugszins",
+    "settingsNotice": "Beträge und Basiszinssatz sind eine kaufmännische Einstellung, keine rechtliche Freigabe. Höhe der Gebühr und die vertragliche Grundlage für die Weiterbelastung an die Gemeinschaft bleiben rechtlich zu prüfen.",
+    "loadPresets": "Vorschlagswerte laden",
+    "presetsLoaded": "Vorschlagswerte geladen. Beträge und Basiszinssatz bitte selbst eintragen.",
+    "levelNo": "Stufe",
+    "minDays": "Tage nach Fälligkeit",
+    "levelText": "Bezeichnung",
+    "feeAmount": "Gebühr (EUR, leer = keine Gebühr)",
+    "feeFromLevel": "Gebühr ab Stufe",
+    "thresholdAmount": "Mahngrenze (EUR)",
+    "addLevel": "Stufe hinzufügen",
+    "removeLevel": "Stufe entfernen",
+    "interestSection": "Verzugszins",
+    "interestEnabled": "Verzugszins aktiv",
+    "interestEnabledHint": "Nur aktivierbar, wenn ein Basiszinssatz eingetragen ist.",
+    "interestBaseRate": "Basiszinssatz (%, vom Betreiber zu pflegen, ändert sich halbjährlich)",
+    "interestSpread": "Aufschlag (Prozentpunkte)",
+    "interestSpreadPresetConsumer": "Verbraucher (5)",
+    "interestSpreadPresetBusiness": "Unternehmer (9)",
+    "save": "Speichern",
+    "saved": "Gespeichert."
   },
   "Billing": {
     "title": "Betriebskostenabrechnung",
@@ -1569,6 +1622,29 @@
       "mergedLocked": "Das Ticket ist gesperrt, die Bearbeitung erfolgt im Zielticket.",
       "contains": "Enthält Ticket",
       "showMerged": "Zusammengeführte anzeigen"
+    },
+    "createAppointment": "Termin anlegen",
+    "filters": {
+      "search": "Suche",
+      "searchPlaceholder": "Nummer, Titel, Beschreibung, Kontakt oder Adresse",
+      "more": "Weitere Filter",
+      "mine": "Meine Tickets",
+      "assigneeAll": "Alle Bearbeiter",
+      "propertyAll": "Alle Objekte",
+      "unitAll": "Alle Einheiten",
+      "contact": "Kontakt",
+      "contactPlaceholder": "Kontakt suchen",
+      "roleAll": "Alle Rollen",
+      "role": {
+        "owner": "Eigentümer",
+        "tenant": "Mieter"
+      },
+      "statusAll": "Alle Status",
+      "priorityAll": "Alle Prioritäten",
+      "category": "Kategorie",
+      "createdFrom": "Erstellt ab",
+      "createdTo": "Erstellt bis",
+      "reset": "Zurücksetzen"
     }
   },
   "TicketTemplates": {
@@ -2117,6 +2193,10 @@
     "immoware": {
       "title": "Immoware24-Anbindung",
       "description": "Verbindung zu Immoware24 per WebDAV, CardDAV und CalDAV einrichten und Abholung anstossen."
+    },
+    "objektakte": {
+      "title": "Objektakte",
+      "description": "Regeln der Regelstufe der Dokumentklassifikation"
     }
   },
   "Members": {
@@ -2190,6 +2270,39 @@
       "management_title": "Geschäftsführung/Vorstand",
       "primaryColor": "Primärfarbe",
       "accentColor": "Akzentfarbe"
+    }
+  },
+  "BillingSettings": {
+    "title": "Rechnungsstellung und Steuer",
+    "loadError": "Die Einstellungen zu Rechnungsstellung und Steuer konnten nicht geladen werden.",
+    "saved": "Gespeichert.",
+    "save": "Speichern",
+    "readOnly": "Nur zur Ansicht. Änderungen erfordert das Recht Mandanteneinstellungen ändern.",
+    "hint": "Rechnungssteller ist immer der Mandant, bei dem angemeldet ist. Die Rechnungsnummer wird im Format KÜRZEL-JJJJ-000001 je Mandant und Jahr lückenlos vergeben.",
+    "secretHint": "Wird verschlüsselt gespeichert; angezeigt werden nur die letzten 4 Zeichen.",
+    "field": {
+      "invoice_prefix": "Rechnungskürzel",
+      "vat_status": "Umsatzsteuerstatus",
+      "vat_status_unset": "nicht eingetragen",
+      "vat_status_regelbesteuert": "regelbesteuert",
+      "vat_status_kleinunternehmer": "Kleinunternehmer (§ 19 UStG)",
+      "vat_id": "USt-IdNr.",
+      "tax_number": "Steuernummer",
+      "leitweg_id": "Leitweg-ID (XRechnung, öffentliche Auftraggeber)",
+      "kleinunternehmer_note": "Pflichthinweistext Kleinunternehmer",
+      "datev_consultant_number": "DATEV-Beraternummer",
+      "datev_client_number": "DATEV-Mandantennummer",
+      "datev_chart_of_accounts": "Kontenrahmen",
+      "datev_chart_of_accounts_unset": "nicht eingetragen",
+      "datev_chart_of_accounts_skr03": "SKR03",
+      "datev_chart_of_accounts_skr04": "SKR04",
+      "datev_account_length": "Sachkontenlänge",
+      "datev_fiscal_year_start_month": "Wirtschaftsjahresbeginn (Monat)"
+    },
+    "validation": {
+      "invoice_prefix": "2 bis 16 Großbuchstaben oder Ziffern.",
+      "datev_account_length": "Wert zwischen 4 und 8.",
+      "datev_fiscal_year_start_month": "Monat zwischen 1 und 12."
     }
   },
   "Profile": {
@@ -2326,7 +2439,8 @@
       "onCall": "Bereitschaft",
       "calendar": "Kalender",
       "alerts": "Alarme",
-      "sms": "SMS-Gateway"
+      "sms": "SMS-Gateway",
+      "whatsapp": "WhatsApp"
     },
     "priorities": {
       "low": "niedrig",
@@ -2342,7 +2456,8 @@
     "channels": {
       "email": "E-Mail",
       "internal": "intern",
-      "sms": "SMS"
+      "sms": "SMS",
+      "whatsapp": "WhatsApp"
     },
     "channel": "Kanal",
     "colors": {
@@ -2463,6 +2578,31 @@
       "test": "Testnachricht senden",
       "testOk": "Testnachricht wurde vom Gateway angenommen.",
       "testFailed": "Test fehlgeschlagen: {error}"
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "intro": "WhatsApp Business Platform (Meta Cloud API). Es werden ausschließlich bei Meta freigegebene Vorlagen versendet, kein Freitext: eine vom Unternehmen begonnene Nachricht ist außerhalb des 24-Stunden-Servicefensters bei WhatsApp nur als Vorlagennachricht möglich.",
+      "enabled": "Aktiv",
+      "phoneNumberId": "Telefonnummer-ID",
+      "wabaId": "WhatsApp-Business-Account-ID",
+      "accessToken": "Zugriffstoken",
+      "accessTokenSet": "Ein Wert ist gespeichert. Leer lassen, um ihn zu behalten.",
+      "accessTokenClear": "Gespeicherten Wert löschen",
+      "templateLanguage": "Sprache der Vorlagen",
+      "templates": "Vorlagennamen je Alarmtyp",
+      "templatesHint": "Name muss exakt der bei Meta freigegebenen Vorlage entsprechen.",
+      "alertType": {
+        "sla_escalation": "SLA-Eskalation",
+        "emergency": "Notfall",
+        "test": "Testnachricht"
+      },
+      "smsFallback": "SMS als Rückfall verwenden, wenn WhatsApp fehlschlägt",
+      "save": "Speichern",
+      "saved": "Gespeichert.",
+      "testTo": "Testnummer (Mitarbeiter)",
+      "test": "Testnachricht senden",
+      "testOk": "Testnachricht wurde von der Cloud API angenommen.",
+      "testFailed": "Test fehlgeschlagen: {error}"
     }
   },
   "Version": {
@@ -2509,7 +2649,9 @@
     "clientSecret": "Client-Secret",
     "sandbox": "Sandbox-Umgebung",
     "save": "Speichern",
-    "saved": "Gespeichert."
+    "saved": "Gespeichert.",
+    "autoFetch": "Täglicher automatischer Abruf",
+    "autoFetchHint": "Ruft Umsätze zugeordneter Konten einmal täglich automatisch ab (Standard: aus). Ein manueller Klick auf „Umsätze abrufen“ ist davon unabhängig."
   },
   "BankConnections": {
     "title": "Bankverbindungen",
@@ -2536,7 +2678,14 @@
     },
     "noConnections": "Noch keine Bankverbindung.",
     "error": "Vorgang fehlgeschlagen.",
-    "assignPropertyBankAccountId": "ID des internen Kontos"
+    "assignPropertyBankAccountId": "ID des internen Kontos",
+    "since": "Von",
+    "until": "Bis",
+    "fetchRangeHint": "Zeitraum optional; ohne Angabe liefert der Anbieter, was er hat.",
+    "fetchBank": "Umsätze aller zugeordneten Konten abrufen",
+    "wizardStep1": "1. Bank suchen und Freigabe starten",
+    "wizardStep2": "2. Freigabe im neuen Fenster abschließen, dann prüfen",
+    "wizardStep3": "3. Konten einem Buchungskreis/Objekt zuordnen"
   },
   "DmsSettings": {
     "title": "DMS-Anbindung",
@@ -2581,6 +2730,8 @@
   "Handover": {
     "title": "Übergabeprotokolle",
     "broker": "Makler",
+    "createAppointment": "Termin anlegen",
+    "appointmentTitle": "Übergabe",
     "new": "Neues Übergabeprotokoll",
     "search": "Suchen",
     "searchPlaceholder": "Nummer, Ticket, Adresse, Objekt",
@@ -3006,6 +3157,25 @@
       "success": "Erfolgreich",
       "error": "Fehler",
       "running": "Laeuft"
+    },
+    "diagnose": {
+      "title": "Verbindung diagnostizieren",
+      "button": "Verbindung diagnostizieren",
+      "running": "Wird geprueft...",
+      "notBooked": "Alle Schritte liefern 404. Das DAV-Modul ist bei Immoware24 vermutlich nicht gebucht. Bitte beim Immoware24-Support nachfragen.",
+      "empty": "Noch nicht diagnostiziert.",
+      "columns": {
+        "step": "Schritt",
+        "url": "URL",
+        "status": "Status",
+        "note": "Bedeutung"
+      },
+      "discovered": {
+        "carddav": "CardDAV-URL gefunden: {url}",
+        "caldav": "CalDAV-URL gefunden: {url}",
+        "webdav": "WebDAV-Wurzel gefunden: {url}",
+        "apply": "Uebernehmen"
+      }
     }
   },
   "Immoware": {
@@ -3031,7 +3201,12 @@
         "modified": "Geaendert",
         "actions": "Aktionen"
       },
-      "download": "Herunterladen"
+      "download": "Herunterladen",
+      "takeOver": "Uebernehmen",
+      "takenOver": "Uebernommen",
+      "takeOverFolder": "Ordner uebernehmen",
+      "takeOverFolderRunning": "Wird uebernommen...",
+      "takeOverFolderResult": "{created} neu angelegt, {linked} bereits uebernommen, {failed} fehlgeschlagen (von {total})."
     },
     "contacts": {
       "searchPlaceholder": "Kontakte durchsuchen",
@@ -3050,7 +3225,10 @@
       "match": "Zuordnen",
       "createContact": "Als Kontakt anlegen",
       "matchPlaceholder": "Kontakt suchen",
-      "search": "Suchen"
+      "search": "Suchen",
+      "takeOverAll": "Alle uebernehmen",
+      "takeOverAllRunning": "Wird uebernommen...",
+      "takeOverAllResult": "{created} neu angelegt, {linked} verknuepft, {skipped} uebersprungen (von {total})."
     },
     "events": {
       "from": "Von",
@@ -3139,6 +3317,91 @@
       "errors": {
         "notFound": "Lernlauf nicht gefunden."
       }
+    }
+  },
+  "InvoiceMatch": {
+    "title": "Bankabgleich",
+    "match": "Mit Bankumsätzen abgleichen",
+    "matched": "Zugeordneter Bankumsatz",
+    "noMatch": "Kein passender Bankumsatz gefunden.",
+    "proposePayment": "Zahlung vorbereiten",
+    "bankAccountId": "ID des internen Kontos",
+    "executionDate": "Ausführungsdatum",
+    "proposalCreated": "Zahlungsvorschlag angelegt: vorbereitet, nicht ausgeführt.",
+    "error": "Abgleich fehlgeschlagen."
+  },
+  "TicketInvoice": {
+    "attach": "Als Rechnung zuordnen",
+    "invoiceId": "Rechnungs-ID",
+    "attached": "Als Rechnung zugeordnet und im Objektordner abgelegt.",
+    "error": "Zuordnung fehlgeschlagen."
+  },
+  "Objektakte": {
+    "title": "Objektakte",
+    "intro": "Prüfcenter für die dreistufige Dokumentklassifikation der objektakte-Übernahme.",
+    "completeness": {
+      "title": "Vollständigkeit der Objektakte",
+      "complete": "Alle Pflichtunterlagen sind vorhanden.",
+      "draftAction": "Nachforderungsschreiben als Entwurf erzeugen",
+      "satisfiedCount": "{count, plural, one {# Pflichtunterlage vorhanden} other {# Pflichtunterlagen vorhanden}}",
+      "draftLabel": "Entwurf (nicht versendet)"
+    },
+    "rules": {
+      "title": "Klassifikationsregeln",
+      "intro": "Regelstufe der dreistufigen Klassifikation: Muster, Zielkategorie und Priorität je Regel.",
+      "required": "Name und Muster sind Pflichtfelder.",
+      "empty": "Keine Regeln angelegt.",
+      "edit": "Bearbeiten",
+      "activate": "Aktivieren",
+      "deactivate": "Deaktivieren",
+      "delete": "Löschen",
+      "editTitle": "Regel bearbeiten",
+      "newTitle": "Neue Regel",
+      "name": "Name",
+      "patternTypeLabel": "Mustertyp",
+      "patternType": {
+        "filename_regex": "Dateiname (Regex)",
+        "text_keyword": "Text-Stichwort",
+        "sender_domain": "Absender/Domain",
+        "drive_folder": "Drive-Ordner"
+      },
+      "targetCategory": "Zielkategorie",
+      "noCategory": "Keine",
+      "patternValue": "Muster",
+      "priorityLabel": "Priorität",
+      "confidence": "Konfidenz",
+      "save": "Speichern",
+      "create": "Anlegen",
+      "cancel": "Abbrechen"
+    },
+    "review": {
+      "filterStatus": "Status",
+      "statusAll": "Alle",
+      "status": {
+        "open": "Offen",
+        "in_progress": "In Bearbeitung",
+        "resolved": "Erledigt",
+        "dismissed": "Verworfen"
+      },
+      "filterPriority": "Mindestpriorität",
+      "filterStage": "Stufe",
+      "bulkCategory": "Sammel-Zielkategorie",
+      "bulkDecide": "Sammelentscheidung",
+      "empty": "Keine Prüffälle.",
+      "select": "Auswählen",
+      "noDocument": "Ohne Dokument",
+      "priorityLabel": "Priorität",
+      "details": "Details",
+      "openDocument": "Dokument öffnen",
+      "candidates": "Kandidaten",
+      "noCandidates": "Keine Kandidaten.",
+      "acceptCandidate": "Übernehmen",
+      "aiSuggestion": "KI-Vorschlag",
+      "askAi": "KI fragen",
+      "reject": "Ablehnen",
+      "snooze": "Zurückstellen (7 Tage)",
+      "manualCategory": "Klasse manuell setzen",
+      "setManually": "Setzen"
     }
   }
 }

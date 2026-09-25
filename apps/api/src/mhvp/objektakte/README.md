@@ -1,12 +1,11 @@
 # objektakte
 
 M35 Stufe 1 (Datenmodell und Migrationsgerüst), Stufe 2 (Dokumentenmigration, Metadaten,
-OCR-Text, Review-Startbestand) und Stufe 3 Teil 1+3 (Regelklassifikation, Review-Center) der
-Übernahme der Anwendung objektakte (Django/MariaDB) in dieses CRM. Plan:
-`docs/plans/M35-objektakte-uebernahme.md`, Regeln: `docs/rules/M35-01.md` (Stufe 1),
-`docs/rules/M35-02.md` (Klassifikation Stufe 1 von drei). Die KI-Klassifikationsstufe
-(Auftragsteil 2), die Vollständigkeitsprüfung (Teil 4) und die CRM-Oberfläche (Teil 5) sind
-eigene, noch nicht begonnene Teilaufträge.
+OCR-Text, Review-Startbestand) und Stufe 3 Teil 1 bis 5 (Regelklassifikation, Review-Center,
+KI-Klassifikationsstufe, Vollständigkeitsprüfung, CRM-Oberfläche) der Übernahme der Anwendung
+objektakte (Django/MariaDB) in dieses CRM. Plan: `docs/plans/M35-objektakte-uebernahme.md`,
+Regeln: `docs/rules/M35-01.md` (Stufe 1), `docs/rules/M35-02.md` (Klassifikation, alle drei
+Stufen).
 
 | Datei (Stufe 3) | Inhalt |
 | --- | --- |
@@ -80,6 +79,21 @@ Rechte: `documents:read` lesen, `documents:create` Vorschau, Übernahme und OCR-
 (wie andere Importe, `mhvp.imports.routers`). Kein Feld ist zwingend aus objektakte lesbar:
 fehlt eine Adresse oder ein Objekttyp, wird nichts geraten, sondern das Feld bleibt leer.
 
-Nicht enthalten (Stufe 3 bis 6, siehe Plan): Klassifikation und die eigentliche
-Review-Center-Oberfläche, Vollständigkeitsprüfung und Nachforderungsschreiben, Vorschaubilder,
-Eigentümer-/Mieterlisten, Übernahme von `AiCall`-Historie und Benutzern, Parallelbetrieb.
+## Stufe 3, Teil 2 (KI), 4 (Vollständigkeit), 5 (Regel-Verwaltung)
+
+| Datei | Inhalt |
+| --- | --- |
+| `masking.py` | `mask_text`: IBAN/E-Mail/Telefon/Namen-Platzhalter vor jedem KI-Aufruf (rule 0.1.13) |
+| `completeness.py` | `check_completeness`, `nachforderungsschreiben_text` (Vollständigkeitsprüfung je Objekt, Textentwurf) |
+| `completeness_routers.py` | `/api/v1/objektakte/required-documents`, `/api/v1/objektakte/properties/{id}/completeness[/nachforderungsschreiben]` |
+| `rules_routers.py` | `/api/v1/objektakte/classification-rules` (CRUD für die Regeln aus Teil 1, Grundlage der CRM-Einstellungsseite) |
+| `review_routers.py` (Ergänzung) | `POST /objektakte/review/{id}/ask-ai` (KI-Stufe, Stufe 3 von drei) |
+
+Die KI-Stufe läuft über den bestehenden `mhvp.ai`-Gateway (`AiTask.CLASSIFY_DOCUMENT`, Prompt
+`mhvp.ai.prompts.classify_document.v1`); nur maskierter Text verlässt das CRM, das Ergebnis ist
+immer ein Vorschlag (rule 0.1.6). Details: `docs/rules/M35-02.md`, Plan Abschnitt 4
+("Ergebnis Stufe 3, Teil 2, 4 und 5"). Die CRM-Oberfläche (Review-Center, Regeln-Einstellungen,
+Vollständigkeits-Karte) liegt unter `apps/web-crm/src/components/objektakte/`.
+
+Nicht enthalten (Stufe 4 bis 6, siehe Plan): Vorschaubilder, Eigentümer-/Mieterlisten,
+Übernahme von `AiCall`-Historie und Benutzern, Parallelbetrieb.

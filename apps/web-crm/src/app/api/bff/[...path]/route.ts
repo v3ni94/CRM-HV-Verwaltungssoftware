@@ -37,9 +37,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
   { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters|dashboard\/stats)$/ },
-  { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|bulk)$/ },
+  { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|calendar\/refresh|bulk)$/ },
   { method: "PUT", pattern: /^workspace\/filters$/ },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
+  // Google-Kalender-Termine (M23-02 bidirektional): ändern/löschen des verknüpften Google-Events
+  // und, nur nach ausdrücklicher Bestätigung, Einladung an externe Teilnehmer (M23-05).
+  { method: "PATCH", pattern: /^workspace\/calendar\/google\/(default|own)\/[^/]+$/ },
+  { method: "DELETE", pattern: /^workspace\/calendar\/google\/(default|own)\/[^/]+$/ },
+  { method: "POST", pattern: /^workspace\/calendar\/google\/(default|own)\/[^/]+\/invite$/ },
   { method: "GET", pattern: /^contacts$/ },
   { method: "POST", pattern: /^contacts$/ },
   { method: "GET", pattern: /^contacts\/duplicates$/ },
@@ -70,8 +75,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^tenant\/roles$/ },
   { method: "POST", pattern: /^tenant\/roles$/ },
   { method: "PUT", pattern: new RegExp(`^tenant/roles/${ID}/permissions$`) },
+  // Portalrechte je Rolle (M2-08 entschieden, docs/rules/M2-07.md).
+  { method: "GET", pattern: /^tenant\/portal-role-permissions$/ },
+  { method: "PUT", pattern: /^tenant\/portal-role-permissions$/ },
+  { method: "POST", pattern: /^tenant\/portal-role-permissions\/resync$/ },
   { method: "GET", pattern: /^tenant\/settings$/ },
   { method: "PATCH", pattern: /^tenant\/settings$/ },
+  // Rechnungsstellung und Steuer (M13-04/M18-01, operator decision 25.09.2026).
+  { method: "GET", pattern: /^tenant\/billing-settings$/ },
+  { method: "PATCH", pattern: /^tenant\/billing-settings$/ },
   // Own account: password change and session list (Meine Daten).
   { method: "POST", pattern: /^auth\/password$/ },
   { method: "GET", pattern: /^auth\/sessions$/ },
@@ -124,9 +136,33 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(book|ignore)$`) },
   // Payment orders (M15): approval and cancel only; the payment file needs G2.
   { method: "POST", pattern: new RegExp(`^banking/payment-orders/${ID}/(approve|cancel)$`) },
-  // Dunning (M16): preview and approval by a second person; fees and interest stay locked (V7).
+  { method: "GET", pattern: /^banking\/payment-orders$/ },
+  // finAPI (M11-finapi): read only aggregator onboarding, consent, fetch (Stufen 1-3).
+  { method: "GET", pattern: /^banking\/finapi\/config$/ },
+  { method: "PUT", pattern: /^banking\/finapi\/config$/ },
+  { method: "GET", pattern: /^banking\/finapi\/connections$/ },
+  { method: "POST", pattern: /^banking\/finapi\/connections$/ },
+  { method: "POST", pattern: new RegExp(`^banking/finapi/connections/${ID}/(check|reauthorize|disconnect|fetch)$`) },
+  { method: "POST", pattern: new RegExp(`^banking/finapi/accounts/${ID}/(assign|fetch)$`) },
+  // Rechnung zu Bankumsatz abgleichen und Zahlungsvorschlag (M11-finapi Stage 3, G2 gesperrt).
+  { method: "GET", pattern: new RegExp(`^banking/invoice-matching/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^banking/invoice-matching/${ID}/match$`) },
+  // Dunning (M16): preview and approval by a second person; fee amount and Basiszinssatz are
+  // only active once the operator has entered them (V7).
+  { method: "GET", pattern: /^accounting\/dunning-settings$/ },
+  { method: "PUT", pattern: /^accounting\/dunning-settings$/ },
+  { method: "POST", pattern: /^accounting\/dunning-settings\/presets$/ },
   { method: "POST", pattern: /^accounting\/dunning-runs$/ },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-runs/${ID}/approve$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/dunning-cases/${ID}/mark-sent$`) },
+  {
+    method: "POST",
+    pattern: new RegExp(`^accounting/dunning-cases/${ID}/mahnbescheid-vorbereitung$`),
+  },
+  {
+    method: "GET",
+    pattern: new RegExp(`^accounting/dunning-cases/${ID}/mahnbescheid-vorbereitung$`),
+  },
   // Operating cost statements (M17): drafting and status steps; issuing needs G3 (API).
   { method: "POST", pattern: /^statements$/ },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/(cost-items|calculate|transition|new-version)$`) },
@@ -210,6 +246,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/assignees$`) },
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/assignees$`) },
   { method: "DELETE", pattern: new RegExp(`^tickets/${ID}/assignees/${ID}$`) },
+  // Rechnung zuordnen (M11-finapi Stage 3): Kategorie Rechnung, Jahresablage im Objektordner.
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/attach-invoice$`) },
   // Paperless-Dokumente in Ticket- und Objektansicht (M31).
   { method: "GET", pattern: new RegExp(`^properties/${ID}/dms-documents$`) },
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/dms-documents$`) },
@@ -217,6 +255,24 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // DMS-Anbindung (Einstellungen): Paperless und Google Drive.
   { method: "GET", pattern: /^dms-connections$/ },
   { method: "PUT", pattern: /^dms-connections\/(paperless|google_drive)$/ },
+  // Objektakte-Übernahme (M35 Stufe 3): Review-Center, Klassifikationsregeln, Vollständigkeit.
+  { method: "GET", pattern: /^objektakte\/review$/ },
+  { method: "GET", pattern: new RegExp(`^objektakte/review/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^objektakte/review/${ID}/(decide|ask-ai)$`) },
+  { method: "POST", pattern: /^objektakte\/review\/bulk-decide$/ },
+  { method: "GET", pattern: /^objektakte\/classification-rules$/ },
+  { method: "POST", pattern: /^objektakte\/classification-rules$/ },
+  { method: "PATCH", pattern: new RegExp(`^objektakte/classification-rules/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^objektakte/classification-rules/${ID}$`) },
+  { method: "GET", pattern: /^objektakte\/required-documents$/ },
+  { method: "POST", pattern: /^objektakte\/required-documents$/ },
+  { method: "DELETE", pattern: new RegExp(`^objektakte/required-documents/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^objektakte/properties/${ID}/completeness$`) },
+  {
+    method: "POST",
+    pattern: new RegExp(`^objektakte/properties/${ID}/completeness/nachforderungsschreiben$`),
+  },
+  { method: "GET", pattern: /^document-categories$/ },
   // SLA und Bereitschaft (M21 Übernahme aus dem Immoware Hub).
   { method: "GET", pattern: /^sla\/(rules|clocks|on-call|on-call\/current|alerts|calendar)$/ },
   { method: "GET", pattern: new RegExp(`^sla/rules/${ID}/steps$`) },
@@ -235,17 +291,24 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^sla\/sms-gateway$/ },
   { method: "PUT", pattern: /^sla\/sms-gateway$/ },
   { method: "POST", pattern: /^sla\/sms-gateway\/test$/ },
+  { method: "GET", pattern: /^sla\/whatsapp-config$/ },
+  { method: "PUT", pattern: /^sla\/whatsapp-config$/ },
+  { method: "POST", pattern: /^sla\/whatsapp-config\/test$/ },
   // Immoware24-Lesezugriff per DAV (M32): Anbindung, Läufe, Dokumente, Kontakte, Termine.
   { method: "GET", pattern: /^immoware\/connection$/ },
   { method: "PUT", pattern: /^immoware\/connection$/ },
   { method: "POST", pattern: /^immoware\/connection\/check$/ },
+  { method: "POST", pattern: /^immoware\/connection\/diagnose$/ },
   { method: "POST", pattern: /^immoware\/sync\/(webdav|carddav|caldav)$/ },
   { method: "GET", pattern: /^immoware\/sync\/runs$/ },
   { method: "GET", pattern: /^immoware\/documents$/ },
   { method: "GET", pattern: new RegExp(`^immoware/documents/${ID}/file$`) },
+  { method: "POST", pattern: new RegExp(`^immoware/documents/${ID}/take-over$`) },
+  { method: "POST", pattern: /^immoware\/documents\/take-over-folder$/ },
   { method: "GET", pattern: /^immoware\/contacts$/ },
   { method: "POST", pattern: new RegExp(`^immoware/contacts/${ID}/match$`) },
   { method: "POST", pattern: new RegExp(`^immoware/contacts/${ID}/create-contact$`) },
+  { method: "POST", pattern: /^immoware\/contacts\/take-over$/ },
   { method: "GET", pattern: /^immoware\/events$/ },
   // Lernphase Immoware24 (M33, Uebernahme des Moduls Learning aus dem Immoware Hub).
   { method: "POST", pattern: /^immoware\/learning\/runs$/ },

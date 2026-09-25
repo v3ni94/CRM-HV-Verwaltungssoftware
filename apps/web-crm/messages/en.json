@@ -41,7 +41,8 @@
     "openNav": "Open navigation",
     "dms": "DMS",
     "immoware": "Immoware24",
-    "immowareLearning": "Learning phase"
+    "immowareLearning": "Learning phase",
+    "objektakte": "Objektakte (Records)"
   },
   "Hoa": {
     "title": "HOA management",
@@ -182,13 +183,15 @@
     "runs": "Recent runs",
     "empty": "No dunning runs yet.",
     "run": "Dunning run at {date}",
-    "feesLocked": "Dunning fees and default interest are locked until V7 is decided and are not computed.",
+    "feesLocked": "A dunning fee or statutory interest only applies once the operator has entered an amount, or a Basiszinssatz, for that level (operator decision 25.09.2026, V7 partly decided). Without a value the item stays 0.00 EUR.",
     "approve": "Approve run",
     "confirmApprove": "Approve this dunning run now? Approval cannot be undone.",
     "level": "Level",
     "total": "Amount",
+    "fee": "Dunning fee",
     "status": "Status",
     "reason": "Reason",
+    "settings": "Dunning levels and fees",
     "runStatus": {
       "preview": "Preview",
       "approved": "Approved"
@@ -197,7 +200,39 @@
       "proposed": "proposed",
       "excluded": "excluded",
       "sent": "sent"
-    }
+    },
+    "markSent": "Mark as sent",
+    "markSentChannel": "Delivery channel",
+    "channel": {
+      "post": "Post",
+      "email": "E-mail",
+      "portal": "Portal"
+    },
+    "mahnbescheid": "Prepare Mahnbescheid",
+    "mahnbescheidHint": "Preparation only, for review by a lawyer. The platform never files this itself.",
+    "mahnbescheidDownload": "Download preparation (JSON)",
+    "mahnbescheidOnlyHighest": "Only possible on the highest configured level.",
+    "settingsTitle": "Dunning levels, fees and statutory interest",
+    "settingsNotice": "Amounts and the base rate are a commercial setting, not a legal release. The fee amount and the contractual basis for charging it to the community are still to be reviewed legally.",
+    "loadPresets": "Load suggested values",
+    "presetsLoaded": "Suggested values loaded. Please enter amounts and the base rate yourself.",
+    "levelNo": "Level",
+    "minDays": "Days past due",
+    "levelText": "Label",
+    "feeAmount": "Fee (EUR, empty = no fee)",
+    "feeFromLevel": "Fee from level",
+    "thresholdAmount": "Dunning threshold (EUR)",
+    "addLevel": "Add level",
+    "removeLevel": "Remove level",
+    "interestSection": "Statutory interest",
+    "interestEnabled": "Interest active",
+    "interestEnabledHint": "Only selectable once a base rate is entered.",
+    "interestBaseRate": "Base rate (%, maintained by the operator, changes twice a year)",
+    "interestSpread": "Spread (percentage points)",
+    "interestSpreadPresetConsumer": "Consumer (5)",
+    "interestSpreadPresetBusiness": "Business (9)",
+    "save": "Save",
+    "saved": "Saved."
   },
   "Billing": {
     "title": "Operating cost statement",
@@ -1034,6 +1069,10 @@
     "immoware": {
       "title": "Immoware24 connection",
       "description": "Set up the connection to Immoware24 over WebDAV, CardDAV and CalDAV and trigger fetches."
+    },
+    "objektakte": {
+      "title": "Objektakte",
+      "description": "Rule stage settings for document classification"
     }
   },
   "MailPlaybooks": {
@@ -1065,7 +1104,8 @@
       "onCall": "On-call",
       "calendar": "Calendar",
       "alerts": "Alerts",
-      "sms": "SMS gateway"
+      "sms": "SMS gateway",
+      "whatsapp": "WhatsApp"
     },
     "priorities": {
       "low": "low",
@@ -1081,7 +1121,8 @@
     "channels": {
       "email": "email",
       "internal": "internal",
-      "sms": "SMS"
+      "sms": "SMS",
+      "whatsapp": "WhatsApp"
     },
     "channel": "Channel",
     "colors": {
@@ -1202,6 +1243,31 @@
       "test": "Send test message",
       "testOk": "The gateway accepted the test message.",
       "testFailed": "Test failed: {error}"
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "intro": "WhatsApp Business Platform (Meta Cloud API). Only templates approved by Meta are sent, never free text: a business initiated message outside WhatsApp's 24 hour service window is only possible as a template message.",
+      "enabled": "Enabled",
+      "phoneNumberId": "Phone number ID",
+      "wabaId": "WhatsApp Business Account ID",
+      "accessToken": "Access token",
+      "accessTokenSet": "A value is stored. Leave empty to keep it.",
+      "accessTokenClear": "Delete stored value",
+      "templateLanguage": "Template language",
+      "templates": "Template names per alert type",
+      "templatesHint": "Must match the template name approved at Meta exactly.",
+      "alertType": {
+        "sla_escalation": "SLA escalation",
+        "emergency": "Emergency",
+        "test": "Test message"
+      },
+      "smsFallback": "Use SMS as fallback when WhatsApp fails",
+      "save": "Save",
+      "saved": "Saved.",
+      "testTo": "Test number (staff)",
+      "test": "Send test message",
+      "testOk": "The Cloud API accepted the test message.",
+      "testFailed": "Test failed: {error}"
     }
   },
   "Version": {
@@ -1248,7 +1314,9 @@
     "clientSecret": "Client secret",
     "sandbox": "Sandbox environment",
     "save": "Save",
-    "saved": "Saved."
+    "saved": "Saved.",
+    "autoFetch": "Daily automatic fetch",
+    "autoFetchHint": "Fetches transactions of assigned accounts once a day automatically (default: off). A manual \"Fetch transactions\" click is independent of this."
   },
   "BankConnections": {
     "title": "Bank connections",
@@ -1275,7 +1343,14 @@
     },
     "noConnections": "No bank connection yet.",
     "error": "Action failed.",
-    "assignPropertyBankAccountId": "Internal account ID"
+    "assignPropertyBankAccountId": "Internal account ID",
+    "since": "From",
+    "until": "Until",
+    "fetchRangeHint": "Date range optional; without it, the provider delivers what it has.",
+    "fetchBank": "Fetch transactions of every assigned account",
+    "wizardStep1": "1. Search the bank and start the authorization",
+    "wizardStep2": "2. Finish the authorization in the new window, then check",
+    "wizardStep3": "3. Assign accounts to a ledger/property"
   },
   "DmsSettings": {
     "title": "DMS connection",
@@ -1503,5 +1578,90 @@
     "editMobilePhone": "Set mobile phone",
     "mobilePhoneShow": "Mobile: {phone}",
     "mobilePhoneHint": "Used for SMS escalations to the on-call person. Leave empty to delete."
+  },
+  "InvoiceMatch": {
+    "title": "Bank reconciliation",
+    "match": "Match with bank transactions",
+    "matched": "Matched bank transaction",
+    "noMatch": "No matching bank transaction found.",
+    "proposePayment": "Prepare payment",
+    "bankAccountId": "Internal account id",
+    "executionDate": "Execution date",
+    "proposalCreated": "Payment proposal created: prepared, not executed.",
+    "error": "Reconciliation failed."
+  },
+  "TicketInvoice": {
+    "attach": "Assign as invoice",
+    "invoiceId": "Invoice id",
+    "attached": "Assigned as invoice and filed in the property folder.",
+    "error": "Assignment failed."
+  },
+  "Objektakte": {
+    "title": "Records review",
+    "intro": "Review center for the three stage document classification of the objektakte takeover.",
+    "completeness": {
+      "title": "Property file completeness",
+      "complete": "All required documents are present.",
+      "draftAction": "Draft a follow-up request letter",
+      "satisfiedCount": "{count, plural, one {# required document present} other {# required documents present}}",
+      "draftLabel": "Draft (not sent)"
+    },
+    "rules": {
+      "title": "Classification rules",
+      "intro": "Rule stage of the three stage classification: pattern, target category and priority per rule.",
+      "required": "Name and pattern are required.",
+      "empty": "No rules yet.",
+      "edit": "Edit",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "editTitle": "Edit rule",
+      "newTitle": "New rule",
+      "name": "Name",
+      "patternTypeLabel": "Pattern type",
+      "patternType": {
+        "filename_regex": "Filename (regex)",
+        "text_keyword": "Text keyword",
+        "sender_domain": "Sender/domain",
+        "drive_folder": "Drive folder"
+      },
+      "targetCategory": "Target category",
+      "noCategory": "None",
+      "patternValue": "Pattern",
+      "priorityLabel": "Priority",
+      "confidence": "Confidence",
+      "save": "Save",
+      "create": "Create",
+      "cancel": "Cancel"
+    },
+    "review": {
+      "filterStatus": "Status",
+      "statusAll": "All",
+      "status": {
+        "open": "Open",
+        "in_progress": "In progress",
+        "resolved": "Resolved",
+        "dismissed": "Dismissed"
+      },
+      "filterPriority": "Minimum priority",
+      "filterStage": "Stage",
+      "bulkCategory": "Bulk target category",
+      "bulkDecide": "Bulk decide",
+      "empty": "No review cases.",
+      "select": "Select",
+      "noDocument": "No document",
+      "priorityLabel": "Priority",
+      "details": "Details",
+      "openDocument": "Open document",
+      "candidates": "Candidates",
+      "noCandidates": "No candidates.",
+      "acceptCandidate": "Accept",
+      "aiSuggestion": "AI suggestion",
+      "askAi": "Ask AI",
+      "reject": "Reject",
+      "snooze": "Snooze (7 days)",
+      "manualCategory": "Set class manually",
+      "setManually": "Set"
+    }
   }
 }

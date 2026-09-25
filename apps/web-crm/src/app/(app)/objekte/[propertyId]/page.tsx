@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
+import { CompletenessPanel } from "@/components/objektakte/CompletenessPanel";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
@@ -167,6 +168,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       </div>
 
       <DmsDocumentsPanel entity="property" id={propertyId} />
+      <CompletenessPanel propertyId={propertyId} />
       <TicketsSection tickets={(tickets.data ?? []) as TicketSummary[]} />
     </div>
   );
