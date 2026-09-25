@@ -72,6 +72,16 @@ Weg wie in Schritt 2: Hostname in `MHVP_HUB_HOST_MAIL` eintragen, Weiterleitung 
 Ein eigener Router mit eigener Oberfläche ist nicht vorgesehen, damit es nur eine Anmeldung
 und eine Sitzung gibt.
 
+## Protokoll
+
+| Datum | Schritt | Ergebnis |
+|-------|---------|----------|
+| 25.09.2026 | 1 und 2 | Letztes Backup immoware_hub-20260925-125702, Hub-Container gestoppt, Weiterleitung über infra/compose.hub-redirect.yaml aktiv, mhvp.sh ergänzt (Sicherung mhvp.sh.vor-hub-redirect) |
+| 09.10.2026 | 3 | frühester Termin, Freigabe der Geschäftsführung erforderlich |
+| 24.12.2026 | 4 | frühester Termin, Freigabe der Geschäftsführung erforderlich |
+
+Hinweis für Betreiber: Prüfbefehle nie mit `set -e` in einer interaktiven Sitzung ausführen, die Shell beendet sich sonst beim ersten Fehler. Nach `up -d web-crm` mindestens 20 Sekunden warten, bevor Traefik-Antworten geprüft werden.
+
 ## Freigabe
 
 Schritt 1 und 2 sind rückholbar und können durch die Geschäftsführung per Zuruf freigegeben
