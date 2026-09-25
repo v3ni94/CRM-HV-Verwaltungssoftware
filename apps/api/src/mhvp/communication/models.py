@@ -97,6 +97,9 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     attachment_document_ids: Mapped[list[uuid.UUID]] = mapped_column(
         ARRAY(UUID(as_uuid=True)), nullable=False, default=list
     )
+    # Weiterleitung an das Rechnungsprogramm (Gesellschaftsrechnungen, M32): wohin und wann.
+    forwarded_to: Mapped[str | None] = mapped_column(String(320))
+    forwarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     classification: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     appointment_suggestions: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, default=list

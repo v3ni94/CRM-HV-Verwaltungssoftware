@@ -120,9 +120,53 @@ class GmailClient:
             raise GmailError(f"Nachricht nicht lesbar (HTTP {r.status_code}).")
         return base64.urlsafe_b64decode(r.json()["raw"] + "==")
 
+    async def _post(self, path: str, body: dict[str, Any]) -> httpx.Response:
+        token = await self._access_token()
+        r = await self._http.post(
+            f"{API}/{path}", json=body, headers={"Authorization": f"Bearer {token}"}
+        )
+        if r.status_code == 401:
+            self._token = None
+            token = await self._access_token()
+            r = await self._http.post(
+                f"{API}/{path}", json=body, headers={"Authorization": f"Bearer {token}"}
+            )
+        return r
+
+    async def find_by_rfc822_message_id(self, header_message_id: str) -> str | None:
+        """Gmail id of the message with this RFC-822 Message-ID (documented search operator)."""
+        r = await self._get("messages", q=f"rfc822msgid:{header_message_id}", maxResults=1)
+        if r.status_code != 200:
+            raise GmailError(f"Suche fehlgeschlagen (HTTP {r.status_code}).")
+        found = r.json().get("messages", [])
+        return str(found[0]["id"]) if found else None
+
+    async def send_raw(self, raw: bytes) -> str:
+        """Sends a complete RFC-822 message (scope gmail.send); returns the Gmail id."""
+        encoded = base64.urlsafe_b64encode(raw).decode().rstrip("=")
+        r = await self._post("messages/send", {"raw": encoded})
+        if r.status_code not in (200, 201):
+            raise GmailError(f"Versand fehlgeschlagen (HTTP {r.status_code}).")
+        return str(r.json()["id"])
+
+    async def archive(self, message_id: str) -> None:
+        """Removes the INBOX label (scope gmail.modify); the mail stays in 'Alle Nachrichten'."""
+        r = await self._post(f"messages/{message_id}/modify", {"removeLabelIds": ["INBOX"]})
+        if r.status_code == 404:
+            return  # bereits verschoben oder geloescht: Archivieren ist idempotent
+        if r.status_code != 200:
+            raise GmailError(f"Archivieren fehlgeschlagen (HTTP {r.status_code}).")
+
 
 OAUTH_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-SCOPES = "https://www.googleapis.com/auth/gmail.readonly"
+# Lesen + Versand (Weiterleitung an das Rechnungsprogramm) + Labels (Archivieren beim
+# Erledigen). Bestehende Verbindungen mit nur-Lese-Freigabe funktionieren weiter fuers Lesen;
+# fuer Weiterleiten/Archivieren muss das Postfach einmal neu verbunden werden.
+SCOPES = (
+    "https://www.googleapis.com/auth/gmail.readonly "
+    "https://www.googleapis.com/auth/gmail.send "
+    "https://www.googleapis.com/auth/gmail.modify"
+)
 
 
 async def oauth_client(session: AsyncSession, settings: Settings) -> tuple[str, str]:

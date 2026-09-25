@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-test("home renders the German product name", async ({ page }) => {
+test("the protected start page redirects to the German login", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("MH Verwaltungsplattform");
-  await expect(page.getByRole("status")).toBeVisible();
+  await expect(page).toHaveURL(/\/anmelden/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Anmeldung");
+  await expect(page.getByLabel("E-Mail")).toBeVisible();
 });
 
 test("/api/health returns ok", async ({ request }) => {

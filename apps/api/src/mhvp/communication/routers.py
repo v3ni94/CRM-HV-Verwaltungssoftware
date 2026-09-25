@@ -100,6 +100,8 @@ def _out(m: Message) -> dict[str, Any]:
             "attachment_document_ids",
             "classification",
             "appointment_suggestions",
+            "forwarded_to",
+            "forwarded_at",
         )
     }
 
@@ -437,6 +439,13 @@ async def assign(
         if body.status is None and (body.contact_id or body.property_id) and row.status == "new":
             row.status = "assigned"
         await session.flush()
+        if body.status == "done":
+            # Erledigt heisst aufgeraeumt: die Mail wandert im Gmail-Postfach ins Archiv.
+            # Nur nach bestem Bemuehen; eine fehlende Google-Freigabe (Neu-Verbinden noetig)
+            # oder ein Netzfehler laesst den Statuswechsel nie scheitern.
+            from mhvp.communication.forwarding import archive_message
+
+            await archive_message(session, request.app.state.settings, row)
         return _out(row)
 
 
@@ -557,3 +566,118 @@ async def take_appointment(
         session.add(entry)
         await session.flush()
         return {"calendar_entry_id": entry.id, "date": entry.starts_on}
+
+
+# ---- Weiterleitung von Gesellschaftsrechnungen an das Rechnungsprogramm (M32) --------------
+# Nur Rechnungen an die Gesellschaft selbst (z. B. Telekom, Krankenkasse) werden weitergeleitet
+# und archiviert; Objektrechnungen nie. Standard ist der Vorschlagsmodus mit Klick je Mail.
+
+from mhvp.communication import forwarding as fwd  # noqa: E402
+from mhvp.platform.models import TenantSettings  # noqa: E402
+
+
+class ForwardingIn(_In):
+    enabled: bool = False
+    address: str = Field(default="", max_length=320)
+    mode: str = Field(default="suggest", pattern="^(suggest|auto)$")
+    senders: list[str] = Field(default_factory=list, max_length=500)
+
+
+@router.get("/forwarding", summary="Weiterleitung Gesellschaftsrechnungen (Konfiguration)")
+async def get_forwarding(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        return await fwd.load_config(session, principal.tenant_id)
+
+
+@router.put("/forwarding", summary="Weiterleitung konfigurieren (Ziel, Modus, Absenderliste)")
+async def put_forwarding(
+    body: ForwardingIn, request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(TenantSettings).where(TenantSettings.tenant_id == principal.tenant_id)
+        )
+        if row is None:
+            row = TenantSettings(tenant_id=principal.tenant_id, created_by=principal.user_id)
+            session.add(row)
+        row.mail_forwarding = body.model_dump()
+        await session.flush()
+        return fwd.parse_config(row.mail_forwarding)
+
+
+class ForwardInvoiceIn(_In):
+    # Absender in die Positivliste aufnehmen: so lernt die Erkennung aus jeder Freigabe.
+    remember_sender: bool = False
+
+
+@router.post(
+    "/messages/{message_id}/forward-invoice",
+    summary="Gesellschaftsrechnung an das Rechnungsprogramm weiterleiten und archivieren",
+)
+async def forward_invoice(
+    message_id: uuid.UUID,
+    body: ForwardInvoiceIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    from mhvp.communication.gmail import GmailError, make_client, oauth_client
+    from mhvp.documents.blobs import BlobStore
+
+    settings = request.app.state.settings
+    async with tenant_tx(request, principal) as session:
+        config = await fwd.load_config(session, principal.tenant_id)
+        if not config["enabled"]:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Weiterleitung ist nicht eingerichtet (Zieladresse in den Einstellungen).",
+            )
+        row = await _message(session, message_id)
+        if row.direction != "in":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Nur eingehende Mails.")
+        if row.forwarded_at is not None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Diese Mail wurde bereits weitergeleitet."
+            )
+        mailbox = await session.get(Mailbox, row.mailbox_id) if row.mailbox_id else None
+        if mailbox is None or mailbox.kind != "gmail" or not mailbox.secret:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Weiterleitung geht nur aus einem Gmail-Postfach."
+            )
+        client_id, client_secret = await oauth_client(session, settings)
+        client = make_client(client_id, client_secret, mailbox)
+        try:
+            await fwd.forward_message(
+                session,
+                BlobStore(settings),
+                mailbox=mailbox,
+                message=row,
+                target=config["address"],
+                client=client,
+                actor_user_id=principal.user_id,
+            )
+        except GmailError as exc:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=f"{exc} Reicht die Freigabe nicht, das Postfach bitte neu verbinden "
+                "(Versand und Archivieren brauchen eine erweiterte Google-Freigabe).",
+            ) from exc
+        except ValueError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        finally:
+            await client.aclose()
+        if body.remember_sender and row.from_address:
+            settings_row = await session.scalar(
+                select(TenantSettings).where(TenantSettings.tenant_id == principal.tenant_id)
+            )
+            if settings_row is not None:
+                address = row.from_address.strip().lower()
+                if "<" in address and ">" in address:
+                    address = address.split("<", 1)[1].split(">", 1)[0].strip()
+                senders = list(config["senders"])
+                if address and address not in senders:
+                    senders.append(address)
+                settings_row.mail_forwarding = {**config, "senders": senders}
+                await session.flush()
+        return _out(row)

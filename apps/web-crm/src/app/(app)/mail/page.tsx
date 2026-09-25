@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { ForwardInvoiceButton } from "@/components/mail/ForwardInvoiceButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDateTime } from "@/lib/format";
@@ -14,11 +15,25 @@ type Params = { status?: string };
 type Message = {
   id: string;
   status: string;
+  direction: string;
   from_address: string | null;
   subject: string | null;
   received_at: string | null;
   ticket_id: string | null;
+  attachment_document_ids: string[];
+  forwarded_at: string | null;
 };
+
+type Forwarding = { enabled: boolean; senders: string[] };
+
+function senderMatches(from: string | null, senders: string[]): boolean {
+  if (!from) return false;
+  let address = from.trim().toLowerCase();
+  const angle = address.match(/<([^>]+)>/);
+  if (angle?.[1]) address = angle[1].trim();
+  const domain = address.split("@").pop() ?? "";
+  return senders.includes(address) || senders.includes(domain);
+}
 
 const STATUSES = ["new", "assigned", "done"] as const;
 
@@ -28,11 +43,14 @@ export default async function MailPage({ searchParams }: { searchParams: Promise
   const params = await searchParams;
   const t = await getTranslations("Mail");
   const query = params.status ? { status: params.status } : {};
-  const { data, error, response } = await serverApi().GET("/api/v1/mail/messages", {
-    params: { query },
-  });
+  const api = serverApi();
+  const [{ data, error, response }, forwardingRes] = await Promise.all([
+    api.GET("/api/v1/mail/messages", { params: { query } }),
+    api.GET("/api/v1/mail/forwarding"),
+  ]);
   redirectIfUnauthenticated(response);
   const rows = (data ?? []) as unknown as Message[];
+  const forwarding = (forwardingRes.data ?? { enabled: false, senders: [] }) as Forwarding;
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
@@ -70,6 +88,7 @@ export default async function MailPage({ searchParams }: { searchParams: Promise
                 <th>{t("colSubject")}</th>
                 <th>{t("colStatus")}</th>
                 <th>{t("colTicket")}</th>
+                {forwarding.enabled ? <th>{t("colForward")}</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -98,6 +117,20 @@ export default async function MailPage({ searchParams }: { searchParams: Promise
                       <span className="text-muted">–</span>
                     )}
                   </td>
+                  {forwarding.enabled ? (
+                    <td>
+                      {m.forwarded_at ? (
+                        <span className={ui.badge}>{t("forwarded")}</span>
+                      ) : m.direction === "in" && m.attachment_document_ids.length > 0 ? (
+                        <ForwardInvoiceButton
+                          messageId={m.id}
+                          suggested={senderMatches(m.from_address, forwarding.senders)}
+                        />
+                      ) : (
+                        <span className="text-muted">–</span>
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

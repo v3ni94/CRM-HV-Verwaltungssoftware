@@ -223,6 +223,9 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # platform wide fallback. The secret is encrypted and never returned by the API.
     google_client_id: Mapped[str | None] = mapped_column(String(200))
     google_client_secret: Mapped[str | None] = mapped_column(EncryptedText())
+    # Weiterleitung von Gesellschaftsrechnungen an das Rechnungsprogramm (M32):
+    # {"enabled": bool, "address": str, "mode": "suggest"|"auto", "senders": [str, ...]}.
+    mail_forwarding: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 

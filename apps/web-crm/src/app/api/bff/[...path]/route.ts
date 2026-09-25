@@ -90,6 +90,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^banking/finapi/connections/${ID}$`) },
   { method: "POST", pattern: /^banking\/finapi\/fetch$/ },
   { method: "POST", pattern: new RegExp(`^banking/finapi/runs/${ID}/resume$`) },
+  // Weiterleitung von Gesellschaftsrechnungen an das Rechnungsprogramm (M32).
+  { method: "GET", pattern: /^mail\/forwarding$/ },
+  { method: "PUT", pattern: /^mail\/forwarding$/ },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/forward-invoice$`) },
   // Dunning (M16): preview and approval by a second person; fees and interest stay locked (V7).
   { method: "POST", pattern: /^accounting\/dunning-runs$/ },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-runs/${ID}/approve$`) },

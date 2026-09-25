@@ -3626,6 +3626,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/forwarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Weiterleitung Gesellschaftsrechnungen (Konfiguration) */
+        get: operations["get_forwarding_api_v1_mail_forwarding_get"];
+        /** Weiterleitung konfigurieren (Ziel, Modus, Absenderliste) */
+        put: operations["put_forwarding_api_v1_mail_forwarding_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/ingest": {
         parameters: {
             query?: never;
@@ -3761,6 +3779,23 @@ export interface paths {
         put?: never;
         /** Erkannten Termin in den Kalender übernehmen */
         post: operations["take_appointment_api_v1_mail_messages__message_id__appointment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/forward-invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Gesellschaftsrechnung an das Rechnungsprogramm weiterleiten und archivieren */
+        post: operations["forward_invoice_api_v1_mail_messages__message_id__forward_invoice_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8056,6 +8091,34 @@ export interface components {
             authorization_context: string;
             /** Bank Name */
             bank_name: string;
+        };
+        /** ForwardInvoiceIn */
+        ForwardInvoiceIn: {
+            /**
+             * Remember Sender
+             * @default false
+             */
+            remember_sender: boolean;
+        };
+        /** ForwardingIn */
+        ForwardingIn: {
+            /**
+             * Address
+             * @default
+             */
+            address: string;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Mode
+             * @default suggest
+             */
+            mode: string;
+            /** Senders */
+            senders?: string[];
         };
         /** GateDecision */
         GateDecision: {
@@ -20127,6 +20190,63 @@ export interface operations {
             };
         };
     };
+    get_forwarding_api_v1_mail_forwarding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_forwarding_api_v1_mail_forwarding_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForwardingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ingest_api_v1_mail_ingest_post: {
         parameters: {
             query?: never;
@@ -20444,6 +20564,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forward_invoice_api_v1_mail_messages__message_id__forward_invoice_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForwardInvoiceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

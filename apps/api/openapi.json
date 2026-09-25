@@ -7076,6 +7076,50 @@
         "title": "FinapiConnectIn",
         "type": "object"
       },
+      "ForwardInvoiceIn": {
+        "additionalProperties": false,
+        "properties": {
+          "remember_sender": {
+            "default": false,
+            "title": "Remember Sender",
+            "type": "boolean"
+          }
+        },
+        "title": "ForwardInvoiceIn",
+        "type": "object"
+      },
+      "ForwardingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "default": "",
+            "maxLength": 320,
+            "title": "Address",
+            "type": "string"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "mode": {
+            "default": "suggest",
+            "pattern": "^(suggest|auto)$",
+            "title": "Mode",
+            "type": "string"
+          },
+          "senders": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Senders",
+            "type": "array"
+          }
+        },
+        "title": "ForwardingIn",
+        "type": "object"
+      },
       "GateDecision": {
         "properties": {
           "comment": {
@@ -31466,6 +31510,70 @@
         ]
       }
     },
+    "/api/v1/mail/forwarding": {
+      "get": {
+        "operationId": "get_forwarding_api_v1_mail_forwarding_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Forwarding Api V1 Mail Forwarding Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Weiterleitung Gesellschaftsrechnungen (Konfiguration)",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "put": {
+        "operationId": "put_forwarding_api_v1_mail_forwarding_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForwardingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Forwarding Api V1 Mail Forwarding Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Weiterleitung konfigurieren (Ziel, Modus, Absenderliste)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/ingest": {
       "post": {
         "operationId": "ingest_api_v1_mail_ingest_post",
@@ -31954,6 +32062,61 @@
           }
         },
         "summary": "Erkannten Termin in den Kalender übernehmen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/forward-invoice": {
+      "post": {
+        "operationId": "forward_invoice_api_v1_mail_messages__message_id__forward_invoice_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForwardInvoiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Forward Invoice Api V1 Mail Messages  Message Id  Forward Invoice Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gesellschaftsrechnung an das Rechnungsprogramm weiterleiten und archivieren",
         "tags": [
           "Postfach"
         ]

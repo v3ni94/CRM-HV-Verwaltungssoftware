@@ -719,6 +719,12 @@ async def patch_ticket(
                 if body.status in (TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED)
                 else None
             )
+            if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
+                # Erledigt raeumt auf: verknuepfte Mails wandern im Gmail-Postfach ins Archiv
+                # (nach bestem Bemuehen, ein Fehler stoppt den Statuswechsel nie).
+                from mhvp.communication.forwarding import archive_ticket_messages
+
+                await archive_ticket_messages(session, request.app.state.settings, ticket.id)
         if body.assignee_user_id and body.assignee_user_id != ticket.assignee_user_id:
             ticket.assignee_user_id = body.assignee_user_id
             await _event(
@@ -815,6 +821,12 @@ async def bulk_status(
                 if body.status in (TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED)
                 else None
             )
+            if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
+                # Erledigt raeumt auf: verknuepfte Mails wandern im Gmail-Postfach ins Archiv
+                # (nach bestem Bemuehen, ein Fehler stoppt den Statuswechsel nie).
+                from mhvp.communication.forwarding import archive_ticket_messages
+
+                await archive_ticket_messages(session, request.app.state.settings, ticket.id)
             updated += 1
         await session.flush()
         return {"updated": updated, "skipped": skipped}

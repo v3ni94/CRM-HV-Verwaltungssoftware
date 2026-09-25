@@ -23,6 +23,7 @@ export default async function SettingsPage() {
     { href: "/einstellungen/ki", title: t("ai.title"), description: t("ai.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/postfaecher", title: t("mail.title"), description: t("mail.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/vorlagen", title: t("templates.title"), description: t("templates.description"), show: can("tickets:approve") },
+    { href: "/einstellungen/weiterleitung", title: t("forwarding.title"), description: t("forwarding.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/profil", title: t("profile.title"), description: t("profile.description"), show: true },
     { href: "/plattform", title: t("platform.title"), description: t("platform.description"), show: Boolean(me.data?.is_platform_admin) },
   ].filter((c) => c.show);

@@ -1,19 +1,137 @@
 @import "tailwindcss";
 @import "@mhvp/ui/tokens.css";
 
-/* Map the neutral MHVP tokens into Tailwind; tenant branding overrides the variables in M2 (V14). */
+/* Map the MHVP tokens into Tailwind (same mapping as the CRM shell). */
 @theme inline {
   --color-bg: var(--mhvp-color-bg);
   --color-surface: var(--mhvp-color-surface);
+  --color-surface-2: var(--mhvp-color-surface-2);
   --color-fg: var(--mhvp-color-fg);
   --color-muted: var(--mhvp-color-muted);
+  --color-subtle: var(--mhvp-color-subtle);
   --color-border: var(--mhvp-color-border);
+  --color-border-soft: var(--mhvp-color-border-soft);
+  --color-gold: var(--mhvp-color-gold);
+  --color-gold-soft: var(--mhvp-color-gold-soft);
+  --color-gold-tint: var(--mhvp-color-gold-tint);
+  --color-anthracite-soft: var(--mhvp-color-anthracite-soft);
   --color-accent: var(--mhvp-color-accent);
+  --color-accent-fg: var(--mhvp-color-accent-fg);
+  --color-success-bg: var(--mhvp-color-success-bg);
+  --color-success-fg: var(--mhvp-color-success-fg);
+  --color-warning-bg: var(--mhvp-color-warning-bg);
+  --color-warning-fg: var(--mhvp-color-warning-fg);
+  --color-danger-bg: var(--mhvp-color-danger-bg);
+  --color-danger-fg: var(--mhvp-color-danger-fg);
   --font-sans: var(--mhvp-font-sans);
+  --radius-sm: var(--mhvp-radius-sm);
+  --radius-md: var(--mhvp-radius-md);
+  --radius-lg: var(--mhvp-radius-lg);
+  --radius-xl: var(--mhvp-radius-xl);
+  --shadow-xs: var(--mhvp-shadow-xs);
+  --shadow-sm: var(--mhvp-shadow-sm);
+  --shadow-md: var(--mhvp-shadow-md);
+  --shadow-card: var(--mhvp-shadow-sm);
 }
 
 body {
   background: var(--mhvp-color-bg);
   color: var(--mhvp-color-fg);
   font-family: var(--mhvp-font-sans);
+  font-size: var(--mhvp-font-body-size);
+  line-height: var(--mhvp-font-body-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Goldpunkt: page titles carry a short gold bar underneath instead of a full underline. */
+.mhvp-title {
+  position: relative;
+  padding-bottom: 0.5rem;
+  font-size: var(--mhvp-font-h1-size);
+  line-height: var(--mhvp-font-h1-line);
+  letter-spacing: var(--mhvp-font-h1-tracking);
+}
+.mhvp-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2.25rem;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--mhvp-color-gold);
+}
+
+.mhvp-h2 {
+  font-size: var(--mhvp-font-h2-size);
+  line-height: var(--mhvp-font-h2-line);
+  letter-spacing: var(--mhvp-font-h2-tracking);
+}
+
+/* Versal labels: uppercase, letter spaced, grey. */
+.mhvp-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mhvp-color-subtle);
+}
+
+/* Data tables: airy rows, no vertical rules, sticky head. */
+.mhvp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.mhvp-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mhvp-color-subtle);
+  background: var(--mhvp-color-bg);
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--mhvp-color-border);
+}
+.mhvp-table tbody td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--mhvp-color-border-soft);
+  vertical-align: top;
+}
+.mhvp-table tbody tr:hover {
+  background: var(--mhvp-color-surface);
+}
+.mhvp-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card hover lift for clickable surfaces (start page tiles). */
+.mhvp-lift {
+  transition:
+    transform var(--mhvp-motion) var(--mhvp-motion-ease),
+    box-shadow var(--mhvp-motion) var(--mhvp-motion-ease),
+    border-color var(--mhvp-motion) var(--mhvp-motion-ease);
+}
+.mhvp-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mhvp-shadow-md);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mhvp-lift:hover {
+    transform: none;
+  }
 }

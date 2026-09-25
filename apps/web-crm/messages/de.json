@@ -1618,6 +1618,10 @@
     "templates": {
       "title": "Ticketvorlagen",
       "description": "Vorlagen mit Checklisten, Routing, SLA und Pflicht-Zusatzfeldern (z. B. IBAN beim Kautionsticket)."
+    },
+    "forwarding": {
+      "title": "Rechnungs-Weiterleitung",
+      "description": "Gesellschaftsrechnungen an das Rechnungsprogramm weiterleiten und archivieren."
     }
   },
   "Members": {
@@ -1824,7 +1828,9 @@
       "new": "Neu",
       "assigned": "Zugeordnet",
       "done": "Erledigt"
-    }
+    },
+    "colForward": "Rechnungsprogramm",
+    "forwarded": "Weitergeleitet"
   },
   "TicketTemplates": {
     "area": "Einstellungen",
@@ -1958,5 +1964,25 @@
     "logPending": "Vormerkungen übersprungen",
     "logFailedAccounts": "Konten mit Fehler",
     "logSkippedAccounts": "Konten ohne Zuordnung"
+  },
+  "MailForwarding": {
+    "eyebrow": "Einstellungen",
+    "title": "Rechnungs-Weiterleitung",
+    "intro": "Rechnungen an die Gesellschaft selbst (z. B. Telekom, Krankenkasse, Steuerberater) werden an das Rechnungsprogramm weitergeleitet und im Postfach archiviert.",
+    "safetyNotice": "Wichtig: An die Gesellschaft gehen auch Rechnungen für verwaltete Objekte ein. Diese werden nie automatisch weitergeleitet. Automatisch geht nur, was auf der Absenderliste steht; alles andere bleibt ein Vorschlag mit Klick je Mail.",
+    "enable": "Weiterleitung aktivieren",
+    "address": "Zieladresse des Rechnungsprogramms",
+    "addressHelp": "Posteingangsadresse des Rechnungsprogramms, z. B. die Lexware-Inbox-Adresse.",
+    "mode": "Arbeitsweise",
+    "modeSuggest": "Vorschlagen (empfohlen zum Start)",
+    "modeSuggestHelp": "Bekannte Absender werden in der Mail-Liste als Vorschlag markiert; weitergeleitet wird erst nach Klick. Jede Weiterleitung nimmt den Absender in die Liste auf.",
+    "modeAuto": "Automatisch für gelernte Absender",
+    "modeAutoHelp": "Mails von Absendern der Liste werden beim Abruf automatisch weitergeleitet und archiviert. Alle anderen bleiben unberührt.",
+    "senders": "Absenderliste (eine Adresse oder Domain je Zeile)",
+    "sendersHelp": "Vollständige Adresse (rechnung@telekom.de) oder Domain (aok.de). Die Liste wächst automatisch mit jeder manuellen Weiterleitung.",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "forward": "An Rechnungsprogramm",
+    "suggested": "Bekannter Absender"
   }
 }
