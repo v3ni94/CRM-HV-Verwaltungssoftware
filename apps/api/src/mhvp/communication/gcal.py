@@ -96,10 +96,15 @@ class GCalClient:
             if not page:
                 return events
 
-    async def insert_event(self, calendar_id: str, body: dict[str, Any]) -> dict[str, Any]:
+    async def insert_event(
+        self, calendar_id: str, body: dict[str, Any], send_updates: str = "none"
+    ) -> dict[str, Any]:
+        # Default "none" (M23-02 rule 2): attendees, if present in body, are never notified
+        # until the staff user explicitly confirms "Einladung senden" (send_updates="all").
         r = await self._request(
             "POST",
             f"calendars/{quote(calendar_id, safe='')}/events",
+            params={"sendUpdates": send_updates},
             json=body,
         )
         if r.status_code not in (200, 201):
@@ -107,11 +112,16 @@ class GCalClient:
         return dict(r.json())
 
     async def patch_event(
-        self, calendar_id: str, event_id: str, body: dict[str, Any]
+        self,
+        calendar_id: str,
+        event_id: str,
+        body: dict[str, Any],
+        send_updates: str = "none",
     ) -> dict[str, Any]:
         r = await self._request(
             "PATCH",
             f"calendars/{quote(calendar_id, safe='')}/events/{quote(event_id, safe='')}",
+            params={"sendUpdates": send_updates},
             json=body,
         )
         if r.status_code == 404:
@@ -120,10 +130,24 @@ class GCalClient:
             raise GCalError(f"Termin nicht änderbar (HTTP {r.status_code}).")
         return dict(r.json())
 
-    async def delete_event(self, calendar_id: str, event_id: str) -> None:
+    async def get_event(self, calendar_id: str, event_id: str) -> dict[str, Any]:
+        r = await self._request(
+            "GET",
+            f"calendars/{quote(calendar_id, safe='')}/events/{quote(event_id, safe='')}",
+        )
+        if r.status_code == 404:
+            raise GCalError("Termin nicht gefunden.")
+        if r.status_code != 200:
+            raise GCalError(f"Termin nicht lesbar (HTTP {r.status_code}).")
+        return dict(r.json())
+
+    async def delete_event(
+        self, calendar_id: str, event_id: str, send_updates: str = "none"
+    ) -> None:
         r = await self._request(
             "DELETE",
             f"calendars/{quote(calendar_id, safe='')}/events/{quote(event_id, safe='')}",
+            params={"sendUpdates": send_updates},
         )
         if r.status_code not in (200, 204, 404):
             raise GCalError(f"Termin nicht löschbar (HTTP {r.status_code}).")

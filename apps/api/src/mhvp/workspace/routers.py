@@ -16,7 +16,7 @@ from mhvp.core.auth.principal import TenantPrincipal, get_principal, require_per
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace import services
-from mhvp.workspace.models import CalendarEntry, Notification, SavedFilter
+from mhvp.workspace.models import CalendarEntry, CalendarEvent, Notification, SavedFilter
 
 router = APIRouter(prefix="/workspace", tags=["Arbeitsplatz"])
 
@@ -75,6 +75,13 @@ class CalendarEntryIn(_In):
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     target: str = Field(default="internal", pattern="^(internal|default|own)$")
+    # M23-02 bidirectional: origin link, location and prospective attendees. Attendees are
+    # stored on calendar_event but never sent to Google here (see rule M23-05); they are sent
+    # only via the separate "Einladung senden" action after staff confirmation.
+    location: str | None = Field(default=None, max_length=500)
+    attendees: list[dict[str, str]] = Field(default_factory=list)
+    source_type: str = Field(default="manual", pattern="^(manual|ticket|handover)$")
+    source_id: uuid.UUID | None = None
 
 
 class GoogleCalendarPatchIn(_In):
@@ -102,6 +109,13 @@ class CalendarItem(BaseModel):
     calendar_label: str | None = None
     google_event_id: str | None = None
     mailbox_id: uuid.UUID | None = None
+    # M23-02 bidirectional: set when a calendar_event link row exists for this Google event.
+    calendar_event_id: uuid.UUID | None = None
+    invite_status: str | None = None  # draft | invited, only for linked events
+    attendees: list[dict[str, str]] = Field(default_factory=list)
+    # True when Google's etag no longer matches the last synced etag on our link row: the
+    # Google version is shown here, the CRM copy is marked stale, neither side is overwritten.
+    is_stale: bool = False
 
 
 class CalendarNotice(BaseModel):
@@ -502,11 +516,18 @@ def _event_dates(event: dict[str, Any]) -> tuple[date, date | None]:
 
 
 def _google_item(
-    event: dict[str, Any], source: str, label: str, mailbox_id: uuid.UUID
+    event: dict[str, Any],
+    source: str,
+    label: str,
+    mailbox_id: uuid.UUID,
+    link: CalendarEvent | None = None,
 ) -> CalendarItem:
     start, end = _event_dates(event)
+    is_stale = bool(link and link.etag and event.get("etag") and event["etag"] != link.etag)
     return CalendarItem(
         kind="appointment",
+        # Rule M23-05: on a conflict the Google version wins for display, the CRM copy is
+        # only flagged stale, never silently overwritten in either direction.
         title=event.get("summary") or "(ohne Titel)",
         date=start,
         ends_on=end,
@@ -515,7 +536,20 @@ def _google_item(
         calendar_label=label,
         google_event_id=event["id"],
         mailbox_id=mailbox_id,
+        calendar_event_id=link.id if link else None,
+        invite_status=link.status if link else None,
+        attendees=link.attendees if link else [],
+        is_stale=is_stale,
     )
+
+
+async def _link_rows(
+    session: Any, tenant_id: uuid.UUID, mailbox_id: uuid.UUID
+) -> dict[str, CalendarEvent]:
+    rows = await session.scalars(
+        select(CalendarEvent).where(CalendarEvent.mailbox_id == mailbox_id)
+    )
+    return {row.google_event_id: row for row in rows.all()}
 
 
 async def _fetch_google_items(
@@ -550,7 +584,16 @@ async def _fetch_google_items(
         finally:
             await client.aclose()
         await redis.set(key, json.dumps(events), ex=GCAL_CACHE_TTL)
-    return [_google_item(e, source, label, mailbox.id) for e in events], notice
+    links = await _link_rows(session, tenant_id, mailbox.id)
+    items = []
+    for e in events:
+        link = links.get(e["id"])
+        item = _google_item(e, source, label, mailbox.id, link)
+        if link is not None and item.is_stale and not link.is_stale:
+            link.is_stale = True
+            link.last_synced_at = datetime.now(UTC)
+        items.append(item)
+    return items, notice
 
 
 @router.get("/calendar", summary="Kalender: eigene Termine, geteilte Termine, Fristen aus Daten")
@@ -624,20 +667,24 @@ async def refresh_calendar(
 def _entry_body(body: CalendarEntryIn) -> dict[str, Any]:
     if body.all_day or (body.starts_at is None and body.ends_at is None):
         end_exclusive = (body.ends_on or body.starts_on) + timedelta(days=1)
-        return {
+        out = {
             "summary": body.title,
             "description": body.notes,
             "start": {"date": body.starts_on.isoformat()},
             "end": {"date": end_exclusive.isoformat()},
         }
-    starts_at = body.starts_at or datetime.combine(body.starts_on, dt.time(9, 0), tzinfo=UTC)
-    ends_at = body.ends_at or (starts_at + timedelta(hours=1))
-    return {
-        "summary": body.title,
-        "description": body.notes,
-        "start": {"dateTime": starts_at.isoformat()},
-        "end": {"dateTime": ends_at.isoformat()},
-    }
+    else:
+        starts_at = body.starts_at or datetime.combine(body.starts_on, dt.time(9, 0), tzinfo=UTC)
+        ends_at = body.ends_at or (starts_at + timedelta(hours=1))
+        out = {
+            "summary": body.title,
+            "description": body.notes,
+            "start": {"dateTime": starts_at.isoformat()},
+            "end": {"dateTime": ends_at.isoformat()},
+        }
+    if body.location:
+        out["location"] = body.location
+    return out
 
 
 @router.post("/calendar", status_code=201, summary="Termin anlegen")
@@ -648,7 +695,17 @@ async def create_entry(
         raise ProblemError(ErrorCodes.VALIDATION, detail="Ende liegt vor dem Beginn.")
     if body.target == "internal":
         async with tenant_tx(request, principal) as session:
-            fields = body.model_dump(exclude={"starts_at", "ends_at", "target"})
+            fields = body.model_dump(
+                exclude={
+                    "starts_at",
+                    "ends_at",
+                    "target",
+                    "location",
+                    "attendees",
+                    "source_type",
+                    "source_id",
+                }
+            )
             entry = CalendarEntry(
                 tenant_id=principal.tenant_id,
                 owner_user_id=principal.user_id,
@@ -681,14 +738,38 @@ async def create_entry(
         client_id, client_secret = await gmail.oauth_client(session, settings)
         client = gcal.make_client(client_id, client_secret, mailbox)
         try:
-            event = await client.insert_event(mailbox.calendar_id, _entry_body(body))
+            # Rule M23-05 ("Einladungen nur nach Bestätigung"): created without attendees and
+            # sendUpdates=none regardless; attendees are only ever sent via the separate,
+            # explicitly confirmed invite endpoint below.
+            event = await client.insert_event(
+                mailbox.calendar_id, _entry_body(body), send_updates="none"
+            )
         except gcal.GCalError as exc:
             raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
         finally:
             await client.aclose()
+        start, _end = _event_dates(event)
+        link = CalendarEvent(
+            tenant_id=principal.tenant_id,
+            mailbox_id=mailbox.id,
+            google_event_id=event["id"],
+            source_type=body.source_type,
+            source_id=body.source_id,
+            title=body.title,
+            starts_at=body.starts_at or datetime.combine(start, dt.time(9, 0), tzinfo=UTC),
+            ends_at=body.ends_at,
+            location=body.location,
+            attendees=body.attendees,
+            status="draft",
+            etag=event.get("etag"),
+            last_synced_at=datetime.now(UTC),
+            created_by=principal.user_id,
+        )
+        session.add(link)
+        await session.flush()
         await _bump_version(request, principal.tenant_id, mailbox.id)
         return _google_item(
-            event, body.target, _google_label(body.target, mailbox.address), mailbox.id
+            event, body.target, _google_label(body.target, mailbox.address), mailbox.id, link
         )
 
 
@@ -716,6 +797,68 @@ async def _google_mailbox_for(session: Any, principal: TenantPrincipal, source: 
     return mailbox
 
 
+async def _link_for(session: Any, mailbox_id: uuid.UUID, event_id: str) -> CalendarEvent | None:
+    result = await session.scalar(
+        select(CalendarEvent).where(
+            CalendarEvent.mailbox_id == mailbox_id, CalendarEvent.google_event_id == event_id
+        )
+    )
+    return result  # type: ignore[no-any-return]
+
+
+class CalendarInviteIn(_In):
+    confirm: bool = Field(description="Muss true sein: ausdrückliche Bestätigung des Nutzers.")
+
+
+@router.post(
+    "/calendar/google/{source}/{event_id}/invite",
+    summary="Einladung an externe Teilnehmer senden (nur nach Bestätigung)",
+)
+async def send_invite(
+    source: str,
+    event_id: str,
+    body: CalendarInviteIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(member),
+) -> CalendarItem:
+    # Rule M23-05: no automatic invitations. This endpoint is the only path that sets
+    # sendUpdates=all, and only after the staff user's explicit confirmation, recorded below.
+    if not body.confirm:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Bestätigung erforderlich.")
+    settings = request.app.state.settings
+    async with tenant_tx(request, principal) as session:
+        mailbox = await _google_mailbox_for(session, principal, source)
+        link = await _link_for(session, mailbox.id, event_id)
+        if link is None:
+            raise ProblemError(
+                ErrorCodes.RESOURCE_NOT_FOUND,
+                detail="Kein verknüpfter Termin für Einladungen gefunden.",
+            )
+        if not link.attendees:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Keine Teilnehmer hinterlegt.")
+        client_id, client_secret = await gmail.oauth_client(session, settings)
+        client = gcal.make_client(client_id, client_secret, mailbox)
+        try:
+            event = await client.patch_event(
+                mailbox.calendar_id,
+                event_id,
+                {"attendees": link.attendees},
+                send_updates="all",
+            )
+        except gcal.GCalError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        finally:
+            await client.aclose()
+        link.status = "invited"
+        link.invite_confirmed_by = principal.user_id
+        link.invite_confirmed_at = datetime.now(UTC)
+        link.etag = event.get("etag")
+        link.last_synced_at = datetime.now(UTC)
+        link.is_stale = False
+        await _bump_version(request, principal.tenant_id, mailbox.id)
+        return _google_item(event, source, _google_label(source, mailbox.address), mailbox.id, link)
+
+
 @router.patch("/calendar/google/{source}/{event_id}", summary="Google-Termin ändern")
 async def patch_google_entry(
     source: str,
@@ -727,6 +870,15 @@ async def patch_google_entry(
     settings = request.app.state.settings
     async with tenant_tx(request, principal) as session:
         mailbox = await _google_mailbox_for(session, principal, source)
+        link = await _link_for(session, mailbox.id, event_id)
+        if link is not None and link.is_stale:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=(
+                    "Termin wurde extern geändert (abweichender Google-Stand). Bitte zuerst "
+                    "die Google-Version prüfen, keine automatische Überschreibung."
+                ),
+            )
         patch: dict[str, Any] = {}
         if body.title is not None:
             patch["summary"] = body.title
@@ -759,13 +911,18 @@ async def patch_google_entry(
         client_id, client_secret = await gmail.oauth_client(session, settings)
         client = gcal.make_client(client_id, client_secret, mailbox)
         try:
-            event = await client.patch_event(mailbox.calendar_id, event_id, patch)
+            event = await client.patch_event(
+                mailbox.calendar_id, event_id, patch, send_updates="none"
+            )
         except gcal.GCalError as exc:
             raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
         finally:
             await client.aclose()
+        if link is not None:
+            link.etag = event.get("etag")
+            link.last_synced_at = datetime.now(UTC)
         await _bump_version(request, principal.tenant_id, mailbox.id)
-        return _google_item(event, source, _google_label(source, mailbox.address), mailbox.id)
+        return _google_item(event, source, _google_label(source, mailbox.address), mailbox.id, link)
 
 
 @router.delete(
@@ -777,14 +934,19 @@ async def delete_google_entry(
     settings = request.app.state.settings
     async with tenant_tx(request, principal) as session:
         mailbox = await _google_mailbox_for(session, principal, source)
+        # Cancelling notifies attendees only when invitations were actually sent before.
+        link = await _link_for(session, mailbox.id, event_id)
+        send_updates = "all" if link is not None and link.status == "invited" else "none"
         client_id, client_secret = await gmail.oauth_client(session, settings)
         client = gcal.make_client(client_id, client_secret, mailbox)
         try:
-            await client.delete_event(mailbox.calendar_id, event_id)
+            await client.delete_event(mailbox.calendar_id, event_id, send_updates=send_updates)
         except gcal.GCalError as exc:
             raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
         finally:
             await client.aclose()
+        if link is not None:
+            await session.delete(link)
         await _bump_version(request, principal.tenant_id, mailbox.id)
 
 

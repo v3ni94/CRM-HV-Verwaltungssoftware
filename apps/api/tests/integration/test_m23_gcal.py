@@ -59,6 +59,12 @@ class FakeGCal:
     def __init__(self) -> None:
         self.events: dict[str, dict[str, dict[str, Any]]] = {}
         self._seq = 0
+        self._etag_seq = 0
+        self.send_updates_seen: list[str] = []
+
+    def _next_etag(self) -> str:
+        self._etag_seq += 1
+        return f"etag-{self._etag_seq}"
 
     def add(self, calendar_id: str, event_id: str, summary: str, day: str) -> None:
         self.events.setdefault(calendar_id, {})[event_id] = {
@@ -66,33 +72,44 @@ class FakeGCal:
             "summary": summary,
             "start": {"date": day},
             "end": {"date": day},
+            "etag": self._next_etag(),
         }
+
+    def touch_externally(self, calendar_id: str, event_id: str) -> None:
+        """Simulate a change made directly on Google's side (new etag, same id)."""
+        self.events[calendar_id][event_id]["etag"] = self._next_etag()
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
         if path.endswith("/token"):
             return httpx.Response(200, json={"access_token": "t", "expires_in": 3600})
         assert request.headers.get("Authorization") == "Bearer t"
+        self.send_updates_seen.append(request.url.params.get("sendUpdates", ""))
         parts = path.split("/")
         # .../calendars/{cal}/events[/{event_id}]
         idx = parts.index("calendars")
         calendar_id = parts[idx + 1]
         rest = parts[idx + 3 :]
         store = self.events.setdefault(calendar_id, {})
-        if request.method == "GET":
+        if request.method == "GET" and not rest:
             return httpx.Response(200, json={"items": list(store.values())})
         if request.method == "POST":
             self._seq += 1
             body = json.loads(request.content)
             eid = f"created-{self._seq}"
-            store[eid] = {"id": eid, **body}
+            store[eid] = {"id": eid, "etag": self._next_etag(), **body}
             return httpx.Response(200, json=store[eid])
         event_id = rest[0]
+        if request.method == "GET":
+            if event_id not in store:
+                return httpx.Response(404)
+            return httpx.Response(200, json=store[event_id])
         if request.method == "PATCH":
             if event_id not in store:
                 return httpx.Response(404)
             body = json.loads(request.content)
             store[event_id].update(body)
+            store[event_id]["etag"] = self._next_etag()
             return httpx.Response(200, json=store[event_id])
         if request.method == "DELETE":
             store.pop(event_id, None)
@@ -259,3 +276,109 @@ def test_create_patch_delete_proxy_to_google_and_cache_invalidates(
         client.get(f"{W}/calendar", params={"start": start, "end": end}, headers=admin)
     )
     assert not any(i.get("google_event_id") == event_id for i in after_delete["items"])
+
+
+def _solo_default_mailbox(client: TestClient, admin: dict[str, str]) -> Any:
+    for box_row in _ok(client.get(f"{M}/mailboxes", headers=admin)):
+        if box_row["is_default"]:
+            _ok(
+                client.patch(
+                    f"{M}/mailboxes/{box_row['id']}", json={"is_default": False}, headers=admin
+                )
+            )
+    box = _mailbox(client, admin, f"invite-{RUN}-{uuid.uuid4().hex[:6]}@example.com", "primary")
+    _ok(client.patch(f"{M}/mailboxes/{box['id']}", json={"is_default": True}, headers=admin))
+    return box
+
+
+def test_invitation_only_after_explicit_confirmation(
+    client: TestClient, world: World, fake: FakeGCal
+) -> None:
+    """M23-02 rule 2 / M23-05: attendees are stored but never sent to Google until the staff
+    user confirms "Einladung senden"; creation always uses sendUpdates=none."""
+    admin = bearer(login(client, world, "m23admin"))
+    _solo_default_mailbox(client, admin)
+    today = datetime.now(UTC).date().isoformat()
+
+    created = _ok(
+        client.post(
+            f"{W}/calendar",
+            json={
+                "title": "Ortstermin mit externem Teilnehmer",
+                "starts_on": today,
+                "target": "default",
+                "attendees": [{"email": "extern@example.com", "name": "Extern"}],
+            },
+            headers=admin,
+        ),
+        201,
+    )
+    event_id = created["google_event_id"]
+    # Created without sending attendee notifications.
+    assert fake.send_updates_seen[-1] == "none"
+    assert created["invite_status"] == "draft"
+    # The stored Google event itself carries no attendees yet.
+    box_default_cal = "primary"
+    assert "attendees" not in fake.events[box_default_cal][event_id]
+
+    # Cannot invite without an explicit confirmation.
+    resp = client.post(
+        f"{W}/calendar/google/default/{event_id}/invite", json={"confirm": False}, headers=admin
+    )
+    assert resp.status_code == 422
+
+    invited = _ok(
+        client.post(
+            f"{W}/calendar/google/default/{event_id}/invite",
+            json={"confirm": True},
+            headers=admin,
+        )
+    )
+    assert invited["invite_status"] == "invited"
+    assert fake.send_updates_seen[-1] == "all"
+    assert fake.events[box_default_cal][event_id]["attendees"] == [
+        {"email": "extern@example.com", "name": "Extern"}
+    ]
+
+    # Cancelling an already-invited appointment notifies attendees (sendUpdates=all).
+    _ok(client.delete(f"{W}/calendar/google/default/{event_id}", headers=admin), 204)
+    assert fake.send_updates_seen[-1] == "all"
+
+
+def test_stale_google_event_is_flagged_and_not_overwritten(
+    client: TestClient, world: World, fake: FakeGCal
+) -> None:
+    """M23-02 rule 3: if the event changed on Google's side (etag differs), the CRM shows the
+    Google version and marks its own copy stale instead of silently overwriting either side."""
+    admin = bearer(login(client, world, "m23admin"))
+    _solo_default_mailbox(client, admin)
+    today = datetime.now(UTC).date().isoformat()
+
+    created = _ok(
+        client.post(
+            f"{W}/calendar",
+            json={"title": "Telefontermin", "starts_on": today, "target": "default"},
+            headers=admin,
+        ),
+        201,
+    )
+    event_id = created["google_event_id"]
+    assert created["is_stale"] is False
+
+    # Someone changes the event directly in Google Calendar.
+    fake.events["primary"][event_id]["summary"] = "Verschoben (extern)"
+    fake.touch_externally("primary", event_id)
+    _ok(client.post(f"{W}/calendar/refresh", headers=admin))
+
+    out = _ok(client.get(f"{W}/calendar", params={"start": today, "end": today}, headers=admin))
+    item = next(i for i in out["items"] if i.get("google_event_id") == event_id)
+    assert item["is_stale"] is True
+    assert item["title"] == "Verschoben (extern)"  # Google version shown, not overwritten.
+
+    # The CRM refuses to patch a stale link rather than overwriting the external change.
+    resp = client.patch(
+        f"{W}/calendar/google/default/{event_id}",
+        json={"title": "CRM-Version"},
+        headers=admin,
+    )
+    assert resp.status_code == 409

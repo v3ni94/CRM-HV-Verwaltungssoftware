@@ -48,6 +48,44 @@ class CalendarEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     )
 
 
+class CalendarEvent(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Link between a Google Calendar event and its CRM origin (M23-02 bidirectional sync).
+
+    One row per event created or tracked from the CRM. ``etag`` is Google's event etag as of
+    the last successful read or write; the read path compares it to the live event and marks
+    the row stale (``is_stale``) instead of overwriting either side automatically (rule
+    M23-05, "keine stillen externen Änderungen").
+    """
+
+    __tablename__ = "calendar_event"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "mailbox_id", "google_event_id"),
+        Index("ix_calendar_event_source", "tenant_id", "source_type", "source_id"),
+    )
+
+    mailbox_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("mailbox.id", ondelete="CASCADE"), nullable=False
+    )
+    google_event_id: Mapped[str] = mapped_column(String(512), nullable=False)
+    # ticket | handover | manual
+    source_type: Mapped[str] = mapped_column(String(32), nullable=False, default="manual")
+    source_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    location: Mapped[str | None] = mapped_column(String(500))
+    # [{"email": "...", "name": "..."}], never sent to Google until invite_confirmed_at is set.
+    attendees: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
+    # draft (attendees not yet sent) | invited (sendUpdates=all was sent)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
+    invite_confirmed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    invite_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    etag: Mapped[str | None] = mapped_column(String(200))
+    is_stale: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_by: Mapped[uuid.UUID] = _user_fk()
+
+
 class SavedFilter(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "saved_filter"
     __table_args__ = (UniqueConstraint("tenant_id", "user_id", "resource", "name"),)

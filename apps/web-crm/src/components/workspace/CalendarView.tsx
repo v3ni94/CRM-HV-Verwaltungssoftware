@@ -6,8 +6,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { CalendarSource } from "@/components/calendar/CalendarLegend";
 import { CalendarLegend } from "@/components/calendar/CalendarLegend";
-import type { CreateEventInput } from "@/components/calendar/CreateEventDialog";
+import type { Attendee, CreateEventInput } from "@/components/calendar/CreateEventDialog";
 import { CreateEventDialog } from "@/components/calendar/CreateEventDialog";
+import { EventDetailDialog } from "@/components/calendar/EventDetailDialog";
 import { weekRange, WeekView } from "@/components/calendar/WeekView";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
@@ -26,6 +27,10 @@ export type CalendarItem = {
   calendar_label: string | null;
   google_event_id: string | null;
   mailbox_id: string | null;
+  calendar_event_id: string | null;
+  invite_status: "draft" | "invited" | null;
+  attendees: Attendee[];
+  is_stale: boolean;
 };
 
 export type CalendarNotice = { source: "default" | "own"; address: string; connected: boolean };
@@ -54,6 +59,7 @@ export function CalendarView({ initialYear, initialMonth }: { initialYear: numbe
   const [visible, setVisible] = useState<Record<CalendarSource, boolean>>({ internal: true, default: true, own: true });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [detailItem, setDetailItem] = useState<CalendarItem | null>(null);
 
   const monthPart = monthRange(year, month);
   const weekPart = weekRange(anchor);
@@ -94,6 +100,12 @@ export function CalendarView({ initialYear, initialMonth }: { initialYear: numbe
       notes: input.notes || null,
     };
     if (input.target === "internal") body.shared = input.shared;
+    else {
+      body.location = input.location || null;
+      body.attendees = input.attendees;
+      body.source_type = input.source_type;
+      if (input.source_id) body.source_id = input.source_id;
+    }
     const result = await bff("/api/bff/workspace/calendar", { method: "POST", body: JSON.stringify(body) });
     if (result.ok) {
       await load();
@@ -212,7 +224,15 @@ export function CalendarView({ initialYear, initialMonth }: { initialYear: numbe
               />
               <span className="w-24 tabular-nums">{formatDate(item.date)}</span>
               <span className="w-28 text-xs text-muted">{item.calendar_label ?? t(`kind.${item.kind}`)}</span>
-              <span className="flex-1">{item.title}</span>
+              <span className="flex-1">
+                {item.title}
+                {item.is_stale ? <span className={`${ui.badgeWarning} ml-2`}>{t("staleBadge")}</span> : null}
+              </span>
+              {item.google_event_id ? (
+                <button type="button" className={ui.buttonSm} onClick={() => setDetailItem(item)}>
+                  {t("details")}
+                </button>
+              ) : null}
               {item.editable && (item.entity_id || item.google_event_id) ? (
                 <button type="button" className={ui.button} onClick={() => void remove(item)}>
                   {t("delete")}
@@ -230,6 +250,17 @@ export function CalendarView({ initialYear, initialMonth }: { initialYear: numbe
           hasDefaultMailbox={hasDefaultMailbox}
           onCreate={createEntry}
           onClose={() => setDialogOpen(false)}
+        />
+      ) : null}
+
+      {detailItem ? (
+        <EventDetailDialog
+          item={detailItem}
+          onClose={() => setDetailItem(null)}
+          onSent={() => {
+            setDetailItem(null);
+            void load();
+          }}
         />
       ) : null}
     </div>
