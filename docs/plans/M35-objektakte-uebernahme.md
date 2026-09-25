@@ -159,6 +159,47 @@ prüfungsregeln, Textbausteine der Nachforderungsschreiben werden als Spezifikat
   Lauf erzeugt keine Duplikate (idempotent geprüft), Abgleichsbericht (Zeilen je Tabelle,
   Abweichungen) liegt vor.
 
+**Ergebnis Stufe 1 (25.09.2026)**
+
+- Neues Modul `mhvp.objektakte` (`apps/api/src/mhvp/objektakte/{models,objektakte_import,
+  routers}.py`, README dort): Baum-Modell `objektakte_drive_node` (Mirror von objektakte
+  `drive_nodes`, `property_id` nullable), minimaler Mirror `objektakte_document_review_case`/
+  `_decision` (Startbestand für die spätere Review-Center-Oberfläche, Stufe 3), Staging-Tabelle
+  `objektakte_party_assignment` für `parties.OwnerUnitAssignment`-Zeilen ohne passendes
+  CRM-Zielmodell auf Einheitenebene (Owner- wie Tenant-Zuordnung).
+- Herkunftsspalten `source_system`/`source_id` (unique je Mandant, partieller Index) auf
+  `mhvp.documents.models.Document`, `mhvp.properties.models.Property`,
+  `mhvp.properties.models.Unit`, `mhvp.contacts.models.Contact`. Migration `0058_objektakte_
+  takeover` (down_revision `0057`, einziger Head danach, geprüft mit `alembic heads`).
+- Importer `mhvp.objektakte.objektakte_import` (Stammdaten: `objects_managedobject` →
+  `Property`, `objects_unit` → `Unit`, `parties_owner`/`parties_tenant` → `Contact`,
+  `parties_ownerunitassignment` → `objektakte_party_assignment`); nutzt den aus
+  `mhvp.handover.uprotokoll_import` herausgezogenen, geteilten Dump-Parser
+  `mhvp.core.sqldump` (U-Protokoll-Import läuft unverändert über denselben Parser, Tests
+  weiterhin grün). Endpunkte `/api/v1/objektakte/imports` (`mode=preview|apply`) und
+  `/api/v1/objektakte/imports/{id}`, Rechte `documents:read`/`documents:create`.
+- Abweichungen von der obigen Skizze, mit Begründung: keine eigene Tabelle
+  `document_classification_run` (Stufe 3 entscheidet über Form der Klassifikationsläufe,
+  vermeidet Felder "auf Vorrat", rule 0.1.4.2); `Property.number` ist auf genau drei Ziffern
+  beschränkt (6.9.1 `number_format`), ein objektakte `object_number` außerhalb 1..999 wird
+  daher nicht automatisch zu einer `Property` und als `unmatched_properties` gemeldet statt
+  abgeschnitten oder neu vergeben; `mhvp.properties.models.Unit.building_id` ist
+  Pflichtfeld, objektakte kennt keine Gebäudeebene, deshalb legt der Importer je
+  übernommenem Objekt ein Platzhaltergebäude an; IBAN wird in Stufe 1 gar nicht in eine
+  `ContactBankAccount` übernommen (die verlangt eine vollständige, CRM-seitig
+  verschlüsselte IBAN, die aus objektakte ohne separaten, freigegebenen
+  Entschlüsselungsschritt nicht verfügbar ist) — siehe `docs/rules/M35-01.md`.
+- Tests: `apps/api/tests/unit/test_m35_objektakte_import.py` (Parser-Mapping, Objektnummer-
+  Normalisierung, Anzeigename), `apps/api/tests/integration/test_m35_objektakte_import.py`
+  (Preview-Zählung, idempotente Übernahme, Rechteprüfung, Mandantentrennung über RLS),
+  `apps/api/tests/integration/test_migrations.py` (kein Autogenerate-Drift durch diese
+  Migration, Auf-/Abstieg), `apps/api/tests/unit/test_m30_uprotokoll_import.py` weiterhin
+  grün nach dem Parser-Refactoring.
+- Offene Punkte für Stufe 2/3: Dokumentenmigration selbst, Klassifikationsregeln,
+  Review-Center-Oberfläche, Auflösung der Staging-Tabelle `objektakte_party_assignment` auf
+  ein endgültiges Vertragsmodell, etwaige IBAN-Neuverschlüsselung (nur mit ausdrücklicher
+  Freigabe der Geschäftsführung, Vier-Augen).
+
 **Stufe 2: Dokumentenmigration (Metadaten, OCR-Text, Vorschauen)**
 - Import aller ca. 26.000 `Document`-Zeilen inkl. `drive_file_id`, `sha256`, Kategorie/
   Subordner/Typ-Zuordnung, OCR-Text in den Volltextindex; Vorschaubilder kopieren oder Regel
@@ -167,6 +208,61 @@ prüfungsregeln, Textbausteine der Nachforderungsschreiben werden als Spezifikat
   (Schlüssel `sha256`/`drive_file_id`).
 - Akzeptanz: Stichprobe von 50 Dokumenten je Kategorie im CRM auffindbar, Volltextsuche
   liefert dieselben Treffer wie objektakte, Vorschau öffnet, Drive-Link funktioniert.
+
+**Ergebnis Stufe 2 (25.09.2026)**
+
+- Importer erweitert (`mhvp.objektakte.objektakte_import`) um `documents_documentcategory` →
+  `mhvp.documents.models.DocumentCategory` (Treffer über `source_id`, sonst Name, sonst neu),
+  `documents_documentsubfolder`/`documents_documenttype` → neue Tabelle
+  `objektakte_document_class` (die flache CRM-Kategorie kann die zweite Ebene nicht halten),
+  `drive_drivenode` → Stufe-1-Baum `objektakte_drive_node` (jetzt gefüllt, Elternverknüpfung
+  in einem zweiten Durchlauf, da ein Kind vor seinem Elternknoten im Dump stehen kann),
+  `documents_document` → `mhvp.documents.models.Document` und `review_reviewcase`/
+  `review_reviewdecision` → die Stufe-1-Tabellen `objektakte_document_review_case`/`_decision`.
+- Kein Binärkopieren: `storage = google_drive`, `storage_ref` ist die objektakte
+  Drive-Datei-ID unverändert, exakt die Konvention, die `mhvp.documents.dms.GoogleDriveStore.
+  put`/`resolve` für ein gespiegeltes Dokument ohnehin schon verwenden. Der Downloadpfad
+  (`GET /api/v1/documents/{id}/content`) wurde um genau diesen Fall erweitert
+  (`mhvp.documents.services.download_from_drive`, neue `GoogleDriveStore.download`), sodass
+  ein migriertes Dokument über die eingerichtete Drive-Anbindung abrufbar ist, ohne dass ein
+  Original je lokal abgelegt wird.
+- OCR-Text: neuer Endpunkt `POST /api/v1/objektakte/imports/{id}/ocr-cache` (ZIP-Upload des
+  objektakte `/data/ocr-cache`-Verzeichnisses), Abgleich über `source_meta["ocr_cache_key"]`,
+  setzt `ocr_text`/`text_status = extracted`. Bis zum Hochladen des Caches steht ein
+  Dokument mit erkanntem Text in objektakte im CRM auf `text_status = pending`, nie
+  vorzeitig auf `extracted`.
+- Idempotenz über eine Zeilenprüfsumme (`source_meta["row_hash"]`, sha256 der sortierten
+  JSON-Repräsentation der Dump-Zeile): ein zweiter Apply mit unverändertem Dump ändert nichts,
+  eine geänderte Zeile wird aktualisiert (`updated`-Zähler im Ergebnis), nie stillschweigend
+  übersprungen.
+- Migration `0060_objektakte_documents` (down_revision `0058`... `0059`, einziger Head danach,
+  mit `alembic heads` geprüft): `document.duplicate_of_id` (Selbstverweis, `SET NULL`),
+  `document.source_meta` (JSONB), `document_category.source_system`/`source_id` (gleiches
+  Muster wie Stufe 1) und die neue Tabelle `objektakte_document_class`.
+- Abweichungen von der obigen Skizze, mit Begründung: kein Dublettenabgleich gegen bereits
+  über M6-Mirror vorhandene Paperless-/Drive-Dokumente (die produktive M6-Dokumentbasis dieses
+  Mandanten ist zum jetzigen Zeitpunkt praktisch leer; ein `sha256`/`drive_file_id`-Abgleich
+  bleibt ein Stufe-5-Thema, sobald der Parallelbetrieb beide Bestände tatsächlich
+  überschneidet); keine Vorschaubilder (das CRM rendert für keinen Dokumenttyp, auch nicht
+  für hochgeladene Dokumente, überhaupt eine eigene Vorschau; ein Vorschau-Pfad ist unabhängig
+  vom objektakte-Bestand offen, M35-02); `sha256` ist auf `Document` Pflicht, eine
+  objektakte-Zeile ohne Hash (Status `registered`) bekommt einen deterministischen
+  Platzhalter, markiert `source_meta["sha256_placeholder"] = true`, nie einen erfundenen
+  Inhaltshash; `decided_by` auf der übernommenen `ReviewDecision` bleibt unbesetzt
+  (objektakte-Benutzer-IDs werden erst in Stufe 4 auf CRM-Nutzer abgebildet).
+- Tests: `apps/api/tests/unit/test_m35_objektakte_import.py` (Dump-Parsing der neuen Tabellen,
+  Zeilenprüfsumme stabil/ändert sich, Textstatus-Zuordnung), `apps/api/tests/integration/
+  test_m35_objektakte_import.py` (Vorschau-Zähler für Dokumente/Review-Fälle, idempotenter
+  Apply mit anschließendem Update bei geänderter Zeile, OCR-Cache-ZIP mit Treffer- und
+  Fehltrefferzählung, Download eines migrierten Dokuments über den bestehenden
+  Downloadpfad mit einem simulierten Drive-Store), `apps/api/tests/integration/
+  test_m6_documents.py` (M6 unverändert grün nach den Downloadpfad-/Modelländerungen),
+  `apps/api/tests/integration/test_migrations.py` (kein durch diese Migration verursachter
+  Autogenerate-Drift; ein bei diesem Lauf bereits vorhandener Drift aus anderen, parallel
+  laufenden Arbeiten an Banking/SLA-Modulen betrifft keine dieser Tabellen/Spalten).
+- Offene Punkte für Stufe 3/4/5: Klassifikationsregeln, Review-Center-Oberfläche, Auflösung
+  der Staging-Tabelle `objektakte_party_assignment`, Vorschaubilder (M35-02), Dublettenabgleich
+  gegen den M6-Bestand sobald beide Systeme parallel laufen, etwaige IBAN-Neuverschlüsselung.
 
 **Stufe 3: Klassifikation, Review Center, Vollständigkeitsprüfung**
 - Neubau Review-Center-Oberfläche und -API im CRM (`ReviewCase`/`ReviewDecision`-Äquivalent),
@@ -212,6 +308,45 @@ prüfungsregeln, Textbausteine der Nachforderungsschreiben werden als Spezifikat
   (Aufbewahrungspflicht der Dokumente, Regel 0.1.7), danach Abschaltung.
 - Akzeptanz: CRM ist alleinige Quelle für Dokumente, Reviews, Listen; objektakte-Stack
   gestoppt; Archivsicherung geprüft (Rücksicherbarkeit stichprobenartig getestet).
+
+**Ergebnis Stufe 3, Teil 1 und 3 (25.09.2026)**
+
+- Regelstufe (Stufe 1 von drei) neu: `mhvp.objektakte.models.ObjektakteClassificationRule`
+  (Muster `filename_regex`/`text_keyword`/`sender_domain`/`drive_folder`, Zielkategorie,
+  `target_document_type`, Priorität, `active`, `confidence`), Service
+  `mhvp.objektakte.classification.classify_document` (alle aktiven Regeln je Mandant nach
+  Priorität, beste Kandidatin gegen `TenantSettings.objektakte_classification
+  .auto_apply_threshold`, Standard `0.85`); oberhalb der Schwelle nur ein Vorschlag in
+  `document.source_meta["classification"]` (nie `document.category_id`, rule 0.1.6),
+  unterhalb ein offener `DocumentReviewCase` (`stage="rules"`). Regelsemantik und die zwei
+  seedbaren Referenzregeln in `docs/rules/M35-02.md` (von 202 Referenzregeln in
+  `/home/user/v3ni94/objektakte/src/apps/classification/rules.py` bzw.
+  `db/seeds/rules/regeln.json` erfüllen nur zwei ausschließlich die vier hier
+  unterstützten, einfachen Bedingungsarten; die übrigen mit Entitäten-, Ordner- oder
+  Konfliktbedingungen sind nicht Teil dieser Stufe, siehe die Datei für die Begründung).
+  Migration `0064_objektakte_classification_rules` (down_revision `0063`).
+- Review-Center (Teil 3) neu: `/api/v1/objektakte/review` (`mhvp.objektakte.review_routers`)
+  mit Liste (Filter Status, Objekt über `DocumentLink`, Mindestpriorität, Stufe), Einzelabruf
+  mit Kandidaten und Dokument-Vorschaulink (`/api/v1/documents/{id}/content`), Entscheidung
+  (`accept_candidate`, `set_manually`, `reject`, `snooze`) und Sammelentscheidung
+  (`bulk-decide`, eine Zielklasse für mehrere Fälle). Jede Entscheidung schreibt eine
+  `objektakte_document_review_decision`-Zeile mit Vorher-/Nachher-Zustand und `decided_by`
+  (bestehende Stufe-1-Tabelle, jetzt erstmals beschrieben statt nur importiert). Rechte:
+  `documents:read` (Liste/Abruf), `documents:update` (Entscheiden), wie in
+  `mhvp.documents.routers`.
+- Stufe 2 (lokales Modell) bleibt außerhalb des Umfangs (M35-01 offen, siehe dort). Die
+  KI-Stufe (Auftragsteil 2), die Vollständigkeitsprüfung (Teil 4) und die CRM-Oberfläche
+  (Teil 5) sind eigene, noch nicht begonnene Teilaufträge.
+- Tests: `apps/api/tests/unit/test_m35_classification_rules.py` (Musterabgleich, kein
+  DB-Zugriff), `apps/api/tests/integration/test_m35_classification_rules.py` (Schwelle vs.
+  Review-Fall, Mandantentrennung), `apps/api/tests/integration/test_m35_review_center.py`
+  (Filter, Abruf, Entscheiden inkl. Autorisierung `documents:read` vs. `documents:update`,
+  Sammelentscheidung, Audit-Zeile, Mandantentrennung).
+- Offene Punkte: ob die restlichen 200 Referenzregeln in einem erweiterten Regelschema
+  übernommen werden, ist eine Betreiberentscheidung (`docs/OPEN_QUESTIONS.md`); kein Feld
+  dieser Stufe füllt derzeit `sender_domain`/`drive_folder` automatisch (kein Mail- oder
+  Drive-Sync-Modul schreibt diese `source_meta`-Schlüssel), sie sind erst nutzbar, sobald ein
+  solches Modul sie befüllt.
 
 ## 5. Risiken
 

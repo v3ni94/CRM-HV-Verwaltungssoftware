@@ -1,10 +1,13 @@
 """Document services: store originals, index text, link, mirror, retention, letters (6.7, 11)."""
 
 import hashlib
+import json
 import uuid
 from datetime import UTC, date, datetime
 from typing import Any
 
+import httpx
+from fastapi import Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +17,7 @@ from mhvp.core.ids import uuid7
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters
 from mhvp.documents.blobs import BlobStore
+from mhvp.documents.dms import DmsError, GoogleDriveStore
 from mhvp.documents.models import (
     DmsConnection,
     Document,
@@ -296,3 +300,36 @@ async def entity_context(
     if unit is not None:
         info.append(("Einheit", unit.label or unit.number))
     return context, info, links
+
+
+async def download_from_drive(session: AsyncSession, request: Request, document: Document) -> bytes:
+    """Original content of a `storage=google_drive` document (M35 Stufe 2 takeover): no local
+    copy exists, `storage_ref` is the Drive file id itself, the same convention
+    `mhvp.documents.dms.GoogleDriveStore.put`/`resolve` use for a mirrored document's
+    `external_ref`, so the existing Drive connection and client both work unchanged.
+    """
+    connection = await session.scalar(
+        select(DmsConnection).where(DmsConnection.kind == StorageKind.GOOGLE_DRIVE)
+    )
+    if connection is None or not connection.enabled or not connection.secret:
+        raise ProblemError(
+            ErrorCodes.RESOURCE_NOT_FOUND,
+            detail="Keine Google-Drive-Anbindung eingerichtet, das Original ist nicht abrufbar.",
+        )
+    secret = json.loads(connection.secret or "{}")
+    options = connection.options or {}
+    timeout = getattr(request.app.state, "http_timeout", 60.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        store = GoogleDriveStore(
+            root_folder_id=str(options.get("root_folder_id", "")),
+            client_id=str(options.get("client_id", "")),
+            client_secret=str(secret.get("client_secret", "")),
+            refresh_token=str(secret.get("refresh_token", "")),
+            client=client,
+        )
+        try:
+            return await store.download(document.storage_ref)
+        except (DmsError, httpx.HTTPError) as exc:
+            raise ProblemError(
+                ErrorCodes.RESOURCE_NOT_FOUND, detail="Original in Google Drive nicht abrufbar."
+            ) from exc

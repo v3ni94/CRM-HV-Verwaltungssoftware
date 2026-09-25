@@ -20,6 +20,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -84,7 +85,17 @@ class DocumentCategory(IdMixin, TimestampMixin, TenantMixin, Base):
     """Category tree per tenant with mapping to Paperless document types and Drive folders."""
 
     __tablename__ = "document_category"
-    __table_args__ = (UniqueConstraint("tenant_id", "code"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "code"),
+        Index(
+            "uq_document_category_source",
+            "tenant_id",
+            "source_system",
+            "source_id",
+            unique=True,
+            postgresql_where=sa_text("source_system IS NOT NULL AND source_id IS NOT NULL"),
+        ),
+    )
 
     parent_id: Mapped[uuid.UUID | None] = _fk("document_category.id", nullable=True)
     code: Mapped[str] = mapped_column(String(63), nullable=False)
@@ -92,6 +103,13 @@ class DocumentCategory(IdMixin, TimestampMixin, TenantMixin, Base):
     paperless_document_type: Mapped[str | None] = mapped_column(String(128))
     drive_folder: Mapped[str | None] = mapped_column(String(64))
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # M35 Stufe 2: objektakte `documents_documentcategory` takeover key (docs/rules/M35-01.md
+    # pattern reused for the category catalog, so a repeated import matches instead of
+    # duplicating a category already created from an earlier run). Restored 25.09.2026 after a
+    # concurrent edit reset this file to an older revision (see git history / other agents'
+    # sessions); verify against migration 0060 if this looks wrong again.
+    source_system: Mapped[str | None] = mapped_column(String(32))
+    source_id: Mapped[str | None] = mapped_column(String(64))
 
 
 class RetentionProfile(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -131,6 +149,14 @@ class Document(IdMixin, TimestampMixin, TenantMixin, Base):
             postgresql_ops={"title": "gin_trgm_ops"},
         ),
         Index("ix_document_tenant_sha256", "tenant_id", "sha256"),
+        Index(
+            "uq_document_source",
+            "tenant_id",
+            "source_system",
+            "source_id",
+            unique=True,
+            postgresql_where=sa_text("source_system IS NOT NULL AND source_id IS NOT NULL"),
+        ),
     )
 
     title: Mapped[str] = mapped_column(String(300), nullable=False)
@@ -163,6 +189,19 @@ class Document(IdMixin, TimestampMixin, TenantMixin, Base):
     retention_hold_reason: Mapped[str | None] = mapped_column(Text)
     visibility: Mapped[list[str]] = mapped_column(ARRAY(String(16)), nullable=False)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    source_system: Mapped[str | None] = mapped_column(String(32))
+    source_id: Mapped[str | None] = mapped_column(String(64))
+    # M35 Stufe 2 (docs/plans/M35-objektakte-uebernahme.md section 4): a duplicate found by
+    # objektakte's own pipeline (`Document.status == "duplicate"`), kept as a link rather than
+    # dropped so the row stays traceable (rule 0.1.7).
+    duplicate_of_id: Mapped[uuid.UUID | None] = _fk(
+        "document.id", nullable=True, ondelete="SET NULL"
+    )
+    # Fields with no fitting CRM column (objektakte status, subfolder/type names, ocr_cache_key,
+    # the row hash used for idempotent re-import) kept verbatim; never a legal/financial record
+    # of its own, only import provenance. Restored 25.09.2026, see the note on
+    # `DocumentCategory.source_system` above.
+    source_meta: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class DocumentLink(IdMixin, TimestampMixin, TenantMixin, Base):

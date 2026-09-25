@@ -239,7 +239,13 @@ async def download(
 ) -> Response:
     async with tenant_tx(request, principal) as session:
         document = await _get(session, Document, document_id)
-        data = _blobs(request).get(document.storage_ref)
+        if document.storage is StorageKind.GOOGLE_DRIVE:
+            # M35 takeover documents: no local copy, `storage_ref` is the Drive file id (the
+            # same convention `mhvp.documents.dms.GoogleDriveStore.put`/`resolve` use for a
+            # mirrored document's `external_ref`).
+            data = await svc.download_from_drive(session, request, document)
+        else:
+            data = _blobs(request).get(document.storage_ref)
         await _event(session, principal, "document.downloaded", document.id)
     name = quote(document.filename)
     return Response(

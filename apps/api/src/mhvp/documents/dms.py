@@ -201,6 +201,23 @@ class GoogleDriveStore:
                 meta.drive_folder if meta.drive_folder in DRIVE_FOLDERS else DEFAULT_DRIVE_FOLDER
             )
             parent = await self._folder(parent, folder)
+        return await self._upload(data, meta, parent)
+
+    async def file_in_property_year_folder(
+        self, data: bytes, meta: MirrorMeta, year: int
+    ) -> MirrorResult:
+        """Files a document under "<Objektordner>/<Jahr>" (M11-finapi Stage 3, "Als Rechnung
+        zuordnen"), scoped to exactly one property; the year folder is created on demand,
+        same as every other folder in this store. Distinct from `put`'s fixed
+        `DRIVE_FOLDERS` categories (01 to 06): a matched invoice is filed by calendar year
+        instead, so `meta.property_folder` is required here."""
+        if not meta.property_folder:
+            raise DmsError("Kein Objektordner für die Jahresablage bekannt.")
+        parent = await self._folder(self._root, meta.property_folder)
+        parent = await self._folder(parent, str(year))
+        return await self._upload(data, meta, parent)
+
+    async def _upload(self, data: bytes, meta: MirrorMeta, parent: str) -> MirrorResult:
         boundary = f"mhvp{uuid.uuid4().hex}"
         metadata = {
             "name": meta.filename,
@@ -230,6 +247,19 @@ class GoogleDriveStore:
 
     async def resolve(self, ref: str) -> str | None:
         return ref
+
+    async def download(self, ref: str) -> bytes:
+        """Original file content for `ref` (a plain Drive file id, the same convention `put`/
+        `resolve` use, M35 Stufe 2: a takeover document's `storage_ref` is the objektakte Drive
+        file id verbatim, never copied locally, so a download goes through this method instead
+        of the S3 `BlobStore`)."""
+        response = await self._client.get(
+            f"{self.FILES_URL}/{ref}",
+            params={"alt": "media", "supportsAllDrives": "true"},
+            headers=await self._auth(),
+        )
+        _raise_for(response, "download")
+        return response.content
 
     async def search(self, property_folder: str, keywords: list[str]) -> list[MirrorHit]:
         """Documents in exactly one object's Drive folder (11.2, M20-05): the query is scoped to
