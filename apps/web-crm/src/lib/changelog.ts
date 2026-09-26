@@ -17,6 +17,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.26.1",
+    date: "26.09.2026",
+    title: "Mail: Aktionen oben, Mehrfachauswahl, Erledigt archiviert",
+    changes: [
+      "Mail: Antworten, Ticket anlegen und Erledigt auch oberhalb der Nachricht",
+      "Mail: Mehrfachauswahl mit Strg, Shift und Alle auswählen, Sammelaktion Als erledigt markieren",
+      "Mail: Erledigt archiviert die Nachricht in Gmail, einzeln und als Sammelaktion",
+    ],
+  },
+  {
     version: "1.26.0",
     date: "26.09.2026",
     title: "Portalzugang am Kontakt, IBAN-Ablehnungsgrund, Importereignisse, Dokumentliste, Telefonassistenz-Korrekturen",
