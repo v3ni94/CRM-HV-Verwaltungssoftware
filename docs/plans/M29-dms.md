@@ -59,3 +59,42 @@ den Stufen oben:
   Zugriff auf den gesamten Drive-Bestand des Mandanten, siehe Regel `docs/rules/M20-05.md`.
 - Ohne verbundenes DMS oder ohne auflösbares Objekt bleibt die Dokumentliste leer; ein DMS-Fehler
   unterbricht die Vorbereitung nicht.
+
+## Ergebnis Stufe 4 (26.09.2026)
+
+Grundlage ist der Schnittstellenvertrag in `docs/integrations/objektakte.md` (Stufe 3 wird im
+objektakte-Repository umgesetzt). Stufe 4 im CRM:
+
+- Client `mhvp.objektakte.remote` (httpx, Zeitlimit, Paginierung, Fehler als 502 an das
+  Frontend), Einstellungen `OBJEKTAKTE_API_URL`, `OBJEKTAKTE_API_TOKEN`,
+  `OBJEKTAKTE_WEBHOOK_SECRET`, `OBJEKTAKTE_TENANT` (leer bedeutet aus, `infra/compose.yaml`,
+  `infra/env.prod.example`).
+- Endpunkte `/api/v1/integrations/objektakte/...` (`mhvp.objektakte.dms_routers`) mit den
+  vorhandenen Rechten `objektakte:*`, `documents:create`, `contacts:read`; keine neue Rolle.
+- Webhook `POST /api/v1/integrations/objektakte/webhook` (`mhvp.objektakte.webhook`) mit
+  HMAC-Prüfung und Idempotenz; `document.filed` wird als M6-Dokument mit Objektverknüpfung
+  abgelegt (Abgleich über objektakte-ID, `drive_file_id`, `sha256`; M6 trägt das ohne neue
+  Dokumenttabelle).
+- Eigentümer- und Mieterlisten als Importvorschlag mit Testlauf, Abgleich und Freigabe
+  (`objektakte_person_proposal`), ohne Schreiben in Stammdaten.
+- Migration `0126_objektakte_dms` (Tabellen `objektakte_webhook_receipt`,
+  `objektakte_person_proposal`, beide mit RLS).
+- CRM-Seite `/dms` mit Kacheln je Objekt (Status, offene Fälle, Vollständigkeit, fehlende
+  Unterlagen) und `/dms/{nummer}` mit fehlenden Unterlagen, Dokumentliste mit Absprung in Drive,
+  Nachholen der Verknüpfung und Importvorschlag; ohne Anbindung Hinweis und Rückfall auf Stufe 1.
+- Tests: `apps/api/tests/unit/test_m29_objektakte_remote.py`,
+  `apps/api/tests/integration/test_m29_dms_objektakte.py` (Fake-Antworten über
+  `httpx.MockTransport`, keine echten Aufrufe), `apps/web-crm/src/components/dms/*.test.tsx`.
+
+Offen:
+
+- Stufe 3 in objektakte (Endpunkte, Token-Kommando, Webhook-Versand) liegt noch nicht vor; die
+  Anbindung ist bis dahin aus. Ein Abnahmetest gegen die echte Schnittstelle steht aus.
+- Übernahme freigegebener Importvorschläge in die Stammdaten: bewusst nicht umgesetzt, weil die
+  Listen keine Vertragsdaten (Eigentumsübergang, Vertragsbeginn der Eigentümer) und nur
+  maskierte Kontaktdaten liefern. Entscheidung des Betreibers, ob ein Übernahmeschritt folgen
+  soll (Betreiber, kein Gate betroffen).
+- `takeover_status` wird so angezeigt, wie objektakte ihn liefert; eine deutsche Bezeichnung je
+  Wert folgt, sobald die Werteliste im Vertrag festgelegt ist.
+- `object.taken_over` wird nur protokolliert; eine Folgeaktion (zum Beispiel Objektstatus im
+  CRM) ist nicht festgelegt.

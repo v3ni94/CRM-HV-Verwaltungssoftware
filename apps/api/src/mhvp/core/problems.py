@@ -168,6 +168,33 @@ class ErrorCodes:
         "Paperless nicht erreichbar",
         "Paperless request failed or timed out.",
     )
+    OBJEKTAKTE_NOT_CONFIGURED = ErrorCode(
+        "MHVP-OAK-0001",
+        502,
+        "objektakte ist nicht angebunden",
+        (
+            "OBJEKTAKTE_API_URL, OBJEKTAKTE_API_TOKEN or OBJEKTAKTE_TENANT is empty, or the "
+            "signed in tenant is not the configured objektakte tenant (M29 Stufe 4)."
+        ),
+    )
+    OBJEKTAKTE_UNAVAILABLE = ErrorCode(
+        "MHVP-OAK-0002",
+        502,
+        "objektakte nicht erreichbar",
+        "Request to the objektakte read API failed, timed out, was refused or was malformed.",
+    )
+    OBJEKTAKTE_OBJECT_NOT_FOUND = ErrorCode(
+        "MHVP-OAK-0003",
+        404,
+        "Objekt in objektakte nicht gefunden",
+        "objektakte answered 404 for this object number.",
+    )
+    OBJEKTAKTE_PROPOSAL_STATE = ErrorCode(
+        "MHVP-OAK-0004",
+        409,
+        "Importvorschlag bereits entschieden",
+        "The person list proposal is approved or rejected; start a new proposal instead.",
+    )
     ACC_UNBALANCED = ErrorCode(
         "MHVP-ACC-0001",
         422,

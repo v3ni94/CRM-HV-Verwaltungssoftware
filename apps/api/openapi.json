@@ -20849,6 +20849,43 @@
         "title": "PaymentTypeMappingIn",
         "type": "object"
       },
+      "PersonProposalDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "PersonProposalDecisionIn",
+        "type": "object"
+      },
+      "PersonProposalIn": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "owners",
+              "tenants"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "PersonProposalIn",
+        "type": "object"
+      },
       "PhoneIn": {
         "additionalProperties": false,
         "properties": {
@@ -52628,6 +52665,646 @@
         "summary": "Import zurücknehmen",
         "tags": [
           "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/objects": {
+      "get": {
+        "operationId": "objects_api_v1_integrations_objektakte_objects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Objects Api V1 Integrations Objektakte Objects Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Objekte aus objektakte (Kacheln der DMS-Seite)",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/objects/{number}": {
+      "get": {
+        "operationId": "object_detail_api_v1_integrations_objektakte_objects__number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Object Detail Api V1 Integrations Objektakte Objects  Number  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objekt aus objektakte mit fehlenden Unterlagen",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/objects/{number}/documents": {
+      "get": {
+        "operationId": "object_documents_api_v1_integrations_objektakte_objects__number__documents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "folder",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Folder"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Object Documents Api V1 Integrations Objektakte Objects  Number  Documents Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dokumentliste eines Objekts aus objektakte",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/objects/{number}/documents/link": {
+      "post": {
+        "operationId": "link_object_documents_api_v1_integrations_objektakte_objects__number__documents_link_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Link Object Documents Api V1 Integrations Objektakte Objects  Number  Documents Link Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Alle Dokumente eines Objekts als CRM-Dokumente verknüpfen (Nachholen)",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/objects/{number}/person-proposals": {
+      "post": {
+        "operationId": "create_proposal_api_v1_integrations_objektakte_objects__number__person_proposals_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonProposalIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Proposal Api V1 Integrations Objektakte Objects  Number  Person Proposals Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümer- oder Mieterliste als Importvorschlag abrufen (Testlauf mit Abgleich)",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/objects/{number}/{kind}": {
+      "get": {
+        "operationId": "object_persons_api_v1_integrations_objektakte_objects__number___kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "owners",
+                "tenants"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Object Persons Api V1 Integrations Objektakte Objects  Number   Kind  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümer- oder Mieterliste aus objektakte",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/person-proposals": {
+      "get": {
+        "operationId": "list_proposals_api_v1_integrations_objektakte_person_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "object_number",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Object Number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tested",
+                    "approved",
+                    "rejected"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Proposals Api V1 Integrations Objektakte Person Proposals Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importvorschläge der Eigentümer- und Mieterlisten",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/person-proposals/{proposal_id}": {
+      "get": {
+        "operationId": "get_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Proposal Api V1 Integrations Objektakte Person Proposals  Proposal Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importvorschlag mit Abgleich",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/person-proposals/{proposal_id}/approve": {
+      "post": {
+        "operationId": "approve_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PersonProposalDecisionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve Proposal Api V1 Integrations Objektakte Person Proposals  Proposal Id  Approve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importvorschlag freigeben (Abgleich als Arbeitsgrundlage, schreibt keine Stammdaten)",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/person-proposals/{proposal_id}/reject": {
+      "post": {
+        "operationId": "reject_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PersonProposalDecisionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reject Proposal Api V1 Integrations Objektakte Person Proposals  Proposal Id  Reject Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importvorschlag verwerfen",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/person-proposals/{proposal_id}/test-run": {
+      "post": {
+        "operationId": "rerun_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__test_run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Rerun Proposal Api V1 Integrations Objektakte Person Proposals  Proposal Id  Test Run Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Testlauf wiederholen (neu abrufen und abgleichen)",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/status": {
+      "get": {
+        "operationId": "status_api_v1_integrations_objektakte_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Status Api V1 Integrations Objektakte Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Anbindung objektakte: eingerichtet für diesen Mandanten?",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/objektakte/webhook": {
+      "post": {
+        "operationId": "receive_api_v1_integrations_objektakte_webhook_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Receive Api V1 Integrations Objektakte Webhook Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Webhook objektakte (HMAC, idempotent)",
+        "tags": [
+          "objektakte-dms"
         ]
       }
     },

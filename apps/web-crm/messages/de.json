@@ -3361,7 +3361,7 @@
     "openApp": "Objektübernahme öffnen",
     "openSearch": "In der Objektübernahme suchen",
     "stage": "Stand der Anbindung",
-    "stageText": "Stufe 1: Absprung je Objekt über die Objektnummer. Stufe 2: zentrale Anmeldung über das CRM. Stufe 3: Übernahmestatus, offene Prüffälle und Dokumentliste im CRM, sobald die Schnittstelle der Objektübernahme vorliegt (Plan M29).",
+    "stageText": "Stufe 1: Absprung je Objekt über die Objektnummer. Stufe 2: zentrale Anmeldung über das CRM. Stufe 4: Übernahmestatus, offene Prüffälle, Vollständigkeit und Dokumentliste im CRM über die Schnittstelle der Objektübernahme (Plan M29).",
     "structure": "Ordnerstruktur je Objekt",
     "folders": "01 Legitimationsunterlagen, 02 Stammakte, 03 Buchhaltung, 04 Mieterakte, 05 Eigentümerakte (je Einheit und Eigentümer mit elf Unterordnern), 06 Sonstiges (Unklar, Manuelle Prüfung, Dubletten, Nicht objektbezogen).",
     "objects": "Objekte",
@@ -3371,7 +3371,81 @@
     "colAction": "Objektakte",
     "searchObject": "Akte {number} suchen",
     "empty": "Keine Objekte vorhanden.",
-    "hint": "Der Absprung öffnet die Suche der Objektübernahme mit der Objektnummer. Eine direkte Verknüpfung je Akte folgt mit Stufe 3."
+    "hint": "Der Absprung öffnet die Suche der Objektübernahme mit der Objektnummer. Eine direkte Verknüpfung je Akte folgt mit Stufe 3.",
+    "webhookOff": "Der Webhook der Objektübernahme ist nicht eingerichtet. Neu abgelegte Dokumente erscheinen erst nach dem Nachholen je Objekt als CRM-Dokumente.",
+    "notConfigured": {
+      "not_configured": "Die Anbindung an die Objektübernahme ist nicht eingerichtet. Solange Adresse, Zugangsschlüssel und Mandant der Schnittstelle fehlen, zeigt diese Seite nur den Absprung je Objekt.",
+      "other_tenant": "Die Objektübernahme ist für einen anderen Mandanten angebunden. Für diesen Mandanten stehen nur die Absprünge je Objekt zur Verfügung.",
+      "forbidden": "Für die Daten der Objektübernahme fehlt die Berechtigung. Es stehen nur die Absprünge je Objekt zur Verfügung."
+    },
+    "tile": {
+      "openCases": "Offene Fälle",
+      "completeness": "Vollständig",
+      "missing": "Fehlend",
+      "complete": "Unterlagen vollständig",
+      "present": "{present} von {required} Unterlagen",
+      "noProperty": "Nicht im CRM angelegt"
+    },
+    "detail": {
+      "title": "Objekt {number}",
+      "openDrive": "Objektakte in Drive öffnen",
+      "openProperty": "Objekt im CRM öffnen",
+      "noProperty": "Zu dieser Objektnummer gibt es im CRM kein Objekt. Dokumente werden ohne Objektbezug verknüpft, ein Abgleich der Personenlisten ist nicht möglich.",
+      "status": "Übernahmestatus",
+      "crmDocuments": "{count, plural, =0 {Keine CRM-Dokumente am Objekt} one {# CRM-Dokument am Objekt} other {# CRM-Dokumente am Objekt}}",
+      "completeness": "Vollständigkeit",
+      "openCases": "Offene Prüffälle",
+      "missing": "Fehlende Unterlagen",
+      "noneMissing": "Es fehlen keine Pflichtunterlagen."
+    },
+    "documents": {
+      "title": "Dokumente",
+      "link": "Als CRM-Dokumente verknüpfen",
+      "linkHint": "Verknüpft alle Dokumente dieses Objekts als CRM-Dokumente. Der Abgleich erfolgt über die Drive-Datei und die Prüfsumme; das Original bleibt in Google Drive.",
+      "linkResult": "Verknüpfung abgeschlossen: {created} neu angelegt, {linked} vorhandenen Dokumenten zugeordnet, {unchanged} bereits verknüpft, {invalid} ohne gültige Prüfsumme übersprungen.",
+      "empty": "Keine Dokumente vorhanden.",
+      "colTitle": "Titel",
+      "colFolder": "Ordner",
+      "colType": "Dokumentart",
+      "colFiled": "Abgelegt",
+      "colLinks": "Öffnen",
+      "openDrive": "In Drive öffnen",
+      "openCrm": "CRM-Dokument",
+      "notLinked": "Nicht verknüpft",
+      "previous": "Zurück",
+      "next": "Weiter",
+      "pageOf": "Seite {page} von {pages}"
+    },
+    "proposal": {
+      "title": "Eigentümer- und Mieterliste als Importvorschlag",
+      "hint": "Die Liste der Objektübernahme wird abgerufen und mit den laufenden Verträgen im CRM abgeglichen. Die Freigabe bestätigt den Abgleich als Arbeitsgrundlage; Kontakte, Verträge und Einheiten werden dabei nicht geändert.",
+      "kind": "Liste",
+      "owners": "Eigentümerliste",
+      "tenants": "Mieterliste",
+      "start": "Abrufen und Testlauf",
+      "state": "Status: {status}. Abgerufen am {fetched}, Stichtag {date}.",
+      "rerun": "Testlauf wiederholen",
+      "approve": "Freigeben",
+      "reject": "Verwerfen",
+      "decided": "Der Vorschlag ist entschieden. Änderungen an den Stammdaten erfolgen in den Stammdatenmasken.",
+      "colName": "Name",
+      "colUnits": "Einheiten",
+      "colResult": "Abgleich",
+      "colCrm": "Im CRM erfasst",
+      "status": {
+        "tested": "Testlauf",
+        "approved": "freigegeben",
+        "rejected": "verworfen"
+      },
+      "row": {
+        "unchanged": "übereinstimmend",
+        "conflict": "abweichend",
+        "new": "neu",
+        "unit_unknown": "Einheit unbekannt",
+        "no_unit": "ohne Einheit",
+        "crm_only": "nur im CRM"
+      }
+    }
   },
   "MailPlaybooks": {
     "title": "Playbooks",
