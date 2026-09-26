@@ -865,7 +865,7 @@ def test_audit_view_lists_all_chats_for_admins_only(client: TestClient, world: W
     filtered = _ok(
         client.get(
             "/api/v1/ai/conversations",
-            params={"scope": "all", "user_id": world.users["m7clerk"], "q": f"Clerk {RUN}"},
+            params={"scope": "all", "user_id": str(world.users["m7clerk"]), "q": f"Clerk {RUN}"},
             headers=admin,
         ),
         200,

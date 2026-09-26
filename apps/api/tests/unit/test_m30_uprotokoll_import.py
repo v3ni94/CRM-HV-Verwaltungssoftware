@@ -6,6 +6,7 @@
 from datetime import date, time
 from decimal import Decimal
 
+from mhvp.core.sqldump import to_bool, to_date, to_decimal, to_time
 from mhvp.handover import uprotokoll_import as importer
 
 DUMP = r"""
@@ -85,14 +86,14 @@ def test_parse_dump_skips_malformed_statement_without_raising() -> None:
 
 
 def test_coerce_typed_conversions() -> None:
-    assert importer._to_date("2026-01-15") == date(2026, 1, 15)
-    assert importer._to_date(None) is None
-    assert importer._to_time("09:30:00") == time(9, 30, 0)
-    assert importer._to_decimal("04512.7") == Decimal("4512.7")
-    assert importer._to_decimal(None) is None
-    assert importer._to_bool(1) is True
-    assert importer._to_bool(0) is False
-    assert importer._to_bool("0") is False
+    assert to_date("2026-01-15") == date(2026, 1, 15)
+    assert to_date(None) is None
+    assert to_time("09:30:00") == time(9, 30, 0)
+    assert to_decimal("04512.7") == Decimal("4512.7")
+    assert to_decimal(None) is None
+    assert to_bool(1) is True
+    assert to_bool(0) is False
+    assert to_bool("0") is False
 
 
 async def test_build_plan_reports_counts_and_unmatched_objects() -> None:

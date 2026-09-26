@@ -76,9 +76,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_ai_knowledge_entry")),
     )
-    op.create_index(
-        "ix_ai_knowledge_entry_property_id", "ai_knowledge_entry", ["property_id"]
-    )
+    op.create_index("ix_ai_knowledge_entry_property_id", "ai_knowledge_entry", ["property_id"])
     op.create_index(
         "ix_ai_knowledge_entry_tenant_property",
         "ai_knowledge_entry",

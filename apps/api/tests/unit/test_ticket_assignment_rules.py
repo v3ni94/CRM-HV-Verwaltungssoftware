@@ -2,6 +2,7 @@
 (operator 25.09.2026, docs/integrations/mail-optimierung.md). Synthetic names only."""
 
 import uuid
+from typing import Any
 
 from mhvp.communication.assignment import ActiveMember, match_by_name
 from mhvp.communication.forwarding import classify_invoice, register_confirmation
@@ -108,7 +109,7 @@ def test_classify_invoice_none_without_invoice_keyword() -> None:
 
 
 def test_register_confirmation_adds_to_learning_list_after_second_confirmation() -> None:
-    cfg: dict = {"sender_allowlist": [], "learning_list": [], "confirmed_counts": {}}
+    cfg: dict[str, Any] = {"sender_allowlist": [], "learning_list": [], "confirmed_counts": {}}
     cfg = register_confirmation(cfg, "poetter@example.com")
     assert "poetter@example.com" not in cfg["learning_list"]
     cfg = register_confirmation(cfg, "poetter@example.com")

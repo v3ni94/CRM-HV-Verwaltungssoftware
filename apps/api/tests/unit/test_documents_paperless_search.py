@@ -1,12 +1,14 @@
 """Paperless-Suche (M31): Objekt-/Ticketsuche und Datei-Proxy gegen einen MockTransport."""
 
+from typing import Any
+
 import httpx
 import pytest
 
 from mhvp.documents.paperless_search import PaperlessSearch, PaperlessSearchError
 
 
-def _client(handler):
+def _client(handler: Any) -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
 

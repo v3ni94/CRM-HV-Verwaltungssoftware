@@ -5,7 +5,7 @@ filing via a fake Drive store (no real network)."""
 import asyncio
 import json
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import boto3
 import pytest
@@ -214,7 +214,9 @@ def _post_invoice(
     inv = _ok(client.post(f"{A}/invoices", json=body, headers=h_creator), 201)
     _review_all(client, h_creator, inv["id"])
     _ok(client.post(f"{A}/invoices/{inv['id']}/release", headers=h_releaser))
-    return _ok(client.post(f"{A}/invoices/{inv['id']}/post", headers=h_creator))
+    return cast(
+        dict[str, Any], _ok(client.post(f"{A}/invoices/{inv['id']}/post", headers=h_creator))
+    )
 
 
 def test_match_by_amount_and_invoice_number(client: TestClient, world: World) -> None:

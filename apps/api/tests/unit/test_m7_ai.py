@@ -72,7 +72,7 @@ def test_complete_with_retry_waits_then_falls_through(monkeypatch: pytest.Monkey
     async def fake_sleep(delay: float) -> None:
         slept.append(delay)
 
-    monkeypatch.setattr(gateway.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
     monkeypatch.setattr(gateway, "RETRY_DELAYS_S", (1.0, 2.0))
 
     class Flaky:
@@ -250,12 +250,14 @@ def test_provider_status_error_carries_provider_message() -> None:
     def response(status: int, body: dict[str, object]) -> httpx.Response:
         return httpx.Response(status, request=httpx.Request("POST", "https://x"), json=body)
 
-    body = {
+    body: dict[str, object] = {
         "type": "error",
         "error": {"type": "authentication_error", "message": "invalid x-api-key"},
     }
     exc = anthropic.AuthenticationError(
-        "Error code: 401 - {...}", response=response(401, body), body=body
+        "Error code: 401 - {...}",
+        response=response(401, body),  # type: ignore[arg-type]
+        body=body,
     )
     assert status_detail(exc, 401) == "HTTP 401: invalid x-api-key"
 
@@ -274,9 +276,11 @@ def test_provider_status_error_carries_provider_message() -> None:
     assert "sk-ant-secret" not in str(info.value)
 
     # OpenAI: message on the top level of the body, 5xx is retryable, long text is truncated.
-    long_body = {"message": "x" * 1000}
+    long_body: dict[str, object] = {"message": "x" * 1000}
     o_exc = openai.InternalServerError(
-        "Error code: 503 - {...}", response=response(503, long_body), body=long_body
+        "Error code: 503 - {...}",
+        response=response(503, long_body),
+        body=long_body,
     )
 
     class FailingCompletions:
@@ -296,11 +300,22 @@ def test_provider_status_error_carries_provider_message() -> None:
     assert o_info.value.retryable
 
     # Key like strings in a provider message are removed; a plain message stays as is.
-    leaky = {"error": {"message": "key sk-abcdefghijklmnop rejected"}}
-    l_exc = anthropic.APIStatusError("Error code: 403", response=response(403, leaky), body=leaky)
+    leaky: dict[str, object] = {"error": {"message": "key sk-abcdefghijklmnop rejected"}}
+    l_exc = anthropic.APIStatusError(
+        "Error code: 403",
+        response=response(403, leaky),  # type: ignore[arg-type]
+        body=leaky,
+    )
     assert status_detail(l_exc, 403) == "HTTP 403: key [entfernt] rejected"
     assert (
-        status_detail(anthropic.APIStatusError("", response=response(500, {}), body=None), 500)
+        status_detail(
+            anthropic.APIStatusError(
+                "",
+                response=response(500, {}),  # type: ignore[arg-type]
+                body=None,
+            ),
+            500,
+        )
         == "HTTP 500"
     )
 
@@ -315,6 +330,7 @@ def test_run_and_propose_marks_unexpected_exception_as_failed(
     from contextlib import asynccontextmanager
     from types import SimpleNamespace
 
+    from mhvp.ai import gateway as gateway_module
     from mhvp.ai import jobs
     from mhvp.ai.models import RunStatus
 
@@ -325,7 +341,7 @@ def test_run_and_propose_marks_unexpected_exception_as_failed(
     async def boom(*args: object, **kwargs: object) -> object:
         raise KeyError("storage_ref")
 
-    monkeypatch.setattr(jobs.gateway, "execute", boom)
+    monkeypatch.setattr(gateway_module, "execute", boom)
     row = SimpleNamespace(
         id=uuid.uuid4(), status=RunStatus.RUNNING, error=None, conversation_id=uuid.uuid4()
     )
@@ -347,9 +363,9 @@ def test_run_and_propose_marks_unexpected_exception_as_failed(
     monkeypatch.setattr(jobs.log, "exception", lambda event, **kw: logged.append(event))
 
     result = asyncio.run(jobs.run_and_propose(None, uuid.uuid4(), row.id, None, None))  # type: ignore[arg-type]
-    assert result is row
-    assert row.status is RunStatus.FAILED
+    assert result is row  # type: ignore[comparison-overlap]
+    assert row.status is RunStatus.FAILED  # type: ignore[unreachable]
     assert row.error == "KeyError: 'storage_ref'"
     assert logged == ["ai_run_unhandled_error"]
     assert len(added) == 1
-    assert added[0].content == "Nicht ausgeführt: KeyError: 'storage_ref'"  # type: ignore[attr-defined]
+    assert added[0].content == "Nicht ausgeführt: KeyError: 'storage_ref'"
