@@ -391,6 +391,9 @@ export function HandoverEditor({ initial }: { initial: Full }) {
           protocolId={p.id}
           address={p.address || null}
           handoverDate={p.handover_date}
+          objectLabel={p.object_label}
+          unitLabel={p.unit_label || p.unit_number}
+          participants={p.participants}
         />
         {!locked ? (
           <button

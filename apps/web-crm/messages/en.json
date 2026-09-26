@@ -1870,5 +1870,10 @@
       "colSource": "Source",
       "duplicate": "Duplicate"
     }
+  },
+  "Handover": {
+    "createAppointment": "Create appointment",
+    "appointmentTitle": "Handover",
+    "appointmentCreatedLink": "Open appointment on {date} in calendar"
   }
 }
