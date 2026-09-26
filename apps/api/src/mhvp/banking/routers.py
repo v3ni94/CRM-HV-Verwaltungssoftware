@@ -365,6 +365,9 @@ async def tx_candidates(
 async def _book(
     session: Any, principal: TenantPrincipal, row: BankTransaction, body: BookIn
 ) -> Any:
+    reasons = await matching.allocation_reasons(
+        session, row, [s.open_item_id for s in body.settlements]
+    )
     entry = await matching.book_payment(
         session,
         row,
@@ -381,7 +384,17 @@ async def _book(
         entity_type="bank_transaction",
         entity_id=row.id,
         actor_user_id=principal.user_id,
-        payload={"journal_entry_id": str(entry.id)},
+        payload={
+            "journal_entry_id": str(entry.id),
+            "allocations": [
+                {
+                    "open_item_id": str(s.open_item_id),
+                    "amount": str(s.amount),
+                    "allocation_reason": reasons[str(s.open_item_id)],
+                }
+                for s in body.settlements
+            ],
+        },
     )
     return entry
 
@@ -443,7 +456,20 @@ async def bulk_confirm(
             ],
         }
         if body.preview:
-            return {"preview": True, **summary}
+            allocations: dict[str, list[dict[str, str]]] = {}
+            for item, row in rows:
+                reasons = await matching.allocation_reasons(
+                    session, row, [s.open_item_id for s in item.settlements]
+                )
+                allocations[str(row.id)] = [
+                    {
+                        "open_item_id": str(s.open_item_id),
+                        "amount": str(s.amount),
+                        "allocation_reason": reasons[str(s.open_item_id)],
+                    }
+                    for s in item.settlements
+                ]
+            return {"preview": True, **summary, "allocations": allocations}
         results = []
         for item, row in rows:
             nested = await session.begin_nested()

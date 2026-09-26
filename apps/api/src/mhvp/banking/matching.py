@@ -27,6 +27,7 @@ from mhvp.accounting.models import (
     OpenItem,
     OpenItemKind,
 )
+from mhvp.banking import allocation
 from mhvp.banking.models import BankRule, BankTransaction, RuleState, TransactionStatus
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -41,6 +42,7 @@ class Candidate:
     remaining: Decimal
     score: int
     reasons: list[str] = field(default_factory=list)
+    allocation_reason: str = allocation.REASON_RULE
 
 
 async def ledger_for(session: AsyncSession, tx: BankTransaction) -> tuple[Ledger, LedgerAccount]:
@@ -92,6 +94,8 @@ async def candidates(session: AsyncSession, tx: BankTransaction) -> list[Candida
     ]
     payer_parties = await _payer_accounts(session, tx)
     purpose = (tx.purpose or "").lower()
+    hints = allocation.parse_allocation_hint(tx.purpose or "")
+    hit_items: dict[uuid.UUID, set[uuid.UUID]] = {}  # debtor account -> items named by the payer
     out: list[Candidate] = []
     for item in receivables:
         account = await session.get(LedgerAccount, item["account_id"])
@@ -113,6 +117,14 @@ async def candidates(session: AsyncSession, tx: BankTransaction) -> list[Candida
         if item["remaining"] == tx.amount:
             score += SCORES["amount"]
             reasons.append("Betrag entspricht dem offenen Betrag")
+        if not hints.empty:
+            entry = await session.get(JournalEntry, item["journal_entry_id"])
+            if allocation.matches_item(
+                hints,
+                reference=entry.reference if entry is not None else None,
+                period=item["due_date"] or item["booking_date"],
+            ):
+                hit_items.setdefault(item["account_id"], set()).add(item["id"])
         if score > 0:
             out.append(
                 Candidate(
@@ -124,8 +136,25 @@ async def candidates(session: AsyncSession, tx: BankTransaction) -> list[Candida
                     reasons,
                 )
             )
-    out.sort(key=lambda c: (-c.score, str(c.open_item_id)))
+    # A hint naming exactly one open item of the debtor is settled first (D39); the rest keeps
+    # the existing order. Scores and the automatic posting criteria stay unchanged.
+    determined = {next(iter(ids)) for ids in hit_items.values() if len(ids) == 1}
+    for c in out:
+        if c.open_item_id in determined:
+            c.allocation_reason = allocation.REASON_DETERMINED
+            c.reasons.append(allocation.REASON_DETERMINED)
+    out.sort(key=lambda c: (c.open_item_id not in determined, -c.score, str(c.open_item_id)))
     return out
+
+
+async def allocation_reasons(
+    session: AsyncSession, tx: BankTransaction, item_ids: list[uuid.UUID]
+) -> dict[str, str]:
+    """Reason per settled open item for preview and audit log (M12-03)."""
+    if tx.amount <= 0 or not item_ids:
+        return {str(i): allocation.REASON_RULE for i in item_ids}
+    found = {c.open_item_id: c.allocation_reason for c in await candidates(session, tx)}
+    return {str(i): found.get(i, allocation.REASON_RULE) for i in item_ids}
 
 
 def unambiguous(found: list[Candidate], amount: Decimal) -> Candidate | None:
