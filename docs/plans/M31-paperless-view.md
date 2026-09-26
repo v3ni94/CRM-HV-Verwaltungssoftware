@@ -64,3 +64,29 @@ Integrationstests für die Router-Endpunkte liegen inzwischen vor: `tests/integr
 test_m31_dms.py` (Paperless per `httpx.MockTransport` gefakt; Happy Path Objekt- und
 Ticketsuche, Datei-Proxy, Berechtigung, Mandantentrennung, Validierung, Verhalten ohne
 gepflegte `object_field_id` bzw. ohne eingerichtete Anbindung).
+
+## Nachtrag 26.09.2026: Objektsuche und Gesellschaftsfilter aus dem Immoware Hub (7.2)
+
+Umsetzung der Empfehlung 7.2 aus `docs/integrations/immoware-hub.md`, aufbauend auf M31, nur
+lesend (Frage 8.3 offen, kein Upload).
+
+* `paperless_search.py`: `object_number_matches` (Hub-Regel exakt `<Nummer>` oder Beginn
+  `<Nummer>, `) als lokale Nachprüfung der Treffer, `search()` mit Objektnummer, Gesellschaft und
+  Volltext (UND), `parse_field_id`, `parse_company_options`; `PaperlessDocument.company`.
+* Konfiguration weiterhin in `DmsConnection.options`, neuer Schlüssel `company_options` (Text,
+  eine Zeile `Options-ID=Gesellschaft`), Standard leer; `object_field_id`, `company_field_id` und
+  `company_options` werden beim `PUT /dms-connections/paperless` geprüft und normalisiert.
+* Endpunkte: `GET /api/v1/dms-documents` (Suche, mindestens ein Kriterium; Mitgliedschaften mit
+  Rechtsträger-Eingrenzung erhalten 403, weil Paperless-Dokumente keinen Rechtsträgerbezug haben),
+  `GET /api/v1/dms-documents/companies`, Parameter `company` an Objekt- und Ticketliste.
+  Unbekannte Gesellschaft oder nicht eingerichtetes Feld: 422 statt ungefilterter Liste.
+* Frontend: Auswahl und Spalte Gesellschaft in `DmsDocumentsPanel.tsx`, Eingabe der
+  Gesellschaftsoptionen in `DmsConnectionSettings.tsx`, BFF-Allowlist ergänzt. Dabei behoben: die
+  Fehlermeldungen für 502 (nicht eingerichtet) und 503 (nicht erreichbar) waren vertauscht.
+* Tests: `tests/unit/test_documents_paperless_search.py` (Grenzfälle 523, 5230, "523, Musterstr",
+  1523, Filteraufbau, Nachprüfung, Konfigurationsprüfung), `tests/integration/test_m31_dms.py`
+  (Gesellschaftsfilter an Objekt und Ticket, Suche, Validierung, Berechtigung),
+  `DmsDocumentsPanel.test.tsx`.
+* Annahme A-048 (`docs/ASSUMPTIONS.md`): Vergleich der Options-ID mit `exact`, Gesamtzahl nach
+  lokaler Nachprüfung nur für die aktuelle Seite korrigiert.
+
