@@ -89,7 +89,7 @@ Den Hub als Datenquelle ins CRM zu hängen, würde denselben Immoware24-Export z
 
 Reihenfolge:
 1. Mailprogramm ins CRM übernehmen (siehe `mail-optimierung.md`), weil es die meiste eigene Fachlogik enthält.
-2. Paperless-Objektsuche und Gesellschaftsfilter in `mhvp.documents` übernehmen.
+2. Paperless-Objektsuche und Gesellschaftsfilter in `mhvp.documents` übernehmen. **7.2 umgesetzt am 26.09.2026**, nur lesend (Frage 8.3 zum Schreiben bleibt offen, kein Upload); Einzelheiten im Abschnitt „Paperless-Objektsuche und Gesellschaftsfilter im CRM (7.2)“.
 3. Stammdaten nur noch über den CRM-Import einlesen.
 4. Hub abschalten, wenn das CRM die Funktionen im Betrieb abdeckt; bis dahin läuft er weiter.
 
@@ -202,3 +202,47 @@ keine Auskunft von Immoware24 selbst; siehe den offenen Punkt unten.
 - Der WebDAV-Lauf selbst (`pull_tree`) bricht seit diesem Auftrag nicht mehr beim ersten
   gesperrten Unterordner (401/403) ab, sondern protokolliert ihn in
   `immoware_sync_run.folder_errors` und geht mit den restlichen Ordnern weiter.
+
+## Paperless-Objektsuche und Gesellschaftsfilter im CRM (7.2)
+
+Vermerk: 7.2 umgesetzt am 26.09.2026. Übernommen wurde die Fachlogik aus Abschnitt 5, nicht der
+Hub-Code. Aufgebaut ist auf der vorhandenen Paperless-Anbindung (Einstellungsseite DMS-Anbindung,
+M31 Paperless-Ansicht, `docs/plans/M31-paperless-view.md`); es gibt keine neue Tabelle und keine
+Migration. Paperless bleibt im CRM nur lesend, ein Upload mit Objekt- und Gesellschaftsfeld folgt
+erst nach Klärung der Frage 8.3.
+
+- Objektsuche: Treffer nur, wenn das Objektfeld genau `<Nummer>` lautet oder mit `<Nummer>, `
+  beginnt. `523` trifft `523` und `523, Musterstr`, aber nicht `5230` und nicht `1523`. Die Regel
+  geht als `custom_field_query` an Paperless und wird auf die gelieferten Treffer noch einmal
+  angewandt (`object_number_matches` in `apps/api/src/mhvp/documents/paperless_search.py`), damit
+  ein Paperless, das den Filter anders auslegt, keine fremden Dokumente an ein Objekt hängt.
+- Gesellschaftsfilter: Vergleich der Options-ID eines Paperless-Auswahlfelds. Feld-ID und
+  Zuordnung Options-ID zu Gesellschaft sind Einstellungen je Mandant mit leerem Standard; das CRM
+  kennt keine Options-IDs von sich aus. Ohne Feld-ID oder ohne Zuordnung gibt es keinen Filter.
+- Endpunkte (Berechtigung `documents:read`): `GET /api/v1/dms-documents?object_number=&company=&q=`
+  (Suche mit mindestens einem Kriterium, UND-verknüpft), `GET /api/v1/dms-documents/companies`
+  (eingerichtete Gesellschaften für die Auswahl), Parameter `company` zusätzlich an
+  `GET /api/v1/properties/{id}/dms-documents` und `GET /api/v1/tickets/{id}/dms-documents`. Jedes
+  Dokument trägt die Gesellschaft laut Zuordnung im Feld `company`.
+- Oberfläche: In der Paperless-Ansicht an Objekt und Ticket erscheint die Auswahl „Gesellschaft“
+  mit Spalte, sobald Gesellschaften eingerichtet sind.
+
+### Wo der Betreiber die Werte einträgt
+
+Im CRM unter Einstellungen, DMS-Anbindung, Abschnitt Paperless (oder per
+`PUT /api/v1/dms-connections/paperless`, Schlüssel in `options`):
+
+| Feld in der Oberfläche | Schlüssel in `options` | Wert |
+| --- | --- | --- |
+| Feld-ID Objektnummer | `object_field_id` | ID des Paperless-Zusatzfelds mit der Objektnummer (laut Abschnitt 3 im Hub Feld 7, vor dem Eintrag in Paperless prüfen) |
+| Feld-ID Gesellschaft | `company_field_id` | ID des Paperless-Auswahlfelds Gesellschaft (laut Abschnitt 3 im Hub Feld 5, vor dem Eintrag prüfen) |
+| Gesellschaftsoptionen | `company_options` | eine Zeile je Option in der Form `Options-ID=Gesellschaft` |
+
+Die Feld-IDs zeigt Paperless in der Verwaltung der benutzerdefinierten Felder und in der Antwort
+von `/api/custom_fields/`. Als Options-ID ist der Wert einzutragen, den Paperless im Auswahlfeld
+eines Dokuments speichert (Feldwert in `custom_fields` eines Dokuments, bei neueren Versionen die
+ID der Option unter `extra_data.select_options`). Die Werte aus `config/hub/paperless.php` des
+Hubs können übernommen werden, wenn sie gegen den Paperless-Server geprüft sind. Ungültige Einträge
+(keine positive Zahl als Feld-ID, Zeile ohne `=`, doppelte Options-ID) weist das CRM beim Speichern
+ab.
+

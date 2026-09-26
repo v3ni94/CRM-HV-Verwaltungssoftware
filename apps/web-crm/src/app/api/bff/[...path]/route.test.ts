@@ -104,6 +104,8 @@ describe("BFF proxy", () => {
     ["POST", `tickets/${ID}/comments`],
     ["GET", "tickets"],
     ["GET", `tickets/${ID}`],
+    ["GET", "dms-documents"],
+    ["GET", "dms-documents/companies"],
     ["POST", "tickets/merge"],
     ["GET", `properties/${ID}`],
     // Dunning fees/interest (M16, 25.09.2026): read/write settings, presets, marking a case
@@ -133,6 +135,8 @@ describe("BFF proxy", () => {
     ["PUT", "ai/providers/unknown"],
     ["GET", "documents"],
     ["GET", `documents/${ID}/content`],
+    ["POST", "dms-documents"],
+    ["PUT", "dms-documents/companies"],
     ["DELETE", `receipts/drafts/${ID}`],
     ["GET", "receipts/drafts/not-a-uuid"],
     ["DELETE", `imports/${ID}`],

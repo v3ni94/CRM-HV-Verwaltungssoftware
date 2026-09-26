@@ -37,6 +37,19 @@ property detail screens in the CRM frontend.
   router endpoints themselves need Postgres fixtures and are not yet covered by an integration
   test in this environment (no local Postgres to run `RefreshDatabase`-style fixtures against).
 
+## Hub 7.2: Paperless object search and company filter
+
+Takes over the Immoware Hub logic (`docs/integrations/immoware-hub.md` sections 5 and 7.2),
+read only. `object_number_matches` implements the object rule (exactly `<number>` or starting
+with `<number>, `, so `523` never hits `5230` or `1523`); it is sent as `custom_field_query` and
+re-applied to results that carry `custom_fields`. The company filter compares the option id of
+the select field `company_field_id`; the mapping option id to company is the text option
+`company_options` (`Option-ID=Company` per line, empty by default, validated on
+`PUT /dms-connections/paperless`). Endpoints: `GET /dms-documents` (object number, company, full
+text; at least one criterion; 403 for legal-entity scoped memberships),
+`GET /dms-documents/companies`, query parameter `company` on the property and ticket lists.
+Unknown company or unconfigured field: 422. Assumption A-048.
+
 ## A30: Paperless post-consume webhook
 
 `paperless_webhook.py`: `POST /documents/webhooks/paperless[/{tenant}]`, no login; HMAC-SHA256

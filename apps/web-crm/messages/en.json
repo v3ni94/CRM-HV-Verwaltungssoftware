@@ -3669,6 +3669,7 @@
       "date": "Date",
       "correspondent": "Correspondent",
       "documentType": "Document type",
+      "company": "Company",
       "tags": "Tags",
       "actions": "Actions"
     },
@@ -3680,6 +3681,10 @@
       "previous": "Previous",
       "next": "Next",
       "page": "Page {page}"
+    },
+    "company": {
+      "label": "Company",
+      "all": "All companies"
     },
     "errors": {
       "unreachable": "Paperless unreachable",
@@ -3819,6 +3824,10 @@
     "tokenHint": "The token is write only and never shown again. Leave empty to keep the stored token.",
     "objectFieldId": "Field ID property number",
     "companyFieldId": "Field ID company",
+    "fieldIdsHint": "Paperless shows the field IDs in its custom field administration and in the response of /api/custom_fields/ (key id). The property search only matches values that equal the property number or start with the number, a comma and a space, e.g. 523 or 523, Musterstraße 1, but not 5230.",
+    "companyOptions": "Company options",
+    "companyOptionsPlaceholder": "Option-ID=Company",
+    "companyOptionsHint": "One line per option of the company select field as Option-ID=Company. The option IDs are shown in Paperless on the select field (via /api/custom_fields/ under extra_data, select_options). Leave empty if no company filter is wanted. The filter only works together with the company field ID.",
     "save": "Save",
     "saved": "Saved.",
     "yes": "Yes",

@@ -3610,6 +3610,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dms-documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Paperless-Dokumente suchen (Objekt, Gesellschaft, Text)
+         * @description Read-only search in Paperless (Hub 7.2): object number with the Hub rule (exactly
+         *     ``<Nummer>`` or ``<Nummer>, ...``), company option and full text, combined with AND. At
+         *     least one criterion is required so the endpoint never lists the whole archive.
+         */
+        get: operations["search_dms_documents_api_v1_dms_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dms-documents/companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gesellschaften des Paperless-Gesellschaftsfilters
+         * @description Configured option id to company mapping (Hub 7.2) for the filter selection; empty when
+         *     the company field or the mapping is not configured. Does not call Paperless.
+         */
+        get: operations["dms_document_companies_api_v1_dms_documents_companies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dms-documents/{paperless_id}/file": {
         parameters: {
             query?: never;
@@ -14824,6 +14867,16 @@ export interface components {
              */
             resolved: boolean;
         };
+        /**
+         * DmsCompanyOptionOut
+         * @description Eine Option des Paperless-Gesellschaftsfelds mit ihrer Gesellschaft (Hub 7.2).
+         */
+        DmsCompanyOptionOut: {
+            /** Label */
+            label: string;
+            /** Option Id */
+            option_id: string;
+        };
         /** DmsConnectionIn */
         DmsConnectionIn: {
             /**
@@ -14884,6 +14937,8 @@ export interface components {
         DmsDocumentOut: {
             /** Added */
             added: string | null;
+            /** Company */
+            company?: string | null;
             /** Correspondent */
             correspondent: string | null;
             /** Created */
@@ -29889,6 +29944,64 @@ export interface operations {
             };
         };
     };
+    search_dms_documents_api_v1_dms_documents_get: {
+        parameters: {
+            query?: {
+                /** @description Objektnummer */
+                object_number?: string | null;
+                /** @description Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies) */
+                company?: string | null;
+                /** @description Volltext */
+                q?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmsDocumentPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dms_document_companies_api_v1_dms_documents_companies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmsCompanyOptionOut"][];
+                };
+            };
+        };
+    };
     dms_document_file_api_v1_dms_documents__paperless_id__file_get: {
         parameters: {
             query?: {
@@ -42781,6 +42894,8 @@ export interface operations {
             query?: {
                 page?: number;
                 page_size?: number;
+                /** @description Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies) */
+                company?: string | null;
             };
             header?: never;
             path: {
@@ -47029,6 +47144,8 @@ export interface operations {
             query?: {
                 page?: number;
                 page_size?: number;
+                /** @description Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies) */
+                company?: string | null;
             };
             header?: never;
             path: {

@@ -8996,6 +8996,25 @@
         "title": "DisruptionIn",
         "type": "object"
       },
+      "DmsCompanyOptionOut": {
+        "description": "Eine Option des Paperless-Gesellschaftsfelds mit ihrer Gesellschaft (Hub 7.2).",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "option_id": {
+            "title": "Option Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "option_id",
+          "label"
+        ],
+        "title": "DmsCompanyOptionOut",
+        "type": "object"
+      },
       "DmsConnectionIn": {
         "additionalProperties": false,
         "properties": {
@@ -9124,6 +9143,17 @@
               }
             ],
             "title": "Added"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
           },
           "correspondent": {
             "anyOf": [
@@ -43874,6 +43904,148 @@
         ]
       }
     },
+    "/api/v1/dms-documents": {
+      "get": {
+        "description": "Read-only search in Paperless (Hub 7.2): object number with the Hub rule (exactly\n``<Nummer>`` or ``<Nummer>, ...``), company option and full text, combined with AND. At\nleast one criterion is required so the endpoint never lists the whole archive.",
+        "operationId": "search_dms_documents_api_v1_dms_documents_get",
+        "parameters": [
+          {
+            "description": "Objektnummer",
+            "in": "query",
+            "name": "object_number",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Objektnummer",
+              "title": "Object Number"
+            }
+          },
+          {
+            "description": "Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies)",
+            "in": "query",
+            "name": "company",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies)",
+              "title": "Company"
+            }
+          },
+          {
+            "description": "Volltext",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Volltext",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DmsDocumentPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paperless-Dokumente suchen (Objekt, Gesellschaft, Text)",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/dms-documents/companies": {
+      "get": {
+        "description": "Configured option id to company mapping (Hub 7.2) for the filter selection; empty when\nthe company field or the mapping is not configured. Does not call Paperless.",
+        "operationId": "dms_document_companies_api_v1_dms_documents_companies_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DmsCompanyOptionOut"
+                  },
+                  "title": "Response Dms Document Companies Api V1 Dms Documents Companies Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Gesellschaften des Paperless-Gesellschaftsfilters",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
     "/api/v1/dms-documents/{paperless_id}/file": {
       "get": {
         "operationId": "dms_document_file_api_v1_dms_documents__paperless_id__file_get",
@@ -62904,6 +63076,26 @@
               "title": "Page Size",
               "type": "integer"
             }
+          },
+          {
+            "description": "Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies)",
+            "in": "query",
+            "name": "company",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies)",
+              "title": "Company"
+            }
           }
         ],
         "responses": {
@@ -69246,6 +69438,26 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies)",
+            "in": "query",
+            "name": "company",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies)",
+              "title": "Company"
             }
           }
         ],

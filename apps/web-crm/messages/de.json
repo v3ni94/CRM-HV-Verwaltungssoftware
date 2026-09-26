@@ -3669,6 +3669,7 @@
       "date": "Datum",
       "correspondent": "Korrespondent",
       "documentType": "Dokumenttyp",
+      "company": "Gesellschaft",
       "tags": "Tags",
       "actions": "Aktionen"
     },
@@ -3680,6 +3681,10 @@
       "previous": "Zurück",
       "next": "Weiter",
       "page": "Seite {page}"
+    },
+    "company": {
+      "label": "Gesellschaft",
+      "all": "Alle Gesellschaften"
     },
     "errors": {
       "unreachable": "Paperless nicht erreichbar",
@@ -3819,6 +3824,10 @@
     "tokenHint": "Der Token wird nur geschrieben und nie wieder angezeigt. Leer lassen, um den hinterlegten Token zu behalten.",
     "objectFieldId": "Feld-ID Objektnummer",
     "companyFieldId": "Feld-ID Gesellschaft",
+    "fieldIdsHint": "Die Feld-IDs zeigt Paperless in der Verwaltung der benutzerdefinierten Felder und in der Antwort von /api/custom_fields/ (Angabe id). Die Objektsuche trifft nur Werte, die genau der Objektnummer entsprechen oder mit Objektnummer, Komma und Leerzeichen beginnen, zum Beispiel 523 oder 523, Musterstraße 1, nicht aber 5230.",
+    "companyOptions": "Gesellschaftsoptionen",
+    "companyOptionsPlaceholder": "Options-ID=Gesellschaft",
+    "companyOptionsHint": "Eine Zeile je Option des Auswahlfelds Gesellschaft in der Form Options-ID=Gesellschaft. Die Options-IDs stehen in Paperless am Auswahlfeld (über /api/custom_fields/ unter extra_data, select_options). Leer lassen, wenn kein Gesellschaftsfilter gewünscht ist. Der Filter wirkt nur mit Feld-ID Gesellschaft.",
     "save": "Speichern",
     "saved": "Gespeichert.",
     "yes": "Ja",

@@ -20,6 +20,7 @@ export type DmsConnection = {
 
 const OBJECT_FIELD_KEY = "object_field_id";
 const COMPANY_FIELD_KEY = "company_field_id";
+const COMPANY_OPTIONS_KEY = "company_options";
 const ROOT_FOLDER_KEY = "root_folder_id";
 const CLIENT_ID_KEY = "client_id";
 
@@ -42,6 +43,8 @@ export function DmsConnectionSettings({
   const [token, setToken] = useState("");
   const [objectFieldId, setObjectFieldId] = useState(paperless?.options?.[OBJECT_FIELD_KEY] ?? "");
   const [companyFieldId, setCompanyFieldId] = useState(paperless?.options?.[COMPANY_FIELD_KEY] ?? "");
+  // Zuordnung Options-ID zu Gesellschaft (Immoware Hub 7.2), eine Zeile je Option, Standard leer.
+  const [companyOptions, setCompanyOptions] = useState(paperless?.options?.[COMPANY_OPTIONS_KEY] ?? "");
   // Post-Consume-Webhook (A30): Geheimnis nur schreibbar, Schalter Standard aus (M14-05).
   const [webhookSecret, setWebhookSecret] = useState("");
   const [autoIntake, setAutoIntake] = useState(paperless?.auto_receipt_intake ?? false);
@@ -85,6 +88,8 @@ export function DmsConnectionSettings({
     else delete options[OBJECT_FIELD_KEY];
     if (companyFieldId.trim()) options[COMPANY_FIELD_KEY] = companyFieldId.trim();
     else delete options[COMPANY_FIELD_KEY];
+    if (companyOptions.trim()) options[COMPANY_OPTIONS_KEY] = companyOptions.trim();
+    else delete options[COMPANY_OPTIONS_KEY];
     const body = {
       enabled,
       base_url: baseUrl.trim() || null,
@@ -101,6 +106,7 @@ export function DmsConnectionSettings({
     setBusy(false);
     if (!res.ok) return setError(res.message);
     setSaved(res.data);
+    setCompanyOptions(res.data.options?.[COMPANY_OPTIONS_KEY] ?? "");
     setToken("");
     setWebhookSecret("");
     setMessage(t("saved"));
@@ -208,6 +214,22 @@ export function DmsConnectionSettings({
               placeholder="5"
             />
           </div>
+        </div>
+        <p className={ui.help}>{t("fieldIdsHint")}</p>
+
+        <div>
+          <label htmlFor="dms-company-options" className={ui.label}>
+            {t("companyOptions")}
+          </label>
+          <textarea
+            id="dms-company-options"
+            className={ui.input}
+            rows={4}
+            value={companyOptions}
+            onChange={(e) => setCompanyOptions(e.target.value)}
+            placeholder={t("companyOptionsPlaceholder")}
+          />
+          <p className={ui.help}>{t("companyOptionsHint")}</p>
         </div>
 
         <fieldset className="flex flex-col gap-3 rounded-lg border border-border p-3">

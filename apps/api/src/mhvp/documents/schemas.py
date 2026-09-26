@@ -167,8 +167,17 @@ class DmsDocumentOut(_Out):
     tags: list[str]
     page_count: int | None
     original_file_name: str | None
+    # Gesellschaft laut konfigurierter Options-Zuordnung (Hub 7.2), sonst None.
+    company: str | None = None
     preview_url: str
     download_url: str
+
+
+class DmsCompanyOptionOut(_Out):
+    """Eine Option des Paperless-Gesellschaftsfelds mit ihrer Gesellschaft (Hub 7.2)."""
+
+    option_id: str
+    label: str
 
 
 class DmsDocumentPageMeta(_Out):
