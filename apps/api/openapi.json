@@ -18024,6 +18024,75 @@
         "title": "MandateType",
         "type": "string"
       },
+      "ManualAssignmentIn": {
+        "description": "One open item of the Zuordnung report finished with a chosen contact.",
+        "properties": {
+          "amount_cents": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Monatlicher Zahlbetrag",
+            "title": "Amount Cents"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "landlord_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Objekteigentümer bei Mietverwaltung, wenn der Vermieter nicht eindeutig ist",
+            "title": "Landlord Contact Id"
+          },
+          "role": {
+            "enum": [
+              "eigentuemer",
+              "mieter"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Vertragsbeginn, Standard 01.01. des laufenden Jahres",
+            "title": "Start Date"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "unit_id",
+          "role",
+          "contact_id"
+        ],
+        "title": "ManualAssignmentIn",
+        "type": "object"
+      },
       "MappingIn": {
         "additionalProperties": false,
         "properties": {
@@ -53763,6 +53832,50 @@
           }
         },
         "summary": "Eigentümer und Mieter der Objektliste als Verträge (Testlauf oder Übernahme)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/lists/zuordnung/manuell": {
+      "post": {
+        "description": "Same party, contract, payment and schedule as the import, idempotent (an existing active\ncontract with the same party is reported as present). Records an import run\n``immoware24:zuordnung-manuell``; nothing is written when the assignment fails (422).",
+        "operationId": "assign_zuordnung_manual_api_v1_imports_immoware24_lists_zuordnung_manuell_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAssignmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Assign Zuordnung Manual Api V1 Imports Immoware24 Lists Zuordnung Manuell Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Offenen Eintrag der Zuordnung mit gewähltem Kontakt als Vertrag anlegen",
         "tags": [
           "Import Immoware24"
         ]

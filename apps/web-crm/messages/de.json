@@ -848,8 +848,29 @@
         "einheit_fehlt": "Einheiten nicht importiert",
         "uebersprungen_abgegeben": "Abgegeben übersprungen",
         "zahlungen_cent_hoa_fee": "Summe Hausgeld monatlich",
-        "zahlungen_cent_rent": "Summe Miete monatlich"
-      }
+        "zahlungen_cent_rent": "Summe Miete monatlich",
+        "vermieter_angelegt": "Vermieter angelegt",
+        "kontakte_aktualisiert": "Kontakte aktualisiert",
+        "manuell_zugeordnet": "Im Bericht manuell zugeordnet"
+      },
+      "openTitle": "Offene Zuordnungen",
+      "openHelp": "Einheiten mit mehrdeutigem oder unbekanntem Namen oder ohne eindeutigen Vermieter. Kontakt wählen und zuordnen, der Vertrag wird wie beim Import angelegt.",
+      "openNone": "Keine offenen Zuordnungen.",
+      "openAssigned": "zugeordnet: {count}",
+      "colAmount": "Zahlbetrag",
+      "colReason": "Grund",
+      "colContact": "Kontakt",
+      "reason": {
+        "nicht_gefunden": "nicht gefunden",
+        "mehrdeutig": "mehrdeutig",
+        "vermieter_fehlt": "Vermieter nicht eindeutig"
+      },
+      "chooseCandidate": "Kandidat wählen",
+      "searchContact": "Kontakt suchen",
+      "searchLandlord": "Objekteigentümer (Vermieter) suchen",
+      "chosen": "Gewählt: {name}",
+      "assign": "Zuordnen",
+      "restored": "Letzter Bericht wiederhergestellt."
     },
     "backToImports": "Zurück zu Importe",
     "noPermission": "Für den Listenimport fehlt die Berechtigung (Importe anlegen sowie Objekte, Kontakte und Verträge anlegen)."
@@ -2240,23 +2261,6 @@
         "city": "Ort",
         "phone": "Telefon",
         "email": "E-Mail"
-      },
-      "acceptAndReply": "Freigeben und antworten",
-      "acceptAndReplyHint": "Übernimmt die Stammdaten und legt den Antwortentwurf am Ticket an. Der Versand erfolgt erst nach Freigabe im Mailmodul.",
-      "call": {
-        "phone": "Anrufernummer",
-        "name": "Anrufer",
-        "property": "Objekt",
-        "unit": "Einheit",
-        "concern": "Anliegen",
-        "unknown": "nicht erkannt",
-        "label": {
-          "mobile": "Mobil",
-          "other": "Festnetz oder unbekannt",
-          "work": "Geschäftlich",
-          "private": "Privat",
-          "fax": "Fax"
-        }
       }
     },
     "title": "Tickets",

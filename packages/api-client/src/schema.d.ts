@@ -6277,6 +6277,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/imports/immoware24/lists/zuordnung/manuell": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Offenen Eintrag der Zuordnung mit gewähltem Kontakt als Vertrag anlegen
+         * @description Same party, contract, payment and schedule as the import, idempotent (an existing active
+         *     contract with the same party is reported as present). Records an import run
+         *     ``immoware24:zuordnung-manuell``; nothing is written when the assignment fails (422).
+         */
+        post: operations["assign_zuordnung_manual_api_v1_imports_immoware24_lists_zuordnung_manuell_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/imports/immoware24/mappings": {
         parameters: {
             query?: never;
@@ -17841,6 +17863,42 @@ export interface components {
          * @enum {string}
          */
         MandateType: "core" | "b2b";
+        /**
+         * ManualAssignmentIn
+         * @description One open item of the Zuordnung report finished with a chosen contact.
+         */
+        ManualAssignmentIn: {
+            /**
+             * Amount Cents
+             * @description Monatlicher Zahlbetrag
+             */
+            amount_cents?: number | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Landlord Contact Id
+             * @description Objekteigentümer bei Mietverwaltung, wenn der Vermieter nicht eindeutig ist
+             */
+            landlord_contact_id?: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "eigentuemer" | "mieter";
+            /**
+             * Start Date
+             * @description Vertragsbeginn, Standard 01.01. des laufenden Jahres
+             */
+            start_date?: string | null;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+        };
         /** MappingIn */
         MappingIn: {
             /** Columns */
@@ -36347,6 +36405,41 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": components["schemas"]["Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_zuordnung_manual_api_v1_imports_immoware24_lists_zuordnung_manuell_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualAssignmentIn"];
             };
         };
         responses: {

@@ -176,6 +176,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/(validate|test-run|apply)$`) },
   // Immoware24-Listen (Objektdaten, Kontakte) als CSV-Upload, Testlauf oder Übernahme.
   { method: "POST", pattern: /^imports\/immoware24\/lists\/(objektdaten|kontakte|zuordnung|adressen|adressen-ableiten)$/ },
+  { method: "POST", pattern: /^imports\/immoware24\/lists\/zuordnung\/manuell$/ },
   // Abgleichberichte des Parallelbetriebs (A68): Liste, Erstellen, JSON, CSV, Spaltenzuordnung.
   { method: "GET", pattern: /^imports\/reconciliation-reports(\/columns)?$/ },
   { method: "POST", pattern: /^imports\/reconciliation-reports$/ },

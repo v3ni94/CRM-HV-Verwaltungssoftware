@@ -848,8 +848,29 @@
         "einheit_fehlt": "Units not imported",
         "uebersprungen_abgegeben": "Handed over, skipped",
         "zahlungen_cent_hoa_fee": "Monthly HOA fees total",
-        "zahlungen_cent_rent": "Monthly rent total"
-      }
+        "zahlungen_cent_rent": "Monthly rent total",
+        "vermieter_angelegt": "Landlords recorded",
+        "kontakte_aktualisiert": "Contacts updated",
+        "manuell_zugeordnet": "Assigned manually in the report"
+      },
+      "openTitle": "Open assignments",
+      "openHelp": "Units with an ambiguous or unknown name or without a clear landlord. Choose a contact and assign it, the contract is created as in the import.",
+      "openNone": "No open assignments.",
+      "openAssigned": "assigned: {count}",
+      "colAmount": "Amount",
+      "colReason": "Reason",
+      "colContact": "Contact",
+      "reason": {
+        "nicht_gefunden": "not found",
+        "mehrdeutig": "ambiguous",
+        "vermieter_fehlt": "landlord not clear"
+      },
+      "chooseCandidate": "Choose candidate",
+      "searchContact": "Search contact",
+      "searchLandlord": "Search property owner (landlord)",
+      "chosen": "Chosen: {name}",
+      "assign": "Assign",
+      "restored": "Last report restored."
     },
     "backToImports": "Back to imports",
     "noPermission": "Missing permission for the list import (create imports and create properties, contacts and contracts)."
@@ -2240,23 +2261,6 @@
         "city": "City",
         "phone": "Phone",
         "email": "E-mail"
-      },
-      "acceptAndReply": "Approve and reply",
-      "acceptAndReplyHint": "Applies the master data and creates the reply draft on the ticket. Sending happens only after approval in the mail module.",
-      "call": {
-        "phone": "Caller number",
-        "name": "Caller",
-        "property": "Property",
-        "unit": "Unit",
-        "concern": "Concern",
-        "unknown": "not recognised",
-        "label": {
-          "mobile": "Mobile",
-          "other": "Landline or unknown",
-          "work": "Work",
-          "private": "Private",
-          "fax": "Fax"
-        }
       }
     },
     "title": "Tickets",
