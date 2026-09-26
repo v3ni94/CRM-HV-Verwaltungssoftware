@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { DunningSettingsForm, type DunningSettings } from "./DunningSettingsForm";
+import { DunningSettingsForm, reminderFeeViolation, type DunningSettings } from "./DunningSettingsForm";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
@@ -184,5 +184,31 @@ describe("DunningSettingsForm", () => {
     renderIntl(<DunningSettingsForm initial={EMPTY} canUpdate />);
     await userEvent.click(screen.getByText("Vorschau"));
     expect(await screen.findByRole("alert")).toHaveTextContent("frsit");
+  });
+
+  it("blocks saving a fee on the payment reminder (level 1) with a German message", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    renderIntl(<DunningSettingsForm initial={EMPTY} canUpdate />);
+    await userEvent.type(screen.getByLabelText("Gebühr ab Stufe"), "1");
+    await userEvent.click(screen.getByText("Speichern"));
+    expect(
+      await screen.findByText(/Die Zahlungserinnerung \(Stufe 1\) ist immer ohne Gebühr und ohne Zinsen/),
+    ).toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("detects reminder fee violations", () => {
+    const lv = { level: 1, min_days_overdue: 7, text: "E", fee_amount: null };
+    expect(reminderFeeViolation("1", [lv])).toBe(true);
+    expect(reminderFeeViolation("2", [{ ...lv, fee_amount: "2,50" }])).toBe(true);
+    expect(reminderFeeViolation("2", [{ ...lv, fee_amount: "0.00" }])).toBe(false);
+    expect(reminderFeeViolation("", [lv])).toBe(false);
+  });
+
+  it("prefills the default payment deadline for a new level and shows the hint", async () => {
+    renderIntl(<DunningSettingsForm initial={EMPTY} canUpdate />);
+    await userEvent.click(screen.getByText("Stufe hinzufügen"));
+    expect(screen.getByDisplayValue("10")).toBeInTheDocument();
+    expect(screen.getByText(/berechnet das Zahlungsdatum aus Briefdatum/)).toBeInTheDocument();
   });
 });

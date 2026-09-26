@@ -182,6 +182,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // only active once the operator has entered them (V7).
   { method: "GET", pattern: /^accounting\/dunning-settings$/ },
   { method: "PUT", pattern: /^accounting\/dunning-settings$/ },
+  // Remove an object override (M16-10); the object inherits the tenant default again.
+  { method: "DELETE", pattern: /^accounting\/dunning-settings$/ },
   { method: "POST", pattern: /^accounting\/dunning-settings\/presets$/ },
   { method: "POST", pattern: /^accounting\/dunning-runs$/ },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-runs/${ID}/approve$`) },

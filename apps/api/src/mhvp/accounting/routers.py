@@ -1450,6 +1450,12 @@ def _dunning_settings_out(
     }
 
 
+REMINDER_FEE_DETAIL = (
+    "Die Zahlungserinnerung (Stufe 1) ist immer ohne Gebühr und ohne Zinsen: "
+    "Gebühr ab Stufe muss mindestens 2 sein, die Gebühr der Stufe 1 muss leer oder 0,00 EUR sein."
+)
+
+
 def _check_levels(levels: list[dict[str, Any]], *, override: bool) -> None:
     for level in levels:
         if (
@@ -1468,6 +1474,12 @@ def _check_levels(levels: list[dict[str, Any]], *, override: bool) -> None:
         fee = level.get("fee_amount")
         if fee is not None and Decimal(str(fee)) < 0:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Mahngebühr darf nicht negativ sein.")
+        if (
+            int(level["level"]) == dunning.REMINDER_LEVEL
+            and fee is not None
+            and Decimal(str(fee)) != 0
+        ):
+            raise ProblemError(ErrorCodes.VALIDATION, detail=REMINDER_FEE_DETAIL)
         days = level.get("payment_days")
         if days is not None and int(days) < 0:
             raise ProblemError(
@@ -1529,6 +1541,8 @@ async def put_dunning_settings(
         raise ProblemError(
             ErrorCodes.VALIDATION, detail="Mandantenvorgabe: Mahnstufen (levels) sind Pflicht."
         )
+    if body.fee_from_level is not None and body.fee_from_level <= dunning.REMINDER_LEVEL:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=REMINDER_FEE_DETAIL)
     if body.levels is not None:
         _check_levels(body.levels, override=override)
     async with tenant_tx(request, principal) as session:
