@@ -8433,6 +8433,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/service-contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dienstleisterverträge */
+        get: operations["list_service_contracts_api_v1_service_contracts_get"];
+        put?: never;
+        /** Dienstleistervertrag anlegen */
+        post: operations["create_service_contract_api_v1_service_contracts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service-contracts/{contract_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dienstleistervertrag lesen */
+        get: operations["get_service_contract_api_v1_service_contracts__contract_id__get"];
+        put?: never;
+        post?: never;
+        /** Dienstleistervertrag löschen */
+        delete: operations["delete_service_contract_api_v1_service_contracts__contract_id__delete"];
+        options?: never;
+        head?: never;
+        /** Dienstleistervertrag ändern */
+        patch: operations["update_service_contract_api_v1_service_contracts__contract_id__patch"];
+        trace?: never;
+    };
     "/api/v1/sla/alerts": {
         parameters: {
             query?: never;
@@ -17973,6 +18010,106 @@ export interface components {
         SerialLetterOut: {
             /** Documents */
             documents: components["schemas"]["DocumentOut"][];
+        };
+        /** ServiceContractIn */
+        ServiceContractIn: {
+            /** Auto Renewal Months */
+            auto_renewal_months?: number | null;
+            /** Cancelled At */
+            cancelled_at?: string | null;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Notice Period Days */
+            notice_period_days: number;
+            /**
+             * Notice Period Unit
+             * @default months
+             */
+            notice_period_unit: string;
+            /** Property Id */
+            property_id?: string | null;
+            /**
+             * Provider Contact Id
+             * Format: uuid
+             */
+            provider_contact_id: string;
+            /**
+             * Starts At
+             * Format: date
+             */
+            starts_at: string;
+            /** Title */
+            title: string;
+        };
+        /** ServiceContractOut */
+        ServiceContractOut: {
+            /** Auto Renewal Months */
+            auto_renewal_months: number | null;
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /** Ends At */
+            ends_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Latest Notice Date */
+            latest_notice_date: string | null;
+            /** Next Possible End */
+            next_possible_end: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Notice Period Days */
+            notice_period_days: number;
+            /** Notice Period Unit */
+            notice_period_unit: string;
+            /**
+             * Orientation Only
+             * @default true
+             */
+            orientation_only: boolean;
+            /** Property Id */
+            property_id: string | null;
+            /**
+             * Provider Contact Id
+             * Format: uuid
+             */
+            provider_contact_id: string;
+            /**
+             * Starts At
+             * Format: date
+             */
+            starts_at: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+        };
+        /** ServiceContractPatch */
+        ServiceContractPatch: {
+            /** Auto Renewal Months */
+            auto_renewal_months?: number | null;
+            /** Cancelled At */
+            cancelled_at?: string | null;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Notice Period Days */
+            notice_period_days?: number | null;
+            /** Notice Period Unit */
+            notice_period_unit?: string | null;
+            /** Property Id */
+            property_id?: string | null;
+            /** Provider Contact Id */
+            provider_contact_id?: string | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Title */
+            title?: string | null;
         };
         /** SessionOut */
         SessionOut: {
@@ -37996,6 +38133,166 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MandateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_service_contracts_api_v1_service_contracts_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+                provider_contact_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceContractOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_service_contract_api_v1_service_contracts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceContractIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceContractOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_service_contract_api_v1_service_contracts__contract_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceContractOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_service_contract_api_v1_service_contracts__contract_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_service_contract_api_v1_service_contracts__contract_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceContractPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceContractOut"];
                 };
             };
             /** @description Validation Error */

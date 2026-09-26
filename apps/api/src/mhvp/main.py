@@ -31,6 +31,7 @@ from mhvp.communication.dispatch import router as dispatch_router
 from mhvp.communication.routers import router as mail_router
 from mhvp.contacts.routers import router as contacts_router
 from mhvp.contracts.routers import router as contracts_router
+from mhvp.contracts.service_contract_routers import router as service_contracts_router
 from mhvp.core import crypto, health
 from mhvp.core.auth import oidc
 from mhvp.core.auth.routers import router as auth_router
@@ -171,6 +172,7 @@ def create_app(
     app.include_router(contacts_router, prefix=API_PREFIX)
     app.include_router(properties_router, prefix=API_PREFIX)
     app.include_router(contracts_router, prefix=API_PREFIX)
+    app.include_router(service_contracts_router, prefix=API_PREFIX)
     # Static intake paths must be registered before /documents/{document_id} (A42).
     app.include_router(documents_intake_router, prefix=API_PREFIX)
     app.include_router(documents_router, prefix=API_PREFIX)

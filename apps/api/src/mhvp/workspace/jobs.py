@@ -28,7 +28,11 @@ DEADLINE_KINDS: tuple[str, ...] = (
     "meter_calibration",
     "bank_consent",
     "document_retention_end",
+    "service_contract_notice",
 )
+# Fixed lead time per kind; overrides the tenant setting (M9-06: 14 days for the notice date
+# of service provider contracts).
+DEADLINE_LEAD_DAYS: dict[str, int] = {"service_contract_notice": 14}
 # Read permission needed to see a kind (endpoint) and update permission of the recipients of
 # the "lead time reached" notification (job). Bank consents are additionally covered by the
 # ten day reminder of A29 (``mhvp.banking.tasks``); this list is the long range view.
@@ -38,6 +42,7 @@ DEADLINE_PERMISSIONS: dict[str, tuple[str, str]] = {
     "meter_calibration": ("properties:read", "properties:update"),
     "bank_consent": ("accounting:read", "accounting:update"),
     "document_retention_end": ("documents:read", "documents:update"),
+    "service_contract_notice": ("contracts:read", "contracts:update"),
 }
 DEADLINE_NOTIFICATION_KIND = "compliance_deadline"
 DIGEST_NOTIFICATION_KIND = "daily_digest"
@@ -91,12 +96,12 @@ async def deadline_candidates(
 ) -> list[dict[str, Any]]:
     """Every future dated obligation known to the data model, keyed by (kind, source, date).
 
-    Not covered (documented in docs/plans/M9.md): service provider contracts (no contract
-    model for them yet), resolution deadlines of virtual owners' meetings (``owners_meeting``
-    has no such field).
+    Not covered (documented in docs/plans/M9.md): resolution deadlines of virtual owners'
+    meetings (``owners_meeting`` has no such field).
     """
     from mhvp.banking.models import BankConnection, ConnectionStatus, FinApiConnection
     from mhvp.contracts.models import Contract
+    from mhvp.contracts.service_contracts import ServiceContract, terms_of
     from mhvp.documents.models import Document
     from mhvp.properties.models import Meter, Property
 
@@ -188,6 +193,19 @@ async def deadline_candidates(
     ).all()
     for doc_id, title, until in documents:
         add("document_retention_end", "document", doc_id, f"Aufbewahrung {title}", until)
+
+    service_contracts = (
+        await session.scalars(select(ServiceContract).where(ServiceContract.cancelled_at.is_(None)))
+    ).all()
+    for sc in service_contracts:
+        add(
+            "service_contract_notice",
+            "service_contract",
+            sc.id,
+            f"Kündigungsfrist Dienstleistervertrag {sc.title}",
+            terms_of(sc, today).notice_deadline,
+            sc.property_id,
+        )
     return out
 
 
@@ -209,6 +227,7 @@ async def refresh_deadlines(
     seen: set[tuple[str, uuid.UUID, date]] = set()
     now = datetime.now(UTC)
     for cand in candidates:
+        cand_lead = DEADLINE_LEAD_DAYS.get(cand["kind"], lead_days)
         key = (cand["kind"], cand["source_id"], cand["due_on"])
         seen.add(key)
         row = existing.get(key)
@@ -226,7 +245,7 @@ async def refresh_deadlines(
                 session.add(
                     ComplianceDeadline(
                         tenant_id=tenant_id,
-                        lead_days=lead_days,
+                        lead_days=cand_lead,
                         status="open",
                         **cand,
                     )
@@ -240,8 +259,8 @@ async def refresh_deadlines(
             if getattr(row, field) != cand[field]:
                 setattr(row, field, cand[field])
                 changed = True
-        if row.lead_days != lead_days:
-            row.lead_days, changed = lead_days, True
+        if row.lead_days != cand_lead:
+            row.lead_days, changed = cand_lead, True
         counts["updated"] += int(changed)
     for key, row in existing.items():
         if key not in seen:

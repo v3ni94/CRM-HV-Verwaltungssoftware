@@ -42,6 +42,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Tagesübersicht, Fristenliste und Schalter der Tagesjobs (A40, A41).
   { method: "GET", pattern: /^workspace\/(digest|deadlines|job-settings)$/ },
   { method: "PUT", pattern: /^workspace\/job-settings$/ },
+  // Dienstleisterverträge (M9-06): Liste, Anlegen, Ändern, Löschen (contracts:*).
+  { method: "GET", pattern: /^service-contracts$/ },
+  { method: "POST", pattern: /^service-contracts$/ },
+  { method: "GET", pattern: new RegExp(`^service-contracts/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^service-contracts/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^service-contracts/${ID}$`) },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
   // Google-Kalender-Termine (M23-02 bidirektional): ändern/löschen des verknüpften Google-Events
   // und, nur nach ausdrücklicher Bestätigung, Einladung an externe Teilnehmer (M23-05).
