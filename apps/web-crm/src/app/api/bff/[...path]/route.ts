@@ -418,6 +418,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^objektakte\/sync\/runs$/ },
   { method: "GET", pattern: /^objektakte\/sync\/deletions$/ },
   { method: "GET", pattern: /^objektakte\/ai-calls\/summary$/ },
+  // DMS-Seite mit Daten der Objektübernahme (M29 Stufe 4, Abruf serverseitig durch die API).
+  { method: "GET", pattern: /^integrations\/objektakte\/objects\/[0-9A-Za-z]{1,16}\/documents$/ },
+  { method: "POST", pattern: /^integrations\/objektakte\/objects\/[0-9A-Za-z]{1,16}\/documents\/link$/ },
+  { method: "POST", pattern: /^integrations\/objektakte\/objects\/[0-9A-Za-z]{1,16}\/person-proposals$/ },
+  { method: "GET", pattern: /^integrations\/objektakte\/person-proposals$/ },
+  { method: "GET", pattern: new RegExp(`^integrations/objektakte/person-proposals/${ID}$`) },
+  {
+    method: "POST",
+    pattern: new RegExp(`^integrations/objektakte/person-proposals/${ID}/(test-run|approve|reject)$`),
+  },
   { method: "GET", pattern: /^document-categories$/ },
   // SLA und Bereitschaft (M21 Übernahme aus dem Immoware Hub).
   { method: "GET", pattern: /^sla\/(rules|clocks|on-call|on-call\/current|alerts|calendar)$/ },
