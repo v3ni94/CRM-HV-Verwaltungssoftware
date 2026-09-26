@@ -77,6 +77,7 @@ und eine Sitzung gibt.
 | Datum | Schritt | Ergebnis |
 |-------|---------|----------|
 | 25.09.2026 | 1 und 2 | Letztes Backup immoware_hub-20260925-125702, Hub-Container gestoppt, Weiterleitung über infra/compose.hub-redirect.yaml aktiv, mhvp.sh ergänzt (Sicherung mhvp.sh.vor-hub-redirect) |
+| 26.09.2026 | 3 | Betreiberfreigabe im Chat (Hub nie produktiv genutzt). `docker compose down` im Hub, Images entfernt, keine Hub-Container mehr, Backups unter /var/backups/immoware-hub erhalten. Schritt 4 frühestens 24.12.2026 nach erneuter Freigabe. Nach Schritt 3 antwortete immoware.muellerhv.de mit 404, Umleitung über compose.hub-redirect.yaml in mhvp.sh prüfen und ggf. erneut anhängen. |
 | 09.10.2026 | 3 | frühester Termin, Freigabe der Geschäftsführung erforderlich |
 | 24.12.2026 | 4 | frühester Termin, Freigabe der Geschäftsführung erforderlich |
 
