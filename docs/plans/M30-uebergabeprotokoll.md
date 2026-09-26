@@ -117,6 +117,22 @@ Postausgang mit Vier-Augen-Freigabe (M20).
    E-Mail-Historie (`protocol_emails`) als eigene Ablage, Ablösung von
    uprotokoll.muellerhv.de.
 
+## Fotos (M30-04, 26.09.2026)
+
+- Beim Hochladen von Fotos zum Übergabeprotokoll (CRM und Portal, beide über
+  `POST /handover/protocols/{id}/documents`) entfernt `mhvp.handover.images.sanitize_image`
+  alle Metadaten (EXIF einschließlich GPS, XMP, IPTC, PNG-Textblöcke) und skaliert das Bild
+  auf eine maximale Kantenlänge, Einstellung `handover_image_max_edge` (Standard 2000 px,
+  kein Hochskalieren). Die EXIF-Ausrichtung wird vorher in die Pixel übernommen.
+- Betroffen sind JPEG, PNG und WebP; andere Dateien (PDF, Office) bleiben unverändert.
+  Ein nicht lesbares Bild wird mit Validierungsfehler abgelehnt, damit kein Original mit
+  Ortsdaten gespeichert wird. Das Original wird nicht zusätzlich gespeichert; die Prüfsumme
+  im Dokumentenindex bezieht sich auf das bereinigte Bild.
+- Pillow ist über reportlab bereits installiert und wird genutzt; keine neue Abhängigkeit.
+- Andere Dokumentuploads und die Datenübernahme aus U-Protokoll (dort bereits bereinigte
+  Bilder) sind nicht betroffen. Die Ortsermittlung per Browser wird nicht übernommen.
+- Tests: `apps/api/tests/unit/test_m30_handover_images.py`.
+
 ## Dateien (Stufe 3)
 
 - `apps/api/src/mhvp/handover/portal.py` (Portal-Router, delegiert an `routers.py`)
