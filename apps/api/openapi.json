@@ -47751,6 +47751,124 @@
         ]
       }
     },
+    "/api/v1/portal/handovers": {
+      "get": {
+        "description": "Protocols of the objects the staff portal account may see (portal permission\n\"handover:read\", M2-08); read only, no internal fields.",
+        "operationId": "staff_list_handovers_api_v1_portal_handovers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Staff List Handovers Api V1 Portal Handovers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokolle lesen (Mitarbeiter)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handovers/{protocol_id}": {
+      "get": {
+        "description": "Detail, read only, with the same hidden field filter as for participants (internal\nnote, internal contact, management number, internal remarks, versions).",
+        "operationId": "staff_get_handover_api_v1_portal_handovers__protocol_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Staff Get Handover Api V1 Portal Handovers  Protocol Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokoll lesen (Mitarbeiter)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
     "/api/v1/portal/invitations/accept": {
       "post": {
         "operationId": "accept_api_v1_portal_invitations_accept_post",

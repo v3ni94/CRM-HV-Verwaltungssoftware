@@ -6574,6 +6574,48 @@ export interface paths {
         patch: operations["patch_item_api_v1_portal_handover__protocol_id___section___item_id__patch"];
         trace?: never;
     };
+    "/api/v1/portal/handovers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Übergabeprotokolle lesen (Mitarbeiter)
+         * @description Protocols of the objects the staff portal account may see (portal permission
+         *     "handover:read", M2-08); read only, no internal fields.
+         */
+        get: operations["staff_list_handovers_api_v1_portal_handovers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/handovers/{protocol_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Übergabeprotokoll lesen (Mitarbeiter)
+         * @description Detail, read only, with the same hidden field filter as for participants (internal
+         *     note, internal contact, management number, internal remarks, versions).
+         */
+        get: operations["staff_get_handover_api_v1_portal_handovers__protocol_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/invitations/accept": {
         parameters: {
             query?: never;
@@ -31670,6 +31712,73 @@ export interface operations {
                 protocol_id: string;
                 section: string;
                 item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    staff_list_handovers_api_v1_portal_handovers_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    staff_get_handover_api_v1_portal_handovers__protocol_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
             };
             cookie?: never;
         };
