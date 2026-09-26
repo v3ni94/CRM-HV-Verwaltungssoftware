@@ -5,6 +5,15 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.24.0 (26.09.2026) Ticketfilter, Erledigungsnotiz, Hallo Heidi, Wissensdatenbank, Assistent-Rolle
+
+- Tickets und Mail: Umschalter "Erledigte anzeigen" in den Übersichten, erledigte Vorgänge sind standardmäßig ausgeblendet. Kontakt-, Objekt- und Einheitenseite zeigen die volle Historie. Statusauswahl im Ticket nach Rolle: Administratoren wählen jeden Status, andere nur die erlaubten Folgestatus.
+- Tickets: Erledigungsnotiz beim Abschluss (Art aus fester Liste plus Freitext, auch in der Bulk-Aktion und beim Zusammenführen). Jeder Abschluss wird als Lernbeispiel gespeichert, gelernte Playbooks erhalten den Schritt "Erledigung", Vorschläge zeigen "Bei ähnlichen Vorgängen wurde".
+- Tickets: Anruf-Mails der KI-Telefonassistenz (Hallo Heidi) werden erkannt, Anrufer über Objekt plus Name, sonst Name oder Rufnummer zugeordnet, Objekt und Einheit am Ticket gesetzt. Eine unbekannte Rufnummer erzeugt automatisch den Vorschlag "Telefonnummer ergänzen" mit Antwortentwurf; "Freigeben und antworten" übernimmt die Nummer und legt die Antwort als Entwurf an. Einstellungen je Mandant unter Postfächer.
+- Einstellungen: neue Seite "Wissen" mit gelernten Playbooks (Trefferzahl, letzte Nutzung, Deaktivieren) und Lernbeispielen mit Filter.
+- Assistent: Eine Rolle aus der Chatanweisung ("Rolle bank") wird beim Tabellenimport auf alle Kontakte gesetzt, die Werte bank und verwalter sind neu. Ohne erkennbare Rolle fragt der Assistent nach. Rolle nachträglich für einen Importlauf setzbar (Importverlauf und POST /ai/import-runs/{id}/apply-role).
+- Migrationen 0126 (Erledigungsnotiz, playbook.last_used_at, KI-Aufgabe ticket_resolution) und 0127 (Anrufassistenz, KI-Aufgabe call_summary).
+
 ## 1.23.1 (26.09.2026) Upload-Seite für Immoware24-Listen
 
 - Importe: neue Seite "Immoware24 Listenimport" (/importe/immoware24-listen) mit Upload im Browser für Objektdaten, Kontaktlisten (Rolle je Datei, auch Dienstleister) und die Zuordnung von Eigentümern und Mietern zu Einheiten. Je Abschnitt Testlauf und Übernehmen mit Bestätigung, Bericht mit Zählern, nicht gefundenen und mehrdeutigen Namen sowie Konflikten. Neuer Endpunkt POST /imports/immoware24/lists/zuordnung.

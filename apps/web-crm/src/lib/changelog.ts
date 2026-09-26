@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.24.0",
+    date: "26.09.2026",
+    title: "Ticketfilter, Erledigungsnotiz, Hallo Heidi, Wissensdatenbank, Assistent-Rolle",
+    changes: [
+      "Tickets und Mail: erledigte Vorgänge ausgeblendet, Umschalter Erledigte anzeigen, Statusauswahl nach Rolle",
+      "Tickets: Erledigungsnotiz beim Abschluss, jeder Abschluss wird als Lernbeispiel gespeichert",
+      "Tickets: Anrufe der KI-Telefonassistenz werden erkannt, neue Rufnummern als Stammdatenvorschlag mit Antwortentwurf",
+      "Einstellungen: Seite Wissen mit gelernten Playbooks und Lernbeispielen",
+      "Assistent: Rolle aus der Chatanweisung beim Tabellenimport, nachträglich je Importlauf setzbar",
+    ],
+  },
+  {
     version: "1.23.1",
     date: "26.09.2026",
     title: "Upload-Seite für Immoware24-Listen",
