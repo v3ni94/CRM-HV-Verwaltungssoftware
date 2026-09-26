@@ -17,6 +17,12 @@ unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge ob
 - Dokumentation: Handbuch für Erledigungsnotiz, Telefonassistenz, ausgeblendete erledigte Vorgänge, Objektbezüge und Wissen; Regeln M19-07 bis M19-09, ADR 0010 Lernbeispiele (Betreiberentscheidung), offene Fragen M19-03 und M19-04, Lückenliste A90 bis A99
 - Offen (Betreiber): Datenschutzregel für Lernbeispiele (M7-04, ADR 0010), AVV und Anbieterfreigabe Telefonassistenz (M19-03), Erledigungsartenliste (M19-04), QR-Code im Einladungs-PDF (M21-08)
 
+## 1.25.1 (26.09.2026) Adressen nachtragen, Einheitenliste und Einheitenseite
+
+- Importe: Abschnitt "1a. Adressen nachtragen" auf der Listenimport-Seite: Straße und Hausnummer aus den Objektnamen ableiten oder eine Adressliste (Objektnummer, Straße, Hausnummer, PLZ, Ort; CSV oder XLSX) hochladen. Füllt nur leere Felder, meldet Abweichungen als Konflikt.
+- Objekte: Einheiten natürlich sortiert (1, 2, 10 statt 1, 10, 2), bei rein numerischen Nummern dreistellige Anzeige. Nummer und Bezeichnung verlinken auf die Einheitenseite. Neue Spalten Eigentümer, Mieter ("kein Mieter") und Fläche.
+- Einheitenseite: alle Stammdaten (Typ, Lage, Fläche, Miteigentumsanteile, Umlageschlüssel, Zusatzfelder, Altsystem-Notizen), Karten Eigentümer und Mieter mit Kontaktlink, seit, Anteil und Miete, beendete Verträge aufklappbar. Neue Endpunkte GET /units/{id}/occupants und /properties/{id}/units?with_occupants=true.
+
 ## 1.25.0 (26.09.2026) Zusammenführung mit 1.24.0 und Fix- und Abschlusswelle: Vier-Augen nach Betreiberentscheidung, Review-Befunde Tickets und Mail, Sicherheit, Performance, Bedienbarkeit, Vertragsformular, Import-Robustheit, Anhang D 54 von 58
 
 - Tickets und Mail: Betreiberentscheidung M20-03 umgesetzt: Vier-Augen-Freigabe nur für Mitarbeiter mit Kennzeichen Azubi oder neuer Mitarbeiter (Einstellungen, Benutzer, optional befristet), alle anderen senden Ticketantworten direkt; Verfasser und Freigeber mit Zeitpunkt als Ticketereignisse und im Mailverlauf sichtbar; Notbremse alle Antworten mit Freigabe (Standard aus); Freigabeberechtigte werden benachrichtigt (Migration 0129, Regel M20-06)

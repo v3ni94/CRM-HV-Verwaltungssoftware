@@ -6,6 +6,7 @@ import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { CompletenessPanel } from "@/components/objektakte/CompletenessPanel";
 import { EnergyCertificateForm } from "@/components/properties/EnergyCertificateForm";
 import { PropertyNotices } from "@/components/properties/PropertyNotices";
+import { UnitsTable } from "@/components/properties/UnitsTable";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
@@ -28,7 +29,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
   const path = { params: { path: { property_id: propertyId } } };
   const [{ data, error, response }, units, contacts, maintenance, tickets] = await Promise.all([
     api.GET("/api/v1/properties/{property_id}", path),
-    api.GET("/api/v1/properties/{property_id}/units", path),
+    api.GET("/api/v1/properties/{property_id}/units", { params: { path: { property_id: propertyId }, query: { with_occupants: true } } }),
     api.GET("/api/v1/properties/{property_id}/contacts", path),
     api.GET("/api/v1/properties/{property_id}/maintenance", path),
     api.GET("/api/v1/tickets", { params: { query: { property_id: propertyId, limit: 50, include_closed: true } } }),
@@ -105,34 +106,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
         {unitRows.length === 0 ? (
           <p className="text-sm text-muted">{t("noUnits")}</p>
         ) : (
-          <div className={`${ui.card} overflow-x-auto p-0`}>
-            <div className="overflow-x-auto">
-<table className={ui.table} data-testid="units">
-              <thead>
-                <tr>
-                  <th>{t("unitNumber")}</th>
-                  <th>{t("unitLabel")}</th>
-                  <th>{t("unitType")}</th>
-                  <th className="num">{t("livingArea")}</th>
-                  <th>{t("allocation")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {unitRows.map((u) => (
-                  <tr key={u.id}>
-                    <td className="tabular-nums font-medium">{u.number}</td>
-                    <td>{u.label ?? ""}</td>
-                    <td className="text-muted">{t(`unitTypes.${u.unit_type}`)}</td>
-                    <td className="num">{u.living_area_sqm ? `${String(u.living_area_sqm).replace(".", ",")} m²` : ""}</td>
-                    <td className="text-xs text-muted">
-                      {(u.allocation_values ?? []).map((v) => `${v.key_code ?? ""}: ${String(v.value).replace(".", ",")}`).join(" · ")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-</div>
-          </div>
+          <UnitsTable units={unitRows} />
         )}
       </section>
 

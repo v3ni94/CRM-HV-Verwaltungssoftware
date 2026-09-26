@@ -33,6 +33,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    version: "1.25.1",
+    date: "26.09.2026",
+    title: "Adressen nachtragen, Einheitenliste und Einheitenseite",
+    changes: [
+      "Importe: Adressen der Objekte aus den Namen ableiten oder per Adressliste nachtragen",
+      "Objekte: Einheiten natürlich sortiert, Nummer und Bezeichnung verlinkt, Spalten Eigentümer, Mieter und Fläche",
+      "Einheitenseite: alle Stammdaten, Umlageschlüssel, Eigentümer und Mieter mit Namen, beendete Verträge",
+    ],
+  },
+  {
     version: "1.25.0",
     date: "26.09.2026",
     title:

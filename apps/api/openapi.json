@@ -986,6 +986,17 @@
             ],
             "title": "Key Code"
           },
+          "key_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Name"
+          },
           "source": {
             "$ref": "#/components/schemas/ValueSource"
           },
@@ -2447,6 +2458,20 @@
           "file"
         ],
         "title": "Body_flow_import_preview_api_v1_letting_flow_import_preview_post",
+        "type": "object"
+      },
+      "Body_import_adressen_api_v1_imports_immoware24_lists_adressen_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_adressen_api_v1_imports_immoware24_lists_adressen_post",
         "type": "object"
       },
       "Body_import_kontakte_api_v1_imports_immoware24_lists_kontakte_post": {
@@ -19955,6 +19980,111 @@
         "title": "Occupant",
         "type": "string"
       },
+      "OccupantMemberOut": {
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "share_percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Percent"
+          }
+        },
+        "required": [
+          "contact_id",
+          "display_name"
+        ],
+        "title": "OccupantMemberOut",
+        "type": "object"
+      },
+      "OccupantOut": {
+        "description": "One ownership or tenancy contract of a unit with its party, for display.",
+        "properties": {
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "contract_number": {
+            "title": "Contract Number",
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/OccupantMemberOut"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "party_name": {
+            "title": "Party Name",
+            "type": "string"
+          },
+          "rent_gross": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Gross"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_id",
+          "contract_number",
+          "kind",
+          "party_id",
+          "party_name",
+          "start_date",
+          "end_date"
+        ],
+        "title": "OccupantOut",
+        "type": "object"
+      },
       "OidcTokenResponse": {
         "properties": {
           "access_token": {
@@ -30462,6 +30592,39 @@
         "title": "UnitIn",
         "type": "object"
       },
+      "UnitOccupantsOut": {
+        "properties": {
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/OccupantOut"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OccupantOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OccupantOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "UnitOccupantsOut",
+        "type": "object"
+      },
       "UnitOut": {
         "properties": {
           "allocation_values": {
@@ -30636,6 +30799,16 @@
             "title": "Number",
             "type": "string"
           },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OccupantOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "postal_code": {
             "anyOf": [
               {
@@ -30674,6 +30847,16 @@
               }
             ],
             "title": "Street"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OccupantOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "total_area_sqm": {
             "anyOf": [
@@ -53284,6 +53467,110 @@
         ]
       }
     },
+    "/api/v1/imports/immoware24/lists/adressen": {
+      "post": {
+        "description": "CSV or XLSX with object number and street, house number, postal code, city. Fills only\nempty fields; differences to filled fields are reported as conflicts, never overwritten.",
+        "operationId": "import_adressen_api_v1_imports_immoware24_lists_adressen_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "preview",
+              "pattern": "^(preview|apply)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_adressen_api_v1_imports_immoware24_lists_adressen_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Adressen Api V1 Imports Immoware24 Lists Adressen Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Adressen der Objekte aus einer Adressliste (Testlauf oder Übernahme)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/lists/adressen-ableiten": {
+      "post": {
+        "description": "Only objects with an empty street; only empty fields are filled\n(handbuch/import-objektdaten.md).",
+        "operationId": "derive_adressen_api_v1_imports_immoware24_lists_adressen_ableiten_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "preview",
+              "pattern": "^(preview|apply)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Derive Adressen Api V1 Imports Immoware24 Lists Adressen Ableiten Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Straße und Hausnummer der Objekte aus dem Objektnamen (Testlauf oder Übernahme)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
     "/api/v1/imports/immoware24/lists/kontakte": {
       "post": {
         "description": "One role (eigentuemer, mieter, bank, sonstige) per file, in the same order as ``files``.",
@@ -64618,6 +64905,7 @@
     },
     "/api/v1/properties/{property_id}/units": {
       "get": {
+        "description": "Units in natural order of their number (\"1\" < \"2\" < \"10\", \"WE1\" < \"WE10\").\n\nWith ``with_occupants=true`` each unit carries its current owner and tenant (at ``as_of``,\ndefault today), loaded in one batch for the whole property.",
         "operationId": "list_units_api_v1_properties__property_id__units_get",
         "parameters": [
           {
@@ -64645,6 +64933,16 @@
                 }
               ],
               "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "with_occupants",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "With Occupants",
+              "type": "boolean"
             }
           }
         ],
@@ -71500,6 +71798,66 @@
           }
         },
         "summary": "Schlüsselwert mit Zeitraum erfassen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/units/{unit_id}/occupants": {
+      "get": {
+        "operationId": "get_unit_occupants_api_v1_units__unit_id__occupants_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitOccupantsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümer, Mieter und Vertragshistorie",
         "tags": [
           "Objekte"
         ]

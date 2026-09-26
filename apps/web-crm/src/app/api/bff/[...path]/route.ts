@@ -174,7 +174,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^imports/immoware24/files/${ID}(/rows|/reconciliation)?$`) },
   { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/(validate|test-run|apply)$`) },
   // Immoware24-Listen (Objektdaten, Kontakte) als CSV-Upload, Testlauf oder Übernahme.
-  { method: "POST", pattern: /^imports\/immoware24\/lists\/(objektdaten|kontakte|zuordnung)$/ },
+  { method: "POST", pattern: /^imports\/immoware24\/lists\/(objektdaten|kontakte|zuordnung|adressen|adressen-ableiten)$/ },
   // Abgleichberichte des Parallelbetriebs (A68): Liste, Erstellen, JSON, CSV, Spaltenzuordnung.
   { method: "GET", pattern: /^imports\/reconciliation-reports(\/columns)?$/ },
   { method: "POST", pattern: /^imports\/reconciliation-reports$/ },
@@ -350,6 +350,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
   { method: "GET", pattern: /^properties$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/units$`) },
+  { method: "GET", pattern: new RegExp(`^units/${ID}(/occupants|/allocation-values)?$`) },
   // Makler (M28 stage 4, docs/rules/M28-01.md): FLOW SQL dump import preview and apply.
   { method: "POST", pattern: /^letting\/flow-import\/preview$/ },
   { method: "GET", pattern: new RegExp(`^letting/flow-import/${ID}$`) },
@@ -522,7 +523,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
 const MULTIPART = new RegExp(
-  `^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung)|letting/listings/${ID}/images)$`,
+  `^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|letting/listings/${ID}/images)$`,
 );
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;

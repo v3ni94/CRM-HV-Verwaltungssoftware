@@ -719,7 +719,7 @@
   },
   "ImmowareLists": {
     "title": "Immoware24 Listenimport",
-    "intro": "Reihenfolge einhalten: 1. Objekte und Einheiten, 2. Kontakte, 3. Zuordnung Eigentümer und Mieter. Je Abschnitt erst Testlauf, dann Übernehmen. Dateien als CSV aus Immoware24 (UTF-8 oder Windows-1252; Semikolon, Komma oder Tabulator werden erkannt). Bankverbindungen und Buchungen entstehen nicht.",
+    "intro": "Reihenfolge einhalten: 1. Objekte und Einheiten, 1a. Adressen, 2. Kontakte, 3. Zuordnung Eigentümer und Mieter. Je Abschnitt erst Testlauf, dann Übernehmen. Dateien als CSV aus Immoware24 (UTF-8 oder Windows-1252; Semikolon, Komma oder Tabulator werden erkannt). Bankverbindungen und Buchungen entstehen nicht.",
     "objektdaten": {
       "title": "1. Objekte und Einheiten",
       "help": "Export Objektdaten mit den Spalten Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer. Eigentümer, Mieter und Beträge werden nur als Herkunftsnotiz an der Einheit gespeichert.",
@@ -795,6 +795,34 @@
     "busy": "Wird verarbeitet",
     "colCount": "Zähler",
     "colValue": "Anzahl",
+    "adressen": {
+      "title": "1a. Adressen nachtragen",
+      "help": "Die Objektliste enthält keine Adressen. Straße, Hausnummer, PLZ und Ort werden hier ergänzt. Es werden nur leere Felder gefüllt, vorhandene Angaben werden nie überschrieben.",
+      "deriveTitle": "Aus Objektnamen ableiten",
+      "deriveHelp": "Für Objekte ohne Straße werden Straße und Hausnummer aus der Bezeichnung übernommen, zum Beispiel Shalomweg 3. Kennzeichen wie Z ABGEGEBEN, Y ABRECHNUNG und WEG werden vorher entfernt.",
+      "listTitle": "Adressliste",
+      "listHelp": "CSV oder Excel mit Objektnummer und den Spalten Straße, Hausnummer, PLZ, Ort. Straße und Hausnummer dürfen in einer Spalte stehen. Abweichungen zu bereits gefüllten Feldern werden als Konflikt gemeldet.",
+      "file": "Adressliste (csv oder xlsx)",
+      "filledTitle": "Gefüllt",
+      "unrecognisedTitle": "Nicht erkennbare Namen",
+      "conflictsTitle": "Konflikte",
+      "problemsTitle": "Nicht zugeordnet",
+      "unknownObject": "Zeile {line}: Objekt {number} nicht vorhanden",
+      "colStreet": "Straße",
+      "colHouseNumber": "Hausnummer",
+      "colPostalCode": "PLZ",
+      "colCity": "Ort",
+      "colField": "Feld",
+      "colCurrent": "Vorhanden",
+      "colList": "Laut Liste",
+      "count": {
+        "filled": "Objekte gefüllt",
+        "skipped": "Übersprungen",
+        "unrecognised": "Namen nicht erkennbar",
+        "conflicts": "Konflikte",
+        "unknown": "Objekte unbekannt"
+      }
+    },
     "zuordnung": {
       "title": "3. Zuordnung Eigentümer und Mieter",
       "help": "Objektliste wie in Schritt 1. Eigentümer und Mieter werden über den Namen den importierten Kontakten zugeordnet und als Verträge mit monatlicher Zahlung angelegt. Vorhandene Verträge werden nicht überschrieben, mehrdeutige Namen werden nur gemeldet.",
@@ -2177,6 +2205,23 @@
       "sendHint": "Legt den Entwurf am Ticket an und reicht ihn zur Freigabe ein (Vier-Augen-Prinzip). Der Versand erfolgt erst nach Freigabe.",
       "submitted": "Antwortentwurf angelegt und zur Freigabe eingereicht.",
       "replyStatus": "Antwort im Mailmodul, Status: {status}",
+      "acceptAndReply": "Freigeben und antworten",
+      "acceptAndReplyHint": "Übernimmt die Stammdaten und legt den Antwortentwurf am Ticket an. Der Versand erfolgt erst nach Freigabe im Mailmodul.",
+      "call": {
+        "phone": "Anrufernummer",
+        "name": "Anrufer",
+        "property": "Objekt",
+        "unit": "Einheit",
+        "concern": "Anliegen",
+        "unknown": "nicht erkannt",
+        "label": {
+          "mobile": "Mobil",
+          "other": "Festnetz oder unbekannt",
+          "work": "Geschäftlich",
+          "private": "Privat",
+          "fax": "Fax"
+        }
+      },
       "decision": {
         "pending": "Offen",
         "accepted": "Akzeptiert",
@@ -6126,5 +6171,50 @@
       "answer_question": "Fragen",
       "summarize": "Zusammenfassung"
     }
+  },
+  "Units": {
+    "number": "Nummer",
+    "label": "Bezeichnung",
+    "type": "Typ",
+    "owner": "Eigentümer",
+    "tenant": "Mieter",
+    "area": "Fläche",
+    "noTenant": "kein Mieter",
+    "noOwner": "kein Eigentümer",
+    "parameters": "Stammdaten der Einheit",
+    "location": "Lage",
+    "floor": "Etage",
+    "livingArea": "Wohnfläche",
+    "totalArea": "Gesamtfläche",
+    "rooms": "Zimmer",
+    "bedrooms": "Schlafzimmer",
+    "bathrooms": "Badezimmer",
+    "cellar": "Kellernummer",
+    "internalName": "Interne Bezeichnung",
+    "modernization": "Letzte Modernisierung",
+    "features": "Ausstattung",
+    "address": "Anschrift",
+    "vatOption": "Umsatzsteueroption",
+    "mea": "Miteigentumsanteile",
+    "allocationKeys": "Umlageschlüssel",
+    "noAllocation": "Keine Umlageschlüsselwerte hinterlegt.",
+    "key": "Schlüssel",
+    "value": "Wert",
+    "validFrom": "gültig ab",
+    "validTo": "gültig bis",
+    "customFields": "Zusatzfelder",
+    "legacy": "Notizen aus dem Altsystem",
+    "since": "seit",
+    "until": "bis",
+    "share": "Anteil",
+    "rent": "Miete (brutto, monatlich)",
+    "contract": "Vertrag",
+    "history": "Beendete Verträge",
+    "noHistory": "Keine beendeten Verträge.",
+    "kind": {
+      "ownership": "Eigentum",
+      "tenancy": "Mietvertrag"
+    },
+    "toProperty": "Objekte"
   }
 }

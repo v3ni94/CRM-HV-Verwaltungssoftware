@@ -52,8 +52,14 @@ type Report = {
   mehrdeutig?: AssignmentEntry[];
   konflikte?: AssignmentEntry[];
   hinweise?: AssignmentEntry[];
+  filled?: AddressEntry[];
+  unrecognised?: { number: string; name: string }[];
+  conflicts?: { line: number; number: string; field: string; current: string; list: string }[];
+  unknown?: { line: number; number: string }[];
+  problems?: string[];
 };
-type Prefix = "objektdaten" | "kontakte" | "zuordnung";
+type AddressEntry = { number: string; name: string; street?: string; house_number?: string; postal_code?: string; city?: string };
+type Prefix = "objektdaten" | "kontakte" | "zuordnung" | "adressen";
 
 /** Collapsible list of the report (closed by default, count in the summary). */
 function Collapsible({ title, count, testId, children }: { title: string; count: number; testId: string; children: ReactNode }) {
@@ -294,10 +300,10 @@ function useListRun(path: string) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const run = async (mode: "preview" | "apply", form: FormData, signature: string) => {
+  const run = async (mode: "preview" | "apply", form: FormData | null, signature: string) => {
     setError(null);
     setBusy(true);
-    const res = await bff<Report>(`${API}/${path}?mode=${mode}`, { method: "POST", body: form });
+    const res = await bff<Report>(`${API}/${path}?mode=${mode}`, form ? { method: "POST", body: form } : { method: "POST" });
     setBusy(false);
     if (!res.ok) return setError(res.message);
     setReport(res.data);
@@ -458,6 +464,202 @@ export function KontakteCard() {
   );
 }
 
+function AdressenReport({ report }: { report: Report }) {
+  const t = useTranslations("ImmowareLists");
+  const filled = report.filled ?? [];
+  const unrecognised = report.unrecognised ?? [];
+  const conflicts = report.conflicts ?? [];
+  const unknown = report.unknown ?? [];
+  const problems = report.problems ?? [];
+  return (
+    <div className="flex flex-col gap-4">
+      <ReportHead report={report} prefix="adressen" testId="adressen-report" />
+      <Collapsible
+        title={t("adressen.filledTitle")}
+        count={filled.length}
+        testId="adressen-filled"
+      >
+        <div className="overflow-x-auto">
+          <table className={ui.table} data-testid="adressen-filled">
+            <thead>
+              <tr>
+                <th>{t("objektdaten.colNumber")}</th>
+                <th>{t("objektdaten.colName")}</th>
+                <th>{t("adressen.colStreet")}</th>
+                <th>{t("adressen.colHouseNumber")}</th>
+                <th>{t("adressen.colPostalCode")}</th>
+                <th>{t("adressen.colCity")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filled.map((r) => (
+                <tr key={r.number}>
+                  <td>{r.number}</td>
+                  <td>{r.name}</td>
+                  <td>{r.street ?? ""}</td>
+                  <td>{r.house_number ?? ""}</td>
+                  <td>{r.postal_code ?? ""}</td>
+                  <td>{r.city ?? ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Collapsible>
+      {report.unrecognised ? (
+        <Collapsible
+          title={t("adressen.unrecognisedTitle")}
+          count={unrecognised.length}
+          testId="adressen-unrecognised"
+        >
+          <ul
+            className="list-disc pl-4 text-sm"
+            data-testid="adressen-unrecognised"
+          >
+            {unrecognised.map((r) => (
+              <li key={r.number}>
+                {r.number} {r.name}
+              </li>
+            ))}
+          </ul>
+        </Collapsible>
+      ) : null}
+      {report.conflicts ? (
+        <Collapsible
+          title={t("adressen.conflictsTitle")}
+          count={conflicts.length}
+          testId="adressen-conflicts"
+        >
+          <div className="overflow-x-auto">
+            <table className={ui.table} data-testid="adressen-conflicts">
+              <thead>
+                <tr>
+                  <th>{t("kontakte.colLine")}</th>
+                  <th>{t("objektdaten.colNumber")}</th>
+                  <th>{t("adressen.colField")}</th>
+                  <th>{t("adressen.colCurrent")}</th>
+                  <th>{t("adressen.colList")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conflicts.map((r, i) => (
+                  <tr key={`${r.line}:${r.field}:${i}`}>
+                    <td>{r.line}</td>
+                    <td>{r.number}</td>
+                    <td>{r.field}</td>
+                    <td>{r.current}</td>
+                    <td>{r.list}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Collapsible>
+      ) : null}
+      {unknown.length + problems.length > 0 ? (
+        <Collapsible
+          title={t("adressen.problemsTitle")}
+          count={unknown.length + problems.length}
+          testId="adressen-problems"
+        >
+          <ul
+            className="list-disc pl-4 text-sm"
+            data-testid="adressen-problems"
+          >
+            {unknown.map((r) => (
+              <li key={`u${r.line}`}>
+                {t("adressen.unknownObject", {
+                  line: r.line,
+                  number: r.number,
+                })}
+              </li>
+            ))}
+            {problems.map((m, i) => (
+              <li key={`p${i}`}>{m}</li>
+            ))}
+          </ul>
+        </Collapsible>
+      ) : null}
+    </div>
+  );
+}
+
+/** Step 1a: street, house number, postal code and city of the imported objects, derived from
+ *  the object name or from an address list. Only empty fields are filled, never overwritten. */
+export function AdressenCard() {
+  const t = useTranslations("ImmowareLists");
+  const derive = useListRun("adressen-ableiten");
+  const list = useListRun("adressen");
+  const [file, setFile] = useState<File | null>(null);
+  const signature = fileKey(file);
+
+  const startDerive = (mode: "preview" | "apply") => {
+    if (mode === "apply" && !window.confirm(t("applyConfirm"))) return;
+    void derive.run(mode, null, "derive");
+  };
+  const startList = (mode: "preview" | "apply") => {
+    if (!file) return;
+    if (mode === "apply" && !window.confirm(t("applyConfirm"))) return;
+    const form = new FormData();
+    form.set("file", file);
+    void list.run(mode, form, signature);
+  };
+
+  return (
+    <section
+      className={`${ui.card} flex flex-col gap-3`}
+      aria-labelledby="adressen-title"
+      data-testid="adressen-card"
+    >
+      <h3 id="adressen-title" className="text-base font-semibold">
+        {t("adressen.title")}
+      </h3>
+      <p className={ui.help}>{t("adressen.help")}</p>
+      <h4 className="text-sm font-semibold">{t("adressen.deriveTitle")}</h4>
+      <p className={ui.help}>{t("adressen.deriveHelp")}</p>
+      <ActionRow
+        t={t}
+        busy={derive.busy}
+        canApply={derive.testedFor === "derive"}
+        onTest={() => startDerive("preview")}
+        onApply={() => startDerive("apply")}
+        testId="adressen-derive"
+      />
+      {derive.error ? (
+        <p role="alert" className={ui.alert}>
+          {derive.error}
+        </p>
+      ) : null}
+      {derive.report ? <AdressenReport report={derive.report} /> : null}
+      <h4 className="text-sm font-semibold">{t("adressen.listTitle")}</h4>
+      <p className={ui.help}>{t("adressen.listHelp")}</p>
+      <label className="flex flex-col gap-1">
+        <span className={ui.label}>{t("adressen.file")}</span>
+        <input
+          type="file"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        />
+      </label>
+      <ActionRow
+        t={t}
+        busy={list.busy}
+        canApply={!!file && list.testedFor === signature}
+        onTest={() => startList("preview")}
+        onApply={() => startList("apply")}
+        testId="adressen-list"
+      />
+      {!file ? <p className={ui.help}>{t("fileRequired")}</p> : null}
+      {list.error ? (
+        <p role="alert" className={ui.alert}>
+          {list.error}
+        </p>
+      ) : null}
+      {list.report ? <AdressenReport report={list.report} /> : null}
+    </section>
+  );
+}
+
 function defaultStart(today = new Date()) {
   return `${today.getFullYear()}-01-01`;
 }
@@ -512,7 +714,7 @@ export function ZuordnungCard() {
   );
 }
 
-/** Page body "Immoware24 Listenimport": the three operator commands (objektdaten, kontakte,
+/** Page body "Immoware24 Listenimport": the operator commands (objektdaten, adressen, kontakte,
  *  zuordnung) in their required order, without server access. */
 export function ListImports() {
   const t = useTranslations("ImmowareLists");
@@ -522,6 +724,7 @@ export function ListImports() {
         {t("intro")}
       </p>
       <ObjektdatenCard />
+      <AdressenCard />
       <KontakteCard />
       <ZuordnungCard />
     </div>
