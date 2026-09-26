@@ -150,6 +150,33 @@ async def _threshold(session: AsyncSession, tenant_id: uuid.UUID) -> float:
     return DEFAULT_AUTO_APPLY_THRESHOLD
 
 
+async def rule_candidates(
+    session: AsyncSession, tenant_id: uuid.UUID, document: Document
+) -> list[RuleCandidate]:
+    """Every active rule that matches the document, best first, without persisting anything.
+    Used by the document inbox pipeline (A42, `mhvp.documents.intake`), which stores its own
+    proposal instead of a review case."""
+    candidates: list[RuleCandidate] = []
+    for rule in await _active_rules(session, tenant_id):
+        matched = _match(rule, document)
+        if matched is None:
+            continue
+        candidates.append(
+            RuleCandidate(
+                rule_id=str(rule.id),
+                rule_name=rule.name,
+                pattern_type=rule.pattern_type.value,
+                matched=matched,
+                category_id=str(rule.target_category_id) if rule.target_category_id else None,
+                document_type=rule.target_document_type,
+                priority=rule.priority,
+                score=float(rule.confidence),
+            )
+        )
+    candidates.sort(key=lambda c: (-c.score, -c.priority))
+    return candidates
+
+
 async def classify_document(
     session: AsyncSession, tenant_id: uuid.UUID, document: Document
 ) -> RuleClassificationResult:

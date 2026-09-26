@@ -138,4 +138,51 @@ describe("DunningSettingsForm", () => {
     expect(String(fetchSpy.mock.calls[0]?.[0])).toBe("/api/bff/accounting/dunning-settings?property_id=p1");
     expect((fetchSpy.mock.calls[0]?.[1] as RequestInit).method).toBe("DELETE");
   });
+
+  it("previews the text of a level with sample items and shows the claim table", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse({
+        level: 1,
+        paragraphs: [
+          "Sehr geehrte Damen und Herren,",
+          "für Objekt 000 Musterobjekt, Einheit 01 sind nach unseren Unterlagen die nachfolgend aufgeführten Beträge noch offen.",
+          "Bitte überweisen Sie den Gesamtbetrag von 700,00 EUR auf das Ihnen bekannte Konto.",
+          "Sollten Sie den Betrag in der Zwischenzeit bereits überwiesen haben, betrachten Sie dieses Schreiben bitte als gegenstandslos.",
+        ],
+        table: {
+          header: ["Posten", "Fälligkeit", "Betrag"],
+          rows: [
+            ["Hausgeld Februar 2026", "03.02.2026", "350,00 EUR"],
+            ["Hausgeld März 2026", "03.03.2026", "350,00 EUR"],
+            ["Summe", "", "700,00 EUR"],
+          ],
+        },
+        standard_request: "Bitte überweisen Sie den Gesamtbetrag von {gesamtbetrag} {frist} {bankverbindung}.",
+        placeholders: { frist: "", bankverbindung: "" },
+        hinweis: "Entwurf, kein Versand",
+      }),
+    );
+    renderIntl(<DunningSettingsForm initial={EMPTY} canUpdate />);
+    await userEvent.click(screen.getByText("Vorschau"));
+    expect(await screen.findByRole("heading", { name: "Vorschau Stufe 1 mit Beispielposten" })).toBeInTheDocument();
+    expect(screen.getByText("Hausgeld Februar 2026")).toBeInTheDocument();
+    expect(screen.getByText("700,00 EUR")).toBeInTheDocument();
+    expect(screen.getByText("Bitte überweisen Sie den Gesamtbetrag von 700,00 EUR auf das Ihnen bekannte Konto.")).toBeInTheDocument();
+    expect(screen.getByText("Entwurf, kein Versand")).toBeInTheDocument();
+    const body = JSON.parse(String((fetchSpy.mock.calls[0]?.[1] as RequestInit).body));
+    expect(body).toEqual({ level: 1, text: "Erinnerung", letter_text: null, fee_amount: null, payment_days: null });
+    // The hint names the placeholders; the preview panel can be closed again.
+    expect(screen.getByText(/Platzhalter: \{frist\}, \{bankverbindung\}/)).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Vorschau schließen"));
+    expect(screen.queryByText("Hausgeld Februar 2026")).not.toBeInTheDocument();
+  });
+
+  it("shows the API problem when a letter text has an unknown placeholder", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse({ code: "MHVP-VAL-0001", detail: "Unbekannte Platzhalter im Brieftext: frsit." }, 422),
+    );
+    renderIntl(<DunningSettingsForm initial={EMPTY} canUpdate />);
+    await userEvent.click(screen.getByText("Vorschau"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("frsit");
+  });
 });

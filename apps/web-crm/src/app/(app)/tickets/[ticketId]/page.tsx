@@ -7,6 +7,7 @@ import { TicketAppointmentButton } from "@/components/tickets/TicketAppointmentB
 import { TicketAttachInvoiceButton } from "@/components/tickets/TicketAttachInvoiceButton";
 import { TicketChecklist } from "@/components/tickets/TicketChecklist";
 import { TicketEdit } from "@/components/tickets/TicketForms";
+import { TicketMailAttachments, type TicketMailAttachment } from "@/components/tickets/TicketMailAttachments";
 import { TicketMergeDialog } from "@/components/tickets/TicketMergeDialog";
 import { TicketProposals } from "@/components/tickets/TicketProposals";
 import { TicketReplyPanel } from "@/components/tickets/TicketReplyPanel";
@@ -21,6 +22,32 @@ export const dynamic = "force-dynamic";
 
 type Comment = { body: string; internal: boolean; created_at: string };
 type Event = { kind: string; at: string };
+
+/** Attachments of the ticket's inbound mails with document metadata (mime type), read server
+ *  side because document reads are outside the BFF allowlist. Unreadable documents are
+ *  skipped; the list is a convenience, not a record. */
+async function loadMailAttachments(api: ReturnType<typeof serverApi>, ticketId: string): Promise<TicketMailAttachment[]> {
+  const messages = await api.GET("/api/v1/mail/messages", { params: { query: { ticket_id: ticketId, direction: "in", limit: 50 } } });
+  const rows = (messages.data ?? []) as { id: string; subject: string | null; received_at: string | null; attachment_document_ids: string[] }[];
+  const out: TicketMailAttachment[] = [];
+  await Promise.all(
+    rows.flatMap((m) =>
+      (m.attachment_document_ids ?? []).map(async (documentId) => {
+        const doc = await api.GET("/api/v1/documents/{document_id}", { params: { path: { document_id: documentId } } });
+        if (!doc.data) return;
+        out.push({
+          message_id: m.id,
+          document_id: documentId,
+          filename: doc.data.filename || doc.data.title,
+          mime_type: doc.data.mime_type,
+          received_at: m.received_at,
+          subject: m.subject,
+        });
+      }),
+    ),
+  );
+  return out.sort((a, b) => (b.received_at ?? "").localeCompare(a.received_at ?? "") || a.filename.localeCompare(b.filename));
+}
 
 export default async function TicketPage({ params }: { params: Promise<{ ticketId: string }> }) {
   const { ticketId } = await params;
@@ -53,6 +80,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
     data.contact_id ? api.GET("/api/v1/contacts/{contact_id}", { params: { path: { contact_id: String(data.contact_id) } } }) : null,
     data.property_id ? api.GET("/api/v1/properties/{property_id}", { params: { path: { property_id: String(data.property_id) } } }) : null,
   ]);
+  const attachments = await loadMailAttachments(api, ticketId);
   const sources = (mergedSources.data ?? []).map((s) => ({ id: String(s.id), number: Number(s.number), title: s.title ? String(s.title) : "" }));
   const canMerge = !mergedInto && data.status !== "closed";
   return (
@@ -115,6 +143,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
       {mergedInto ? null : (
         <>
           <TicketReplyPanel ticketId={ticketId} canSend={canReply} />
+          <TicketMailAttachments attachments={attachments} />
           <TicketProposals ticketId={ticketId} />
         </>
       )}

@@ -335,3 +335,488 @@ def test_matching_set_and_controlled_automation(client: TestClient, world: World
     assert m["coverage"] == 0.25
     assert m["error_rate"] == 0.0
     _ok(client.post(f"{B}/rules/{rule['id']}/disable", headers=h))
+
+
+def test_d39_payment_determination_is_not_overridden_by_account_priority(
+    client: TestClient, world: World
+) -> None:
+    """D39 (annex D, 7.4 Nr. 5): a payer's determination (purpose names the February
+    Hausgeld) is not overridden by any internal account priority such as oldest first.
+    Expected: with January 250,00 and February 250,00 open, the payment 250,00 "Hausgeld
+    Februar 2026 <Vertrag>" has two candidates with equal evidence and no unambiguous hit,
+    an active rule posts nothing, the bulk preview lists it as an exception; the explicit
+    settlement of the February item leaves January open at 250,00. A payment without any
+    determination ("<Vertrag>" only) likewise goes to review instead of a silent oldest first
+    application (M10-03 stays open)."""
+    h = bearer(login(client, world, "m12admin"))
+    acc_user = bearer(login(client, world, "m12acc"))
+    bank = "DE02100500000054540402"
+    payer = "DE62370400440532013001"
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "722", "name": "Tilgungshaus", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    bank_id = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": bank,
+                "holder": "GdWE Tilgungshaus",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "person",
+                "first_name": "Tilg",
+                "last_name": f"D39{RUN}",
+                "bank_accounts": [{"iban": payer, "valid_from": "2020-01-01"}],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    party = _ok(
+        client.post(
+            "/api/v1/parties", json={"members": [{"contact_id": contact["id"]}]}, headers=h
+        ),
+        201,
+    )
+    unit = _unit(client, h, prop["id"], "01")
+    contract = _ok(
+        client.post(
+            "/api/v1/contracts",
+            json={
+                "kind": "ownership",
+                "unit_id": unit,
+                "party_id": party["id"],
+                "start_date": "2020-01-01",
+                "title_transfer_date": "2020-01-01",
+                "acquisition_kind": "first_acquisition",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    template = _ok(client.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    accounts = {
+        a["number"]: a for a in _ok(client.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    _ok(
+        client.post(
+            f"{A}/ledgers/{ledger}/accounts",
+            json={
+                "number": "001210",
+                "name": "WEG-Bank",
+                "category": "bank",
+                "type": "asset",
+                "property_bank_account_id": bank_id,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    debtor = next(a["id"] for a in accounts.values() if a["category"] == "debtor")
+    entries = {}
+    for month, booking, due in [
+        ("Januar", "2026-01-01", "2026-01-03"),
+        ("Februar", "2026-02-01", "2026-02-03"),
+    ]:
+        draft = _ok(
+            client.post(
+                f"{A}/ledgers/{ledger}/entries",
+                json={
+                    "kind": "receivable",
+                    "booking_date": booking,
+                    "due_date": due,
+                    "text": f"Hausgeld {month}",
+                    "contract_id": contract["id"],
+                    "lines": [
+                        {"account_id": debtor, "debit": "250.00"},
+                        {"account_id": accounts["060100"]["id"], "credit": "250.00"},
+                    ],
+                },
+                headers=h,
+            ),
+            201,
+        )
+        _ok(client.post(f"{A}/ledgers/{ledger}/entries/{draft['id']}/post", headers=h))
+        entries[month] = draft["id"]
+    open_before = _ok(
+        client.get(f"{A}/ledgers/{ledger}/open-items", params={"as_of": "2026-02-28"}, headers=h)
+    )
+    by_entry = {i["journal_entry_id"]: i for i in open_before}
+    january, february = by_entry[entries["Januar"]], by_entry[entries["Februar"]]
+    assert january["due_date"] < february["due_date"]
+
+    n = contract["number"]
+    statement = _camt(
+        "D39",
+        bank,
+        "0.00",
+        "500.00",
+        [
+            _ntry("D39-1", "250.00", "CRDT", "2026-02-05", payer, f"Hausgeld Februar 2026 {n}"),
+            _ntry("D39-2", "250.00", "CRDT", "2026-02-06", payer, f"{n}"),
+        ],
+    )
+    _ok(
+        client.post(
+            f"{B}/imports",
+            json={"document_id": _upload(client, h, "d39.xml", statement)},
+            headers=h,
+        ),
+        201,
+    )
+    txs = {
+        t["bank_reference"]: t
+        for t in _ok(client.get(f"{B}/transactions", headers=h))
+        if t["bank_reference"] in {"D39-1", "D39-2"}
+    }
+    determined = _ok(client.get(f"{B}/transactions/{txs['D39-1']['id']}/candidates", headers=h))
+    assert determined["unambiguous_open_item_id"] is None  # review, no silent priority
+    assert {c["open_item_id"] for c in determined["candidates"]} == {january["id"], february["id"]}
+    assert len({c["score"] for c in determined["candidates"]}) == 1  # equal evidence, no ranking
+    undetermined = _ok(client.get(f"{B}/transactions/{txs['D39-2']['id']}/candidates", headers=h))
+    assert undetermined["unambiguous_open_item_id"] is None  # M10-03: no oldest first by default
+
+    # Even an active rule does not pick an item by priority for either payment.
+    _ok(client.put(f"{B}/automation", json={"enabled": True, "reason": "Test D39"}, headers=h))
+    rule = _ok(
+        client.post(
+            f"{B}/rules",
+            json={"name": "Hausgeld D39", "legal_entity_id": hoa, "purpose_regex": ".*"},
+            headers=h,
+        ),
+        201,
+    )
+    evidence = _upload(client, h, "nachweis-d39.xml", b"<nachweis>Testlauf D39</nachweis>")
+    _ok(client.post(f"{B}/rules/{rule['id']}/approve", headers=acc_user))
+    _ok(
+        client.post(
+            f"{B}/rules/{rule['id']}/activate",
+            json={"max_amount": "500", "test_evidence_document_id": evidence},
+            headers=acc_user,
+        )
+    )
+    assert _ok(client.post(f"{B}/auto-post", headers=h))["posted"] == 0
+    _ok(client.post(f"{B}/rules/{rule['id']}/disable", headers=h))
+    # Bulk confirmation without an explicit settlement books nothing for this payment.
+    bulk = _ok(
+        client.post(
+            f"{B}/bulk-confirm",
+            json={"preview": False, "items": [{"transaction_id": txs["D39-1"]["id"]}]},
+            headers=h,
+        )
+    )
+    assert [r["ok"] for r in bulk["results"]] == [False]
+    still_new = {
+        t["bank_reference"]
+        for t in _ok(client.get(f"{B}/transactions", params={"status": "new"}, headers=h))
+    }
+    assert {"D39-1", "D39-2"} <= still_new
+
+    # The explicit determination is applied as given: February settled, January stays open.
+    _ok(
+        client.post(
+            f"{B}/transactions/{txs['D39-1']['id']}/book",
+            json={"settlements": [{"open_item_id": february["id"], "amount": "250.00"}]},
+            headers=h,
+        ),
+        201,
+    )
+    open_after = _ok(
+        client.get(f"{A}/ledgers/{ledger}/open-items", params={"as_of": "2026-02-28"}, headers=h)
+    )
+    assert [(i["journal_entry_id"], i["remaining"]) for i in open_after] == [
+        (entries["Januar"], "250.00")
+    ]
+    assert _ok(client.get(f"{A}/ledgers/{ledger}/checks", headers=h))["ok"] is True
+
+
+def test_a45_matching_metrics_coverage_and_error_rate_per_period(
+    client: TestClient, world: World
+) -> None:
+    """A45 (M12 acceptance): synthetic March set with a correct automatic hit, a wrong automatic
+    hit (reversed by the reviewer), an ambiguous purpose (manual), an IBAN only case (manual)
+    and an ignored transaction. Coverage and error rate are reported apart, per period."""
+    h = bearer(login(client, world, "m12admin"))
+    acc_user = bearer(login(client, world, "m12acc"))
+    bank_iban = "DE91100000000123456789"
+    payers = ["DE44500105175407324931", "DE27100777770209299700"]
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "724", "name": "Kennzahlenhaus", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    bank_id = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": bank_iban,
+                "holder": "GdWE Kennzahlenhaus",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    contracts = []
+    # Four owners: two with a payer IBAN on file, two without (targets of wrong and ambiguous
+    # purposes).
+    for i, iban in enumerate([*payers, None, None], start=1):
+        contact = _ok(
+            client.post(
+                "/api/v1/contacts",
+                json={
+                    "kind": "person",
+                    "first_name": f"Kenn{i}",
+                    "last_name": f"Z{RUN}",
+                    "bank_accounts": [{"iban": iban, "valid_from": "2020-01-01"}] if iban else [],
+                },
+                headers=h,
+            ),
+            201,
+        )
+        party = _ok(
+            client.post(
+                "/api/v1/parties", json={"members": [{"contact_id": contact["id"]}]}, headers=h
+            ),
+            201,
+        )
+        unit = _unit(client, h, prop["id"], f"1{i}")
+        contracts.append(
+            _ok(
+                client.post(
+                    "/api/v1/contracts",
+                    json={
+                        "kind": "ownership",
+                        "unit_id": unit,
+                        "party_id": party["id"],
+                        "start_date": "2020-01-01",
+                        "title_transfer_date": "2020-01-01",
+                        "acquisition_kind": "first_acquisition",
+                    },
+                    headers=h,
+                ),
+                201,
+            )
+        )
+    template = _ok(client.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    accounts = {
+        a["number"]: a for a in _ok(client.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    _ok(
+        client.post(
+            f"{A}/ledgers/{ledger}/accounts",
+            json={
+                "number": "001210",
+                "name": "WEG-Bank",
+                "category": "bank",
+                "type": "asset",
+                "property_bank_account_id": bank_id,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    debtors = {a["unit_id"]: a["id"] for a in accounts.values() if a["category"] == "debtor"}
+    # One receivable per contract in March; contract 1 has a second one in April (K6).
+    for c, months in zip(
+        contracts,
+        [
+            (("März", "2026-03-01"), ("April", "2026-04-01")),
+            (("März", "2026-03-01"),),
+            (("März", "2026-03-01"),),
+            (("März", "2026-03-01"),),
+        ],
+        strict=True,
+    ):
+        for month, day in months:
+            draft = _ok(
+                client.post(
+                    f"{A}/ledgers/{ledger}/entries",
+                    json={
+                        "kind": "receivable",
+                        "booking_date": day,
+                        "text": f"Hausgeld {month}",
+                        "contract_id": c["id"],
+                        "lines": [
+                            {"account_id": debtors[c["unit_id"]], "debit": "180.00"},
+                            {"account_id": accounts["060100"]["id"], "credit": "180.00"},
+                        ],
+                    },
+                    headers=h,
+                ),
+                201,
+            )
+            _ok(client.post(f"{A}/ledgers/{ledger}/entries/{draft['id']}/post", headers=h))
+    n1, n2, n3, n4 = (c["number"] for c in contracts)
+    statement = _camt(
+        "K-1",
+        bank_iban,
+        "0.00",
+        "900.00",
+        [
+            # K1: correct automatic hit (contract number of payer 1, own IBAN, full amount)
+            _ntry("K1", "180.00", "CRDT", "2026-03-05", payers[0], f"Hausgeld {n1}"),
+            # K2: wrong automatic hit: payer 2 quotes contract 3 by mistake; the automation
+            # assigns it to contract 3 (number and full amount), the reviewer reverses.
+            _ntry("K2", "180.00", "CRDT", "2026-03-05", payers[1], f"Hausgeld {n3}"),
+            # K3: ambiguous purpose (contracts 2 and 4, both open in full): stays manual
+            _ntry("K3", "180.00", "CRDT", "2026-03-06", STRANGER, f"Hausgeld {n2} {n4}"),
+            # K4: IBAN and amount only: no automatic assignment
+            _ntry("K4", "180.00", "CRDT", "2026-03-07", payers[1], "Hausgeld"),
+            # K5: ignored by the reviewer (fee refund)
+            _ntry("K5", "180.00", "CRDT", "2026-03-08", STRANGER, "Erstattung"),
+            # K6: outside the reported period (April)
+            _ntry("K6", "180.00", "CRDT", "2026-04-02", payers[0], f"Hausgeld {n1}"),
+        ],
+    )
+    _ok(
+        client.post(
+            f"{B}/imports", json={"document_id": _upload(client, h, "k.xml", statement)}, headers=h
+        ),
+        201,
+    )
+    txs = {
+        t["bank_reference"]: t
+        for t in _ok(client.get(f"{B}/transactions", headers=h))
+        if t["bank_reference"] and t["bank_reference"].startswith("K")
+    }
+    assert len(txs) == 6
+
+    rule = _ok(
+        client.post(
+            f"{B}/rules",
+            json={"name": "Hausgeld 722", "legal_entity_id": hoa, "purpose_regex": "Hausgeld"},
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.post(f"{B}/rules/{rule['id']}/approve", headers=acc_user))
+    evidence = _upload(client, h, "nachweis722.xml", b"<nachweis>Testlauf A45</nachweis>")
+    _ok(
+        client.post(
+            f"{B}/rules/{rule['id']}/activate",
+            json={"max_amount": "500", "test_evidence_document_id": evidence},
+            headers=acc_user,
+        )
+    )
+    _ok(client.put(f"{B}/automation", json={"enabled": True, "reason": "Test A45"}, headers=h))
+    auto = _ok(client.post(f"{B}/auto-post", headers=h))
+    assert auto["posted"] == 3  # K1, K2 (wrong) and K6 (April); K3 ambiguous, K4 IBAN only
+    booked = {
+        t["bank_reference"]: t
+        for t in _ok(client.get(f"{B}/transactions", params={"status": "booked"}, headers=h))
+    }
+    assert {"K1", "K2", "K6"} <= set(booked)
+
+    # Reviewer corrects the wrong hit by reversal (B03); the reversal is the error signal.
+    wrong_entry = booked["K2"]["journal_entry_id"]
+    _ok(
+        client.post(
+            f"{A}/ledgers/{ledger}/entries/{wrong_entry}/reverse",
+            json={"reason": "Falsche Zuordnung: Zahler 2 nannte Vertrag 1"},
+            headers=h,
+        ),
+        201,
+    )
+    _ok(
+        client.post(
+            f"{B}/transactions/{txs['K5']['id']}/ignore",
+            json={"decision": "ignore", "reason": "Gebührenerstattung, kein Hausgeld"},
+            headers=h,
+        )
+    )
+    # Manual booking of the IBAN only case after review.
+    k4_item = _ok(client.get(f"{B}/transactions/{txs['K4']['id']}/candidates", headers=h))
+    assert k4_item["unambiguous_open_item_id"] is None
+    _ok(
+        client.post(
+            f"{B}/transactions/{txs['K4']['id']}/book",
+            json={
+                "settlements": [
+                    {"open_item_id": k4_item["candidates"][0]["open_item_id"], "amount": "180.00"}
+                ]
+            },
+            headers=h,
+        ),
+        201,
+    )
+
+    m = _ok(
+        client.get(
+            f"{B}/matching-metrics",
+            params={"from": "2026-03-01", "to": "2026-03-31"},
+            headers=acc_user,
+        )
+    )
+    assert m["period_from"] == "2026-03-01"
+    assert m["period_to"] == "2026-03-31"
+    assert m["transactions"] == 5  # K6 lies in April
+    assert m["incoming"] == 5
+    assert m["auto_matched"] == 2  # K1 correct, K2 wrong
+    assert m["manual_booked"] == 1  # K4
+    assert m["open"] == 1  # K3 ambiguous
+    assert m["ignored"] == 1  # K5
+    assert Decimal(m["coverage"]) == Decimal("0.4")  # 2 of 5
+    assert m["auto_reversed"] == 1
+    assert m["auto_cancelled"] == 1
+    assert m["auto_corrected"] == 0
+    assert Decimal(m["error_rate"]) == Decimal("0.5")  # 1 of 2, apart from coverage
+    assert "keine Freigabe" in m["note"]
+
+    april = _ok(
+        client.get(
+            f"{B}/matching-metrics", params={"from": "2026-04-01", "to": "2026-04-30"}, headers=h
+        )
+    )
+    assert april["transactions"] == 1
+    assert april["auto_matched"] == 1
+    assert Decimal(april["coverage"]) == Decimal("1")
+    assert april["error_rate"] == "0.0000"
+
+    empty = _ok(
+        client.get(
+            f"{B}/matching-metrics", params={"from": "2030-01-01", "to": "2030-01-31"}, headers=h
+        )
+    )
+    assert empty["transactions"] == 0
+    assert empty["coverage"] is None
+    assert empty["error_rate"] is None
+    bad = client.get(
+        f"{B}/matching-metrics", params={"from": "2026-03-31", "to": "2026-03-01"}, headers=h
+    )
+    assert bad.status_code == 422, bad.text
+    _ok(client.post(f"{B}/rules/{rule['id']}/disable", headers=h))

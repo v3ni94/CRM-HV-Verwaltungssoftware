@@ -254,6 +254,10 @@ class LegalEntity(IdMixin, TimestampMixin, TenantMixin, Base):
     name: Mapped[str] = mapped_column(String(400), nullable=False)
     party_id: Mapped[uuid.UUID | None] = _fk("party.id", nullable=True)
     property_id: Mapped[uuid.UUID | None] = _fk("property.id", nullable=True)
+    # SEPA creditor identifier of this legal entity as creditor of direct debits (M15-02,
+    # pain.008). Entered by the operator from the Bundesbank document; never derived.
+    # Format rules are not verified in code (docs/OPEN_QUESTIONS.md M15-01).
+    sepa_creditor_id: Mapped[str | None] = mapped_column(String(35))
 
 
 class PropertyOwner(IdMixin, TimestampMixin, TenantMixin, Base):

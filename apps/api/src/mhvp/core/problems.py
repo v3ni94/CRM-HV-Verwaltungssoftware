@@ -45,6 +45,30 @@ class ErrorCodes:
     HTTP_ERROR = ErrorCode(
         "MHVP-CORE-0005", 400, "Anfrage nicht verarbeitbar", "Generic HTTP error."
     )
+    RATE_LIMITED = ErrorCode(
+        "MHVP-CORE-0006",
+        429,
+        "Zu viele Anfragen",
+        "Rate limit per token, API key or client address exceeded (A49); see Retry-After.",
+    )
+    IDEMPOTENCY_KEY_MISMATCH = ErrorCode(
+        "MHVP-CORE-0007",
+        422,
+        "Idempotency-Key bereits anders verwendet",
+        "Same Idempotency-Key reused with a different method, path or body (A48).",
+    )
+    IDEMPOTENCY_IN_PROGRESS = ErrorCode(
+        "MHVP-CORE-0008",
+        409,
+        "Aufruf mit diesem Idempotency-Key läuft noch",
+        "First request with this Idempotency-Key has not completed yet (A48).",
+    )
+    IDEMPOTENCY_KEY_INVALID = ErrorCode(
+        "MHVP-CORE-0009",
+        422,
+        "Idempotency-Key ungültig",
+        "Idempotency-Key header must be 1 to 255 characters (A48).",
+    )
     NOT_AUTHENTICATED = ErrorCode(
         "MHVP-AUTH-0001", 401, "Anmeldung erforderlich", "Missing or invalid credentials."
     )
@@ -86,6 +110,18 @@ class ErrorCodes:
     )
     WEBHOOK_TARGET = ErrorCode(
         "MHVP-HOOK-0001", 422, "Webhook-Ziel nicht zulässig", "Unsafe or invalid webhook URL."
+    )
+    WEBHOOK_SIGNATURE = ErrorCode(
+        "MHVP-HOOK-0002",
+        401,
+        "Webhook-Signatur ungültig",
+        "Missing, stale or invalid HMAC signature on an inbound webhook (A30).",
+    )
+    WEBHOOK_REPLAY = ErrorCode(
+        "MHVP-HOOK-0003",
+        409,
+        "Webhook bereits verarbeitet",
+        "Same signature delivered again within the replay window (A30).",
     )
     GATE_FOUR_EYES = ErrorCode(
         "MHVP-GATE-0002",
@@ -149,6 +185,15 @@ class ErrorCodes:
         422,
         "Falscher Rechtsträger",
         "Accounts, open items or bank accounts belong to another ledger (B01).",
+    )
+    ACC_VAT_NOT_RELEASED = ErrorCode(
+        "MHVP-ACC-0005",
+        409,
+        "Steuerbehandlung nicht freigegeben",
+        (
+            "The ledger has a VAT option but no released tax treatment: invoices with VAT and "
+            "receivables with VAT are not posted automatically (M14-02, M13-03, D45)."
+        ),
     )
     RELEASE_GATE_CLOSED = ErrorCode(
         "MHVP-GATE-0001",
@@ -230,6 +275,31 @@ class ErrorCodes:
         409,
         "DATEV-Parameter fehlen",
         "consultant_number, client_number or chart_of_accounts not set (M18-01).",
+    )
+    DATEV_MAPPING_MISSING = ErrorCode(
+        "MHVP-BILL-0008",
+        409,
+        "DATEV-Kontenzuordnung unvollständig",
+        "Posted lines use CRM accounts without a DatevAccountMapping for the ledger and "
+        "booking date; the batch is not written with raw account numbers (A36, M18-04).",
+    )
+    BILLING_LEITWEG_ID_MISSING = ErrorCode(
+        "MHVP-BILL-0005",
+        409,
+        "Leitweg-ID fehlt",
+        "TenantBillingSettings.leitweg_id is empty; XRechnung needs BT-10 BuyerReference (A12).",
+    )
+    BILLING_PAYEE_IBAN_MISSING = ErrorCode(
+        "MHVP-BILL-0007",
+        409,
+        "Zahlungskonto fehlt",
+        "TenantBillingSettings.payee_iban is empty; XRechnung needs BT-84 for a credit transfer.",
+    )
+    XRECHNUNG_NOT_ISSUED = ErrorCode(
+        "MHVP-BILL-0006",
+        409,
+        "XRechnung nur für ausgestellte Rechnungen",
+        "XRechnung XML is generated only for issued or released outgoing invoices (A12).",
     )
 
 

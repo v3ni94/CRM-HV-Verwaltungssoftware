@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -558,7 +558,8 @@ class TicketReplyIn(_In):
     template_id: uuid.UUID | None = None
     subject: str = Field(min_length=1, max_length=998)
     body: str = Field(min_length=1, max_length=100000)
-    to_addresses: list[str] | None = Field(default=None, max_length=20)
+    # Validated addresses (422), so approval never fails on a malformed header (review 26.09.2026).
+    to_addresses: list[EmailStr] | None = Field(default=None, max_length=20)
     attachment_document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
     confirm: bool = False
 
@@ -843,6 +844,7 @@ async def reply_to_ticket(
     ``confirm`` wird nichts angelegt; ein Versand ohne ausdrücklichen Klick ist ausgeschlossen."""
     from mhvp.communication.models import Message
     from mhvp.communication.routers import _out as message_out
+    from mhvp.communication.routers import mailbox_accessible
 
     if not principal.has("communication:update"):
         raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Missing communication:update.")
@@ -870,6 +872,12 @@ async def reply_to_ticket(
         if mailbox is None:
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Kein eingerichtetes Postfach für den Versand (M20-01)."
+            )
+        if not await mailbox_accessible(session, principal, mailbox):
+            raise ProblemError(
+                ErrorCodes.FORBIDDEN,
+                detail=f"Kein Zugriff auf das Postfach {mailbox.address}; die Freigabe für "
+                "dieses Postfach erteilt ein Administrator.",
             )
         to_addresses = [a.strip() for a in (body.to_addresses or ctx["to_addresses"]) if a.strip()]
         if not to_addresses:
@@ -1761,6 +1769,7 @@ async def get_ticket(
         from sqlalchemy import func
 
         from mhvp.communication.models import Message
+        from mhvp.portal.routers import ticket_attachments
 
         message_count = int(
             await session.scalar(
@@ -1777,6 +1786,8 @@ async def get_ticket(
             "work_orders": [_order_out(o) for o in orders],
             "assignees": [_assignee_out(a) for a in assignees],
             "message_count": message_count,
+            # A55: documents linked to the ticket as attachments (portal photos, PDFs).
+            "attachments": await ticket_attachments(session, ticket.id),
         }
 
 

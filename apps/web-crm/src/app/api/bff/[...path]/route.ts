@@ -39,6 +39,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters|dashboard\/stats)$/ },
   { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|calendar\/refresh|bulk)$/ },
   { method: "PUT", pattern: /^workspace\/filters$/ },
+  // Tagesübersicht, Fristenliste und Schalter der Tagesjobs (A40, A41).
+  { method: "GET", pattern: /^workspace\/(digest|deadlines|job-settings)$/ },
+  { method: "PUT", pattern: /^workspace\/job-settings$/ },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
   // Google-Kalender-Termine (M23-02 bidirektional): ändern/löschen des verknüpften Google-Events
   // und, nur nach ausdrücklicher Bestätigung, Einladung an externe Teilnehmer (M23-05).
@@ -72,6 +75,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/roles$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/competences$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/mobile-phone$`) },
+  // A37: Zugriffsbereich je Rechtsträger (Steuerberater).
+  { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/legal-entities$`) },
+  { method: "GET", pattern: /^tenant\/legal-entities$/ },
   { method: "GET", pattern: /^tenant\/competence-catalogue$/ },
   { method: "GET", pattern: /^tenant\/roles$/ },
   { method: "POST", pattern: /^tenant\/roles$/ },
@@ -106,6 +112,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: /^ai\/routing$/ },
   { method: "PUT", pattern: /^ai\/providers\/(anthropic|openai)$/ },
   { method: "POST", pattern: /^ai\/providers\/(anthropic|openai)\/release$/ },
+  // Verbindungstest je Stufe (Einstellungen, KI-Anbieter); erteilt keine Freigabe.
+  { method: "POST", pattern: /^ai\/providers\/(anthropic|openai)\/test$/ },
   // Wissensbasis je Mandant und Objekt (Welle 3 Punkt 14, M34).
   { method: "GET", pattern: /^ai\/knowledge$/ },
   { method: "POST", pattern: /^ai\/knowledge$/ },
@@ -123,10 +131,23 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^imports\/immoware24\/(mappings|files)$/ },
   { method: "GET", pattern: new RegExp(`^imports/immoware24/files/${ID}(/rows|/reconciliation)?$`) },
   { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/(validate|test-run|apply)$`) },
+  // Immoware24-Listen (Objektdaten, Kontakte) als CSV-Upload, Testlauf oder Übernahme.
+  { method: "POST", pattern: /^imports\/immoware24\/lists\/(objektdaten|kontakte)$/ },
   // Evaluations (M18, 7.5): liquidity, payments by debtor, revenue; read only.
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/liquidity$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/payments-by-debtor$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/revenue$`) },
+  // DATEV account mapping (A36, M18-01): list, create, change, delete, CSV import, report.
+  { method: "GET", pattern: /^accounting\/datev-mappings$/ },
+  { method: "POST", pattern: /^accounting\/datev-mappings$/ },
+  { method: "POST", pattern: /^accounting\/datev-mappings\/import$/ },
+  { method: "GET", pattern: /^accounting\/datev-mappings\/report$/ },
+  { method: "PATCH", pattern: new RegExp(`^accounting/datev-mappings/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^accounting/datev-mappings/${ID}$`) },
+  // Audit export per legal entity and period (A26, 7.7, D55): create, status, list, ZIP download.
+  { method: "POST", pattern: /^accounting\/audit-exports$/ },
+  { method: "GET", pattern: /^accounting\/audit-exports$/ },
+  { method: "GET", pattern: new RegExp(`^accounting/audit-exports/${ID}(/download)?$`) },
   // Receivable runs (M13): preview and posting; postings stay non leading until G1.
   { method: "POST", pattern: /^accounting\/receivable-runs$/ },
   { method: "GET", pattern: new RegExp(`^accounting/receivable-runs/${ID}$`) },
@@ -164,6 +185,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^accounting\/dunning-runs$/ },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-runs/${ID}/approve$`) },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-cases/${ID}/mark-sent$`) },
+  // Dunning letters and Mahnbescheid preparation as PDF drafts (M16-02, A31, A33): preview
+  // returns the PDF, the second endpoint files it; nothing is sent, no application is filed.
+  { method: "POST", pattern: /^accounting\/dunning-settings\/letter-preview$/ },
+  { method: "POST", pattern: new RegExp(`^accounting/dunning-cases/${ID}/letter(-preview)?$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/dunning-cases/${ID}/mahnbescheid(-preview)?$`) },
   {
     method: "POST",
     pattern: new RegExp(`^accounting/dunning-cases/${ID}/mahnbescheid-vorbereitung$`),
@@ -175,6 +201,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Operating cost statements (M17): drafting and status steps; issuing needs G3 (API).
   { method: "POST", pattern: /^statements$/ },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/(cost-items|calculate|transition|new-version)$`) },
+  // KI-Plausibilität eines Abrechnungsentwurfs (A35): Hinweise als Vorschlag, keine Wirkung.
+  { method: "GET", pattern: new RegExp(`^(hoa/)?statements/${ID}/ai-check$`) },
+  { method: "POST", pattern: new RegExp(`^(hoa/)?statements/${ID}/ai-check$`) },
+  // Owner statements (M17, A06): drafts; the PDF needs G3 (API).
+  { method: "GET", pattern: /^billing\/owner-statements$/ },
+  { method: "GET", pattern: new RegExp(`^billing/owner-statements/${ID}$`) },
+  { method: "POST", pattern: /^billing\/owner-statements$/ },
+  { method: "POST", pattern: new RegExp(`^billing/owner-statements/${ID}/(calculate|approve)$`) },
   // HOA (M24, M25): drafts, calculation, resolution bound to the snapshot, meeting steps.
   // Issuing, due and posting of statements need G4 (checked by the API).
   { method: "POST", pattern: /^hoa\/(plans|statements|meetings|resolutions|special-levies)$/ },
@@ -203,6 +237,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^letting/listings/${ID}/openimmo\\.xml$`) },
   { method: "GET", pattern: new RegExp(`^letting/listings/${ID}/openimmo\\.zip$`) },
   { method: "GET", pattern: /^letting\/listings\/openimmo\.zip$/ },
+  // Bilder je Anzeige (M26-02): Liste, Upload (multipart), Verknüpfen, Lösen, Anzeige.
+  { method: "GET", pattern: new RegExp(`^letting/listings/${ID}/images$`) },
+  { method: "POST", pattern: new RegExp(`^letting/listings/${ID}/images$`) },
+  { method: "POST", pattern: new RegExp(`^letting/listings/${ID}/images/link$`) },
+  { method: "DELETE", pattern: new RegExp(`^letting/listings/${ID}/images/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^letting/listings/${ID}/images/${ID}/content$`) },
   // Makler (M28-01): property and unit pickers for the listing creation form.
   // Übergabeprotokolle (M30): protocol, sub records, photos, signatures, completion, versions.
   { method: "GET", pattern: /^handover\/protocols$/ },
@@ -244,6 +284,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^tickets\/templates$/ },
   { method: "POST", pattern: /^tickets\/templates$/ },
   { method: "GET", pattern: new RegExp(`^tickets/templates/${ID}$`) },
+  // Regel-Engine Stufe 1 (A38): Regeln, Aktivierung, Testlauf ohne Wirkung, Protokoll.
+  { method: "GET", pattern: /^automation\/(meta|rules|runs)$/ },
+  { method: "POST", pattern: /^automation\/rules$/ },
+  { method: "GET", pattern: new RegExp(`^automation/rules/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^automation/rules/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^automation/rules/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^automation/rules/${ID}/(activate|test)$`) },
   { method: "PATCH", pattern: new RegExp(`^tickets/templates/${ID}$`) },
   // Antwortvorlagen (operator 26.09.2026): CRUD, Platzhalter, Vorschau je Ticket und Antwort
   // aus dem Ticket (nur nach Bestätigung, über den bestehenden Freigabeweg).
@@ -292,6 +339,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^objektakte/properties/${ID}/completeness$`) },
   // Listengenerierung (M35 Stufe 4): Anforderungslisten und Dokumentenübersicht, JSON und CSV.
   { method: "GET", pattern: /^objektakte\/lists\/missing-documents(\/export)?$/ },
+  // Personenlisten und Ablage einer Liste als Dokument (M35 Stufe 4, Rest).
+  { method: "GET", pattern: new RegExp(`^objektakte/properties/${ID}/lists/(owners|tenants)(/export)?$`) },
+  {
+    method: "POST",
+    pattern: new RegExp(`^objektakte/properties/${ID}/lists/(missing-documents|documents|owners|tenants)/store$`),
+  },
   {
     method: "GET",
     pattern: new RegExp(`^objektakte/properties/${ID}/lists/(missing-documents|documents)(/export)?$`),
@@ -300,6 +353,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
     method: "POST",
     pattern: new RegExp(`^objektakte/properties/${ID}/completeness/nachforderungsschreiben$`),
   },
+  // Objektakte-Übernahme, Stufe 4/5 (Synchronisationsstand, Löschmarkierungen, KI-Kosten).
+  { method: "GET", pattern: /^objektakte\/sync$/ },
+  { method: "PUT", pattern: /^objektakte\/sync$/ },
+  { method: "POST", pattern: /^objektakte\/sync\/runs$/ },
+  { method: "GET", pattern: /^objektakte\/sync\/deletions$/ },
+  { method: "GET", pattern: /^objektakte\/ai-calls\/summary$/ },
   { method: "GET", pattern: /^document-categories$/ },
   // SLA und Bereitschaft (M21 Übernahme aus dem Immoware Hub).
   { method: "GET", pattern: /^sla\/(rules|clocks|on-call|on-call\/current|alerts|calendar)$/ },
@@ -347,12 +406,20 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },
   // Beleg aus Paperless holen und als Rechnung erfassen (M14 KI-Extraktion, manuelle Aktion).
   { method: "POST", pattern: /^invoices\/intake\/paperless$/ },
+  // Belegeingang (M14): KI-Entwürfe aus Upload, Mail-Anhang oder Paperless, Feldprüfung, Entscheidung.
+  { method: "GET", pattern: /^receipts\/drafts$/ },
+  { method: "POST", pattern: /^receipts\/drafts$/ },
+  { method: "POST", pattern: /^receipts\/drafts\/paperless$/ },
+  { method: "GET", pattern: new RegExp(`^receipts/drafts/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^receipts/drafts/${ID}/(confirm|reject)$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
-const MULTIPART = new RegExp(`^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents)$`);
+const MULTIPART = new RegExp(
+  `^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte)|letting/listings/${ID}/images)$`,
+);
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 

@@ -58,6 +58,7 @@
     "aiSettings": "KI-Einstellungen",
     "dashboard": "Start",
     "calendar": "Kalender",
+    "deadlines": "Fristen",
     "entity": {
       "contact": "Kontakt",
       "property": "Objekt",
@@ -498,7 +499,10 @@
     "colKept": "Grund für Beibehaltung",
     "source": {
       "ai:extract_contacts": "KI: Kontakte aus Liste",
-      "ai:extract_property": "KI: Objekt aus Unterlagen"
+      "ai:extract_property": "KI: Objekt aus Unterlagen",
+   "immoware24:objektdaten": "Immoware24-Liste: Objektdaten",
+   "immoware24:kontakte": "Immoware24-Liste: Kontakte",
+   "objektakte": "objektakte-Export (Übernahme)"
     },
     "status": {
       "applied": "übernommen",
@@ -549,6 +553,18 @@
     "priceIn": "Preis Eingabe ({tier})",
     "priceOut": "Preis Ausgabe ({tier})",
     "tierInvalid": "Stufe {tier}: Modell und beide Preise angeben.",
+    "maxOutput": "Ausgabegrenze ({tier})",
+    "maxOutputHint": "Ausgabegrenze des Modells laut Anbieter, in Token je Antwort. Leer bedeutet 16000.",
+    "maxOutputInvalid": "Stufe {tier}: Die Ausgabegrenze muss eine ganze Zahl größer 0 sein.",
+    "test": "Verbindung testen",
+    "testHint": "Schickt je eingerichteter Stufe (klein, groß) einen Minimalprompt an den Anbieter. Der Test setzt keine Freigabe voraus und erteilt keine; die Kosten sind minimal und werden dem Monatsbudget belastet.",
+    "testUnsaved": "Bitte zuerst speichern, der Test verwendet die gespeicherte Konfiguration.",
+    "testRunning": "Der Test läuft …",
+    "testResultTitle": "Testergebnis",
+    "testOk": "erreichbar",
+    "testFailed": "fehlgeschlagen",
+    "testLine": "{tier}: {status}, Modell {model}, {ms} ms",
+    "testError": "Fehlermeldung des Anbieters: {error}",
     "budget": "Monatsbudget in EUR",
     "budgetInvalid": "Bitte ein gültiges Monatsbudget angeben, zum Beispiel 100,00.",
     "dataProtection": "Datenschutz",
@@ -616,6 +632,79 @@
         "fact": "Fakt"
       }
     }
+  },
+  "ImmowareLists": {
+    "title": "Immoware24-Listen",
+    "intro": "Objektliste und Kontaktlisten aus Immoware24 als CSV (UTF-8, Semikolon) direkt anlegen. Erst Testlauf, dann Übernahme. Es entstehen keine Verträge, Sollstellungen oder Buchungen.",
+    "objektdaten": {
+      "title": "Objektdaten",
+      "help": "Export Objektdaten mit den Spalten Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer. Eigentümer, Mieter und Beträge werden nur als Herkunftsnotiz an der Einheit gespeichert.",
+      "file": "Objektliste (csv)",
+      "numberMap": "Nummernzuordnung (ALT=NEU, je Zeile oder durch Komma getrennt)",
+      "numberMapHelp": "Für Objektnummern mit mehr als drei Stellen, zum Beispiel 10012=012.",
+      "skipHandedOver": "Abgegebene Objekte (Präfix Z ABGEGEBEN) überspringen",
+      "colObject": "Objekt (alt)",
+      "colNumber": "Nummer",
+      "colName": "Bezeichnung",
+      "colUnits": "Einheiten",
+      "skippedTitle": "Übersprungene Objekte",
+      "conflictsTitle": "Konflikte und Einheiten mit Meldungen",
+      "notesTitle": "Hinweise",
+      "count": {
+        "property_created": "Objekte angelegt",
+        "property_unchanged": "Objekte unverändert",
+        "property_conflict": "Objekte mit Konflikt",
+        "property_skipped": "Objekte übersprungen",
+        "unit_created": "Einheiten angelegt",
+        "unit_unchanged": "Einheiten unverändert",
+        "unit_conflict": "Einheiten mit Konflikt",
+        "unit_invalid": "Einheiten ungültig"
+      }
+    },
+    "kontakte": {
+      "title": "Kontakte",
+      "help": "Je Kontaktgruppe eine Liste (Spalten id und Name erforderlich). Derselbe Kontakt in mehreren Listen erhält alle Rollen.",
+      "file": "Datei {index} (csv)",
+      "role": "Rolle für Datei {index}",
+      "roleOption": {
+        "eigentuemer": "Eigentümer",
+        "mieter": "Mieter",
+        "bank": "Bank",
+        "sonstige": "Sonstige"
+      },
+      "colFile": "Datei",
+      "colLine": "Zeile",
+      "colId": "Id",
+      "colName": "Name",
+      "colRole": "Rolle",
+      "notesTitle": "Zeilen mit Hinweisen oder Problemen",
+      "count": {
+        "created": "Kontakte angelegt",
+        "unchanged": "Kontakte unverändert",
+        "role_added": "Rolle ergänzt",
+        "invalid": "Zeilen ungültig"
+      }
+    },
+    "colStatus": "Status",
+    "colMessages": "Meldungen",
+    "status": {
+      "created": "angelegt",
+      "unchanged": "unverändert",
+      "conflict": "Konflikt",
+      "invalid": "ungültig",
+      "role_added": "Rolle ergänzt",
+      "übersprungen": "übersprungen"
+    },
+    "testRun": "Testlauf",
+    "apply": "Übernehmen",
+    "applyHint": "Übernehmen wird nach einem Testlauf mit denselben Dateien und Einstellungen freigeschaltet.",
+    "applyConfirm": "Die Daten aus dem Testlauf jetzt übernehmen? Vorhandene Datensätze werden nicht überschrieben.",
+    "fileRequired": "Bitte eine Datei auswählen.",
+    "resultTest": "Testlauf, es wurde nichts gespeichert.",
+    "resultApplied": "Übernommen. Der Lauf ist unter Importe aufgeführt.",
+    "runLink": "Importlauf öffnen",
+    "noEntries": "Keine Einträge.",
+    "busy": "Wird verarbeitet"
   },
   "Immoware24": {
     "title": "Importassistent",
@@ -855,6 +944,65 @@
     "confirmInviteAction": "Einladung jetzt senden",
     "close": "Schließen"
   },
+  "Digest": {
+    "title": "Tagesübersicht",
+    "description": "Ihre fälligen Tickets, offenen Freigaben, Fristen des Tages und KI-Vorschläge. Dieselben Daten erhalten Sie täglich um 07:00 Uhr als Benachrichtigung.",
+    "empty": "Für heute liegt nichts an.",
+    "total": "{count} offene Punkte",
+    "more": "und {count} weitere",
+    "loadError": "Die Tagesübersicht konnte nicht geladen werden.",
+    "section": {
+      "tickets_due_today": "Heute fällige Tickets",
+      "tickets_overdue": "Überfällige Tickets",
+      "approvals": "Offene Freigaben",
+      "deadlines": "Fristen des Tages (zu prüfen)",
+      "ai_proposals": "Offene KI-Vorschläge"
+    }
+  },
+  "Deadlines": {
+    "title": "Fristen",
+    "description": "Termine aus den Stammdaten mit Vorfrist aus den Einstellungen. Orientierung, keine rechtliche Fristberechnung; jede Frist ist zu prüfen. Die Liste wird täglich um 20:00 Uhr aktualisiert.",
+    "loadError": "Die Fristenliste konnte nicht geladen werden.",
+    "empty": "Keine Fristen im gewählten Zeitraum.",
+    "filter": {
+      "kind": "Typ",
+      "allKinds": "Alle Typen",
+      "status": "Status",
+      "from": "Von",
+      "to": "Bis",
+      "apply": "Anwenden"
+    },
+    "column": {
+      "due_on": "Datum",
+      "kind": "Typ",
+      "reference": "Bezug",
+      "lead_days": "Vorfrist",
+      "status": "Status",
+      "notified_at": "Benachrichtigt"
+    },
+    "kind": {
+      "contract_end": "Vertragsende",
+      "contract_termination": "Kündigung",
+      "meter_calibration": "Eichfrist Zähler",
+      "bank_consent": "Ablauf Bankzustimmung",
+      "document_retention_end": "Ende Aufbewahrung"
+    },
+    "status": {
+      "open": "offen",
+      "done": "erledigt",
+      "all": "alle"
+    },
+    "days": "{count} Tage",
+    "toCheck": "zu prüfen",
+    "settings": {
+      "title": "Einstellungen der Tagesjobs",
+      "leadDays": "Vorfrist in Tagen (Vorschlag {default})",
+      "digestMail": "Tagesübersicht zusätzlich als Systemmail über das Standardpostfach senden",
+      "save": "Speichern",
+      "saved": "Gespeichert.",
+      "error": "Speichern fehlgeschlagen."
+    }
+  },
   "Accounting": {
     "title": "Buchhaltung",
     "parallelNotice": "Parallelbetrieb: Führend ist weiterhin Immoware24. Buchungen in der Plattform sind nicht die führende Buchhaltung, solange die Freigabestufe G1 nicht erteilt ist.",
@@ -884,6 +1032,7 @@
     },
     "receivablesLink": "Sollstellungen",
     "dunningLink": "Mahnwesen",
+    "ownerStatementsLink": "Eigentümerabrechnung",
     "reports": {
       "link": "Auswertungen",
       "title": "Auswertungen",
@@ -920,6 +1069,28 @@
         "empty": "Keine Erträge im gewählten Zeitraum.",
         "amount": "Betrag",
         "total": "Summe"
+      },
+      "auditExport": {
+        "title": "Prüfexport (maschinell auswertbar)",
+        "description": "ZIP je Rechtsträger und Zeitraum mit CSV je Tabelle (Konten, Buchungen, OP-Ausgleich, Eröffnungsbestände, Stammdatenhistorie, Freigaben, Stornobeziehungen, Verteilungsschlüssel), Inhaltsverzeichnis mit SHA-256 und verknüpften Originalbelegen. Umfang nach Abschnitt 7.7; kein DATEV-Kontenrahmen und keine steuerliche Einordnung.",
+        "start": "Zeitraum von",
+        "end": "Zeitraum bis",
+        "create": "Prüfexport erstellen",
+        "creating": "Wird erstellt",
+        "queued": "Der Export wird im Hintergrund erstellt. Die Liste aktualisiert sich beim nächsten Laden.",
+        "empty": "Noch kein Prüfexport für diesen Buchungskreis.",
+        "period": "Zeitraum",
+        "createdAt": "Erstellt am",
+        "status": "Status",
+        "rows": "Zeilen",
+        "sha256": "SHA-256",
+        "download": "ZIP herunterladen",
+        "statuses": {
+          "queued": "in Warteschlange",
+          "running": "läuft",
+          "done": "fertig",
+          "failed": "fehlgeschlagen"
+        }
       }
     }
   },
@@ -1094,6 +1265,21 @@
         "hintsTitle": "Hinweise (nicht sperrend):",
         "error": "Prüfung fehlgeschlagen.",
         "notice": "Nur lesender Export nach OpenImmo 1.2.7 (M26-02), XML oder ZIP mit verknüpften Bildern. Kein Versand an ein Portal. Die Pflichtfeldliste ist ein Produktstandard, keine rechtliche Vollständigkeitsprüfung."
+      },
+      "images": {
+        "title": "Bilder",
+        "intro": "Bilder werden als Dokument abgelegt und mit der Anzeige verknüpft. Die Reihenfolge entspricht der Reihenfolge der Verknüpfung und wird so in den OpenImmo-Export übernommen.",
+        "upload": "Bild hochladen",
+        "uploading": "Bild wird hochgeladen.",
+        "empty": "Noch keine Bilder verknüpft.",
+        "remove": "Entfernen",
+        "confirmRemove": "Bild von der Anzeige lösen? Das Dokument bleibt in der Dokumentenablage erhalten.",
+        "position": "Position {position}",
+        "loading": "Bilder werden geladen.",
+        "linkExisting": "Vorhandenes Dokument verknüpfen",
+        "documentId": "Dokument-ID",
+        "link": "Verknüpfen",
+        "onlyImages": "Zulässig sind JPEG, PNG, TIFF und HEIC."
       }
     },
     "import": {
@@ -1155,6 +1341,22 @@
   },
   "Bank": {
     "title": "Bank",
+    "metrics": {
+      "title": "Kennzahlen Bankabgleich",
+      "intro": "Abdeckungsgrad und Fehlerquote der Automatik getrennt, je Zeitraum, aus vorhandenen Daten.",
+      "from": "Von",
+      "to": "Bis",
+      "coverage": "Abdeckungsgrad",
+      "coverageBase": "{auto} von {total} Umsätzen automatisch eindeutig zugeordnet",
+      "errorRate": "Fehlerquote",
+      "errorBase": "{reversed} von {auto} automatischen Zuordnungen storniert ({corrected} korrigiert, {cancelled} aufgehoben)",
+      "manual": "Manuell gebucht",
+      "open": "Offen",
+      "ignored": "{count} ignoriert",
+      "noBase": "keine Basis",
+      "period": "Zeitraum {from} bis {to}.",
+      "note": "Betriebskennzahlen, keine Freigabe der Automatik."
+    },
     "notice": "Zuordnungen sind Vorschläge. Die IBAN allein beweist keinen Schuldner. Gebucht wird nur nach Bestätigung; bis zur Freigabestufe G1 nicht in der führenden Buchhaltung.",
     "statementFile": "Kontoauszug (CAMT.053)",
     "import": "Importieren",
@@ -1294,7 +1496,18 @@
     "letterPdf": "Mahnschreiben (PDF-Entwurf)",
     "letterFile": "Entwurf ablegen",
     "letterFiled": "Entwurf abgelegt",
-    "letterNotice": "Mahnschreiben entstehen nur als Entwurf auf dem Briefbogen des Mandanten. Der Versand ist gesperrt; er erfolgt außerhalb der Plattform und wird mit \"Als versendet markieren\" dokumentiert."
+    "letterNotice": "Mahnschreiben entstehen nur als Entwurf auf dem Briefbogen des Mandanten. Der Versand ist gesperrt; er erfolgt außerhalb der Plattform und wird mit \"Als versendet markieren\" dokumentiert.",
+    "letterTextHint": "Leer bedeutet Standardtext der Stufe. Ein eigener Text ersetzt nur den Aufforderungsabsatz; die Forderungsaufstellung (Posten, Fälligkeit, Betrag, Summe) steht immer im Schreiben. Platzhalter: {placeholders}. {frist} nennt ein Datum nur bei hinterlegter Zahlungsfrist, {bankverbindung} nennt ein Konto nur, wenn eines freigegeben ist (sonst \"auf das Ihnen bekannte Konto\").",
+    "letterPreview": "Vorschau",
+    "letterPreviewTitle": "Vorschau Stufe {level} mit Beispielposten",
+    "letterPreviewClose": "Vorschau schließen",
+    "letterPreviewTable": "Forderungsaufstellung",
+    "letterPreviewPosten": "Posten",
+    "letterPreviewDue": "Fälligkeit",
+    "letterPreviewAmount": "Betrag",
+    "mahnbescheidPdf": "Vorbereitung als PDF (kein Antrag)",
+    "mahnbescheidPdfFile": "PDF ablegen",
+    "mahnbescheidPdfFiled": "PDF abgelegt"
   },
   "Billing": {
     "title": "Betriebskostenabrechnung",
@@ -1324,6 +1537,32 @@
     "advancesPaid": "Vorauszahlungen gezahlt",
     "balance": "Ergebnis",
     "vacancyShare": "Leerstandsanteil Eigentümer: {amount}",
+      "aiCheck": {
+        "title": "KI-Plausibilität",
+        "notice": "Hinweise der KI ohne Wirkung auf die Abrechnung. Die KI nennt keine Beträge und keine Korrekturen; Prüfung und Entscheidung bleiben bei einer Person.",
+        "start": "Prüfung starten",
+        "running": "Die Prüfung läuft, bitte warten.",
+        "none": "Noch keine Prüfung durchgeführt.",
+        "noFindings": "Keine Auffälligkeiten gemeldet.",
+        "findings": "Hinweise",
+        "summary": "Zusammenfassung",
+        "reference": "Bezug",
+        "position": "Position {ref}",
+        "unit": "Einheit {unit}",
+        "snapshot": "Snapshot {hash}",
+        "checkedAt": "geprüft am {date}",
+        "runFailed": "Prüfung nicht ausgeführt: {reason}",
+        "severity": {
+          "low": "niedrig",
+          "medium": "mittel",
+          "high": "hoch"
+        },
+        "overall": {
+          "unauffaellig": "unauffällig",
+          "pruefen": "zu prüfen",
+          "kritisch": "kritisch"
+        }
+      },
     "status": {
       "draft": "Entwurf",
       "calculated": "berechnet",
@@ -1591,6 +1830,11 @@
     }
   },
   "Tickets": {
+    "mailAttachments": {
+      "title": "Anhänge aus E-Mails",
+      "hint": "PDF- und Bildanhänge können als Beleg erfasst werden. Die KI schlägt die Werte vor, geprüft und bestätigt wird im Belegeingang. Es wird nichts gebucht.",
+      "unsupported": "kein Beleg (Dateityp)"
+    },
     "proposals": {
       "title": "Vorschläge aus der E-Mail",
       "contact": "Kontakt: {name}",
@@ -1756,6 +2000,111 @@
     },
     "openTicket": "Ticket öffnen",
     "messages": "Nachrichten"
+  },
+  "Automation": {
+    "title": "Automatisierung",
+    "pageDescription": "Regel-Engine Stufe 1: Auslöser, Bedingungen und Aktionen. Regeln lösen keine Buchungen, Zahlungen oder Freigaben aus.",
+    "empty": "Noch keine Regeln angelegt.",
+    "newRule": "Neue Regel",
+    "name": "Name",
+    "description": "Beschreibung",
+    "trigger": "Auslöser (Ereignistyp)",
+    "triggerHelp": "Zum Beispiel ticket.created. Die Liste zeigt bekannte Ereignistypen.",
+    "conditions": "Bedingungen",
+    "conditionsJson": "Bedingungen (JSON, verschachtelt)",
+    "combinator": "Verknüpfung",
+    "and": "alle treffen zu (und)",
+    "or": "eine trifft zu (oder)",
+    "noConditions": "Ohne Bedingung gilt die Regel für jedes Ereignis des Auslösers.",
+    "field": "Feld",
+    "operator": "Operator",
+    "value": "Wert",
+    "addCondition": "Bedingung hinzufügen",
+    "remove": "Entfernen",
+    "ops": {
+      "eq": "gleich",
+      "ne": "ungleich",
+      "contains": "enthält",
+      "gt": "größer als",
+      "lt": "kleiner als"
+    },
+    "actionsLabel": "Aktionen",
+    "addAction": "Aktion hinzufügen",
+    "actionType": "Aktionstyp",
+    "actions": {
+      "set_ticket_field": "Ticketfeld setzen",
+      "notify": "Interne Benachrichtigung",
+      "create_ticket": "Ticket aus Vorlage anlegen"
+    },
+    "actionValue": "Wert der Aktion",
+    "ticketField": "Ticketfeld",
+    "ticketFields": {
+      "priority": "Priorität",
+      "team_id": "Team",
+      "category": "Kategorie",
+      "assignee_user_id": "Bearbeiter"
+    },
+    "teamIdHelp": "Team-ID (UUID)",
+    "priorities": {
+      "low": "Niedrig",
+      "normal": "Normal",
+      "high": "Hoch",
+      "urgent": "Dringend",
+      "immediate": "Sofort"
+    },
+    "none": "Keiner",
+    "notifyTitle": "Titel (Platzhalter in geschweiften Klammern erlaubt, zum Beispiel Ticketnummer oder Tickettitel)",
+    "notifyBody": "Text",
+    "roles": "Rollen",
+    "users": "Benutzer",
+    "template": "Ticketvorlage",
+    "noTemplates": "Keine Vorlage vorhanden",
+    "ticketTitle": "Titel (leer = Titel der Vorlage)",
+    "fromTemplate": "aus Vorlage",
+    "copyFromEvent": {
+      "property_id": "Objekt aus Ereignis übernehmen",
+      "unit_id": "Einheit aus Ereignis übernehmen",
+      "contact_id": "Kontakt aus Ereignis übernehmen"
+    },
+    "noMoneyHint": "Stufe 1: Regeln legen Tickets an, benachrichtigen intern und setzen Ticketfelder. Keine Buchung, keine Zahlung, keine Freigabe.",
+    "invalidJson": "Ungültiges JSON.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "active": "aktiv",
+    "inactive": "inaktiv",
+    "activate": "Aktivieren",
+    "deactivate": "Deaktivieren",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "confirmDelete": "Regel \"{name}\" löschen? Das Protokoll der Regel wird mit entfernt.",
+    "testRun": "Testlauf",
+    "testRunHelp": "Die Regel wird gegen ein Beispielereignis geprüft. Es wird nichts angelegt, gesetzt oder gesendet.",
+    "sampleEntity": "Beispiel Ticketfelder (JSON)",
+    "samplePayload": "Beispiel Ereignisdaten (JSON)",
+    "runTest": "Testlauf starten",
+    "matched": "Regel greift. Vorschau der Aktionen:",
+    "notMatched": "Bedingungen treffen nicht zu.",
+    "triggerMismatch": "Der Ereignistyp passt nicht zum Auslöser der Regel.",
+    "summary": {
+      "setField": "Ticketfeld {field} auf {value} setzen",
+      "notify": "Benachrichtigung an {count} Empfänger oder Rollen",
+      "createTicket": "Ticket aus Vorlage anlegen {title}"
+    },
+    "log": "Protokoll",
+    "filterRule": "Regel filtern",
+    "allRules": "Alle Regeln",
+    "refresh": "Aktualisieren",
+    "noRuns": "Noch keine Ausführungen.",
+    "time": "Zeitpunkt",
+    "rule": "Regel",
+    "event": "Ereignis",
+    "status": "Ergebnis",
+    "statuses": {
+      "executed": "ausgeführt",
+      "failed": "fehlgeschlagen",
+      "dry_run": "Testlauf"
+    }
   },
   "TicketTemplates": {
     "title": "Ticketvorlagen",
@@ -2235,7 +2584,9 @@
       "details": "Details anzeigen",
       "restart": "Neues Anliegen",
       "onlyNew": "Nur neue Kontakte importieren",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "useAsContacts": "Ja, als Kontakte anlegen",
+      "askInstead": "Nein, als Frage behandeln"
     },
     "askPrompt": "Stellen Sie Ihre Frage. Sie können auch Dokumente anhängen, dann antworte ich daraus.",
     "summarizePrompt": "Hängen Sie das Dokument an, das ich zusammenfassen soll.",
@@ -2243,6 +2594,10 @@
     "importContactsUpload": "Bitte hängen Sie die Liste an (Excel, CSV oder PDF) und senden Sie sie ab. Ergänzende Hinweise können Sie dazuschreiben.",
     "importPropertyUpload": "Bitte hängen Sie die Objektliste an (zum Beispiel Eigentümer- oder Mieterliste mit Einheiten) und senden Sie sie ab.",
     "needFile": "Dafür brauche ich eine Datei. Bitte über die Büroklammer anhängen.",
+    "needFileOrPaste": "Dafür brauche ich die Daten: Bitte eine Datei anhängen (Excel, CSV oder PDF) oder die Kontaktdaten hier als Text einfügen.",
+    "pastedContactsDetected": "Das sieht nach Kontaktdaten aus. Soll ich daraus Kontakte anlegen? Ich lese die Daten nur und lege nichts ohne Ihre Bestätigung an.",
+    "pastedContactsRole": "Gern. Um welche Art von Kontakten handelt es sich? Danach lese ich den eingefügten Text.",
+    "importIntentDetected": "Dafür Datei anhängen oder Daten hier einfügen. Um welche Art von Kontakten handelt es sich?",
     "working": "Ich lese die Daten und prüfe sie. Das kann einen Moment dauern.",
     "thinking": "Der Assistent arbeitet …",
     "progress": {
@@ -2348,6 +2703,14 @@
     "replyTemplates": {
       "title": "Antwortvorlagen",
       "description": "Vorgefertigte Antworten für Tickets mit Platzhaltern und Standardanhängen."
+    },
+    "automation": {
+      "title": "Automatisierung",
+      "description": "Regeln: Wenn ein Ereignis eintritt, dann Ticket anlegen, benachrichtigen oder Ticketfeld setzen. Mit Testlauf und Protokoll."
+    },
+    "datev": {
+      "title": "Buchhaltung, DATEV",
+      "description": "Kontenzuordnung CRM-Konto zu DATEV-Sachkonto, CSV-Import und Prüfbericht für den Buchungsstapel."
     }
   },
   "Members": {
@@ -2383,7 +2746,11 @@
     "mobilePhone": "Mobilnummer",
     "editMobilePhone": "Mobilnummer pflegen",
     "mobilePhoneShow": "Mobil: {phone}",
-    "mobilePhoneHint": "Für SMS-Eskalationen an die Bereitschaft. Leer lassen löscht die Nummer."
+    "mobilePhoneHint": "Für SMS-Eskalationen an die Bereitschaft. Leer lassen löscht die Nummer.",
+    "editLegalEntities": "Rechtsträger ({count})",
+    "legalEntitiesHint": "Zugriffsbereich für Steuerberater: nur die gewählten Rechtsträger sind in Buchungskreisen, Auswertungen, Exporten und verknüpften Dokumenten sichtbar.",
+    "legalEntitiesNone": "Ohne Auswahl hat der Steuerberater keinen Zugriff auf Buchhaltungsdaten.",
+    "legalEntitiesEmpty": "Es sind noch keine Rechtsträger angelegt."
   },
   "Roles": {
     "title": "Rollen und Rechte",
@@ -2423,6 +2790,87 @@
       "accentColor": "Akzentfarbe"
     }
   },
+  "ManagerEntitySetup": {
+    "title": "Rechtsträger der verwaltenden Gesellschaft",
+    "description": "Eigener Rechtsträger und Buchungskreis der verwaltenden Gesellschaft für eigene Forderungen (Verwalterhonorar, Mahngebühren), getrennt von den verwalteten Gemeinschaften und Eigentümern. Der Name stammt aus den Firmendaten des Mandanten. Der Schritt ist einmalig und kann gefahrlos wiederholt werden.",
+    "status": {
+      "setUp": "eingerichtet",
+      "notSetUp": "nicht eingerichtet"
+    },
+    "name": "Rechtsträger",
+    "accounts": "Konten im Buchungskreis",
+    "create": "Rechtsträger und Buchungskreis einrichten",
+    "created": "Rechtsträger und Buchungskreis wurden angelegt.",
+    "alreadySetUp": "Bereits eingerichtet, keine Änderung.",
+    "readOnly": "Die Einrichtung erfordert das Recht Mandanteneinstellungen ändern.",
+    "loadError": "Der Status konnte nicht geladen werden."
+  },
+  "DatevMappings": {
+    "title": "DATEV-Kontenzuordnung",
+    "description": "Zuordnung der CRM-Kontonummern zu den DATEV-Sachkonten des Steuerberaters. Der Buchungsstapel-Export nutzt diese Zuordnung und bricht ab, solange Konten mit Buchungen nicht zugeordnet sind.",
+    "intro": "Es ist kein Kontenrahmen vorbelegt. Jede Zuordnung wird vom Betreiber nach Abstimmung mit dem Steuerberater eingetragen oder aus einer CSV-Datei übernommen. Eine Zeile ohne Buchungskreis gilt für alle Buchungskreise; eine Zeile mit Buchungskreis hat Vorrang. Gültig ab begrenzt die Zuordnung auf Buchungen ab diesem Datum.",
+    "readOnly": "Nur zur Ansicht. Die Pflege erfordert das Recht Buchhaltung ändern.",
+    "allLedgers": "Alle Buchungskreise",
+    "yes": "Ja",
+    "no": "Nein",
+    "activate": "Aktivieren",
+    "deactivate": "Deaktivieren",
+    "delete": "Löschen",
+    "confirmDelete": "Zuordnung für Konto {account} löschen?",
+    "created": "Zuordnung angelegt.",
+    "imported": "Übernommen: {created} neu, {updated} geändert, {unchanged} unverändert.",
+    "field": {
+      "account_code": "CRM-Konto",
+      "datev_account": "DATEV-Konto",
+      "label": "Bezeichnung",
+      "ledger": "Buchungskreis",
+      "valid_from": "Gültig ab",
+      "active": "Aktiv"
+    },
+    "table": {
+      "title": "Zuordnungen",
+      "empty": "Noch keine Zuordnungen vorhanden."
+    },
+    "create": {
+      "title": "Zuordnung anlegen",
+      "submit": "Anlegen"
+    },
+    "import": {
+      "title": "Import aus CSV",
+      "hint": "Kopfzeile mit den Spalten account_code (Konto), datev_account (DATEV-Konto), optional label (Bezeichnung) und valid_from (Gültig ab, TT.MM.JJJJ). Trennzeichen Semikolon oder Komma. Erst Vorschau prüfen, dann übernehmen; eine Datei mit fehlerhaften Zeilen wird nicht übernommen.",
+      "file": "CSV-Datei",
+      "content": "CSV-Inhalt",
+      "preview": "Vorschau",
+      "apply": "Übernehmen",
+      "summary": "Vorschau: {create} neu, {update} geändert, {unchanged} unverändert, {error} fehlerhaft.",
+      "line": "Zeile",
+      "action": "Aktion",
+      "was": "bisher",
+      "actions": {
+        "create": "neu",
+        "update": "ändern",
+        "unchanged": "unverändert",
+        "error": "Fehler"
+      }
+    },
+    "report": {
+      "title": "Prüfbericht nicht zugeordneter Konten",
+      "hint": "Je Buchungskreis und Zeitraum: Konten mit Buchungen ohne Zuordnung blockieren den DATEV-Export. Konten ohne Buchungen werden zum Zeitraumende geprüft.",
+      "start": "Von",
+      "end": "Bis",
+      "run": "Bericht laden",
+      "noLedgers": "Kein Buchungskreis vorhanden",
+      "summary": "{unmapped} Konten ohne Zuordnung, davon {used} mit Buchungen im Zeitraum.",
+      "onlyUnmapped": "Nur nicht zugeordnete Konten anzeigen",
+      "accountName": "Kontobezeichnung",
+      "lines": "Buchungszeilen",
+      "period": "Buchungen von bis",
+      "to": "bis",
+      "status": "Status",
+      "unmapped": "nicht zugeordnet",
+      "mapped": "zugeordnet"
+    }
+  },
   "BillingSettings": {
     "title": "Rechnungsstellung und Steuer",
     "loadError": "Die Einstellungen zu Rechnungsstellung und Steuer konnten nicht geladen werden.",
@@ -2439,6 +2887,7 @@
       "vat_status_kleinunternehmer": "Kleinunternehmer (§ 19 UStG)",
       "vat_id": "USt-IdNr.",
       "tax_number": "Steuernummer",
+      "payee_iban": "IBAN für Honorarrechnungen (XRechnung)",
       "leitweg_id": "Leitweg-ID (XRechnung, öffentliche Auftraggeber)",
       "kleinunternehmer_note": "Pflichthinweistext Kleinunternehmer",
       "datev_consultant_number": "DATEV-Beraternummer",
@@ -2912,6 +3361,10 @@
     "fetchBank": "Umsätze aller zugeordneten Konten abrufen",
     "wizardStep1": "1. Bank suchen und Freigabe starten",
     "wizardStep2": "2. Freigabe im neuen Fenster abschließen, dann prüfen",
+    "consentExpiring": "Die Zustimmung zum Kontozugriff läuft am {date} ab (in {days} Tagen). Bitte rechtzeitig erneuern, sonst werden keine Umsätze mehr abgerufen.",
+    "consentExpiredOn": "Zustimmung abgelaufen am {date}. Es werden keine Umsätze abgerufen, bis die Zustimmung erneuert ist.",
+    "consentExpired": "Zustimmung abgelaufen. Es werden keine Umsätze abgerufen, bis die Zustimmung erneuert ist.",
+    "renewConsent": "Zustimmung erneuern",
     "wizardStep3": "3. Konten einem Buchungskreis/Objekt zuordnen"
   },
   "DmsSettings": {
@@ -2952,6 +3405,14 @@
     "connected": "Google-Konto {account} verbunden.",
     "connectedNeedsRootFolder": "Google-Konto {account} verbunden. Wurzelordner-ID eintragen und speichern, um die Anbindung zu aktivieren.",
     "oauthFailed": "Verbindung fehlgeschlagen: {reason}",
+    "webhookTitle": "Post-Consume-Webhook",
+    "webhookHint": "Paperless meldet neue Dokumente an das CRM (Endpunkt /api/v1/documents/webhooks/paperless, HMAC-SHA256 über Zeitstempel und Rohdaten, Mandant per Kopfzeile X-MHVP-Tenant oder Pfad). Das gemeldete Dokument wird als Dokument indexiert.",
+    "webhookSecret": "Webhook-Geheimnis",
+    "webhookSecretStored": "Geheimnis hinterlegt, zum Ändern neu eingeben",
+    "webhookSecretMissing": "nicht hinterlegt",
+    "webhookSecretHint": "Mindestens 16 Zeichen. Wird nur geschrieben und nie wieder angezeigt. Leer lassen, um das hinterlegte Geheimnis zu behalten. Ohne Geheimnis werden alle Meldungen abgewiesen.",
+    "autoIntake": "Belegeingang aus Paperless automatisch",
+    "autoIntakeHint": "Standard aus. Wenn aktiv, wird für jedes gemeldete Dokument ein Belegentwurf zur Prüfung erzeugt (Warteschlange). Ein Entwurf ist keine Rechnung und keine Buchung.",
     "rootFolderIdBeforeConnectHint": "Vor dem Verbinden speichern, damit die Anbindung nach dem OAuth-Vorgang sofort aktiv werden kann."
   },
   "Handover": {
@@ -3630,6 +4091,91 @@
       "manualCategory": "Klasse manuell setzen",
       "setManually": "Setzen"
     },
+    "sync": {
+      "title": "Synchronisationsstand",
+      "intro": "Täglicher Differenzimport aus dem objektakte-Export im Parallelbetrieb. Standard aus; ohne Exportpfad lässt sich der Lauf nicht aktivieren.",
+      "enabled": "Täglicher Abgleich aktiv",
+      "dumpPath": "Exportpfad auf dem Worker (.sql)",
+      "save": "Einstellungen speichern",
+      "saved": "Einstellungen gespeichert.",
+      "lastRun": "Letzter Lauf",
+      "never": "Noch kein Lauf",
+      "status": "Status",
+      "statusValue": {
+        "never": "Noch kein Lauf",
+        "ok": "Erfolgreich",
+        "error": "Fehlgeschlagen"
+      },
+      "watermark": "Wasserstand (Quelle)",
+      "lastError": "Fehler",
+      "report": "Bericht des letzten Laufs",
+      "reportTrigger": "Auslöser",
+      "considered": "Betrachtet",
+      "created": "Angelegt",
+      "updated": "Aktualisiert",
+      "deletedMarked": "Als gelöscht markiert",
+      "deletionsResolved": "Löschmarkierungen aufgelöst",
+      "runNow": "Jetzt abgleichen",
+      "queued": "Der Abgleich wurde an den Worker übergeben. Der Bericht erscheint nach Abschluss hier.",
+      "uploadLabel": "Vollständigen Export hochladen",
+      "upload": "Export hochladen und abgleichen",
+      "uploaded": "Der Export wurde verarbeitet.",
+      "reload": "Stand aktualisieren",
+      "deletions": "Löschmarkierungen",
+      "deletionsIntro": "In objektakte gelöschte Datensätze werden im CRM nur markiert, nie gelöscht. Eine Markierung gilt als aufgelöst, sobald der Datensatz im Export wieder erscheint.",
+      "filterOpen": "Nur offene",
+      "filterAll": "Offene und aufgelöste",
+      "noDeletions": "Keine Löschmarkierungen.",
+      "colSource": "Quelle",
+      "colTarget": "Datensatz",
+      "colDetected": "Erkannt am",
+      "colResolved": "Aufgelöst am",
+      "open": "Offen",
+      "openRecord": "Datensatz öffnen",
+      "noLink": "Kein Verweis"
+    },
+    "userMapping": {
+      "title": "Benutzerabbildung",
+      "intro": "Vorschlag je objektakte-Benutzer. Es wird kein Benutzer, keine Mitgliedschaft und keine Rolle automatisch angelegt; die Einladung bleibt eine Handlung des Administrators.",
+      "empty": "Der Export enthielt keine Benutzer.",
+      "colEmail": "E-Mail",
+      "colName": "Name",
+      "colSourceRole": "Rolle objektakte",
+      "colProposedRole": "Vorgeschlagene CRM-Rolle",
+      "colCrmRoles": "Rollen im CRM",
+      "colAction": "Aktion",
+      "noProposal": "Kein Vorschlag",
+      "action": {
+        "already_member": "Bereits Mitglied",
+        "add_membership": "Mitgliedschaft ergänzen",
+        "invite": "Einladen",
+        "manual": "Manuell entscheiden",
+        "skip": "Überspringen"
+      },
+      "openMembers": "Zur Mitarbeiterverwaltung",
+      "inviteLink": "Einladen mit Vorbelegung"
+    },
+    "aiCosts": {
+      "title": "KI-Kosten der Altanwendung",
+      "intro": "Kosten, Token und Anzahl der externen KI-Aufrufe aus dem objektakte-Protokoll, je Objekt und je Monat. Nur lesend; neue KI-Aufrufe des CRM erscheinen hier nicht.",
+      "property": "Objekt",
+      "allProperties": "Alle Objekte",
+      "from": "Von",
+      "to": "Bis",
+      "apply": "Auswerten",
+      "loading": "Wird geladen.",
+      "empty": "Keine KI-Aufrufe im gewählten Zeitraum.",
+      "withoutProperty": "Ohne Objektzuordnung",
+      "byProperty": "Je Objekt",
+      "byMonth": "Je Monat",
+      "colProperty": "Objekt",
+      "colMonth": "Monat",
+      "colCalls": "Aufrufe",
+      "colTokensIn": "Token Eingabe",
+      "colTokensOut": "Token Ausgabe",
+      "colCost": "Kosten",
+      "total": "Summe"
+    },
     "lists": {
       "title": "Listen aus der Objektakte",
       "intro": "Anforderungslisten fehlender Unterlagen je Objekt oder über alle Objekte sowie die Dokumentenübersicht je Kategorie. Nur lesend, Export als CSV.",
@@ -3654,7 +4200,21 @@
       "colFilename": "Dateiname",
       "colCreated": "Erstellt am",
       "colSource": "Herkunft",
-      "duplicate": "Dublette"
+      "duplicate": "Dublette",
+      "kindOwners": "Eigentümerliste",
+      "kindTenants": "Mieterliste",
+      "storeAsDocument": "Als Dokument ablegen",
+      "storing": "Liste wird abgelegt.",
+      "stored": "Die Liste wurde als Dokument \"{title}\" beim Objekt abgelegt.",
+      "personsIntro": "Personen aus den aktuellen Verträgen des Objekts (Stichtag {date}). Nur Kontaktfelder, die im CRM sichtbar sind, keine Bankdaten.",
+      "personsTotal": "{count, plural, one {# Eintrag} other {# Einträge}}",
+      "emptyPersons": "Keine aktuellen Verträge dieser Art zum Objekt.",
+      "colUnit": "Einheit",
+      "colName": "Name",
+      "colAddress": "Anschrift",
+      "colEmail": "E-Mail",
+      "colPhone": "Telefon",
+      "colContractStart": "Vertragsbeginn"
     }
   },
   "Receipts": {
@@ -3663,9 +4223,15 @@
     "description": "Eingangsrechnungen aus Mail-Anhängen, Paperless oder Upload werden von der KI als Entwurf vorgeschlagen. Jeder Wert wird geprüft, bevor eine Rechnung als Entwurf angelegt wird. Es wird nichts gebucht.",
     "notice": "Vor der Übermittlung an den KI-Anbieter werden IBAN, E-Mail-Adressen, Telefonnummern und Personennamen maskiert. Die IBAN wird nie automatisch übernommen, sie muss aus dem Original eingetragen und bestätigt werden.",
     "backToInvoices": "Zum Rechnungseingang",
+    "openCount": "{count, plural, =0 {Keine offenen Belegentwürfe} one {# offener Belegentwurf} other {# offene Belegentwürfe}}",
+    "attachment": {
+      "capture": "Als Rechnung erfassen",
+      "failed": "Rechnungserfassung nicht möglich: {reason}",
+      "openDraft": "Entwurf im Belegeingang öffnen"
+    },
     "intake": {
       "title": "Beleg erfassen",
-      "upload": "Beleg hochladen (PDF)",
+      "upload": "Beleg hochladen (PDF oder XRechnung-XML)",
       "paperlessId": "Paperless-Dokumentnummer",
       "paperlessStart": "Aus Paperless holen",
       "uploading": "Beleg wird hochgeladen und ausgewertet …"
@@ -3681,8 +4247,13 @@
         "supplier": "Aussteller",
         "number": "Rechnungsnummer",
         "gross": "Brutto",
+        "amount": "Betrag",
+        "date": "Datum",
+        "property": "Objektvorschlag",
+        "confidence": "Sicherheit",
         "status": "Status"
       },
+      "confidenceHint": "niedrigste Feldsicherheit",
       "open": "Prüfen"
     },
     "source": {
@@ -3710,9 +4281,36 @@
       },
       "sourceLabel": {
         "ai": "KI",
+        "xml": "XML (E-Rechnung)",
+        "ai_estimate": "KI-Schätzung, nicht belegt",
         "local": "Plattform",
         "none": "kein Wert"
       },
+      "einvoice": {
+        "xrechnung": "E-Rechnung: XRechnung (XML)",
+        "zugferd": "E-Rechnung: ZUGFeRD/Factur-X (PDF mit XML)"
+      },
+      "einvoiceHint": "Der strukturierte Teil wurde ohne KI gelesen. Formale Gültigkeit belegt keine erbrachte Leistung; sachliche, rechnerische und steuerliche Prüfung bleiben Pflicht.",
+      "conflicts": "Widersprüche zwischen XML und PDF",
+      "conflictLine": "{field}: XML {xml}, {source} {other}.",
+      "conflictSource": {
+        "pdf_text": "PDF-Text",
+        "ai": "KI-Lesung des PDF"
+      },
+      "conflictMissing": "nicht gefunden",
+      "conflictsAcknowledge": "Ich habe die Widersprüche gesichtet. Sie bleiben als Prüfhinweis an der Rechnung; es wird kein Wert automatisch ausgewählt.",
+      "findings": "Prüfhinweise",
+      "readOnly": "nur zur Prüfung, wird nicht übernommen",
+      "xmlLines": "Positionen laut XML ({count})",
+      "xmlLineColumns": {
+        "position": "Pos.",
+        "description": "Bezeichnung",
+        "quantity": "Menge",
+        "net": "Netto",
+        "vat": "USt"
+      },
+      "xmlPayment": "Zahlungsangaben laut XML (IBAN maskiert)",
+      "xmlPaymentNone": "keine",
       "fields": {
         "supplier_name": "Aussteller (laut Beleg)",
         "invoice_number": "Rechnungsnummer",
@@ -3725,6 +4323,8 @@
         "discount_percent": "Skonto in Prozent",
         "discount_until": "Skonto bis",
         "order_reference": "Auftragsreferenz",
+        "recipient_name": "Rechnungsempfänger (laut Beleg)",
+        "section_35a_amount": "Anteil nach § 35a EStG",
         "property_ref": "Objektbezug"
       },
       "warnings": "Hinweise der Plattform",
@@ -3752,6 +4352,75 @@
       "failed": "Die Extraktion ist fehlgeschlagen: {reason}",
       "extracting": "Der Beleg wird ausgewertet. Die Anzeige aktualisiert sich automatisch.",
       "decided": "Über diesen Entwurf wurde bereits entschieden."
+    }
+  },
+  "OwnerStatements": {
+    "title": "Eigentümerabrechnung",
+    "notice": "Entwurf aus dem gebuchten Buchungskreis des Vermieters (Mietverwaltung oder SEV). Einnahmen, Ausgaben, Verwalterhonorar, Auszahlungen, offene Mietforderungen, Kautionen und freie Liquidität werden getrennt ausgewiesen; Kautionen sind keine Liquidität. Die Ausgabe an den Eigentümer ist bis zur Freigabestufe G3 gesperrt.",
+    "ledger": "Buchungskreis",
+    "from": "Von",
+    "to": "Bis",
+    "until": "bis",
+    "create": "Abrechnung anlegen",
+    "calculate": "Berechnen",
+    "empty": "Noch keine Eigentümerabrechnungen.",
+    "kind": "Art",
+    "period": "Zeitraum",
+    "statusLabel": "Status",
+    "detail": "Eigentümerabrechnung",
+    "notCalculated": "Noch nicht berechnet.",
+    "gateNotice": "Ausgabe als PDF und Versand erst mit Freigabestufe G3; die interne Freigabe erteilt eine zweite Person über die API.",
+    "total": "Summe",
+    "operatingResult": "Einnahmen minus Ausgaben minus Honorar",
+    "findings": "Prüfhinweise",
+    "noFindings": "Keine Auffälligkeiten.",
+    "kinds": {
+      "rental_owner": "Mietverwaltung",
+      "sev_owner": "SEV"
+    },
+    "status": {
+      "draft": "Entwurf",
+      "calculated": "berechnet",
+      "internally_approved": "intern freigegeben"
+    },
+    "blocks": {
+      "income": "Einnahmen",
+      "expenses": "Ausgaben nach Kostenarten",
+      "adminFee": "Verwalterhonorar (Entwurf aus Honorareinstellung)",
+      "payouts": "Auszahlungen an den Eigentümer",
+      "receivables": "Offene Mietforderungen zum Stichtag",
+      "deposits": "Kautionen (Fremdgeld)",
+      "liquidity": "Freie Liquidität",
+      "result": "Ergebnis",
+      "sev": "Überleitung WEG-Einzelabrechnung"
+    },
+    "income": {
+      "rent": "Mieten",
+      "advances": "Nebenkostenvorauszahlungen",
+      "other": "Sonstige Erträge"
+    },
+    "fee": {
+      "net": "Netto",
+      "vat": "Umsatzsteuer",
+      "gross": "Brutto"
+    },
+    "deposits": {
+      "held": "Kautionsbestand",
+      "bank": "Guthaben Kautionskonten"
+    },
+    "liquidity": {
+      "bank": "Bank und Kasse",
+      "deposits": "abzüglich Kautionen",
+      "payables": "abzüglich offene Verbindlichkeiten",
+      "free": "Freie Liquidität"
+    },
+    "sev": {
+      "hoaCostShare": "Kostenanteil laut WEG-Abrechnung",
+      "hausgeldResolved": "Hausgeld Soll",
+      "hausgeldPaid": "Hausgeld gezahlt",
+      "hoaResult": "Abrechnungsspitze",
+      "tenantCosts": "Auf Mieter umgelegt",
+      "ownerBurden": "Eigentümerbelastung"
     }
   }
 }

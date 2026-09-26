@@ -6,7 +6,18 @@ Plan: `docs/plans/M14-belegeingang.md`. Specification: docs/MASTER-PROMPT.md 6.4
 
 * Files: `models.py` (`ReceiptDraft`), `masking.py` (masking before the provider call, IBAN
   candidates), `extraction.py` (prepare, materialize, per-field confidence, property match),
-  `schemas.py`, `routers.py` (`/api/v1/receipts`). Migration `0080_receipt_draft`.
+  `einvoice.py` (XRechnung UBL/CII and ZUGFeRD reading, formal findings, conflicts),
+  `schemas.py`, `routers.py` (`/api/v1/receipts`). Migrations `0080_receipt_draft`,
+  `0095_receipt_draft_einvoice`.
+* E-invoices (13.5, PÜ01, D41, D42): a plain XRechnung XML is read deterministically without a
+  provider call (fields with source ``xml``, ``xml_lines``, ``xml_payment`` with masked IBAN);
+  a ZUGFeRD / Factur-X PDF keeps the XML as the proposal and the AI reading of the PDF text as
+  the cross check. Contradictions (XML against PDF text, XML against AI) are listed in
+  ``conflicts``; ``confirm`` refuses them without ``conflicts_acknowledged`` and carries them to
+  the invoice findings. Formal readability closes no review step (D41).
+* § 35a (D44): ``section_35a_amount`` from the model is a proposal only with a stated basis
+  (invoice statement or line items); otherwise source ``ai_estimate``, confidence 0, finding
+  and demand for a documented split. Never written to the invoice by ``confirm``.
 * A draft is never an invoice and never a posting. `confirm` creates an `Invoice` as an open,
   unposted draft (review not started) from the values the reviewer entered, through the same
   `mhvp.ai.imports.apply_invoice` path as the chat proposal; `reject` closes the draft without
@@ -30,5 +41,6 @@ Plan: `docs/plans/M14-belegeingang.md`. Specification: docs/MASTER-PROMPT.md 6.4
   `GET /receipts/drafts/{id}`, `POST .../confirm`, `POST .../reject`. Permissions
   ``accounting:read`` and ``accounting:create``.
 * CRM: `/rechnungen/belegeingang` (`components/receipts/ReceiptIntake.tsx`).
-* Tests: `tests/unit/test_m14_receipt_drafts.py`, `tests/integration/test_m14_receipt_drafts.py`,
+* Tests: `tests/unit/test_m14_receipt_drafts.py`, `tests/unit/test_m14_einvoice.py`,
+  `tests/integration/test_m14_receipt_drafts.py` (D41, D42, D44),
   offline evaluation `tests/ai_eval/extract_invoice/cases.jsonl` (`make ai-eval`).

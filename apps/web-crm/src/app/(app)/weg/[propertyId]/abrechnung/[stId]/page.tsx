@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
 import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
@@ -66,6 +67,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
 </div>
       {data.status === "draft" ? <HoaItemForm target="statement" id={stId} keys={ctx.keys} accounts={costAccounts} /> : null}
       <HoaSteps target="statement" id={stId} status={String(data.status)} legalEntityId={ctx.entity.id} snapshotHash={(data.snapshot_hash as string | null) ?? null} />
+      <AiPlausibilityCard kind="hoa/statements" id={stId} snapshotHash={(data.snapshot_hash as string | null) ?? null} />
       {snap?.units ? (
         <div className="overflow-x-auto">
 <table className="mhvp-table">

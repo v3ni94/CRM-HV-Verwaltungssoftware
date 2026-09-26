@@ -141,8 +141,16 @@ branch; `alembic heads` confirmed a single head after each stage).
 - History depth per bank is not modelled (`docs/integrations/finapi.md`, "wie vom Anbieter
   geliefert"); verify per bank once real contracts exist.
 - `FinApiConnection.consent_valid_until` stays unset until a verified consent-expiry field is
-  confirmed from finAPI (see "Zu prüfen" in `docs/integrations/finapi.md`); the CRM's "Erneut
-  freigeben" action does not yet show a countdown.
+  confirmed from finAPI (see "Zu prüfen" in `docs/integrations/finapi.md`). Task A29
+  (26.09.2026) adds the reminder on top of that field: beat job `mhvp.banking.consent_reminders`
+  (daily 07:05, per tenant) notifies every member with `accounting:update` ten days before the
+  effective expiry (`FinApiConnection.consent_valid_until`, else
+  `BankConnection.consent_valid_until`), once per connection and expiry date (domain event
+  `banking.consent_expiring` as idempotency marker, shared with the 06:00 `sync_all` reminder),
+  marks a past date as `consent_expired`, and the CRM shows a banner with the date and the
+  button "Zustimmung erneuern" (same WebForm flow as "Erneut freigeben",
+  `FinApiConsentBanner.tsx`). Tests: `test_m11_finapi.py` (once per date, far date, tenant
+  separation, read only member not notified), `FinApiConsentBanner.test.tsx`.
 - finAPI contract/licensing and the § 34 ZAG assessment (M11-40 to M11-45) remain open; per
   operator decision 25.09.2026 accounts are configured per tenant and finAPI is confirmed as the
   aggregator, but the underlying finAPI contract is still pending (see

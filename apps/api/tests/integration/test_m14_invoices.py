@@ -329,3 +329,156 @@ def test_invoice_review_release_post_and_d12(client: TestClient, world: World) -
     assert draft["posting_status"] == "unposted"
     second = _ok(client.post(f"{A}/recurring-invoices/{plan['id']}/generate", headers=h), 201)
     assert second["invoice_date"] == "2026-04-01"
+
+
+async def _set_vat_option(settings: Any, tenant_id: Any, ledger_id: str) -> None:
+    """Ledger with a VAT option but without a maintained tax treatment (D45). No endpoint
+    maintains ``ledger.vat_mode`` yet (the tax treatment itself is an open decision, M14-02,
+    M13-03), so the test sets the option directly, like a one-off operator step would."""
+    from uuid import UUID
+
+    from mhvp.accounting.models import Ledger, VatMode
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    engine = create_app_engine(settings)
+    factory = create_session_factory(engine)
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            ledger = await session.get(Ledger, UUID(ledger_id))
+            assert ledger is not None
+            ledger.vat_mode = VatMode.OPTION
+    finally:
+        await engine.dispose()
+
+
+def test_d45_invoice_with_vat_on_option_ledger_is_not_posted(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """D45 (annex D, M14-02): a ledger with a VAT option but no released tax treatment posts
+    no input tax automatically. Expected: an invoice 1.000,00 net + 190,00 VAT passes review
+    and release but posting is refused with problem code MHVP-ACC-0005; posting status,
+    journal and open items stay unchanged. An invoice without VAT (500,00) in the same ledger
+    is posted, so the lock is specific to the tax treatment, not to the ledger."""
+    h = bearer(login(client, world, "m14admin"))
+    acc_user = bearer(login(client, world, "m14acc"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "742", "name": "Optionshaus", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    template = _ok(client.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    asyncio.run(_set_vat_option(_settings(database, redis_url), world.tenant_a, ledger))
+    assert _ok(client.get(f"{A}/ledgers/{ledger}", headers=h))["vat_mode"] == "option"
+    acc = {
+        a["number"]: a["id"] for a in _ok(client.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    provider = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "company",
+                "company_name": f"Optionsdienst {RUN} GmbH",
+                "bank_accounts": [{"iban": KNOWN, "valid_from": "2020-01-01"}],
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    base = {
+        "ledger_id": ledger,
+        "provider_contact_id": provider,
+        "invoice_date": "2026-02-01",
+        "due_date": "2026-02-15",
+        "service_from": "2026-01-01",
+        "service_to": "2026-01-31",
+        "payee_iban": KNOWN,
+        "order_reference": "AUF-2026-45",
+    }
+    taxed = _ok(
+        client.post(
+            f"{A}/invoices",
+            json={
+                **base,
+                "number": "D45-1",
+                "net": "1000.00",
+                "vat": "190.00",
+                "gross": "1190.00",
+                "lines": [
+                    {
+                        "account_id": acc["040100"],
+                        "net": "1000.00",
+                        "vat_percent": "19",
+                        "vat": "190.00",
+                        "text": "Hausmeister Januar mit Steuer",
+                    }
+                ],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _review_all(client, h, taxed["id"])
+    _ok(client.post(f"{A}/invoices/{taxed['id']}/release", headers=acc_user))
+    refused = client.post(f"{A}/invoices/{taxed['id']}/post", headers=h)
+    assert refused.status_code == 409, refused.text
+    problem = refused.json()
+    assert problem["code"] == "MHVP-ACC-0005"
+    assert "M14-02" in problem["detail"]
+    after = _ok(client.get(f"{A}/invoices/{taxed['id']}", headers=h))
+    assert after["posting_status"] == "unposted"
+    assert after["journal_entry_id"] is None
+    assert after["released"] is True  # the lock does not consume the release
+    assert (
+        _ok(
+            client.get(
+                f"{A}/ledgers/{ledger}/open-items", params={"as_of": "2026-12-31"}, headers=h
+            )
+        )
+        == []
+    )
+    assert _ok(client.get(f"{A}/ledgers/{ledger}/entries", headers=h)) == []
+
+    # Without VAT the same ledger posts the gross amount as cost (M14-02, A-027).
+    untaxed = _ok(
+        client.post(
+            f"{A}/invoices",
+            json={
+                **base,
+                "number": "D45-2",
+                "net": "500.00",
+                "vat": "0.00",
+                "gross": "500.00",
+                "lines": [
+                    {
+                        "account_id": acc["040100"],
+                        "net": "500.00",
+                        "vat_percent": "0",
+                        "vat": "0.00",
+                        "text": "Kleinunternehmer ohne Steuer",
+                    }
+                ],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _review_all(client, h, untaxed["id"])
+    _ok(client.post(f"{A}/invoices/{untaxed['id']}/release", headers=acc_user))
+    posted = _ok(client.post(f"{A}/invoices/{untaxed['id']}/post", headers=h))
+    assert posted["posting_status"] == "posted"
+    items = _ok(
+        client.get(f"{A}/ledgers/{ledger}/open-items", params={"as_of": "2026-12-31"}, headers=h)
+    )
+    assert [(i["kind"], i["remaining"]) for i in items] == [("payable", "500.00")]
+    assert _ok(client.get(f"{A}/ledgers/{ledger}/checks", headers=h))["ok"] is True

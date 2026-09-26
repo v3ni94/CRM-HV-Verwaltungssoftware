@@ -48,15 +48,35 @@ const LISTING: Listing = {
   notes: null,
 };
 
+/** The image section (ListingImages) loads `.../images` on mount; the listing endpoints answer
+ * with `listing`. */
+function mockFetch(listing: Listing) {
+  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url = String(input);
+    return url.endsWith("/images") ? jsonResponse([]) : jsonResponse(listing);
+  });
+}
+
+function patchBody(fetchMock: ReturnType<typeof mockFetch>) {
+  const call = fetchMock.mock.calls.find((c) => c[1]?.method === "PATCH");
+  return JSON.parse(call?.[1]?.body as string);
+}
+
 describe("ListingDetail", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("activates the listing", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ ...LISTING, status: "active" }));
+    const fetchMock = mockFetch({ ...LISTING, status: "active" });
     renderIntl(<ListingDetail listing={LISTING} />);
     await userEvent.click(screen.getByText("Aktivieren"));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
-    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ status: "active" });
+    expect(patchBody(fetchMock)).toEqual({ status: "active" });
+  });
+
+  it("renders the image section of the listing", async () => {
+    mockFetch(LISTING);
+    renderIntl(<ListingDetail listing={LISTING} />);
+    expect(await screen.findByText("Noch keine Bilder verknüpft.")).toBeInTheDocument();
   });
 
   it("shows the FLOWFACT placeholder status", () => {
@@ -72,11 +92,11 @@ describe("ListingDetail", () => {
   });
 
   it("saves the form with features and energy fields", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse(LISTING));
+    const fetchMock = mockFetch(LISTING);
     renderIntl(<ListingDetail listing={LISTING} />);
     await userEvent.click(screen.getByText("Speichern"));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
-    const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string);
+    const body = patchBody(fetchMock);
     expect(body).toMatchObject({
       object_type: "wohnung",
       address_release: "vollstaendig",

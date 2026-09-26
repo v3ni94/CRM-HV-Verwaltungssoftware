@@ -6,6 +6,19 @@ Einstellungen bündelt alles, was den Mandanten und seinen Betrieb betrifft: Ben
 Rollen, Postfächer, DMS- und Google-Verbindung, SLA, KI, Immoware24-Anbindung, Bank und
 Ticketvorlagen.
 
+## Rechtsträger der verwaltenden Gesellschaft
+
+Unter Einstellungen, Mandant zeigt die Karte "Rechtsträger der verwaltenden Gesellschaft",
+ob die verwaltende Gesellschaft (zum Beispiel die Hausverwaltung Müller GmbH) einen eigenen
+Rechtsträger mit Buchungskreis besitzt (Status eingerichtet oder nicht eingerichtet). Die
+Schaltfläche "Rechtsträger und Buchungskreis einrichten" legt beides einmalig an: den Namen
+aus den Firmendaten des Mandanten, den Buchungskreis mit den Standardkonten der Kontenvorlage.
+Ein erneuter Klick ändert nichts. Der eigene Buchungskreis nimmt eigene Forderungen der
+Verwaltung auf (Verwalterhonorar, Rechnungsentwürfe über Mahngebühren an Gemeinschaft oder
+Vermieter) und bleibt von den Buchungskreisen der verwalteten Gemeinschaften und Eigentümer
+getrennt. Die Einrichtung erfordert das Recht Mandanteneinstellungen ändern; Buchungen in
+diesem Buchungskreis bleiben wie überall hinter G1.
+
 ## Benutzer und Kompetenzen
 
 Unter Benutzer und Rollen werden Konten angelegt, Rollen zugewiesen und Kompetenzen
@@ -46,6 +59,11 @@ automatisch; ohne hinterlegten OAuth-Client (Einstellungen, Postfächer) ist das
 möglich. Alternativ lassen sich Client-ID, Client-Secret und Refresh-Token manuell
 eintragen (Manuell hinterlegen).
 
+Für Paperless zusätzlich: das Webhook-Geheimnis für den Post-Consume-Webhook (mindestens
+16 Zeichen, nur schreibbar, wird nie wieder angezeigt; leer lassen, um es zu behalten) und
+der Schalter Belegeingang aus Paperless automatisch (Standard aus). Ohne Geheimnis weist
+der Endpunkt jede Meldung ab. Details im Kapitel Belegeingang.
+
 ## SLA mit Vorschlagswerten
 
 Unter SLA und Bereitschaft: Regeln je Priorität (Reaktions- und Lösungszeit,
@@ -69,7 +87,21 @@ Unter KI werden Anbieter (Anthropic oder OpenAI), Modelle je Stufe, Monatsbudget
 Datenschutzangaben (Auftragsverarbeitungsvertrag, Trainings-Opt-out) gepflegt. Jede
 Änderung hebt eine bestehende Freigabe auf; die Freigabe muss eine andere Person
 erteilen als die, die zuletzt gespeichert hat (Vier-Augen-Prinzip). Ist das
-Monatsbudget ausgeschöpft, werden neue KI-Aufträge gesperrt. Die KI-Wissensbasis (Kapitel
+Monatsbudget ausgeschöpft, werden neue KI-Aufträge gesperrt.
+
+Je Stufe (klein, groß) lässt sich zusätzlich die Ausgabegrenze des Modells laut Anbieter
+eintragen (Token je Antwort). Bleibt das Feld leer, gilt der Standard 16000. Der Wert wird bei
+jedem Aufruf als Obergrenze mitgegeben; ein zu hoher Wert wird vom Anbieter abgewiesen, ein zu
+niedriger führt bei umfangreichen Listen zu abgeschnittenen Antworten, die die Plattform durch
+Aufteilen der Daten abfängt.
+
+Mit "Verbindung testen" schickt die Plattform je eingerichteter Stufe einen Minimalprompt an den
+Anbieter und zeigt je Stufe Status, Modellname, Antwortzeit und bei Fehlern die Meldung des
+Anbieters. Der Test benötigt einen hinterlegten Schlüssel und die gespeicherte Konfiguration,
+setzt aber keine Freigabe voraus, erteilt keine und hebt keine auf. Die minimalen Kosten werden
+dem Monatsbudget belastet und erscheinen im Verbrauch. Die Embedding-Stufe wird nicht getestet.
+
+Die KI-Wissensbasis (Kapitel
 Mail, Abschnitt Vorbereitung) wird je Mandant und optional je Objekt unter KI,
 Wissensbasis gepflegt: Ablageregeln, Arbeitsweisen, Fakten und aus Korrekturen gelernte
 Einträge, filterbar je Objekt.

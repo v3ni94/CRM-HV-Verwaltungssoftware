@@ -35,6 +35,9 @@ class PaperlessDocument:
     tags: list[str]
     page_count: int | None
     original_file_name: str | None
+    # OCR text as Paperless holds it (A42 intake pipeline reuses it instead of a second OCR);
+    # None when the listing was requested without it.
+    content: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +132,7 @@ class PaperlessSearch:
             or [name(t) or "" for t in (raw.get("tags") or []) if isinstance(t, dict)],
             page_count=raw.get("page_count"),
             original_file_name=raw.get("original_file_name"),
+            content=raw.get("content") if isinstance(raw.get("content"), str) else None,
         )
 
     def _page(self, payload: dict[str, Any]) -> PaperlessPage:
@@ -161,6 +165,23 @@ class PaperlessSearch:
             "page_size": page_size,
             "ordering": "-created",
         }
+        return self._page(await self._get("/api/documents/", params))
+
+    async def list_added_since(
+        self, added_after: str | None, page: int = 1, page_size: int = 50
+    ) -> PaperlessPage:
+        """Documents added to Paperless after ``added_after`` (ISO 8601, exclusive), oldest
+        first, with their OCR ``content``; the inbox job (A42) keeps the last ``added`` value
+        of a tenant as its watermark. Without a watermark the whole archive is paged."""
+        params: dict[str, Any] = {
+            "page": page,
+            "page_size": page_size,
+            "ordering": "added",
+            "fields": "id,title,created,added,correspondent,document_type,tags,page_count,"
+            "original_file_name,content",
+        }
+        if added_after:
+            params["added__gt"] = added_after
         return self._page(await self._get("/api/documents/", params))
 
     async def fetch_file(self, document_id: int, kind: FileKind) -> PaperlessFile:

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ImportResult } from "@/components/ai/ImportResult";
+import { UserMappingTable, type UserMappingRow } from "@/components/objektakte/UserMappingTable";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -29,7 +30,12 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ i
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
       ) : (
-        <ImportResult importRun={data} canUndo={me.data?.permissions.includes("ai:delete") ?? false} />
+        <>
+          <ImportResult importRun={data} canUndo={me.data?.permissions.includes("ai:delete") ?? false} />
+          {data.source === "objektakte" && Array.isArray(data.summary?.user_mapping) ? (
+            <UserMappingTable rows={data.summary.user_mapping as UserMappingRow[]} />
+          ) : null}
+        </>
       )}
     </div>
   );

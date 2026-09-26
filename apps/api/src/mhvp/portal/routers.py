@@ -9,6 +9,7 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
+from urllib.parse import quote as url_quote
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import Response
@@ -26,7 +27,7 @@ from mhvp.core.auth.principal import (
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.portal import access
+from mhvp.portal import access, read_receipts
 from mhvp.portal.models import ChangeRequest, PortalAccount
 from mhvp.workspace.services import local_today
 
@@ -35,6 +36,11 @@ admin = APIRouter(prefix="/portal-admin", tags=["Portal Verwaltung"])
 MANAGE = require_permission("contacts:update")
 INVITE_DAYS = 14
 KINDS = ("address", "phone", "email", "bank_account", "meter_reading", "invoice_submission")
+# A55: the portal accepts photos and PDF only (damage report, quote, invoice); other types of
+# the general document pipeline (text, CSV, XML) stay CRM side.
+PORTAL_UPLOAD_MIME_TYPES = frozenset(
+    {"image/jpeg", "image/png", "image/tiff", "image/heic", "application/pdf"}
+)
 
 
 class _In(BaseModel):
@@ -56,6 +62,9 @@ class PortalTicketIn(_In):
     title: str = Field(min_length=3, max_length=300)
     description: str = Field(min_length=3, max_length=20000)
     unit_id: uuid.UUID | None = None
+    # A55: photos or PDFs uploaded by this portal account via POST /portal/uploads; linked to
+    # the ticket as attachments (entity_type "ticket"). Never a document of someone else.
+    document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=10)
 
 
 class PortalCommentIn(_In):
@@ -432,10 +441,44 @@ async def documents(request: Request, ctx: Portal = Depends(portal_user)) -> lis
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
         docs = await access.visible_documents(session, account, local_today())
+        notes = await access.redaction_notes(session, {d.id for d in docs})
         return [
-            {"id": d.id, "title": d.title, "filename": d.filename, "created_at": d.created_at}
+            {
+                "id": d.id,
+                "title": d.title,
+                "filename": d.filename,
+                "created_at": d.created_at,
+                # E06, D31: a released version of a receipt carries the redaction note.
+                "redaction_note": notes.get(d.id),
+            }
             for d in docs
         ]
+
+
+@router.get("/documents/{document_id}", summary="Dokument öffnen (Abruf wird als Indiz vermerkt)")
+async def open_document(
+    document_id: uuid.UUID, request: Request, ctx: Portal = Depends(portal_user)
+) -> dict[str, Any]:
+    """Metadata of one released document. Opening writes a read receipt of kind "opened"
+    (11.3, D34): an indication only, no delivery and no receipt; the list writes nothing."""
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        docs = {d.id: d for d in await access.visible_documents(session, account, local_today())}
+        document = docs.get(document_id)
+        if document is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)  # no hint whether it exists
+        note = (await access.redaction_notes(session, {document.id})).get(document.id)
+        await read_receipts.record(session, account, document.id, "opened")
+        return {
+            "id": document.id,
+            "title": document.title,
+            "filename": document.filename,
+            "mime_type": document.mime_type,
+            "size": document.size,
+            "created_at": document.created_at,
+            "redaction_note": note,
+            "read_receipt_note": read_receipts.LEGAL_NOTE,
+        }
 
 
 @router.get("/documents/{document_id}/download", summary="Dokument herunterladen (gleiche Prüfung)")
@@ -451,6 +494,9 @@ async def download(
         if document is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)  # no hint whether it exists
         data = BlobStore(request.app.state.settings).get(document.storage_ref)
+        note = (await access.redaction_notes(session, {document.id})).get(document.id)
+        # D34: the download is recorded as an indication only (no delivery, no receipt).
+        await read_receipts.record(session, account, document.id, "downloaded")
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -463,7 +509,11 @@ async def download(
         return Response(
             content=data,
             media_type=document.mime_type,
-            headers={"Content-Disposition": f'attachment; filename="{document.filename}"'},
+            headers={
+                "Content-Disposition": f'attachment; filename="{document.filename}"',
+                # Header values are latin-1 on the wire: percent encoded UTF-8 (RFC 8187 style).
+                **({"X-Redaction-Note": url_quote(note)} if note else {}),
+            },
         )
 
 
@@ -478,6 +528,11 @@ async def upload(
     principal, account = ctx
     data = await file.read()
     mime = file.content_type or "application/octet-stream"
+    if mime not in PORTAL_UPLOAD_MIME_TYPES:
+        raise ProblemError(
+            ErrorCodes.UPLOAD_REJECTED,
+            detail="Im Portal sind nur Fotos (JPEG, PNG, TIFF, HEIC) und PDF zulässig.",
+        )
     check_upload(mime, data, request.app.state.settings.document_max_bytes)
     async with tenant_tx(request, principal) as session:
         doc = await store_document(
@@ -502,12 +557,25 @@ async def create_ticket(
     body: PortalTicketIn, request: Request, ctx: Portal = Depends(portal_user)
 ) -> dict[str, Any]:
     from mhvp.core.numbering import next_number
+    from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRole
     from mhvp.properties.models import Unit
     from mhvp.tickets.models import Priority, Ticket, TicketSource
     from mhvp.tickets.routers import SLA_HOURS
 
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
+        # A55: only documents this account uploaded itself may be attached; anything else is
+        # answered as not found so the portal never learns whether a foreign id exists.
+        attachments: list[Document] = []
+        for document_id in dict.fromkeys(body.document_ids):
+            doc = await session.get(Document, document_id)
+            if (
+                doc is None
+                or doc.created_by != account.user_id
+                or doc.source is not DocumentSource.PORTAL
+            ):
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Anhang nicht gefunden.")
+            attachments.append(doc)
         scopes = await _scopes(session, account)
         property_id = None
         if body.unit_id is not None:
@@ -531,7 +599,47 @@ async def create_ticket(
         )
         session.add(ticket)
         await session.flush()
-        return {"id": ticket.id, "number": ticket.number, "status": ticket.status.value}
+        for doc in attachments:
+            session.add(
+                DocumentLink(
+                    tenant_id=principal.tenant_id,
+                    document_id=doc.id,
+                    entity_type="ticket",
+                    entity_id=ticket.id,
+                    role=LinkRole.ATTACHMENT,
+                )
+            )
+        await session.flush()
+        return {
+            "id": ticket.id,
+            "number": ticket.number,
+            "status": ticket.status.value,
+            "attachments": [_attachment_out(d) for d in attachments],
+        }
+
+
+def _attachment_out(doc: Any) -> dict[str, Any]:
+    return {"id": doc.id, "title": doc.title, "filename": doc.filename, "mime_type": doc.mime_type}
+
+
+async def ticket_attachments(session: AsyncSession, ticket_id: uuid.UUID) -> list[dict[str, Any]]:
+    """Documents linked to a ticket as attachments (A55), oldest first. Shared with the CRM
+    ticket detail (mhvp.tickets.routers.get_ticket)."""
+    from mhvp.documents.models import Document, DocumentLink, LinkRole
+
+    rows = (
+        await session.scalars(
+            select(Document)
+            .join(DocumentLink, DocumentLink.document_id == Document.id)
+            .where(
+                DocumentLink.entity_type == "ticket",
+                DocumentLink.entity_id == ticket_id,
+                DocumentLink.role == LinkRole.ATTACHMENT,
+            )
+            .order_by(DocumentLink.created_at)
+        )
+    ).all()
+    return [_attachment_out(d) for d in rows]
 
 
 @router.get("/tickets", summary="Eigene Meldungen mit Verlauf")
@@ -563,6 +671,7 @@ async def tickets(request: Request, ctx: Portal = Depends(portal_user)) -> list[
                     "title": t.title,
                     "status": t.status.value,
                     "comments": [c.body for c in comments],
+                    "attachments": await ticket_attachments(session, t.id),
                 }
             )
         return out

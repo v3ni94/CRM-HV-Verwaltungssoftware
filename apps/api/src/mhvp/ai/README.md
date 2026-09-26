@@ -82,3 +82,44 @@ values masked (`mhvp.objektakte.masking.mask_identifiers`); the result is an `Ai
 Every decision writes an `AiExample` of the tenant, which `gateway.examples` hands to later runs
 as few-shot context. IBANs are never part of the schema nor of an applied change.
 
+
+## Connection test, output limit per tier, pasted contacts (26.09.2026)
+
+- `POST /ai/providers/{provider}/test` (`tenant_settings:update`, `connection_test.py`): one
+  minimal `summarize` prompt per configured tier (small, large; never embedding) with the stored
+  key, no retries and no fallback. Needs no four eyes release and never grants or withdraws one;
+  each call is recorded as an `AiTaskRun` (`input_ref.connection_test = true`) so the monthly
+  budget is charged. Returns status, model, duration and the provider's error text per tier.
+- `TierModel.max_output_tokens` (JSONB in `ai_provider_config.models`, no schema change): the
+  provider's published output limit per tier, sent as `max_tokens`; unset means
+  `gateway.DEFAULT_MAX_OUTPUT_TOKENS` (16000). `Route.max_output_tokens` carries it per run.
+- `extract_contacts` without documents: the chat message itself is the only chunk
+  (`gateway.NO_DOCUMENT_HINT`); the widget offers this when contact data is pasted or the user
+  asks to create contacts without a file. The result stays a proposal (rule 0.1.6).
+
+## KI-Plausibilität eines Abrechnungsentwurfs (A35, 26.09.2026)
+
+Task `check_statement` (`CheckStatementResult`, tier `large`, prompt
+`prompts/check_statement/v1.md`) checks a calculated operating cost statement (M17) or HOA
+statement (M24) and answers with findings only: field, description, severity (`low`, `medium`,
+`high`), reference to a position (`P1`, ...) or a unit, overall assessment, summary. No amounts,
+no corrections, no decision (rule 0.1.6). Input assembly, masking (no ids, no IBAN, no titled
+names, parties as unit numbers) and result normalisation live in `mhvp.billing.ai_check`;
+`jobs.run_and_propose` stores a succeeded run as an `AiProposal` of entity type
+`statement_check`. Endpoints: `POST`/`GET` `/statements/{id}/ai-check` and
+`/hoa/statements/{id}/ai-check`. Evaluation: `tests/ai_eval/check_statement/cases.jsonl`
+(24 cases), scorer `_check_statement` in `evaluate.py`. Plan: `docs/plans/M17.md`.
+
+## Offline-Evaluation der Vorschlagsaufgaben (A46, 26.09.2026)
+
+`tests/ai_eval/<task>/cases.jsonl` holds recorded answers with hand written expectations for
+`classify_email` (22 cases), `draft_reply` (21), `map_columns` (24) and
+`contact_master_data_change` (26, M7-08). Each set has border cases (null or empty fields,
+limits, ambiguous rows, low confidence) and at least one prompt injection case. The scorers in
+`evaluate.py` measure the platform's post-processing on the recorded answer, never the model:
+`_classify_email` runs `communication.suggest.merge_suggestion` over the keyword fallback,
+`_draft_reply` runs `communication.suggest.playbook_fields`, `_map_columns` runs
+`table_mapper.mapping_usable` and `apply_mapping` on the case's small table, and
+`_contact_change` runs the deterministic stage and `tickets.proposals.merge`, title and greeting.
+These scorers take the case input as well (`INPUT_SCORERS`). `propose_posting` has no schema
+yet and no set (docs/OPEN_QUESTIONS.md M7-09). Test: `tests/unit/test_a46_ai_eval.py`.

@@ -15,6 +15,7 @@ export type BillingSettings = {
   vat_id_masked: string | null;
   tax_number_masked: string | null;
   leitweg_id: string | null;
+  payee_iban_masked: string | null;
   kleinunternehmer_note: string | null;
   datev_consultant_number: string | null;
   datev_client_number: string | null;
@@ -25,8 +26,11 @@ export type BillingSettings = {
 };
 
 type Patch = Partial<
-  Omit<BillingSettings, "tenant_id" | "vat_id_masked" | "tax_number_masked" | "version">
-> & { vat_id?: string; tax_number?: string };
+  Omit<
+    BillingSettings,
+    "tenant_id" | "vat_id_masked" | "tax_number_masked" | "payee_iban_masked" | "version"
+  >
+> & { vat_id?: string; tax_number?: string; payee_iban?: string };
 
 const TEXT_FIELDS = [
   "invoice_prefix",
@@ -116,6 +120,16 @@ export function BillingSettingsForm({
           placeholder={values.tax_number_masked ?? undefined}
           disabled={!canUpdate}
           onChange={(e) => set("tax_number", e.target.value)}
+        />
+        <span className="text-xs text-muted">{t("secretHint")}</span>
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className={ui.label}>{t("field.payee_iban")}</span>
+        <input
+          className={ui.input}
+          placeholder={values.payee_iban_masked ?? undefined}
+          disabled={!canUpdate}
+          onChange={(e) => set("payee_iban", e.target.value)}
         />
         <span className="text-xs text-muted">{t("secretHint")}</span>
       </label>

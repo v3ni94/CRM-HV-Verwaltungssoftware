@@ -133,7 +133,7 @@ def _debtor_contract(c: TestClient, h: dict[str, str], prop: str, unit_no: str) 
         c.post("/api/v1/parties", json={"members": [{"contact_id": contact["id"]}]}, headers=h),
         201,
     )
-    contract = _ok(
+    contract: dict[str, Any] = _ok(
         c.post(
             "/api/v1/contracts",
             json={
@@ -480,5 +480,229 @@ def test_letter_pdf_draft_and_send_locked(
     other = bearer(login(gated, world, "dlother"))
     assert (
         gated.post(f"{A}/dunning-cases/{case['id']}/letter-preview", headers=other).status_code
+        == 404
+    )
+
+
+def _pdf_text(response: Any) -> str:
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"] == "application/pdf"
+    return "\n".join(page.extract_text() for page in PdfReader(io.BytesIO(response.content)).pages)
+
+
+def test_letter_text_modules_and_claim_table(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """A33: every level has a neutral standard text with the Forderungsaufstellung (Posten,
+    Fälligkeit, Betrag, Summe); ``letter_text`` per level replaces the request paragraph and
+    may use placeholders. ``{frist}`` only yields a date with ``payment_days``,
+    ``{bankverbindung}`` falls back to "das Ihnen bekannte Konto" (M16-12, M16-13); unknown
+    placeholders are refused when saving."""
+    _, gated = clients
+    gh = bearer(login(gated, world, "dladmin"))
+    _ok(gated.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=gh))
+
+    # Unknown placeholder: refused at save time, nothing is stored.
+    bad = gated.put(
+        f"{A}/dunning-settings",
+        json={
+            "levels": [
+                {"level": 1, "min_days_overdue": 5, "text": "Erinnerung", "letter_text": "{frsit}"}
+            ],
+            "interest_enabled": False,
+        },
+        headers=gh,
+    )
+    assert bad.status_code == 422
+    assert "frsit" in bad.json()["detail"]
+
+    # Text preview with sample items: standard text of level 2 (1. Mahnung), no fee and no
+    # deadline without values, table with the two sample items and the total.
+    preview = _ok(gated.post(f"{A}/dunning-settings/letter-preview", json={"level": 2}, headers=gh))
+    assert preview["hinweis"] == "Entwurf, kein Versand"
+    assert preview["table"]["header"] == ["Posten", "Fälligkeit", "Betrag"]
+    assert preview["table"]["rows"][-1] == ["Summe", "", "700,00 EUR"]
+    assert preview["table"]["rows"][0] == ["Hausgeld Februar 2026", "03.02.2026", "350,00 EUR"]
+    assert "trotz unserer Zahlungserinnerung" in preview["paragraphs"][1]
+    request_paragraph = preview["paragraphs"][2]
+    assert request_paragraph == (
+        "Bitte überweisen Sie den Gesamtbetrag von 700,00 EUR auf das Ihnen bekannte Konto."
+    )
+    assert "Verzug" not in " ".join(preview["paragraphs"])
+    assert "frist" in preview["placeholders"]
+    assert "bankverbindung" in preview["placeholders"]
+
+    # Own text with placeholders, a fee and a deadline of 10 days from the given letter date.
+    custom = _ok(
+        gated.post(
+            f"{A}/dunning-settings/letter-preview",
+            json={
+                "level": 3,
+                "text": "2. Mahnung Objekt",
+                "letter_text": "Zahlen Sie {gesamtbetrag} {frist} {bankverbindung} ({stufe}).",
+                "fee_amount": "7.50",
+                "payment_days": 10,
+                "letter_date": "2026-03-01",
+            },
+            headers=gh,
+        )
+    )
+    assert custom["paragraphs"][2] == (
+        "Zahlen Sie 707,50 EUR bis zum 11.03.2026 auf das Ihnen bekannte Konto (2. Mahnung Objekt)."
+    )
+    assert ["Mahngebühr laut hinterlegter Mahnstufe", "", "7,50 EUR"] in custom["table"]["rows"]
+    assert custom["table"]["rows"][-1] == ["Summe", "", "707,50 EUR"]
+    assert (
+        gated.post(
+            f"{A}/dunning-settings/letter-preview",
+            json={"level": 1, "letter_text": "{konto}"},
+            headers=gh,
+        ).status_code
+        == 422
+    )
+
+    # A real case: the stored letter_text of the level is used in the PDF, together with
+    # the claim table.
+    prop, ledger = _hoa_property(gated, gh, "774", "Mahnhaus Bausteine")
+    contract = _debtor_contract(gated, gh, prop, "01")
+    _ok(gated.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=gh))
+    run = _ok(
+        gated.post(f"{A}/receivable-runs", json={"period_month": "2026-03-01"}, headers=gh), 201
+    )
+    _ok(gated.post(f"{A}/receivable-runs/{run['id']}/post", headers=gh))
+    _ok(
+        gated.put(
+            f"{A}/dunning-settings",
+            json={
+                "levels": [
+                    {
+                        "level": 1,
+                        "min_days_overdue": 5,
+                        "text": "Zahlungserinnerung",
+                        "letter_text": (
+                            "Bitte gleichen Sie {gesamtbetrag} {frist} {bankverbindung} aus."
+                        ),
+                    }
+                ],
+                "threshold_amount": "20.00",
+                "interest_enabled": False,
+            },
+            headers=gh,
+        )
+    )
+    preview_run = _ok(
+        gated.post(f"{A}/dunning-runs", json={"run_date": "2026-03-20"}, headers=gh), 201
+    )
+    case = next(c for c in preview_run["cases"] if c["contract_id"] == contract["id"])
+    text = _pdf_text(
+        gated.post(
+            f"{A}/dunning-cases/{case['id']}/letter-preview",
+            json={"letter_date": "2026-03-21"},
+            headers=gh,
+        )
+    )
+    assert "Posten" in text
+    assert "Fälligkeit" in text
+    assert "Summe" in text
+    assert "03.03.2026" in text  # due date of the March receivable (due day 3)
+    assert "350,00 EUR" in text
+    assert "Bitte gleichen Sie 350,00 EUR auf das Ihnen bekannte Konto aus." in text.replace(
+        "\n", " "
+    )
+    assert "bis zum" not in text  # no payment_days configured, hence no date
+    assert "Verzug" not in text
+    assert "Entwurf" in text
+
+
+def test_mahnbescheid_pdf_export(clients: tuple[TestClient, TestClient], world: World) -> None:
+    """A31 (M16-07): the Mahnbescheid preparation is exported as a PDF on the tenant
+    letterhead with the notice "Vorbereitung, Prüfung durch Rechtsanwalt erforderlich, kein
+    Antrag", the claim table (Hauptforderung per item with due date, fee only once posted as
+    a draft receivable, interest never), debtor, creditor and the dunning history. The export
+    needs the preparation record first; the filed PDF is a generated document."""
+    _, gated = clients
+    gh = bearer(login(gated, world, "dladmin"))
+    acc_user = bearer(login(gated, world, "dlacc"))
+    _ok(gated.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=gh))
+    prop, ledger = _hoa_property(gated, gh, "775", "Mahnhaus Bescheid")
+    contract = _debtor_contract(gated, gh, prop, "01")
+    _ok(gated.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=gh))
+    run = _ok(
+        gated.post(f"{A}/receivable-runs", json={"period_month": "2026-03-01"}, headers=gh), 201
+    )
+    _ok(gated.post(f"{A}/receivable-runs/{run['id']}/post", headers=gh))
+    _ok(
+        gated.put(
+            f"{A}/dunning-settings",
+            json={
+                "levels": [
+                    {"level": 1, "min_days_overdue": 5, "text": "Mahnung", "fee_amount": "5.00"}
+                ],
+                "threshold_amount": "20.00",
+                "fee_from_level": 1,
+                "interest_enabled": False,
+            },
+            headers=gh,
+        )
+    )
+    preview = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-03-20"}, headers=gh), 201)
+    case = next(c for c in preview["cases"] if c["contract_id"] == contract["id"])
+    assert case["fee_amount"] == "5.00"
+
+    # No export before the preparation record exists.
+    early = gated.post(f"{A}/dunning-cases/{case['id']}/mahnbescheid-preview", headers=gh)
+    assert early.status_code == 409
+
+    # Approval posts the fee as a draft receivable; only then it counts as booked.
+    _ok(gated.post(f"{A}/dunning-runs/{preview['id']}/approve", headers=acc_user))
+    _ok(
+        gated.post(
+            f"{A}/dunning-cases/{case['id']}/mark-sent", json={"channel": "post"}, headers=gh
+        )
+    )
+    prep = _ok(
+        gated.post(f"{A}/dunning-cases/{case['id']}/mahnbescheid-vorbereitung", headers=gh), 201
+    )
+
+    text = _pdf_text(
+        gated.post(
+            f"{A}/dunning-cases/{case['id']}/mahnbescheid-preview",
+            json={"letter_date": "2026-05-04"},
+            headers=gh,
+        )
+    )
+    flat = text.replace("\n", " ")
+    assert "Vorbereitung, Prüfung durch Rechtsanwalt erforderlich, kein Antrag" in flat
+    assert "Hausverwaltung Müller GmbH" in flat  # letterhead of the tenant
+    assert "Gläubiger (Antragsteller)" in flat
+    assert "Mahnhaus Bescheid" in flat
+    assert f"Schuldner (Antragsgegner): Schuldner{RUN}, Erika" in flat
+    assert "Rheinpromenade 1" in flat
+    assert "Posten" in flat
+    assert "Fälligkeit" in flat
+    assert "03.03.2026" in flat
+    assert "350,00 EUR" in flat
+    assert "Mahngebühr laut hinterlegter Mahnstufe" in flat
+    assert "5,00 EUR" in flat
+    assert "355,00 EUR" in flat  # Summe: main claim plus the posted fee
+    assert "Verzugszinsen sind nicht aufgenommen" in flat
+    assert "Mahnhistorie" in flat
+    assert "20.03.2026" in flat
+    assert "versandt" in flat
+    assert prep["aktenzeichen_intern"] in flat
+    assert "Verzug wird nicht behauptet" in flat
+
+    stored = _ok(gated.post(f"{A}/dunning-cases/{case['id']}/mahnbescheid", headers=gh), 201)
+    assert stored["document_id"] is not None
+    assert stored["status"] == "in_vorbereitung"
+    document = _ok(gated.get(f"/api/v1/documents/{stored['document_id']}", headers=gh))
+    assert document["mime_type"] == "application/pdf"
+    assert "kein Antrag" in document["title"]
+
+    other = bearer(login(gated, world, "dlother"))
+    assert (
+        gated.post(
+            f"{A}/dunning-cases/{case['id']}/mahnbescheid-preview", headers=other
+        ).status_code
         == 404
     )

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { AiChatWidget, pageContext, RUN_TIMEOUT_MS } from "./AiChatWidget";
+import { AiChatWidget, looksLikeContactData, looksLikeImportIntent, pageContext, RUN_TIMEOUT_MS } from "./AiChatWidget";
 
 let pathname = "/kontakte";
 vi.mock("next/navigation", () => ({
@@ -304,5 +304,96 @@ describe("AiChatWidget", () => {
     expect(
       await screen.findByText(/Dafür brauche ich eine Datei/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("AiChatWidget free text contacts", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const conversationAndRun = (fetchMock: ReturnType<typeof vi.fn>, sent: { body?: string }[]) => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/bff/ai/conversations") && method === "POST")
+        return jsonResponse({ id: CONV, title: "x", context_type: "global", context_id: null, created_at: "2026-09-24T10:00:00Z", messages: [] }, 201);
+      if (url.endsWith(`/api/bff/ai/conversations/${CONV}/messages`)) {
+        sent.push({ body: init?.body as string });
+        return jsonResponse({ id: RUN, status: "queued", task: "extract_contacts" }, 202);
+      }
+      if (url.endsWith(`/api/bff/ai/runs/${RUN}`))
+        return jsonResponse({ id: RUN, status: "succeeded", task: "extract_contacts", proposal_id: PROPOSAL, output: {} });
+      if (url.endsWith(`/api/bff/ai/proposals/${PROPOSAL}`))
+        return jsonResponse({
+          id: PROPOSAL,
+          task_run_id: RUN,
+          entity_type: "contacts",
+          context_id: null,
+          decision: "pending",
+          decided_by: null,
+          decided_at: null,
+          import_run_id: null,
+          proposed: { questions: [], rows: [row(0, "new")] },
+        });
+      return jsonResponse({}, 404);
+    });
+  };
+
+  it("recognises pasted contact data and offers the import; nothing runs before the yes", () => {
+    expect(looksLikeContactData("Erika Muster, Hauptstraße 5, 40213 Düsseldorf, erika@example.org")).toBe(true);
+    expect(looksLikeContactData("Wie hoch ist die Miete?")).toBe(false);
+    expect(looksLikeImportIntent("Bitte diese Mieter anlegen")).toBe(true);
+    expect(looksLikeImportIntent("Wann ist die Versammlung?")).toBe(false);
+  });
+
+  it("starts the extraction from the pasted text without a file and keeps the confirmation", async () => {
+    pathname = "/start";
+    const sent: { body?: string }[] = [];
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    conversationAndRun(fetchMock as unknown as ReturnType<typeof vi.fn>, sent);
+
+    renderIntl(<AiChatWidget />);
+    await userEvent.click(screen.getByRole("button", { name: "KI-Assistent öffnen" }));
+    const pasted = "Erika Muster, Hauptstraße 5, 40213 Düsseldorf, erika@example.org";
+    await userEvent.type(screen.getByLabelText("Nachricht"), `${pasted}{enter}`);
+    expect(await screen.findByText(/Das sieht nach Kontaktdaten aus/)).toBeInTheDocument();
+    expect(sent).toHaveLength(0); // nothing sent before the user says yes
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/api/bff/documents"))).toBe(false);
+
+    await userEvent.click(screen.getByRole("button", { name: "Ja, als Kontakte anlegen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Eigentümer" }));
+    await waitFor(() => expect(screen.getByText(/Ich habe 1 Kontakte aus den Daten gelesen/)).toBeInTheDocument(), { timeout: 3000 });
+    expect(sent).toHaveLength(1);
+    const body = JSON.parse(sent[0]?.body as string);
+    expect(body).toMatchObject({ task: "extract_contacts", document_ids: [] });
+    expect(body.content).toContain("Eigentümer");
+    expect(body.content).toContain(pasted);
+    // No upload happened and the import still waits for the explicit yes.
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/api/bff/documents"))).toBe(false);
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/apply"))).toBe(false);
+    expect(screen.getByRole("button", { name: "Ja, importieren" })).toBeInTheDocument();
+  });
+
+  it("offers file or pasted text on an import wish and reads pasted text in the import flow", async () => {
+    pathname = "/kontakte";
+    const sent: { body?: string }[] = [];
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    conversationAndRun(fetchMock as unknown as ReturnType<typeof vi.fn>, sent);
+
+    renderIntl(<AiChatWidget />);
+    await userEvent.click(screen.getByRole("button", { name: "KI-Assistent öffnen" }));
+    await userEvent.type(screen.getByLabelText("Nachricht"), "Bitte neue Mieter anlegen{enter}");
+    expect(await screen.findByText(/Dafür Datei anhängen oder Daten hier einfügen/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Mieter" }));
+    expect(screen.getByText(/Bitte hängen Sie die Liste an/)).toBeInTheDocument();
+    // Plain text without contact data is not enough.
+    await userEvent.type(screen.getByLabelText("Nachricht"), "hier{enter}");
+    expect(await screen.findByText(/Bitte eine Datei anhängen .* oder die Kontaktdaten hier als Text einfügen/)).toBeInTheDocument();
+    expect(sent).toHaveLength(0);
+    await userEvent.type(screen.getByLabelText("Nachricht"), "Max Muster, Tel. 0211 123456, max@example.org{enter}");
+    await waitFor(() => expect(screen.getByText(/Ich habe 1 Kontakte aus den Daten gelesen/)).toBeInTheDocument(), { timeout: 3000 });
+    const body = JSON.parse(sent[0]?.body as string);
+    expect(body).toMatchObject({ task: "extract_contacts", document_ids: [] });
+    expect(body.content).toContain("ausschließlich um Mieter");
+    expect(body.content).toContain("max@example.org");
   });
 });

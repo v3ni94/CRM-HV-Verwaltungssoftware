@@ -77,7 +77,7 @@ class FakeDav:
 
     def _auth_ok(self, request: httpx.Request) -> bool:
         auth = request.headers.get("Authorization", "")
-        return auth.startswith("Basic ")  # httpx.BasicAuth already encoded correctly on send
+        return bool(auth.startswith("Basic "))  # httpx.BasicAuth already encoded correctly on send
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.methods_seen.append(request.method)

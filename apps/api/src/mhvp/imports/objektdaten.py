@@ -246,6 +246,97 @@ class _Principal:
     user_id: uuid.UUID | None
 
 
+async def apply_prepared(
+    session: Any,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    prepared: list[Prepared],
+    *,
+    skip_handed_over: bool = False,
+    recorder: Any | None = None,
+) -> dict[str, Any]:
+    """Create properties and units in an open tenant session (CLI and API share this).
+
+    The caller decides whether the transaction is committed (apply) or rolled back (test run).
+    ``recorder`` (``mhvp.ai.imports.Recorder``) registers created rows for undo."""
+    principal = _Principal(tenant_id, user_id)
+    imported_at = datetime.now(UTC).strftime("%d.%m.%Y")
+    counts: Counter[str] = Counter()
+    lines: list[dict[str, Any]] = []
+    for item in prepared:
+        entry: dict[str, Any] = {
+            "objekt": item.row.source_number,
+            "nummer": item.number,
+            "bezeichnung": item.name,
+            "hinweise": list(item.notes),
+            "einheiten": {},
+        }
+        lines.append(entry)
+        if item.problems:
+            entry["status"] = "übersprungen"
+            entry["probleme"] = item.problems
+            counts["property_skipped"] += 1
+            continue
+        if skip_handed_over and item.status is PropertyStatus.TERMINATED:
+            entry["status"] = "übersprungen"
+            entry["probleme"] = ["abgegebenes Objekt (Option --skip-handed-over)"]
+            counts["property_skipped"] += 1
+            continue
+        if item.number is None or item.management_type is None:  # pragma: no cover
+            continue
+        status, _, prop_id, messages = await import_services._apply_property(
+            session,
+            principal,
+            {"number": item.number, "name": item.name, "management_type": item.management_type},
+            recorder,
+        )
+        entry["status"] = status.value
+        if messages:
+            entry["probleme"] = messages
+        counts[f"property_{status.value}"] += 1
+        if status is RowStatus.CREATED:
+            prop = await session.get(Property, prop_id)
+            prop.status = item.status
+            prop.source_system = SOURCE_SYSTEM
+            prop.source_id = item.row.source_number
+            if item.notes:
+                prop.notes = "\n".join(item.notes)
+        elif status is not RowStatus.UNCHANGED:
+            continue
+        unit_counts: Counter[str] = Counter()
+        for unit in item.row.units:
+            ustatus, _, unit_id, umessages = await import_services._apply_unit(
+                session,
+                principal,
+                {
+                    "property_number": item.number,
+                    "number": unit.number,
+                    "label": (unit.label or None) and unit.label[:50],
+                    "building": unit.building,
+                    "location": (unit.location or None) and unit.location[:100],
+                    "unit_type": unit.unit_type.value,
+                },
+                recorder,
+            )
+            unit_counts[ustatus.value] += 1
+            counts[f"unit_{ustatus.value}"] += 1
+            if umessages:
+                entry.setdefault("einheiten_probleme", []).append(
+                    {"ve": unit.number, "meldungen": umessages}
+                )
+            if ustatus is RowStatus.CREATED:
+                created = await session.get(Unit, unit_id)
+                created.source_system = SOURCE_SYSTEM
+                created.source_id = f"{item.row.source_number}/{unit.number}"
+                created.custom_fields = {
+                    **(created.custom_fields or {}),
+                    "altsystem": _source_note(unit, imported_at),
+                }
+        entry["einheiten"] = dict(unit_counts)
+    await session.flush()
+    return {"counts": dict(counts), "objekte": lines}
+
+
 async def import_prepared(
     factory: Any,
     tenant_id: uuid.UUID,
@@ -256,92 +347,17 @@ async def import_prepared(
     skip_handed_over: bool = False,
 ) -> dict[str, Any]:
     """Create properties and units; a test run rolls the transaction back."""
-    principal = _Principal(tenant_id, user_id)
-    imported_at = datetime.now(UTC).strftime("%d.%m.%Y")
-    counts: Counter[str] = Counter()
-    lines: list[dict[str, Any]] = []
-
-    async def work(session: Any) -> None:
-        for item in prepared:
-            entry: dict[str, Any] = {
-                "objekt": item.row.source_number,
-                "nummer": item.number,
-                "bezeichnung": item.name,
-                "hinweise": list(item.notes),
-                "einheiten": {},
-            }
-            lines.append(entry)
-            if item.problems:
-                entry["status"] = "übersprungen"
-                entry["probleme"] = item.problems
-                counts["property_skipped"] += 1
-                continue
-            if skip_handed_over and item.status is PropertyStatus.TERMINATED:
-                entry["status"] = "übersprungen"
-                entry["probleme"] = ["abgegebenes Objekt (Option --skip-handed-over)"]
-                counts["property_skipped"] += 1
-                continue
-            if item.number is None or item.management_type is None:  # pragma: no cover
-                continue
-            status, _, prop_id, messages = await import_services._apply_property(
-                session,
-                principal,
-                {"number": item.number, "name": item.name, "management_type": item.management_type},
-                None,
-            )
-            entry["status"] = status.value
-            if messages:
-                entry["probleme"] = messages
-            counts[f"property_{status.value}"] += 1
-            if status is RowStatus.CREATED:
-                prop = await session.get(Property, prop_id)
-                prop.status = item.status
-                prop.source_system = SOURCE_SYSTEM
-                prop.source_id = item.row.source_number
-                if item.notes:
-                    prop.notes = "\n".join(item.notes)
-            elif status is not RowStatus.UNCHANGED:
-                continue
-            unit_counts: Counter[str] = Counter()
-            for unit in item.row.units:
-                ustatus, _, unit_id, umessages = await import_services._apply_unit(
-                    session,
-                    principal,
-                    {
-                        "property_number": item.number,
-                        "number": unit.number,
-                        "label": (unit.label or None) and unit.label[:50],
-                        "building": unit.building,
-                        "location": (unit.location or None) and unit.location[:100],
-                        "unit_type": unit.unit_type.value,
-                    },
-                    None,
-                )
-                unit_counts[ustatus.value] += 1
-                counts[f"unit_{ustatus.value}"] += 1
-                if umessages:
-                    entry.setdefault("einheiten_probleme", []).append(
-                        {"ve": unit.number, "meldungen": umessages}
-                    )
-                if ustatus is RowStatus.CREATED:
-                    created = await session.get(Unit, unit_id)
-                    created.source_system = SOURCE_SYSTEM
-                    created.source_id = f"{item.row.source_number}/{unit.number}"
-                    created.custom_fields = {
-                        **(created.custom_fields or {}),
-                        "altsystem": _source_note(unit, imported_at),
-                    }
-            entry["einheiten"] = dict(unit_counts)
-        await session.flush()
-        if not apply:
-            raise _DryRunError
-
+    report: dict[str, Any] = {}
     try:
         async with tenant_transaction(factory, tenant_id) as session:
-            await work(session)
+            report = await apply_prepared(
+                session, tenant_id, user_id, prepared, skip_handed_over=skip_handed_over
+            )
+            if not apply:
+                raise _DryRunError
     except _DryRunError:
         pass
-    return {"apply": apply, "counts": dict(counts), "objekte": lines}
+    return {"apply": apply, **report}
 
 
 def _parse_number_map(values: list[str]) -> dict[str, str]:

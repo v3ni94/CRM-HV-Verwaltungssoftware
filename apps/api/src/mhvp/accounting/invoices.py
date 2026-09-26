@@ -290,8 +290,10 @@ async def post(session: AsyncSession, invoice: Invoice, user_id: uuid.UUID | Non
     if ledger is None:  # pragma: no cover
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     if ledger.vat_mode is not VatMode.NONE and invoice.vat:
+        # D45: a VAT option without a released tax treatment never posts input tax by itself;
+        # the lock carries its own problem code so it is visible to callers and jobs.
         raise ProblemError(
-            ErrorCodes.CONFLICT,
+            ErrorCodes.ACC_VAT_NOT_RELEASED,
             detail="Vorsteuerbehandlung für diesen Buchungskreis ist nicht freigegeben (M14-02).",
         )
     creditor = await creditor_account(session, ledger, invoice.provider_contact_id)

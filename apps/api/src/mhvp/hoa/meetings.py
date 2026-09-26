@@ -6,6 +6,7 @@ are flagged for a manual check with a documented basis (open question M25-01). R
 individual community (Teilungserklärung, Vereinbarungen) are not known to the system."""
 
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -89,6 +90,15 @@ class AttendanceIn(MeetingBaseIn):
     online: bool = False
     proxy_contact_id: uuid.UUID | None = None
     proxy_document_id: uuid.UUID | None = None
+
+
+class DisruptionIn(MeetingBaseIn):
+    """Documented technical disruption of a hybrid or virtual meeting (D53)."""
+
+    description: str = Field(min_length=1, max_length=4000)
+    occurred_at: datetime
+    resolved: bool = False
+    affected_contract_ids: list[uuid.UUID] = Field(default_factory=list, max_length=500)
 
 
 class VoteIn(MeetingBaseIn):
@@ -367,6 +377,75 @@ async def attendance(
         return {"id": row.id, "represented": row.present or bool(row.proxy_contact_id)}
 
 
+@router.post(
+    "/meetings/{meeting_id}/disruptions", status_code=201, summary="Technische Störung (D53)"
+)
+async def disruption(
+    meeting_id: uuid.UUID,
+    body: DisruptionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    """A disruption is documented as an event, never silently dropped. While a disruption is
+    open, votes and announcements are refused; a documented resumption reopens the meeting."""
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        if meeting.mode == "presence":
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Störung nur bei hybrider oder virtueller Versammlung.",
+            )
+        if body.resolved:
+            if meeting.status != "disrupted":
+                raise ProblemError(ErrorCodes.CONFLICT, detail="Keine offene Störung.")
+            meeting.status = "held"
+        else:
+            if meeting.status not in ("invited", "held"):
+                raise ProblemError(ErrorCodes.CONFLICT, detail="Versammlung nicht eröffnet.")
+            meeting.status = "disrupted"
+        event = await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="meeting.disruption_resolved" if body.resolved else "meeting.disruption",
+            entity_type="owners_meeting",
+            entity_id=meeting.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "description": body.description,
+                "occurred_at": body.occurred_at.isoformat(),
+                "affected_contract_ids": [str(c) for c in body.affected_contract_ids],
+            },
+        )
+        await session.flush()
+        return _meeting_out(meeting) | {"event_id": event.id}
+
+
+async def _disruptions(session: AsyncSession, meeting_id: uuid.UUID) -> list[dict[str, Any]]:
+    from mhvp.core.events import DomainEvent
+
+    rows = await session.scalars(
+        select(DomainEvent)
+        .where(
+            DomainEvent.entity_type == "owners_meeting",
+            DomainEvent.entity_id == meeting_id,
+            DomainEvent.type.in_(["meeting.disruption", "meeting.disruption_resolved"]),
+        )
+        .order_by(DomainEvent.occurred_at, DomainEvent.id)
+    )
+    return [
+        {"id": e.id, "resolved": e.type == "meeting.disruption_resolved", **e.payload}
+        for e in rows.all()
+    ]
+
+
+def _ensure_not_disrupted(meeting: Meeting) -> None:
+    if meeting.status == "disrupted":
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Versammlung gestört: erst Fortsetzung dokumentieren (D53).",
+        )
+
+
 @router.post("/agenda/{item_id}/votes", status_code=201, summary="Stimme erfassen")
 async def cast_vote(
     item_id: uuid.UUID, body: VoteIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -374,6 +453,7 @@ async def cast_vote(
     async with tenant_tx(request, principal) as session:
         item = await _get(session, AgendaItem, item_id)
         meeting = await _get(session, Meeting, item.meeting_id)
+        _ensure_not_disrupted(meeting)
         att = await session.scalar(
             select(Attendance).where(
                 Attendance.meeting_id == meeting.id, Attendance.contract_id == body.contract_id
@@ -499,6 +579,7 @@ async def announce(
     async with tenant_tx(request, principal) as session:
         item = await _get(session, AgendaItem, item_id)
         meeting = await _get(session, Meeting, item.meeting_id)
+        _ensure_not_disrupted(meeting)
         result = await _tally(session, item, meeting)
         if result["proposal"] and result["proposal"] != body.outcome:
             raise ProblemError(
@@ -696,6 +777,7 @@ async def create_report(
 
     async with tenant_tx(request, principal) as session:
         eng = await _get(session, AuditEngagement, audit_id)
+        outdated_reasons = await refresh_audit_items(session, eng)
         items = (
             await session.scalars(select(AuditItem).where(AuditItem.engagement_id == eng.id))
         ).all()
@@ -714,10 +796,16 @@ async def create_report(
             "snapshot_hash": eng.snapshot_hash,
             "selected": len(items),
             "checked_count": len(checked),
-            "checked_value": str(sum((i.amount or ZERO for i in checked), ZERO)),
+            "checked_value": _money(sum((i.amount or ZERO for i in checked), ZERO)),
+            "unchecked_count": len(items) - len(checked),
+            "unchecked_value": _money(
+                sum((i.amount or ZERO for i in items if i.status != "checked"), ZERO)
+            ),
             "open": [str(i.id) for i in items if i.status in ("open", "query")],
             "objections": [str(i.id) for i in items if i.status == "objection"],
             "outdated": [str(i.id) for i in items if i.status == "outdated"],
+            "outdated_reasons": outdated_reasons,
+            "overall_status": _overall_status(items),
             "scope_note": (
                 "Vollprüfung der Population"
                 if eng.sampling == "full"
@@ -738,6 +826,90 @@ async def create_report(
         session.add(row)
         await session.flush()
         return {"id": row.id, "version": row.version, "content": content}
+
+
+def _money(value: Decimal) -> str:
+    return str(value.quantize(Decimal("0.01")))
+
+
+def _overall_status(items: Sequence[AuditItem]) -> str:
+    """Never an unchanged green status once a checked item is outdated or objected (D33)."""
+    if not items:
+        return "keine Positionen ausgewählt"
+    if any(i.status == "outdated" for i in items):
+        return "eingeschränkt: Positionen nach Prüfung geändert"
+    if any(i.status in ("objection", "open", "query") for i in items):
+        return "eingeschränkt: offene Positionen oder Beanstandungen"
+    return "Stichprobe geprüft"
+
+
+async def refresh_audit_items(session: AsyncSession, eng: AuditEngagement) -> dict[str, str]:
+    """Marks items outdated whose invoice or booking changed after the item was last worked on
+    (D33): an invoice referencing the item's document with a later modification (new version
+    via PUT), or a posted reversal of the item's journal entry. Returns reasons per item id."""
+    from mhvp.accounting.models import EntryStatus, Invoice, JournalEntry
+
+    reasons: dict[str, str] = {}
+    items = (
+        await session.scalars(
+            select(AuditItem).where(
+                AuditItem.engagement_id == eng.id, AuditItem.status != "outdated"
+            )
+        )
+    ).all()
+    for item in items:
+        reason = None
+        if item.document_id is not None:
+            changed = await session.scalar(
+                select(Invoice.id).where(
+                    Invoice.document_id == item.document_id, Invoice.updated_at > item.updated_at
+                )
+            )
+            if changed is not None:
+                reason = "Rechnung nach Prüfung geändert"
+        if reason is None and item.journal_entry_id is not None:
+            reversed_ = await session.scalar(
+                select(JournalEntry.id).where(
+                    JournalEntry.reverses_id == item.journal_entry_id,
+                    JournalEntry.status == EntryStatus.POSTED,
+                )
+            )
+            if reversed_ is not None:
+                reason = "Buchung nach Prüfung storniert"
+        if reason is not None:
+            item.status = "outdated"
+            item.version += 1
+            reasons[str(item.id)] = reason
+    if reasons:
+        await session.flush()
+    return reasons
+
+
+@router.get("/audits/{audit_id}", summary="Beiratsprüfung mit Positionen (PÜ07, D33)")
+async def get_audit(
+    audit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        eng = await _get(session, AuditEngagement, audit_id)
+        outdated_reasons = await refresh_audit_items(session, eng)
+        items = (
+            await session.scalars(
+                select(AuditItem)
+                .where(AuditItem.engagement_id == eng.id)
+                .order_by(AuditItem.created_at, AuditItem.id)
+            )
+        ).all()
+        return {
+            "id": eng.id,
+            "legal_entity_id": eng.legal_entity_id,
+            "statement_id": eng.statement_id,
+            "sampling": eng.sampling,
+            "population": eng.population,
+            "status": eng.status,
+            "overall_status": _overall_status(items),
+            "outdated_reasons": outdated_reasons,
+            "items": [_item_out(i) for i in items],
+        }
 
 
 async def outdate_audit_items(session: AsyncSession, statement_id: uuid.UUID) -> None:
@@ -804,6 +976,7 @@ async def get_meeting(
             ],
             "represented": sum(1 for a in attendance if a.present or a.proxy_contact_id),
             "proxies": sum(1 for a in attendance if a.proxy_contact_id),
+            "disruptions": await _disruptions(session, meeting.id),
         }
 
 

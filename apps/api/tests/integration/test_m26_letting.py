@@ -1225,3 +1225,175 @@ def test_listing_openimmo_export(
     assert client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=ho).status_code == 404
     assert client.get(f"{L}/listings/{listing['id']}/openimmo.zip", headers=ho).status_code == 404
     assert client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=ho).status_code == 404
+
+
+def test_listing_images_upload_link_export_and_tenant_separation(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
+    """M26-02 images: upload via the listing, link an existing image document, both appear in
+    link order in the image list and in the ZIP export; unlinking keeps the document; a
+    foreign tenant sees nothing (404), non-images are refused."""
+    import xml.etree.ElementTree as ET
+    import zipfile
+
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "767",
+                "name": "Bilderhaus",
+                "management_type": "rental",
+                "street": "Bildweg",
+                "house_number": "1",
+                "postal_code": "40002",
+                "city": f"Bildstadt {RUN}",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    building = _ok(
+        client.post(f"/api/v1/properties/{prop['id']}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )["id"]
+    unit = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/units",
+            json={"building_id": building, "number": "01", "unit_type": "apartment"},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    listing = _ok(
+        client.post(f"{L}/listings", json={"unit_id": unit, "kind": "rental"}, headers=h), 201
+    )
+    images_url = f"{L}/listings/{listing['id']}/images"
+    assert _ok(client.get(images_url, headers=h)) == []
+
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+    # upload: stored as document with link entity_type listing, role attachment
+    uploaded = _ok(
+        client.post(images_url, files={"file": ("aussen.png", png, "image/png")}, headers=h), 201
+    )
+    assert [i["filename"] for i in uploaded] == ["aussen.png"]
+    assert uploaded[0]["role"] == "attachment"
+    doc = _ok(client.get(f"/api/v1/documents/{uploaded[0]['document_id']}", headers=h))
+    assert [(x["entity_type"], x["entity_id"]) for x in doc["links"]] == [
+        ("listing", listing["id"])
+    ]
+    # not an image: refused, nothing stored
+    rejected = client.post(
+        images_url, files={"file": ("expose.pdf", b"%PDF-1.4 test", "application/pdf")}, headers=h
+    )
+    assert rejected.status_code == 422, rejected.text
+
+    # link an existing image document through the listing endpoint (LINKABLE "listing")
+    existing = _ok(
+        client.post(
+            "/api/v1/documents",
+            files={"file": ("innen.png", png, "image/png")},
+            headers=h,
+        ),
+        201,
+    )
+    linked = _ok(
+        client.post(f"{images_url}/link", json={"document_id": existing["id"]}, headers=h), 201
+    )
+    assert [i["filename"] for i in linked] == ["aussen.png", "innen.png"]  # link order
+    duplicate = client.post(f"{images_url}/link", json={"document_id": existing["id"]}, headers=h)
+    assert duplicate.status_code == 409
+    pdf_doc = _doc(client, h, "kein-bild.pdf")
+    not_image = client.post(f"{images_url}/link", json={"document_id": pdf_doc}, headers=h)
+    assert not_image.status_code == 422
+    # the generic document link endpoint accepts listing as target as well
+    generic = _ok(
+        client.post(
+            f"/api/v1/documents/{pdf_doc}/links",
+            json={"entity_type": "listing", "entity_id": listing["id"], "role": "attachment"},
+            headers=h,
+        ),
+        201,
+    )
+    assert any(x["entity_type"] == "listing" for x in generic["links"])
+    # a PDF linked to the listing is not an image and stays out of the image list
+    assert [i["filename"] for i in _ok(client.get(images_url, headers=h))] == [
+        "aussen.png",
+        "innen.png",
+    ]
+
+    content = client.get(f"{images_url}/{existing['id']}/content", headers=h)
+    assert content.status_code == 200
+    assert content.headers["content-type"] == "image/png"
+    assert content.content == png
+
+    # export finds both images
+    check = _ok(client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=h))
+    assert check["image_count"] == 2
+    zipped = client.get(f"{L}/listings/{listing['id']}/openimmo.zip?force=true", headers=h)
+    assert zipped.status_code == 200, zipped.text
+    with zipfile.ZipFile(io.BytesIO(zipped.content)) as archive:
+        assert set(archive.namelist()) == {"listing.xml", "images/aussen.png", "images/innen.png"}
+        root = ET.fromstring(archive.read("listing.xml"))  # noqa: S314
+    paths = [a.findtext("daten/pfad") for a in root.findall("anbieter/immobilie/anhaenge/anhang")]
+    assert paths == ["images/aussen.png", "images/innen.png"]
+
+    # unlink: the link goes, the document stays
+    remaining = _ok(client.delete(f"{images_url}/{uploaded[0]['document_id']}", headers=h))
+    assert [i["filename"] for i in remaining] == ["innen.png"]
+    assert (
+        client.get(f"/api/v1/documents/{uploaded[0]['document_id']}", headers=h).status_code == 200
+    )
+    assert client.delete(f"{images_url}/{uploaded[0]['document_id']}", headers=h).status_code == 404
+
+    # tenant separation
+    async def _other_tenant_world(settings: Any) -> World:
+        from mhvp.core import crypto
+        from mhvp.core.db.engine import create_app_engine, create_session_factory
+
+        crypto.set_master_key(b"k" * 32)
+        engine = create_app_engine(settings)
+        factory = create_session_factory(engine)
+        try:
+            b, _ = await services.provision_tenant(factory, slug=f"vim-{RUN}", name=f"VIM {RUN}")
+            other = World(tenant_a=b, tenant_b=b, app_url=world.app_url)
+            uid = await services.create_user(
+                factory, email=other.email("mimother"), display_name="mimother", password=PASSWORD
+            )
+            other.users["mimother"] = uid
+            await services.add_member(
+                factory, tenant_id=b, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
+            )
+            return other
+        finally:
+            await engine.dispose()
+
+    other_world = asyncio.run(_other_tenant_world(_settings(database, redis_url)))
+    ho = bearer(login(client, other_world, "mimother"))
+    assert client.get(images_url, headers=ho).status_code == 404
+    assert (
+        client.post(images_url, files={"file": ("x.png", png, "image/png")}, headers=ho).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            f"{images_url}/link", json={"document_id": existing["id"]}, headers=ho
+        ).status_code
+        == 404
+    )
+    assert client.get(f"{images_url}/{existing['id']}/content", headers=ho).status_code == 404
+    assert client.delete(f"{images_url}/{existing['id']}", headers=ho).status_code == 404
+    # the foreign tenant cannot link its own document to our listing either
+    foreign_doc = _ok(
+        client.post("/api/v1/documents", files={"file": ("f.png", png, "image/png")}, headers=ho),
+        201,
+    )
+    assert (
+        client.post(
+            f"/api/v1/documents/{foreign_doc['id']}/links",
+            json={"entity_type": "listing", "entity_id": listing["id"]},
+            headers=ho,
+        ).status_code
+        == 404
+    )

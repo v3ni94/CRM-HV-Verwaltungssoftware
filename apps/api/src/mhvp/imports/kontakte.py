@@ -314,6 +314,57 @@ class _DryRunError(Exception):
     pass
 
 
+async def apply_prepared(
+    session: Any,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    prepared: list[Prepared],
+    *,
+    recorder: Any | None = None,
+) -> dict[str, Any]:
+    """Create contacts in an open tenant session (CLI and API share this).
+
+    The caller decides whether the transaction is committed (apply) or rolled back (test run).
+    ``recorder`` (``mhvp.ai.imports.Recorder``) registers created rows for undo."""
+    counts: Counter[str] = Counter()
+    lines: list[dict[str, Any]] = []
+    for item in prepared:
+        entry: dict[str, Any] = {
+            "datei": item.row.source_file,
+            "zeile": item.row.line,
+            "id": item.row.external_id,
+            "name": item.row.name,
+            "rolle": item.row.role.value,
+            "hinweise": list(item.notes),
+        }
+        lines.append(entry)
+        if item.data is None:
+            entry["status"] = "invalid"
+            entry["probleme"] = item.problems
+            counts["invalid"] += 1
+            continue
+        existing = await import_services._contact(session, item.row.external_id)
+        if existing is not None:
+            roles = set(existing.roles or [])
+            if item.row.role.value in roles:
+                entry["status"] = "unchanged"
+                counts["unchanged"] += 1
+            else:
+                existing.roles = sorted(roles | {item.row.role.value})
+                entry["status"] = "role_added"
+                counts["role_added"] += 1
+            continue
+        contact = await create_contact(session, tenant_id, user_id, item.data)
+        party = await create_party(session, tenant_id, user_id, [contact])
+        if recorder is not None:
+            recorder.add("contact", contact.id)
+            recorder.add("party", party.id)
+        entry["status"] = "created"
+        counts["created"] += 1
+    await session.flush()
+    return {"counts": dict(counts), "kontakte": lines}
+
+
 async def import_prepared(
     factory: Any,
     tenant_id: uuid.UUID,
@@ -322,50 +373,15 @@ async def import_prepared(
     *,
     apply: bool,
 ) -> dict[str, Any]:
-    counts: Counter[str] = Counter()
-    lines: list[dict[str, Any]] = []
-
-    async def work(session: Any) -> None:
-        for item in prepared:
-            entry: dict[str, Any] = {
-                "datei": item.row.source_file,
-                "zeile": item.row.line,
-                "id": item.row.external_id,
-                "name": item.row.name,
-                "rolle": item.row.role.value,
-                "hinweise": list(item.notes),
-            }
-            lines.append(entry)
-            if item.data is None:
-                entry["status"] = "invalid"
-                entry["probleme"] = item.problems
-                counts["invalid"] += 1
-                continue
-            existing = await import_services._contact(session, item.row.external_id)
-            if existing is not None:
-                roles = set(existing.roles or [])
-                if item.row.role.value in roles:
-                    entry["status"] = "unchanged"
-                    counts["unchanged"] += 1
-                else:
-                    existing.roles = sorted(roles | {item.row.role.value})
-                    entry["status"] = "role_added"
-                    counts["role_added"] += 1
-                continue
-            contact = await create_contact(session, tenant_id, user_id, item.data)
-            await create_party(session, tenant_id, user_id, [contact])
-            entry["status"] = "created"
-            counts["created"] += 1
-        await session.flush()
-        if not apply:
-            raise _DryRunError
-
+    report: dict[str, Any] = {}
     try:
         async with tenant_transaction(factory, tenant_id) as session:
-            await work(session)
+            report = await apply_prepared(session, tenant_id, user_id, prepared)
+            if not apply:
+                raise _DryRunError
     except _DryRunError:
         pass
-    return {"apply": apply, "counts": dict(counts), "kontakte": lines}
+    return {"apply": apply, **report}
 
 
 def _read_file(path: str) -> str:

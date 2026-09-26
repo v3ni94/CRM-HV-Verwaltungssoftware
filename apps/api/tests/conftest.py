@@ -25,6 +25,7 @@ def make_settings(**overrides: object) -> Settings:
         "s3_access_key_id": None,
         "s3_secret_access_key": None,
         "health_check_timeout_seconds": 2.0,
+        "rate_limit_enabled": False,
     }
     values.update(overrides)
     return Settings(**values)  # type: ignore[arg-type]

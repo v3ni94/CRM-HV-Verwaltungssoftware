@@ -29,6 +29,9 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.core.tasks",
             "mhvp.core.webhook_tasks",
             "mhvp.documents.tasks",
+            "mhvp.documents.paperless_webhook",
+            "mhvp.documents.intake",
+            "mhvp.documents.mirror_deletion",
             "mhvp.ai.jobs",
             "mhvp.workspace.tasks",
             "mhvp.communication.tasks",
@@ -39,6 +42,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.sla.tasks",
             "mhvp.immoware.tasks",
             "mhvp.objektakte.tasks",
+            "mhvp.automation.tasks",
         ],
     )
     app.conf.update(
@@ -70,6 +74,13 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "schedule": 60.0,
                 "options": {"queue": "io"},
             },
+            # Document inbox (A42, 11.4, 15.1): daily 06:30, proposals only (rule 0.1.6);
+            # Paperless, Drive inbox folder and mailbox attachments since the tenant watermark.
+            "documents-process-inbox": {
+                "task": "mhvp.documents.process_inbox",
+                "schedule": crontab(hour=6, minute=30),
+                "options": {"queue": "io"},
+            },
             # Maintenance reminders as in-app notifications (M9); idempotent per unread item.
             # Bank retrieval 06:00 (8.2); connectors without contract report "not configured".
             # Prospect records are deleted after their deletion date (M26).
@@ -94,6 +105,13 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "schedule": crontab(hour=6, minute=30),
                 "options": {"queue": "io"},
             },
+            # Consent reminder 10 days before an aggregator consent expires (A29, 8.2): daily,
+            # per tenant, one notification per connection and expiry date.
+            "banking-consent-reminders": {
+                "task": "mhvp.banking.consent_reminders",
+                "schedule": crontab(hour=7, minute=5),
+                "options": {"queue": "io"},
+            },
             # Dunning previews on the 5th (15.1); approval and sending stay manual.
             "accounting-dunning-run": {
                 "task": "mhvp.accounting.dunning_run",
@@ -109,7 +127,25 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.workspace.reminders",
                 "schedule": 3600.0,
             },
+            # Daily digest per user 07:00 (A40, 15.1 tasks.digest): in-app notification, mail
+            # only with the tenant switch (default off); idempotent per user and day.
+            "workspace-digest": {
+                "task": "mhvp.workspace.digest",
+                "schedule": crontab(hour=7, minute=0),
+            },
+            # Deadline list 20:00 (A41, 15.1 compliance.deadlines): orientation only, lead time
+            # from the tenant settings; no legal deadline calculation (M1-09).
+            "workspace-compliance-deadlines": {
+                "task": "mhvp.workspace.compliance_deadlines",
+                "schedule": crontab(hour=20, minute=0),
+            },
             # SLA-Ampel und Eskalation (M21 Übernahme aus dem Immoware Hub), alle 5 Minuten.
+            # Regel-Engine Stufe 1 (A38, 15.2): neue Ereignisse je Mandant seit Wasserstand;
+            # Aktionen nur Ticket, Benachrichtigung, Ticketfeld (keine Buchung, keine Zahlung).
+            "automation-process-events": {
+                "task": "mhvp.automation.process_events",
+                "schedule": 60.0,
+            },
             "sla-check-clocks": {
                 "task": "mhvp.sla.check_clocks",
                 "schedule": 300.0,

@@ -1,11 +1,13 @@
 """M35 Stufe 4 Listengenerierung: CSV shape of the Anforderungsliste and Dokumentenübersicht
 (semicolon, CRLF, UTF-8 BOM, quoting of separators in values), without a database."""
 
+from typing import Any
+
 from mhvp.objektakte import lists
 
 
 def test_missing_documents_csv_one_row_per_missing_class() -> None:
-    entries = [
+    entries: list[dict[str, Any]] = [
         {
             "property_number": "801",
             "property_name": "Haus; Listenweg",
@@ -72,3 +74,14 @@ def test_documents_csv_flags_duplicates_and_uncategorised() -> None:
     assert lines[2] == (
         "801;Haus;;Ohne Kategorie;Unklar;u.pdf;application/pdf;2026-09-26T11:00:00+00:00;;nein"
     )
+
+
+def test_csv_neutralises_formula_prefixes() -> None:
+    """Sicherheitsreview 26.09.2026, Befund 6: titles starting like a formula are exported as
+    text (leading apostrophe), numbers and ordinary titles stay as they are."""
+    rows_in = [(1, "=1+1", 2), (2, "@SUM(A1)", -3), (3, "Plan", 0)]
+    text = lists.to_csv(("Nr", "Titel", "Anzahl"), rows_in)
+    rows = text.lstrip("\ufeff").split("\r\n")
+    assert rows[1] == "1;'=1+1;2"
+    assert rows[2] == "2;'@SUM(A1);-3"
+    assert rows[3] == "3;Plan;0"

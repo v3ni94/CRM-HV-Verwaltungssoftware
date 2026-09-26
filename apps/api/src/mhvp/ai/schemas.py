@@ -30,6 +30,9 @@ class TierModel(_In):
     model: str = Field(min_length=1, max_length=100)
     input_eur_per_mtok: Decimal = Field(ge=0, max_digits=20, decimal_places=8)
     output_eur_per_mtok: Decimal = Field(ge=0, max_digits=20, decimal_places=8)
+    # Output limit of the model as published by the provider (max_tokens of one call). Empty
+    # means the platform default (gateway.DEFAULT_MAX_OUTPUT_TOKENS); never invented here.
+    max_output_tokens: int | None = Field(default=None, ge=1, le=1_000_000)
 
 
 class ProviderIn(_In):
@@ -57,6 +60,24 @@ class ProviderOut(_Out):
     enabled: bool
     released_at: datetime | None
     released_by: uuid.UUID | None
+
+
+class TierTestOut(BaseModel):
+    """Result of one minimal call per configured tier (connection test, no release check)."""
+
+    tier: Literal["small", "large"]
+    model: str
+    ok: bool
+    duration_ms: int
+    error: str | None = None
+    tokens_in: int = 0
+    tokens_out: int = 0
+    cost_eur: Decimal = Decimal(0)
+
+
+class ProviderTestOut(BaseModel):
+    provider: AiProvider
+    tiers: list[TierTestOut]
 
 
 RoutingStrategy = Literal[

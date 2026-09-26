@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { BankAccountOverview } from "@/components/banking/BankAccountOverview";
 import { FinApiConnections } from "@/components/banking/FinApiConnections";
+import { MatchingMetricsCard } from "@/components/banking/MatchingMetricsCard";
 import { StatementImport } from "@/components/banking/StatementImport";
 import { TransactionMatcher } from "@/components/banking/TransactionMatcher";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -42,6 +43,7 @@ export default async function BankPage() {
       <BankAccountOverview />
       <FinApiConnections />
       <StatementImport />
+      <MatchingMetricsCard />
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}

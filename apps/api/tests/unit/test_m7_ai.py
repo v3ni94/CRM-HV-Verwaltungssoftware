@@ -1,8 +1,10 @@
 """M7 pure logic: prompts, schemas, cost, confidence, table text, offline evaluation."""
 
 import io
+from collections.abc import Mapping
 from decimal import Decimal
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from openpyxl import Workbook
@@ -72,7 +74,7 @@ def test_complete_with_retry_waits_then_falls_through(monkeypatch: pytest.Monkey
     async def fake_sleep(delay: float) -> None:
         slept.append(delay)
 
-    monkeypatch.setattr(gateway.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
     monkeypatch.setattr(gateway, "RETRY_DELAYS_S", (1.0, 2.0))
 
     class Flaky:
@@ -247,7 +249,7 @@ def test_provider_status_error_carries_provider_message() -> None:
 
     from mhvp.ai.providers import AnthropicClient, OpenAIClient, ProviderError, status_detail
 
-    def response(status: int, body: dict[str, object]) -> httpx.Response:
+    def response(status: int, body: Mapping[str, object]) -> httpx.Response:
         return httpx.Response(status, request=httpx.Request("POST", "https://x"), json=body)
 
     body = {
@@ -255,7 +257,9 @@ def test_provider_status_error_carries_provider_message() -> None:
         "error": {"type": "authentication_error", "message": "invalid x-api-key"},
     }
     exc = anthropic.AuthenticationError(
-        "Error code: 401 - {...}", response=response(401, body), body=body
+        "Error code: 401 - {...}",
+        response=response(401, body),  # type: ignore[arg-type]
+        body=body,
     )
     assert status_detail(exc, 401) == "HTTP 401: invalid x-api-key"
 
@@ -276,7 +280,9 @@ def test_provider_status_error_carries_provider_message() -> None:
     # OpenAI: message on the top level of the body, 5xx is retryable, long text is truncated.
     long_body = {"message": "x" * 1000}
     o_exc = openai.InternalServerError(
-        "Error code: 503 - {...}", response=response(503, long_body), body=long_body
+        "Error code: 503 - {...}",
+        response=response(503, long_body),
+        body=long_body,
     )
 
     class FailingCompletions:
@@ -297,10 +303,17 @@ def test_provider_status_error_carries_provider_message() -> None:
 
     # Key like strings in a provider message are removed; a plain message stays as is.
     leaky = {"error": {"message": "key sk-abcdefghijklmnop rejected"}}
-    l_exc = anthropic.APIStatusError("Error code: 403", response=response(403, leaky), body=leaky)
+    l_exc = anthropic.APIStatusError(
+        "Error code: 403",
+        response=response(403, leaky),  # type: ignore[arg-type]
+        body=leaky,
+    )
     assert status_detail(l_exc, 403) == "HTTP 403: key [entfernt] rejected"
     assert (
-        status_detail(anthropic.APIStatusError("", response=response(500, {}), body=None), 500)
+        status_detail(
+            anthropic.APIStatusError("", response=response(500, {}), body=None),  # type: ignore[arg-type]
+            500,
+        )
         == "HTTP 500"
     )
 
@@ -325,11 +338,11 @@ def test_run_and_propose_marks_unexpected_exception_as_failed(
     async def boom(*args: object, **kwargs: object) -> object:
         raise KeyError("storage_ref")
 
-    monkeypatch.setattr(jobs.gateway, "execute", boom)
+    monkeypatch.setattr(gateway, "execute", boom)
     row = SimpleNamespace(
         id=uuid.uuid4(), status=RunStatus.RUNNING, error=None, conversation_id=uuid.uuid4()
     )
-    added: list[object] = []
+    added: list[Any] = []
 
     class Session:
         async def get(self, model: object, key: object) -> object:
@@ -347,9 +360,9 @@ def test_run_and_propose_marks_unexpected_exception_as_failed(
     monkeypatch.setattr(jobs.log, "exception", lambda event, **kw: logged.append(event))
 
     result = asyncio.run(jobs.run_and_propose(None, uuid.uuid4(), row.id, None, None))  # type: ignore[arg-type]
-    assert result is row
+    assert cast(object, result) is row
     assert row.status is RunStatus.FAILED
     assert row.error == "KeyError: 'storage_ref'"
     assert logged == ["ai_run_unhandled_error"]
     assert len(added) == 1
-    assert added[0].content == "Nicht ausgeführt: KeyError: 'storage_ref'"  # type: ignore[attr-defined]
+    assert added[0].content == "Nicht ausgeführt: KeyError: 'storage_ref'"

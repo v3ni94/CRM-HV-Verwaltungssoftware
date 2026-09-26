@@ -1,16 +1,21 @@
 """M35 Stufe 4, part Listengenerierung (docs/plans/M35-objektakte-uebernahme.md section 4):
 Anforderungsliste (missing mandatory documents, per property and across properties) and
-Dokumentenübersicht je Kategorie, each as JSON and CSV. Covers the happy path, authorization
-(a role without `objektakte:read` gets 403) and tenant separation (a property of another
-tenant is not found under RLS, the overview never lists it)."""
+Dokumentenübersicht je Kategorie, each as JSON and CSV; Stufe 4 rest: Eigentümerliste and
+Mieterliste from current contracts (contact fields only, no bank data) and filing a generated
+list as a document of the property. Covers the happy path, authorization (a role without
+`objektakte:read` gets 403) and tenant separation (a property of another tenant is not found
+under RLS, the overview never lists it)."""
 
 import asyncio
 import uuid
 from collections.abc import Iterator
 from typing import Any
 
+import boto3
 import pytest
 from fastapi.testclient import TestClient
+from moto import mock_aws
+from pydantic import SecretStr
 
 from mhvp.core import crypto
 from mhvp.core.db.engine import create_app_engine, create_session_factory
@@ -31,13 +36,22 @@ from mhvp.properties.models import ManagementType, Property
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m2_platform import _settings as base_settings
+from tests.integration.test_m5_contracts import _unit
 
 pytestmark = pytest.mark.integration
 BASE = "/api/v1/objektakte"
+BUCKET = "mhvp-lists"
 
 
 def _settings(database: Database, redis_url: str) -> Any:
-    return base_settings(database, redis_url)
+    return base_settings(
+        database,
+        redis_url,
+        s3_endpoint_url="https://s3.us-east-1.amazonaws.com",
+        s3_access_key_id=SecretStr("testing"),
+        s3_secret_access_key=SecretStr("testing"),
+        s3_bucket=BUCKET,
+    )
 
 
 def _document(
@@ -174,8 +188,10 @@ def world_and_ids(database: Database, redis_url: str) -> tuple[World, dict[str, 
 
 @pytest.fixture
 def client(database: Database, redis_url: str) -> Iterator[TestClient]:
-    with TestClient(create_app(_settings(database, redis_url))) as c:
-        yield c
+    with mock_aws():
+        boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
+        with TestClient(create_app(_settings(database, redis_url))) as c:
+            yield c
 
 
 def _ok(response: Any, status: int = 200) -> Any:
@@ -288,3 +304,218 @@ def test_lists_are_tenant_separated(
         f"{BASE}/properties/{ids['other_property']}/lists/missing-documents", headers=admin
     )
     assert foreign.status_code == 404
+
+
+def _contact(client: TestClient, h: dict[str, str], last_name: str, **extra: Any) -> str:
+    body: dict[str, Any] = {"kind": "person", "first_name": "Test", "last_name": last_name}
+    body.update(extra)
+    return str(_ok(client.post("/api/v1/contacts", json=body, headers=h), 201)["id"])
+
+
+def _party_of(client: TestClient, h: dict[str, str], *contact_ids: str) -> str:
+    members = [{"contact_id": c} for c in contact_ids]
+    return str(_ok(client.post("/api/v1/parties", json={"members": members}, headers=h), 201)["id"])
+
+
+def test_person_lists_and_store_as_document(
+    client: TestClient, world_and_ids: tuple[World, dict[str, uuid.UUID]]
+) -> None:
+    """Eigentümerliste and Mieterliste: expected rows by hand. Unit 01: owner Eigner (address,
+    e-mail, phone, ownership from 01.01.2020), tenant Bewohner (tenancy from 01.03.2024).
+    Unit 02: owner party of two members (Eigner and Miteigner), no tenant. A tenancy that
+    ended 29.02.2024 is not current on today's date and stays out. No IBAN anywhere in the
+    output although the owner has a bank account."""
+    world, ids = world_and_ids
+    h = bearer(login(client, world, "listadmin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "803",
+                "name": "Haus Personen",
+                "management_type": "hoa_with_sev",
+                "street": "Listenweg",
+                "house_number": "3",
+                "postal_code": "40789",
+                "city": "Monheim am Rhein",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    unit1 = _unit(client, h, prop["id"], "01")
+    unit2 = _unit(client, h, prop["id"], "02")
+    owner = _contact(
+        client,
+        h,
+        f"Eigner{RUN}",
+        addresses=[
+            {
+                "label": "postal",
+                "street": "Hauptstraße",
+                "house_number": "1",
+                "postal_code": "40789",
+                "city": "Monheim am Rhein",
+            }
+        ],
+        phones=[{"label": "mobile", "number": "0171 1234567"}],
+        emails=[{"email": f"eigner.{RUN}@example.org"}],
+        bank_accounts=[{"iban": "DE02 1203 0000 0000 2020 51", "valid_from": "2020-01-01"}],
+    )
+    co_owner = _contact(client, h, f"Miteigner{RUN}")
+    tenant = _contact(
+        client, h, f"Bewohner{RUN}", emails=[{"email": f"bewohner.{RUN}@example.org"}]
+    )
+    former = _contact(client, h, f"Vormieter{RUN}")
+    owner_party = _party_of(client, h, owner)
+    pair_party = _party_of(client, h, owner, co_owner)
+    ownership = {
+        "kind": "ownership",
+        "start_date": "2020-01-01",
+        "title_transfer_date": "2020-01-01",
+        "acquisition_kind": "first_acquisition",
+    }
+    _ok(
+        client.post(
+            "/api/v1/contracts",
+            json={**ownership, "unit_id": unit1, "party_id": owner_party, "sev_enabled": True},
+            headers=h,
+        ),
+        201,
+    )
+    _ok(
+        client.post(
+            "/api/v1/contracts",
+            json={**ownership, "unit_id": unit2, "party_id": pair_party},
+            headers=h,
+        ),
+        201,
+    )
+    _ok(
+        client.post(
+            "/api/v1/contracts",
+            json={
+                "kind": "tenancy",
+                "unit_id": unit1,
+                "party_id": _party_of(client, h, former),
+                "start_date": "2022-01-01",
+                "end_date": "2024-02-29",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(
+        client.post(
+            "/api/v1/contracts",
+            json={
+                "kind": "tenancy",
+                "unit_id": unit1,
+                "party_id": _party_of(client, h, tenant),
+                "start_date": "2024-03-01",
+            },
+            headers=h,
+        ),
+        201,
+    )
+
+    owners = _ok(client.get(f"{BASE}/properties/{prop['id']}/lists/owners", headers=h))
+    assert owners["kind"] == "owners"
+    assert owners["total"] == 3
+    assert [(r["unit_number"], r["name"]) for r in owners["rows"]] == [
+        ("01", f"Eigner{RUN}, Test"),
+        ("02", f"Eigner{RUN}, Test"),
+        ("02", f"Miteigner{RUN}, Test"),
+    ]
+    first = owners["rows"][0]
+    assert first["street"] == "Hauptstraße 1"
+    assert first["postal_code"] == "40789"
+    assert first["city"] == "Monheim am Rhein"
+    assert first["email"] == f"eigner.{RUN}@example.org"
+    assert first["phone"] == "+491711234567"
+    assert first["contract_start"] == "2020-01-01"
+    assert first["contract_end"] is None
+    assert owners["rows"][2]["email"] == ""
+    assert "iban" not in str(owners).lower()
+    assert "DE02" not in str(owners)
+
+    tenants = _ok(client.get(f"{BASE}/properties/{prop['id']}/lists/tenants", headers=h))
+    assert [(r["unit_number"], r["name"]) for r in tenants["rows"]] == [
+        ("01", f"Bewohner{RUN}, Test")
+    ]
+    assert tenants["rows"][0]["contract_start"] == "2024-03-01"
+
+    csv_resp = client.get(f"{BASE}/properties/{prop['id']}/lists/tenants/export", headers=h)
+    assert csv_resp.status_code == 200, csv_resp.text
+    assert 'filename="mieterliste-803.csv"' in csv_resp.headers["content-disposition"]
+    lines = csv_resp.text.lstrip("\ufeff").splitlines()
+    assert lines[0] == (
+        "Objektnummer;Objekt;Einheit;Bezeichnung;Name;Straße;PLZ;Ort;E-Mail;Telefon;"
+        "Vertragsnummer;Vertragsbeginn;Vertragsende"
+    )
+    assert len(lines) == 2
+    assert lines[1].startswith(f"803;Haus Personen;01;WE 01;Bewohner{RUN}, Test;;;;bewohner.{RUN}@")
+    assert lines[1].endswith(";01.03.2024;")
+    owners_csv = client.get(f"{BASE}/properties/{prop['id']}/lists/owners/export", headers=h)
+    assert 'filename="eigentuemerliste-803.csv"' in owners_csv.headers["content-disposition"]
+    assert "DE02" not in owners_csv.text
+
+    # store as document: new document of category "Liste", linked to the property, CSV content
+    stored = _ok(client.post(f"{BASE}/properties/{prop['id']}/lists/owners/store", headers=h), 201)
+    assert stored["mime_type"] == "text/csv"
+    assert stored["source"] == "generated"
+    assert stored["title"].startswith("Eigentümerliste 803 Haus Personen ")
+    assert stored["filename"].startswith("eigentuemerliste-803-")
+    assert stored["filename"].endswith(".csv")
+    assert [(x["entity_type"], x["entity_id"], x["role"]) for x in stored["links"]] == [
+        ("property", prop["id"], "generated")
+    ]
+    categories = _ok(client.get("/api/v1/document-categories", headers=h))
+    liste = next(c for c in categories if c["code"] == "list")
+    assert liste["name"] == "Liste"
+    assert stored["category_id"] == liste["id"]
+    content = client.get(f"/api/v1/documents/{stored['id']}/content", headers=h)
+    assert content.status_code == 200
+    body = content.content.decode("utf-8-sig")
+    assert body.splitlines()[0].startswith("Objektnummer;Objekt;Einheit;")
+    assert f"Eigner{RUN}, Test" in body
+    assert "DE02" not in body
+    # the stored list shows up in the Dokumentenübersicht of the property
+    overview = _ok(client.get(f"{BASE}/properties/{prop['id']}/lists/documents", headers=h))
+    assert [g["code"] for g in overview["groups"]] == ["list"]
+    assert overview["groups"][0]["documents"][0]["document_id"] == stored["id"]
+    # a second call stores a second snapshot, nothing is overwritten
+    again = _ok(
+        client.post(f"{BASE}/properties/{prop['id']}/lists/missing-documents/store", headers=h),
+        201,
+    )
+    assert again["id"] != stored["id"]
+    assert again["title"].startswith("Anforderungsliste 803 ")
+    assert (
+        client.post(f"{BASE}/properties/{prop['id']}/lists/unknown/store", headers=h).status_code
+        == 422
+    )
+
+    # authorization and tenant separation
+    caretaker = bearer(login(client, world, "listcaretaker"))
+    for path in (
+        f"{BASE}/properties/{prop['id']}/lists/owners",
+        f"{BASE}/properties/{prop['id']}/lists/tenants/export",
+    ):
+        assert client.get(path, headers=caretaker).status_code == 403, path
+    assert (
+        client.post(
+            f"{BASE}/properties/{prop['id']}/lists/owners/store", headers=caretaker
+        ).status_code
+        == 403
+    )
+    other = bearer(login(client, world, "listother", tenant_id=world.tenant_b))
+    assert (
+        client.get(f"{BASE}/properties/{prop['id']}/lists/owners", headers=other).status_code == 404
+    )
+    assert (
+        client.post(f"{BASE}/properties/{prop['id']}/lists/owners/store", headers=other).status_code
+        == 404
+    )
+    own = _ok(client.get(f"{BASE}/properties/{ids['other_property']}/lists/tenants", headers=other))
+    assert own["total"] == 0

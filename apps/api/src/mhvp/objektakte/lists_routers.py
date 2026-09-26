@@ -7,9 +7,15 @@ read only list endpoints under `/api/v1/objektakte`, each as JSON and as CSV exp
   of one property.
 * `GET /objektakte/properties/{id}/lists/documents` (+ `/export`): Dokumentenübersicht je
   Kategorie of one property.
+* `GET /objektakte/properties/{id}/lists/owners` and `.../tenants` (+ `/export`):
+  Eigentümerliste and Mieterliste of one property (persons from current contracts, contact
+  fields as shown in the CRM, no bank data).
+* `POST /objektakte/properties/{id}/lists/{kind}/store`: generate the CSV of one list kind and
+  file it as a document of the property (category "Liste").
 
-Permission `objektakte:read` everywhere (docs/rules/M35-03.md, same as the completeness check
-the lists build on).
+Permission `objektakte:read` for reading (docs/rules/M35-03.md, same as the completeness check
+the lists build on); storing a list creates a document and therefore needs `documents:create`
+in addition.
 Tenant separation comes from RLS inside `tenant_tx`; a property of another tenant is simply
 not found (404), never revealed.
 """
@@ -22,12 +28,17 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.documents import schemas as document_schemas
+from mhvp.documents.blobs import BlobStore
+from mhvp.documents.routers import _out as document_out
 from mhvp.objektakte import lists
 from mhvp.properties.models import ManagementType, Property
 
 router = APIRouter(prefix="/objektakte", tags=["objektakte-lists"])
 READ = require_permission("objektakte:read")
+DOCUMENTS_CREATE = require_permission("documents:create")
 CSV_MEDIA_TYPE = "text/csv; charset=utf-8"
 
 
@@ -140,3 +151,74 @@ async def export_property_documents(
         return _csv_response(
             lists.documents_csv(overview), f"dokumentenuebersicht-{property_row.number}.csv"
         )
+
+
+@router.get(
+    "/properties/{property_id}/lists/{kind}",
+    summary="Eigentümerliste oder Mieterliste eines Objekts",
+)
+async def property_persons(
+    property_id: uuid.UUID,
+    kind: lists.PersonListKind,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        property_row = await _property(session, property_id)
+        return await lists.persons_list(session, principal.tenant_id, property_row, kind)
+
+
+@router.get(
+    "/properties/{property_id}/lists/{kind}/export",
+    summary="Eigentümerliste oder Mieterliste eines Objekts als CSV",
+    response_class=Response,
+)
+async def export_property_persons(
+    property_id: uuid.UUID,
+    kind: lists.PersonListKind,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        property_row = await _property(session, property_id)
+        listing = await lists.persons_list(session, principal.tenant_id, property_row, kind)
+        return _csv_response(
+            lists.persons_csv(listing),
+            f"{lists.LIST_FILE_STEMS[kind]}-{property_row.number}.csv",
+        )
+
+
+@router.post(
+    "/properties/{property_id}/lists/{kind}/store",
+    status_code=201,
+    summary="Liste eines Objekts als Dokument ablegen",
+)
+async def store_property_list(
+    property_id: uuid.UUID,
+    kind: lists.ListKind,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+    _creator: TenantPrincipal = Depends(DOCUMENTS_CREATE),
+) -> document_schemas.DocumentOut:
+    """Generates the CSV of `kind` and files it as a new document (category "Liste", source
+    generated, linked to the property). Every call stores a new snapshot."""
+    async with tenant_tx(request, principal) as session:
+        property_row = await _property(session, property_id)
+        document = await lists.store_list(
+            session,
+            BlobStore(request.app.state.settings),
+            tenant_id=principal.tenant_id,
+            property_row=property_row,
+            kind=kind,
+            created_by=principal.user_id,
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document.created",
+            entity_type="document",
+            entity_id=document.id,
+            actor_user_id=principal.user_id,
+            payload={"size": document.size, "list_kind": kind, "property_id": str(property_id)},
+        )
+        return await document_out(session, document)

@@ -96,6 +96,7 @@ async def _world(settings: Any) -> World:
         for name, tenant, role in (
             ("osadmin", a, "tenant_admin"),
             ("osreader", a, "read_only"),
+            ("osclerk", a, "clerk_no_accounting"),
             ("osother", b, "tenant_admin"),
         ):
             uid = await services.create_user(
@@ -241,6 +242,11 @@ def test_switch_is_off_by_default_and_needs_a_dump_path(client: TestClient, worl
     assert response.status_code == 422, response.text
     response = client.put(BASE, json={"dump_path": "/data/export/objektakte.txt"}, headers=admin)
     assert response.status_code == 422, response.text
+    # Sicherheitsreview 26.09.2026: only paths inside Settings.objektakte_dump_dir.
+    for outside in ("/etc/objektakte.sql", "/data/objektakte-export/../x/objektakte.sql"):
+        response = client.put(BASE, json={"dump_path": outside}, headers=admin)
+        assert response.status_code == 422, response.text
+        assert "Exportverzeichnis" in response.text
 
     state = _ok(
         client.put(
@@ -263,3 +269,32 @@ def test_switch_is_off_by_default_and_needs_a_dump_path(client: TestClient, worl
         ).status_code
         == 403
     )
+
+
+def test_manual_run_respects_the_switch(client: TestClient, world: World) -> None:
+    """Sicherheitsreview 26.09.2026, Befund 7: without a file the queued run needs `enabled`;
+    an upload while the import is off is reserved for administrators."""
+    admin = bearer(login(client, world, "osadmin", world.tenant_a))
+    clerk = bearer(login(client, world, "osclerk", world.tenant_a))
+    _ok(
+        client.put(
+            BASE,
+            json={"dump_path": "/data/objektakte-export/objektakte.sql", "enabled": False},
+            headers=admin,
+        )
+    )
+    queued = client.post(f"{BASE}/runs", headers=admin)
+    assert queued.status_code == 409, queued.text
+    assert "ausgeschaltet" in queued.json()["detail"]
+    upload = client.post(
+        f"{BASE}/runs",
+        files={"file": ("objektakte.sql", DUMP_V1.encode("utf-8"), "application/sql")},
+        headers=clerk,
+    )
+    assert upload.status_code == 403, upload.text
+    assert "Administratoren" in upload.json()["detail"]
+    assert _run(client, admin, DUMP_V1)["mode"] == "inline"
+
+    _ok(client.put(BASE, json={"enabled": True}, headers=admin))
+    assert _run(client, clerk, DUMP_V1)["mode"] == "inline"
+    _ok(client.put(BASE, json={"enabled": False}, headers=admin))

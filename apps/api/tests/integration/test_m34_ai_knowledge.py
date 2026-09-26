@@ -7,7 +7,7 @@ import asyncio
 import json
 from collections.abc import Iterator
 from email.message import EmailMessage
-from typing import Any
+from typing import Any, cast
 
 import boto3
 import pytest
@@ -128,7 +128,7 @@ def _property(c: TestClient, h: dict[str, str], number: str) -> dict[str, Any]:
         "postal_code": "40789",
         "city": "Monheim am Rhein",
     }
-    return _ok(c.post(f"{M}/properties", json=body, headers=h), 201)
+    return cast(dict[str, Any], _ok(c.post(f"{M}/properties", json=body, headers=h), 201))
 
 
 def _unit(c: TestClient, h: dict[str, str], prop_id: str, number: str) -> str:

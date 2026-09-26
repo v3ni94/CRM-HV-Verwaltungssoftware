@@ -26,6 +26,10 @@ Certificates come from Let's Encrypt via HTTP challenge; port 80 must be reachab
     cp infra/env.backup.example .env.backup && chmod 600 .env.backup
 
 Fill every `change-me`. `MHVP_FORWARDED_ALLOW_IPS` is the subnet of the `mhvp-edge` network.
+`MHVP_OBJEKTAKTE_DUMP_DIR` (default `/data/objektakte-export`) is the directory on the worker
+that holds the objektakte exports for the daily differential import; a tenant's dump path is
+only accepted inside it, so mount that directory read only into the worker container and put
+the export there. `MHVP_OBJEKTAKTE_DUMP_MAX_BYTES` (default 512 MiB) caps the export size.
 Keep a sealed off-server copy of `MHVP_MASTER_KEY` and `MHVP_JWT_PRIVATE_KEY`: a backup
 without the master key cannot decrypt protected fields.
 

@@ -15,9 +15,10 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import session_allowed_legal_entity_ids
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.documents import letters
+from mhvp.documents import letters, mirror_deletion
 from mhvp.documents import schemas as s
 from mhvp.documents import services as svc
 from mhvp.documents.blobs import BlobStore
@@ -61,10 +62,30 @@ def _blobs(request: Request) -> BlobStore:
     return BlobStore(request.app.state.settings)
 
 
+def _scope_filter(session: Any) -> Any:
+    """A37 (docs/rules/M18-05-steuerberaterzugang.md): for a scoped membership (tax advisor)
+    only documents linked to one of its legal entities exist; returns the subquery of allowed
+    document ids or ``None`` when the principal is not restricted."""
+    allowed = session_allowed_legal_entity_ids(session)
+    if allowed is None:
+        return None
+    return select(DocumentLink.document_id).where(
+        DocumentLink.entity_type == "legal_entity", DocumentLink.entity_id.in_(list(allowed))
+    )
+
+
 async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
     row = await session.get(model, entity_id)
     if row is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    if model is Document:
+        scoped = _scope_filter(session)
+        if scoped is not None:
+            visible = await session.scalar(
+                select(Document.id).where(Document.id == entity_id, Document.id.in_(scoped))
+            )
+            if visible is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     return row
 
 
@@ -200,6 +221,9 @@ async def list_documents(
             query = query.where(Document.id.in_(link))
         if category_id:
             query = query.where(Document.category_id == category_id)
+        scoped = _scope_filter(session)  # A37: legal entity scope of the membership
+        if scoped is not None:
+            query = query.where(Document.id.in_(scoped))
         total = await session.scalar(select(func.count()).select_from(query.subquery())) or 0
         columns: list[Any] = [Document] + (
             [snippet.label("snippet")] if snippet is not None else []
@@ -226,6 +250,27 @@ async def get_document(
 ) -> s.DocumentOut:
     async with tenant_tx(request, principal) as session:
         return await _out(session, await _get(session, Document, document_id))
+
+
+@router.get(
+    "/documents/{document_id}/read-receipts",
+    summary="Portalzugriffe (Indiz, keine Zustellung)",
+)
+async def read_receipts(
+    document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """Portal read receipts of a document (11.3, D34, A53): who opened or downloaded it
+    through the portal and when. An indication only, kept apart from dispatch evidence
+    (``mhvp.communication``) and from any receipt date; it changes no delivery status."""
+    from mhvp.portal import read_receipts as receipts
+
+    async with tenant_tx(request, principal) as session:
+        document = await _get(session, Document, document_id)
+        return {
+            "document_id": document.id,
+            "note": receipts.LEGAL_NOTE,
+            "items": await receipts.for_document(session, document.id),
+        }
 
 
 @router.get(
@@ -366,6 +411,8 @@ async def delete_document(
     document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(DELETE)
 ) -> Response:
     """Only after a released retention profile expired and without a hold (6.9.5, D46)."""
+    # The refusal is logged in its own transaction: raising inside the transaction would roll
+    # the event back with it, and D46 requires the refusal to be recorded.
     async with tenant_tx(request, principal) as session:
         document = await _get(session, Document, document_id)
         blocker = await svc.deletion_blocker(session, document, _today())
@@ -373,6 +420,12 @@ async def delete_document(
             await _event(
                 session, principal, "document.deletion_refused", document.id, reason=blocker
             )
+    if blocker is not None:
+        raise ProblemError(ErrorCodes.RETENTION_LOCKED, detail=blocker)
+    async with tenant_tx(request, principal) as session:
+        document = await _get(session, Document, document_id)
+        blocker = await svc.deletion_blocker(session, document, _today())
+        if blocker is not None:  # changed in between
             raise ProblemError(ErrorCodes.RETENTION_LOCKED, detail=blocker)
         mirrors = (
             await session.scalars(
@@ -382,15 +435,15 @@ async def delete_document(
                 )
             )
         ).all()
-        if mirrors:
-            # Mirror deletion is not implemented yet; deleting only here would break 6.9.5.
-            raise ProblemError(
-                ErrorCodes.RETENTION_LOCKED,
-                detail=(
-                    "Das Dokument ist in einem externen DMS gespiegelt; "
-                    "die Löschung dort ist offen (M6-03)."
-                ),
-            )
+        # A43 (6.9.5, M6-03): copies in Paperless and Drive are removed by a logged job after
+        # this deletion; the request is journaled here, in the same transaction.
+        jobs = await mirror_deletion.request(
+            session,
+            tenant_id=principal.tenant_id,
+            document_id=document.id,
+            mirrors=list(mirrors),
+            actor_user_id=principal.user_id,
+        )
         _blobs(request).delete(document.storage_ref)
         await _event(
             session,
@@ -399,8 +452,10 @@ async def delete_document(
             document.id,
             sha256=document.sha256,
             profile=document.retention_profile_id,
+            mirror_deletions=len(jobs),
         )
         await session.delete(document)
+    mirror_deletion.enqueue(jobs)
     return Response(status_code=204)
 
 
@@ -513,6 +568,8 @@ def _connection_out(row: DmsConnection) -> s.DmsConnectionOut:
         base_url=row.base_url,
         has_secret=bool(row.secret),
         options={k: str(v) for k, v in (row.options or {}).items()},
+        has_webhook_secret=bool(row.webhook_secret),
+        auto_receipt_intake=bool(row.auto_receipt_intake),
     )
 
 
@@ -561,6 +618,12 @@ async def put_connection(
         row.enabled, row.base_url, row.options = body.enabled, body.base_url, body.options
         if body.secret is not None:
             row.secret = body.secret
+        if kind is StorageKind.PAPERLESS:
+            # A30: webhook secret is write only; the intake switch needs a secret to be useful
+            # but is stored as given (default off, M14-05).
+            if body.webhook_secret is not None:
+                row.webhook_secret = body.webhook_secret
+            row.auto_receipt_intake = body.auto_receipt_intake
         if row.enabled and not row.secret:
             raise svc.invalid("Ohne Zugangsdaten kann die Anbindung nicht aktiviert werden.")
         await session.flush()

@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: help dev down migrate test test-api test-web e2e lint typecheck openapi db-bootstrap agent-docs seed ai-eval deploy backup backup-verify
+.PHONY: help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi db-bootstrap agent-docs seed ai-eval deploy backup backup-verify
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -38,6 +38,10 @@ lint: ## ruff, eslint, agent docs sync check
 	cd apps/api && uv run ruff check . && uv run ruff format --check .
 	pnpm lint
 	python3 scripts/sync_agent_docs.py --check
+	python3 scripts/check_i18n.py
+
+i18n-check: ## de.json/en.json key parity, dashes and empty values
+	python3 scripts/check_i18n.py
 
 typecheck: ## mypy strict and tsc --noEmit
 	cd apps/api && uv run mypy

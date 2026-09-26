@@ -15,6 +15,7 @@ afterwards from a ZIP of the U-Protokoll storage directory by their stored path 
 
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -110,6 +111,9 @@ class ImportPlan:
     unmatched_objects: int = 0
     duplicates: int = 0
     unknown_tables: list[str] = field(default_factory=list)
+    # Protocols with a predecessor (`parent_protocol_id`) and e-mail history rows in the dump.
+    versions_with_parent: int = 0
+    emails_total: int = 0
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -118,6 +122,8 @@ class ImportPlan:
             "unmatched_objects": self.unmatched_objects,
             "duplicates": self.duplicates,
             "unknown_tables": self.unknown_tables,
+            "versions_with_parent": self.versions_with_parent,
+            "emails_total": self.emails_total,
         }
 
 
@@ -138,6 +144,8 @@ async def build_plan(
     )
     plan = ImportPlan(counts={t: len(rows) for t, rows in tables.items()})
     plan.unknown_tables = sorted(set(tables) - set(KNOWN_TABLES))
+    plan.versions_with_parent = sum(1 for r in protocols if r.get("parent_protocol_id"))
+    plan.emails_total = len(tables.get("protocol_emails", []))
     for row in protocols:
         source_id = f"uprotokoll:{row.get('id')}"
         duplicate = source_id in existing
@@ -152,6 +160,7 @@ async def build_plan(
                 "source_id": row.get("id"),
                 "number": row.get("protocol_number"),
                 "version": row.get("version") or 1,
+                "parent_source_id": row.get("parent_protocol_id"),
                 "status": row.get("status"),
                 "address": ", ".join(
                     x
@@ -177,6 +186,12 @@ class ImportResult:
     id_map: dict[str, dict[str, str]] = field(default_factory=dict)
     staged_files: list[dict[str, Any]] = field(default_factory=list)
     signatures: list[dict[str, Any]] = field(default_factory=list)
+    # Second pass (M30-03): predecessor links set from `protocols.parent_protocol_id`, and the
+    # e-mail history of `protocol_emails` (counted in full, taken over as internal notes).
+    versions_linked: int = 0
+    versions_unresolved: int = 0
+    emails_total: int = 0
+    emails_imported: int = 0
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -185,7 +200,51 @@ class ImportResult:
             "id_map": self.id_map,
             "staged_files": self.staged_files,
             "signatures": self.signatures,
+            "versions_linked": self.versions_linked,
+            "versions_unresolved": self.versions_unresolved,
+            "emails_total": self.emails_total,
+            "emails_imported": self.emails_imported,
         }
+
+
+EMAIL_NOTE_SOURCE_PREFIX = "uprotokoll:email:"
+
+
+def _first(row: dict[str, Any], *names: str, limit: int | None = None) -> str | None:
+    """First non empty string of several candidate column names (the column names of
+    `protocol_emails` differ between U-Protokoll schema versions; nothing is guessed beyond
+    the listed candidates, an unknown layout simply yields an empty part)."""
+    for name in names:
+        value = _s(row, name, limit)
+        if value:
+            return value
+    return None
+
+
+def _sent_at(row: dict[str, Any]) -> datetime | None:
+    for key in ("sent_at", "created_at"):
+        value = row.get(key)
+        parsed = _to_datetime(value.strip() if isinstance(value, str) else value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def email_note_text(row: dict[str, Any]) -> str:
+    """Internal note text for one `protocol_emails` row: time, recipient and subject only, never
+    the body (data minimisation, the mail itself stays in the sender's mailbox)."""
+    sent = _sent_at(row)
+    when = sent.strftime("%d.%m.%Y %H:%M") if sent is not None else "unbekannt"
+    recipient = (
+        _first(row, "recipient_email", "recipient", "to_email", "to_address", "email", limit=320)
+        or "unbekannt"
+    )
+    subject = _first(row, "subject", limit=500) or "ohne Betreff"
+    status = _first(row, "status", "send_status", limit=50)
+    parts = [f"E-Mail aus U-Protokoll: {when} an {recipient}, Betreff: {subject}"]
+    if status:
+        parts.append(f"Status: {status}")
+    return ", ".join(parts)
 
 
 async def apply_import(
@@ -257,6 +316,7 @@ async def apply_import(
             internal_contact=_s(row, "internal_contact", 200),
             internal_note=_s(row, "internal_note"),
             general_note=_s(row, "general_note"),
+            change_reason=_s(row, "change_reason"),
             completed_at=_to_datetime(row.get("completed_at")),
             archived_at=_to_datetime(row.get("archived_at")),
         )
@@ -266,7 +326,14 @@ async def apply_import(
         _created("protocols")
 
     result.id_map["protocols"] = {str(k): str(v) for k, v in protocol_map.items()}
+    # Every protocol of the dump that exists in the CRM now (created in this or an earlier run),
+    # for the second pass: predecessor links and the e-mail history are set idempotently even
+    # for protocols that were created by an earlier run without them.
+    all_protocols = await _all_source_protocols(session, tenant_id, tables, protocol_map)
+    await _link_predecessors(session, tables, all_protocols, result)
+    await _import_email_history(session, principal, tables, all_protocols, result)
     if not protocol_map:
+        await session.flush()
         return result
 
     for row in tables.get("protocol_participants", []):
@@ -462,3 +529,105 @@ async def apply_import(
     ]
     await session.flush()
     return result
+
+
+async def _all_source_protocols(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    tables: dict[str, list[dict[str, Any]]],
+    created: dict[Any, uuid.UUID],
+) -> dict[str, HandoverProtocol]:
+    """`uprotokoll:<id>` -> protocol row for every dump protocol present in the CRM."""
+    sources = [f"uprotokoll:{row.get('id')}" for row in tables.get("protocols", [])]
+    if not sources:
+        return {}
+    rows = (
+        await session.scalars(
+            select(HandoverProtocol).where(
+                HandoverProtocol.tenant_id == tenant_id,
+                HandoverProtocol.import_source.in_(sources),
+            )
+        )
+    ).all()
+    out = {p.import_source: p for p in rows if p.import_source}
+    for source_id, protocol_id in created.items():
+        key = f"uprotokoll:{source_id}"
+        if key not in out:
+            row = await session.get(HandoverProtocol, protocol_id)
+            if row is not None:
+                out[key] = row
+    return out
+
+
+async def _link_predecessors(
+    session: AsyncSession,
+    tables: dict[str, list[dict[str, Any]]],
+    protocols: dict[str, HandoverProtocol],
+    result: ImportResult,
+) -> None:
+    """Second pass: `protocols.parent_protocol_id` -> `HandoverProtocol.parent_id`. Idempotent:
+    a link that is already set is left alone; a parent missing from the dump and from the CRM
+    is counted as unresolved, never invented."""
+    for row in tables.get("protocols", []):
+        parent_source = row.get("parent_protocol_id")
+        if parent_source is None:
+            continue
+        child = protocols.get(f"uprotokoll:{row.get('id')}")
+        if child is None:
+            continue
+        parent = protocols.get(f"uprotokoll:{parent_source}")
+        if parent is None or parent.id == child.id:
+            result.versions_unresolved += 1
+            continue
+        if child.parent_id == parent.id:
+            continue
+        child.parent_id = parent.id
+        result.versions_linked += 1
+
+
+async def _import_email_history(
+    session: AsyncSession,
+    principal: TenantPrincipal,
+    tables: dict[str, list[dict[str, Any]]],
+    protocols: dict[str, HandoverProtocol],
+    result: ImportResult,
+) -> None:
+    """`protocol_emails` becomes one internal note per row (time, recipient, subject, no body),
+    `import_source = "uprotokoll:email:<id>"`, idempotent by that source id. Rows whose protocol
+    is not in the CRM are counted in `emails_total` only."""
+    rows = tables.get("protocol_emails", [])
+    result.emails_total = len(rows)
+    if not rows:
+        return
+    sources = [f"{EMAIL_NOTE_SOURCE_PREFIX}{row.get('id')}" for row in rows]
+    existing = frozenset(
+        (
+            await session.scalars(
+                select(HandoverNote.import_source).where(
+                    HandoverNote.tenant_id == principal.tenant_id,
+                    HandoverNote.import_source.in_(sources),
+                )
+            )
+        ).all()
+    )
+    for row in rows:
+        source = f"{EMAIL_NOTE_SOURCE_PREFIX}{row.get('id')}"
+        protocol = protocols.get(f"uprotokoll:{row.get('protocol_id')}")
+        if protocol is None or source in existing:
+            continue
+        sent = _sent_at(row)
+        session.add(
+            HandoverNote(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                import_source=source,
+                protocol_id=protocol.id,
+                category="other",
+                text=email_note_text(row),
+                due_date=sent.date() if sent is not None else None,
+                status=_first(row, "status", "send_status", limit=50),
+                is_internal=True,
+                sort_order=9000 + result.emails_imported,
+            )
+        )
+        result.emails_imported += 1

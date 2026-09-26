@@ -534,3 +534,184 @@ def test_mandates_direct_debit_and_deposits(client: TestClient, world: World) ->
     )
     assert final["balance"] == "600.00"
     assert len(_ok(client.get(deposits, headers=h), 200)) == 1
+
+
+def test_d17_one_owner_two_units_and_one_unit_two_owners(client: TestClient, world: World) -> None:
+    """D17: party A owns units 01 and 02, party B (two persons, 50/50) owns unit 03. Expected:
+    three ownership contracts, a debtor account per party and unit (6.9.2, not per person and
+    not one for both units), one receivable per contract and month (3 x 300,00 = 900,00, none
+    per co owner), and one head vote per party (§ 25 Abs. 2 WEG as implemented in M25): A yes
+    with both units, B no gives 1:1, an owner voting differently with two units is refused."""
+    from decimal import Decimal
+
+    h = bearer(login(client, world, "m5admin"))
+    weg = _property(client, h, "515", "hoa")
+    hoa = next(e["id"] for e in weg["legal_entities"] if e["kind"] == "hoa")
+    party_a, _ = _party(client, h, "Doppel")
+    first = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={"kind": "person", "first_name": "Anna", "last_name": f"Gemein{RUN}"},
+            headers=h,
+        )
+    )
+    second = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={"kind": "person", "first_name": "Bernd", "last_name": f"Gemein{RUN}"},
+            headers=h,
+        )
+    )
+    party_b = _ok(
+        client.post(
+            "/api/v1/parties",
+            json={
+                "members": [
+                    {"contact_id": first["id"], "share_percent": "50"},
+                    {"contact_id": second["id"], "role": "co_party", "share_percent": "50"},
+                ]
+            },
+            headers=h,
+        )
+    )
+    assert len(party_b["members"]) == 2
+    contracts: dict[str, dict[str, Any]] = {}
+    for no, party in [("01", party_a), ("02", party_a), ("03", str(party_b["id"]))]:
+        unit = _unit(client, h, weg["id"], no)
+        contracts[no] = _ok(
+            client.post(
+                "/api/v1/contracts",
+                json={
+                    "kind": "ownership",
+                    "unit_id": unit,
+                    "party_id": party,
+                    "start_date": "2020-01-01",
+                    "title_transfer_date": "2020-01-01",
+                    "acquisition_kind": "first_acquisition",
+                },
+                headers=h,
+            )
+        )
+        _ok(
+            client.post(
+                f"/api/v1/contracts/{contracts[no]['id']}/payments",
+                json=_payment("300.00", "300.00", "2020-01-01", "hoa_fee"),
+                headers=h,
+            )
+        )
+        _ok(
+            client.post(
+                f"/api/v1/contracts/{contracts[no]['id']}/schedules",
+                json={"valid_from": "2020-01-01", "due_day": 3},
+                headers=h,
+            )
+        )
+    debtors = {no: c["debtor_account"]["id"] for no, c in contracts.items()}
+    assert len(set(debtors.values())) == 3  # per party and unit, never shared or per person
+    assert contracts["01"]["party_id"] == contracts["02"]["party_id"] == party_a
+    assert contracts["03"]["party_id"] == party_b["id"]
+
+    # No double receivable: one item per contract and month, none per co owner.
+    acc = "/api/v1/accounting"
+    template = _ok(client.post(f"{acc}/templates/default", headers=h))
+    ledger = _ok(
+        client.post(
+            f"{acc}/ledgers",
+            json={"legal_entity_id": hoa, "template_id": template["id"]},
+            headers=h,
+        )
+    )["id"]
+    accounts = {
+        a["number"]: a["id"]
+        for a in _ok(client.get(f"{acc}/ledgers/{ledger}/accounts", headers=h), 200)
+    }
+    _ok(
+        client.put(
+            f"{acc}/ledgers/{ledger}/payment-type-accounts",
+            json={"payment_type_code": "hoa_fee", "account_id": accounts["060100"]},
+            headers=h,
+        ),
+        200,
+    )
+    run = _ok(
+        client.post(
+            f"{acc}/receivable-runs",
+            json={"period_month": "2026-03-01", "scope": "property", "scope_id": weg["id"]},
+            headers=h,
+        )
+    )
+    assert run["totals"]["ready"] == {"count": 3, "amount": "900.00"}
+    posted = _ok(client.post(f"{acc}/receivable-runs/{run['id']}/post", headers=h), 200)
+    assert posted["status"] == "posted"
+    items = _ok(
+        client.get(f"{acc}/ledgers/{ledger}/open-items", params={"as_of": "2026-03-31"}, headers=h),
+        200,
+    )
+    assert sorted(i["contract_id"] for i in items) == sorted(c["id"] for c in contracts.values())
+    assert sum(Decimal(i["remaining"]) for i in items) == Decimal("900.00")
+
+    # One head vote per party: A (two units) counts once, B (two persons) counts once.
+    hoa_api = "/api/v1/hoa"
+    meeting = _ok(
+        client.post(
+            f"{hoa_api}/meetings",
+            json={
+                "legal_entity_id": hoa,
+                "scheduled_at": "2026-06-20T10:00:00+02:00",
+                "voting_principle": "head",
+            },
+            headers=h,
+        )
+    )
+    unanimous = _ok(
+        client.post(
+            f"{hoa_api}/meetings/{meeting['id']}/agenda",
+            json={"title": "Hausordnung", "proposal": "Die Hausordnung wird geändert."},
+            headers=h,
+        )
+    )
+    split = _ok(
+        client.post(
+            f"{hoa_api}/meetings/{meeting['id']}/agenda",
+            json={"title": "Dach", "proposal": "Das Dach wird saniert."},
+            headers=h,
+        )
+    )
+    _ok(
+        client.post(
+            f"{hoa_api}/meetings/{meeting['id']}/invite",
+            json={"invited_at": "2026-05-29"},
+            headers=h,
+        ),
+        200,
+    )
+    for no in ("01", "02", "03"):
+        _ok(
+            client.post(
+                f"{hoa_api}/meetings/{meeting['id']}/attendance",
+                json={"contract_id": contracts[no]["id"], "present": True},
+                headers=h,
+            )
+        )
+    for no, choice in [("01", "yes"), ("02", "yes"), ("03", "no")]:
+        _ok(
+            client.post(
+                f"{hoa_api}/agenda/{unanimous['id']}/votes",
+                json={"contract_id": contracts[no]["id"], "choice": choice},
+                headers=h,
+            )
+        )
+    tally = _ok(client.get(f"{hoa_api}/agenda/{unanimous['id']}/tally", headers=h), 200)
+    assert (tally["yes"], tally["no"], tally["principle"]) == ("1", "1", "head")
+    assert tally["proposal"] == "negative"  # 1:1 is no simple majority; A never counts twice
+    for no, choice in [("01", "yes"), ("02", "no"), ("03", "no")]:
+        _ok(
+            client.post(
+                f"{hoa_api}/agenda/{split['id']}/votes",
+                json={"contract_id": contracts[no]["id"], "choice": choice},
+                headers=h,
+            )
+        )
+    inconsistent = client.get(f"{hoa_api}/agenda/{split['id']}/tally", headers=h)
+    assert inconsistent.status_code == 409, inconsistent.text
+    assert "Uneinheitliche Stimmabgabe" in inconsistent.json()["detail"]

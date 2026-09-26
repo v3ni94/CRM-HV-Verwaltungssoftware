@@ -232,6 +232,12 @@ class DmsConnection(IdMixin, TimestampMixin, TenantMixin, Base):
     secret: Mapped[str | None] = mapped_column(EncryptedText())
     # Drive: root folder id, OAuth client id; Paperless: tag prefix.
     options: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # Paperless post-consume webhook (A30, 11.2/11.4): HMAC secret of this tenant, write only,
+    # and the switch "Belegeingang aus Paperless automatisch" (M14-05, default off).
+    webhook_secret: Mapped[str | None] = mapped_column(EncryptedText())
+    auto_receipt_intake: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_text("false")
+    )
 
 
 class DocumentMirror(IdMixin, TimestampMixin, TenantMixin, Base):

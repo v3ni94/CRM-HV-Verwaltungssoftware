@@ -230,11 +230,9 @@ async def transition(
                     ErrorCodes.VALIDATION, detail="Zugangsdatum fehlt (Fristwahrung durch Zugang)."
                 )
             snap = await session.get(StatementSnapshot, st.snapshot_id)
-            if snap and any(r["late_claim_blocked"] for r in snap.results["results"]):
-                raise ProblemError(
-                    ErrorCodes.CONFLICT,
-                    detail="Nachforderung nach Fristablauf ohne geprüfte Ausnahme.",
-                )
+            if snap is None:
+                raise ProblemError(ErrorCodes.CONFLICT, detail="Kein Ergebnis-Snapshot.")
+            services.check_issue(st, snap, body.delivered_at)
             st.delivered_at = body.delivered_at
         await _transition(session, st, body.target, principal, body.note)
         await session.flush()

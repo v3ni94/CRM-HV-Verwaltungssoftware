@@ -4,7 +4,8 @@ Stand 26.09.2026. Immoware24 exportiert je Kontaktgruppe eine Liste (Eigentümer
 Sonstige) mit den Spalten id, Name, Briefanrede, Benutzername, Adresse, Stadt, PLZ, Staat, Land,
 Landesvorwahl, Vorwahl, Telefonnummer, E-Mail. Ein Befehl auf dem Server legt daraus die Kontakte
 des gewählten Mandanten an; die Rolle (Eigentümer, Mieter, Bank, Sonstiges) ergibt sich aus dem
-Dateinamen oder wird als `ROLLE=PFAD` angegeben.
+Dateinamen oder wird als `ROLLE=PFAD` angegeben. Derselbe Import steht im CRM unter Importe,
+Importassistent, Abschnitt "Immoware24-Listen" ohne Serverzugang zur Verfügung.
 
 ## Was angelegt wird
 
@@ -24,6 +25,29 @@ Dateinamen oder wird als `ROLLE=PFAD` angegeben.
   nur einmal angelegt und erhält beide Rollen.
 * Es entstehen keine Verträge, Sollstellungen, Bankverbindungen oder Buchungen. Die Zuordnung
   zu Objekten und Einheiten folgt über den Importassistenten (Verträge) oder manuell.
+
+## Ablauf über die Oberfläche
+
+1. Im CRM Importe, Importassistent öffnen und im Abschnitt "Immoware24-Listen" die Karte
+   "Kontakte" verwenden. Erforderlich sind die Rechte des Importassistenten; Nur-Lese-Benutzer
+   erhalten eine Ablehnung.
+2. Bis zu vier CSV-Dateien wählen (UTF-8, Semikolon, wie exportiert, je höchstens 20 MB) und je
+   Datei die Rolle festlegen (Eigentümer, Mieter, Bank, Sonstige). Die Rolle wird hier nicht aus
+   dem Dateinamen abgeleitet, sondern immer aus der Auswahl.
+3. Testlauf ausführen. Es wird nichts gespeichert. Der Bericht zeigt die Zählung und alle Zeilen
+   mit Hinweisen oder Problemen (geratene Namensreihenfolge, ungültige Telefonnummern oder
+   E-Mail-Adressen, unbekannte Länder, ungültige Zeilen).
+4. Übernehmen ist erst nach einem Testlauf mit denselben Dateien und Rollen freigeschaltet und
+   fragt vor dem Speichern nach.
+5. Nach der Übernahme erscheint der Lauf unter Importe mit der Quelle "Immoware24-Liste:
+   Kontakte". Er lässt sich dort zurücknehmen, soweit keine späteren Daten auf den Kontakten
+   aufbauen. Eine nur ergänzte Rolle an einem vorhandenen Kontakt wird durch die Rücknahme
+   nicht entfernt.
+
+Über die Schnittstelle: `POST /api/v1/imports/immoware24/lists/kontakte?mode=preview` oder
+`mode=apply` als multipart mit den Feldern `files` und `roles` in gleicher Reihenfolge (eine
+Rolle je Datei: eigentuemer, mieter, bank, sonstige). Die Antwort ist der Bericht des Befehls,
+bei Übernahme zusätzlich `import_run_id`.
 
 ## Ablauf auf dem Server
 

@@ -10,6 +10,7 @@ const initial: BillingSettings = {
   invoice_prefix: null,
   vat_status: "unset",
   vat_id_masked: null,
+  payee_iban_masked: null,
   tax_number_masked: null,
   leitweg_id: null,
   kleinunternehmer_note: null,

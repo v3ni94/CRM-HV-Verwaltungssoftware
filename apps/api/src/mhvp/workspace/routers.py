@@ -15,7 +15,7 @@ from mhvp.communication.models import Mailbox, MailboxUser
 from mhvp.core.auth.principal import TenantPrincipal, get_principal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.workspace import services
+from mhvp.workspace import jobs, services
 from mhvp.workspace.models import CalendarEntry, CalendarEvent, Notification, SavedFilter
 
 router = APIRouter(prefix="/workspace", tags=["Arbeitsplatz"])
@@ -437,6 +437,130 @@ async def search(
                     Hit(entity_type="document", id=d.id, title=d.title, subtitle=d.filename)
                 )
     return hits
+
+
+# Digest and deadlines (A40, A41) ------------------------------------------------------
+
+
+class JobSettingsOut(BaseModel):
+    digest_mail_enabled: bool
+    deadline_lead_days: int
+    deadline_lead_days_default: int = jobs.DEFAULT_LEAD_DAYS
+
+
+class JobSettingsIn(_In):
+    digest_mail_enabled: bool | None = None
+    deadline_lead_days: int | None = Field(default=None, ge=0, le=730)
+
+
+class DeadlineOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    kind: str
+    source_type: str
+    source_id: uuid.UUID
+    reference: str
+    due_on: date
+    lead_days: int
+    status: str
+    property_id: uuid.UUID | None
+    notified_at: datetime | None
+    done_at: datetime | None
+    updated_at: datetime
+
+
+@router.get("/digest", summary="Tagesübersicht des angemeldeten Benutzers (A40)")
+async def digest(
+    request: Request,
+    day: date | None = None,
+    principal: TenantPrincipal = Depends(member),
+) -> dict[str, Any]:
+    """Same data as the daily job ``tasks.digest``, computed live for the caller."""
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Tenant user required.")
+    async with tenant_tx(request, principal) as session:
+        return await jobs.build_digest(
+            session,
+            principal.tenant_id,
+            principal.user_id,
+            principal.permissions,
+            day or services.local_today(),
+        )
+
+
+@router.get("/deadlines", summary="Fristenliste des Mandanten (A41, Orientierung, zu prüfen)")
+async def deadlines(
+    request: Request,
+    kind: str | None = Query(default=None, pattern="^(" + "|".join(jobs.DEADLINE_KINDS) + ")$"),
+    status: str = Query(default="open", pattern="^(open|done|all)$"),
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    limit: int = Query(default=200, ge=1, le=1000),
+    principal: TenantPrincipal = Depends(member),
+) -> list[DeadlineOut]:
+    """Only kinds the caller may read (contracts, properties, accounting, documents)."""
+    from mhvp.workspace.models import ComplianceDeadline
+
+    allowed = [k for k, (read, _u) in jobs.DEADLINE_PERMISSIONS.items() if principal.has(read)]
+    if kind is not None:
+        allowed = [k for k in allowed if k == kind]
+    if not allowed:
+        return []
+    query = select(ComplianceDeadline).where(ComplianceDeadline.kind.in_(allowed))
+    if status != "all":
+        query = query.where(ComplianceDeadline.status == status)
+    if from_date is not None:
+        query = query.where(ComplianceDeadline.due_on >= from_date)
+    if to_date is not None:
+        query = query.where(ComplianceDeadline.due_on <= to_date)
+    query = query.order_by(ComplianceDeadline.due_on, ComplianceDeadline.reference).limit(limit)
+    async with tenant_tx(request, principal) as session:
+        rows = (await session.scalars(query)).all()
+        return [DeadlineOut.model_validate(r) for r in rows]
+
+
+@router.get("/job-settings", summary="Schalter der Tagesjobs (Digest-Mail, Vorfrist)")
+async def get_job_settings(
+    request: Request, principal: TenantPrincipal = Depends(member)
+) -> JobSettingsOut:
+    async with tenant_tx(request, principal) as session:
+        row = await jobs.job_settings(session, principal.tenant_id)
+        return JobSettingsOut(
+            digest_mail_enabled=row.digest_mail_enabled,
+            deadline_lead_days=row.deadline_lead_days,
+        )
+
+
+@router.put("/job-settings", summary="Schalter der Tagesjobs ändern")
+async def put_job_settings(
+    request: Request,
+    body: JobSettingsIn,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> JobSettingsOut:
+    async with tenant_tx(request, principal) as session:
+        row = await jobs.save_job_settings(
+            session,
+            principal.tenant_id,
+            digest_mail_enabled=body.digest_mail_enabled,
+            deadline_lead_days=body.deadline_lead_days,
+            actor_user_id=principal.user_id,
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="workspace.job_settings_changed",
+            entity_type="workspace_job_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "digest_mail_enabled": row.digest_mail_enabled,
+                "deadline_lead_days": row.deadline_lead_days,
+            },
+        )
+        return JobSettingsOut(
+            digest_mail_enabled=row.digest_mail_enabled,
+            deadline_lead_days=row.deadline_lead_days,
+        )
 
 
 # Notifications -------------------------------------------------------------------------

@@ -18,6 +18,7 @@ from mhvp.banking.connectors import (
     FileConnector,
     UnconfiguredConnector,
 )
+from mhvp.core.problems import ProblemError
 
 WEB_FORM_ID = "wf-1"
 BANK_CONNECTION_ID = "9001"
@@ -184,7 +185,7 @@ def test_fetch_transactions_requires_external_account_id(
     connector: finapi_client.FinApiConnector,
 ) -> None:
     account = BankAccountInfo(iban=IBAN)
-    with pytest.raises(finapi_client.ProblemError):
+    with pytest.raises(ProblemError):
         connector.fetch_transactions(account, since=date(2026, 1, 1), until=date(2026, 3, 1))
 
 

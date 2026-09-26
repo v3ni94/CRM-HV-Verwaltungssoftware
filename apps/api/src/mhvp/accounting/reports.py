@@ -11,6 +11,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.accounting import datev_mapping
 from mhvp.accounting import services as acc
 from mhvp.accounting.models import (
     AccountCategory,
@@ -21,6 +22,9 @@ from mhvp.accounting.models import (
     LedgerAccount,
     OpenItemSettlement,
 )
+from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
+from mhvp.core.escaping import csv_safe_cell
+from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
 
 HORIZON_DAYS = 90
@@ -149,11 +153,19 @@ async def revenue(
     ]
 
 
+def ensure_ledger_in_scope(session: AsyncSession, ledger: Ledger) -> None:
+    """Central filter hook (A37, docs/rules/M18-05-steuerberaterzugang.md): exports and
+    evaluations of a ledger outside the membership's legal entity scope answer 404. Sessions
+    without a request principal (worker, seed) are not limited."""
+    ensure_session_legal_entity_allowed(session, ledger.legal_entity_id)
+
+
 async def journal_csv(
     session: AsyncSession, ledger: Ledger, start: date, end: date
 ) -> tuple[bytes, int]:
     """Neutral journal export (semicolon CSV, German decimal comma, ISO dates). Not a DATEV or
     GoBD data carrier format (M18-01)."""
+    ensure_ledger_in_scope(session, ledger)
     rows = (
         await session.execute(
             select(JournalEntry, JournalLine, LedgerAccount)
@@ -191,11 +203,11 @@ async def journal_csv(
                 entry.fiscal_year,
                 entry.number,
                 entry.booking_date.isoformat(),
-                entry.reference or "",
+                csv_safe_cell(entry.reference or ""),
                 entry.kind.value,
-                line.text or entry.text,
+                csv_safe_cell(line.text or entry.text),
                 account.number,
-                account.name,
+                csv_safe_cell(account.name),
                 str(line.debit).replace(".", ","),
                 str(line.credit).replace(".", ","),
                 str(entry.reverses_id or ""),
@@ -212,9 +224,10 @@ def checksum(data: bytes) -> str:
 # DATEV Buchungsstapel (M18-01) ----------------------------------------------------------
 #
 # Only emitted once consultant_number, client_number and chart_of_accounts are set on the
-# tenant's TenantBillingSettings (operator decision 25.09.2026). The CRM account numbers are
-# emitted as they are; no mapping to a DATEV Kontenrahmen account is invented (see
-# docs/rules/M18-02.md). Fields implemented in the EXTF header follow the parts of the DATEV
+# tenant's TenantBillingSettings (operator decision 25.09.2026). The "Konto" field carries the
+# operator's DATEV Sachkonto from datev_account_mapping (A36, docs/rules/M18-04); no chart of
+# accounts is preloaded and unmapped accounts stop the export (MHVP-BILL-0008).
+# Fields implemented in the EXTF header follow the parts of the DATEV
 # "Buchungsstapel" format description that are unambiguous from the repository's integration
 # notes; every other header field is left empty and documented there rather than guessed.
 
@@ -236,8 +249,12 @@ async def datev_csv(
     fiscal_year_start_month: int,
 ) -> tuple[bytes, int]:
     """DATEV EXTF Buchungsstapel CSV. Requires the three operator-entered parameters; the caller
-    checks their presence (MHVP-BILL-0004) before calling this. Account numbers are the CRM's
-    own ledger account numbers, unchanged; the export log marks "Kontenzuordnung zu prüfen"."""
+    checks their presence (MHVP-BILL-0004) before calling this. The "Konto" field carries the
+    DATEV Sachkonto from the operator's mapping (``mhvp.accounting.datev_mapping``, A36,
+    M18-04) resolved per ledger and booking date. When any posted line has no mapping the
+    export stops with MHVP-BILL-0008 and the list of missing accounts; raw CRM numbers are
+    never written silently."""
+    ensure_ledger_in_scope(session, ledger)
     rows = (
         await session.execute(
             select(JournalEntry, JournalLine, LedgerAccount)
@@ -251,6 +268,47 @@ async def datev_csv(
             .order_by(JournalEntry.fiscal_year, JournalEntry.number, JournalLine.line_no)
         )
     ).all()
+    resolver = await datev_mapping.load_resolver(session, ledger)
+    missing: dict[str, dict[str, Any]] = {}
+    mapped: list[str] = []
+    for entry, _line, account in rows:
+        target = resolver.resolve(account.number, entry.booking_date)
+        if target is None:
+            item = missing.setdefault(
+                account.number,
+                {
+                    "account_code": account.number,
+                    "account_name": account.name,
+                    "lines": 0,
+                    "first_booking_date": entry.booking_date,
+                    "last_booking_date": entry.booking_date,
+                },
+            )
+            item["lines"] += 1
+            item["first_booking_date"] = min(item["first_booking_date"], entry.booking_date)
+            item["last_booking_date"] = max(item["last_booking_date"], entry.booking_date)
+            continue
+        mapped.append(target)
+    if missing:
+        codes = ", ".join(sorted(missing))
+        raise ProblemError(
+            ErrorCodes.DATEV_MAPPING_MISSING,
+            detail=(
+                f"Für {len(missing)} Konten fehlt die DATEV-Kontenzuordnung im Zeitraum "
+                f"{start:%d.%m.%Y} bis {end:%d.%m.%Y}: {codes}. Zuordnung unter Einstellungen, "
+                "Buchhaltung, DATEV pflegen."
+            ),
+            extensions={
+                "missing": [
+                    {
+                        **item,
+                        "first_booking_date": item["first_booking_date"].isoformat(),
+                        "last_booking_date": item["last_booking_date"].isoformat(),
+                    }
+                    for item in sorted(missing.values(), key=lambda i: str(i["account_code"]))
+                ]
+            },
+        )
     fiscal_year_start = date(start.year, fiscal_year_start_month, 1)
     if fiscal_year_start > start:
         fiscal_year_start = date(start.year - 1, fiscal_year_start_month, 1)
@@ -292,14 +350,14 @@ async def datev_csv(
             "Belegfeld 1",
         ]
     )
-    for entry, line, account in rows:
+    for (entry, line, _account), datev_account in zip(rows, mapped, strict=True):
         amount = line.debit if line.debit else line.credit
         soll_haben = "S" if line.debit else "H"
         writer.writerow(
             [
                 str(amount).replace(".", ","),
                 soll_haben,
-                account.number,
+                datev_account,
                 "",
                 f"{entry.booking_date:%d%m}",
                 (line.text or entry.text or "")[:60],

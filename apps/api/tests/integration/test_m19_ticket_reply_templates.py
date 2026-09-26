@@ -44,6 +44,7 @@ async def _world(settings: Any) -> World:
             ("rtadmin", "tenant_admin", a),
             ("rtfreigeber", "tenant_admin", a),
             ("rtreader", "read_only", a),
+            ("rtclerk", "clerk_no_delete", a),
             ("rtotherb", "tenant_admin", b),
         ]:
             uid = await services.create_user(
@@ -377,3 +378,64 @@ def test_preview_and_reply_requires_confirmation_and_uses_ticket_mailbox(
         e["kind"] == "mail_sent"
         for e in _ok(client.get(f"{T}/{ticket_id}", headers=admin))["events"]
     )
+
+
+def test_reply_rejects_invalid_addresses_and_foreign_mailbox(
+    client: TestClient, world: World, fake: FakeGmail
+) -> None:
+    """Sicherheitsreview 26.09.2026, Befunde 3 und 4: a malformed recipient is a 422 when the
+    reply is created, and a clerk may only answer through a mailbox granted to them."""
+    admin = bearer(login(client, world, "rtadmin"))
+    clerk = bearer(login(client, world, "rtclerk"))
+    box = _ok(
+        client.post(
+            f"{M}/mailboxes",
+            json={"address": f"buchhaltung-rt{RUN}@example.com", "kind": "gmail", "secret": "rt"},
+            headers=admin,
+        ),
+        201,
+    )
+    _ok(client.patch(f"{M}/mailboxes/{box['id']}", json={"enabled": True}, headers=admin))
+    sender = f"kunde-rt{RUN}@example.com"
+    raw = _eml(sender, f"Rückfrage {RUN}", f"<rt2-{RUN}@x>")
+    eml = _upload(client, admin, "rt2.eml", raw)
+    msg = _ok(
+        client.post(
+            f"{M}/ingest", json={"document_id": eml, "mailbox_id": box["id"]}, headers=admin
+        ),
+        201,
+    )
+    ticket_id = _ok(client.post(f"{M}/messages/{msg['id']}/ticket", headers=admin), 201)[
+        "ticket_id"
+    ]
+    reply = {"subject": "AW: Rückfrage", "body": "Guten Tag, wir melden uns.", "confirm": True}
+
+    invalid = client.post(
+        f"{T}/{ticket_id}/reply",
+        json={**reply, "to_addresses": ["keine-adresse"]},
+        headers=admin,
+    )
+    assert invalid.status_code == 422, invalid.text
+
+    # Befund 4: no MailboxUser grant, not an administrator, mailbox not default.
+    denied = client.post(f"{T}/{ticket_id}/reply", json=reply, headers=clerk)
+    assert denied.status_code == 403, denied.text
+    assert "Postfach" in denied.json()["detail"]
+    assert not [
+        m
+        for m in _ok(client.get(f"{M}/messages", params={"direction": "out"}, headers=admin))
+        if m["ticket_id"] == ticket_id
+    ]
+
+    _ok(
+        client.put(
+            f"{M}/mailboxes/{box['id']}/users",
+            json={"user_ids": [str(world.users["rtclerk"])]},
+            headers=admin,
+        )
+    )
+    created = _ok(client.post(f"{T}/{ticket_id}/reply", json=reply, headers=clerk), 201)
+    assert created["status"] == "pending"
+    assert created["mailbox_id"] == box["id"]
+    assert created["to_addresses"] == [sender]
+    assert len(fake.sent) == 0

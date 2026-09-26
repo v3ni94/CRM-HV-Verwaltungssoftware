@@ -446,3 +446,430 @@ def test_dunning_mark_sent_advances_level(
     second_case = next(c for c in second["cases"] if c["contract_id"] == c1["id"])
     assert second_case["level"] == 2
     assert second_case["fee_amount"] == "7.50"
+
+
+def test_d40_dunning_without_fee_amount_and_base_rate_creates_no_side_claim(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """D40 (annex D, 7.5 Mahnwesen, docs/rules/M16-01.md): a dunning proposal without a
+    maintained fee amount and without a Basiszinssatz creates no side claim. Expected: the
+    V7 presets carry no amounts; the Zahlungserinnerung (level 1) is 0,00 even when an amount
+    is entered for it, because fees start at ``fee_from_level`` 2; enabling interest without
+    ``interest_base_rate`` is refused with problem code MHVP-CORE-0004; the proposed case
+    shows fee 0,00 and interest 0,00, approval creates neither a fee entry nor an HVM invoice
+    draft, and the open items stay at the main claim of 350,00."""
+    from decimal import Decimal
+
+    _, gated = clients
+    h = bearer(login(gated, world, "m16admin"))
+    acc_user = bearer(login(gated, world, "m16acc"))
+    prop = _ok(
+        gated.post(
+            "/api/v1/properties",
+            json={"number": "765", "name": "Mahnhaus ohne Gebühr", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    c1 = _contract(gated, h, prop["id"], "01", "2020-01-01")
+    template = _ok(gated.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        gated.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    _ok(gated.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=h))
+    acc = {
+        a["number"]: a["id"] for a in _ok(gated.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    for code, number in [("hoa_fee", "060100"), ("reserve", "060200")]:
+        _ok(
+            gated.put(
+                f"{A}/ledgers/{ledger}/payment-type-accounts",
+                json={"payment_type_code": code, "account_id": acc[number]},
+                headers=h,
+            )
+        )
+    run = _ok(
+        gated.post(f"{A}/receivable-runs", json={"period_month": "2026-03-01"}, headers=h), 201
+    )
+    _ok(gated.post(f"{A}/receivable-runs/{run['id']}/post", headers=h))
+
+    if _ok(gated.get(f"{A}/dunning-settings", headers=h))["status"] == "nicht eingerichtet":
+        _ok(gated.post(f"{A}/dunning-settings/presets", json={}, headers=h), 201)
+    preset = _ok(
+        gated.post(f"{A}/dunning-settings/presets", json={"property_id": prop["id"]}, headers=h),
+        201,
+    )
+    assert preset["fee_from_level"] == 2
+    assert all(lv["fee_amount"] is None for lv in preset["levels"])
+    assert preset["interest_enabled"] is False
+    assert preset["interest_base_rate"] is None
+    assert preset["status"] == "kein_betrag_hinterlegt"
+
+    # Interest cannot be switched on without a maintained Basiszinssatz (never hardcoded).
+    refused = gated.put(
+        f"{A}/dunning-settings",
+        json={"property_id": prop["id"], "interest_enabled": True, "interest_spread": "5"},
+        headers=h,
+    )
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["code"] == "MHVP-CORE-0004"
+    assert "Basiszinssatz" in refused.json()["detail"]
+    assert (
+        _ok(gated.get(f"{A}/dunning-settings", params={"property_id": prop["id"]}, headers=h))[
+            "interest_enabled"
+        ]
+        is False
+    )
+
+    # An amount entered for level 1 does not make the Zahlungserinnerung chargeable.
+    levels = [{**lv, "fee_amount": "5.00"} if lv["level"] == 1 else lv for lv in preset["levels"]]
+    saved = _ok(
+        gated.put(
+            f"{A}/dunning-settings",
+            json={"property_id": prop["id"], "levels": levels, "fee_from_level": 2},
+            headers=h,
+        )
+    )
+    assert saved["fee_from_level"] == 2
+
+    lead = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-03-25"}, headers=h), 201)
+    case = next(c for c in lead["cases"] if c["contract_id"] == c1["id"])
+    assert case["status"] == "proposed"
+    assert case["level"] == 1
+    assert case["fee_amount"] == "0.00"
+    assert case["interest_amount"] == "0.00"
+    assert case["total"] == "350.00"
+    approved = _ok(gated.post(f"{A}/dunning-runs/{lead['id']}/approve", headers=acc_user))
+    approved_case = next(c for c in approved["cases"] if c["contract_id"] == c1["id"])
+    assert approved_case["fee_entry_id"] is None
+    assert approved_case["fee_invoice_draft_id"] is None
+    drafts = _ok(gated.get(f"{A}/ledgers/{ledger}/entries", params={"status": "draft"}, headers=h))
+    assert [e for e in drafts if e["kind"] == "dunning_fee"] == []
+    items = _ok(
+        gated.get(f"{A}/ledgers/{ledger}/open-items", params={"as_of": "2026-03-31"}, headers=h)
+    )
+    assert sum(Decimal(i["remaining"]) for i in items) == Decimal("350.00")
+    assert all(i["kind"] == "receivable" for i in items)
+
+
+def test_d52_comparison_ledger_receivable_run_and_dunning_stay_internal(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """D52 (6.9.10, 13.1): exactly one leading system per legal entity, date and process type.
+    A comparison ledger (Immoware24 leading, parallel operation) books the Sollstellung only as
+    an internal comparison posting: it is not dunned (excluded with reason), and a proposal
+    made while the platform was leading can no longer be approved once Immoware24 leads again,
+    so no double dunning arises from both systems. Direct debit follows with A11 (pain.008);
+    payment orders are covered in test_m15_payments (D52). Expected by hand: 2 contracts with
+    300,00 hoa_fee + 50,00 reserve each, run 20.03.2026 -> 2 cases of 350,00."""
+    client, gated = clients
+    h = bearer(login(client, world, "m16admin"))
+    acc_user = bearer(login(client, world, "m16acc"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "769", "name": "Vergleichshaus", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    mine = {_contract(client, h, prop["id"], no, "2020-01-01")["id"] for no in ("01", "02")}
+    template = _ok(client.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )
+    assert ledger["leading_system"] == "immoware24"  # comparison ledger by default
+    acc = {
+        a["number"]: a["id"]
+        for a in _ok(client.get(f"{A}/ledgers/{ledger['id']}/accounts", headers=h))
+    }
+    for code, number in [("hoa_fee", "060100"), ("reserve", "060200")]:
+        _ok(
+            client.put(
+                f"{A}/ledgers/{ledger['id']}/payment-type-accounts",
+                json={"payment_type_code": code, "account_id": acc[number]},
+                headers=h,
+            )
+        )
+    # Sollstellung: posted as comparison booking (daily reconciliation, 13.1), no external effect.
+    run = _ok(
+        client.post(
+            f"{A}/receivable-runs",
+            json={"period_month": "2026-03-01", "scope": "property", "scope_id": prop["id"]},
+            headers=h,
+        ),
+        201,
+    )
+    assert {i["contract_id"] for i in run["items"]} == mine  # scope=property: only this object
+    posted = _ok(client.post(f"{A}/receivable-runs/{run['id']}/post", headers=h))
+    assert posted["status"] == "posted"
+    # Without G1 the platform cannot become leading; Immoware24 stays the only dunning system.
+    assert (
+        client.post(
+            f"{A}/ledgers/{ledger['id']}/leading", json={"leading_system": "mhvp"}, headers=h
+        ).status_code
+        == 403
+    )
+    _ok(
+        client.put(
+            f"{A}/dunning-settings",
+            json={
+                "levels": [{"level": 1, "min_days_overdue": 10, "text": "Zahlungserinnerung"}],
+                "threshold_amount": "20.00",
+            },
+            headers=h,
+        )
+    )
+
+    def own_cases(run_out: dict[str, Any]) -> list[dict[str, Any]]:
+        return [c for c in run_out["cases"] if c["contract_id"] in mine]
+
+    prev = _ok(client.post(f"{A}/dunning-runs", json={"run_date": "2026-03-20"}, headers=h), 201)
+    cases = own_cases(prev)
+    assert len(cases) == 2
+    assert all(c["status"] == "excluded" and c["total"] == "350.00" for c in cases)
+    assert all("nicht führend" in c["reason"] and "6.9.10" in c["reason"] for c in cases)
+    assert all(c["fee_amount"] == "0.00" for c in cases)
+
+    # G1 open: platform leading -> proposals; Immoware24 leading again -> no approval (D52).
+    gh = bearer(login(gated, world, "m16acc"))
+    _ok(
+        gated.post(
+            f"{A}/ledgers/{ledger['id']}/leading", json={"leading_system": "mhvp"}, headers=gh
+        )
+    )
+    lead = _ok(client.post(f"{A}/dunning-runs", json={"run_date": "2026-03-20"}, headers=h), 201)
+    assert {c["status"] for c in own_cases(lead)} == {"proposed"}
+    back = _ok(
+        client.post(
+            f"{A}/ledgers/{ledger['id']}/leading", json={"leading_system": "immoware24"}, headers=h
+        )
+    )
+    assert back["leading_system"] == "immoware24"  # handing back needs no gate
+    refused = client.post(f"{A}/dunning-runs/{lead['id']}/approve", headers=acc_user)
+    assert refused.status_code == 409
+    assert "führende System" in refused.json()["detail"]
+    assert _ok(client.get(f"{A}/dunning-runs/{lead['id']}", headers=h))["status"] != "approved"
+    # No dunning fee or side claim was created for the comparison ledger.
+    assert all(
+        c["fee_amount"] == "0.00"
+        for c in own_cases(_ok(client.get(f"{A}/dunning-runs/{lead['id']}", headers=h)))
+    )
+
+
+async def _fee_invoice_draft(settings: Any, tenant_id: UUID, case_id: str) -> dict[str, str]:
+    """Read the draft HVM outgoing invoice of a case (no HTTP endpoint lists drafts yet)."""
+    from sqlalchemy import select as sa_select
+
+    from mhvp.accounting.models import DunningFeeInvoiceDraft
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    engine = create_app_engine(settings)
+    factory = create_session_factory(engine)
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            draft = await session.scalar(
+                sa_select(DunningFeeInvoiceDraft).where(
+                    DunningFeeInvoiceDraft.case_id == UUID(case_id)
+                )
+            )
+            assert draft is not None
+            return {
+                "issuer_ledger_id": str(draft.issuer_ledger_id),
+                "recipient_legal_entity_id": str(draft.recipient_legal_entity_id),
+                "amount": str(draft.amount),
+                "status": draft.status,
+            }
+    finally:
+        await engine.dispose()
+
+
+def test_a32_manager_entity_setup_and_tenancy_fee(
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
+) -> None:
+    """A32 (M16-08): the managing company's own legal entity (``manager``) and ledger are set
+    up through the platform (``POST /tenant/manager-entity``, Einstellungen, Mandant): the
+    name comes from the tenant master data, the ledger carries the default accounts that
+    apply to ``manager``, a second call changes nothing (idempotent), the status endpoint
+    reports ``eingerichtet``; an accountant without ``tenant_settings:update`` is refused.
+    Rent case (contract kind ``tenancy``, run scope ``property``): the fee is posted as a
+    draft receivable in the landlord's ledger and the draft HVM outgoing invoice names the
+    landlord (rental owner legal entity) as recipient and the manager ledger as issuer."""
+    from tests.integration.test_m5_contracts import _party
+    from tests.integration.test_m5_contracts import _unit as _unit_
+
+    _, gated = clients
+    h = bearer(login(gated, world, "m16admin"))
+    acc_user = bearer(login(gated, world, "m16acc"))
+    t = "/api/v1/tenant/manager-entity"
+
+    # Permission: the accountant role only reads tenant settings.
+    assert gated.post(t, headers=acc_user).status_code == 403
+    before = _ok(gated.get(t, headers=acc_user))
+    assert before["status"] in ("eingerichtet", "nicht_eingerichtet")
+
+    first = _ok(gated.post(t, headers=h))
+    assert first["status"] == "eingerichtet"
+    assert first["legal_entity_id"]
+    assert first["ledger_id"]
+    assert first["accounts_count"] > 0
+    assert first["name"]  # from tenant master data, never a default
+    second = _ok(gated.post(t, headers=h))
+    assert second["created"] is False
+    assert (second["legal_entity_id"], second["ledger_id"]) == (
+        first["legal_entity_id"],
+        first["ledger_id"],
+    )
+    status = _ok(gated.get(t, headers=h))
+    assert status["status"] == "eingerichtet"
+    assert status["ledger_id"] == first["ledger_id"]
+    manager_ledger = _ok(gated.get(f"{A}/ledgers/{first['ledger_id']}", headers=h))
+    assert manager_ledger["legal_entity_id"] == first["legal_entity_id"]
+    numbers = {
+        a["number"] for a in _ok(gated.get(f"{A}/ledgers/{first['ledger_id']}/accounts", headers=h))
+    }
+    assert "001300" in numbers  # default template rows that apply to "manager"
+    assert "060100" not in numbers  # Hausgeld belongs to the GdWE only
+
+    # Rent case: landlord legal entity, tenancy with rent, leading ledger, overdue rent.
+    prop = _ok(
+        gated.post(
+            "/api/v1/properties",
+            json={"number": "766", "name": "Mahnhaus Miete", "management_type": "rental"},
+            headers=h,
+        ),
+        201,
+    )
+    landlord_party, _ = _party(gated, h, "Vermieter766", "company")
+    landlord = _ok(
+        gated.post(
+            f"/api/v1/properties/{prop['id']}/owners",
+            json={"party_id": landlord_party, "valid_from": "2020-01-01"},
+            headers=h,
+        ),
+        201,
+    )["legal_entity_id"]
+    unit = _unit_(gated, h, prop["id"], "01")
+    tenant_party, _ = _party(gated, h, "Mieter766")
+    lease = _ok(
+        gated.post(
+            "/api/v1/contracts",
+            json={
+                "kind": "tenancy",
+                "unit_id": unit,
+                "party_id": tenant_party,
+                "start_date": "2024-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    assert lease["legal_entity_id"] == landlord
+    _ok(
+        gated.post(
+            f"/api/v1/contracts/{lease['id']}/payments",
+            json={
+                "payment_type_code": "rent",
+                "net": "650.00",
+                "gross": "650.00",
+                "valid_from": "2024-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(
+        gated.post(
+            f"/api/v1/contracts/{lease['id']}/schedules",
+            json={"valid_from": "2024-01-01", "due_day": 3},
+            headers=h,
+        ),
+        201,
+    )
+    template = _ok(gated.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        gated.post(
+            f"{A}/ledgers",
+            json={"legal_entity_id": landlord, "template_id": template["id"]},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    rent_account = _ok(
+        gated.post(
+            f"{A}/ledgers/{ledger}/accounts",
+            json={"number": "060300", "name": "Mieten", "category": "revenue", "type": "income"},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    _ok(
+        gated.put(
+            f"{A}/ledgers/{ledger}/payment-type-accounts",
+            json={"payment_type_code": "rent", "account_id": rent_account},
+            headers=h,
+        )
+    )
+    _ok(gated.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=h))
+    run = _ok(
+        gated.post(
+            f"{A}/receivable-runs",
+            json={"period_month": "2026-03-01", "scope": "property", "scope_id": prop["id"]},
+            headers=h,
+        ),
+        201,
+    )
+    _ok(gated.post(f"{A}/receivable-runs/{run['id']}/post", headers=h))
+    # Tenant default (needed once) and the object override with the fee for the rent case.
+    _ok(
+        gated.put(
+            f"{A}/dunning-settings",
+            json={
+                "levels": [{"level": 1, "min_days_overdue": 10, "text": "Mahnung"}],
+                "threshold_amount": "20.00",
+                "fee_from_level": 1,
+            },
+            headers=h,
+        )
+    )
+    _ok(
+        gated.put(
+            f"{A}/dunning-settings",
+            json={
+                "property_id": prop["id"],
+                "levels": [
+                    {"level": 1, "min_days_overdue": 10, "text": "Mahnung", "fee_amount": "7.50"}
+                ],
+                "threshold_amount": "20.00",
+                "fee_from_level": 1,
+            },
+            headers=h,
+        )
+    )
+    lead = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-03-25"}, headers=h), 201)
+    case = next(c for c in lead["cases"] if c["contract_id"] == lease["id"])
+    assert case["fee_amount"] == "7.50"
+    approved = _ok(gated.post(f"{A}/dunning-runs/{lead['id']}/approve", headers=acc_user))
+    approved_case = next(c for c in approved["cases"] if c["contract_id"] == lease["id"])
+    assert approved_case["fee_entry_id"] is not None
+    assert approved_case["fee_invoice_draft_id"] is not None
+    entry = _ok(
+        gated.get(f"{A}/ledgers/{ledger}/entries/{approved_case['fee_entry_id']}", headers=h)
+    )
+    assert entry["status"] == "draft"  # fee receivable in the landlord's ledger, draft only
+    draft = asyncio.run(
+        _fee_invoice_draft(_settings(database, redis_url), world.tenant_a, case["id"])
+    )
+    assert draft["issuer_ledger_id"] == first["ledger_id"]  # HVM invoices the landlord
+    assert draft["recipient_legal_entity_id"] == landlord
+    assert draft["amount"] == "7.50"
+    assert draft["status"] == "draft"  # G1 closed: nothing released, nothing sent

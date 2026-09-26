@@ -30,7 +30,16 @@ READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 
 _STATUS_FILTER = "^(open|extracting|proposed|failed|confirmed|rejected)$"
-_SUPPORTED_MIME = {"application/pdf", "image/png", "image/jpeg", "text/plain"}
+_SUPPORTED_MIME = {
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "text/plain",
+    "application/xml",
+    "text/xml",
+}
+# Types whose original bytes are read for the structured e-invoice part (13.5).
+_EINVOICE_MIME = {"application/pdf", "application/xml", "text/xml"}
 
 
 async def _draft(session: Any, draft_id: uuid.UUID) -> ReceiptDraft:
@@ -106,7 +115,10 @@ async def _start(
         if document.mime_type not in _SUPPORTED_MIME:
             raise ProblemError(
                 ErrorCodes.VALIDATION,
-                detail="Nur PDF, Bild oder Textbelege können als Rechnung erfasst werden.",
+                detail=(
+                    "Nur PDF, Bild, Text oder XML-Belege (XRechnung) können als Rechnung "
+                    "erfasst werden."
+                ),
             )
         if source == ReceiptDraftSource.MAIL_ATTACHMENT.value:
             if message_id is None:
@@ -129,6 +141,10 @@ async def _start(
                 ErrorCodes.CONFLICT,
                 detail="Für dieses Dokument liegt bereits ein offener Belegentwurf vor.",
             )
+        data: bytes | None = None
+        if document.mime_type in _EINVOICE_MIME:
+            blobs = BlobStore(request.app.state.settings)
+            data = blobs.get(BlobStore.key(principal.tenant_id, document.id))
         draft = await extraction.prepare(
             session,
             tenant_id=principal.tenant_id,
@@ -136,11 +152,20 @@ async def _start(
             document=document,
             source=source,
             message_id=message_id,
+            data=data,
         )
-        await _event(session, principal, "receipt_draft.started", draft.id, source=source)
+        await _event(
+            session,
+            principal,
+            "receipt_draft.started",
+            draft.id,
+            source=source,
+            e_invoice_format=draft.e_invoice_format,
+            ai_run=draft.task_run_id is not None,
+        )
         draft_id, run_id = draft.id, draft.task_run_id
-    assert run_id is not None  # noqa: S101 - prepare always queues a run
-    await _dispatch(request, principal, run_id)
+    if run_id is not None:  # a plain XRechnung needs no provider call
+        await _dispatch(request, principal, run_id)
     return await get_draft(draft_id, request, principal)
 
 
@@ -175,6 +200,13 @@ async def create_draft_from_paperless(
             raise ProblemError(ErrorCodes.DMS_UNAVAILABLE, detail=str(exc)) from None
         finally:
             await client.aclose()
+        # Same limit as an upload (A-016): Paperless is a configured DMS, not a trusted source
+        # of unbounded files.
+        if len(file.content) > request.app.state.settings.document_max_bytes:
+            raise ProblemError(
+                ErrorCodes.UPLOAD_REJECTED,
+                detail="Das Paperless-Dokument überschreitet die zulässige Dateigröße.",
+            )
         filename = file.filename or f"paperless-{body.paperless_document_id}.pdf"
         document = await doc_services.store_document(
             session,
@@ -257,6 +289,14 @@ async def confirm_draft(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Die Extraktion läuft noch; bitte kurz warten."
             )
+        if draft.conflicts and not body.conflicts_acknowledged:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=(
+                    "Der Entwurf weist Widersprüche zwischen XML und PDF aus; sie müssen "
+                    "gesichtet werden (conflicts_acknowledged), keine automatische Auswahl (D42)."
+                ),
+            )
         data = body.invoice
         if data.payee_iban:
             if not body.iban_confirmed:
@@ -285,6 +325,7 @@ async def confirm_draft(
         summary = await imports.apply_invoice(session, import_run, principal, data)
         import_run.summary = summary
         draft.invoice_id = uuid.UUID(summary["invoice_id"])
+        await _carry_over(session, draft)
         draft.status = ReceiptDraftStatus.CONFIRMED.value
         draft.decided_by, draft.decided_at = principal.user_id, datetime.now(UTC)
         if body.note:
@@ -318,6 +359,37 @@ async def reject_draft(
         await _close_proposal(session, draft, Decision.REJECTED, principal)
         await _event(session, principal, "receipt_draft.rejected", draft.id, reason=body.reason)
         return await _out(session, draft)
+
+
+async def _carry_over(session: Any, draft: ReceiptDraft) -> None:
+    """What the intake knows and the apply schema cannot carry: e-invoice format, the printed
+    recipient (PÜ01 check against the legal entity) and the intake findings (D42 conflicts,
+    D44 unproven § 35a share) as review hints on the invoice. Findings are hints only; the
+    review steps stay open (PÜ05)."""
+    from mhvp.accounting import invoices as acc_invoices
+    from mhvp.accounting.models import Invoice
+
+    invoice = await session.get(Invoice, draft.invoice_id)
+    if invoice is None:  # pragma: no cover - apply_invoice just created it
+        return
+    if draft.e_invoice_format in ("xrechnung", "zugferd"):
+        invoice.e_invoice_format = draft.e_invoice_format
+    recipient = (draft.fields.get("recipient_name") or {}).get("value")
+    if recipient and not invoice.recipient_name:
+        invoice.recipient_name = str(recipient)[:400]
+    await acc_invoices.evaluate(session, invoice)
+    extra: list[str] = []
+    for conflict in draft.conflicts:
+        other = conflict.get("other")
+        extra.append(
+            f"E-Rechnung: Widerspruch bei {conflict.get('field')} (XML: {conflict.get('xml')}, "
+            f"{conflict.get('other_source')}: {other if other is not None else 'nicht gefunden'}); "
+            "Zahlungsprüfung statt automatischer Auswahl (D42)"
+        )
+    extra.extend(f for f in draft.findings if f.startswith("§-35a"))
+    if extra:
+        invoice.findings = [*invoice.findings, *extra]
+    await session.flush()
 
 
 async def _close_proposal(

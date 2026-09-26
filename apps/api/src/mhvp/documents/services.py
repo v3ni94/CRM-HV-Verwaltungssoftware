@@ -37,8 +37,10 @@ from mhvp.handover.models import (
     HandoverProtocol,
     HandoverRoom,
 )
+from mhvp.letting.models import Listing
 from mhvp.platform.models import TenantSettings
 from mhvp.properties.models import Building, LegalEntity, Property, Unit
+from mhvp.tickets.models import Ticket
 
 # Entities a document may be linked to, with the model used to verify existence (RLS applies).
 LINKABLE: dict[str, Any] = {
@@ -55,6 +57,14 @@ LINKABLE: dict[str, Any] = {
     "handover_room": HandoverRoom,
     "handover_defect": HandoverDefect,
     "handover_item": HandoverItem,
+    # Listings (M26-02): images and attachments of an advertisement; the OpenImmo export reads
+    # image documents linked with entity_type "listing".
+    "listing": Listing,
+    # Tickets (A55): photos of a damage report from the portal and other attachments.
+    "ticket": Ticket,
+    # Released version of another document (E06, D31): a redacted copy links to its original
+    # with role "generated"; the portal shows the copy with a redaction note, never the original.
+    "document": Document,
 }
 VISIBILITY = frozenset({"tenant", "owner", "provider", "board"})
 

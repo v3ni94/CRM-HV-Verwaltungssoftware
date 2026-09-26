@@ -42,6 +42,7 @@ export function DunningCaseActions({
   const [error, setError] = useState<string | null>(null);
   const [prep, setPrep] = useState<Mahnbescheid | null>(null);
   const [filed, setFiled] = useState(hasLetter);
+  const [prepFiled, setPrepFiled] = useState(false);
 
   async function downloadLetter() {
     setBusy(true);
@@ -109,6 +110,49 @@ export function DunningCaseActions({
     else setError(res.message);
   }
 
+  /** A31: PDF der Vorbereitung auf dem Briefbogen ("Vorbereitung, Prüfung durch Rechtsanwalt
+   * erforderlich, kein Antrag"), Vorschau als Download oder Ablage als Dokument. */
+  async function downloadPrepPdf() {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/bff/accounting/dunning-cases/${caseId}/mahnbescheid-preview`, {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const problem = await readProblem(response);
+        setError(problemMessage(problem, response.status));
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mahnbescheid-vorbereitung-${caseId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError(problemMessage(null, 0));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function filePrepPdf() {
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ document_id: string }>(`/api/bff/accounting/dunning-cases/${caseId}/mahnbescheid`, {
+      method: "POST",
+    });
+    setBusy(false);
+    if (res.ok) {
+      setPrepFiled(true);
+      router.refresh();
+    } else setError(res.message);
+  }
+
   function download() {
     if (!prep) return;
     const blob = new Blob([JSON.stringify(prep, null, 2)], { type: "application/json" });
@@ -155,9 +199,21 @@ export function DunningCaseActions({
       ) : null}
       {isHighestLevel ? (
         prep ? (
-          <button type="button" className={ui.buttonSm} onClick={download}>
-            {t("mahnbescheidDownload")}
-          </button>
+          <>
+            <button type="button" className={ui.buttonSm} onClick={download}>
+              {t("mahnbescheidDownload")}
+            </button>
+            <button type="button" className={ui.buttonSm} onClick={downloadPrepPdf} disabled={busy}>
+              {t("mahnbescheidPdf")}
+            </button>
+            {prepFiled ? (
+              <span className={ui.badge}>{t("mahnbescheidPdfFiled")}</span>
+            ) : (
+              <button type="button" className={ui.buttonSm} onClick={filePrepPdf} disabled={busy}>
+                {t("mahnbescheidPdfFile")}
+              </button>
+            )}
+          </>
         ) : (
           <button type="button" className={ui.buttonSm} onClick={prepareMahnbescheid} disabled={busy}>
             {t("mahnbescheid")}

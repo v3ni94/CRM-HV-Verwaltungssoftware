@@ -20,6 +20,163 @@ from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.workspace.services import local_today, notify
 
 CONSENT_WARN_DAYS = 10
+# Task A29 (8.2): one in-app notification per bank connection and expiry date to everyone
+# who may act on it (accounting:update). The domain event is the idempotency marker: it is
+# written in the same transaction as the notifications, so a second run on the same day (or
+# the daily beat plus the 06:00 sync) never notifies twice for the same expiry date.
+CONSENT_EVENT_TYPE = "banking.consent_expiring"
+CONSENT_NOTIFICATION_KIND = "banking.consent_expiring"
+CONSENT_PERMISSION = "accounting:update"
+
+
+async def users_with_permission(
+    session: AsyncSession, tenant_id: uuid.UUID, permission: str
+) -> list[uuid.UUID]:
+    """Active members of the tenant whose roles (including parent roles) grant ``permission``.
+    Mirrors `mhvp.core.auth.permissions.effective_permissions`, but per tenant instead of per
+    membership, for job recipients."""
+    from mhvp.platform.models import Membership, MembershipRole, MembershipStatus, Role
+    from mhvp.platform.models import RolePermission as RolePerm
+
+    resource, action = permission.split(":", 1)
+    granting = set(
+        (
+            await session.scalars(
+                select(RolePerm.role_id).where(
+                    RolePerm.tenant_id == tenant_id,
+                    RolePerm.resource == resource,
+                    RolePerm.action == action,
+                )
+            )
+        ).all()
+    )
+    if not granting:
+        return []
+    parents = {
+        row.id: row.parent_role_id
+        for row in (
+            await session.execute(
+                select(Role.id, Role.parent_role_id).where(Role.tenant_id == tenant_id)
+            )
+        ).all()
+    }
+    rows = (
+        await session.execute(
+            select(Membership.user_id, MembershipRole.role_id)
+            .join(MembershipRole, MembershipRole.membership_id == Membership.id)
+            .where(
+                Membership.tenant_id == tenant_id,
+                Membership.status == MembershipStatus.ACTIVE,
+                MembershipRole.tenant_id == tenant_id,
+            )
+        )
+    ).all()
+    recipients: list[uuid.UUID] = []
+    for user_id, role_id in rows:
+        seen: set[uuid.UUID] = set()
+        current: uuid.UUID | None = role_id
+        while current is not None and current not in seen:
+            seen.add(current)
+            if current in granting:
+                if user_id not in recipients:
+                    recipients.append(user_id)
+                break
+            current = parents.get(current)
+    return recipients
+
+
+async def _consent_already_notified(
+    session: AsyncSession, connection_id: uuid.UUID, valid_until: date
+) -> bool:
+    from mhvp.core.events import DomainEvent
+
+    existing = await session.scalar(
+        select(DomainEvent.id).where(
+            DomainEvent.type == CONSENT_EVENT_TYPE,
+            DomainEvent.entity_id == connection_id,
+            DomainEvent.payload["consent_valid_until"].astext == valid_until.isoformat(),
+        )
+    )
+    return existing is not None
+
+
+async def remind_consent_expiry(
+    session: AsyncSession, tenant_id: uuid.UUID, conn: BankConnection, today: date
+) -> int:
+    """Reminder for one connection (A29): the finAPI consent date wins over the generic one;
+    a date within CONSENT_WARN_DAYS notifies the accounting users once per expiry date and
+    emits ``banking.consent_expiring``; a past date also marks the connection as expired.
+    Returns the number of notifications created."""
+    from mhvp.banking.models import FinApiConnection
+    from mhvp.core.events import emit
+
+    fa = await session.scalar(
+        select(FinApiConnection).where(FinApiConnection.bank_connection_id == conn.id)
+    )
+    valid_until = (fa.consent_valid_until if fa is not None else None) or conn.consent_valid_until
+    if valid_until is None or valid_until > today + timedelta(days=CONSENT_WARN_DAYS):
+        return 0
+    expired = valid_until < today
+    if expired and conn.status not in (ConnectionStatus.DISABLED, ConnectionStatus.CONSENT_EXPIRED):
+        conn.status = ConnectionStatus.CONSENT_EXPIRED
+    if await _consent_already_notified(session, conn.id, valid_until):
+        return 0
+    recipients = await users_with_permission(session, tenant_id, CONSENT_PERMISSION)
+    if not recipients and conn.created_by is not None:
+        recipients = [conn.created_by]
+    # A new expiry date (renewed or expired meanwhile) supersedes the still unread reminder
+    # for the old date; `notify` would otherwise treat it as the same unread item.
+    from mhvp.workspace.models import Notification
+
+    for old in (
+        await session.scalars(
+            select(Notification).where(
+                Notification.kind == CONSENT_NOTIFICATION_KIND,
+                Notification.entity_id == conn.id,
+                Notification.read_at.is_(None),
+            )
+        )
+    ).all():
+        old.read_at = datetime.now(UTC)
+    when = f"{valid_until:%d.%m.%Y}"
+    title = (
+        f"Bankzustimmung {conn.bank_name} ist am {when} abgelaufen"
+        if expired
+        else f"Bankzustimmung {conn.bank_name} läuft am {when} ab"
+    )
+    body = (
+        "Die Zustimmung zum Kontozugriff muss über Bank, Bankverbindungen, Zustimmung erneuern "
+        "(WebForm der Bank) verlängert werden. Bis dahin werden keine Umsätze abgerufen."
+    )
+    created = 0
+    for user_id in recipients:
+        row = await notify(
+            session,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            kind=CONSENT_NOTIFICATION_KIND,
+            title=title,
+            body=body,
+            entity_type="bank_connection",
+            entity_id=conn.id,
+        )
+        created += int(row is not None)
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type=CONSENT_EVENT_TYPE,
+        entity_type="bank_connection",
+        entity_id=conn.id,
+        actor_user_id=None,
+        payload={
+            "consent_valid_until": valid_until.isoformat(),
+            "expired": expired,
+            "bank_name": conn.bank_name,
+            "recipients": len(recipients),
+            "days_left": (valid_until - today).days,
+        },
+    )
+    return created
 
 
 async def _warn_consent_expiry(
@@ -29,26 +186,49 @@ async def _warn_consent_expiry(
     today: date,
     counts: dict[str, int],
 ) -> None:
-    if not (
-        conn.consent_valid_until
-        and conn.consent_valid_until <= today + timedelta(days=CONSENT_WARN_DAYS)
-    ):
-        return
-    if conn.consent_valid_until < today:
-        conn.status = ConnectionStatus.CONSENT_EXPIRED
-    if conn.created_by is not None:
-        created = await notify(
-            session,
-            tenant_id=tenant_id,
-            user_id=conn.created_by,
-            kind="bank_consent_expiring",
-            title=(
-                f"Bankzustimmung {conn.bank_name} läuft am {conn.consent_valid_until:%d.%m.%Y} ab"
-            ),
-            entity_type="bank_connection",
-            entity_id=conn.id,
-        )
-        counts["consent_warnings"] += int(created is not None)
+    counts["consent_warnings"] += await remind_consent_expiry(session, tenant_id, conn, today)
+
+
+async def consent_reminders_tenant(
+    session: AsyncSession, tenant_id: uuid.UUID, today: date | None = None
+) -> dict[str, int]:
+    """Per tenant half of the daily beat job ``mhvp.banking.consent_reminders`` (A29)."""
+    today = today or local_today()
+    counts = {"connections": 0, "consent_warnings": 0}
+    for conn in (await session.scalars(select(BankConnection))).all():
+        if conn.connector is Connector.FILE_IMPORT or conn.status is ConnectionStatus.DISABLED:
+            continue
+        counts["connections"] += 1
+        counts["consent_warnings"] += await remind_consent_expiry(session, tenant_id, conn, today)
+    await session.flush()
+    return counts
+
+
+async def consent_reminders_once(settings: Settings) -> dict[str, int]:
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    totals = {"connections": 0, "consent_warnings": 0}
+    try:
+        async with platform_transaction(factory) as session:
+            ids = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            async with tenant_transaction(factory, tenant_id) as session:
+                for key, value in (await consent_reminders_tenant(session, tenant_id)).items():
+                    totals[key] += value
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.banking.consent_reminders")
+def consent_reminders() -> dict[str, int]:
+    """Celery beat entry (daily): reminder 10 days before a consent expires, per tenant,
+    idempotent per connection and expiry date (A29, 8.2)."""
+    return asyncio.run(consent_reminders_once(get_settings()))
 
 
 async def sync_tenant(session: AsyncSession, tenant_id: uuid.UUID) -> dict[str, int]:

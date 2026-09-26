@@ -38,11 +38,47 @@ export type DocumentsOverview = {
   groups: { category_id: string | null; code: string; name: string; count: number; documents: DocumentRow[] }[];
 };
 
-type ListKind = "missing" | "documents";
+type PersonRow = {
+  unit_id: string;
+  unit_number: string;
+  unit_label: string | null;
+  contract_id: string;
+  contract_number: string;
+  contract_start: string;
+  contract_end: string | null;
+  party_name: string;
+  contact_id: string | null;
+  name: string;
+  street: string;
+  postal_code: string;
+  city: string;
+  email: string;
+  phone: string;
+};
+export type PersonsList = {
+  property_id: string;
+  property_number: string;
+  property_name: string;
+  management_type: string;
+  kind: "owners" | "tenants";
+  reference_date: string;
+  total: number;
+  rows: PersonRow[];
+};
+
+type ListKind = "missing" | "documents" | "owners" | "tenants";
+/** API path segment of a list kind (`/lists/<kind>`). */
+const API_KIND: Record<ListKind, string> = {
+  missing: "missing-documents",
+  documents: "documents",
+  owners: "owners",
+  tenants: "tenants",
+};
 
 /** M35 Stufe 4, Teil Listengenerierung: Anforderungsliste fehlender Unterlagen (je Objekt oder
- * über alle Objekte) und Dokumentenübersicht je Kategorie, jeweils mit CSV-Download. Nur
- * lesend, spiegelt `/api/v1/objektakte/lists/...` und `/api/v1/objektakte/properties/{id}/lists/...`. */
+ * über alle Objekte), Dokumentenübersicht je Kategorie sowie Eigentümer- und Mieterliste je
+ * Objekt, jeweils mit CSV-Download und Ablage als Dokument beim Objekt. Spiegelt
+ * `/api/v1/objektakte/lists/...` und `/api/v1/objektakte/properties/{id}/lists/...`. */
 export function ObjektakteLists({ properties }: { properties: PropertyOption[] }) {
   const t = useTranslations("Objektakte.lists");
   const [kind, setKind] = useState<ListKind>("missing");
@@ -50,12 +86,16 @@ export function ObjektakteLists({ properties }: { properties: PropertyOption[] }
   const [onlyIncomplete, setOnlyIncomplete] = useState(true);
   const [missing, setMissing] = useState<MissingEntry[]>([]);
   const [documents, setDocuments] = useState<DocumentsOverview | null>(null);
+  const [persons, setPersons] = useState<PersonsList | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [storing, setStoring] = useState(false);
+  const [storedTitle, setStoredTitle] = useState<string | null>(null);
 
+  const needsProperty = kind !== "missing";
   const csvPath = () => {
-    if (kind === "documents") {
-      return propertyId ? `/api/bff/objektakte/properties/${propertyId}/lists/documents/export` : null;
+    if (needsProperty) {
+      return propertyId ? `/api/bff/objektakte/properties/${propertyId}/lists/${API_KIND[kind]}/export` : null;
     }
     if (propertyId) return `/api/bff/objektakte/properties/${propertyId}/lists/missing-documents/export`;
     const params = new URLSearchParams();
@@ -63,12 +103,37 @@ export function ObjektakteLists({ properties }: { properties: PropertyOption[] }
     return `/api/bff/objektakte/lists/missing-documents/export?${params.toString()}`;
   };
 
+  async function storeAsDocument() {
+    if (!propertyId) return;
+    setStoring(true);
+    setError(null);
+    setStoredTitle(null);
+    const res = await bff<{ id: string; title: string }>(
+      `/api/bff/objektakte/properties/${propertyId}/lists/${API_KIND[kind]}/store`,
+      { method: "POST" },
+    );
+    setStoring(false);
+    if (res.ok) setStoredTitle(res.data.title);
+    else setError(res.message);
+  }
+
   useEffect(() => {
     let cancelled = false;
+    setStoredTitle(null);
     void (async () => {
       setLoading(true);
       setError(null);
-      if (kind === "documents") {
+      if (kind === "owners" || kind === "tenants") {
+        if (!propertyId) {
+          setPersons(null);
+          setLoading(false);
+          return;
+        }
+        const res = await bff<PersonsList>(`/api/bff/objektakte/properties/${propertyId}/lists/${kind}`);
+        if (cancelled) return;
+        if (res.ok) setPersons(res.data);
+        else setError(res.message);
+      } else if (kind === "documents") {
         if (!propertyId) {
           setDocuments(null);
           setLoading(false);
@@ -115,12 +180,14 @@ export function ObjektakteLists({ properties }: { properties: PropertyOption[] }
           <select className={ui.input} value={kind} onChange={(e) => setKind(e.target.value as ListKind)}>
             <option value="missing">{t("kindMissing")}</option>
             <option value="documents">{t("kindDocuments")}</option>
+            <option value="owners">{t("kindOwners")}</option>
+            <option value="tenants">{t("kindTenants")}</option>
           </select>
         </label>
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("property")}</span>
           <select className={ui.input} value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
-            <option value="">{kind === "documents" ? t("chooseProperty") : t("allProperties")}</option>
+            <option value="">{needsProperty ? t("chooseProperty") : t("allProperties")}</option>
             {properties.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.number} {p.name}
@@ -142,7 +209,23 @@ export function ObjektakteLists({ properties }: { properties: PropertyOption[] }
             {t("downloadCsv")}
           </a>
         ) : null}
+        {propertyId ? (
+          <button
+            type="button"
+            className={`${ui.secondary} ${ui.actionFull}`}
+            disabled={storing || loading}
+            onClick={storeAsDocument}
+            data-testid="objektakte-list-store"
+          >
+            {storing ? t("storing") : t("storeAsDocument")}
+          </button>
+        ) : null}
       </div>
+      {storedTitle ? (
+        <p role="status" className={ui.success} data-testid="objektakte-list-stored">
+          {t("stored", { title: storedTitle })}
+        </p>
+      ) : null}
 
       {error ? (
         <p role="alert" className={ui.alert}>
@@ -189,6 +272,49 @@ export function ObjektakteLists({ properties }: { properties: PropertyOption[] }
               </tbody>
             </table>
           </div>
+        )
+      ) : null}
+
+      {(kind === "owners" || kind === "tenants") && !loading ? (
+        !propertyId ? (
+          <p className="text-sm text-muted">{t("chooseProperty")}</p>
+        ) : persons && persons.total > 0 ? (
+          <div className="flex flex-col gap-2">
+            <p className={ui.help}>
+              {t("personsIntro", { date: formatDate(persons.reference_date) })} {t("personsTotal", { count: persons.total })}
+            </p>
+            <div className="overflow-x-auto">
+              <table className={ui.table} data-testid="objektakte-persons">
+                <thead>
+                  <tr>
+                    <th scope="col">{t("colUnit")}</th>
+                    <th scope="col">{t("colName")}</th>
+                    <th scope="col">{t("colAddress")}</th>
+                    <th scope="col">{t("colEmail")}</th>
+                    <th scope="col">{t("colPhone")}</th>
+                    <th scope="col">{t("colContractStart")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {persons.rows.map((r) => (
+                    <tr key={`${r.contract_id}-${r.contact_id ?? "party"}`}>
+                      <td>
+                        {r.unit_number}
+                        {r.unit_label ? ` ${r.unit_label}` : ""}
+                      </td>
+                      <td>{r.name}</td>
+                      <td>{[r.street, [r.postal_code, r.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")}</td>
+                      <td>{r.email}</td>
+                      <td>{r.phone}</td>
+                      <td>{formatDate(r.contract_start)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted">{t("emptyPersons")}</p>
         )
       ) : null}
 

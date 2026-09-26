@@ -138,11 +138,17 @@ async def staff_permissions(session: AsyncSession, account: PortalAccount) -> fr
         TenantSettings,
     )
     from mhvp.portal.staff_access import effective_permissions_for_role_codes
+    from mhvp.workspace.services import local_today
 
+    # Only a currently valid staff grant counts: a grant deactivated on a role change into an
+    # exempt role (valid_to in the past, mhvp.platform.staff_portal_sync) unlocks nothing.
+    today = local_today()
     has_staff_grant = await session.scalar(
         select(AccessGrant.id).where(
             AccessGrant.account_id == account.id,
             AccessGrant.legal_basis == STAFF_ACCESS_LEGAL_BASIS,
+            AccessGrant.valid_from <= today,
+            or_(AccessGrant.valid_to.is_(None), AccessGrant.valid_to >= today),
         )
     )
     if has_staff_grant is None:
@@ -225,3 +231,55 @@ async def visible_documents(
         return []
     query = select(Document).where(Document.id.in_(allowed)).order_by(Document.created_at.desc())
     return list((await session.scalars(query)).all())
+
+
+async def visible_document_ids(
+    session: AsyncSession, account: PortalAccount, today: date
+) -> set[uuid.UUID]:
+    return {d.id for d in await visible_documents(session, account, today)}
+
+
+async def document_scope_for_user(
+    session: AsyncSession, user_id: uuid.UUID | None, today: date
+) -> set[uuid.UUID] | None:
+    """Central document filter for paths that do not go through a portal endpoint but act on
+    behalf of a user, e.g. the AI context of a run (6.9.6: the matrix also covers RAG search;
+    D30). Returns the ids the user may see through the portal matrix, or None when the user
+    is not an external portal user (no active portal account, or the tenant wide staff grant),
+    in which case CRM permissions and RLS alone govern access."""
+    if user_id is None:
+        return None
+    account = await session.scalar(
+        select(PortalAccount).where(
+            PortalAccount.user_id == user_id, PortalAccount.status == "active"
+        )
+    )
+    if account is None or await has_staff_grant(session, account.id):
+        return None
+    return await visible_document_ids(session, account, today)
+
+
+REDACTION_NOTE = (
+    "Für Sie freigegebene Fassung: Angaben Dritter sind geschwärzt, das Original ist nicht "
+    "Teil der Freigabe."
+)
+
+
+async def redaction_notes(
+    session: AsyncSession, document_ids: set[uuid.UUID]
+) -> dict[uuid.UUID, str]:
+    """Documents that are a released version of another document (E06, D31): a document
+    linked to its original with ``entity_type="document"`` and role ``generated`` carries a
+    redaction note in the portal. The original itself stays behind the matrix."""
+    from mhvp.documents.models import DocumentLink, LinkRole
+
+    if not document_ids:
+        return {}
+    rows = await session.scalars(
+        select(DocumentLink.document_id).where(
+            DocumentLink.document_id.in_(document_ids),
+            DocumentLink.entity_type == "document",
+            DocumentLink.role == LinkRole.GENERATED,
+        )
+    )
+    return dict.fromkeys(rows, REDACTION_NOTE)

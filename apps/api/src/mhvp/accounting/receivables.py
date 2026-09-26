@@ -13,7 +13,7 @@ from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import services as acc
@@ -222,6 +222,13 @@ async def post_run(
         return run  # repeated click (B08)
     if run.status is not RunStatus.PREVIEW:
         raise ProblemError(ErrorCodes.CONFLICT, detail="Der Lauf ist storniert.")
+    # D48: runs of the same tenant and period are serialised. A second run then recomputes
+    # against the already posted items and fails as "changed basis" instead of hitting the
+    # unique index on posted items mid way (concurrency, retry, double call: one effect).
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
+        {"key": f"receivable_run:{run.tenant_id}:{run.period_month.isoformat()}"},
+    )
     current = await compute(session, run.period_month, run.scope, run.scope_id)
     if digest(current) != run.preview_hash:
         raise ProblemError(
@@ -279,7 +286,13 @@ async def post_run(
             kind=EntryKind.RECEIVABLE,
             contract_id=contract.id,
             source=EntrySource.AUTO_RECEIVABLE,
-            idempotency_key=f"receivable:{contract.id}:{item.payment_type_code}:{run.period_month.isoformat()}",
+            # Per run: a reversed run leaves its entries in the journal (rule 0.1.7), so a new
+            # run for the same period must not collide with them. Once per contract, component
+            # and period is enforced by the partial unique index on posted receivable items.
+            idempotency_key=(
+                f"receivable:{run.id}:{contract.id}:{item.payment_type_code}:"
+                f"{run.period_month.isoformat()}"
+            ),
         )
         lines = [
             acc.LineIn(debtor.id, item.amount, Decimal("0")),
@@ -352,3 +365,74 @@ def admin_fee(setting: Any, unit_counts: dict[str, int]) -> dict[str, Any]:
         "gross": str(net + vat),
         "status": "draft",
     }
+
+
+# Management fee addressing (6.9.11, E13, D58) ------------------------------------------------
+
+FEE_PAYEE_ROLE = "manager"
+
+
+async def fee_unit_counts(session: AsyncSession, setting: Any, as_of: date) -> dict[str, int]:
+    """Units the fee is charged for, per unit type.
+
+    Without ``invoice_debtor_party_id`` the fee is the WEG (or rental owner) fee for every unit
+    of the property. With a debtor party in an object ``hoa_with_sev`` it is the SE fee of that
+    owner and counts only the units that owner holds with SEV on ``as_of``: the SEV owner is
+    never charged for the units of the other owners (D58).
+    """
+    from mhvp.contracts.models import Contract, ContractKind
+    from mhvp.properties.models import ManagementType, Property, Unit
+
+    prop = await session.get(Property, setting.property_id)
+    query = select(Unit.unit_type, func.count()).where(Unit.property_id == setting.property_id)
+    if (
+        setting.invoice_debtor_party_id is not None
+        and prop is not None
+        and prop.management_type is ManagementType.HOA_WITH_SEV
+    ):
+        query = query.join(Contract, Contract.unit_id == Unit.id).where(
+            Contract.kind == ContractKind.OWNERSHIP,
+            Contract.sev_enabled.is_(True),
+            Contract.sev_fee_debtor_party_id == setting.invoice_debtor_party_id,
+            Contract.start_date <= as_of,
+            or_(Contract.end_date.is_(None), Contract.end_date >= as_of),
+        )
+    rows = await session.execute(query.group_by(Unit.unit_type))
+    return {unit_type.value: int(n) for unit_type, n in rows.all()}
+
+
+async def admin_fee_draft(
+    session: AsyncSession, setting: Any, unit_counts: dict[str, int]
+) -> dict[str, Any]:
+    """Fee draft with explicit addressing (E13): ``invoice_debtor_party_id`` is the party that
+    owes the fee (the SEV owner for an SE fee, none for the WEG fee, which is owed by the
+    Gemeinschaft as the legal entity of the property), ``debtor_legal_entity_id`` the ledger the
+    fee is a cost in, and the payee is always the management tenant. A party is never the
+    payee of the management fee, whatever a ``recipient`` style field may suggest (D58)."""
+    from mhvp.properties.models import LegalEntity, LegalEntityKind
+
+    draft = admin_fee(setting, unit_counts)
+    debtor_entity: LegalEntity | None = None
+    if setting.invoice_debtor_party_id is not None:
+        debtor_entity = await session.scalar(
+            select(LegalEntity).where(
+                LegalEntity.property_id == setting.property_id,
+                LegalEntity.party_id == setting.invoice_debtor_party_id,
+                LegalEntity.kind.in_([LegalEntityKind.SEV_OWNER, LegalEntityKind.RENTAL_OWNER]),
+            )
+        )
+    else:
+        debtor_entity = await session.scalar(
+            select(LegalEntity).where(
+                LegalEntity.property_id == setting.property_id,
+                LegalEntity.kind.in_([LegalEntityKind.HOA, LegalEntityKind.RENTAL_OWNER]),
+            )
+        )
+    draft["invoice_debtor_party_id"] = (
+        str(setting.invoice_debtor_party_id) if setting.invoice_debtor_party_id else None
+    )
+    draft["debtor_legal_entity_id"] = str(debtor_entity.id) if debtor_entity else None
+    draft["debtor_legal_entity_kind"] = debtor_entity.kind.value if debtor_entity else None
+    draft["payee_role"] = FEE_PAYEE_ROLE
+    draft["payee_party_id"] = None
+    return draft

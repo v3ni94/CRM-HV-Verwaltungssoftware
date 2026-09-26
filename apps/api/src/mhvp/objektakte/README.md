@@ -95,22 +95,40 @@ immer ein Vorschlag (rule 0.1.6). Details: `docs/rules/M35-02.md`, Plan Abschnit
 ("Ergebnis Stufe 3, Teil 2, 4 und 5"). Die CRM-Oberfläche (Review-Center, Regeln-Einstellungen,
 Vollständigkeits-Karte) liegt unter `apps/web-crm/src/components/objektakte/`.
 
-Nicht enthalten (Stufe 4 bis 6, siehe Plan): Vorschaubilder, Eigentümer-/Mieterlisten (Personenlisten),
-Parallelbetrieb.
+Nicht enthalten (Stufe 4 bis 6, siehe Plan): Vorschaubilder. Personenlisten und Parallelbetrieb sind
+inzwischen umgesetzt (siehe unten).
 
 ## Stufe 4, Teil Listengenerierung
 
 | Datei | Inhalt |
 | --- | --- |
-| `lists.py` | `missing_documents_list`, `missing_documents_overview`, `documents_by_category`, CSV-Erzeugung (Semikolon, CRLF, UTF-8 BOM) |
-| `lists_routers.py` | `/api/v1/objektakte/lists/missing-documents[/export]`, `/api/v1/objektakte/properties/{id}/lists/missing-documents[/export]`, `/api/v1/objektakte/properties/{id}/lists/documents[/export]` |
+| `lists.py` | `missing_documents_list`, `missing_documents_overview`, `documents_by_category`, `persons_list` (Eigentümer- und Mieterliste), `render_list`, `store_list` (Ablage als Dokument), CSV-Erzeugung (Semikolon, CRLF, UTF-8 BOM) |
+| `lists_routers.py` | `/api/v1/objektakte/lists/missing-documents[/export]`, `/api/v1/objektakte/properties/{id}/lists/missing-documents[/export]`, `/api/v1/objektakte/properties/{id}/lists/documents[/export]`, `/api/v1/objektakte/properties/{id}/lists/owners[/export]`, `.../lists/tenants[/export]`, `POST .../lists/{kind}/store` |
 
 Die Anforderungsliste baut auf `check_completeness` auf (eine Definition von "fehlend"), die
 Dokumentenübersicht gruppiert alle über `DocumentLink(entity_type="property")` verknüpften
 Dokumente nach `DocumentCategory` (unklassifizierte Dokumente als eigene Gruppe, Dubletten
-gekennzeichnet, nie ausgeblendet). Alle Endpunkte sind lesend (`documents:read`), keine neue
-Tabelle, keine Ablage der Liste als Dokument (offener Punkt der Stufe 4, Plan Abschnitt 4).
-CRM-Oberfläche: `apps/web-crm/src/components/objektakte/ObjektakteLists.tsx`.
+gekennzeichnet, nie ausgeblendet). Lesende Endpunkte verlangen `objektakte:read`, keine neue
+Tabelle. CRM-Oberfläche: `apps/web-crm/src/components/objektakte/ObjektakteLists.tsx`.
+
+Personenlisten (Stufe 4, Rest, 26.09.2026): Eigentümerliste (`Contract.kind == ownership`) und
+Mieterliste (`Contract.kind == tenancy`) je Objekt, eine Zeile je Einheit, Vertrag und
+Vertragspartei-Mitglied (Rollen `primary` und `co_party`; Bürgen und gesetzliche Vertreter
+bleiben außen vor). Ein Vertrag zählt, wenn er am Stichtag (heute, Europe/Berlin) läuft
+(`start_date <= Stichtag`, `end_date` leer oder `>= Stichtag`). Felder: Einheit, Name
+(`Contact.display_name`), primäre Anschrift, primäre E-Mail, primäres Telefon,
+Vertragsnummer, Vertragsbeginn und -ende. Keine Bankdaten, keine Geburtsdaten
+(Datensparsamkeit, nur im CRM ohnehin sichtbare Kontaktfelder). Eine Partei ohne Mitglieder
+erscheint mit dem Parteinamen, damit nichts stillschweigend entfällt.
+
+Ablage als Dokument (`POST .../lists/{kind}/store`, Rechte `objektakte:read` und
+`documents:create`): erzeugt die CSV der gewählten Liste und legt sie über
+`mhvp.documents.services.store_document` als Dokument ab (Quelle `generated`, Kategorie
+`list` "Liste", beim ersten Aufruf je Mandant angelegt, Verknüpfung zum Objekt mit Rolle
+`generated`, Titel "<Liste> <Objektnummer> <Objektname> <TT.MM.JJJJ>", Dateiname
+`<liste>-<nummer>-<JJJJ-MM-TT>.csv`). Jeder Aufruf erzeugt einen neuen Stand, nichts wird
+überschrieben; Aufbewahrung, Spiegelung und Suche laufen wie bei jedem anderen Dokument.
+Tests: `tests/integration/test_m35_objektakte_lists.py::test_person_lists_and_store_as_document`.
 
 ## Stufe 4, Teil Berechtigungen, Benutzerabbildung, KI-Protokoll
 
@@ -122,7 +140,17 @@ Regel: `docs/rules/M35-03.md`. Migration `0076_objektakte_ai_call`.
 | `review_routers.py`, `rules_routers.py`, `completeness_routers.py` | verlangen die `objektakte:*`-Schlüssel statt `documents:read`/`documents:update` |
 | `objektakte_import.py` | Tabellen `roles`, `users`, `ai_calls`: `build_user_mapping` (Vorschlag objektakte-Benutzer auf CRM-Rolle, `OBJEKTAKTE_ROLE_MAP`, nie ein Benutzer angelegt, Ergebnis in Vorschau und `ImportRun.summary["user_mapping"]`), `decided_by` übernommener Entscheidungen nur für bereits aktive Mitglieder, `_import_ai_calls` |
 | `models.py` (Ergänzung) | `ObjektakteAiCall` (`objektakte_ai_call`, nur vom Importer beschrieben) |
-| `ai_call_routers.py` | `GET /api/v1/objektakte/documents/{id}/ai-calls` (`objektakte:read`, nur lesend, Summen für Kostenauswertung) |
+| `ai_call_routers.py` | `GET /api/v1/objektakte/documents/{id}/ai-calls` (`objektakte:read`, nur lesend, Summen für Kostenauswertung); `GET /api/v1/objektakte/ai-calls/summary?property_id=&from=&to=` (`objektakte:read`): Kosten EUR, Token und Anzahl je Objekt (`by_property`, ohne Objektzuordnung als eigene Zeile) und je Kalendermonat (`by_month`, UTC) sowie Gesamtsumme; `from`/`to` einschließlich; Kostensummen als Dezimalstring mit sechs Stellen, UI rundet auf `1.234,56 EUR` |
+
+CRM-Oberfläche (`apps/web-crm`): Benutzerabbildung als Tabelle auf der Importdetailseite
+(`/importe/{id}`, Komponente `components/objektakte/UserMappingTable.tsx`) je Quellbenutzer mit
+E-Mail, objektakte-Rolle, vorgeschlagener CRM-Rolle und Aktion; je Zeile ein Link auf die
+Mitarbeiterverwaltung `/einstellungen/benutzer?email=&role=` (Einladungsformular wird
+vorbelegt, angelegt wird nichts ohne Absenden durch den Administrator, Regel M35-03).
+KI-Kostenauswertung auf der Objektakte-Seite (`components/objektakte/AiCostSummary.tsx`,
+Objekt- und Zeitraumfilter, Tabellen je Objekt und je Monat). Tests:
+`tests/integration/test_m35_ai_call_summary.py` (Summen, Filter, 403/401, Mandantentrennung),
+`UserMappingTable.test.tsx`, `AiCostSummary.test.tsx`.
 
 ## Stufe 5, Differenzimport und paralleler Betrieb
 
@@ -131,8 +159,20 @@ keeps only rows whose source `updated_at` is at or after the stored watermark; `
 updates existing rows only where values differ, `_mark_missing_sources` records deletions as
 markers (`objektakte_source_deletion`, resolved when the row reappears), never deletes.
 State per tenant in `objektakte_sync_state` (`enabled` default false, `dump_path`, watermark,
-last report). Tasks `mhvp.objektakte.sync_all` (beat, daily 05:15, only enabled tenants) and
+last report). `dump_path` must lie inside `Settings.objektakte_dump_dir`
+(`MHVP_OBJEKTAKTE_DUMP_DIR`, default `/data/objektakte-export`); the API checks the path and
+`read_dump_file` checks it again on the worker with symlinks resolved (Sicherheitsreview
+26.09.2026). Tasks `mhvp.objektakte.sync_all` (beat, daily 05:15, only enabled tenants) and
 `mhvp.objektakte.sync_tenant`; API `GET/PUT /objektakte/sync`, `POST /objektakte/sync/runs`
 (with file: immediate run; without: queued run on the configured path), `GET
 /objektakte/sync/deletions`. Migration `0077_objektakte_sync_state`. Tests:
 `tests/unit/test_m35_objektakte_sync.py`, `tests/integration/test_m35_objektakte_sync.py`.
+
+CRM-Oberfläche: Abschnitt "Synchronisationsstand" unter Einstellungen, Objektakte
+(`components/objektakte/SyncStatus.tsx`): Schalter und Exportpfad (nur `tenant_settings:update`),
+letzter Lauf mit Status, Wasserstand und Bericht (betrachtet, angelegt, aktualisiert, als gelöscht
+markiert, Löschmarkierungen aufgelöst, je Tabelle), "Jetzt abgleichen" (POST ohne Datei, Lauf über
+den Worker) und Upload eines vollständigen Exports (POST mit Datei, sofortiger Lauf), beides nur
+mit `documents:create`; Liste der Löschmarkierungen mit Filter offen/aufgelöst und Verweis auf
+den betroffenen Datensatz (Objekt, Kontakt; andere Zieltabellen ohne eigene Seite nur als Text).
+Test: `SyncStatus.test.tsx`.

@@ -9,6 +9,7 @@ partial failure and not a full success (case 8), dedup keeps two real 700 EUR pa
 
 import asyncio
 import concurrent.futures
+import uuid
 from collections.abc import Iterator
 from typing import Any
 
@@ -212,7 +213,7 @@ def _connect_and_check(client: TestClient, h: dict[str, str]) -> dict[str, Any]:
     created = _ok(client.post(f"{B}/connections", json={"bank_name": "Sparkasse"}, headers=h), 201)
     assert created["status"] == "web_form_pending"
     assert created["web_form_url"]
-    checked = _ok(client.post(f"{B}/connections/{created['id']}/check", headers=h))
+    checked: dict[str, Any] = _ok(client.post(f"{B}/connections/{created['id']}/check", headers=h))
     return checked
 
 
@@ -520,3 +521,214 @@ def test_reauthorize_sets_update_required_and_new_webform(client: TestClient, wo
     assert reauth["status"] == "update_required"
     assert reauth["web_form_url"]
     assert len(reauth["accounts"]) == len(checked["accounts"])  # nothing lost
+
+
+# Consent reminder (A29, 8.2) -------------------------------------------------------------
+
+
+def _run_reminders(
+    database: Database, redis_url: str, tenant_id: Any, today: Any
+) -> dict[str, int]:
+    """Runs the per-tenant half of the daily beat job for exactly one tenant."""
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    settings = _settings(database, redis_url)
+
+    async def _go() -> dict[str, int]:
+        engine = create_app_engine(settings)
+        try:
+            factory = create_session_factory(engine)
+            async with tenant_transaction(factory, tenant_id) as session:
+                return await banking_tasks.consent_reminders_tenant(session, tenant_id, today)
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(_go())
+
+
+def _set_consent(database: Database, redis_url: str, tenant_id: Any, fa_id: str, day: Any) -> None:
+    from mhvp.banking.models import FinApiConnection
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    settings = _settings(database, redis_url)
+
+    async def _go() -> None:
+        engine = create_app_engine(settings)
+        try:
+            factory = create_session_factory(engine)
+            async with tenant_transaction(factory, tenant_id) as session:
+                fa = await session.get(FinApiConnection, uuid.UUID(fa_id))
+                assert fa is not None
+                fa.consent_valid_until = day
+        finally:
+            await engine.dispose()
+
+    asyncio.run(_go())
+
+
+def _consent_notifications(
+    client: TestClient, h: dict[str, str], bank_connection_id: str
+) -> list[Any]:
+    rows = _ok(client.get("/api/v1/workspace/notifications", headers=h))
+    return [
+        n
+        for n in rows
+        if n["kind"] == banking_tasks.CONSENT_NOTIFICATION_KIND
+        and n["entity_id"] == bank_connection_id
+    ]
+
+
+def test_consent_reminder_once_per_expiry_and_only_within_window(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """A29: 10 days before expiry every user with accounting:update gets exactly one
+    notification per connection and expiry date (a second run and the 06:00 sync add none);
+    a far away date produces nothing; a read-only user is never notified; an expired consent
+    marks the connection as expired."""
+    from datetime import date, timedelta
+
+    h = bearer(login(client, world, "fa-admin"))
+    _configure(client, h)
+    checked = _connect_and_check(client, h)
+    bank_connection_id = checked["bank_connection_id"]
+    today = date(2026, 9, 26)
+
+    # Far away: nothing.
+    _set_consent(database, redis_url, world.tenant_a, checked["id"], today + timedelta(days=40))
+    counts = _run_reminders(database, redis_url, world.tenant_a, today)
+    assert counts["consent_warnings"] == 0
+    assert _consent_notifications(client, h, bank_connection_id) == []
+
+    # Exactly 10 days: once, to the accounting users, not to a read-only member.
+    expiry = today + timedelta(days=10)
+    _set_consent(database, redis_url, world.tenant_a, checked["id"], expiry)
+    first = _run_reminders(database, redis_url, world.tenant_a, today)
+    assert first["consent_warnings"] >= 2  # fa-admin and fa-banking at least
+    mine = _consent_notifications(client, h, bank_connection_id)
+    assert len(mine) == 1
+    assert "06.10.2026" in mine[0]["title"]
+    banking = bearer(login_password_only(client, world, "fa-banking"))
+    assert len(_consent_notifications(client, banking, bank_connection_id)) == 1
+
+    second = _run_reminders(database, redis_url, world.tenant_a, today)
+    assert second["consent_warnings"] == 0
+    assert len(_consent_notifications(client, h, bank_connection_id)) == 1
+    # The daily sync shares the same idempotency marker (event per connection and date).
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    async def _sync() -> dict[str, int]:
+        engine = create_app_engine(_settings(database, redis_url))
+        try:
+            async with tenant_transaction(create_session_factory(engine), world.tenant_a) as s:
+                return await banking_tasks.sync_tenant(s, world.tenant_a)
+        finally:
+            await engine.dispose()
+
+    assert asyncio.run(_sync())["consent_warnings"] == 0
+    assert len(_consent_notifications(client, h, bank_connection_id)) == 1
+
+    # Expired: marked clearly and notified once for the new date.
+    _set_consent(database, redis_url, world.tenant_a, checked["id"], today - timedelta(days=1))
+    third = _run_reminders(database, redis_url, world.tenant_a, today)
+    assert third["consent_warnings"] >= 1
+    rows = _consent_notifications(client, h, bank_connection_id)
+    assert len(rows) == 2
+    assert any("abgelaufen" in n["title"] for n in rows)
+    conn = next(
+        c for c in _ok(client.get(f"{B}/connections", headers=h)) if c["id"] == checked["id"]
+    )
+    assert conn["status"] == "consent_expired"
+    assert conn["consent_valid_until"] == (today - timedelta(days=1)).isoformat()
+
+
+def test_consent_reminder_recipients_and_tenant_separation(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """A29: recipients are the members whose roles grant accounting:update (tenant_admin,
+    accountant roles), never a read-only member; a run for one tenant touches no other
+    tenant's connections or users."""
+    from datetime import date, timedelta
+
+    from mhvp.banking.models import BankConnection, ConnectionStatus, Connector, FinApiConnection
+    from mhvp.core import crypto
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    settings = _settings(database, redis_url)
+    today = date(2026, 9, 26)
+
+    async def _setup() -> tuple[uuid.UUID, uuid.UUID, uuid.UUID, uuid.UUID]:
+        crypto.set_master_key(b"k" * 32)
+        engine = create_app_engine(settings)
+        factory = create_session_factory(engine)
+        try:
+            other, _ = await services.provision_tenant(
+                factory, slug=f"finapi-b-{RUN}", name=f"FinApi B {RUN}"
+            )
+            reader = await services.create_user(
+                factory, email=world.email("fa-reader"), display_name="reader", password=PASSWORD
+            )
+            world.users["fa-reader"] = reader
+            await services.add_member(
+                factory,
+                tenant_id=world.tenant_a,
+                user_id=reader,
+                role_codes=["read_only"],
+                actor_user_id=None,
+            )
+            other_user = await services.create_user(
+                factory, email=world.email("fa-other"), display_name="other", password=PASSWORD
+            )
+            world.users["fa-other"] = other_user
+            await services.add_member(
+                factory,
+                tenant_id=other,
+                user_id=other_user,
+                role_codes=["tenant_admin"],
+                actor_user_id=None,
+            )
+            async with tenant_transaction(factory, other) as session:
+                conn = BankConnection(
+                    tenant_id=other,
+                    connector=Connector.AGGREGATOR_FINAPI,
+                    bank_name="Volksbank B",
+                    status=ConnectionStatus.ACTIVE,
+                    created_by=other_user,
+                )
+                session.add(conn)
+                await session.flush()
+                session.add(
+                    FinApiConnection(
+                        tenant_id=other,
+                        bank_connection_id=conn.id,
+                        consent_valid_until=today + timedelta(days=3),
+                    )
+                )
+                await session.flush()
+                conn_id = conn.id
+            return other, other_user, reader, conn_id
+        finally:
+            await engine.dispose()
+
+    other, _other_user, _reader, other_conn_id = asyncio.run(_setup())
+
+    # Tenant A run: nothing for tenant B.
+    _run_reminders(database, redis_url, world.tenant_a, today)
+    other_h = bearer(login(client, world, "fa-other", other))
+    assert _consent_notifications(client, other_h, str(other_conn_id)) == []
+
+    # Tenant B run: exactly one for its admin, and the read-only member of A got nothing.
+    counts = _run_reminders(database, redis_url, other, today)
+    assert counts == {"connections": 1, "consent_warnings": 1}
+    rows = _consent_notifications(client, other_h, str(other_conn_id))
+    assert len(rows) == 1
+    assert "29.09.2026" in rows[0]["title"]
+    reader_h = bearer(login_password_only(client, world, "fa-reader"))
+    assert [
+        n
+        for n in _ok(client.get("/api/v1/workspace/notifications", headers=reader_h))
+        if n["kind"] == banking_tasks.CONSENT_NOTIFICATION_KIND
+    ] == []

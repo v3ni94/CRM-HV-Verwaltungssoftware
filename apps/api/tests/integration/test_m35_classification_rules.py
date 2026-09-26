@@ -114,6 +114,7 @@ async def test_above_threshold_yields_proposal_not_final_category(
             result = await classify_document(session, tenant_id, doc)
             assert result.applied_as_proposal
             assert doc.category_id is None  # never applied automatically (rule 0.1.6)
+            assert doc.source_meta is not None
             classification = doc.source_meta["classification"]
             assert classification["stage"] == "rules"
             assert classification["status"] == "proposal"
@@ -143,6 +144,7 @@ async def test_below_threshold_creates_review_case(database: Database, redis_url
             result = await classify_document(session, tenant_id, doc)
             assert not result.applied_as_proposal
             assert result.review_case_id is not None
+            assert doc.source_meta is not None
             assert doc.source_meta["classification"]["status"] == "review"
 
             from mhvp.objektakte.models import DocumentReviewCase
@@ -154,6 +156,7 @@ async def test_below_threshold_creates_review_case(database: Database, redis_url
             ).scalar_one()
             assert row.stage == "rules"
             assert row.document_id == doc.id
+            assert row.candidates is not None
             assert row.candidates["candidates"][0]["category_id"] == str(cat.id)
     finally:
         await engine.dispose()

@@ -525,10 +525,16 @@ async def post_statement(
         if st is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         if st.status is StatementStatus.POSTED:
-            return _st_out(st)
+            return _st_out(st)  # already posted: a later contest never reverses anything (D54)
+        resolution = await session.get(Resolution, st.resolution_id) if st.resolution_id else None
+        if resolution is not None and resolution.status not in BINDING:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=f"Ergebnisbuchung gesperrt: Beschluss im Status {resolution.status}, "
+                "nicht bestandskräftig (D54).",
+            )
         await _move(session, st, HoaTransitionIn(target=StatementStatus.POSTED), principal)
         ledger = await session.get(Ledger, st.ledger_id)
-        resolution = await session.get(Resolution, st.resolution_id)
         mapping = await session.scalar(
             select(PaymentTypeAccount).where(
                 PaymentTypeAccount.ledger_id == st.ledger_id,

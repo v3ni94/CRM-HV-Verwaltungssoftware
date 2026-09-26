@@ -14,6 +14,8 @@ export type DmsConnection = {
   base_url: string | null;
   has_secret: boolean;
   options: Record<string, string>;
+  has_webhook_secret?: boolean;
+  auto_receipt_intake?: boolean;
 };
 
 const OBJECT_FIELD_KEY = "object_field_id";
@@ -40,6 +42,9 @@ export function DmsConnectionSettings({
   const [token, setToken] = useState("");
   const [objectFieldId, setObjectFieldId] = useState(paperless?.options?.[OBJECT_FIELD_KEY] ?? "");
   const [companyFieldId, setCompanyFieldId] = useState(paperless?.options?.[COMPANY_FIELD_KEY] ?? "");
+  // Post-Consume-Webhook (A30): Geheimnis nur schreibbar, Schalter Standard aus (M14-05).
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [autoIntake, setAutoIntake] = useState(paperless?.auto_receipt_intake ?? false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,6 +90,8 @@ export function DmsConnectionSettings({
       base_url: baseUrl.trim() || null,
       options,
       ...(token ? { secret: token } : {}),
+      ...(webhookSecret ? { webhook_secret: webhookSecret } : {}),
+      auto_receipt_intake: autoIntake,
     };
     setBusy(true);
     const res = await bff<DmsConnection>("/api/bff/dms-connections/paperless", {
@@ -95,6 +102,7 @@ export function DmsConnectionSettings({
     if (!res.ok) return setError(res.message);
     setSaved(res.data);
     setToken("");
+    setWebhookSecret("");
     setMessage(t("saved"));
   };
 
@@ -201,6 +209,31 @@ export function DmsConnectionSettings({
             />
           </div>
         </div>
+
+        <fieldset className="flex flex-col gap-3 rounded-lg border border-border p-3">
+          <legend className="px-1 text-sm font-medium">{t("webhookTitle")}</legend>
+          <p className={ui.help}>{t("webhookHint")}</p>
+          <div>
+            <label htmlFor="dms-webhook-secret" className={ui.label}>
+              {t("webhookSecret")}
+            </label>
+            <input
+              id="dms-webhook-secret"
+              type="password"
+              autoComplete="off"
+              className={ui.input}
+              value={webhookSecret}
+              onChange={(e) => setWebhookSecret(e.target.value)}
+              placeholder={saved?.has_webhook_secret ? t("webhookSecretStored") : t("webhookSecretMissing")}
+            />
+            <p className={ui.help}>{t("webhookSecretHint")}</p>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={autoIntake} onChange={(e) => setAutoIntake(e.target.checked)} />
+            {t("autoIntake")}
+          </label>
+          <p className={ui.help}>{t("autoIntakeHint")}</p>
+        </fieldset>
 
         {error ? (
           <p role="alert" className={ui.alert}>

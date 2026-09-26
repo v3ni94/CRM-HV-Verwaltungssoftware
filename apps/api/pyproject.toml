@@ -90,6 +90,7 @@ asyncio_default_test_loop_scope = "session"
 addopts = "-ra --strict-markers --cov=mhvp --cov-report=term-missing"
 markers = [
     "integration: requires a bootstrapped PostgreSQL (see docs/runbooks/local-development.md)",
+    "slow: load and runtime measurements (minutes), run explicitly with -m slow",
 ]
 filterwarnings = ["error::DeprecationWarning:mhvp.*"]
 

@@ -30,6 +30,9 @@ class Principal:
     api_key_id: uuid.UUID | None = None
     is_platform_admin: bool = False
     platform_access_reason: str | None = None
+    # Legal entity scope of the membership (A37, ``mhvp.core.auth.scope``): raw list from
+    # ``Membership.legal_entity_ids``; only effective for scoped roles (tax_advisor).
+    legal_entity_ids: tuple[uuid.UUID, ...] = ()
 
     def has(self, permission: str) -> bool:
         return permission in self.permissions
@@ -52,6 +55,9 @@ async def tenant_tx(request: Request, principal: Principal) -> AsyncIterator[Asy
     if principal.tenant_id is None:
         raise ProblemError(ErrorCodes.TENANT_SELECTION)
     async with tenant_transaction(sessions(request), principal.tenant_id) as session:
+        # Lets domain helpers without a principal argument apply the legal entity scope
+        # (``mhvp.core.auth.scope.session_principal``).
+        session.info["mhvp.principal"] = principal
         yield session
 
 
@@ -141,7 +147,20 @@ async def _from_bearer(request: Request, settings: Settings, raw: str) -> Princi
         permissions=permissions,
         roles=tuple(roles),
         is_platform_admin=is_admin,
+        legal_entity_ids=_scope_ids(membership.legal_entity_ids),
     )
+
+
+def _scope_ids(raw: object) -> tuple[uuid.UUID, ...]:
+    if not isinstance(raw, list):
+        return ()
+    out: list[uuid.UUID] = []
+    for item in raw:
+        try:
+            out.append(uuid.UUID(str(item)))
+        except ValueError:
+            continue
+    return tuple(out)
 
 
 async def get_principal(request: Request) -> Principal:
@@ -180,6 +199,7 @@ def require_permission(permission: str) -> Callable[[Request], Awaitable[TenantP
             api_key_id=principal.api_key_id,
             is_platform_admin=principal.is_platform_admin,
             platform_access_reason=principal.platform_access_reason,
+            legal_entity_ids=principal.legal_entity_ids,
         )
 
     return dependency

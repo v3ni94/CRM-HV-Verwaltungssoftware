@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { Immoware24Wizard } from "@/components/imports/Immoware24Wizard";
+import { ListImports } from "@/components/imports/ListImports";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -51,6 +52,7 @@ export default async function Immoware24Page() {
       ) : (
         <Immoware24Wizard fields={fields.data} mappings={mappings.data ?? []} canUndo={canUndo} />
       )}
+      {fields.data ? <ListImports /> : null}
     </div>
   );
 }

@@ -38,6 +38,432 @@
     "title": "Portal",
     "handover": "Handover protocols",
     "logout": "Sign out",
-    "footer": "All entries are stored by the property management. Internal notes of the management are not visible here."
+    "footer": "All entries are stored by the property management. Internal notes of the management are not visible here.",
+    "nav": {
+      "handoverStaff": "Handover protocols (management)",
+      "start": "Overview",
+      "documents": "Documents",
+      "tickets": "Reports",
+      "account": "Account statement",
+      "meter": "Meter reading",
+      "data": "Data change",
+      "orders": "Orders"
+    },
+    "start": {
+      "handoverStaff": "View the management's handover protocols",
+      "title": "Overview",
+      "greetingTenantOwner": "Your contract data and requests at a glance.",
+      "greetingProvider": "Your orders from the property management.",
+      "documents": "View and download documents",
+      "tickets": "Report damage and requests",
+      "account": "View account statement",
+      "meter": "Report meter reading",
+      "data": "Request master data change",
+      "orders": "Process orders",
+      "handover": "Handover protocols"
+    },
+    "proposalNotice": "Proposal, will be reviewed by the management."
+  },
+  "Documents": {
+    "title": "Documents",
+    "empty": "No released documents.",
+    "download": "Download",
+    "created": "Provided on"
+  },
+  "Tickets": {
+    "title": "Reports",
+    "empty": "No reports available.",
+    "new": "New damage report",
+    "titleField": "Title",
+    "description": "Description",
+    "photo": "Attach photo (optional)",
+    "submit": "Report",
+    "submitted": "The report was submitted.",
+    "back": "Back to overview",
+    "history": "History",
+    "commentField": "Message",
+    "commentSubmit": "Send",
+    "commentSent": "Message was sent.",
+    "number": "Number",
+    "titleRequired": "Please enter a title.",
+    "descriptionRequired": "Please enter a description.",
+    "status": {
+      "new": "New",
+      "in_progress": "In progress",
+      "waiting": "Waiting for feedback",
+      "done": "Done",
+      "closed": "Closed",
+      "rejected": "Rejected"
+    }
+  },
+  "Account": {
+    "title": "Account statement",
+    "empty": "No open items.",
+    "contract": "Contract",
+    "dueDate": "Due on",
+    "amount": "Amount",
+    "remaining": "Open"
+  },
+  "Meter": {
+    "title": "Report meter reading",
+    "meterId": "Meter ID",
+    "meterIdHint": "You find the meter ID in your documents or can ask the management for it.",
+    "value": "Meter reading",
+    "date": "Reading date",
+    "submit": "Report",
+    "submitted": "The meter reading was submitted as a proposal.",
+    "valueRequired": "Please enter a meter reading.",
+    "dateRequired": "Please enter a reading date."
+  },
+  "DataChange": {
+    "title": "Data change",
+    "kind": "Type of change",
+    "kindOptions": {
+      "address": "Address",
+      "phone": "Phone number",
+      "email": "E-mail address",
+      "bank_account": "Bank account"
+    },
+    "fields": {
+      "street": "Street",
+      "house_number": "House number",
+      "postal_code": "Postal code",
+      "city": "City",
+      "number": "Phone number",
+      "email": "E-mail address",
+      "iban": "IBAN"
+    },
+    "submit": "Propose change",
+    "submitted": "The change was submitted as a proposal."
+  },
+  "Orders": {
+    "title": "Orders",
+    "empty": "No orders available.",
+    "back": "Back to overview",
+    "quoteAmount": "Quote amount (EUR)",
+    "quoteDocument": "Attach quote as file (optional)",
+    "quoteSubmit": "Submit quote",
+    "quoteSubmitted": "The quote was submitted.",
+    "declineAction": "Decline order",
+    "declineConfirm": "Really decline the order?",
+    "declined": "Order was declined.",
+    "appointmentDate": "Appointment",
+    "appointmentSubmit": "Set appointment",
+    "appointmentSubmitted": "The appointment was submitted.",
+    "report": "Completion report",
+    "photos": "Photos of the work (optional)",
+    "completeSubmit": "Document completion",
+    "completeSubmitted": "The completion was documented.",
+    "invoiceNumber": "Invoice number",
+    "invoiceDate": "Invoice date",
+    "invoiceGross": "Invoice amount gross (EUR)",
+    "invoiceDocument": "Attach invoice as file",
+    "invoiceDocumentRequired": "Please attach the invoice as a file.",
+    "invoiceSubmit": "Submit invoice",
+    "invoiceSubmitted": "The invoice was submitted as a proposal for review.",
+    "status": {
+      "draft": "Draft",
+      "requested": "Requested",
+      "quoted": "Quote submitted",
+      "approved": "Approved",
+      "scheduled": "Appointment set",
+      "in_progress": "In progress",
+      "done": "Completed",
+      "invoiced": "Invoice submitted",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    }
+  },
+  "HandoverStaff": {
+    "title": "Handover protocols",
+    "intro": "All handover protocols of the tenant, read only. Internal notes of the management are not visible here.",
+    "empty": "No handover protocols available.",
+    "forbidden": "This view requires the portal permission to read handover protocols. Please contact the administration.",
+    "object": "Property",
+    "unit": "Unit",
+    "manualObject": "Property entered manually",
+    "noObject": "Without property reference",
+    "date": "Handover on",
+    "pdf": "Open PDF",
+    "detail": "Open protocol",
+    "version": "Version",
+    "notSet": "not specified"
+  },
+  "Handover": {
+    "title": "Handover protocols",
+    "empty": "No entries.",
+    "statusLabel": {
+      "draft": "Draft",
+      "in_progress": "In progress",
+      "signature_pending": "Signature pending",
+      "completed": "Completed",
+      "sent": "Delivery prepared",
+      "archived": "Archived",
+      "cancelled": "Cancelled"
+    },
+    "saved": "Saved.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Really delete the entry?",
+    "add": {
+      "participants": "Add participant",
+      "meters": "Add meter",
+      "rooms": "Add room",
+      "defects": "Add defect",
+      "keys": "Add key",
+      "items": "Add item",
+      "notes": "Add remark"
+    },
+    "photos": {
+      "add": "Photo",
+      "uploading": "Uploading",
+      "remove": "Remove photo"
+    },
+    "fields": {
+      "address": "Address",
+      "street": "Street",
+      "house_number": "House number",
+      "postal_code": "Postal code",
+      "city": "City",
+      "object_label": "Property label",
+      "building": "Building",
+      "floor": "Floor",
+      "unit_number": "Unit",
+      "unit_label": "Unit (label)",
+      "unit_position": "Location",
+      "handover_date": "Handover date",
+      "handover_start": "Start",
+      "handover_end": "End",
+      "hide_time_information": "Do not show time in the protocol",
+      "handover_location": "Place of handover",
+      "ticket_number": "Ticket number",
+      "reference_number": "Reference",
+      "rental_contract_number": "Rental contract number",
+      "general_note": "General remark",
+      "deposit_amount": "Deposit amount (EUR)",
+      "deposit_account_holder": "Account holder",
+      "deposit_iban": "IBAN",
+      "deposit_bic": "BIC",
+      "deposit_bank_name": "Bank",
+      "deposit_note": "Remark on the deposit",
+      "deposit_separate_statement": "Deposit statement is issued separately",
+      "role": "Role",
+      "salutation": "Salutation",
+      "first_name": "First name",
+      "last_name": "Last name",
+      "company": "Company",
+      "email": "E-mail",
+      "phone": "Phone",
+      "comment": "Remark",
+      "meter_type": "Meter type",
+      "custom_type": "Custom label",
+      "number": "Meter number",
+      "value": "Meter reading",
+      "unit": "Unit",
+      "location": "Location",
+      "read_on": "Read on",
+      "read_at": "Time",
+      "name": "Label",
+      "room_type": "Room type",
+      "condition": "Condition",
+      "room_id": "Room",
+      "category": "Category",
+      "title": "Title",
+      "priority": "Priority",
+      "defect_status": "Status",
+      "responsibility": "Responsible",
+      "description": "Description",
+      "key_type": "Key type",
+      "custom_name": "Custom label",
+      "quantity": "Quantity",
+      "key_number": "Key number",
+      "status": "Status",
+      "item_type": "Type",
+      "text": "Text",
+      "responsible_party": "Responsible",
+      "due_date": "Deadline",
+      "is_internal": "Internal, not in the customer PDF"
+    },
+    "roles": {
+      "moving_out": "Tenant moving out",
+      "moving_in": "Tenant moving in",
+      "seller": "Selling owner",
+      "buyer": "Buying owner",
+      "handing_over": "Handing over party",
+      "taking_over": "Taking over party",
+      "management": "Management",
+      "broker": "Broker",
+      "caretaker": "Caretaker",
+      "proxy": "Authorised representative",
+      "witness": "Witness",
+      "relative": "Relative",
+      "expert": "Expert",
+      "craftsman": "Craftsman",
+      "other": "Other person"
+    },
+    "options": {
+      "participants": {
+        "role": {
+          "moving_out": "Tenant moving out",
+          "moving_in": "Tenant moving in",
+          "seller": "Selling owner",
+          "buyer": "Buying owner",
+          "handing_over": "Handing over party",
+          "taking_over": "Taking over party",
+          "management": "Management",
+          "broker": "Broker",
+          "caretaker": "Caretaker",
+          "proxy": "Authorised representative",
+          "witness": "Witness",
+          "relative": "Relative",
+          "expert": "Expert",
+          "craftsman": "Craftsman",
+          "other": "Other person"
+        }
+      },
+      "meters": {
+        "meter_type": {
+          "electricity": "Electricity",
+          "gas": "Gas",
+          "water": "Water",
+          "cold_water": "Cold water",
+          "hot_water": "Hot water",
+          "heating": "Heating meter",
+          "heat_quantity": "Heat quantity meter",
+          "common_electricity": "Common electricity",
+          "sub_meter": "Sub meter",
+          "photovoltaic": "Photovoltaic",
+          "other": "Other meter"
+        },
+        "unit": {
+          "kWh": "kWh",
+          "m³": "m³",
+          "MWh": "MWh",
+          "Liter": "Litres",
+          "Einheiten": "Units"
+        }
+      },
+      "rooms": {
+        "condition": {
+          "ok": "Free of defects",
+          "defective": "Defects present",
+          "not_checked": "Not checked",
+          "not_accessible": "Not accessible",
+          "not_included": "Not part of the handover"
+        }
+      },
+      "defects": {
+        "priority": {
+          "info": "Note",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "urgent": "Urgent"
+        },
+        "defect_status": {
+          "pre_existing": "Pre-existing",
+          "new": "Newly identified",
+          "acknowledged": "Acknowledged by the handing over party",
+          "rejected": "Acknowledgement rejected",
+          "unclear": "Unclear"
+        }
+      },
+      "keys": {
+        "status": {
+          "handed_over": "Handed over",
+          "not_handed_over": "Not handed over",
+          "to_follow": "To follow"
+        }
+      },
+      "notes": {
+        "category": {
+          "agreement": "Agreement",
+          "hint": "Note",
+          "defect": "Defect",
+          "open_task": "Open task",
+          "follow_up": "Follow up",
+          "payment": "Payment matter",
+          "other": "Other item"
+        }
+      }
+    },
+    "signature": {
+      "consent": "With their signature the signatories confirm the correctness and completeness of the details and agree to the electronic processing and storage of the protocol for the duration of the statutory retention and limitation periods.",
+      "participant": "Participant",
+      "free": "Free entry",
+      "done": "signed",
+      "name": "Name",
+      "role": "Role",
+      "location": "Place",
+      "canvas": "Signature field",
+      "clear": "Clear",
+      "save": "Save signature",
+      "saved": "Signature saved.",
+      "empty": "Please sign first.",
+      "none": "No signature recorded yet.",
+      "noName": "Without name",
+      "confirmDelete": "Really delete the signature?"
+    },
+    "hints": {
+      "title": "Notes (no obstacle to completion):"
+    },
+    "pdf": {
+      "preview": "PDF preview (draft)",
+      "stored": "Show PDF"
+    },
+    "tabs": {
+      "object": "Property",
+      "participants": "Participants",
+      "deposit": "Deposit",
+      "meters": "Meters",
+      "rooms": "Rooms",
+      "defects": "Defects",
+      "keys": "Keys",
+      "items": "Items",
+      "notes": "Remarks",
+      "signatures": "Signatures",
+      "summary": "Review and completion"
+    },
+    "complete": {
+      "action": "Complete protocol bindingly",
+      "force": "Complete bindingly despite notes",
+      "confirm": "Is the handover fully completed? With Yes the protocol is locked and stored as PDF. No changes are possible afterwards.",
+      "confirmForce": "There are notes. Is the handover fully completed anyway? With Yes the protocol is locked.",
+      "help": "On completion the protocol is locked and generated as PDF. No changes are possible afterwards; the PDF remains available here for {days} days. The management takes care of the delivery."
+    },
+    "intro": "Please fill in the handover protocol section by section. Every entry is saved immediately.",
+    "list": {
+      "number": "Number",
+      "object": "Property",
+      "date": "Handover on",
+      "status": "Status",
+      "open": "Open"
+    },
+    "access": {
+      "edit": "Editing possible",
+      "read": "Read only, available until {date}",
+      "none": "No handover protocol exists for your access."
+    },
+    "locked": "The protocol is completed and can no longer be changed.",
+    "back": "Back to overview",
+    "deposit": {
+      "notice": "Deposit details are only recorded and printed in the protocol; they do not trigger a payment."
+    },
+    "summary": {
+      "title": "Summary",
+      "rooms": "Rooms",
+      "meters": "Meters",
+      "defects": "Defects",
+      "keys": "Keys",
+      "items": "Items",
+      "notes": "Remarks",
+      "signatures": "Signatures",
+      "photos": "Photos"
+    },
+    "pdfDraft": "Preview (draft)",
+    "pdfFinal": "Protocol as PDF"
   }
 }

@@ -4,7 +4,18 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -94,3 +105,66 @@ class SavedFilter(IdMixin, TimestampMixin, TenantMixin, Base):
     resource: Mapped[str] = mapped_column(String(64), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     params: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+
+
+class WorkspaceJobSettings(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Tenant switches of the daily jobs (A40, A41): digest mail (default off, section 15.1)
+    and the lead time of the deadline list. The lead time is a product setting with a
+    documented default, not a legal deadline (rule M1-09, docs/plans/M9.md)."""
+
+    __tablename__ = "workspace_job_settings"
+    __table_args__ = (UniqueConstraint("tenant_id", name="uq_workspace_job_settings_tenant"),)
+
+    digest_mail_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    deadline_lead_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=30, server_default=text("30")
+    )
+
+
+class DigestRun(IdMixin, TenantMixin, Base):
+    """One row per tenant, user and local day: idempotency marker of ``tasks.digest`` (A40).
+    Stores counts only; the content is the notification itself."""
+
+    __tablename__ = "digest_run"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "user_id", "digest_date", name="uq_digest_run_day"),
+    )
+
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    digest_date: Mapped[date] = mapped_column(Date, nullable=False)
+    counts: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    mail_status: Mapped[str] = mapped_column(String(32), nullable=False, default="not_sent")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+
+
+class ComplianceDeadline(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Deadline list of ``compliance.deadlines`` (A41): derived from contracts, meters, bank
+    consents and document retention; the source row stays the single source of truth, this
+    table is refreshed idempotently per (kind, source, date). Dates are orientation only and
+    marked "zu prüfen" in the UI; the legal deadline calculation is open (M1-09)."""
+
+    __tablename__ = "compliance_deadline"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "kind", "source_id", "due_on", name="uq_compliance_deadline_source"
+        ),
+        Index("ix_compliance_deadline_due", "tenant_id", "status", "due_on"),
+    )
+
+    # contract_end | contract_termination | meter_calibration | bank_consent |
+    # document_retention_end
+    kind: Mapped[str] = mapped_column(String(48), nullable=False)
+    source_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    reference: Mapped[str] = mapped_column(String(300), nullable=False)
+    due_on: Mapped[date] = mapped_column(Date, nullable=False)
+    lead_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    # open | done (done when the source no longer carries the date or it lies in the past)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    property_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

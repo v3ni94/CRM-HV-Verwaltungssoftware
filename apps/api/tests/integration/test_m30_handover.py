@@ -790,6 +790,19 @@ INSERT INTO `protocol_files` (`id`,`protocol_id`,`file_category`,`original_filen
 `stored_filename`,`storage_path`,`mime_type`,`sha256`,`is_internal`)
 VALUES (9201,9001,'photo','flur.jpg','a1.jpg','protocols/9001/a1.jpg','image/jpeg',
 '{sha}',0);
+
+INSERT INTO `protocols` (`id`, `protocol_number`, `protocol_type`, `status`, `version`,
+`parent_protocol_id`, `property_id`, `street`, `house_number`, `postal_code`, `city`,
+`change_reason`)
+VALUES (9002,'UP-009001','rental','completed',2,9001,1,'Musterweg','12','40789',
+'Monheim am Rhein','Zaehlerstand korrigiert');
+
+INSERT INTO `protocol_emails` (`id`,`protocol_id`,`recipient_email`,`subject`,`body`,`status`,
+`sent_at`)
+VALUES (9301,9001,'erika@example.test','Ihr Uebergabeprotokoll','Geheimer Text','sent',
+'2026-02-01 12:00:00'),
+       (9302,9001,'max@example.test','Ihr Uebergabeprotokoll',NULL,'failed','2026-02-01 12:01:00'),
+       (9303,8888,'verwaist@example.test','Ohne Protokoll',NULL,'sent',NULL);
 """
 
 
@@ -827,9 +840,11 @@ def test_uprotokoll_import_preview_apply_and_files(client: TestClient, world: Wo
             headers=h,
         )
     )
-    assert preview["counts"]["protocols"] == 1
+    assert preview["counts"]["protocols"] == 2
     assert preview["protocols"][0]["matched_property"] is True
     assert preview["duplicates"] == 0
+    assert preview["versions_with_parent"] == 1
+    assert preview["emails_total"] == 3
 
     applied = _ok(
         client.post(
@@ -839,15 +854,32 @@ def test_uprotokoll_import_preview_apply_and_files(client: TestClient, world: Wo
             headers=h,
         )
     )
-    assert applied["created"]["protocols"] == 1
+    assert applied["created"]["protocols"] == 2
+    # Second pass (M30-03): version 2 is linked to its predecessor, the e-mail history becomes
+    # internal notes (time, recipient, subject, no body); the orphan e-mail is only counted.
+    assert applied["versions_linked"] == 1
+    assert applied["versions_unresolved"] == 0
+    assert applied["emails_total"] == 3
+    assert applied["emails_imported"] == 2
     run_id = applied["import_run_id"]
 
     listed = _ok(client.get(H, headers=h))["items"]
-    imported = next(p for p in listed if p["number"] == "UP-009001")
+    imported = next(p for p in listed if p["number"] == "UP-009001" and p["version"] == 1)
     full = _ok(client.get(f"{H}/{imported['id']}", headers=h))
     assert full["internal_note"] == "nur intern"
     assert any(p["last_name"] == "Musterfrau" for p in full["participants"])
     assert any(n["text"] and "Zaehler" in n["text"] for n in full["notes"])
+    mail_notes = [n for n in full["notes"] if n["text"] and "E-Mail aus U-Protokoll" in n["text"]]
+    assert len(mail_notes) == 2
+    assert all(n["is_internal"] for n in mail_notes)
+    assert any("01.02.2026 12:00 an erika@example.test" in n["text"] for n in mail_notes)
+    assert any("Betreff: Ihr Uebergabeprotokoll" in n["text"] for n in mail_notes)
+    assert not any("Geheimer Text" in n["text"] for n in mail_notes)
+    version_two = next(p for p in listed if p["number"] == "UP-009001" and p["version"] == 2)
+    full_two = _ok(client.get(f"{H}/{version_two['id']}", headers=h))
+    assert full_two["parent_id"] == imported["id"]
+    assert full_two["change_reason"] == "Zaehlerstand korrigiert"
+    assert [v["version"] for v in full_two["versions"]] == [1, 2]
 
     # Idempotent: re-running the same dump creates nothing new.
     reapplied = _ok(
@@ -859,7 +891,12 @@ def test_uprotokoll_import_preview_apply_and_files(client: TestClient, world: Wo
         )
     )
     assert reapplied["created"] == {}
-    assert reapplied["skipped_duplicates"] == 1
+    assert reapplied["skipped_duplicates"] == 2
+    assert reapplied["versions_linked"] == 0
+    assert reapplied["emails_imported"] == 0
+    assert reapplied["emails_total"] == 3
+    again = _ok(client.get(f"{H}/{imported['id']}", headers=h))
+    assert len([n for n in again["notes"] if "E-Mail aus U-Protokoll" in (n["text"] or "")]) == 2
 
     # Binary files (photos, signatures) come from a ZIP of the U-Protokoll storage directory.
     buffer = _io.BytesIO()
@@ -989,3 +1026,224 @@ def test_handover_portal_staff_lists_all_protocols(client: TestClient, world: Wo
     listed2 = _ok(client.get(f"{PH}/protocols", headers=staff2))
     assert all(row["id"] != pid for row in listed2)
     assert client.get(f"{PH}/{pid}", headers=staff2).status_code == 404
+
+
+PS = "/api/v1/portal/handover-protocols"
+
+
+def _staff_member(
+    client: TestClient, admin: dict[str, str], name: str, role_codes: list[str]
+) -> tuple[str, dict[str, str], str]:
+    """Creates a staff member and logs in; returns (email, headers, membership_id)."""
+    email = f"{name}-{RUN}@example.org"
+    member = _ok(
+        client.post(
+            "/api/v1/tenant/members",
+            json={
+                "email": email,
+                "display_name": name,
+                "password": PASSWORD,
+                "role_codes": role_codes,
+            },
+            headers=admin,
+        ),
+        201,
+    )
+    login_step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+    assert login_step.status_code == 200, login_step.text
+    return (
+        email,
+        {"Authorization": f"Bearer {login_step.json()['access_token']}"},
+        member["membership_id"],
+    )
+
+
+def test_portal_handover_protocols_for_staff(client: TestClient, world: World) -> None:
+    """M2-08 rest (26.09.2026): /api/v1/portal/handover-protocols lists every protocol of the
+    tenant for staff with the portal permission "handover:read" (object, unit, date, status,
+    PDF link), the detail hides internal fields, the PDF is readable. An external portal user
+    gets 403, another tenant's staff never sees the protocol (RLS)."""
+    h = bearer(login(client, world, "m30admin"))
+    _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h))
+    prop_id = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "832",
+                "name": "Portalhaus",
+                "management_type": "rental",
+                "street": "Portalweg",
+                "house_number": "7",
+                "postal_code": "40789",
+                "city": "Monheim am Rhein",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    building = _ok(
+        client.post(f"/api/v1/properties/{prop_id}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )["id"]
+    unit_id = _ok(
+        client.post(
+            f"/api/v1/properties/{prop_id}/units",
+            json={"building_id": building, "number": "07", "unit_type": "apartment"},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    pid = _ok(client.post(H, json={"kind": "rental", "unit_id": unit_id}, headers=h), 201)["id"]
+    _ok(
+        client.patch(
+            f"{H}/{pid}",
+            json={"handover_date": "2026-09-01", "internal_note": "streng intern"},
+            headers=h,
+        )
+    )
+    _, staff, _ = _staff_member(client, h, "m30ps", ["standard"])
+
+    listed = _ok(client.get(PS, headers=staff))
+    row = next(r for r in listed if r["id"] == pid)
+    assert row["property"] == {"id": prop_id, "number": "832", "name": "Portalhaus"}
+    assert row["unit"]["id"] == unit_id
+    assert row["unit"]["number"] == "07"
+    assert row["handover_date"] == "2026-09-01"
+    assert row["status"] == "in_progress"
+    assert row["address"].startswith("Portalweg 7")
+    assert row["pdf_url"] == f"{PS}/{pid}/pdf"
+    assert "internal_note" not in row
+
+    detail = _ok(client.get(f"{PS}/{pid}", headers=staff))
+    assert detail["id"] == pid
+    assert "internal_note" not in detail
+    assert "internal_contact" not in detail
+    assert detail["access"] == {"right": "read", "valid_to": None}
+    assert detail["pdf_url"] == f"{PS}/{pid}/pdf"
+
+    pdf = client.get(f"{PS}/{pid}/pdf", headers=staff)
+    assert pdf.status_code == 200, pdf.text
+    assert pdf.headers["content-type"].startswith("application/pdf")
+    assert pdf.content.startswith(b"%PDF")
+
+    # Permission: without "handover:read" in the role matrix the endpoints are forbidden.
+    _ok(
+        client.put(
+            "/api/v1/tenant/portal-role-permissions",
+            json={"standard": ["documents:read"]},
+            headers=h,
+        )
+    )
+    assert client.get(PS, headers=staff).status_code == 403
+    assert client.get(f"{PS}/{pid}", headers=staff).status_code == 403
+    assert client.get(f"{PS}/{pid}/pdf", headers=staff).status_code == 403
+    _ok(client.put("/api/v1/tenant/portal-role-permissions", json={}, headers=h))
+    assert client.get(PS, headers=staff).status_code == 200
+
+    # An external portal user (participant with a grant on exactly this protocol) is no staff.
+    contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "person",
+                "first_name": "Paul",
+                "last_name": f"Portal{RUN}",
+                "emails": [{"email": world.email("m30extern2"), "is_primary": True}],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    mover = _ok(
+        client.post(
+            f"{H}/{pid}/participants",
+            json={"contact_id": contact["id"], "role": "moving_in"},
+            headers=h,
+        ),
+        201,
+    )
+    grant = _ok(
+        client.post(f"{H}/{pid}/participants/{mover['id']}/portal-access", json={}, headers=h),
+        201,
+    )
+    _ok(
+        client.post(
+            "/api/v1/portal/invitations/accept",
+            json={"token": grant["invitation_token"], "password": PASSWORD},
+        )
+    )
+    extern = bearer(login(client, world, "m30extern2"))
+    assert client.get(PS, headers=extern).status_code == 403
+    assert client.get(f"{PS}/{pid}", headers=extern).status_code == 403
+    assert client.get(f"{PS}/{pid}/pdf", headers=extern).status_code == 403
+
+    # Tenant separation: staff of another tenant sees nothing of this one.
+    h2 = bearer(login(client, world, "m30other"))
+    _, staff2, _ = _staff_member(client, h2, "m30ps2", ["standard"])
+    assert all(r["id"] != pid for r in _ok(client.get(PS, headers=staff2)))
+    assert client.get(f"{PS}/{pid}", headers=staff2).status_code == 404
+    assert client.get(f"{PS}/{pid}/pdf", headers=staff2).status_code == 404
+
+
+def test_staff_portal_grant_follows_role_change(client: TestClient, world: World) -> None:
+    """M2-08 rest (26.09.2026): a membership moved into an exempt role (read_only) loses the
+    tenant wide staff grant (deactivated, not deleted); the portal then unlocks nothing. Moving
+    back to a staff role reactivates the grant. A member created directly with an exempt role
+    gets a grant only after the change into a staff role."""
+    h = bearer(login(client, world, "m30admin"))
+    _ok(client.post(H, json={"kind": "general"}, headers=h), 201)
+    _, staff, membership_id = _staff_member(client, h, "m30rc", ["standard"])
+    assert client.get(PS, headers=staff).status_code == 200
+    assert "handover:read" in _ok(client.get("/api/v1/portal/me", headers=staff))["permissions"]
+
+    def set_roles(codes: list[str]) -> None:
+        response = client.put(
+            f"/api/v1/tenant/members/{membership_id}/roles",
+            json={"role_codes": codes},
+            headers=h,
+        )
+        assert response.status_code == 204, response.text
+
+    set_roles(["read_only"])
+    assert client.get(PS, headers=staff).status_code == 403
+    me = client.get("/api/v1/portal/me", headers=staff)
+    assert me.status_code == 200, me.text
+    assert me.json()["permissions"] == []
+    assert client.get("/api/v1/portal/documents", headers=staff).json() == []
+
+    set_roles(["standard"])
+    assert client.get(PS, headers=staff).status_code == 200
+    assert "handover:read" in _ok(client.get("/api/v1/portal/me", headers=staff))["permissions"]
+
+    # Twice the same change stays idempotent (no duplicate grant, still one working access).
+    set_roles(["standard"])
+    assert client.get(PS, headers=staff).status_code == 200
+
+    # Exempt from the start: no portal account; after the change to a staff role the grant
+    # is created on the fly.
+    email = f"m30rc2-{RUN}@example.org"
+    member = _ok(
+        client.post(
+            "/api/v1/tenant/members",
+            json={
+                "email": email,
+                "display_name": "m30rc2",
+                "password": PASSWORD,
+                "role_codes": ["read_only"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    assert member["portal_access"] == "exempt"
+    login_step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+    assert login_step.status_code == 200, login_step.text
+    reader = {"Authorization": f"Bearer {login_step.json()['access_token']}"}
+    assert client.get(PS, headers=reader).status_code == 403
+    response = client.put(
+        f"/api/v1/tenant/members/{member['membership_id']}/roles",
+        json={"role_codes": ["standard"]},
+        headers=h,
+    )
+    assert response.status_code == 204, response.text
+    assert client.get(PS, headers=reader).status_code == 200

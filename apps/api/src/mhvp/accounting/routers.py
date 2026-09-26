@@ -12,11 +12,19 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.accounting import dunning, dunning_letters, invoices, numbering, receivables, reports
+from mhvp.accounting import (
+    dunning,
+    dunning_letters,
+    invoices,
+    numbering,
+    receivables,
+    reports,
+    xrechnung,
+)
 from mhvp.accounting import services as svc
 from mhvp.accounting.models import (
     AdminFeeSetting,
@@ -60,6 +68,10 @@ from mhvp.accounting.schemas import (
     ReverseIn,
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import (
+    ensure_session_legal_entity_allowed,
+    session_allowed_legal_entity_ids,
+)
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ReleaseGateResolver, ensure_release_gate_open
@@ -86,6 +98,8 @@ async def _ledger(session: AsyncSession, ledger_id: uuid.UUID, *, lock: bool = F
     ledger = await session.scalar(query)
     if ledger is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    # A37: legal entity scope of the membership (tax advisor); foreign ledgers answer 404.
+    ensure_session_legal_entity_allowed(session, ledger.legal_entity_id)
     return ledger
 
 
@@ -216,6 +230,10 @@ async def list_ledgers(
         query = select(Ledger).order_by(Ledger.name)
         if property_id:
             query = query.where(Ledger.property_id == property_id)
+        # A37: a scoped membership (tax advisor) only lists its assigned legal entities.
+        allowed = session_allowed_legal_entity_ids(session)
+        if allowed is not None:
+            query = query.where(Ledger.legal_entity_id.in_(list(allowed)))
         return [LedgerOut.model_validate(x) for x in (await session.scalars(query)).all()]
 
 
@@ -403,6 +421,12 @@ async def create_entry(
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, ledger_id)
         if body.idempotency_key:
+            # D48: two concurrent calls with the same key are serialised so that the second
+            # one finds the first draft instead of failing on the unique index (B08).
+            await session.execute(
+                text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
+                {"key": f"entry_idempotency:{ledger.id}:{body.idempotency_key}"},
+            )
             existing = await session.scalar(
                 select(JournalEntry).where(
                     JournalEntry.ledger_id == ledger.id,
@@ -822,7 +846,11 @@ async def reverse_run(
 async def create_fee(
     body: FeeIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
+    from mhvp.contacts.models import Party
+
     async with tenant_tx(request, principal) as session:
+        if body.invoice_debtor_party_id is not None:
+            await _get(session, Party, body.invoice_debtor_party_id)  # D58: debtor must exist
         data = body.model_dump()
         data["amounts_per_unit_type"] = {k: str(v) for k, v in body.amounts_per_unit_type.items()}
         row = AdminFeeSetting(tenant_id=principal.tenant_id, created_by=principal.user_id, **data)
@@ -836,17 +864,10 @@ async def fee_preview(
     fee_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
     """Draft only: issuing an invoice (XRechnung) needs the tax data of the tenant (M13-04)."""
-    from mhvp.properties.models import Unit
-
     async with tenant_tx(request, principal) as session:
         fee = await _get(session, AdminFeeSetting, fee_id)
-        rows = await session.execute(
-            select(Unit.unit_type, func.count())
-            .where(Unit.property_id == fee.property_id)
-            .group_by(Unit.unit_type)
-        )
-        counts = {unit_type.value: int(n) for unit_type, n in rows.all()}
-        return receivables.admin_fee(fee, counts)
+        counts = await receivables.fee_unit_counts(session, fee, local_today())
+        return await receivables.admin_fee_draft(session, fee, counts)
 
 
 @router.post(
@@ -862,30 +883,38 @@ async def fee_issue(
     """Allocates the gapless PREFIX-JJJJ-000001 invoice number (M13-04) and blocks when the
     tenant's VAT status or tax data required for XRechnung is missing."""
     from mhvp.platform.models import TenantBillingSettings
-    from mhvp.properties.models import Unit
 
     async with tenant_tx(request, principal) as session:
         fee = await _get(session, AdminFeeSetting, fee_id)
-        rows = await session.execute(
-            select(Unit.unit_type, func.count())
-            .where(Unit.property_id == fee.property_id)
-            .group_by(Unit.unit_type)
-        )
-        counts = {unit_type.value: int(n) for unit_type, n in rows.all()}
-        draft = receivables.admin_fee(fee, counts)
+        issue_date = invoice_date or local_today()
+        counts = await receivables.fee_unit_counts(session, fee, issue_date)
+        draft = await receivables.admin_fee_draft(session, fee, counts)
         billing_settings = await session.scalar(
             select(TenantBillingSettings).where(
                 TenantBillingSettings.tenant_id == principal.tenant_id
             )
         )
         numbering.assert_xrechnung_allowed(billing_settings)
-        issue_date = invoice_date or local_today()
         number = await numbering.allocate_invoice_number(
             session, principal.tenant_id, issue_date.year
         )
+        # A12: the issued invoice is frozen for the XRechnung XML
+        # (GET /accounting/invoices/{id}/xrechnung.xml, mhvp.accounting.xrechnung).
+        issued = await xrechnung.issue(
+            session,
+            fee=fee,
+            draft=draft,
+            number=number,
+            issue_date=issue_date,
+            billing=billing_settings,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+        )
+        draft["id"] = str(issued.id)
         draft["number"] = number
         draft["invoice_date"] = issue_date
-        draft["status"] = "issued"
+        draft["status"] = issued.status.value
+        draft["xrechnung_url"] = f"/api/v1/accounting/invoices/{issued.id}/xrechnung.xml"
         return draft
 
 
@@ -1316,6 +1345,19 @@ class DunningLetterIn(BaseModel):
     letter_date: date | None = None
 
 
+class DunningLetterTextPreviewIn(BaseModel):
+    """Text of one level with sample items for the settings form (A33). Only values given
+    here are used: no fee without ``fee_amount``, no deadline without ``payment_days``."""
+
+    model_config = ConfigDict(extra="forbid")
+    level: int = Field(ge=1, le=9)
+    text: str | None = Field(default=None, max_length=200)
+    letter_text: str | None = Field(default=None, max_length=4000)
+    fee_amount: Decimal | None = Field(default=None, ge=0)
+    payment_days: int | None = Field(default=None, ge=0)
+    letter_date: date | None = None
+
+
 def _settings_status(eff: dunning.EffectiveSettings | None) -> str:
     if eff is None or not eff.levels:
         return "nicht eingerichtet"
@@ -1431,6 +1473,8 @@ def _check_levels(levels: list[dict[str, Any]], *, override: bool) -> None:
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail="Zahlungsfrist darf nicht negativ sein."
             )
+        if level.get("letter_text"):
+            dunning_letters.check_letter_text(str(level["letter_text"]))
     numbers = [int(lv["level"]) for lv in levels]
     if len(numbers) != len(set(numbers)):
         raise ProblemError(ErrorCodes.VALIDATION, detail="Jede Mahnstufe nur einmal.")
@@ -1587,6 +1631,29 @@ async def post_dunning_settings_presets(
                 "steht aus."
             ),
         }
+
+
+@router.post(
+    "/dunning-settings/letter-preview",
+    summary="Textbaustein einer Mahnstufe mit Beispielposten (A33, nur Text, kein Versand)",
+)
+async def dunning_letter_text_preview(
+    body: DunningLetterTextPreviewIn,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """Standard text or the given ``letter_text`` of a level, rendered with sample items;
+    placeholders are checked (422 on unknown ones). No bank account is passed: which account
+    may appear in a letter is an open operator decision (M16-13)."""
+    if body.letter_text:
+        dunning_letters.check_letter_text(body.letter_text)
+    return dunning_letters.sample_preview(
+        level=body.level,
+        level_text=body.text,
+        letter_text=body.letter_text,
+        fee_amount=body.fee_amount,
+        payment_days=body.payment_days,
+        letter_date=body.letter_date or local_today(),
+    )
 
 
 @router.post("/dunning-runs", status_code=201, summary="Mahnlauf: Vorschau")
@@ -1860,6 +1927,90 @@ async def dunning_get_mahnbescheid(
         return _mahnbescheid_out(prep)
 
 
+async def _mahnbescheid_pdf(
+    session: AsyncSession, request: Request, case_id: uuid.UUID, letter_date: date | None
+) -> tuple[DunningCase, DunningMahnbescheidPrep, dunning_letters.LetterDraft, bytes]:
+    """PDF of the stored preparation record (A31): it must exist first (POST
+    ``mahnbescheid-vorbereitung``), so the export never precedes the data set."""
+    from mhvp.documents import services as doc_services
+    from mhvp.documents.blobs import BlobStore
+
+    case = await session.get(DunningCase, case_id)
+    if case is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    prep = await session.scalar(
+        select(DunningMahnbescheidPrep).where(DunningMahnbescheidPrep.case_id == case.id)
+    )
+    if prep is None:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Zuerst die Mahnbescheid-Vorbereitung anlegen, dann den PDF-Export erzeugen.",
+        )
+    head = await doc_services.letterhead(session, BlobStore(request.app.state.settings))
+    draft = await dunning_letters.build_mahnbescheid(
+        session, case, prep, head, letter_date or local_today()
+    )
+    return case, prep, draft, dunning_letters.render(head, draft)
+
+
+@router.post(
+    "/dunning-cases/{case_id}/mahnbescheid-preview",
+    summary="Mahnbescheid-Vorbereitung als PDF (Vorschau, nicht abgelegt, kein Antrag)",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def dunning_mahnbescheid_preview(
+    case_id: uuid.UUID,
+    request: Request,
+    body: DunningLetterIn | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        _, _, draft, pdf = await _mahnbescheid_pdf(
+            session, request, case_id, body.letter_date if body else None
+        )
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'attachment; filename="{quote(draft.filename)}"',
+        },
+    )
+
+
+@router.post(
+    "/dunning-cases/{case_id}/mahnbescheid",
+    status_code=201,
+    summary="Mahnbescheid-Vorbereitung als PDF erzeugen und ablegen (kein Antrag)",
+)
+async def dunning_mahnbescheid_create(
+    case_id: uuid.UUID,
+    request: Request,
+    body: DunningLetterIn | None = None,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    from mhvp.documents.blobs import BlobStore
+
+    async with tenant_tx(request, principal) as session:
+        _, prep, draft, pdf = await _mahnbescheid_pdf(
+            session, request, case_id, body.letter_date if body else None
+        )
+        document_id = await dunning_letters.store_mahnbescheid(
+            session,
+            BlobStore(request.app.state.settings),
+            draft=draft,
+            pdf=pdf,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+        )
+        return {
+            **_mahnbescheid_out(prep),
+            "document_id": document_id,
+            "hinweis": dunning_letters.MAHNBESCHEID_NOTICE,
+        }
+
+
 # Evaluations and exports (M18, 7.5, 7.7) -----------------------------------------------
 
 EXPORT = require_permission("accounting:export")
@@ -1957,7 +2108,8 @@ async def export_datev(
 ) -> dict[str, Any]:
     """Emits the DATEV EXTF Buchungsstapel header only once consultant_number, client_number
     and chart_of_accounts are set (operator decision 25.09.2026, M18-01). Otherwise rejects with
-    the existing message."""
+    the existing message. Account numbers come from the operator's DATEV mapping (A36);
+    missing mappings answer 409 MHVP-BILL-0008 with the list of accounts."""
     from mhvp.platform.models import ChartOfAccountsKind, TenantBillingSettings
 
     async with tenant_tx(request, principal) as session:
@@ -2000,7 +2152,9 @@ async def export_datev(
             period_to=end,
             rows=rows,
             sha256=reports.checksum(data),
-            note="Kontenzuordnung zu prüfen",
+            # A36: the Konto field carries the operator's mapping (datev_account_mapping);
+            # unmapped accounts stopped the export before this point (MHVP-BILL-0008).
+            note="Kontenzuordnung angewendet",
         )
         session.add(run)
         await emit(

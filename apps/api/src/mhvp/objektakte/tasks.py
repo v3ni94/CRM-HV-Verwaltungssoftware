@@ -12,8 +12,9 @@ still runs. Same engine/transaction pattern as `mhvp.banking.tasks`.
 
 import asyncio
 import logging
+import posixpath
 import uuid
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from celery import shared_task
 from sqlalchemy import select
@@ -28,25 +29,45 @@ from mhvp.objektakte.models import ObjektakteSyncState
 from mhvp.platform.models import Tenant, TenantStatus
 
 log = logging.getLogger(__name__)
-MAX_DUMP_BYTES = 2 * 1024 * 1024 * 1024
+# Default of Settings.objektakte_dump_max_bytes; the file is read completely for parsing.
+MAX_DUMP_BYTES = 512 * 1024 * 1024
 
 
 class DumpUnreadableError(RuntimeError):
     """The configured export file is missing, not a `.sql` file, too large or not UTF-8."""
 
 
-def read_dump_file(dump_path: str | None) -> str:
-    """Reads the configured export. Only an absolute `.sql` path to a regular file is accepted,
-    so a tenant setting can never point the worker at an arbitrary file for parsing."""
+def path_within_dump_dir(dump_path: str, base_dir: str) -> bool:
+    """True when ``dump_path`` (normalised, no ``..`` escape) lies inside ``base_dir``. Pure
+    path arithmetic, no file system access, so the API can check a path that only exists on
+    the worker."""
+    base = PurePosixPath(posixpath.normpath(base_dir))
+    candidate = PurePosixPath(posixpath.normpath(dump_path))
+    return candidate != base and candidate.is_relative_to(base)
+
+
+def read_dump_file(dump_path: str | None, base_dir: str, max_bytes: int = MAX_DUMP_BYTES) -> str:
+    """Reads the configured export. Only an absolute `.sql` path to a regular file inside
+    ``base_dir`` (symlinks resolved) is accepted, so a tenant setting can never point the
+    worker at an arbitrary file for parsing (another tenant's export, system files). The size
+    is checked with ``stat`` against ``max_bytes`` before anything is read into memory."""
     if not dump_path:
         raise DumpUnreadableError("Kein Exportpfad hinterlegt.")
     path = Path(dump_path)
     if not path.is_absolute() or path.suffix.lower() != ".sql":
         raise DumpUnreadableError("Der Exportpfad muss absolut sein und auf .sql enden.")
+    if not path_within_dump_dir(dump_path, base_dir):
+        raise DumpUnreadableError("Der Exportpfad liegt außerhalb des Exportverzeichnisses.")
     if not path.is_file():
         raise DumpUnreadableError("Die Exportdatei wurde nicht gefunden.")
-    if path.stat().st_size > MAX_DUMP_BYTES:
-        raise DumpUnreadableError("Die Exportdatei ist zu groß.")
+    resolved = path.resolve()
+    if not path_within_dump_dir(str(resolved), str(Path(base_dir).resolve())):
+        raise DumpUnreadableError("Der Exportpfad liegt außerhalb des Exportverzeichnisses.")
+    size = resolved.stat().st_size
+    if size > max_bytes:
+        raise DumpUnreadableError(
+            f"Die Exportdatei ist zu groß ({size} Byte, Obergrenze {max_bytes} Byte)."
+        )
     try:
         return path.read_text(encoding="utf-8")
     except UnicodeDecodeError as exc:
@@ -56,8 +77,10 @@ def read_dump_file(dump_path: str | None) -> str:
 async def sync_tenant_once(
     settings: Settings, tenant_id: uuid.UUID, *, trigger: str, force: bool = False
 ) -> dict[str, int]:
-    """One run for one tenant. `force` (manual trigger) ignores `enabled`, never the water mark
-    or the dump path; the beat job never forces."""
+    """One run for one tenant. `force` ignores `enabled`, never the water mark or the dump
+    path; neither the beat job nor the queued manual trigger forces (the switch decides,
+    Sicherheitsreview 26.09.2026, 7). The parameter stays for callers that must run a
+    switched off tenant deliberately (tests, operator scripts)."""
     engine = create_async_engine(
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
     )
@@ -74,7 +97,9 @@ async def sync_tenant_once(
             counts["skipped"] += 1
             return counts
         try:
-            sql_text = read_dump_file(dump_path)
+            sql_text = read_dump_file(
+                dump_path, settings.objektakte_dump_dir, settings.objektakte_dump_max_bytes
+            )
             async with tenant_transaction(factory, tenant_id) as session:
                 await importer.run_differential_import(
                     session, tenant_id, sql_text, trigger=trigger
@@ -121,7 +146,6 @@ def sync_all() -> dict[str, int]:
 @shared_task(name="mhvp.objektakte.sync_tenant")
 def sync_tenant(tenant_id: str) -> dict[str, int]:
     """Queued by the manual trigger endpoint (`mhvp.objektakte.routers`); runs the configured
-    export for this tenant even when the daily job is switched off."""
-    return asyncio.run(
-        sync_tenant_once(get_settings(), uuid.UUID(tenant_id), trigger="manual", force=True)
-    )
+    export for this tenant only while `ObjektakteSyncState.enabled` is on (the endpoint
+    checks the switch as well, the job checks it again at run time)."""
+    return asyncio.run(sync_tenant_once(get_settings(), uuid.UUID(tenant_id), trigger="manual"))

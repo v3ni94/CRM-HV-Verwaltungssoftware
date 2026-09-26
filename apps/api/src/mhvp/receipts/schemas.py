@@ -34,8 +34,19 @@ class ReceiptDraftFromPaperlessIn(_In):
 class ReceiptFieldOut(BaseModel):
     value: str | None
     confidence: float = Field(ge=0, le=1)
-    source: Literal["ai", "local", "none"]
+    source: Literal["ai", "xml", "ai_estimate", "local", "none"]
     note: str | None = None
+
+
+class ReceiptConflictOut(BaseModel):
+    """D42: one contradiction between the structured part and another reading; ``other`` is
+    None when the value is simply missing in the other source."""
+
+    field: str
+    xml: str | None
+    other: str | None
+    other_source: Literal["pdf_text", "ai"]
+    note: str
 
 
 class ReceiptIbanCandidateOut(BaseModel):
@@ -58,6 +69,11 @@ class ReceiptDraftOut(_Out):
     warnings: list[str]
     questions: list[str]
     masked_excerpt: str | None
+    e_invoice_format: str
+    xml_lines: list[dict[str, Any]] = Field(default_factory=list)
+    xml_payment: dict[str, Any] | None = None
+    conflicts: list[ReceiptConflictOut] = Field(default_factory=list)
+    findings: list[str] = Field(default_factory=list)
     error: str | None
     invoice_id: uuid.UUID | None
     decided_by: uuid.UUID | None
@@ -78,6 +94,14 @@ class ReceiptConfirmIn(_In):
 
     invoice: InvoiceApplyIn
     iban_confirmed: bool = False
+    conflicts_acknowledged: bool = Field(
+        default=False,
+        description=(
+            "Pflicht, wenn der Entwurf Widersprüche zwischen XML und PDF ausweist (D42): die "
+            "prüfende Person hat die Widersprüche gesehen; sie bleiben als Prüfhinweis an der "
+            "Rechnung."
+        ),
+    )
     note: str | None = Field(default=None, max_length=1000)
 
 

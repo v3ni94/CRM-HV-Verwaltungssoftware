@@ -32,10 +32,22 @@ export default async function SettingsPage() {
       show: can("tickets:read"),
     },
     {
+      href: "/einstellungen/automatisierung",
+      title: t("automation.title"),
+      description: t("automation.description"),
+      show: can("tenant_settings:read") || can("tickets:read"),
+    },
+    {
       href: "/einstellungen/antwortvorlagen",
       title: t("replyTemplates.title"),
       description: t("replyTemplates.description"),
       show: can("tickets:read"),
+    },
+    {
+      href: "/einstellungen/buchhaltung/datev",
+      title: t("datev.title"),
+      description: t("datev.description"),
+      show: can("accounting:read"),
     },
     { href: "/einstellungen/immoware", title: t("immoware.title"), description: t("immoware.description"), show: can("immoware:read") },
     {

@@ -64,9 +64,11 @@ from mhvp.platform.schemas import (
     GateRequestCreate,
     GateRequestOut,
     GateStateOut,
+    LegalEntityOption,
     MemberCompetences,
     MemberCreate,
     MemberInvite,
+    MemberLegalEntities,
     MemberMobilePhone,
     MemberOut,
     MemberRoles,
@@ -439,6 +441,7 @@ def _billing_out(row: TenantBillingSettings) -> TenantBillingSettingsOut:
         vat_id_masked=_mask(row.vat_id),
         tax_number_masked=_mask(row.tax_number),
         leitweg_id=row.leitweg_id,
+        payee_iban_masked=_mask(row.payee_iban),
         kleinunternehmer_note=row.kleinunternehmer_note,
         datev_consultant_number=row.datev_consultant_number,
         datev_client_number=row.datev_client_number,
@@ -512,7 +515,7 @@ async def patch_billing_settings(
                 entity_type="tenant_billing_settings",
                 entity_id=row.id,
                 actor_user_id=principal.user_id,
-                payload={"fields": sorted(changed - {"vat_id", "tax_number"})},
+                payload={"fields": sorted(changed - {"vat_id", "tax_number", "payee_iban"})},
             )
         response.headers["ETag"] = f'"{row.version}"'
         return _billing_out(row)
@@ -652,6 +655,7 @@ async def list_members(
                     Membership.contact_id,
                     Membership.competences,
                     Membership.mobile_phone,
+                    Membership.legal_entity_ids,
                     User.email,
                     User.display_name,
                     User.last_login_at,
@@ -684,6 +688,7 @@ async def list_members(
             contact_id=r.contact_id,
             last_login_at=r.last_login_at,
             mobile_phone=r.mobile_phone,
+            legal_entity_ids=_uuid_list(r.legal_entity_ids),
         )
         for r in rows
     ]
@@ -1022,6 +1027,13 @@ async def put_member_roles(
         role_codes=body.role_codes,
         actor_user_id=principal.user_id,
     )
+    # M2-08 rest (26.09.2026): the staff portal grant follows the roles (deactivated on a
+    # change into an exempt role, reactivated or created on the way back).
+    from mhvp.platform.staff_portal_sync import sync_staff_grant_after_role_change
+
+    await sync_staff_grant_after_role_change(
+        request, principal=principal, membership_id=membership_id, role_codes=body.role_codes
+    )
     return Response(status_code=204)
 
 
@@ -1082,6 +1094,91 @@ async def put_member_competences(
             entity_id=membership_id,
             actor_user_id=principal.user_id,
             changes={"competences": {"old": before, "new": sorted(membership.competences)}},
+        )
+    return Response(status_code=204)
+
+
+def _uuid_list(raw: object) -> list[uuid.UUID]:
+    out: list[uuid.UUID] = []
+    for item in raw if isinstance(raw, list) else []:
+        try:
+            out.append(uuid.UUID(str(item)))
+        except ValueError:
+            continue
+    return out
+
+
+@tenant_router.get(
+    "/legal-entities", summary="Rechtsträger des Mandanten (Auswahl für Zugriffsbereiche, A37)"
+)
+async def list_legal_entity_options(
+    request: Request, principal: TenantPrincipal = Depends(require_permission("members:read"))
+) -> list[LegalEntityOption]:
+    from mhvp.properties.models import LegalEntity
+
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.execute(
+                select(
+                    LegalEntity.id, LegalEntity.name, LegalEntity.kind, LegalEntity.property_id
+                ).order_by(LegalEntity.name)
+            )
+        ).all()
+    return [
+        LegalEntityOption(id=r.id, name=r.name, kind=str(r.kind.value), property_id=r.property_id)
+        for r in rows
+    ]
+
+
+@tenant_router.put(
+    "/members/{membership_id}/legal-entities",
+    status_code=204,
+    summary="Zugriffsbereich je Rechtsträger eines Mitglieds setzen (Steuerberater, A37)",
+)
+async def put_member_legal_entities(
+    membership_id: uuid.UUID,
+    body: MemberLegalEntities,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> Response:
+    """docs/rules/M18-05-steuerberaterzugang.md: the list limits memberships whose roles are all
+    scoped roles (tax_advisor) to these legal entities; an empty list means no access for them.
+    Unknown or foreign legal entities are rejected (RLS shows only the tenant's own)."""
+    from mhvp.properties.models import LegalEntity
+
+    wanted = list(dict.fromkeys(body.legal_entity_ids))
+    async with platform_transaction(sessions(request)) as session:
+        membership = await session.get(Membership, membership_id)
+        if membership is None or membership.tenant_id != principal.tenant_id:
+            raise _not_found()
+    async with tenant_tx(request, principal) as session:
+        if wanted:
+            known = set(
+                (
+                    await session.scalars(select(LegalEntity.id).where(LegalEntity.id.in_(wanted)))
+                ).all()
+            )
+            unknown = [str(x) for x in wanted if x not in known]
+            if unknown:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail=f"Unbekannte Rechtsträger: {', '.join(unknown)}."
+                )
+    async with platform_transaction(sessions(request)) as session:
+        membership = await session.get(Membership, membership_id)
+        if membership is None or membership.tenant_id != principal.tenant_id:
+            raise _not_found()
+        before = sorted(str(x) for x in (membership.legal_entity_ids or []))
+        membership.legal_entity_ids = [str(x) for x in wanted]
+        membership.updated_by = principal.user_id
+    async with tenant_tx(request, principal) as session:
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="membership.legal_entities_changed",
+            entity_type="membership",
+            entity_id=membership_id,
+            actor_user_id=principal.user_id,
+            changes={"legal_entity_ids": {"old": before, "new": sorted(str(x) for x in wanted)}},
         )
     return Response(status_code=204)
 

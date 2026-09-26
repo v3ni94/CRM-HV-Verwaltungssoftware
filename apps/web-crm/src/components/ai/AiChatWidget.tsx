@@ -36,6 +36,24 @@ function stepError(step: string, status: number, message: string): string {
   return `${step} (HTTP ${status}): ${message}`;
 }
 
+const EMAIL = /[\w.+-]+@[\w-]+\.[\w.-]+/;
+const PHONE = /(?:\+\d{2}|0)\s?[\d\s/-]{6,}\d/;
+const POSTAL_CITY = /\b\d{5}\s+[A-ZÄÖÜ][\wäöüß-]+/;
+const IMPORT_INTENT = /\b(anlegen|importier\w*|erfass\w*|übernehm\w*|einlesen|aufnehm\w*)\b/i;
+const CONTACT_WORDS = /\b(kontakt\w*|mieter\w*|eigentümer\w*|adress\w*|person\w*|firma|firmen|dienstleister\w*)\b/i;
+
+/** Pasted contact data: at least one e-mail, phone number or postal code with town, and more
+ *  than a short question. The AI extraction decides the rest; this only routes the flow. */
+export function looksLikeContactData(text: string): boolean {
+  const hits = [EMAIL, PHONE, POSTAL_CITY].filter((re) => re.test(text)).length;
+  return hits >= 1 && (hits >= 2 || text.length >= 40);
+}
+
+/** "Kontakte anlegen", "Mieter importieren": the user wants the import flow without a file. */
+export function looksLikeImportIntent(text: string): boolean {
+  return IMPORT_INTENT.test(text) && CONTACT_WORDS.test(text);
+}
+
 export function pageContext(pathname: string): PageContext {
   const id = pathname.match(UUID)?.[0] ?? null;
   if (pathname.startsWith("/kontakte")) return { area: "contacts", contextType: id ? "contact" : "global", contextId: id };
@@ -61,10 +79,11 @@ type Flow =
   | { step: "idle" }
   | { step: "ask_question" }
   | { step: "summarize" }
-  | { step: "import_contacts"; role?: string }
+  | { step: "import_contacts"; role?: string; pendingText?: string }
   | { step: "import_property" }
-  | { step: "confirm"; proposal: Proposal; documentIds: string[] }
-  | { step: "reject_reason"; proposal: Proposal; documentIds: string[] };
+  | { step: "offer_import"; text: string }
+  | { step: "confirm"; proposal: Proposal; documentIds: string[]; sourceText?: string }
+  | { step: "reject_reason"; proposal: Proposal; documentIds: string[]; sourceText?: string };
 
 /** Floating assistant available on every screen. Scripted steps with quick replies drive the
  *  import flow; the AI only extracts and answers, nothing is written before an explicit yes. */
@@ -171,7 +190,7 @@ export function AiChatWidget() {
     return null;
   };
 
-  const summarizeProposal = (proposal: Proposal, documentIds: string[]) => {
+  const summarizeProposal = (proposal: Proposal, documentIds: string[], sourceText?: string) => {
     if (proposal.entity_type === "contacts") {
       const p = contactsPreview(proposal.proposed);
       const count = (s: string) => p.rows.filter((r) => r.status === s).length;
@@ -201,7 +220,7 @@ export function AiChatWidget() {
         { id: "details", label: t("chips.details") },
       ]);
     }
-    setFlow({ step: "confirm", proposal, documentIds });
+    setFlow({ step: "confirm", proposal, documentIds, sourceText });
   };
 
   const applyAll = async (proposal: Proposal) => {
@@ -238,10 +257,12 @@ export function AiChatWidget() {
     }
   };
 
-  const extract = (task: "extract_contacts" | "extract_property", content: string, list: File[]) =>
+  /** Without files the message text itself is the material (pasted contact data); the backend
+   *  reads it as the only chunk. The result is still a proposal that needs a yes. */
+  const extract = (task: "extract_contacts" | "extract_property", content: string, list: File[], sourceText?: string) =>
     guarded(async () => {
-      setStage("uploading");
-      const ids = await upload(list);
+      if (list.length) setStage("uploading");
+      const ids = list.length ? await upload(list) : [];
       say(t("working"));
       const run = await runTask(task, content, ids);
       const problem = describeRun(run);
@@ -256,8 +277,11 @@ export function AiChatWidget() {
         setFlow({ step: "idle" });
         return;
       }
-      summarizeProposal(proposal, ids);
+      summarizeProposal(proposal, ids, sourceText);
     });
+
+  const extractPasted = (role: string, pasted: string) =>
+    extract("extract_contacts", [t(`roleText.${role}`), pasted].join("\n\n"), [], pasted);
 
   const onChip = (chip: Chip) => {
     push({ kind: "user", text: chip.label });
@@ -286,10 +310,32 @@ export function AiChatWidget() {
       case "role_tenant":
       case "role_mixed": {
         const role = chip.id === "role_owner" ? "owner" : chip.id === "role_tenant" ? "tenant" : "mixed";
+        const pasted = flow.step === "import_contacts" ? flow.pendingText : undefined;
         setFlow({ step: "import_contacts", role });
+        if (pasted) {
+          void extractPasted(role, pasted);
+          return;
+        }
         say(t("importContactsUpload"));
         return;
       }
+      case "use_as_contacts":
+        if (flow.step === "offer_import") {
+          setFlow({ step: "import_contacts", pendingText: flow.text });
+          say(t("pastedContactsRole"), [
+            { id: "role_owner", label: t("chips.owners") },
+            { id: "role_tenant", label: t("chips.tenants") },
+            { id: "role_mixed", label: t("chips.mixed") },
+          ]);
+        }
+        return;
+      case "ask_instead":
+        if (flow.step === "offer_import") {
+          const question = flow.text;
+          setFlow({ step: "idle" });
+          void askQuestion(question, []);
+        }
+        return;
       case "import_property":
         setFlow({ step: "import_property" });
         say(t("importPropertyUpload"));
@@ -356,8 +402,12 @@ export function AiChatWidget() {
     if (fileInput.current) fileInput.current.value = "";
     switch (flow.step) {
       case "import_contacts": {
-        if (list.length === 0) return say(t("needFile"));
         const role = flow.role ?? "mixed";
+        if (list.length === 0) {
+          // No file: pasted contact data is the material, anything else needs a file or text.
+          if (content && looksLikeContactData(content)) return extractPasted(role, content);
+          return say(t("needFileOrPaste"));
+        }
         return extract("extract_contacts", [t(`roleText.${role}`), content].filter(Boolean).join(" "), list);
       }
       case "import_property":
@@ -378,9 +428,10 @@ export function AiChatWidget() {
       case "reject_reason":
         return guarded(async () => {
           // The reason becomes a new extraction with the same documents and the correction.
-          const { documentIds } = flow;
+          const { documentIds, sourceText } = flow;
           say(t("working"));
-          const run = await runTask("extract_contacts", t("correctionText", { text: content }), documentIds);
+          const correction = [t("correctionText", { text: content }), ...(documentIds.length === 0 && sourceText ? [sourceText] : [])].join("\n\n");
+          const run = await runTask("extract_contacts", correction, documentIds);
           const problem = describeRun(run);
           const proposal = problem ? null : await proposalOf(run);
           if (!proposal) {
@@ -388,27 +439,51 @@ export function AiChatWidget() {
             setFlow({ step: "idle" });
             return;
           }
-          summarizeProposal(proposal, documentIds);
+          summarizeProposal(proposal, documentIds, sourceText);
         });
+      case "offer_import":
+        return say(t("pleaseChoose"), [
+          { id: "use_as_contacts", label: t("chips.useAsContacts") },
+          { id: "ask_instead", label: t("chips.askInstead") },
+        ]);
       case "confirm":
         return say(t("pleaseChoose"), [
           { id: "yes", label: t("chips.yes") },
           { id: "no", label: t("chips.no") },
         ]);
       default:
+        if (list.length === 0 && content && looksLikeContactData(content)) {
+          // Pasted contact data outside the import flow: offer the import, never start it alone.
+          setFlow({ step: "offer_import", text: content });
+          return say(t("pastedContactsDetected"), [
+            { id: "use_as_contacts", label: t("chips.useAsContacts") },
+            { id: "ask_instead", label: t("chips.askInstead") },
+          ]);
+        }
+        if (list.length === 0 && content && looksLikeImportIntent(content)) {
+          setFlow({ step: "import_contacts" });
+          return say(t("importIntentDetected"), [
+            { id: "role_owner", label: t("chips.owners") },
+            { id: "role_tenant", label: t("chips.tenants") },
+            { id: "role_mixed", label: t("chips.mixed") },
+          ]);
+        }
         // Free question (with optional documents), on every page.
-        return guarded(async () => {
-          if (list.length) setStage("uploading");
-          const ids = list.length ? await upload(list) : [];
-          say(t("working"));
-          const run = await runTask("answer_question", [t("pageHint", { page: t(`area.${ctx.area}`) }), content].join(" "), ids);
-          const problem = describeRun(run);
-          const out = run.output as { answer?: string; answerable?: boolean } | null;
-          say(problem ?? (out?.answerable === false ? t("notAnswerable") : (out?.answer ?? "")), startChips(ctx.area));
-          setFlow({ step: "idle" });
-        });
+        return askQuestion(content, list);
     }
   };
+
+  const askQuestion = (content: string, list: File[]) =>
+    guarded(async () => {
+      if (list.length) setStage("uploading");
+      const ids = list.length ? await upload(list) : [];
+      say(t("working"));
+      const run = await runTask("answer_question", [t("pageHint", { page: t(`area.${ctx.area}`) }), content].join(" "), ids);
+      const problem = describeRun(run);
+      const out = run.output as { answer?: string; answerable?: boolean } | null;
+      say(problem ?? (out?.answerable === false ? t("notAnswerable") : (out?.answer ?? "")), startChips(ctx.area));
+      setFlow({ step: "idle" });
+    });
 
   const needsFile = flow.step === "import_contacts" || flow.step === "import_property" || flow.step === "summarize";
 

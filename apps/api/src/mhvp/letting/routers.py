@@ -1447,3 +1447,230 @@ async def apply_flow_import(
             payload={"created": created, "skipped": skipped},
         )
         return _run_out(run)
+
+
+# Listing images (M26-02): documents linked to a listing via document_link ----------------
+
+
+class ListingImageLinkIn(LettingBaseIn):
+    document_id: uuid.UUID
+
+
+def _image_out(document: Document, link: DocumentLink) -> dict[str, Any]:
+    return {
+        "document_id": str(document.id),
+        "link_id": str(link.id),
+        "title": document.title,
+        "filename": document.filename,
+        "mime_type": document.mime_type,
+        "size": document.size,
+        "created_at": document.created_at.isoformat(),
+        "linked_at": link.created_at.isoformat(),
+        "role": link.role.value,
+    }
+
+
+async def _listing_image_rows(session: Any, listing_id: uuid.UUID) -> list[dict[str, Any]]:
+    """All image documents of the listing in link order (DocumentLink has no sort field, so
+    the order of linking is the order of the export; docs/rules/M26-02.md)."""
+    rows = (
+        await session.execute(
+            select(Document, DocumentLink)
+            .join(DocumentLink, DocumentLink.document_id == Document.id)
+            .where(
+                DocumentLink.entity_type == "listing",
+                DocumentLink.entity_id == listing_id,
+                Document.mime_type.ilike("image/%"),
+            )
+            .order_by(DocumentLink.created_at, DocumentLink.id)
+        )
+    ).all()
+    return [_image_out(document, link) for document, link in rows]
+
+
+@router.get("/listings/{listing_id}/images", summary="Bilder einer Anzeige")
+async def list_listing_images(
+    listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        if await session.get(Listing, listing_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return await _listing_image_rows(session, listing_id)
+
+
+@router.post(
+    "/listings/{listing_id}/images",
+    status_code=201,
+    summary="Bild hochladen und mit der Anzeige verknüpfen",
+)
+async def upload_listing_image(
+    listing_id: uuid.UUID,
+    request: Request,
+    file: UploadFile = File(),
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> list[dict[str, Any]]:
+    """Stores the file as a regular document (M6 rules: type check, size limit, mirrors)
+    with a link `entity_type="listing"`, role attachment. Only image types are accepted here;
+    other files go through the document upload. Returns the updated image list."""
+    from mhvp.documents import services as document_services
+    from mhvp.documents.models import DocumentSource, LinkRole
+
+    limit = request.app.state.settings.document_max_bytes
+    data = await file.read(limit + 1)
+    mime = (file.content_type or "application/octet-stream").split(";")[0].strip().lower()
+    if not mime.startswith("image/"):
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Für Anzeigen sind nur Bilddateien vorgesehen."
+        )
+    document_services.check_upload(mime, data, limit)
+    filename = (file.filename or "bild").replace("/", "_").replace("\\", "_")
+    async with tenant_tx(request, principal) as session:
+        if await session.get(Listing, listing_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        document = await document_services.store_document(
+            session,
+            _blobs_store(request),
+            tenant_id=principal.tenant_id,
+            data=data,
+            title=filename,
+            filename=filename,
+            mime_type=mime,
+            source=DocumentSource.UPLOAD,
+            category_id=None,
+            links=[("listing", listing_id, LinkRole.ATTACHMENT)],
+            created_by=principal.user_id,
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document.created",
+            entity_type="document",
+            entity_id=document.id,
+            actor_user_id=principal.user_id,
+            payload={"size": document.size, "listing_id": str(listing_id)},
+        )
+        return await _listing_image_rows(session, listing_id)
+
+
+@router.post(
+    "/listings/{listing_id}/images/link",
+    status_code=201,
+    summary="Vorhandenes Bilddokument mit der Anzeige verknüpfen",
+)
+async def link_listing_image(
+    listing_id: uuid.UUID,
+    body: ListingImageLinkIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> list[dict[str, Any]]:
+    from mhvp.documents.models import LinkRole
+
+    async with tenant_tx(request, principal) as session:
+        if await session.get(Listing, listing_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        document = await session.get(Document, body.document_id)
+        if document is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Dokument nicht gefunden.")
+        if not document.mime_type.lower().startswith("image/"):
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Das Dokument ist keine Bilddatei.")
+        session.add(
+            DocumentLink(
+                tenant_id=principal.tenant_id,
+                document_id=document.id,
+                entity_type="listing",
+                entity_id=listing_id,
+                role=LinkRole.ATTACHMENT,
+            )
+        )
+        try:
+            await session.flush()
+        except IntegrityError:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Das Bild ist bereits mit der Anzeige verknüpft."
+            ) from None
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document.linked",
+            entity_type="document",
+            entity_id=document.id,
+            actor_user_id=principal.user_id,
+            payload={"target_type": "listing", "target_id": str(listing_id)},
+        )
+        return await _listing_image_rows(session, listing_id)
+
+
+@router.delete(
+    "/listings/{listing_id}/images/{document_id}",
+    summary="Bild von der Anzeige lösen (Dokument bleibt erhalten)",
+)
+async def unlink_listing_image(
+    listing_id: uuid.UUID,
+    document_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> list[dict[str, Any]]:
+    """Removes only the link to the listing; the document itself and its other links stay
+    (deletion of documents follows the retention rules of module documents)."""
+    async with tenant_tx(request, principal) as session:
+        if await session.get(Listing, listing_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        links = (
+            await session.scalars(
+                select(DocumentLink).where(
+                    DocumentLink.entity_type == "listing",
+                    DocumentLink.entity_id == listing_id,
+                    DocumentLink.document_id == document_id,
+                )
+            )
+        ).all()
+        if not links:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Verknüpfung fehlt.")
+        for link in links:
+            await session.delete(link)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document.unlinked",
+            entity_type="document",
+            entity_id=document_id,
+            actor_user_id=principal.user_id,
+            payload={"target_type": "listing", "target_id": str(listing_id)},
+        )
+        await session.flush()
+        return await _listing_image_rows(session, listing_id)
+
+
+@router.get(
+    "/listings/{listing_id}/images/{document_id}/content",
+    summary="Bild einer Anzeige anzeigen",
+    response_class=Response,
+    responses={200: {"content": {"image/*": {}}}},
+)
+async def listing_image_content(
+    listing_id: uuid.UUID,
+    document_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        link = await session.scalar(
+            select(DocumentLink).where(
+                DocumentLink.entity_type == "listing",
+                DocumentLink.entity_id == listing_id,
+                DocumentLink.document_id == document_id,
+            )
+        )
+        document = await session.get(Document, document_id) if link is not None else None
+        if document is None or not document.mime_type.lower().startswith("image/"):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        data = _blobs_store(request).get(document.storage_ref)
+    return Response(
+        content=data,
+        media_type=document.mime_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{document.id}"',
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
+        },
+    )

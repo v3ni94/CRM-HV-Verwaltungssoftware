@@ -40,6 +40,7 @@
     "logout": "Abmelden",
     "footer": "Alle Angaben werden bei der Hausverwaltung gespeichert. Interne Vermerke der Verwaltung sind hier nicht sichtbar.",
     "nav": {
+      "handoverStaff": "Übergabeprotokolle (Verwaltung)",
       "start": "Übersicht",
       "documents": "Dokumente",
       "tickets": "Meldungen",
@@ -49,6 +50,7 @@
       "orders": "Aufträge"
     },
     "start": {
+      "handoverStaff": "Übergabeprotokolle der Verwaltung einsehen",
       "title": "Übersicht",
       "greetingTenantOwner": "Ihre Vertragsdaten und Anliegen auf einen Blick.",
       "greetingProvider": "Ihre Aufträge der Hausverwaltung.",
@@ -172,6 +174,21 @@
       "rejected": "Abgelehnt",
       "cancelled": "Storniert"
     }
+  },
+  "HandoverStaff": {
+    "title": "Übergabeprotokolle",
+    "intro": "Alle Übergabeprotokolle des Mandanten, nur lesend. Interne Vermerke der Verwaltung sind hier nicht sichtbar.",
+    "empty": "Keine Übergabeprotokolle vorhanden.",
+    "forbidden": "Für diese Ansicht fehlt das Portalrecht Übergabeprotokolle lesen. Bitte wenden Sie sich an die Administration.",
+    "object": "Objekt",
+    "unit": "Einheit",
+    "manualObject": "Objekt manuell erfasst",
+    "noObject": "Ohne Objektbezug",
+    "date": "Übergabe am",
+    "pdf": "PDF öffnen",
+    "detail": "Protokoll öffnen",
+    "version": "Version",
+    "notSet": "keine Angabe"
   },
   "Handover": {
     "title": "Übergabeprotokolle",

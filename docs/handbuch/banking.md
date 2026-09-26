@@ -30,6 +30,17 @@ und Client-Secret eines abgeschlossenen finAPI-Vertrags) lässt sich keine Bankv
 verbinden. Details und offene Punkte in `docs/integrations/finapi.md` sowie
 `docs/OPEN_QUESTIONS.md` (M11-40 bis M11-45).
 
+## Zustimmung erneuern
+
+Die Zustimmung der Bank zum Kontozugriff ist befristet. Zehn Tage vor dem Ablaufdatum
+erhalten alle Benutzer mit Buchhaltungsrecht (Rollen mit accounting:update) eine
+Benachrichtigung je Bankverbindung, einmal je Ablaufdatum. Auf der Bankverbindungsseite
+erscheint ab diesem Zeitpunkt ein Hinweis mit dem Ablaufdatum und der Schaltfläche
+Zustimmung erneuern; sie startet dasselbe WebForm der Bank wie Erneut freigeben. Eine
+abgelaufene Zustimmung wird als Zustimmung abgelaufen markiert; bis zur Erneuerung werden
+keine Umsätze abgerufen. Der Hinweis setzt voraus, dass ein Ablaufdatum bekannt ist
+(finAPI liefert es derzeit nicht verifiziert, siehe `docs/integrations/finapi.md`).
+
 ## Umsätze abrufen
 
 Nach Verbunden löst Umsätze abrufen einen Hintergrundlauf aus (Abruf eingereiht). Ein

@@ -31,6 +31,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/handover$/ },
   // Staff mit Portalrecht handover:read (M2-08 entschieden): Liste aller Protokolle des Mandanten.
   { method: "GET", pattern: /^portal\/handover\/protocols$/ },
+  // Mitarbeiter mit Portalrecht handover:read (M2-08 Rest, 26.09.2026): Liste und Detail.
+  { method: "GET", pattern: /^portal\/handover-protocols$/ },
+  { method: "GET", pattern: new RegExp(`^portal/handover-protocols/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^portal/handover/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^portal/handover/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^portal/handover/${ID}/hints$`) },

@@ -8,7 +8,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 
-from mhvp.ai import gateway, imports, jobs, tasks
+from mhvp.ai import connection_test, gateway, imports, jobs, tasks
 from mhvp.ai import schemas as s
 from mhvp.ai.models import (
     AiConversation,
@@ -150,6 +150,82 @@ async def release_provider(
         await session.flush()
         await session.refresh(row)
         return _provider_out(row)
+
+
+@router.post("/ai/providers/{provider}/test", summary="KI-Anbieter: Verbindung testen")
+async def provider_connection_test(
+    provider: AiProvider, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.ProviderTestOut:
+    """One minimal prompt per configured tier (small, large) with the stored key. Works without
+    a release, changes no release state and records each call as a run so the budget is
+    charged; the provider's own error text is returned per tier."""
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(AiProviderConfig).where(AiProviderConfig.provider == provider)
+        )
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if not row.api_key:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Kein API-Schlüssel hinterlegt, Test nicht möglich."
+            )
+        if not connection_test.configured_tiers(row.models or {}):
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Keine Stufe mit Modellname eingerichtet, Test nicht möglich.",
+            )
+        api_key, models = row.api_key, dict(row.models or {})
+        config_id = row.id
+    # The provider calls run outside the transaction, like every gateway run.
+    results = await connection_test.check_provider(provider, api_key, models)
+    async with tenant_tx(request, principal) as session:
+        for result in results:
+            run = AiTaskRun(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                task=connection_test.TEST_TASK,
+                provider=provider,
+                model=result.model,
+                prompt_version=tasks.prompt(connection_test.TEST_TASK).version,
+                input_hash=gateway.input_hash(
+                    connection_test.TEST_TASK,
+                    "connection-test",
+                    connection_test.TEST_INSTRUCTION,
+                    {"tier": result.tier, "at": datetime.now(UTC).isoformat()},
+                ),
+                input_ref={"connection_test": True, "tier": result.tier, "instruction": ""},
+                status=RunStatus.SUCCEEDED if result.ok else RunStatus.FAILED,
+                error=result.error,
+                tokens_in=result.tokens_in,
+                tokens_out=result.tokens_out,
+                cost_eur=result.cost_eur,
+                duration_ms=result.duration_ms,
+            )
+            session.add(run)
+        await _event(
+            session,
+            principal,
+            "ai_provider.tested",
+            config_id,
+            provider=provider.value,
+            ok=all(r.ok for r in results),
+        )
+    return s.ProviderTestOut(
+        provider=provider,
+        tiers=[
+            s.TierTestOut(
+                tier=r.tier,
+                model=r.model,
+                ok=r.ok,
+                duration_ms=r.duration_ms,
+                error=r.error,
+                tokens_in=r.tokens_in,
+                tokens_out=r.tokens_out,
+                cost_eur=r.cost_eur,
+            )
+            for r in results
+        ],
+    )
 
 
 @router.get("/ai/routing", summary="Anbieterstrategie")
@@ -693,8 +769,19 @@ async def undo_import(
     async with tenant_tx(request, principal) as session:
         row = await _get(session, ImportRun, import_id)
         await imports.undo(session, row, principal.user_id)
-        await _event(session, principal, "import_run.undone", row.id, status=row.status.value)
-        return await _import_out(session, row)
+        out = await _import_out(session, row)
+        kept = [i for i in out.items if not i.undone and i.kept_reason]
+        # D46: a partial undo is logged with every kept entity and its reason.
+        await _event(
+            session,
+            principal,
+            "import_run.undone",
+            row.id,
+            status=row.status.value,
+            kept=len(kept),
+            kept_reasons="; ".join(f"{i.entity_type}: {i.kept_reason}" for i in kept) or None,
+        )
+        return out
 
 
 # Knowledge base (Welle 3 item 14): manually curated per tenant and optionally per property,

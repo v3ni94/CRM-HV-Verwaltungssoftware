@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
 import { ResultTable, StatementWorkbench } from "@/components/billing/StatementWorkbench";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -73,6 +74,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
           ) : null}
         </>
       ) : null}
+      <AiPlausibilityCard kind="statements" id={id} snapshotHash={snap?.hash ?? null} />
     </div>
   );
 }

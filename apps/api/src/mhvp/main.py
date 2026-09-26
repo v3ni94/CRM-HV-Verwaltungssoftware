@@ -13,11 +13,19 @@ from fastapi import FastAPI
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from mhvp.accounting.audit_export_routers import router as accounting_audit_export_router
+from mhvp.accounting.datev_mapping_routers import router as datev_mapping_router
+from mhvp.accounting.direct_debit_routers import router as direct_debit_router
 from mhvp.accounting.routers import intake_router as accounting_intake_router
 from mhvp.accounting.routers import router as accounting_router
+from mhvp.accounting.xrechnung import router as accounting_xrechnung_router
 from mhvp.ai.routers import router as ai_router
+from mhvp.automation.routers import router as automation_router
 from mhvp.banking.routers import finapi_router
 from mhvp.banking.routers import router as banking_router
+from mhvp.billing.ai_check_routers import router as statement_ai_check_router
+from mhvp.billing.letter_routers import router as statement_letters_router
+from mhvp.billing.owner_statement_routers import router as owner_statement_router
 from mhvp.billing.routers import router as billing_router
 from mhvp.communication.dispatch import router as dispatch_router
 from mhvp.communication.routers import router as mail_router
@@ -29,20 +37,27 @@ from mhvp.core.auth.routers import router as auth_router
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.health import ReadinessCheck
+from mhvp.core.idempotency import IdempotencyMiddleware
 from mhvp.core.logging import configure_logging
 from mhvp.core.middleware import CorrelationIdMiddleware
 from mhvp.core.problems import install_problem_handlers
+from mhvp.core.ratelimit import RateLimitMiddleware
 from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGateResolver
 from mhvp.core.storage import create_s3_client
+from mhvp.core.versioning import ApiVersionMiddleware, mark_deprecated_routes
+from mhvp.documents.intake_routers import router as documents_intake_router
+from mhvp.documents.paperless_webhook import router as paperless_webhook_router
 from mhvp.documents.routers import router as documents_router
 from mhvp.handover.imports import router as handover_imports_router
 from mhvp.handover.portal import router as handover_portal_router
+from mhvp.handover.portal_staff import router as handover_portal_staff_router
 from mhvp.handover.routers import router as handover_router
 from mhvp.hoa.levies import router as hoa_levies_router
 from mhvp.hoa.meetings import router as hoa_meetings_router
 from mhvp.hoa.package import router as hoa_package_router
 from mhvp.hoa.routers import router as hoa_router
 from mhvp.immoware.routers import router as immoware_router
+from mhvp.imports.list_import_routers import router as list_imports_router
 from mhvp.imports.routers import router as imports_router
 from mhvp.letting.rentlaw import platform_router as rentlaw_platform_router
 from mhvp.letting.rentlaw import tenant_router as rentlaw_router
@@ -63,6 +78,7 @@ from mhvp.properties.routers import router as properties_router
 from mhvp.receipts.routers import router as receipts_router
 from mhvp.sla.routers import router as sla_router
 from mhvp.sla.whatsapp_webhook import router as whatsapp_webhook_router
+from mhvp.tenant.routers import router as tenant_setup_router
 from mhvp.tickets.routers import router as tickets_router
 from mhvp.workspace.ops import router as ops_router
 from mhvp.workspace.routers import router as workspace_router
@@ -151,22 +167,35 @@ def create_app(
     app.include_router(oidc.well_known)
     app.include_router(platform_router, prefix=API_PREFIX)
     app.include_router(tenant_router, prefix=API_PREFIX)
+    app.include_router(tenant_setup_router, prefix=API_PREFIX)
     app.include_router(contacts_router, prefix=API_PREFIX)
     app.include_router(properties_router, prefix=API_PREFIX)
     app.include_router(contracts_router, prefix=API_PREFIX)
+    # Static intake paths must be registered before /documents/{document_id} (A42).
+    app.include_router(documents_intake_router, prefix=API_PREFIX)
     app.include_router(documents_router, prefix=API_PREFIX)
+    app.include_router(paperless_webhook_router, prefix=API_PREFIX)
     app.include_router(handover_router, prefix=API_PREFIX)
     app.include_router(handover_imports_router, prefix=API_PREFIX)
     app.include_router(handover_portal_router, prefix=API_PREFIX)
+    app.include_router(handover_portal_staff_router, prefix=API_PREFIX)
     app.include_router(imports_router, prefix=API_PREFIX)
+    app.include_router(list_imports_router, prefix=API_PREFIX)
     app.include_router(ai_router, prefix=API_PREFIX)
     app.include_router(workspace_router, prefix=API_PREFIX)
     app.include_router(ops_router, prefix=API_PREFIX)
     app.include_router(accounting_router, prefix=API_PREFIX)
     app.include_router(accounting_intake_router, prefix=API_PREFIX)
+    app.include_router(accounting_xrechnung_router, prefix=API_PREFIX)
+    app.include_router(accounting_audit_export_router, prefix=API_PREFIX)
+    app.include_router(datev_mapping_router, prefix=API_PREFIX)
     app.include_router(banking_router, prefix=API_PREFIX)
+    app.include_router(direct_debit_router, prefix=API_PREFIX)
     app.include_router(finapi_router, prefix=API_PREFIX)
     app.include_router(billing_router, prefix=API_PREFIX)
+    app.include_router(statement_letters_router, prefix=API_PREFIX)
+    app.include_router(owner_statement_router, prefix=API_PREFIX)
+    app.include_router(statement_ai_check_router, prefix=API_PREFIX)
     app.include_router(hoa_router, prefix=API_PREFIX)
     app.include_router(hoa_meetings_router, prefix=API_PREFIX)
     app.include_router(hoa_levies_router, prefix=API_PREFIX)
@@ -177,6 +206,7 @@ def create_app(
     app.include_router(licensing_router, prefix=API_PREFIX)
     app.include_router(tickets_router, prefix=API_PREFIX)
     app.include_router(sla_router, prefix=API_PREFIX)
+    app.include_router(automation_router, prefix=API_PREFIX)
     app.include_router(whatsapp_webhook_router, prefix=API_PREFIX)
     app.include_router(immoware_router, prefix=API_PREFIX)
     app.include_router(objektakte_router, prefix=API_PREFIX)
@@ -191,6 +221,13 @@ def create_app(
     app.include_router(dispatch_router, prefix=API_PREFIX)
     app.include_router(portal_router, prefix=API_PREFIX)
     app.include_router(portal_admin_router, prefix=API_PREFIX)
+    # Deprecation marks into the OpenAPI document after all routers (ADR 0008, A50).
+    mark_deprecated_routes(app)
+    # Order (inner to outer): idempotency, rate limit, correlation id (outermost, A48/A49).
+    # API-Version and deprecation headers (ADR 0008, A50), inside the correlation id.
+    app.add_middleware(ApiVersionMiddleware, version=settings.app_version)
+    app.add_middleware(IdempotencyMiddleware)
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(CorrelationIdMiddleware)
     return app
 

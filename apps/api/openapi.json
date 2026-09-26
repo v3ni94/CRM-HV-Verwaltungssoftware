@@ -1430,6 +1430,45 @@
         "title": "AttendanceIn",
         "type": "object"
       },
+      "AuditExportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "period_from": {
+            "format": "date",
+            "title": "Period From",
+            "type": "string"
+          },
+          "period_to": {
+            "format": "date",
+            "title": "Period To",
+            "type": "string"
+          },
+          "receipts_max_bytes": {
+            "default": 104857600,
+            "maximum": 2147483648.0,
+            "minimum": 0.0,
+            "title": "Receipts Max Bytes",
+            "type": "integer"
+          },
+          "run_in_background": {
+            "default": false,
+            "title": "Run In Background",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "period_from",
+          "period_to"
+        ],
+        "title": "AuditExportIn",
+        "type": "object"
+      },
       "AuditItemIn": {
         "additionalProperties": false,
         "properties": {
@@ -1625,6 +1664,20 @@
         "title": "AuditReportIn",
         "type": "object"
       },
+      "AutomationActivateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "active"
+        ],
+        "title": "AutomationActivateIn",
+        "type": "object"
+      },
       "AutomationIn": {
         "additionalProperties": false,
         "properties": {
@@ -1644,6 +1697,147 @@
           "reason"
         ],
         "title": "AutomationIn",
+        "type": "object"
+      },
+      "AutomationRuleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Actions",
+            "type": "array"
+          },
+          "active": {
+            "default": false,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "conditions": {
+            "additionalProperties": true,
+            "title": "Conditions",
+            "type": "object"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "trigger_event_type": {
+            "maxLength": 100,
+            "minLength": 3,
+            "title": "Trigger Event Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "trigger_event_type",
+          "actions"
+        ],
+        "title": "AutomationRuleIn",
+        "type": "object"
+      },
+      "AutomationRulePatch": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "maxItems": 10,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actions"
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "conditions": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conditions"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "trigger_event_type": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Event Type"
+          }
+        },
+        "title": "AutomationRulePatch",
         "type": "object"
       },
       "BandSegment": {
@@ -2010,6 +2204,55 @@
         "title": "Body_flow_import_preview_api_v1_letting_flow_import_preview_post",
         "type": "object"
       },
+      "Body_import_kontakte_api_v1_imports_immoware24_lists_kontakte_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "contentMediaType": "application/octet-stream",
+              "type": "string"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "files",
+          "roles"
+        ],
+        "title": "Body_import_kontakte_api_v1_imports_immoware24_lists_kontakte_post",
+        "type": "object"
+      },
+      "Body_import_objektdaten_api_v1_imports_immoware24_lists_objektdaten_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "number_map": {
+            "default": "",
+            "title": "Number Map",
+            "type": "string"
+          },
+          "skip_handed_over": {
+            "default": false,
+            "title": "Skip Handed Over",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_objektdaten_api_v1_imports_immoware24_lists_objektdaten_post",
+        "type": "object"
+      },
       "Body_match_files_api_v1_handover_imports_uprotokoll_files_post": {
         "properties": {
           "file": {
@@ -2276,6 +2519,20 @@
           "file"
         ],
         "title": "Body_upload_document_api_v1_portal_handover__protocol_id__documents_post",
+        "type": "object"
+      },
+      "Body_upload_listing_image_api_v1_letting_listings__listing_id__images_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_listing_image_api_v1_letting_listings__listing_id__images_post",
         "type": "object"
       },
       "BookIn": {
@@ -6573,6 +6830,26 @@
         "title": "CostItemIn",
         "type": "object"
       },
+      "CreditorIdIn": {
+        "additionalProperties": false,
+        "properties": {
+          "sepa_creditor_id": {
+            "anyOf": [
+              {
+                "maxLength": 35,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sepa Creditor Id"
+          }
+        },
+        "title": "CreditorIdIn",
+        "type": "object"
+      },
       "CustomFieldIn": {
         "additionalProperties": false,
         "properties": {
@@ -6654,6 +6931,317 @@
           "id"
         ],
         "title": "CustomFieldOut",
+        "type": "object"
+      },
+      "DatevImportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 2000000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "ledger_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Id"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "DatevImportIn",
+        "type": "object"
+      },
+      "DatevImportOut": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "file_errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "File Errors",
+            "type": "array"
+          },
+          "ledger_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Id"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dry_run",
+          "ledger_id",
+          "rows",
+          "file_errors",
+          "counts"
+        ],
+        "title": "DatevImportOut",
+        "type": "object"
+      },
+      "DatevMappingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "account_code": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Account Code",
+            "type": "string"
+          },
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "datev_account": {
+            "maxLength": 16,
+            "minLength": 1,
+            "pattern": "^[0-9]+$",
+            "title": "Datev Account",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "ledger_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Id"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          }
+        },
+        "required": [
+          "account_code",
+          "datev_account"
+        ],
+        "title": "DatevMappingIn",
+        "type": "object"
+      },
+      "DatevMappingOut": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "datev_account": {
+            "title": "Datev Account",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "ledger_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Id"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          }
+        },
+        "required": [
+          "id",
+          "ledger_id",
+          "account_code",
+          "datev_account",
+          "label",
+          "active",
+          "valid_from"
+        ],
+        "title": "DatevMappingOut",
+        "type": "object"
+      },
+      "DeadlineOut": {
+        "properties": {
+          "done_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          },
+          "due_on": {
+            "format": "date",
+            "title": "Due On",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "lead_days": {
+            "title": "Lead Days",
+            "type": "integer"
+          },
+          "notified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notified At"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "source_type",
+          "source_id",
+          "reference",
+          "due_on",
+          "lead_days",
+          "status",
+          "property_id",
+          "notified_at",
+          "done_at",
+          "updated_at"
+        ],
+        "title": "DeadlineOut",
         "type": "object"
       },
       "DebtorAccountOut": {
@@ -7243,6 +7831,313 @@
         "title": "DiagnosisStepOut",
         "type": "object"
       },
+      "DirectDebitOrderOut": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "contact_bank_account_id": {
+            "format": "uuid",
+            "title": "Contact Bank Account Id",
+            "type": "string"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "debtor_iban_suffix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debtor Iban Suffix"
+          },
+          "debtor_name": {
+            "title": "Debtor Name",
+            "type": "string"
+          },
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          },
+          "end_to_end_id": {
+            "title": "End To End Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mandate_reference": {
+            "title": "Mandate Reference",
+            "type": "string"
+          },
+          "mandate_scheme": {
+            "title": "Mandate Scheme",
+            "type": "string"
+          },
+          "mandate_signed_on": {
+            "format": "date",
+            "title": "Mandate Signed On",
+            "type": "string"
+          },
+          "open_item_id": {
+            "format": "uuid",
+            "title": "Open Item Id",
+            "type": "string"
+          },
+          "pre_notification_dispatch_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pre Notification Dispatch Id"
+          },
+          "pre_notification_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pre Notification Document Id"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "sequence_type": {
+            "title": "Sequence Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "open_item_id",
+          "contract_id",
+          "contact_id",
+          "contact_bank_account_id",
+          "mandate_reference",
+          "mandate_signed_on",
+          "mandate_scheme",
+          "sequence_type",
+          "amount",
+          "debtor_name",
+          "purpose",
+          "end_to_end_id",
+          "due_date",
+          "pre_notification_document_id",
+          "pre_notification_dispatch_id"
+        ],
+        "title": "DirectDebitOrderOut",
+        "type": "object"
+      },
+      "DirectDebitRunIn": {
+        "additionalProperties": false,
+        "properties": {
+          "collection_date": {
+            "format": "date",
+            "title": "Collection Date",
+            "type": "string"
+          },
+          "lead_days": {
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Lead Days",
+            "type": "integer"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "open_item_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 2000,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Item Ids"
+          },
+          "property_bank_account_id": {
+            "format": "uuid",
+            "title": "Property Bank Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "collection_date",
+          "lead_days",
+          "property_bank_account_id"
+        ],
+        "title": "DirectDebitRunIn",
+        "type": "object"
+      },
+      "DirectDebitRunOut": {
+        "properties": {
+          "approvals": {
+            "default": 0,
+            "title": "Approvals",
+            "type": "integer"
+          },
+          "collection_date": {
+            "format": "date",
+            "title": "Collection Date",
+            "type": "string"
+          },
+          "control_sum": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Control Sum",
+            "type": "string"
+          },
+          "creditor_id": {
+            "title": "Creditor Id",
+            "type": "string"
+          },
+          "creditor_name": {
+            "title": "Creditor Name",
+            "type": "string"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "excluded": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Excluded",
+            "type": "array"
+          },
+          "exported_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exported At"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lead_days": {
+            "title": "Lead Days",
+            "type": "integer"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/DirectDebitOrderOut"
+            },
+            "title": "Orders",
+            "type": "array"
+          },
+          "property_bank_account_id": {
+            "format": "uuid",
+            "title": "Property Bank Account Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "ledger_id",
+          "legal_entity_id",
+          "property_bank_account_id",
+          "creditor_id",
+          "creditor_name",
+          "collection_date",
+          "lead_days",
+          "message_id",
+          "format",
+          "status",
+          "control_sum",
+          "transaction_count",
+          "document_id",
+          "excluded",
+          "exported_at"
+        ],
+        "title": "DirectDebitRunOut",
+        "type": "object"
+      },
       "DispatchIn": {
         "additionalProperties": false,
         "properties": {
@@ -7276,9 +8171,51 @@
         "title": "DispatchIn",
         "type": "object"
       },
+      "DisruptionIn": {
+        "additionalProperties": false,
+        "description": "Documented technical disruption of a hybrid or virtual meeting (D53).",
+        "properties": {
+          "affected_contract_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Affected Contract Ids",
+            "type": "array"
+          },
+          "description": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "resolved": {
+            "default": false,
+            "title": "Resolved",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "description",
+          "occurred_at"
+        ],
+        "title": "DisruptionIn",
+        "type": "object"
+      },
       "DmsConnectionIn": {
         "additionalProperties": false,
         "properties": {
+          "auto_receipt_intake": {
+            "default": false,
+            "title": "Auto Receipt Intake",
+            "type": "boolean"
+          },
           "base_url": {
             "anyOf": [
               {
@@ -7315,6 +8252,20 @@
             ],
             "description": "nur schreibbar",
             "title": "Secret"
+          },
+          "webhook_secret": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "nur schreibbar",
+            "title": "Webhook Secret"
           }
         },
         "title": "DmsConnectionIn",
@@ -7322,6 +8273,11 @@
       },
       "DmsConnectionOut": {
         "properties": {
+          "auto_receipt_intake": {
+            "default": false,
+            "title": "Auto Receipt Intake",
+            "type": "boolean"
+          },
           "base_url": {
             "anyOf": [
               {
@@ -7339,6 +8295,11 @@
           },
           "has_secret": {
             "title": "Has Secret",
+            "type": "boolean"
+          },
+          "has_webhook_secret": {
+            "default": false,
+            "title": "Has Webhook Secret",
             "type": "boolean"
           },
           "kind": {
@@ -7851,6 +8812,87 @@
           }
         },
         "title": "DunningLetterIn",
+        "type": "object"
+      },
+      "DunningLetterTextPreviewIn": {
+        "additionalProperties": false,
+        "description": "Text of one level with sample items for the settings form (A33). Only values given\nhere are used: no fee without ``fee_amount``, no deadline without ``payment_days``.",
+        "properties": {
+          "fee_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Amount"
+          },
+          "letter_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letter Date"
+          },
+          "letter_text": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letter Text"
+          },
+          "level": {
+            "maximum": 9.0,
+            "minimum": 1.0,
+            "title": "Level",
+            "type": "integer"
+          },
+          "payment_days": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Days"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "title": "DunningLetterTextPreviewIn",
         "type": "object"
       },
       "DunningMarkSentIn": {
@@ -10795,6 +11837,116 @@
         "title": "ImportOut",
         "type": "object"
       },
+      "ImportRowOut": {
+        "properties": {
+          "account_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Code"
+          },
+          "action": {
+            "enum": [
+              "create",
+              "update",
+              "unchanged",
+              "error"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "datev_account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Account"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "existing_datev_account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Existing Datev Account"
+          },
+          "existing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Existing Id"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "line_no": {
+            "title": "Line No",
+            "type": "integer"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          }
+        },
+        "required": [
+          "line_no",
+          "account_code",
+          "datev_account",
+          "label",
+          "valid_from",
+          "action",
+          "error",
+          "existing_id",
+          "existing_datev_account"
+        ],
+        "title": "ImportRowOut",
+        "type": "object"
+      },
       "ImportStatus": {
         "enum": [
           "applied",
@@ -10803,6 +11955,196 @@
         ],
         "title": "ImportStatus",
         "type": "string"
+      },
+      "IntakeAcceptIn": {
+        "additionalProperties": false,
+        "description": "Overrides for the proposed values; omitted fields take the proposal, ``null`` drops it.",
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "use_proposed": {
+            "default": true,
+            "description": "false: nur die hier angegebenen Werte übernehmen",
+            "title": "Use Proposed",
+            "type": "boolean"
+          }
+        },
+        "title": "IntakeAcceptIn",
+        "type": "object"
+      },
+      "IntakeProposalOut": {
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/Decision"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Title"
+          },
+          "final": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "proposed": {
+            "additionalProperties": true,
+            "title": "Proposed",
+            "type": "object"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "document_title",
+          "source",
+          "confidence",
+          "proposed",
+          "decision",
+          "decided_by",
+          "decided_at",
+          "final",
+          "created_at"
+        ],
+        "title": "IntakeProposalOut",
+        "type": "object"
+      },
+      "IntakeProposalPage": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/IntakeProposalOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "IntakeProposalPage",
+        "type": "object"
+      },
+      "IntakeRejectIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "IntakeRejectIn",
+        "type": "object"
       },
       "InviteIn": {
         "additionalProperties": false,
@@ -11554,6 +12896,60 @@
         "title": "InvoiceReviewIn",
         "type": "object"
       },
+      "JobSettingsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "deadline_lead_days": {
+            "anyOf": [
+              {
+                "maximum": 730.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline Lead Days"
+          },
+          "digest_mail_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Digest Mail Enabled"
+          }
+        },
+        "title": "JobSettingsIn",
+        "type": "object"
+      },
+      "JobSettingsOut": {
+        "properties": {
+          "deadline_lead_days": {
+            "title": "Deadline Lead Days",
+            "type": "integer"
+          },
+          "deadline_lead_days_default": {
+            "default": 30,
+            "title": "Deadline Lead Days Default",
+            "type": "integer"
+          },
+          "digest_mail_enabled": {
+            "title": "Digest Mail Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "digest_mail_enabled",
+          "deadline_lead_days"
+        ],
+        "title": "JobSettingsOut",
+        "type": "object"
+      },
       "JournalEntryIn": {
         "additionalProperties": false,
         "properties": {
@@ -12115,6 +13511,43 @@
         "title": "LegalEntityKind",
         "type": "string"
       },
+      "LegalEntityOption": {
+        "description": "Rechtsträger des Mandanten zur Auswahl in der Mitarbeiterverwaltung (A37).",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind"
+        ],
+        "title": "LegalEntityOption",
+        "type": "object"
+      },
       "LegalEntityOut": {
         "properties": {
           "id": {
@@ -12247,6 +13680,37 @@
           "contact_id"
         ],
         "title": "LetterIn",
+        "type": "object"
+      },
+      "LettersIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "letter_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letter Date"
+          }
+        },
+        "title": "LettersIn",
         "type": "object"
       },
       "LevyAmendIn": {
@@ -12745,6 +14209,21 @@
         ],
         "title": "LinkRole",
         "type": "string"
+      },
+      "ListingImageLinkIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id"
+        ],
+        "title": "ListingImageLinkIn",
+        "type": "object"
       },
       "ListingIn": {
         "additionalProperties": false,
@@ -13777,8 +15256,10 @@
             "anyOf": [
               {
                 "items": {
+                  "format": "email",
                   "type": "string"
                 },
+                "maxItems": 20,
                 "type": "array"
               },
               {
@@ -14361,6 +15842,68 @@
         "title": "ManagementType",
         "type": "string"
       },
+      "ManagerEntityOut": {
+        "description": "``eingerichtet`` once legal entity and ledger exist, else ``nicht_eingerichtet``.",
+        "properties": {
+          "accounts_count": {
+            "title": "Accounts Count",
+            "type": "integer"
+          },
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "ledger_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Id"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "name",
+          "legal_entity_id",
+          "ledger_id",
+          "accounts_count",
+          "created"
+        ],
+        "title": "ManagerEntityOut",
+        "type": "object"
+      },
       "MandateGrantedVia": {
         "enum": [
           "telefon",
@@ -14656,6 +16199,67 @@
         "title": "MappingOut",
         "type": "object"
       },
+      "MappingPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "clear_valid_from": {
+            "default": false,
+            "title": "Clear Valid From",
+            "type": "boolean"
+          },
+          "datev_account": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "minLength": 1,
+                "pattern": "^[0-9]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Account"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          }
+        },
+        "title": "MappingPatch",
+        "type": "object"
+      },
       "MatchIn": {
         "additionalProperties": false,
         "properties": {
@@ -14919,6 +16523,22 @@
         "title": "MemberInvite",
         "type": "object"
       },
+      "MemberLegalEntities": {
+        "description": "Zugriffsbereich je Rechtsträger (A37, docs/rules/M18-05-steuerberaterzugang.md). Nur für\nRollen mit eingeschränktem Bereich (Steuerberater) wirksam; leere Liste bedeutet dort kein\nZugriff.",
+        "properties": {
+          "legal_entity_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Legal Entity Ids",
+            "type": "array"
+          }
+        },
+        "title": "MemberLegalEntities",
+        "type": "object"
+      },
       "MemberMobilePhone": {
         "description": "Mobilnummer für SMS-Eskalationen an die Bereitschaft (M35); ``None`` löscht sie.",
         "properties": {
@@ -14980,6 +16600,14 @@
               }
             ],
             "title": "Last Login At"
+          },
+          "legal_entity_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Legal Entity Ids",
+            "type": "array"
           },
           "membership_id": {
             "format": "uuid",
@@ -16090,6 +17718,35 @@
       "OrderPatch": {
         "additionalProperties": false,
         "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "counterpart_iban": {
+            "anyOf": [
+              {
+                "maxLength": 34,
+                "minLength": 15,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterpart Iban"
+          },
           "execution_date": {
             "anyOf": [
               {
@@ -16377,6 +18034,33 @@
           "valid_to"
         ],
         "title": "OwnerOut",
+        "type": "object"
+      },
+      "OwnerStatementIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "period_from": {
+            "format": "date",
+            "title": "Period From",
+            "type": "string"
+          },
+          "period_to": {
+            "format": "date",
+            "title": "Period To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "period_from",
+          "period_to"
+        ],
+        "title": "OwnerStatementIn",
         "type": "object"
       },
       "OwnershipTransferIn": {
@@ -17443,6 +19127,15 @@
             "title": "Description",
             "type": "string"
           },
+          "document_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Document Ids",
+            "type": "array"
+          },
           "title": {
             "maxLength": 300,
             "minLength": 3,
@@ -17528,6 +19221,34 @@
           "note"
         ],
         "title": "PreparationCorrectionIn",
+        "type": "object"
+      },
+      "PreviewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "collection_date": {
+            "format": "date",
+            "title": "Collection Date",
+            "type": "string"
+          },
+          "lead_days": {
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Lead Days",
+            "type": "integer"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "collection_date",
+          "lead_days"
+        ],
+        "title": "PreviewIn",
         "type": "object"
       },
       "PriceIn": {
@@ -19255,6 +20976,26 @@
         "title": "ProtocolPatch",
         "type": "object"
       },
+      "ProviderTestOut": {
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/AiProvider"
+          },
+          "tiers": {
+            "items": {
+              "$ref": "#/components/schemas/TierTestOut"
+            },
+            "title": "Tiers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "provider",
+          "tiers"
+        ],
+        "title": "ProviderTestOut",
+        "type": "object"
+      },
       "ReadingIn": {
         "additionalProperties": false,
         "properties": {
@@ -19375,6 +21116,12 @@
         "additionalProperties": false,
         "description": "Reviewed values. ``invoice`` is what the reviewer confirmed; an IBAN is accepted only\ntogether with ``iban_confirmed=true`` (rule 0.1.6: no IBAN from a proposal without a\nhuman confirmation).",
         "properties": {
+          "conflicts_acknowledged": {
+            "default": false,
+            "description": "Pflicht, wenn der Entwurf Widersprüche zwischen XML und PDF ausweist (D42): die prüfende Person hat die Widersprüche gesehen; sie bleiben als Prüfhinweis an der Rechnung.",
+            "title": "Conflicts Acknowledged",
+            "type": "boolean"
+          },
           "iban_confirmed": {
             "default": false,
             "title": "Iban Confirmed",
@@ -19400,6 +21147,58 @@
           "invoice"
         ],
         "title": "ReceiptConfirmIn",
+        "type": "object"
+      },
+      "ReceiptConflictOut": {
+        "description": "D42: one contradiction between the structured part and another reading; ``other`` is\nNone when the value is simply missing in the other source.",
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "other": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other"
+          },
+          "other_source": {
+            "enum": [
+              "pdf_text",
+              "ai"
+            ],
+            "title": "Other Source",
+            "type": "string"
+          },
+          "xml": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xml"
+          }
+        },
+        "required": [
+          "field",
+          "xml",
+          "other",
+          "other_source",
+          "note"
+        ],
+        "title": "ReceiptConflictOut",
         "type": "object"
       },
       "ReceiptDraftFromDocumentIn": {
@@ -19477,6 +21276,13 @@
       },
       "ReceiptDraftOut": {
         "properties": {
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptConflictOut"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -19511,6 +21317,10 @@
             "title": "Document Id",
             "type": "string"
           },
+          "e_invoice_format": {
+            "title": "E Invoice Format",
+            "type": "string"
+          },
           "error": {
             "anyOf": [
               {
@@ -19528,6 +21338,13 @@
             },
             "title": "Fields",
             "type": "object"
+          },
+          "findings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Findings",
+            "type": "array"
           },
           "iban_candidates": {
             "items": {
@@ -19630,6 +21447,26 @@
             },
             "title": "Warnings",
             "type": "array"
+          },
+          "xml_lines": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Xml Lines",
+            "type": "array"
+          },
+          "xml_payment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xml Payment"
           }
         },
         "required": [
@@ -19645,6 +21482,7 @@
           "warnings",
           "questions",
           "masked_excerpt",
+          "e_invoice_format",
           "error",
           "invoice_id",
           "decided_by",
@@ -19677,6 +21515,8 @@
           "source": {
             "enum": [
               "ai",
+              "xml",
+              "ai_estimate",
               "local",
               "none"
             ],
@@ -20362,6 +22202,139 @@
           }
         },
         "title": "ReplyTemplatePatch",
+        "type": "object"
+      },
+      "ReportLineOut": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "datev_account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datev Account"
+          },
+          "first_booking_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Booking Date"
+          },
+          "last_booking_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Booking Date"
+          },
+          "lines_in_period": {
+            "title": "Lines In Period",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "unmapped": {
+            "title": "Unmapped",
+            "type": "boolean"
+          },
+          "unmapped_lines": {
+            "title": "Unmapped Lines",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_code",
+          "account_name",
+          "datev_account",
+          "lines_in_period",
+          "first_booking_date",
+          "last_booking_date",
+          "unmapped",
+          "unmapped_lines",
+          "reason"
+        ],
+        "title": "ReportLineOut",
+        "type": "object"
+      },
+      "ReportOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/ReportLineOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "period_from": {
+            "format": "date",
+            "title": "Period From",
+            "type": "string"
+          },
+          "period_to": {
+            "format": "date",
+            "title": "Period To",
+            "type": "string"
+          },
+          "unmapped_count": {
+            "title": "Unmapped Count",
+            "type": "integer"
+          },
+          "used_unmapped_count": {
+            "title": "Used Unmapped Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "period_from",
+          "period_to",
+          "unmapped_count",
+          "used_unmapped_count",
+          "accounts"
+        ],
+        "title": "ReportOut",
         "type": "object"
       },
       "ReportType": {
@@ -22743,6 +24716,17 @@
             ],
             "title": "Leitweg Id"
           },
+          "payee_iban_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payee Iban Masked"
+          },
           "tax_number_masked": {
             "anyOf": [
               {
@@ -22786,6 +24770,7 @@
           "vat_id_masked",
           "tax_number_masked",
           "leitweg_id",
+          "payee_iban_masked",
           "kleinunternehmer_note",
           "datev_consultant_number",
           "datev_client_number",
@@ -22902,6 +24887,18 @@
               }
             ],
             "title": "Leitweg Id"
+          },
+          "payee_iban": {
+            "anyOf": [
+              {
+                "maxLength": 34,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payee Iban"
           },
           "tax_number": {
             "anyOf": [
@@ -23072,6 +25069,51 @@
           "end_date"
         ],
         "title": "TerminationIn",
+        "type": "object"
+      },
+      "TestEventIn": {
+        "additionalProperties": false,
+        "description": "Sample event for a dry run; an existing ``entity_id`` loads the real ticket fields.",
+        "properties": {
+          "entity": {
+            "additionalProperties": true,
+            "title": "Entity",
+            "type": "object"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "entity_type": {
+            "default": "ticket",
+            "maxLength": 63,
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "type": {
+            "maxLength": 100,
+            "minLength": 3,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "TestEventIn",
         "type": "object"
       },
       "TextStatus": {
@@ -23457,6 +25499,7 @@
             "anyOf": [
               {
                 "items": {
+                  "format": "email",
                   "type": "string"
                 },
                 "maxItems": 20,
@@ -23758,6 +25801,19 @@
             ],
             "title": "Input Eur Per Mtok"
           },
+          "max_output_tokens": {
+            "anyOf": [
+              {
+                "maximum": 1000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Output Tokens"
+          },
           "model": {
             "maxLength": 100,
             "minLength": 1,
@@ -23784,6 +25840,66 @@
           "output_eur_per_mtok"
         ],
         "title": "TierModel",
+        "type": "object"
+      },
+      "TierTestOut": {
+        "description": "Result of one minimal call per configured tier (connection test, no release check).",
+        "properties": {
+          "cost_eur": {
+            "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost Eur",
+            "type": "string"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "tier": {
+            "enum": [
+              "small",
+              "large"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "tokens_in": {
+            "default": 0,
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "default": 0,
+            "title": "Tokens Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tier",
+          "model",
+          "ok",
+          "duration_ms"
+        ],
+        "title": "TierTestOut",
         "type": "object"
       },
       "TokenResponse": {
@@ -26388,6 +28504,1036 @@
         ]
       }
     },
+    "/api/v1/accounting/audit-exports": {
+      "get": {
+        "operationId": "list_audit_exports_api_v1_accounting_audit_exports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ledger_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ledger Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Audit Exports Api V1 Accounting Audit Exports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüfexporte auflisten",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "operationId": "create_audit_export_api_v1_accounting_audit_exports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditExportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Audit Export Api V1 Accounting Audit Exports Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüfexport je Rechtsträger und Zeitraum erstellen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/audit-exports/{run_id}": {
+      "get": {
+        "operationId": "get_audit_export_api_v1_accounting_audit_exports__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Audit Export Api V1 Accounting Audit Exports  Run Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Status eines Prüfexports",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/audit-exports/{run_id}/download": {
+      "get": {
+        "operationId": "download_audit_export_api_v1_accounting_audit_exports__run_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüfexport (ZIP) herunterladen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/datev-mappings": {
+      "get": {
+        "description": "With ``ledger_id`` the rows of that ledger plus the tenant wide rows are listed.",
+        "operationId": "list_mappings_api_v1_accounting_datev_mappings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ledger_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ledger Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_inactive",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Inactive",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DatevMappingOut"
+                  },
+                  "title": "Response List Mappings Api V1 Accounting Datev Mappings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "DATEV-Kontenzuordnungen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "operationId": "create_mapping_api_v1_accounting_datev_mappings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatevMappingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatevMappingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "DATEV-Kontenzuordnung anlegen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/datev-mappings/import": {
+      "post": {
+        "description": "CSV with header ``account_code;datev_account;label;valid_from`` (German aliases\naccepted, semicolon or comma). ``dry_run=true`` returns the preview only. A file with any\nrow error is not written at all (``dry_run=false`` then answers 422 with the rows).",
+        "operationId": "import_mappings_api_v1_accounting_datev_mappings_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatevImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatevImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuordnungen aus CSV (Vorschau oder Übernahme)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/datev-mappings/report": {
+      "get": {
+        "description": "Per ledger and period: every account of the ledger with its resolved DATEV account,\nposted lines in the period and whether a line or the account as of the period end lacks\na mapping. The same check blocks the batch export (MHVP-BILL-0008).",
+        "operationId": "mapping_report_api_v1_accounting_datev_mappings_report_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüfbericht nicht zugeordnete Konten",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/datev-mappings/{mapping_id}": {
+      "delete": {
+        "description": "Master data only; exports already written keep their content and checksum.",
+        "operationId": "delete_mapping_api_v1_accounting_datev_mappings__mapping_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mapping_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mapping Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "DATEV-Kontenzuordnung löschen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "patch": {
+        "operationId": "update_mapping_api_v1_accounting_datev_mappings__mapping_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mapping_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mapping Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatevMappingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "DATEV-Kontenzuordnung ändern",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits": {
+      "get": {
+        "operationId": "list_runs_api_v1_accounting_direct_debits_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(draft|approved|file_generated|exported|cancelled)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DirectDebitRunOut"
+                  },
+                  "title": "Response List Runs Api V1 Accounting Direct Debits Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lastschriftläufe",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "operationId": "create_run_api_v1_accounting_direct_debits_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectDebitRunIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectDebitRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lastschriftlauf anlegen (Entwurf)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits/creditor-ids/legal-entities/{legal_entity_id}": {
+      "put": {
+        "operationId": "set_creditor_id_api_v1_accounting_direct_debits_creditor_ids_legal_entities__legal_entity_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "legal_entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Legal Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditorIdIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Set Creditor Id Api V1 Accounting Direct Debits Creditor Ids Legal Entities  Legal Entity Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gläubiger-Identifikationsnummer des Rechtsträgers hinterlegen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits/creditor-ids/tenant": {
+      "put": {
+        "operationId": "set_tenant_creditor_id_api_v1_accounting_direct_debits_creditor_ids_tenant_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditorIdIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Set Tenant Creditor Id Api V1 Accounting Direct Debits Creditor Ids Tenant Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gläubiger-Identifikationsnummer des Mandanten (Rückfall)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits/preview": {
+      "post": {
+        "operationId": "preview_api_v1_accounting_direct_debits_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Preview Api V1 Accounting Direct Debits Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einziehbare Sollstellungen (Vorschau)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits/{run_id}": {
+      "get": {
+        "operationId": "get_run_api_v1_accounting_direct_debits__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectDebitRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lastschriftlauf",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits/{run_id}/approve": {
+      "post": {
+        "operationId": "approve_run_api_v1_accounting_direct_debits__run_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectDebitRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Freigabe (zwei verschiedene Personen)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits/{run_id}/cancel": {
+      "post": {
+        "operationId": "cancel_run_api_v1_accounting_direct_debits__run_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectDebitRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lauf verwerfen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits/{run_id}/file": {
+      "get": {
+        "operationId": "download_file_api_v1_accounting_direct_debits__run_id__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lastschriftdatei herunterladen (G2)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "operationId": "generate_file_api_v1_accounting_direct_debits__run_id__file_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectDebitRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lastschriftdatei erzeugen und ablegen (nicht übermittelt)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits/{run_id}/orders": {
+      "get": {
+        "operationId": "list_orders_api_v1_accounting_direct_debits__run_id__orders_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DirectDebitOrderOut"
+                  },
+                  "title": "Response List Orders Api V1 Accounting Direct Debits  Run Id  Orders Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lastschriften eines Laufs",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/direct-debits/{run_id}/pre-notifications": {
+      "post": {
+        "operationId": "pre_notifications_api_v1_accounting_direct_debits__run_id__pre_notifications_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Pre Notifications Api V1 Accounting Direct Debits  Run Id  Pre Notifications Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorabinformationen je Zahler (Entwurf)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/accounting/dunning-cases/{case_id}/letter": {
       "post": {
         "operationId": "dunning_letter_create_api_v1_accounting_dunning_cases__case_id__letter_post",
@@ -26547,6 +29693,124 @@
           }
         },
         "summary": "Mahnschreiben versenden (gesperrt: G1 geschlossen, Versand nicht umgesetzt, M16-02)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/dunning-cases/{case_id}/mahnbescheid": {
+      "post": {
+        "operationId": "dunning_mahnbescheid_create_api_v1_accounting_dunning_cases__case_id__mahnbescheid_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DunningLetterIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dunning Mahnbescheid Create Api V1 Accounting Dunning Cases  Case Id  Mahnbescheid Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mahnbescheid-Vorbereitung als PDF erzeugen und ablegen (kein Antrag)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/dunning-cases/{case_id}/mahnbescheid-preview": {
+      "post": {
+        "operationId": "dunning_mahnbescheid_preview_api_v1_accounting_dunning_cases__case_id__mahnbescheid_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DunningLetterIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mahnbescheid-Vorbereitung als PDF (Vorschau, nicht abgelegt, kein Antrag)",
         "tags": [
           "Buchhaltung"
         ]
@@ -26998,6 +30262,50 @@
           }
         },
         "summary": "Mahnstufen, Gebühren (je Stufe, nur mit Betrag) und Zins",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/dunning-settings/letter-preview": {
+      "post": {
+        "description": "Standard text or the given ``letter_text`` of a level, rendered with sample items;\nplaceholders are checked (422 on unknown ones). No bank account is passed: which account\nmay appear in a letter is an open operator decision (M16-13).",
+        "operationId": "dunning_letter_text_preview_api_v1_accounting_dunning_settings_letter_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DunningLetterTextPreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dunning Letter Text Preview Api V1 Accounting Dunning Settings Letter Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Textbaustein einer Mahnstufe mit Beispielposten (A33, nur Text, kein Versand)",
         "tags": [
           "Buchhaltung"
         ]
@@ -27523,6 +30831,138 @@
           }
         },
         "summary": "Prüfschritt erfassen (PÜ05)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/invoices/{invoice_id}/xrechnung.xml": {
+      "get": {
+        "description": "Generated on request from the frozen invoice and the current tenant tax data; drafts and\nincoming invoices answer 409 (MHVP-BILL-0006), missing Leitweg-ID or tax data 409\n(MHVP-BILL-0002/0003/0005).",
+        "operationId": "xrechnung_xml_api_v1_accounting_invoices__invoice_id__xrechnung_xml_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/xml": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Honorarrechnung als XRechnung (UBL 2.1, XRechnung 3.0)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/invoices/{invoice_id}/xrechnung/check": {
+      "get": {
+        "description": "Own structural check only (mandatory fields, sums); the official KoSIT validator is run\noutside the platform (P05, scripts/kosit_validate.sh).",
+        "operationId": "xrechnung_check_api_v1_accounting_invoices__invoice_id__xrechnung_check_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Xrechnung Check Api V1 Accounting Invoices  Invoice Id  Xrechnung Check Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Strukturprüfung der XRechnung (Findings)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/invoices/{invoice_id}/xrechnung/document": {
+      "post": {
+        "description": "Files the XML once in the document index (source generated); a second call returns the\nexisting document. Nothing is sent to the recipient.",
+        "operationId": "xrechnung_store_api_v1_accounting_invoices__invoice_id__xrechnung_document_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Xrechnung Store Api V1 Accounting Invoices  Invoice Id  Xrechnung Document Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "XRechnung als Dokument ablegen (Objekt und Rechtsträger verknüpft)",
         "tags": [
           "Buchhaltung"
         ]
@@ -28489,7 +31929,7 @@
     },
     "/api/v1/accounting/ledgers/{ledger_id}/exports/datev": {
       "post": {
-        "description": "Emits the DATEV EXTF Buchungsstapel header only once consultant_number, client_number\nand chart_of_accounts are set (operator decision 25.09.2026, M18-01). Otherwise rejects with\nthe existing message.",
+        "description": "Emits the DATEV EXTF Buchungsstapel header only once consultant_number, client_number\nand chart_of_accounts are set (operator decision 25.09.2026, M18-01). Otherwise rejects with\nthe existing message. Account numbers come from the operator's DATEV mapping (A36);\nmissing mappings answer 409 MHVP-BILL-0008 with the list of accounts.",
         "operationId": "export_datev_api_v1_accounting_ledgers__ledger_id__exports_datev_post",
         "parameters": [
           {
@@ -30365,6 +33805,48 @@
         ]
       }
     },
+    "/api/v1/ai/providers/{provider}/test": {
+      "post": {
+        "description": "One minimal prompt per configured tier (small, large) with the stored key. Works without\na release, changes no release state and records each call as a run so the budget is\ncharged; the provider's own error text is returned per tier.",
+        "operationId": "provider_connection_test_api_v1_ai_providers__provider__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/AiProvider"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderTestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Anbieter: Verbindung testen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
     "/api/v1/ai/routing": {
       "get": {
         "operationId": "get_routing_api_v1_ai_routing_get",
@@ -30930,6 +34412,430 @@
         "summary": "Gemerktes Gerät widerrufen",
         "tags": [
           "Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/automation/meta": {
+      "get": {
+        "operationId": "meta_api_v1_automation_meta_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Meta Api V1 Automation Meta Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Bekannte Ereignistypen und Aktionen der Stufe 1",
+        "tags": [
+          "Automatisierung"
+        ]
+      }
+    },
+    "/api/v1/automation/rules": {
+      "get": {
+        "operationId": "list_rules_api_v1_automation_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Rules Api V1 Automation Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Regeln auflisten",
+        "tags": [
+          "Automatisierung"
+        ]
+      },
+      "post": {
+        "operationId": "create_rule_api_v1_automation_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Rule Api V1 Automation Rules Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regel anlegen",
+        "tags": [
+          "Automatisierung"
+        ]
+      }
+    },
+    "/api/v1/automation/rules/{rule_id}": {
+      "delete": {
+        "operationId": "delete_rule_api_v1_automation_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regel löschen (nur Administrator)",
+        "tags": [
+          "Automatisierung"
+        ]
+      },
+      "get": {
+        "operationId": "get_rule_api_v1_automation_rules__rule_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Rule Api V1 Automation Rules  Rule Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regel lesen",
+        "tags": [
+          "Automatisierung"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_rule_api_v1_automation_rules__rule_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationRulePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Rule Api V1 Automation Rules  Rule Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regel ändern",
+        "tags": [
+          "Automatisierung"
+        ]
+      }
+    },
+    "/api/v1/automation/rules/{rule_id}/activate": {
+      "post": {
+        "operationId": "activate_rule_api_v1_automation_rules__rule_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationActivateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Activate Rule Api V1 Automation Rules  Rule Id  Activate Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regel aktivieren oder deaktivieren",
+        "tags": [
+          "Automatisierung"
+        ]
+      }
+    },
+    "/api/v1/automation/rules/{rule_id}/test": {
+      "post": {
+        "operationId": "dry_run_rule_api_v1_automation_rules__rule_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestEventIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dry Run Rule Api V1 Automation Rules  Rule Id  Test Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Testlauf gegen ein Beispielereignis (ohne Wirkung)",
+        "tags": [
+          "Automatisierung"
+        ]
+      }
+    },
+    "/api/v1/automation/runs": {
+      "get": {
+        "operationId": "list_runs_api_v1_automation_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "rule_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rule Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Runs Api V1 Automation Runs Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ausführungsprotokoll",
+        "tags": [
+          "Automatisierung"
         ]
       }
     },
@@ -31978,6 +35884,76 @@
         ]
       }
     },
+    "/api/v1/banking/matching-metrics": {
+      "get": {
+        "description": "Coverage = automatically and unambiguously assigned transactions / transactions of the\nperiod; error rate = automatic assignments later reversed (corrected or cancelled) /\nautomatic assignments. See ``mhvp.banking.matching_metrics`` (M12 acceptance, A45).",
+        "operationId": "matching_metrics_api_v1_banking_matching_metrics_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Matching Metrics Api V1 Banking Matching Metrics Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abdeckungsgrad und Fehlerquote des Bankabgleichs je Zeitraum (getrennt)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
     "/api/v1/banking/matching/metrics": {
       "get": {
         "description": "Coverage = automatically booked / incoming; error rate = automatic bookings later reversed\n/ automatic bookings. Operational figures, no proof of safety (7.4).",
@@ -32974,6 +36950,278 @@
         "summary": "Möglichen Doppelumsatz klären",
         "tags": [
           "Bank"
+        ]
+      }
+    },
+    "/api/v1/billing/owner-statements": {
+      "get": {
+        "operationId": "list_statements_api_v1_billing_owner_statements_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ledger_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ledger Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Statements Api V1 Billing Owner Statements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümerabrechnungen",
+        "tags": [
+          "Abrechnung"
+        ]
+      },
+      "post": {
+        "operationId": "create_api_v1_billing_owner_statements_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerStatementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Api V1 Billing Owner Statements Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümerabrechnung anlegen (Entwurf)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/owner-statements/{statement_id}": {
+      "get": {
+        "operationId": "get_api_v1_billing_owner_statements__statement_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Api V1 Billing Owner Statements  Statement Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümerabrechnung mit Blöcken",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/owner-statements/{statement_id}/approve": {
+      "post": {
+        "operationId": "approve_api_v1_billing_owner_statements__statement_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve Api V1 Billing Owner Statements  Statement Id  Approve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Interne Freigabe (zweite Person)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/owner-statements/{statement_id}/calculate": {
+      "post": {
+        "operationId": "calculate_api_v1_billing_owner_statements__statement_id__calculate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Calculate Api V1 Billing Owner Statements  Statement Id  Calculate Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Berechnen (Snapshot aus dem Ledger)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/owner-statements/{statement_id}/pdf": {
+      "get": {
+        "operationId": "pdf_api_v1_billing_owner_statements__statement_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ausgabe als PDF (nur mit Freigabestufe G3)",
+        "tags": [
+          "Abrechnung"
         ]
       }
     },
@@ -35434,6 +39682,321 @@
         ]
       }
     },
+    "/api/v1/documents/intake-proposals": {
+      "get": {
+        "operationId": "list_intake_proposals_api_v1_documents_intake_proposals_get",
+        "parameters": [
+          {
+            "description": "pending, accepted, modified, rejected, all",
+            "in": "query",
+            "name": "decision",
+            "required": false,
+            "schema": {
+              "default": "pending",
+              "description": "pending, accepted, modified, rejected, all",
+              "title": "Decision",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeProposalPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschläge aus dem Dokumenteingang",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/documents/intake-proposals/{proposal_id}": {
+      "get": {
+        "operationId": "get_intake_proposal_api_v1_documents_intake_proposals__proposal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlag lesen",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/documents/intake-proposals/{proposal_id}/accept": {
+      "post": {
+        "operationId": "accept_intake_proposal_api_v1_documents_intake_proposals__proposal_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/IntakeAcceptIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlag bestätigen und Dokument zuordnen",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/documents/intake-proposals/{proposal_id}/reject": {
+      "post": {
+        "operationId": "reject_intake_proposal_api_v1_documents_intake_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/IntakeRejectIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlag ablehnen",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/documents/webhooks/paperless": {
+      "post": {
+        "operationId": "receive_api_v1_documents_webhooks_paperless_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Receive Api V1 Documents Webhooks Paperless Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Paperless Post-Consume-Webhook (HMAC, je Mandant)",
+        "tags": [
+          "Paperless Webhook"
+        ]
+      }
+    },
+    "/api/v1/documents/webhooks/paperless/{tenant_key}": {
+      "post": {
+        "operationId": "receive_for_tenant_api_v1_documents_webhooks_paperless__tenant_key__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_key",
+            "required": true,
+            "schema": {
+              "title": "Tenant Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Receive For Tenant Api V1 Documents Webhooks Paperless  Tenant Key  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paperless Post-Consume-Webhook (Mandant im Pfad)",
+        "tags": [
+          "Paperless Webhook"
+        ]
+      }
+    },
     "/api/v1/documents/{document_id}": {
       "delete": {
         "description": "Only after a released retention profile expired and without a hold (6.9.5, D46).",
@@ -35850,6 +40413,52 @@
           }
         },
         "summary": "Spiegelung erneut anstoßen",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}/read-receipts": {
+      "get": {
+        "description": "Portal read receipts of a document (11.3, D34, A53): who opened or downloaded it\nthrough the portal and when. An indication only, kept apart from dispatch evidence\n(``mhvp.communication``) and from any receipt date; it changes no delivery status.",
+        "operationId": "read_receipts_api_v1_documents__document_id__read_receipts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Receipts Api V1 Documents  Document Id  Read Receipts Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalzugriffe (Indiz, keine Zustellung)",
         "tags": [
           "Dokumente"
         ]
@@ -37674,6 +42283,51 @@
         ]
       }
     },
+    "/api/v1/hoa/audits/{audit_id}": {
+      "get": {
+        "operationId": "get_audit_api_v1_hoa_audits__audit_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "audit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Audit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Audit Api V1 Hoa Audits  Audit Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Beiratsprüfung mit Positionen (PÜ07, D33)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/audits/{audit_id}/items": {
       "post": {
         "operationId": "add_audit_item_api_v1_hoa_audits__audit_id__items_post",
@@ -38156,6 +42810,62 @@
           }
         },
         "summary": "Anwesenheit/Vollmacht",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/meetings/{meeting_id}/disruptions": {
+      "post": {
+        "description": "A disruption is documented as an event, never silently dropped. While a disruption is\nopen, votes and announcements are refused; a documented resumption reopens the meeting.",
+        "operationId": "disruption_api_v1_hoa_meetings__meeting_id__disruptions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisruptionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Disruption Api V1 Hoa Meetings  Meeting Id  Disruptions Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Technische Störung (D53)",
         "tags": [
           "hoa"
         ]
@@ -39257,6 +43967,94 @@
         "summary": "Hausgeldabrechnung mit Kostenpositionen",
         "tags": [
           "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/statements/{statement_id}/ai-check": {
+      "get": {
+        "operationId": "get_hoa_statement_check_api_v1_hoa_statements__statement_id__ai_check_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Hoa Statement Check Api V1 Hoa Statements  Statement Id  Ai Check Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Plausibilität der Hausgeldabrechnung: Läufe und Hinweise",
+        "tags": [
+          "Abrechnung"
+        ]
+      },
+      "post": {
+        "operationId": "start_hoa_statement_check_api_v1_hoa_statements__statement_id__ai_check_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Hoa Statement Check Api V1 Hoa Statements  Statement Id  Ai Check Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Plausibilität der Hausgeldabrechnung anstoßen (nur Hinweise)",
+        "tags": [
+          "Abrechnung"
         ]
       }
     },
@@ -40811,6 +45609,120 @@
         ]
       }
     },
+    "/api/v1/imports/immoware24/lists/kontakte": {
+      "post": {
+        "description": "One role (eigentuemer, mieter, bank, sonstige) per file, in the same order as ``files``.",
+        "operationId": "import_kontakte_api_v1_imports_immoware24_lists_kontakte_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "preview",
+              "pattern": "^(preview|apply)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_kontakte_api_v1_imports_immoware24_lists_kontakte_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Kontakte Api V1 Imports Immoware24 Lists Kontakte Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kontakte aus den Kontaktlisten (Testlauf oder Übernahme)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/lists/objektdaten": {
+      "post": {
+        "description": "``number_map``: ``ALT=NEU`` pairs separated by comma or line break for object numbers\nthat are not three digits. Same rules as the command line (handbuch/import-objektdaten.md).",
+        "operationId": "import_objektdaten_api_v1_imports_immoware24_lists_objektdaten_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "preview",
+              "pattern": "^(preview|apply)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_objektdaten_api_v1_imports_immoware24_lists_objektdaten_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Objektdaten Api V1 Imports Immoware24 Lists Objektdaten Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objekte und Einheiten aus der Objektliste (Testlauf oder Übernahme)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
     "/api/v1/imports/immoware24/mappings": {
       "get": {
         "operationId": "list_mappings_api_v1_imports_immoware24_mappings_get",
@@ -41657,6 +46569,277 @@
           }
         },
         "summary": "Anzeige ändern",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/listings/{listing_id}/images": {
+      "get": {
+        "operationId": "list_listing_images_api_v1_letting_listings__listing_id__images_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Listing Images Api V1 Letting Listings  Listing Id  Images Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bilder einer Anzeige",
+        "tags": [
+          "letting"
+        ]
+      },
+      "post": {
+        "description": "Stores the file as a regular document (M6 rules: type check, size limit, mirrors)\nwith a link `entity_type=\"listing\"`, role attachment. Only image types are accepted here;\nother files go through the document upload. Returns the updated image list.",
+        "operationId": "upload_listing_image_api_v1_letting_listings__listing_id__images_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_listing_image_api_v1_letting_listings__listing_id__images_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Upload Listing Image Api V1 Letting Listings  Listing Id  Images Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bild hochladen und mit der Anzeige verknüpfen",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/listings/{listing_id}/images/link": {
+      "post": {
+        "operationId": "link_listing_image_api_v1_letting_listings__listing_id__images_link_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListingImageLinkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Link Listing Image Api V1 Letting Listings  Listing Id  Images Link Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorhandenes Bilddokument mit der Anzeige verknüpfen",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/listings/{listing_id}/images/{document_id}": {
+      "delete": {
+        "description": "Removes only the link to the listing; the document itself and its other links stay\n(deletion of documents follows the retention rules of module documents).",
+        "operationId": "unlink_listing_image_api_v1_letting_listings__listing_id__images__document_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Unlink Listing Image Api V1 Letting Listings  Listing Id  Images  Document Id  Delete",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bild von der Anzeige lösen (Dokument bleibt erhalten)",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
+    "/api/v1/letting/listings/{listing_id}/images/{document_id}/content": {
+      "get": {
+        "operationId": "listing_image_content_api_v1_letting_listings__listing_id__images__document_id__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/*": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bild einer Anzeige anzeigen",
         "tags": [
           "letting"
         ]
@@ -44178,6 +49361,93 @@
         ]
       }
     },
+    "/api/v1/objektakte/ai-calls/summary": {
+      "get": {
+        "description": "Aggregates `objektakte_ai_call` of the tenant: cost in EUR, tokens and number of calls\nper property (`by_property`, calls without a resolved property in one row with\n`property_id=null`) and per calendar month of `requested_at` (`by_month`, `YYYY-MM`, UTC).\n`from`/`to` are inclusive calendar days; `property_id` narrows both groupings. Cost sums\nkeep six decimals as decimal strings (the UI formats `1.234,56 EUR`), tokens are integers.",
+        "operationId": "ai_call_summary_api_v1_objektakte_ai_calls_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ai Call Summary Api V1 Objektakte Ai Calls Summary Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Kosten der Altanwendung objektakte je Objekt und je Monat (nur lesend)",
+        "tags": [
+          "objektakte-ai-calls"
+        ]
+      }
+    },
     "/api/v1/objektakte/classification-rules": {
       "get": {
         "operationId": "list_rules_api_v1_objektakte_classification_rules_get",
@@ -44902,6 +50172,172 @@
         ]
       }
     },
+    "/api/v1/objektakte/properties/{property_id}/lists/{kind}": {
+      "get": {
+        "operationId": "property_persons_api_v1_objektakte_properties__property_id__lists__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "owners",
+                "tenants"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Property Persons Api V1 Objektakte Properties  Property Id  Lists  Kind  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümerliste oder Mieterliste eines Objekts",
+        "tags": [
+          "objektakte-lists"
+        ]
+      }
+    },
+    "/api/v1/objektakte/properties/{property_id}/lists/{kind}/export": {
+      "get": {
+        "operationId": "export_property_persons_api_v1_objektakte_properties__property_id__lists__kind__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "owners",
+                "tenants"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümerliste oder Mieterliste eines Objekts als CSV",
+        "tags": [
+          "objektakte-lists"
+        ]
+      }
+    },
+    "/api/v1/objektakte/properties/{property_id}/lists/{kind}/store": {
+      "post": {
+        "description": "Generates the CSV of `kind` and files it as a new document (category \"Liste\", source\ngenerated, linked to the property). Every call stores a new snapshot.",
+        "operationId": "store_property_list_api_v1_objektakte_properties__property_id__lists__kind__store_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "missing-documents",
+                "documents",
+                "owners",
+                "tenants"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Liste eines Objekts als Dokument ablegen",
+        "tags": [
+          "objektakte-lists"
+        ]
+      }
+    },
     "/api/v1/objektakte/required-documents": {
       "get": {
         "operationId": "list_required_documents_api_v1_objektakte_required_documents_get",
@@ -45374,7 +50810,7 @@
         ]
       },
       "put": {
-        "description": "`enabled` switches the daily job on for this tenant only (default off, ADR 0003);\n`dump_path` is the absolute `.sql` export path on the worker (validated again at run time\nby `mhvp.objektakte.tasks.read_dump_file`).",
+        "description": "`enabled` switches the daily job on for this tenant only (default off, ADR 0003);\n`dump_path` is the absolute `.sql` export path on the worker inside\n`Settings.objektakte_dump_dir` (validated again at run time by\n`mhvp.objektakte.tasks.read_dump_file`, symlinks resolved).",
         "operationId": "update_sync_settings_api_v1_objektakte_sync_put",
         "requestBody": {
           "content": {
@@ -45475,7 +50911,7 @@
     },
     "/api/v1/objektakte/sync/runs": {
       "post": {
-        "description": "With an uploaded complete export the run happens right now in this request and returns\nits report. Without a file the configured `dump_path` is read by the worker\n(`mhvp.objektakte.sync_tenant`), and the report appears on `GET /objektakte/sync` once the\ntask has finished. Both paths use the same water mark and the same idempotent apply.",
+        "description": "With an uploaded complete export the run happens right now in this request and returns\nits report. Without a file the configured `dump_path` is read by the worker\n(`mhvp.objektakte.sync_tenant`), and the report appears on `GET /objektakte/sync` once the\ntask has finished. Both paths use the same water mark and the same idempotent apply.\n\nThe per tenant switch `enabled` applies to both paths: the queued run is refused while it\nis off, and an upload while it is off is reserved for administrators\n(`tenant_settings:update`, the permission that owns the switch).",
         "operationId": "trigger_sync_run_api_v1_objektakte_sync_runs_post",
         "requestBody": {
           "content": {
@@ -46932,6 +52368,52 @@
         ]
       }
     },
+    "/api/v1/portal/documents/{document_id}": {
+      "get": {
+        "description": "Metadata of one released document. Opening writes a read receipt of kind \"opened\"\n(11.3, D34): an indication only, no delivery and no receipt; the list writes nothing.",
+        "operationId": "open_document_api_v1_portal_documents__document_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Open Document Api V1 Portal Documents  Document Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dokument öffnen (Abruf wird als Indiz vermerkt)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
     "/api/v1/portal/documents/{document_id}/download": {
       "get": {
         "operationId": "download_api_v1_portal_documents__document_id__download_get",
@@ -46994,6 +52476,149 @@
           }
         },
         "summary": "Eigene Übergabeprotokolle",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover-protocols": {
+      "get": {
+        "operationId": "list_protocols_api_v1_portal_handover_protocols_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Protocols Api V1 Portal Handover Protocols Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokolle des Mandanten (Mitarbeiter)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover-protocols/{protocol_id}": {
+      "get": {
+        "description": "Same field filter as for participants: internal remarks, the internal contact and the\nmanagement number never leave the CRM, not even for staff reading through the portal.",
+        "operationId": "get_protocol_api_v1_portal_handover_protocols__protocol_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Protocol Api V1 Portal Handover Protocols  Protocol Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokoll lesen (Mitarbeiter)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover-protocols/{protocol_id}/pdf": {
+      "get": {
+        "operationId": "get_pdf_api_v1_portal_handover_protocols__protocol_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "download",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Download",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "PDF eines Übergabeprotokolls (Mitarbeiter)",
         "tags": [
           "Portal"
         ]
@@ -51595,6 +57220,94 @@
         ]
       }
     },
+    "/api/v1/statements/{statement_id}/ai-check": {
+      "get": {
+        "operationId": "get_statement_check_api_v1_statements__statement_id__ai_check_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Statement Check Api V1 Statements  Statement Id  Ai Check Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Plausibilität: Läufe und Hinweise",
+        "tags": [
+          "Abrechnung"
+        ]
+      },
+      "post": {
+        "operationId": "start_statement_check_api_v1_statements__statement_id__ai_check_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Statement Check Api V1 Statements  Statement Id  Ai Check Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Plausibilität des Abrechnungsentwurfs anstoßen (nur Hinweise)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
     "/api/v1/statements/{statement_id}/calculate": {
       "post": {
         "operationId": "calculate_api_v1_statements__statement_id__calculate_post",
@@ -51690,6 +57403,170 @@
           }
         },
         "summary": "Kostenposition mit Grundlage erfassen",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/statements/{statement_id}/letters": {
+      "post": {
+        "operationId": "letters_create_api_v1_statements__statement_id__letters_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LettersIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Letters Create Api V1 Statements  Statement Id  Letters Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anschreiben je Mieter als PDF-Entwurf ablegen (Dokument je Vertrag, kein Versand)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/statements/{statement_id}/letters/preview": {
+      "post": {
+        "operationId": "letters_preview_api_v1_statements__statement_id__letters_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LettersIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anschreiben Guthaben/Nachzahlung je Mieter als PDF-Entwurf (Vorschau, kein Versand)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/statements/{statement_id}/letters/send": {
+      "post": {
+        "description": "Locked on purpose: G3 must be open for the tenant, and even then the dispatch path\n(postal or e-mail evidence of access, A04, M17-04) is not released.",
+        "operationId": "letters_send_api_v1_statements__statement_id__letters_send_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Letters Send Api V1 Statements  Statement Id  Letters Send Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anschreiben zustellen (gesperrt: G3 geschlossen, Zustellung nicht umgesetzt)",
         "tags": [
           "Abrechnung"
         ]
@@ -52267,6 +58144,72 @@
         ]
       }
     },
+    "/api/v1/tenant/legal-entities": {
+      "get": {
+        "operationId": "list_legal_entity_options_api_v1_tenant_legal_entities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LegalEntityOption"
+                  },
+                  "title": "Response List Legal Entity Options Api V1 Tenant Legal Entities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rechtsträger des Mandanten (Auswahl für Zugriffsbereiche, A37)",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/manager-entity": {
+      "get": {
+        "operationId": "get_manager_entity_api_v1_tenant_manager_entity_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerEntityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rechtsträger der verwaltenden Gesellschaft (Status)",
+        "tags": [
+          "Mandant"
+        ]
+      },
+      "post": {
+        "description": "Idempotent one-off setup step (Einstellungen, Mandant): creates the ``manager`` legal\nentity named after the tenant's company master data and its ledger with the default\nchart of accounts; a second call returns the existing state unchanged.",
+        "operationId": "create_manager_entity_api_v1_tenant_manager_entity_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerEntityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rechtsträger und Buchungskreis der verwaltenden Gesellschaft einrichten",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/tenant/members": {
       "get": {
         "operationId": "list_members_api_v1_tenant_members_get",
@@ -52427,6 +58370,53 @@
           }
         },
         "summary": "Kompetenzen eines Mitglieds setzen",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/members/{membership_id}/legal-entities": {
+      "put": {
+        "description": "docs/rules/M18-05-steuerberaterzugang.md: the list limits memberships whose roles are all\nscoped roles (tax_advisor) to these legal entities; an empty list means no access for them.\nUnknown or foreign legal entities are rejected (RLS shows only the tenant's own).",
+        "operationId": "put_member_legal_entities_api_v1_tenant_members__membership_id__legal_entities_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberLegalEntities"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zugriffsbereich je Rechtsträger eines Mitglieds setzen (Steuerberater, A37)",
         "tags": [
           "Mandant"
         ]
@@ -56041,6 +62031,171 @@
         ]
       }
     },
+    "/api/v1/workspace/deadlines": {
+      "get": {
+        "description": "Only kinds the caller may read (contracts, properties, accounting, documents).",
+        "operationId": "deadlines_api_v1_workspace_deadlines_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "pattern": "^(open|done|all)$",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeadlineOut"
+                  },
+                  "title": "Response Deadlines Api V1 Workspace Deadlines Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fristenliste des Mandanten (A41, Orientierung, zu prüfen)",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/digest": {
+      "get": {
+        "description": "Same data as the daily job ``tasks.digest``, computed live for the caller.",
+        "operationId": "digest_api_v1_workspace_digest_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "day",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Day"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Digest Api V1 Workspace Digest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tagesübersicht des angemeldeten Benutzers (A40)",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
     "/api/v1/workspace/filters": {
       "get": {
         "operationId": "list_filters_api_v1_workspace_filters_get",
@@ -56164,6 +62319,66 @@
           }
         },
         "summary": "Listenfilter löschen",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/job-settings": {
+      "get": {
+        "operationId": "get_job_settings_api_v1_workspace_job_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Schalter der Tagesjobs (Digest-Mail, Vorfrist)",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      },
+      "put": {
+        "operationId": "put_job_settings_api_v1_workspace_job_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schalter der Tagesjobs ändern",
         "tags": [
           "Arbeitsplatz"
         ]

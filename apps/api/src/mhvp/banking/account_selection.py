@@ -25,6 +25,7 @@ from mhvp.banking.models import (
     FinApiAccountLink,
 )
 from mhvp.contacts.validation import mask_iban
+from mhvp.core.escaping import LIKE_ESCAPE, escape_like
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties.models import LegalEntity, Property, PropertyBankAccount
@@ -93,12 +94,13 @@ def _base_query(
     if legal_entity_id is not None:
         query = query.where(PropertyBankAccount.legal_entity_id == legal_entity_id)
     if q:
-        pattern = f"%{q.strip()}%"
+        # Search term matches literally: % and _ are escaped (Sicherheitsreview 26.09.2026, 5).
+        pattern = f"%{escape_like(q.strip())}%"
         query = query.where(
             or_(
-                PropertyBankAccount.holder.ilike(pattern),
-                PropertyBankAccount.bank_name.ilike(pattern),
-                PropertyBankAccount.iban_suffix.ilike(pattern),
+                PropertyBankAccount.holder.ilike(pattern, escape=LIKE_ESCAPE),
+                PropertyBankAccount.bank_name.ilike(pattern, escape=LIKE_ESCAPE),
+                PropertyBankAccount.iban_suffix.ilike(pattern, escape=LIKE_ESCAPE),
             )
         )
     return query.order_by(PropertyBankAccount.holder, PropertyBankAccount.iban_suffix)

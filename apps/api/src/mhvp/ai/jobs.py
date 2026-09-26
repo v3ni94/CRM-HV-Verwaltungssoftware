@@ -94,6 +94,21 @@ async def run_and_propose(
         run = await session.get(AiTaskRun, run_id)  # type: ignore[assignment]
         assert run is not None  # noqa: S101
         proposal_id = None
+        if run.status is RunStatus.SUCCEEDED and run.task is AiTask.CHECK_STATEMENT:
+            # A35 KI-Plausibilität: findings only, stored as a proposal at the statement;
+            # nothing is written to the statement or its snapshot (rule 0.1.6).
+            from mhvp.billing import ai_check
+
+            check = AiProposal(
+                tenant_id=tenant_id,
+                task_run_id=run.id,
+                entity_type=ai_check.ENTITY_TYPE,
+                context_id=_uuid(run.input_ref.get("context", {}).get("context_id")),
+                proposed=ai_check.proposal_payload(run),
+            )
+            session.add(check)
+            await session.flush()
+            proposal_id = check.id
         if run.status is RunStatus.SUCCEEDED and run.task in (
             AiTask.EXTRACT_CONTACTS,
             AiTask.EXTRACT_PROPERTY,

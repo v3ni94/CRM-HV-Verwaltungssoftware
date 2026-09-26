@@ -113,9 +113,24 @@ Postausgang mit Vier-Augen-Freigabe (M20).
    Getestet mit einem synthetischen Dump (`tests/unit/test_m30_uprotokoll_import.py`,
    `tests/integration/test_m30_handover.py::test_uprotokoll_import_preview_apply_and_files`),
    nicht mit echten Daten (Regel 0.1.9). Offen (M30-03): echter Exportbefehl und Speicherort
-   der Dateien beim Betreiber, Protokollversionen/Vorgänger-Verknüpfung beim Import,
-   E-Mail-Historie (`protocol_emails`) als eigene Ablage, Ablösung von
-   uprotokoll.muellerhv.de.
+   der Dateien beim Betreiber, Ablösung von uprotokoll.muellerhv.de.
+4a. **Versionen und E-Mail-Historie beim Import** (umgesetzt 26.09.2026): Die Übernahme läuft in
+   zwei Durchläufen. Erst werden alle Protokolle angelegt, dann wird `protocols.parent_protocol_id`
+   auf `handover_protocol.parent_id` abgebildet (`change_reason` wird mit übernommen); ein
+   bereits gesetzter Verweis bleibt unverändert, ein Vorgänger, der weder im Dump noch im CRM
+   vorhanden ist, wird als `versions_unresolved` gezählt. Die Tabelle `protocol_emails` wird
+   vollständig gezählt (`emails_total` in Vorschau und Bericht) und je Protokoll als interner
+   Hinweis (`handover_note`, Kategorie `other`, `is_internal`, `import_source =
+   "uprotokoll:email:<id>"`) mit Zeitpunkt, Empfänger, Betreff und Sendestatus übernommen; der
+   Mailtext wird nie übernommen. Beide Schritte sind idempotent und wirken auch auf Protokolle,
+   die ein früherer Lauf ohne diese Schritte angelegt hat.
+4b. **Portal für Mitarbeiter** (umgesetzt 26.09.2026, M2-08 Rest): `GET
+   /api/v1/portal/handover-protocols` (Liste mit Objekt, Einheit, Datum, Status, PDF-Link),
+   `/{id}` (ohne interne Felder) und `/{id}/pdf` für Mitgliedschaften mit dem Portalrecht
+   `handover:read` (`mhvp.handover.portal_staff`); Portalseite `/uebergabeprotokolle` mit
+   Navigationslink und Startkachel nur bei vorhandenem Recht. Beim Rollenwechsel in eine
+   ausgenommene Rolle wird der mandantenweite Zugriffsgrant deaktiviert, beim Rückwechsel
+   wieder aktiviert (`mhvp.platform.staff_portal_sync`).
 
 ## Dateien (Stufe 3)
 
@@ -171,3 +186,18 @@ Postausgang mit Vier-Augen-Freigabe (M20).
 Keine Geldflüsse. Die Kautionsangaben (Betrag, IBAN) werden nur erfasst und im PDF
 ausgegeben; sie erzeugen keine Forderung und keine Zahlung (G1, G2 unberührt). Die IBAN
 wird formal geprüft (Mod 97), ein Prüfkennzeichen "IBAN geprüft" setzt nur die Verwaltung.
+
+## Dateien (Stufe 4a und 4b: Versionen, E-Mail-Historie, Mitarbeiterportal, 26.09.2026)
+
+- `apps/api/src/mhvp/handover/uprotokoll_import.py` (`_link_predecessors`,
+  `_import_email_history`, `email_note_text`, Zähler in `ImportPlan` und `ImportResult`)
+- `apps/api/src/mhvp/handover/portal_staff.py` (neu), `apps/api/src/mhvp/main.py` (Registrierung)
+- `apps/api/src/mhvp/platform/staff_portal_sync.py` (neu), `apps/api/src/mhvp/platform/routers.py`
+  (`put_member_roles`), `apps/api/src/mhvp/portal/access.py` (`staff_permissions` nur gültige Grants)
+- `apps/web-portal/src/app/(portal)/uebergabeprotokolle/page.tsx`,
+  `apps/web-portal/src/components/handover/StaffProtocolList.tsx`, `StartTiles.tsx`, `layout.tsx`,
+  BFF und Dateiproxy (Positivlisten), `messages/de.json`, `messages/en.json`
+- Tests: `tests/unit/test_m30_uprotokoll_import.py`,
+  `tests/integration/test_m30_handover.py` (`test_uprotokoll_import_preview_apply_and_files`,
+  `test_portal_handover_protocols_for_staff`, `test_staff_portal_grant_follows_role_change`),
+  `apps/web-portal/src/components/handover/StaffProtocolList.test.tsx`, `StartTiles.test.tsx`

@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { LogoutButton } from "@/components/shell/LogoutButton";
-import type { Me } from "@/components/portal/types";
+import { hasStaffPermission, type Me } from "@/components/portal/types";
 import { serverApi } from "@/lib/api-server";
 
 /** Signed-in area of the portal: slim header with role aware navigation, content, footer note.
@@ -34,6 +34,9 @@ export default async function PortalLayout({ children }: { children: React.React
         { href: "/zaehlerstand", label: t("nav.meter") },
         { href: "/daten", label: t("nav.data") },
       ];
+  if (me && hasStaffPermission(me, "handover:read")) {
+    links.push({ href: "/uebergabeprotokolle", label: t("nav.handoverStaff") });
+  }
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border bg-surface">

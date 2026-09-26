@@ -8,7 +8,10 @@ import { bff } from "@/lib/bff";
 import { formatConfidence, formatDate, formatDateTime, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
-export type DraftField = { value: string | null; confidence: number; source: "ai" | "local" | "none"; note: string | null };
+export type DraftField = { value: string | null; confidence: number; source: "ai" | "xml" | "ai_estimate" | "local" | "none"; note: string | null };
+/** D42: one contradiction between the structured XML part and the PDF text or the AI reading. */
+export type DraftConflict = { field: string; xml: string | null; other: string | null; other_source: "pdf_text" | "ai"; note: string };
+export type XmlLine = { position: string | null; description: string | null; quantity: string | null; unit: string | null; net: string | null; vat_percent: string | null };
 export type ReceiptDraft = {
   id: string;
   document_id: string;
@@ -21,6 +24,11 @@ export type ReceiptDraft = {
   warnings: string[];
   questions: string[];
   masked_excerpt: string | null;
+  e_invoice_format?: "none" | "xrechnung" | "zugferd";
+  xml_lines?: XmlLine[];
+  xml_payment?: { means_code: string | null; payee_name: string | null; reference: string | null; terms: string | null; iban_masked: string | null; iban_checksum_ok: boolean | null } | null;
+  conflicts?: DraftConflict[];
+  findings?: string[];
   error: string | null;
   invoice_id: string | null;
   created_at: string;
@@ -39,9 +47,14 @@ const FIELD_ORDER = [
   "discount_percent",
   "discount_until",
   "order_reference",
+  "recipient_name",
+  "section_35a_amount",
   "property_ref",
 ] as const;
 type FieldName = (typeof FIELD_ORDER)[number];
+/** Shown for review only; the confirmation never sends them (the apply schema has no such
+ *  field, a § 35a estimate is never taken over, D44). */
+const READ_ONLY_FIELDS: ReadonlySet<FieldName> = new Set<FieldName>(["recipient_name", "section_35a_amount"]);
 type Form = Record<FieldName, string>;
 const POLL_MS = 2500;
 const R = "/api/bff/receipts/drafts";
@@ -50,6 +63,19 @@ function formFromDraft(draft: ReceiptDraft): Form {
   const form = {} as Form;
   for (const name of FIELD_ORDER) form[name] = draft.fields[name]?.value ?? "";
   return form;
+}
+
+/** Lowest field confidence of a draft (the weakest value decides how much review it needs);
+ *  null while nothing has been extracted yet. */
+export function minConfidence(draft: ReceiptDraft): number | null {
+  const values = Object.values(draft.fields).map((f) => f.confidence);
+  return values.length === 0 ? null : Math.min(...values);
+}
+
+function propertyLabel(draft: ReceiptDraft): string {
+  const ref = draft.fields.property_ref?.value ?? null;
+  const match = draft.property_suggestions.find((p) => p.property_id === ref) ?? draft.property_suggestions[0];
+  return match ? `${match.number} ${match.name}` : (ref ?? "");
 }
 
 function confidenceClass(value: number): string {
@@ -87,6 +113,7 @@ export function ReceiptIntake({
   const [providers, setProviders] = useState<Option[]>([]);
   const [iban, setIban] = useState("");
   const [ibanConfirmed, setIbanConfirmed] = useState(false);
+  const [conflictsAcknowledged, setConflictsAcknowledged] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
   const selected = useMemo(() => drafts.find((d) => d.id === selectedId) ?? null, [drafts, selectedId]);
@@ -111,12 +138,15 @@ export function ReceiptIntake({
     setProvider(selected.supplier_candidates[0]?.contact_id ?? "");
     setIban("");
     setIbanConfirmed(false);
+    setConflictsAcknowledged(false);
     setAccount("");
     // Only the selected draft's identity and status matter; the form is the reviewer's copy.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id, selected?.status]);
 
-  const visible = drafts.filter((d) => filter === "all" || ["extracting", "proposed", "failed"].includes(d.status));
+  const visible = drafts
+    .filter((d) => filter === "all" || ["extracting", "proposed", "failed"].includes(d.status))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   const startFromFile = async (file: File) => {
     setBusy(true);
@@ -173,7 +203,8 @@ export function ReceiptIntake({
     form.net !== "" &&
     form.vat !== "" &&
     form.gross !== "" &&
-    (iban.trim() === "" || ibanConfirmed);
+    (iban.trim() === "" || ibanConfirmed) &&
+    ((selected.conflicts ?? []).length === 0 || conflictsAcknowledged);
 
   const confirm = async () => {
     if (!selected || !form || !canConfirm) return;
@@ -181,6 +212,7 @@ export function ReceiptIntake({
     setError(null);
     const body = {
       iban_confirmed: ibanConfirmed && iban.trim() !== "",
+      conflicts_acknowledged: (selected.conflicts ?? []).length > 0 && conflictsAcknowledged,
       invoice: {
         ledger_id: ledger,
         provider_contact_id: provider,
@@ -227,7 +259,7 @@ export function ReceiptIntake({
             <span className={ui.label}>{t("intake.upload")}</span>
             <input
               type="file"
-              accept="application/pdf"
+              accept="application/pdf,application/xml,text/xml,.xml"
               className={ui.input}
               disabled={busy}
               onChange={(e) => {
@@ -271,32 +303,39 @@ export function ReceiptIntake({
               <thead>
                 <tr>
                   <th>{t("list.columns.created")}</th>
-                  <th>{t("list.columns.source")}</th>
                   <th>{t("list.columns.supplier")}</th>
-                  <th>{t("list.columns.number")}</th>
-                  <th className="num">{t("list.columns.gross")}</th>
+                  <th className="num">{t("list.columns.amount")}</th>
+                  <th>{t("list.columns.date")}</th>
+                  <th>{t("list.columns.property")}</th>
+                  <th title={t("list.confidenceHint")}>{t("list.columns.confidence")}</th>
+                  <th>{t("list.columns.source")}</th>
                   <th>{t("list.columns.status")}</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {visible.map((d) => (
-                  <tr key={d.id} className={d.id === selectedId ? "bg-surface" : undefined}>
-                    <td>{formatDateTime(d.created_at)}</td>
-                    <td>{t(`source.${d.source}`)}</td>
-                    <td>{d.fields.supplier_name?.value ?? ""}</td>
-                    <td>{d.fields.invoice_number?.value ?? ""}</td>
-                    <td className="num">{d.fields.gross?.value ? formatEur(d.fields.gross.value) : ""}</td>
-                    <td>
-                      <span className={ui.badge}>{t(`status.${d.status}`)}</span>
-                    </td>
-                    <td>
-                      <button type="button" className={ui.buttonSm} onClick={() => setSelectedId(d.id)}>
-                        {t("list.open")}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {visible.map((d) => {
+                  const confidence = minConfidence(d);
+                  return (
+                    <tr key={d.id} className={d.id === selectedId ? "bg-surface" : undefined}>
+                      <td>{formatDateTime(d.created_at)}</td>
+                      <td>{d.fields.supplier_name?.value ?? ""}</td>
+                      <td className="num">{d.fields.gross?.value ? formatEur(d.fields.gross.value) : ""}</td>
+                      <td>{d.fields.invoice_date?.value ? formatDate(d.fields.invoice_date.value) : ""}</td>
+                      <td>{propertyLabel(d)}</td>
+                      <td>{confidence === null ? "" : <span className={confidenceClass(confidence)}>{formatConfidence(confidence) || "0 %"}</span>}</td>
+                      <td>{t(`source.${d.source}`)}</td>
+                      <td>
+                        <span className={ui.badge}>{t(`status.${d.status}`)}</span>
+                      </td>
+                      <td>
+                        <button type="button" className={ui.buttonSm} onClick={() => setSelectedId(d.id)}>
+                          {t("list.open")}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -320,6 +359,46 @@ export function ReceiptIntake({
           ) : null}
           {selected.status === "rejected" ? <p className="text-sm text-muted">{t("review.decided")}</p> : null}
           {selected.status === "proposed" ? <p className={ui.notice}>{t("review.hint")}</p> : null}
+          {selected.e_invoice_format && selected.e_invoice_format !== "none" ? (
+            <p className="text-sm">
+              <span className={ui.badge}>{t(`review.einvoice.${selected.e_invoice_format}`)}</span> {t("review.einvoiceHint")}
+            </p>
+          ) : null}
+
+          {(selected.conflicts ?? []).length > 0 ? (
+            <div role="alert" className="flex flex-col gap-1 rounded-md border border-danger-fg/30 bg-danger-bg p-2 text-sm text-danger-fg" data-testid="receipt-conflicts">
+              <span className="font-medium">{t("review.conflicts")}</span>
+              <ul className="list-disc pl-5">
+                {(selected.conflicts ?? []).map((c, i) => (
+                  <li key={i}>
+                    {t("review.conflictLine", {
+                      field: FIELD_ORDER.includes(c.field as FieldName) ? t(`review.fields.${c.field}`) : c.field,
+                      xml: c.xml ?? t("review.conflictMissing"),
+                      source: t(`review.conflictSource.${c.other_source}`),
+                      other: c.other ?? t("review.conflictMissing"),
+                    })}{" "}
+                    <span className="text-xs">{c.note}</span>
+                  </li>
+                ))}
+              </ul>
+              {selected.status === "proposed" ? (
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={conflictsAcknowledged} onChange={(e) => setConflictsAcknowledged(e.target.checked)} />
+                  {t("review.conflictsAcknowledge")}
+                </label>
+              ) : null}
+            </div>
+          ) : null}
+          {(selected.findings ?? []).length > 0 ? (
+            <div className="flex flex-col gap-1 rounded-md border border-warning-fg/20 bg-warning-bg p-2 text-sm text-warning-fg" data-testid="receipt-findings">
+              <span className="font-medium">{t("review.findings")}</span>
+              <ul className="list-disc pl-5">
+                {(selected.findings ?? []).map((f, i) => (
+                  <li key={i}>{f}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {selected.warnings.length > 0 ? (
             <div className="flex flex-col gap-1 rounded-md border border-warning-fg/20 bg-warning-bg p-2 text-sm text-warning-fg">
@@ -358,19 +437,25 @@ export function ReceiptIntake({
                 <tbody>
                   {FIELD_ORDER.map((name) => {
                     const f = selected.fields[name] ?? { value: null, confidence: 0, source: "none", note: null };
-                    const editable = selected.status === "proposed";
+                    const editable = selected.status === "proposed" && !READ_ONLY_FIELDS.has(name);
                     const isDate = name.endsWith("_date") || name === "discount_until";
+                    const conflicting = (selected.conflicts ?? []).some((c) => c.field === name);
+                    if (f.source === "none" && READ_ONLY_FIELDS.has(name)) return null;
                     return (
-                      <tr key={name}>
+                      <tr key={name} className={conflicting ? "bg-danger-bg" : undefined} data-conflict={conflicting ? "true" : undefined}>
                         <td className="font-medium">{t(`review.fields.${name}`)}</td>
                         <td>{name === "property_ref" ? (selected.property_suggestions.find((p) => p.property_id === f.value)?.name ?? f.value ?? "") : (f.value ?? "")}</td>
                         <td>
                           <span className={confidenceClass(f.confidence)}>{formatConfidence(f.confidence) || "0 %"}</span>
                         </td>
-                        <td>{t(`review.sourceLabel.${f.source}`)}</td>
+                        <td>
+                          <span className={f.source === "xml" ? ui.badgeSuccess : f.source === "ai_estimate" ? ui.badgeDanger : undefined}>{t(`review.sourceLabel.${f.source}`)}</span>
+                        </td>
                         <td className="text-xs text-muted">{f.note ?? ""}</td>
                         <td>
-                          {name === "property_ref" ? (
+                          {READ_ONLY_FIELDS.has(name) ? (
+                            <span className="text-sm text-muted">{t("review.readOnly")}</span>
+                          ) : name === "property_ref" ? (
                             <select className={ui.input} value={form[name]} onChange={setField(name)} disabled={!editable}>
                               <option value="">{t("review.choose")}</option>
                               {selected.property_suggestions.map((p) => (
@@ -500,6 +585,38 @@ export function ReceiptIntake({
             </>
           ) : null}
 
+          {(selected.xml_lines ?? []).length > 0 ? (
+            <details className="text-xs text-muted" data-testid="receipt-xml-lines">
+              <summary className="cursor-pointer">{t("review.xmlLines", { count: (selected.xml_lines ?? []).length })}</summary>
+              <table className={`${ui.table} mt-2`}>
+                <thead>
+                  <tr>
+                    <th>{t("review.xmlLineColumns.position")}</th>
+                    <th>{t("review.xmlLineColumns.description")}</th>
+                    <th className="num">{t("review.xmlLineColumns.quantity")}</th>
+                    <th className="num">{t("review.xmlLineColumns.net")}</th>
+                    <th className="num">{t("review.xmlLineColumns.vat")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(selected.xml_lines ?? []).map((ln, i) => (
+                    <tr key={i}>
+                      <td>{ln.position ?? ""}</td>
+                      <td>{ln.description ?? ""}</td>
+                      <td className="num">{[ln.quantity, ln.unit].filter(Boolean).join(" ")}</td>
+                      <td className="num">{ln.net ? formatEur(ln.net) : ""}</td>
+                      <td className="num">{ln.vat_percent ? `${ln.vat_percent} %` : ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          ) : null}
+          {selected.xml_payment ? (
+            <p className="text-xs text-muted" data-testid="receipt-xml-payment">
+              {t("review.xmlPayment")}: {[selected.xml_payment.payee_name, selected.xml_payment.iban_masked, selected.xml_payment.reference, selected.xml_payment.terms].filter(Boolean).join(", ") || t("review.xmlPaymentNone")}
+            </p>
+          ) : null}
           {selected.masked_excerpt ? (
             <details className="text-xs text-muted">
               <summary className="cursor-pointer">{t("review.maskedExcerpt")}</summary>

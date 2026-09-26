@@ -19,7 +19,15 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer
+from reportlab.platypus import (
+    BaseDocTemplate,
+    Frame,
+    PageTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 PAGE_W, PAGE_H = A4
 LEFT, RIGHT = 25 * mm, 20 * mm
@@ -49,6 +57,22 @@ class Letterhead:
 
 
 @dataclass
+class LetterTable:
+    """A table inside the body (for example a Forderungsaufstellung). Cells are plain text
+    (escaped on rendering); ``right_aligned`` lists column indexes with amounts; the optional
+    last row is rendered bold as a total when ``total_row`` is set."""
+
+    header: list[str]
+    rows: list[list[str]]
+    right_aligned: tuple[int, ...] = ()
+    total_row: bool = False
+    widths: tuple[float, ...] | None = None  # fractions of the text width, sums to 1
+
+
+TABLE_MARKER = "[[table:{name}]]"
+
+
+@dataclass
 class Letter:
     recipient_lines: list[str]
     subject: str
@@ -57,6 +81,11 @@ class Letter:
     info: list[tuple[str, str]] = field(default_factory=list)
     closing: str = "Mit freundlichen Grüßen"
     signatory: list[str] = field(default_factory=list)
+    # Tables referenced from ``body`` by a paragraph that only holds ``[[table:<name>]]``.
+    tables: dict[str, LetterTable] = field(default_factory=dict)
+    # Optional prominent note above the subject (plain text, escaped on rendering), for
+    # example "Vorbereitung, Prüfung durch Rechtsanwalt erforderlich, kein Antrag".
+    notice: str | None = None
 
 
 def render_text(source: str, context: dict[str, Any]) -> str:
@@ -175,9 +204,58 @@ class _Pages:
         self._footer(c)
 
 
-def _paragraphs(text: str, style: ParagraphStyle) -> list[Any]:
+def _table(table: LetterTable, width: float, style: ParagraphStyle) -> Table:
+    cell = ParagraphStyle("cell", parent=style, spaceAfter=0, fontSize=9.5, leading=12)
+    cell_right = ParagraphStyle("cell_right", parent=cell, alignment=2)
+    head = ParagraphStyle("cell_head", parent=cell, fontName="Helvetica-Bold")
+    head_right = ParagraphStyle("cell_head_right", parent=head, alignment=2)
+
+    def row(values: list[str], base: ParagraphStyle, right: ParagraphStyle) -> list[Any]:
+        return [
+            Paragraph(html.escape(v), right if i in table.right_aligned else base)
+            for i, v in enumerate(values)
+        ]
+
+    data = [row(table.header, head, head_right)]
+    for index, values in enumerate(table.rows):
+        bold = table.total_row and index == len(table.rows) - 1
+        data.append(row(values, head if bold else cell, head_right if bold else cell_right))
+    columns = len(table.header)
+    fractions = table.widths or tuple(1 / columns for _ in range(columns))
+    flow = Table(data, colWidths=[width * f for f in fractions], repeatRows=1)
+    commands: list[Any] = [
+        ("LINEBELOW", (0, 0), (-1, 0), 0.6, HexColor(TEXT)),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+    ]
+    if table.total_row and table.rows:
+        commands.append(("LINEABOVE", (0, -1), (-1, -1), 0.6, HexColor(TEXT)))
+    flow.setStyle(TableStyle(commands))
+    return flow
+
+
+def _paragraphs(
+    text: str,
+    style: ParagraphStyle,
+    tables: dict[str, LetterTable] | None = None,
+    width: float = PAGE_W - LEFT - RIGHT,
+) -> list[Any]:
     blocks = [b.strip() for b in text.replace("\r\n", "\n").split("\n\n")]
-    return [Paragraph(b.replace("\n", "<br/>"), style) for b in blocks if b]
+    out: list[Any] = []
+    for block in blocks:
+        if not block:
+            continue
+        if block.startswith("[[table:") and block.endswith("]]"):
+            table = (tables or {}).get(block[len("[[table:") : -2])
+            if table is None:
+                raise PlaceholderError(f"Unbekannte Tabelle {block}.")
+            out += [_table(table, width, style), Spacer(1, 4 * mm)]
+            continue
+        out.append(Paragraph(block.replace("\n", "<br/>"), style))
+    return out
 
 
 def render_pdf(head: Letterhead, letter: Letter) -> bytes:
@@ -206,8 +284,14 @@ def render_pdf(head: Letterhead, letter: Letter) -> bytes:
     )
     body = ParagraphStyle("body", fontName="Helvetica", fontSize=10.5, leading=14, spaceAfter=7)
     subject = ParagraphStyle("subject", fontName="Helvetica-Bold", fontSize=11.5, leading=15)
-    story: list[Any] = [Paragraph(letter.subject, subject), Spacer(1, 8 * mm)]
-    story += _paragraphs(letter.body, body)
+    story: list[Any] = []
+    if letter.notice:
+        notice = ParagraphStyle(
+            "notice", parent=body, fontName="Helvetica-Bold", textColor=HexColor("#8A1C1C")
+        )
+        story += [Paragraph(html.escape(letter.notice), notice), Spacer(1, 3 * mm)]
+    story += [Paragraph(letter.subject, subject), Spacer(1, 8 * mm)]
+    story += _paragraphs(letter.body, body, letter.tables, width)
     story += [Spacer(1, 4 * mm), Paragraph(html.escape(letter.closing), body), Spacer(1, 14 * mm)]
     story += [Paragraph(html.escape(line), body) for line in letter.signatory]
     doc.build(story)

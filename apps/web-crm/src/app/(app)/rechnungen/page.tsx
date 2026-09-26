@@ -13,9 +13,15 @@ export const dynamic = "force-dynamic";
 
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ proposal?: string }> }) {
   const t = await getTranslations("Invoices");
+  const tr = await getTranslations("Receipts");
   const { proposal: initialProposalId } = await searchParams;
   const api = serverApi();
-  const [list, ledgers] = await Promise.all([api.GET("/api/v1/accounting/invoices"), api.GET("/api/v1/accounting/ledgers")]);
+  const [list, ledgers, openDrafts] = await Promise.all([
+    api.GET("/api/v1/accounting/invoices"),
+    api.GET("/api/v1/accounting/ledgers"),
+    api.GET("/api/v1/receipts/drafts", { params: { query: { status: "open", limit: 1 } } }),
+  ]);
+  const openDraftCount = Number(openDrafts.data?.total ?? 0);
   redirectIfUnauthenticated(list.response);
   const accounts: Record<string, { id: string; label: string }[]> = {};
   await Promise.all(
@@ -36,6 +42,11 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
         action={
           <Link href="/rechnungen/belegeingang" className={ui.button}>
             {t("receiptIntakeLink")}
+            {openDraftCount > 0 ? (
+              <span className={ui.badgeWarning} data-testid="open-receipt-drafts" title={tr("openCount", { count: openDraftCount })}>
+                {openDraftCount}
+              </span>
+            ) : null}
           </Link>
         }
       />

@@ -43,6 +43,19 @@ export type DunningSettings = {
   tenant_default_exists?: boolean;
 };
 
+/** Antwort von `POST /accounting/dunning-settings/letter-preview` (A33): Text der Stufe mit
+ * Beispielposten; Gebühr und Frist nur aus den übergebenen Werten, keine Bankverbindung. */
+export type LetterTextPreview = {
+  level: number;
+  paragraphs: string[];
+  table: { header: string[]; rows: string[][] };
+  standard_request: string;
+  placeholders: Record<string, string>;
+  hinweis: string;
+};
+
+const PLACEHOLDERS = ["{frist}", "{bankverbindung}", "{gesamtbetrag}", "{forderungsinhaber}", "{objekt}", "{stufe}"];
+
 const EMPTY_LEVEL: DunningLevel = {
   level: 1,
   min_days_overdue: 7,
@@ -98,6 +111,7 @@ export function DunningSettingsForm({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<LetterTextPreview | null>(null);
 
   const tenantDefaultMissing = isOverride && initial.tenant_default_exists === false;
   const editable = canUpdate && !tenantDefaultMissing;
@@ -195,6 +209,27 @@ export function DunningSettingsForm({
     } else {
       setError(result.message);
     }
+  }
+
+  async function previewLevel(lv: DunningLevel) {
+    setBusy(true);
+    setError(null);
+    const result = await bff<LetterTextPreview>("/api/bff/accounting/dunning-settings/letter-preview", {
+      method: "POST",
+      body: JSON.stringify({
+        level: lv.level,
+        text: lv.text || null,
+        letter_text: lv.letter_text?.trim() ? lv.letter_text : null,
+        fee_amount: lv.fee_amount || null,
+        payment_days:
+          lv.payment_days === null || lv.payment_days === undefined || Number.isNaN(lv.payment_days)
+            ? null
+            : lv.payment_days,
+      }),
+    });
+    setBusy(false);
+    if (result.ok) setPreview(result.data);
+    else setError(result.message);
   }
 
   async function removeOverride() {
@@ -367,23 +402,81 @@ export function DunningSettingsForm({
                   />
                 </td>
                 <td>
-                  <button
-                    type="button"
-                    className={ui.buttonSm}
-                    onClick={() => removeLevel(i)}
-                    disabled={ladderDisabled || levels.length <= 1}
-                  >
-                    {t("removeLevel")}
-                  </button>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      className={ui.buttonSm}
+                      onClick={() => previewLevel(lv)}
+                      disabled={busy}
+                      aria-label={t("letterPreviewTitle", { level: lv.level })}
+                    >
+                      {t("letterPreview")}
+                    </button>
+                    <button
+                      type="button"
+                      className={ui.buttonSm}
+                      onClick={() => removeLevel(i)}
+                      disabled={ladderDisabled || levels.length <= 1}
+                    >
+                      {t("removeLevel")}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <p className={`${ui.help} mt-2`}>
+        {t("letterTextHint", {
+          placeholders: PLACEHOLDERS.join(", "),
+          frist: "{frist}",
+          bankverbindung: "{bankverbindung}",
+        })}
+      </p>
       <button type="button" className={`${ui.button} mt-2`} onClick={addLevel} disabled={ladderDisabled}>
         {t("addLevel")}
       </button>
+      {preview ? (
+        <section className="mt-4 rounded border border-border p-3" aria-label={t("letterPreviewTitle", { level: preview.level })}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-base font-semibold">{t("letterPreviewTitle", { level: preview.level })}</h3>
+            <span className={ui.badge}>{preview.hinweis}</span>
+          </div>
+          <div className="mt-2 flex flex-col gap-2 text-sm">
+            {preview.paragraphs.slice(0, 2).map((paragraph, i) => (
+              <p key={`a${i}`}>{paragraph}</p>
+            ))}
+            <table className={ui.table}>
+              <caption className="text-left text-xs text-muted">{t("letterPreviewTable")}</caption>
+              <thead>
+                <tr>
+                  {preview.table.header.map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {preview.table.rows.map((row, i) => (
+                  <tr key={i} className={i === preview.table.rows.length - 1 ? "font-semibold" : undefined}>
+                    {row.map((cell, j) => (
+                      <td key={j} className={j === 2 ? "text-right" : undefined}>
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {preview.paragraphs.slice(2).map((paragraph, i) => (
+              <p key={`b${i}`}>{paragraph}</p>
+            ))}
+          </div>
+          <button type="button" className={`${ui.buttonSm} mt-2`} onClick={() => setPreview(null)}>
+            {t("letterPreviewClose")}
+          </button>
+        </section>
+      ) : null}
 
       <h3 className={`${ui.h2} mt-6 text-base`}>
         {t("interestSection")}

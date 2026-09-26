@@ -24,7 +24,10 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Protocol, runtime_checkable
 
-from mhvp.banking.camt import RawTransaction
+from mhvp.banking import camt, mt940
+from mhvp.banking.camt import ParsedFile, RawTransaction
+
+MT940_SUFFIXES = (".sta", ".mt940", ".940", ".swi")
 
 
 @dataclass(frozen=True)
@@ -144,12 +147,30 @@ class UnconfiguredConnector:
 
 
 class FileConnector:
-    """CSV/CAMT file upload (`mhvp.banking.camt.parse`, `mhvp.banking.services.import_file`).
-    Unchanged behaviour: parsing and import still happen where they always have (the upload
-    endpoint and `services.import_file`); this class only gives the file path a place on the
-    common `BankConnector` seam so callers can treat every connector uniformly where that
-    makes sense. It has no bank search, no WebForm and no consent to refresh: those calls
-    raise `ConnectorNotSupportedError` rather than pretending to support them."""
+    """CAMT.053/MT940 file upload (`mhvp.banking.camt.parse`, `mhvp.banking.mt940.parse`,
+    `mhvp.banking.services.import_file`). Parsing and import still happen where they always
+    have (the upload endpoint and `services.import_file`); `parse` only chooses the parser by
+    file name suffix or content, both parsers yield the same `ParsedFile` and the import
+    normalises both the same way (bank reference primary, content hash secondary, D05). This
+    class gives the file path a place on the common `BankConnector` seam so callers can treat
+    every connector uniformly where that makes sense. It has no bank search, no WebForm and
+    no consent to refresh: those calls raise `ConnectorNotSupportedError` rather than
+    pretending to support them. Bank specific CSV remains open (M11-02)."""
+
+    @staticmethod
+    def detect_format(data: bytes, filename: str | None = None) -> str:
+        """``"mt940"`` for an MT940 suffix or content starting with ``:20:``, else ``"camt"``."""
+        name = (filename or "").lower()
+        if name.endswith(MT940_SUFFIXES) or mt940.looks_like_mt940(data):
+            return "mt940"
+        return "camt"
+
+    @classmethod
+    def parse(cls, data: bytes, filename: str | None = None) -> ParsedFile:
+        """Parse an uploaded statement file; raises ValueError with a German message."""
+        if cls.detect_format(data, filename) == "mt940":
+            return mt940.parse(data)
+        return camt.parse(data)
 
     def _unsupported(self, what: str) -> None:
         raise ConnectorNotSupportedError(

@@ -448,7 +448,7 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 
 | Feld | Inhalt |
 | --- | --- |
-| Annahme | Der Standardtext des Mahnschreibens (`mhvp.accounting.dunning_letters`) ist neutral: er listet die offenen Posten mit Fälligkeit, nennt den Forderungsinhaber ("im Auftrag von"), bittet um Ausgleich und enthält den Hinweis, dass sich das Schreiben bei zwischenzeitlicher Zahlung erledigt. Er behauptet keinen Verzug, nennt keine Rechtsfolgen und keine Bankverbindung. Ein Zahlungsdatum erscheint nur, wenn je Stufe `payment_days` hinterlegt ist (Briefdatum plus Tage, Kalendertage ohne Feiertagsprüfung); ein hinterlegter `letter_text` je Stufe ersetzt nur den Aufforderungsabsatz. Jedes Schreiben trägt "Entwurf, kein Versand". |
+| Annahme | Der Standardtext des Mahnschreibens (`mhvp.accounting.dunning_letters`) ist neutral: er listet die offenen Posten mit Fälligkeit, nennt den Forderungsinhaber ("im Auftrag von"), bittet um Ausgleich und enthält den Hinweis, dass sich das Schreiben bei zwischenzeitlicher Zahlung erledigt. Er behauptet keinen Verzug, nennt keine Rechtsfolgen und keine Bankverbindung. Ein Zahlungsdatum erscheint nur, wenn je Stufe `payment_days` hinterlegt ist (Briefdatum plus Tage, Kalendertage ohne Feiertagsprüfung); ein hinterlegter `letter_text` je Stufe ersetzt nur den Aufforderungsabsatz. Jedes Schreiben trägt "Entwurf, kein Versand". Ergänzung 26.09.2026 (A33): die Standardtexte je Stufe (`STANDARD_TEXTS`, Zahlungserinnerung, 1., 2., 3. Mahnung) verweisen im Einleitungsabsatz auf die vorherige Stufe ("trotz unserer Zahlungserinnerung"), weil eine Stufe nur nach manueller Versandmarkierung steigt; die Forderungsaufstellung nennt als Posten den Buchungstext des offenen Postens. |
 | Begründung | Aufgabe 26.09.2026 (Mahnschreiben als PDF-Entwurf); Textbausteine je Stufe sind nicht freigegeben (M16-02), daher nur ein Text ohne rechtliche Aussagen. Gebühr und Zins erscheinen ausschließlich aus den wirksamen Einstellungen (docs/rules/M16-01.md, M16-02.md). |
 | Kennzeichnung | unkritisch, solange der Versand gesperrt bleibt; vor Freigabe des Versands sind Textbausteine, Zahlungsfrist und Bankverbindung zu entscheiden (M16-02, M16-12, M16-13) |
 | Betroffene Bereiche | Mahnwesen, Mahnschreiben (docs/rules/M16-02.md) |
@@ -486,6 +486,28 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Kennzeichnung | unkritisch; im Zweifel bleibt ein Datensatz erhalten und wird nur markiert |
 | Betroffene Bereiche | objektakte-Übernahme, Dokumente, Kontakte, Objekte |
 | Überprüfung spätestens bei Meilenstein | vor Abschaltung von objektakte (Stufe 6) |
+| Datum | 26.09.2026 |
+
+## A-045
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Regelversionen der Betriebskostenabrechnung (`mhvp.billing.calc.RULE_VERSIONS`) werden nach dem ersten Tag des Abrechnungszeitraums gewählt: Es gilt die Version mit dem spätesten Geltungsbeginn, der nicht nach dem Periodenbeginn liegt. Der Snapshot speichert die verwendete Version; eine später eingetragene Version verändert berechnete oder ausgegebene Abrechnungen nicht, auch nicht bei einer neuen Version derselben Abrechnung (D28). Ob eine Regel mit Geltungsbeginn innerhalb eines Zeitraums anteilig oder erst ab der Folgeperiode gilt, ist damit nicht entschieden. |
+| Begründung | 7.6 A01 (Regelversion konserviert), Anhang D Fall D28; bislang gibt es nur eine Version, die Stichtagswahl ist als Mechanismus testbar |
+| Kennzeichnung | unkritisch, solange nur eine Regelversion existiert; vor Eintrag einer zweiten Version fachlich zu bestätigen |
+| Betroffene Bereiche | Betriebskostenabrechnung Miete (M17) |
+| Überprüfung spätestens bei Meilenstein | G3 |
+| Datum | 26.09.2026 |
+
+## A-046
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Beim MT940-Import erhält ein Umsatz ohne `//`-Bankreferenz in `:61:` eine abgeleitete Referenz aus Auszugsnummer (`:28C:`), laufender Zeilennummer und Valutadatum (`raw.reference_source = derived:28C/line/value_date`). Ein Wiederimport derselben Datei wird damit als Dublette erkannt und hat keine Zusatzwirkung; zwei gleiche Zahlungen in verschiedenen Auszügen oder Zeilen bleiben zwei Zahlungen (D05). Die Annahme ist, dass eine Bank die Auszugsnummer je Konto nicht innerhalb eines Jahres wiederverwendet und die Zeilenreihenfolge beim erneuten Abruf desselben Auszugs stabil ist. |
+| Begründung | MT940 kennt keine verbindliche eindeutige Umsatzkennung; ohne Referenz würde jeder Wiederimport neue Umsätze zur Prüfung anlegen. Die Ableitung ist deterministisch und im Rohdatensatz gekennzeichnet, nichts wird erfunden |
+| Kennzeichnung | unkritisch für Entwicklung und Tests; vor produktivem Einsatz mit echten Auszügen der jeweiligen Bank zu prüfen (M11-02) |
+| Betroffene Bereiche | Bankumsatzimport MT940 (M11), Dublettenprüfung (D05) |
+| Überprüfung spätestens bei Meilenstein | Abnahme M11 mit echten Beispieldateien |
 | Datum | 26.09.2026 |
 
 ## Ausdrücklich nicht angenommen

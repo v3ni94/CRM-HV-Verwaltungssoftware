@@ -595,3 +595,44 @@ def test_mirror_to_paperless_and_drive(
     assert b'name="title"' in body
     assert b'name="tags"' in body
     assert client.delete(f"/api/v1/documents/{doc['id']}", headers=h).status_code == 409
+
+
+def test_d43_original_locked_while_only_ocr_text_exists(client: TestClient, world: World) -> None:
+    """D43: an invoice whose text is indexed (text layer, OCR) keeps its original; text or JSON
+    replaces nothing. The refused deletion is logged (6.9.5, 11.3, D46)."""
+    h = bearer(login(client, world, "m6admin"))
+    marker = f"D43Beleg{RUN}"
+    doc = _ok(
+        _upload(
+            client,
+            h,
+            "rechnung-d43.txt",
+            f"Rechnung {marker} Nummer RE-D43 Betrag 119,00 EUR".encode(),
+            "text/plain",
+        )
+    )
+    assert doc["text_status"] == "extracted"  # only text exists besides the original
+    assert doc["retention_profile_id"] is None
+    url = f"/api/v1/documents/{doc['id']}"
+    found = _ok(client.get("/api/v1/documents", params={"q": marker}, headers=h), 200)
+    assert [d["id"] for d in found["items"]] == [doc["id"]]
+
+    refused = client.delete(url, headers=h)
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "MHVP-DOC-0001"
+    assert "Aufbewahrungsprofil" in refused.json()["detail"]
+    # The original is still there and downloadable; the text index is no substitute.
+    assert client.get(url, headers=h).status_code == 200
+    content = client.get(f"{url}/content", headers=h)
+    assert content.status_code == 200
+    assert marker.encode() in content.content
+    events = _ok(
+        client.get(
+            "/api/v1/tenant/events", params={"type": "document.deletion_refused"}, headers=h
+        ),
+        200,
+    )
+    logged = [e for e in events if e["entity_id"] == doc["id"]]
+    assert logged, "refusal must be logged (D46)"
+    assert "Aufbewahrungsprofil" in logged[0]["payload"]["reason"]
+    assert logged[0]["actor_user_id"] == str(world.users["m6admin"])

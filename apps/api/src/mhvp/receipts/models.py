@@ -4,9 +4,16 @@ document (6.4, rule 0.1.6). A draft is never a posting and never an invoice by i
 reviewer entered, and only `reject` closes it without one.
 
 Field values live in ``fields`` as ``{name: {"value", "confidence", "source", "note"}}`` with
-``source`` ``ai`` (model output), ``local`` (deterministic detection in the CRM, e.g. the IBAN
-candidates or the property match) or ``none`` (no value). IBAN candidates never enter
-``fields``; they are stored encrypted in ``iban_candidates`` and exposed masked.
+``source`` ``ai`` (model output), ``xml`` (structured part of an e-invoice, `receipts.einvoice`),
+``ai_estimate`` (a model value that is explicitly not evidence, e.g. a § 35a share without a
+documented split, D44), ``local`` (deterministic detection in the CRM, e.g. the IBAN candidates
+or the property match) or ``none`` (no value). IBAN candidates never enter ``fields``; they
+are stored encrypted in ``iban_candidates`` and exposed masked.
+
+E-invoices (13.5, D41, D42): ``e_invoice_format`` (``none``, ``xrechnung``, ``zugferd``),
+``xml_lines`` and ``xml_payment`` (masked) keep the structured part; ``conflicts`` lists every
+contradiction between the XML and the PDF text or the AI reading; ``findings`` are the
+deterministic hints of the intake (formal completeness, arithmetic, unproven estimates).
 """
 
 from __future__ import annotations
@@ -16,7 +23,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -69,6 +76,19 @@ class ReceiptDraft(IdMixin, TimestampMixin, TenantMixin, Base):
     questions: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     # What was sent to the provider (masked) so a reviewer can verify the masking (0.1.13).
     masked_excerpt: Mapped[str | None] = mapped_column(Text)
+    e_invoice_format: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="none", server_default="none"
+    )
+    xml_lines: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    xml_payment: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    conflicts: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    findings: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
     error: Mapped[str | None] = mapped_column(Text)
     invoice_id: Mapped[uuid.UUID | None] = _fk("invoice.id", nullable=True)
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

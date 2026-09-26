@@ -9,6 +9,7 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 import { ADDRESS_RELEASES, ENERGY_STATUSES, ENERGY_TYPES, FEATURE_KEYS, OBJECT_TYPES } from "./ListingCreate";
+import { ListingImages } from "./ListingImages";
 import { OpenImmoExport } from "./OpenImmoExport";
 
 export type Listing = {
@@ -542,6 +543,7 @@ export function ListingDetail({ listing }: { listing: Listing }) {
           {t("detail.save")}
         </button>
       </form>
+      <ListingImages listingId={listing.id} />
       <OpenImmoExport listingId={listing.id} />
     </div>
   );

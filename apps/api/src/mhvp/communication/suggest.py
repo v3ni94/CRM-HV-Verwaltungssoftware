@@ -59,14 +59,51 @@ async def best_playbook(session: AsyncSession, text: str) -> tuple[Playbook | No
     return None, 0.0
 
 
-def _fallback(message: Message, categories: list[str]) -> dict[str, Any]:
+def fallback_suggestion(
+    subject: str | None, body: str | None, categories: list[str]
+) -> dict[str, Any]:
+    """Deterministic suggestion from ``mhvp.communication.mail`` (keywords only), used where
+    the model answers null or the run fails."""
     return {
-        "category": mail.category(message.subject, message.body, categories),
-        "urgency": "high" if mail.urgency(message.subject, message.body) == "urgent" else "normal",
-        "summary": (message.subject or "E-Mail ohne Betreff")[:300],
-        "property_number": mail.property_number(message.subject, message.body),
+        "category": mail.category(subject, body, categories),
+        "urgency": "high" if mail.urgency(subject, body) == "urgent" else "normal",
+        "summary": (subject or "E-Mail ohne Betreff")[:300],
+        "property_number": mail.property_number(subject, body),
         "contact_name": None,
         "reply_draft": None,
+    }
+
+
+def _fallback(message: Message, categories: list[str]) -> dict[str, Any]:
+    return fallback_suggestion(message.subject, message.body, categories)
+
+
+def merge_suggestion(output: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+    """Model answer (``MailSuggestion``) over the deterministic fallback: every null or empty
+    classification field falls back; ``contact_name`` and ``reply_draft`` stay as answered
+    (null stays null, nothing is invented). Pure, so the offline evaluation (9.1,
+    ``mhvp.ai.evaluate``) scores exactly this step."""
+    return {
+        "category": output.get("category") or fallback["category"],
+        "urgency": output.get("urgency") or fallback["urgency"],
+        "summary": output.get("summary") or fallback["summary"],
+        "property_number": output.get("property_number") or fallback["property_number"],
+        "contact_name": output.get("contact_name"),
+        "reply_draft": output.get("reply_draft"),
+    }
+
+
+def playbook_fields(output: dict[str, Any], ticket_title: str) -> dict[str, Any]:
+    """Playbook draft fields from a ``PlaybookDraft`` answer: title cut to 200 characters (the
+    ticket title when empty), at most ten keywords of 64 characters, steps as text, template
+    as answered. Pure, shared with the offline evaluation."""
+    return {
+        "title": str(output.get("title") or ticket_title)[:200],
+        "category": output.get("category"),
+        "keywords": [str(k)[:64] for k in output.get("keywords", [])][:10],
+        "summary": str(output.get("summary") or ""),
+        "steps": [str(s) for s in output.get("steps", [])],
+        "reply_template": output.get("reply_template"),
     }
 
 
@@ -146,17 +183,8 @@ async def suggest_for_message(
 
     result: dict[str, Any]
     if run.status is RunStatus.SUCCEEDED and run.output:
-        output = run.output
-        fallback = _fallback(message, categories)
-        result = {
-            "category": output.get("category") or fallback["category"],
-            "urgency": output.get("urgency") or fallback["urgency"],
-            "summary": output.get("summary") or fallback["summary"],
-            "property_number": output.get("property_number") or fallback["property_number"],
-            "contact_name": output.get("contact_name"),
-            "reply_draft": output.get("reply_draft"),
-            "model": run.model,
-        }
+        result = merge_suggestion(run.output, _fallback(message, categories))
+        result["model"] = run.model
         status = "ready"
     elif run.status is RunStatus.BLOCKED:
         result = {"reason": run.error or "Kein freigegebener KI-Anbieter."}
@@ -222,19 +250,13 @@ async def learn_playbook_from_ticket(
     if run.status is not RunStatus.SUCCEEDED or not run.output:
         return None
 
-    output = run.output
-    title = str(output.get("title") or ticket.title)[:200]
-    duplicate = await session.scalar(select(Playbook).where(Playbook.title == title))
+    fields = playbook_fields(run.output, ticket.title)
+    duplicate = await session.scalar(select(Playbook).where(Playbook.title == fields["title"]))
     if duplicate is not None:
         return None
     draft = Playbook(
         tenant_id=ticket.tenant_id,
-        title=title,
-        category=output.get("category"),
-        keywords=[str(k)[:64] for k in output.get("keywords", [])][:10],
-        summary=str(output.get("summary") or ""),
-        steps=[str(s) for s in output.get("steps", [])],
-        reply_template=output.get("reply_template"),
+        **fields,
         source_ticket_id=ticket.id,
         status="draft",
     )

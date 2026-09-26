@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
+import { AttachmentReceiptAction } from "@/components/receipts/AttachmentReceiptAction";
 import { SafeText } from "@/components/ui/SafeText";
 import { ui } from "@/lib/ui";
 
@@ -23,47 +24,6 @@ function submitterLabel(message: Message, members: Member[] | null, t: ReturnTyp
   const member = members?.find((m) => m.user_id === message.submitted_by);
   const who = member?.display_name || member?.email || message.submitted_by;
   return message.submitted_at ? t("submittedBy", { who, at: formatDateTime(message.submitted_at) }) : who;
-}
-
-/** "Als Rechnung erfassen" on one attachment (M14): starts extract_invoice and links to the
- * review form in the invoices area; the invoice itself is created only there, after review. */
-function AttachmentInvoiceAction({ messageId, attachmentId, label }: { messageId: string; attachmentId: string; label: string }) {
-  const t = useTranslations("Mail");
-  const [busy, setBusy] = useState(false);
-  const [proposalId, setProposalId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const start = async () => {
-    setBusy(true);
-    setError(null);
-    const res = await bff<{ run_id: string; proposal_id: string | null }>(
-      `/api/bff/mail/messages/${messageId}/attachments/${attachmentId}/invoice-extraction`,
-      { method: "POST" },
-    );
-    setBusy(false);
-    if (!res.ok) {
-      setError(t("invoiceExtractionFailed", { reason: res.message }));
-      return;
-    }
-    setProposalId(res.data.proposal_id);
-  };
-
-  if (proposalId) {
-    return (
-      <Link href={`/rechnungen?proposal=${proposalId}`} className="text-xs font-medium text-accent hover:underline">
-        {t("openInvoiceReview")}
-      </Link>
-    );
-  }
-
-  return (
-    <span className="flex flex-col gap-1">
-      <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void start()}>
-        {label}: {t("captureAsInvoice")}
-      </button>
-      {error ? <span className="text-xs text-danger-fg">{error}</span> : null}
-    </span>
-  );
 }
 
 function ThreadEntry({ message }: { message: Message }) {
@@ -215,7 +175,7 @@ export function MailDetail({
           <ul className="flex flex-wrap gap-2">
             {message.attachment_document_ids.map((attachmentId, i) => (
               <li key={attachmentId}>
-                <AttachmentInvoiceAction messageId={message.id} attachmentId={attachmentId} label={t("attachmentInvoice", { number: i + 1 })} />
+                <AttachmentReceiptAction messageId={message.id} documentId={attachmentId} label={t("attachmentInvoice", { number: i + 1 })} />
               </li>
             ))}
           </ul>

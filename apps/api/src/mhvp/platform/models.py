@@ -124,6 +124,13 @@ class Membership(IdMixin, TimestampMixin, Base):
     )
     # Mobilnummer für SMS-Eskalationen an die Bereitschaft (M35).
     mobile_phone: Mapped[str | None] = mapped_column(String(40))
+    # Zugriffsbereich je Rechtsträger (A37, M18-02, docs/rules/M18-05-steuerberaterzugang.md):
+    # Liste von ``legal_entity.id`` als Strings. Nur für Rollen mit eingeschränktem Bereich
+    # wirksam (``mhvp.core.auth.scope.SCOPED_ROLES``, heute Steuerberater); leere Liste
+    # bedeutet dort kein Zugriff. Für alle anderen Rollen ohne Wirkung.
+    legal_entity_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class RefreshToken(IdMixin, Base):
@@ -334,6 +341,9 @@ class TenantBillingSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     tax_number: Mapped[str | None] = mapped_column(EncryptedText())
     # Leitweg-ID for XRechnung to public sector recipients (optional, not a secret).
     leitweg_id: Mapped[str | None] = mapped_column(String(64))
+    # Payee IBAN of the invoicing tenant for XRechnung (BT-84, BR-61); encrypted at rest and
+    # masked in the API like the tax identifiers (A12). Operator entry only, never invented.
+    payee_iban: Mapped[str | None] = mapped_column(EncryptedText())
     # Mandatory note for Kleinunternehmer invoices (§ 19 UStG); the operator enters the wording.
     kleinunternehmer_note: Mapped[str | None] = mapped_column(Text)
     # DATEV Buchungsstapel export parameters (M18-01); export stays blocked until all three of
@@ -351,6 +361,9 @@ class TenantBillingSettings(IdMixin, TimestampMixin, TenantMixin, Base):
         Integer, nullable=False, default=1, server_default="1"
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    # Tenant wide SEPA creditor identifier used when the collecting legal entity has none of
+    # its own (M15-02, pain.008); operator entry only, format not verified (M15-01).
+    sepa_creditor_id: Mapped[str | None] = mapped_column(String(35))
 
 
 class InvoiceNumberCounter(IdMixin, TenantMixin, Base):

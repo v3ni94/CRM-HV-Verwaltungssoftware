@@ -27,3 +27,15 @@ describe("StartTiles", () => {
     expect(screen.queryByText("Kontoauszug ansehen")).not.toBeInTheDocument();
   });
 });
+
+describe("StartTiles for staff", () => {
+  it("adds the management handover tile only with the portal permission handover:read", () => {
+    renderIntl(<StartTiles me={me({ permissions: ["handover:read"] })} />);
+    expect(screen.getByText("Übergabeprotokolle der Verwaltung einsehen")).toBeInTheDocument();
+  });
+
+  it("hides the management handover tile for external portal users", () => {
+    renderIntl(<StartTiles me={me({ permissions: [] })} />);
+    expect(screen.queryByText("Übergabeprotokolle der Verwaltung einsehen")).not.toBeInTheDocument();
+  });
+});

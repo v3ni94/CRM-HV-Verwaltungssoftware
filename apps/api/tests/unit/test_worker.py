@@ -14,9 +14,11 @@ def test_queues_and_reliability_settings(settings: Settings) -> None:
     assert conf.worker_prefetch_multiplier == 1
     assert conf.enable_utc is True
     assert conf.accept_content == ["json"]
-    assert set(conf.beat_schedule) == {
+    # Subset check: other tasks (A29, A38) add their own beat entries in parallel.
+    assert set(conf.beat_schedule) >= {
         "webhooks-dispatch",
         "documents-mirror",
+        "documents-process-inbox",
         "workspace-reminders",
         "banking-sync-all",
         "banking-finapi-scheduled-fetch",
@@ -29,7 +31,14 @@ def test_queues_and_reliability_settings(settings: Settings) -> None:
         "immoware-sync-carddav",
         "immoware-sync-caldav",
         "objektakte-sync-all",
+        "workspace-digest",
+        "workspace-compliance-deadlines",
     }
+    assert conf.beat_schedule["workspace-digest"]["task"] == "mhvp.workspace.digest"
+    assert (
+        conf.beat_schedule["workspace-compliance-deadlines"]["task"]
+        == "mhvp.workspace.compliance_deadlines"
+    )
     assert conf.beat_schedule["webhooks-dispatch"]["task"] == "mhvp.core.webhooks.dispatch"
 
 
@@ -45,3 +54,18 @@ def test_lazy_module_attribute(monkeypatch: object) -> None:
 
     with pytest.raises(AttributeError):
         _ = worker.does_not_exist
+
+
+def test_document_jobs_registered(settings: Settings) -> None:
+    """A42 inbox job on the beat plan and A43 mirror deletion task with retry ladder."""
+    from mhvp.documents import mirror_deletion
+
+    app = create_celery(settings)
+    app.loader.import_default_modules()
+    assert "mhvp.documents.process_inbox" in app.tasks
+    inbox = app.conf.beat_schedule["documents-process-inbox"]
+    assert inbox["task"] == "mhvp.documents.process_inbox"
+    assert inbox["options"] == {"queue": "io"}
+    assert str(inbox["schedule"]) == "<crontab: 30 6 * * * (m/h/dM/MY/d)>"
+    task = app.tasks[mirror_deletion.TASK_NAME]
+    assert task.max_retries == len(mirror_deletion.BACKOFF_SECONDS)

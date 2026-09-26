@@ -10,3 +10,9 @@ Portal specific endpoints and access matrix filters.
 
 Layout once implemented: `models.py`, `schemas.py`, `services.py`, `routers.py`, tests under
 `apps/api/tests/portal/`. Register models in `mhvp/models.py` for Alembic autogenerate.
+
+Access paths (docs/rules/M21-06.md, D29 to D31): `access.visible_documents` is the single
+document filter for portal list and download; `access.document_scope_for_user` applies the same
+filter to runs of the AI gateway started on behalf of a portal user; `access.redaction_notes`
+marks a released (redacted) version of a receipt, linked to its original with
+`entity_type="document"` and role `generated`.

@@ -430,6 +430,29 @@ prüfungsregeln, Textbausteine der Nachforderungsschreiben werden als Spezifikat
   manuelle Einladung nach dem Bericht voraus. Migrationskette: parallel entstandene
   Migrationen (0077 ff.) sind beim Zusammenführen linear auf 0076 zu setzen.
 
+**Ergebnis Stufe 4, Nachtrag Oberflächen und Kostenauswertung (26.09.2026)**
+
+- Benutzerabbildung im CRM: Importdetailseite `/importe/{id}` zeigt für objektakte-Läufe den
+  Bericht `user_mapping` als Tabelle (E-Mail, Name, objektakte-Rolle, vorgeschlagene CRM-Rolle,
+  Rollen im CRM, Aktion `already_member`, `add_membership`, `invite`, `manual`, `skip`). Je
+  Zeile ein Link auf die Mitarbeiterverwaltung `/einstellungen/benutzer?email=&role=`; die
+  Seite belegt das Einladungsformular damit vor (E-Mail, Rolle, nur wenn die Rolle im
+  Mandanten existiert). Übersprungene Konten erhalten keinen Link. Es wird weiterhin kein
+  Benutzer automatisch angelegt (Regel M35-03).
+- KI-Kostenauswertung: `GET /api/v1/objektakte/ai-calls/summary?property_id=&from=&to=`
+  (`objektakte:read`) liefert Summe Kosten EUR, Token (Eingabe, Ausgabe) und Anzahl je Objekt
+  (Aufrufe ohne Objektzuordnung als eigene Zeile) und je Kalendermonat sowie die Gesamtsumme;
+  `from`/`to` als einschließliche Kalendertage, ungültiger Zeitraum wird abgewiesen. CRM:
+  Abschnitt "KI-Kosten der Altanwendung" auf der Objektakte-Seite mit Objekt- und
+  Zeitraumfilter, Beträge im Format `1.234,56 EUR` (Rundung ohne Float in der Oberfläche,
+  API liefert sechs Nachkommastellen der Quelle).
+- Tests: `apps/api/tests/integration/test_m35_ai_call_summary.py` (Summen aus dem Testexport
+  nachrechenbar, Filter, 403 ohne `objektakte:read`, 401 ohne Anmeldung, Mandantentrennung),
+  `apps/web-crm/src/components/objektakte/UserMappingTable.test.tsx`, `AiCostSummary.test.tsx`.
+- Offen bleibt: die Akzeptanz "alle bisherigen objektakte-Benutzer können sich im CRM
+  anmelden" setzt weiterhin die manuelle Einladung je Zeile voraus; eine Sammelaktion ist
+  bewusst nicht vorgesehen (Regel M35-03).
+
 ### Ergebnis Stufe 5, Differenzimport (26.09.2026)
 
 - Umgesetzt: Wasserstand je Mandant (`objektakte_sync_state`), Filter auf geänderte Quellzeilen,
@@ -440,6 +463,25 @@ prüfungsregeln, Textbausteine der Nachforderungsschreiben werden als Spezifikat
   gemappten Stammdatenfelder (Name, Adresse), sobald die Quellzeile neuer ist; Betreiber muss
   entscheiden, ob objektakte für diese Felder führend bleibt oder nur für Altfälle beschreibbar
   ist (Abschnitt 7). Oberfläche für Synchronisationsstand und Löschmarkierungen fehlt (nur API).
+
+**Ergebnis Stufe 5, Nachtrag Oberfläche (26.09.2026)**
+
+- Unter Einstellungen, Objektakte zeigt der Abschnitt "Synchronisationsstand"
+  (`apps/web-crm/src/components/objektakte/SyncStatus.tsx`) Schalter und Exportpfad (Speichern
+  nur mit `tenant_settings:update`, Validierung wie in der API), letzten Lauf mit Status,
+  Wasserstand, Fehlertext und Bericht (betrachtet, angelegt, aktualisiert, als gelöscht
+  markiert, Löschmarkierungen aufgelöst, jeweils Summe und Aufteilung je Tabelle), die
+  Schaltfläche "Jetzt abgleichen" (`POST /objektakte/sync/runs` ohne Datei, Lauf über den
+  Worker, Bericht nach "Stand aktualisieren") und den Upload eines vollständigen Exports (mit
+  Datei, sofortiger Lauf); beides nur mit `documents:create`. Darunter die Löschmarkierungen
+  (`GET /objektakte/sync/deletions`) mit Filter offen/aufgelöst und Verweis auf den betroffenen
+  Datensatz (Objekt, Kontakt; Zieltabellen ohne eigene CRM-Seite nur als Text mit Kennung).
+- BFF-Freigaben: `GET/PUT objektakte/sync`, `POST objektakte/sync/runs`,
+  `GET objektakte/sync/deletions`, `GET objektakte/ai-calls/summary`.
+- Test: `SyncStatus.test.tsx` (Bericht, Löschmarkierungen mit Link, Speichern, Lauf ohne
+  Datei, Filter aufgelöst, Ausblendung ohne Berechtigung). Der offene Punkt zur
+  Datenhoheit der gemappten Stammdatenfelder im Parallelbetrieb (Abschnitt 7) bleibt
+  bestehen.
 
 ## 5. Risiken
 

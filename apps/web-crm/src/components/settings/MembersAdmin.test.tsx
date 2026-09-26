@@ -84,4 +84,51 @@ describe("MembersAdmin", () => {
     expect(call).toBeDefined();
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({ competence_codes: ["buchhaltung"] });
   });
+
+  it("selects legal entities for a tax advisor only (A37)", async () => {
+    const HOA1 = "01920000-0000-7000-8000-00000000a001";
+    const HOA2 = "01920000-0000-7000-8000-00000000a002";
+    const TAX_ID = "01920000-0000-7000-8000-00000000f005";
+    const taxAdvisor = { ...member, membership_id: TAX_ID, email: "stb@example.org", display_name: "Steuerberatung", roles: ["tax_advisor"], legal_entity_ids: [] };
+    const options = [
+      { id: HOA1, name: "WEG Musterstraße 1", kind: "hoa" },
+      { id: HOA2, name: "WEG Musterstraße 2", kind: "hoa" },
+    ];
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith(`/api/bff/tenant/members/${TAX_ID}/legal-entities`) && method === "PUT") {
+        return new Response(null, { status: 204 });
+      }
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+
+    renderIntl(
+      <MembersAdmin
+        initialMembers={[member, taxAdvisor]}
+        roles={roles}
+        competenceCatalogue={competenceCatalogue}
+        legalEntityOptions={options}
+        canCreate={false}
+        canUpdate
+        canUpdateScope
+      />,
+    );
+
+    const table = within(screen.getByRole("table"));
+    // Only the tax advisor row offers the scope editor; the administrator row does not.
+    expect(table.getAllByRole("button", { name: "Rechtsträger (0)" })).toHaveLength(1);
+    await userEvent.click(table.getByRole("button", { name: "Rechtsträger (0)" }));
+    expect(screen.getByText("Ohne Auswahl hat der Steuerberater keinen Zugriff auf Buchhaltungsdaten.")).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("WEG Musterstraße 1"));
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const call = fetchMock.mock.calls.find(([input, init]) =>
+      String(input).endsWith(`/api/bff/tenant/members/${TAX_ID}/legal-entities`) && init?.method === "PUT",
+    );
+    expect(call).toBeDefined();
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ legal_entity_ids: [HOA1] });
+    await waitFor(() => expect(table.getByRole("button", { name: "Rechtsträger (1)" })).toBeInTheDocument());
+  });
 });

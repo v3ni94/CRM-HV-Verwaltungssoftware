@@ -4,7 +4,7 @@ legal entity. Tenant separation, legal entity separation and permissions. No pay
 
 import asyncio
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import boto3
 import pytest
@@ -82,13 +82,16 @@ def _ok(response: Any, status: int = 200) -> Any:
 
 
 def _property(c: TestClient, h: dict[str, str], number: str, kind: str) -> dict[str, Any]:
-    return _ok(
-        c.post(
-            P,
-            json={"number": number, "name": f"Objekt {number}", "management_type": kind},
-            headers=h,
+    return cast(
+        dict[str, Any],
+        _ok(
+            c.post(
+                P,
+                json={"number": number, "name": f"Objekt {number}", "management_type": kind},
+                headers=h,
+            ),
+            201,
         ),
-        201,
     )
 
 
@@ -351,3 +354,20 @@ def test_list_assign_defaults_and_separation(client: TestClient, world: World) -
     assert (
         client.get(f"{P}/{hoa_prop['id']}/bank-account-options", headers=other_h).status_code == 404
     )
+
+
+def test_search_term_matches_literally(client: TestClient, world: World) -> None:
+    """Sicherheitsreview 26.09.2026, Befund 5: % and _ in the search term are no wildcards."""
+    h = bearer(login(client, world, "basadmin"))
+    prop = _property(client, h, "959", "hoa")
+    entity = _entity(prop, "hoa")
+    account = _account(client, h, prop, entity, "hoa", IBAN_OTHER)
+
+    def ids(r: list[dict[str, Any]]) -> set[str]:
+        return {a["id"] for a in r}
+
+    assert account in ids(_ok(client.get(f"{B}/accounts", params={"q": "Inhaber hoa"}, headers=h)))
+    for wildcard in ("%", "_", "Inhaber_hoa", "Inh%hoa"):
+        listed = _ok(client.get(f"{B}/accounts", params={"q": wildcard}, headers=h))
+        assert account not in ids(listed), wildcard
+    assert listed == []

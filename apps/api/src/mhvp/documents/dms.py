@@ -1,7 +1,9 @@
 """External DMS mirrors (11.1, 11.2): Paperless-ngx and Google Drive over their REST APIs.
 
 The platform index and the S3 original stay authoritative; mirrors are copies. Deletion in the
-mirrors follows the retention rules of the index (6.9.5) and is not offered here yet.
+mirrors follows the retention rules of the index (6.9.5): ``delete`` is only ever called by
+``mhvp.documents.mirror_deletion`` after the platform deletion (released profile, expired
+retention, no hold) and every call is logged as a domain event (A43, M6-03).
 """
 
 import json
@@ -52,6 +54,21 @@ class DocumentStore(Protocol):
     async def put(self, data: bytes, meta: MirrorMeta) -> MirrorResult: ...
 
     async def resolve(self, ref: str) -> str | None: ...
+
+    async def delete(self, ref: str) -> bool:
+        """Remove the mirrored copy; True when deleted now, False when it was already gone."""
+        ...
+
+
+@dataclass(frozen=True)
+class InboxFile:
+    """One file of a Drive inbox folder (A42, `GoogleDriveStore.list_folder`)."""
+
+    ref: str
+    name: str
+    mime_type: str
+    modified_at: str  # RFC 3339 as Drive returns it; used as the intake watermark
+    size: int | None = None
 
 
 @dataclass
@@ -133,6 +150,17 @@ class PaperlessStore:
         if task.get("status") != "SUCCESS" or task.get("related_document") is None:
             raise DmsError(f"consume: {task.get('status')}")
         return str(task["related_document"])
+
+    async def delete(self, ref: str) -> bool:
+        if ref.startswith("task:") or not ref.isdigit():
+            raise DmsError("delete: reference is not a Paperless document id")
+        response = await self._client.delete(
+            f"{self._base}/api/documents/{ref}/", headers=self._headers
+        )
+        if response.status_code == 404:
+            return False
+        _raise_for(response, "delete")
+        return True
 
 
 class GoogleDriveStore:
@@ -260,6 +288,60 @@ class GoogleDriveStore:
         )
         _raise_for(response, "download")
         return response.content
+
+    async def delete(self, ref: str) -> bool:
+        response = await self._client.delete(
+            f"{self.FILES_URL}/{ref}",
+            params={"supportsAllDrives": "true"},
+            headers=await self._auth(),
+        )
+        if response.status_code == 404:
+            return False
+        _raise_for(response, "delete")
+        return True
+
+    async def list_folder(
+        self, folder_id: str, modified_after: str | None = None, page_size: int = 100
+    ) -> list[InboxFile]:
+        """Files (no sub folders) of one folder, oldest change first, optionally only those
+        changed after ``modified_after`` (RFC 3339), so the inbox job (A42) can keep a
+        watermark. Only the given folder is listed, never the whole Drive account."""
+        escaped = folder_id.replace("\\", "\\\\").replace("'", "\\'")
+        query = f"'{escaped}' in parents and trashed = false and mimeType != '{_FOLDER_MIME}'"
+        if modified_after:
+            query += f" and modifiedTime > '{modified_after}'"
+        files: list[InboxFile] = []
+        token: str | None = None
+        while True:
+            params = {
+                "q": query,
+                "fields": "nextPageToken,files(id,name,mimeType,modifiedTime,size)",
+                "orderBy": "modifiedTime",
+                "pageSize": str(page_size),
+                "supportsAllDrives": "true",
+                "includeItemsFromAllDrives": "true",
+            }
+            if token:
+                params["pageToken"] = token
+            response = await self._client.get(
+                self.FILES_URL, params=params, headers=await self._auth()
+            )
+            _raise_for(response, "inbox listing")
+            payload = response.json()
+            for f in payload.get("files", []):
+                size = f.get("size")
+                files.append(
+                    InboxFile(
+                        ref=str(f["id"]),
+                        name=str(f.get("name") or f["id"]),
+                        mime_type=str(f.get("mimeType") or "application/octet-stream"),
+                        modified_at=str(f.get("modifiedTime") or ""),
+                        size=int(size) if size is not None else None,
+                    )
+                )
+            token = payload.get("nextPageToken")
+            if not token:
+                return files
 
     async def search(self, property_folder: str, keywords: list[str]) -> list[MirrorHit]:
         """Documents in exactly one object's Drive folder (11.2, M20-05): the query is scoped to

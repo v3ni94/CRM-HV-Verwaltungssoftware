@@ -15,6 +15,7 @@ from mhvp.main import create_app
 from mhvp.platform import services
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
+from tests.integration.test_m18_tax_advisor_scope import assign_ledger_scope
 
 pytestmark = pytest.mark.integration
 A = "/api/v1/accounting"
@@ -198,6 +199,8 @@ def test_reports_and_exports(client: TestClient, world: World) -> None:
     )
     assert [(r["number"], r["amount"]) for r in rev] == [("060100", "400.00")]
 
+    # A37: the tax advisor only sees assigned legal entities (test_m18_tax_advisor_scope).
+    assign_ledger_scope(client, h, world.users["m18tax"], ledger)
     tax = bearer(login(client, world, "m18tax"))
     export = _ok(
         client.post(
@@ -238,6 +241,24 @@ def test_reports_and_exports(client: TestClient, world: World) -> None:
             headers=h,
         )
     )
+    # A36 (M18-04): without the operator's account mapping the batch is refused (never raw
+    # CRM numbers); with a complete mapping the DATEV Sachkonto is written.
+    refused = client.post(
+        f"{A}/ledgers/{ledger}/exports/datev",
+        params={"start": "2026-01-01", "end": "2026-12-31"},
+        headers=tax,
+    )
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "MHVP-BILL-0008"
+    csv_text = "account_code;datev_account\n" + "".join(
+        f"{number};{9 if number == '001200' else 8}{index:03d}\n"
+        for index, number in enumerate(sorted(acc))
+    )
+    _ok(
+        client.post(
+            f"{A}/datev-mappings/import", json={"content": csv_text, "dry_run": False}, headers=h
+        )
+    )
     datev = _ok(
         client.post(
             f"{A}/ledgers/{ledger}/exports/datev",
@@ -247,4 +268,4 @@ def test_reports_and_exports(client: TestClient, world: World) -> None:
         201,
     )
     assert datev["content"].startswith('"EXTF";"7";"21";"Buchungsstapel"')
-    assert "001200" in datev["content"]  # CRM account number emitted unmapped (M18-02)
+    assert "001200" not in datev["content"].split("\r\n", 2)[2]

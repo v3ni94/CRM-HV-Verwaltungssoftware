@@ -186,6 +186,7 @@ async def statement_results(
         - statement.reserve_withdrawals
         + statement.reserve_interest
     )
+    bank = await reserve_bank_balance(session, ledger, end)
     reserve = {
         "opening": str(statement.reserve_opening),
         "contributions_resolved": str(reserve_due),
@@ -194,6 +195,16 @@ async def statement_results(
         "withdrawals": str(statement.reserve_withdrawals),
         "interest": str(statement.reserve_interest),
         "closing": str(closing),
+        # W08, D19: the bank balance of the reserve accounts is shown apart from the accounting
+        # reserve; a difference is explained here, never settled by an automatic entry.
+        "bank_balance": str(bank),
+        "bank_difference": str(bank - closing),
+        "bank_difference_note": (
+            "Bankanlage entspricht dem Rücklagenbestand."
+            if bank == closing
+            else "Bankanlage und Rücklagenbestand weichen ab; Differenz erklären "
+            "(offene Beiträge sind kein vorhandenes Geld), keine Ausgleichsbuchung."
+        ),
     }
     return {
         "units": units,
@@ -201,6 +212,32 @@ async def statement_results(
         "reserve": reserve,
         "total_costs": str(sum((i.amount for i in items), ZERO)),
     }
+
+
+async def reserve_bank_balance(session: AsyncSession, ledger: Any, as_of: date) -> Decimal:
+    """Balance of the reserve bank accounts of the ledger (same identification as 7.5
+    liquidity: bank account of kind reserve, or the default account 001201)."""
+    from mhvp.accounting.models import AccountCategory, LedgerAccount
+    from mhvp.accounting.reports import _balance
+    from mhvp.properties.models import BankAccountKind, PropertyBankAccount
+
+    total = ZERO
+    for account in (
+        await session.scalars(
+            select(LedgerAccount).where(
+                LedgerAccount.ledger_id == ledger.id,
+                LedgerAccount.category == AccountCategory.BANK,
+            )
+        )
+    ).all():
+        if account.property_bank_account_id:
+            bank = await session.get(PropertyBankAccount, account.property_bank_account_id)
+            is_reserve = bank is not None and bank.kind is BankAccountKind.RESERVE
+        else:
+            is_reserve = account.number == "001201"
+        if is_reserve:
+            total += await _balance(session, account.id, as_of)
+    return total
 
 
 async def asset_report(

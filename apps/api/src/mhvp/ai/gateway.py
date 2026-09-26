@@ -18,7 +18,7 @@ from decimal import Decimal
 from typing import Any
 
 from openpyxl import load_workbook
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -38,7 +38,10 @@ MAX_TABLE_ROWS = 20_000  # rows with content; formatted empty rows do not count
 MAX_DOCUMENT_CHARS = 250_000  # per file for non chunked tasks; longer files are cut visibly
 CHUNK_CHARS = 150_000  # extraction tasks: table text is split into row chunks of this size
 CHUNK_CONCURRENCY = 4  # concurrent provider calls per chunked run (latency bound, not CPU)
-CHUNK_ROWS = 80  # rows per chunk for extract_contacts/extract_property (fits max_tokens=16000)
+CHUNK_ROWS = 80  # rows per chunk for extract_contacts/extract_property (fits 16000 output tokens)
+# Output limit per call when the tier carries no ``max_output_tokens`` (operator entered per tier
+# from the provider's published model limits, schemas.TierModel).
+DEFAULT_MAX_OUTPUT_TOKENS = 16000
 RETRIEVE_LIMIT = 6  # normal retrieval; reduced (below) when the input would be too large
 REDUCED_RETRIEVE_LIMIT = 3
 FEW_SHOT = 8
@@ -49,9 +52,10 @@ MTOK = Decimal(1_000_000)
 CHARS_PER_TOKEN = Decimal("3.5")
 CHUNKED_TASKS: frozenset[AiTask] = frozenset({AiTask.EXTRACT_CONTACTS, AiTask.EXTRACT_PROPERTY})
 # Fast table import (M7-06): deterministic column mapping instead of sending every row to the
-# LLM. Only extract_contacts is wired up; extract_property stays on the chunked path (M7-07,
-# open point) since its rows carry unit/party/payment structure the mapper does not model yet.
-FAST_TABLE_TASKS: frozenset[AiTask] = frozenset({AiTask.EXTRACT_CONTACTS})
+# LLM. extract_contacts uses the contact column model (``tasks.ColumnMappingResult``),
+# extract_property (A47) the owner/tenant list column model of ``table_mapper`` (units,
+# parties, payments); both share the ``map_columns`` task for the mapping call.
+FAST_TABLE_TASKS: frozenset[AiTask] = frozenset({AiTask.EXTRACT_CONTACTS, AiTask.EXTRACT_PROPERTY})
 
 
 class GatewayBlockedError(Exception):
@@ -161,6 +165,9 @@ def _chunk_table_body(
     return ["\n".join(c) for c in chunks] or [body]
 
 
+NO_DOCUMENT_HINT = (
+    "Hinweis: Es wurde keine Datei angehängt. Die Daten stehen im Text der Anweisung des Nutzers."
+)
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 TABLE_MIME_TYPES = {XLSX, "text/csv"}
 
@@ -254,6 +261,17 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
     context = dict(ref.get("context", {}))
     input_stats: dict[str, int] = {}
 
+    # Access matrix on the AI path (6.9.6, D30): a run started by an external portal user may
+    # only carry documents that user sees through the portal; attached foreign documents block
+    # the run, retrieved ones are dropped before any text is assembled (M20-05: nothing foreign
+    # enters the prompt context). CRM users are governed by permissions and RLS (scope None).
+    from mhvp.portal.access import document_scope_for_user
+    from mhvp.workspace.services import local_today
+
+    scope = await document_scope_for_user(session, run.created_by, local_today())
+    if scope is not None and any(d not in scope for d in document_ids):
+        raise GatewayBlockedError("Mindestens ein angehängtes Dokument ist nicht freigegeben.")
+
     if run.task in CHUNKED_TASKS:
         # extract_contacts / extract_property: retrieved documents never enter here (rule 1),
         # and every document is chunked by rows instead of being cut off (rule 2).
@@ -263,7 +281,11 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
             pieces, raw_chars = await document_chunks(session, blobs, document_id)
             input_stats[name] = raw_chars
             chunk_texts.extend(pieces)
-        chunks = [f"{instruction}\n\n{piece}" for piece in chunk_texts] or [instruction]
+        # No document attached (contact data pasted into the chat): the message text itself is
+        # the material; the hint keeps the model from waiting for a file.
+        chunks = [f"{instruction}\n\n{piece}" for piece in chunk_texts] or [
+            f"{instruction}\n\n{NO_DOCUMENT_HINT}"
+        ]
         return TaskInput(
             text=chunks[0],
             document_ids=document_ids,
@@ -274,6 +296,8 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
 
     if run.task is AiTask.ANSWER_QUESTION:
         found = await retrieve(session, str(ref.get("instruction", "")))
+        if scope is not None:
+            found = [d for d in found if d.id in scope]
         document_ids = [*document_ids, *[d.id for d in found if d.id not in document_ids]]
 
     async def _assemble(ids: list[uuid.UUID], max_chars: int) -> tuple[str, dict[str, int]]:
@@ -326,11 +350,12 @@ async def _complete_with_retry(
     system: str,
     messages: list[dict[str, str]],
     schema: dict[str, Any],
+    max_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
 ) -> providers.Completion:
     for delay in (*RETRY_DELAYS_S, None):
         try:
             return await client.complete(
-                model=model, system=system, messages=messages, schema=schema, max_tokens=16000
+                model=model, system=system, messages=messages, schema=schema, max_tokens=max_tokens
             )
         except providers.ProviderError as exc:
             if not exc.retryable or delay is None:
@@ -394,6 +419,17 @@ class Route:
     price_out: Decimal
     tier: str = ""
     context_tokens: int | None = None
+    max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS
+
+
+def max_output_tokens_of(entry: dict[str, Any]) -> int:
+    """Output limit of a tier entry; the platform default when unset or unusable."""
+    value = entry.get("max_output_tokens")
+    try:
+        parsed = int(value) if value is not None else DEFAULT_MAX_OUTPUT_TOKENS
+    except (TypeError, ValueError):
+        return DEFAULT_MAX_OUTPUT_TOKENS
+    return parsed if parsed > 0 else DEFAULT_MAX_OUTPUT_TOKENS
 
 
 def estimate_tokens(chars: int) -> int:
@@ -468,6 +504,7 @@ async def routes(
                 price_out,
                 tier=tier,
                 context_tokens=int(context_tokens) if context_tokens is not None else None,
+                max_output_tokens=max_output_tokens_of(entry),
             )
         )
     return usable, reasons
@@ -779,6 +816,124 @@ async def _run_fast_contacts(
     return output, tokens_in, tokens_out, warnings, skipped, chosen_final
 
 
+async def _run_fast_property(
+    factory: async_sessionmaker[AsyncSession],
+    tenant_id: uuid.UUID,
+    run_id: uuid.UUID,
+    table: table_mapper.TableData,
+    map_plan: list[tuple["Route", Decimal, Decimal]],
+    plan: list[tuple["Route", Decimal, Decimal]],
+    keys: dict[AiProvider, str],
+    instruction: str,
+    context: dict[str, Any],
+    shots: list[dict[str, Any]],
+    chosen: "Route",
+) -> tuple[dict[str, Any], int, int, list[str], list[str], "Route"] | None:
+    """Fast path for ``extract_property`` on an owner/tenant list (A47): one small
+    ``map_columns`` call with the property column model, then deterministic unit/party/payment
+    rows in Python (German numbers and dates via ``mhvp.imports.fields``), then only the
+    residual rows through the normal chunked ``extract_property`` extraction. The result keeps
+    the ``PropertyResult`` shape, so preview and apply (with confirmation) are unchanged; an
+    IBAN only appears masked in ``questions`` and is never part of the proposal. Returns
+    ``None`` to fall back to the full chunked path (no header or low mapping confidence)."""
+    map_messages = _messages(table_mapper.column_samples(table), {}, [])
+    map_result = await _call_plan(
+        map_plan,
+        keys,
+        table_mapper.property_map_system_prompt(),
+        map_messages,
+        table_mapper.property_map_schema(),
+        AiTask.MAP_COLUMNS,
+        tenant_id=tenant_id,
+        run_id=run_id,
+        model=table_mapper.PropertyColumnMappingResult,
+    )
+    tokens_in, tokens_out = map_result.tokens_in, map_result.tokens_out
+    mapping_output = map_result.output
+    if not table_mapper.mapping_usable(mapping_output):
+        return None
+    assert mapping_output is not None  # noqa: S101 - mapping_usable checked it
+    await _update_progress(
+        factory, tenant_id, run_id, {"stage": "Spalten erkannt", "current": 0, "total": 1}
+    )
+    mapping: dict[str, str] = {
+        m["source_column"]: m["target_field"] for m in mapping_output["mappings"]
+    }
+    mapped = table_mapper.apply_property_mapping(
+        table, mapping, default_role=mapping_output.get("default_role")
+    )
+    await _update_progress(
+        factory,
+        tenant_id,
+        run_id,
+        {"stage": f"{mapped.processed_rows} Zeilen verarbeitet", "current": 0, "total": 1},
+    )
+    warnings: list[str] = []
+    skipped: list[str] = list(map_result.skips)
+    output: dict[str, Any] = {
+        "property": mapped.property,
+        "buildings": mapped.buildings,
+        "units": mapped.units,
+        "parties": mapped.parties,
+        "questions": mapped.questions,
+    }
+    chosen_final = map_result.chosen
+    if mapped.residual:
+        await _update_progress(
+            factory,
+            tenant_id,
+            run_id,
+            {
+                "stage": f"{len(mapped.residual)} Zeilen an KI",
+                "current": 0,
+                "total": len(mapped.residual),
+            },
+        )
+        body = table_mapper.residual_table_text(table, mapped.residual)
+        pieces = _chunk_table_body(body)
+        residual_chunks = [
+            f'{instruction}\n\n<datei name="{table.filename}" teil="{i}/{len(pieces)}">\n'
+            f"{piece}\n</datei>"
+            for i, piece in enumerate(pieces, start=1)
+        ]
+        chunk_result = await _process_chunks(
+            residual_chunks,
+            plan,
+            keys,
+            tasks.prompt(AiTask.EXTRACT_PROPERTY).system,
+            tasks.json_schema(AiTask.EXTRACT_PROPERTY),
+            AiTask.EXTRACT_PROPERTY,
+            context,
+            shots,
+            factory,
+            tenant_id,
+            run_id,
+            chosen,
+        )
+        tokens_in += chunk_result.tokens_in
+        tokens_out += chunk_result.tokens_out
+        warnings.extend(chunk_result.warnings)
+        skipped.extend(chunk_result.skips)
+        chosen_final = chunk_result.chosen
+        if chunk_result.outputs:
+            # Deterministic result first: its property record wins when it names anything,
+            # units and parties are concatenated and deduped like the chunked path does.
+            llm = merge_extraction(AiTask.EXTRACT_PROPERTY, chunk_result.outputs)
+            has_property = any(v for v in mapped.property.values())
+            output = merge_extraction(
+                AiTask.EXTRACT_PROPERTY, [output, llm] if has_property else [llm, output]
+            )
+        else:
+            warnings.append(
+                f"{len(mapped.residual)} Zeile(n) konnten nicht per KI ergänzt werden: "
+                f"{chunk_result.warnings[-1] if chunk_result.warnings else 'unbekannter Fehler'}"
+            )
+    await _update_progress(
+        factory, tenant_id, run_id, {"stage": "Fertig", "current": 1, "total": 1}
+    )
+    return output, tokens_in, tokens_out, warnings, skipped, chosen_final
+
+
 @dataclass
 class _PlanResult:
     output: dict[str, Any] | None
@@ -806,10 +961,13 @@ async def _call_plan(
     *,
     tenant_id: uuid.UUID | None = None,
     run_id: uuid.UUID | None = None,
+    model: type[BaseModel] | None = None,
 ) -> _PlanResult:
     """One prompt against the routing plan: retries per provider (schema errors), falls back to
     the next provider of the plan on a provider error (budget exhausted providers are already
-    filtered out of ``plan``)."""
+    filtered out of ``plan``). ``model`` overrides the task's output schema for validation
+    (the property variant of ``map_columns``, A47); by default ``tasks.SCHEMAS[task]``."""
+    output_model: type[BaseModel] = model or tasks.SCHEMAS[task]
     tokens_in = tokens_out = 0
     output: dict[str, Any] | None = None
     error: str | None = None
@@ -825,7 +983,12 @@ async def _call_plan(
             for attempt in range(2):
                 try:
                     completion = await _complete_with_retry(
-                        client, chosen.model, system, current_messages, schema
+                        client,
+                        chosen.model,
+                        system,
+                        current_messages,
+                        schema,
+                        max_tokens=chosen.max_output_tokens,
                     )
                 except providers.ProviderError as exc:
                     error = f"Anbieterfehler: {exc}"
@@ -844,9 +1007,7 @@ async def _call_plan(
                 tokens_in += completion.tokens_in
                 tokens_out += completion.tokens_out
                 try:
-                    output = (
-                        tasks.SCHEMAS[task].model_validate(completion.data).model_dump(mode="json")
-                    )
+                    output = output_model.model_validate(completion.data).model_dump(mode="json")
                     error = None
                     break
                 except ValidationError as exc:
@@ -1022,7 +1183,8 @@ async def execute(
     if fast_table is not None:
         # Fast table import (M7-06): map_columns plus deterministic rows, only residual rows
         # (if any) go through the chunked LLM extraction below.
-        fast_out = await _run_fast_contacts(
+        fast_runner = _run_fast_property if task is AiTask.EXTRACT_PROPERTY else _run_fast_contacts
+        fast_out = await fast_runner(
             factory,
             tenant_id,
             run_id,

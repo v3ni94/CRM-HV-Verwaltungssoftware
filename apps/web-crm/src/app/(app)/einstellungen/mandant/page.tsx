@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { CompanySettings } from "@/components/settings/CompanySettings";
 import { BillingSettingsForm, type BillingSettings } from "@/components/settings/BillingSettings";
+import { ManagerEntitySetup, type ManagerEntityStatus } from "@/components/settings/ManagerEntitySetup";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -21,10 +22,13 @@ export default async function CompanySettingsPage() {
   const billingRes = await serverFetch("/api/v1/tenant/billing-settings");
   const billingData: BillingSettings | null = billingRes.ok ? await billingRes.json() : null;
   const tb = await getTranslations("BillingSettings");
+  const managerRes = await serverFetch("/api/v1/tenant/manager-entity");
+  const managerData: ManagerEntityStatus | null = managerRes.ok ? await managerRes.json() : null;
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
       <CompanySettings initial={settings.data.company} branding={settings.data.branding} canUpdate={can("tenant_settings:update")} />
+      <ManagerEntitySetup initial={managerData} canUpdate={can("tenant_settings:update")} />
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">{tb("title")}</h2>
         {billingData ? (

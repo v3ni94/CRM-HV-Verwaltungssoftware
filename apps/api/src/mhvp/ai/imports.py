@@ -28,8 +28,9 @@ from mhvp.contracts.models import (
     PaymentSchedule,
     SepaMandate,
 )
+from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.documents.models import DocumentLink
+from mhvp.documents.models import Document, DocumentLink
 from mhvp.properties.models import Building, PropertyOwner, Unit
 
 # Preview -----------------------------------------------------------------------------------
@@ -226,6 +227,8 @@ async def create_party(
 
 async def _referenced(session: AsyncSession, entity_type: str, entity_id: uuid.UUID) -> str | None:
     """Reason why an imported entity must stay (bound by later data), or None."""
+    if entity_type == "document":
+        return await _document_kept(session, entity_id)
     linked = await session.scalar(
         select(func.count())
         .select_from(DocumentLink)
@@ -304,7 +307,30 @@ async def _referenced(session: AsyncSession, entity_type: str, entity_id: uuid.U
     return None
 
 
+async def _document_kept(session: AsyncSession, document_id: uuid.UUID) -> str:
+    """An original recorded by an import is never removed by undo (6.9.5, D43, D46).
+
+    The retention check of the document module decides first (hold, profile, deadline); even an
+    expired profile leaves the deletion to the document endpoint, which alone checks mirrors and
+    removes the stored file. Undo therefore only reports, it never bypasses the lock.
+    """
+    from mhvp.documents.services import deletion_blocker
+
+    document = await session.get(Document, document_id)
+    if document is None:
+        return "Original nicht mehr vorhanden"
+    blocker = await deletion_blocker(session, document, date.today())  # noqa: DTZ011
+    if blocker is not None:
+        return f"Aufbewahrung: {blocker}"
+    return "Originale werden nur über die Dokumentlöschung mit Aufbewahrungsprüfung entfernt"
+
+
 async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID) -> None:
+    if entity_type == "document":  # pragma: no cover - _referenced always keeps documents
+        raise ProblemError(
+            ErrorCodes.RETENTION_LOCKED,
+            detail="Originale werden über die Import-Rücknahme nicht gelöscht.",
+        )
     if entity_type == "contract":
         contract = await session.get(Contract, entity_id)
         if contract is None:
@@ -396,6 +422,17 @@ async def undo(session: AsyncSession, run: ImportRun, user_id: uuid.UUID | None)
         reason = await _referenced(session, item.entity_type, item.entity_id)
         if reason is not None:
             item.kept_reason, kept = reason, kept + 1
+            if item.entity_type == "document":
+                # D46: the refused removal of an original is logged like a refused deletion.
+                await emit(
+                    session,
+                    tenant_id=run.tenant_id,
+                    type="document.deletion_refused",
+                    entity_type="document",
+                    entity_id=item.entity_id,
+                    actor_user_id=user_id,
+                    payload={"reason": reason, "import_run_id": str(run.id), "via": "undo"},
+                )
             continue
         async with session.begin_nested():
             await _remove(session, item.entity_type, item.entity_id)
@@ -536,6 +573,9 @@ async def apply_property(
                 None,
                 ValueSource.AI,
             )
+    # E13: in a community with SEV a tenancy needs an ownership with SEV on the same unit.
+    # An owner listed together with a tenant on one unit therefore gets sev_enabled.
+    units_with_tenant = {p["unit_number"] for p in preview["parties"] if p.get("role") == "tenant"}
     for index, party_data in enumerate(preview["parties"]):
         target = units.get(party_data["unit_number"])
         name = " ".join(p for p in (party_data.get("first_name"), party_data.get("last_name")) if p)
@@ -583,6 +623,11 @@ async def apply_property(
             party_id=party.id,
             start_date=start,
             title_transfer_date=start if kind == "ownership" else None,
+            sev_enabled=(
+                kind == "ownership"
+                and management is ManagementType.HOA_WITH_SEV
+                and party_data["unit_number"] in units_with_tenant
+            ),
         )
         async with session.begin_nested():
             try:

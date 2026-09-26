@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { AuditExportPanel, type AuditExportRun } from "@/components/accounting/AuditExportPanel";
 import { LiquidityReport, type LiquiditySnapshot } from "@/components/accounting/ReportsLiquidity";
 import { PaymentsByDebtor, type PaymentsByDebtorRow } from "@/components/accounting/ReportsPaymentsByDebtor";
 import { RevenueReport, type RevenueRow } from "@/components/accounting/ReportsRevenue";
@@ -41,7 +42,7 @@ export default async function LedgerReportsPage({
     );
   }
 
-  const [liquidity, paymentsByDebtor, revenue] = await Promise.all([
+  const [liquidity, paymentsByDebtor, revenue, auditExports] = await Promise.all([
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/liquidity", {
       params: { path: { ledger_id: id }, query: { as_of: asOf } },
     }),
@@ -51,6 +52,7 @@ export default async function LedgerReportsPage({
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/revenue", {
       params: { path: { ledger_id: id }, query: { start, end } },
     }),
+    api.GET("/api/v1/accounting/audit-exports", { params: { query: { ledger_id: id } } }),
   ]);
 
   return (
@@ -121,6 +123,22 @@ export default async function LedgerReportsPage({
           </p>
         ) : (
           <RevenueReport rows={revenue.data as unknown as RevenueRow[]} />
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className={ui.h2}>{t("reports.auditExport.title")}</h2>
+        {!auditExports.data ? (
+          <p role="alert" className={ui.alert}>
+            {problemMessage(auditExports.error as Problem | undefined, auditExports.response.status)}
+          </p>
+        ) : (
+          <AuditExportPanel
+            ledgerId={id}
+            runs={auditExports.data as unknown as AuditExportRun[]}
+            defaultStart={start}
+            defaultEnd={end}
+          />
         )}
       </section>
     </div>

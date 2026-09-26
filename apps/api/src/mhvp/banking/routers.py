@@ -4,7 +4,7 @@ no payment is initiated here (G2)."""
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,9 +12,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.accounting.models import EntrySource
-from mhvp.banking import account_selection, camt, matching, payments
+from mhvp.banking import account_selection, matching, payments
 from mhvp.banking import finapi as finapi_client
+from mhvp.banking import matching_metrics as matching_metrics_svc
 from mhvp.banking import services as svc
+from mhvp.banking.connectors import FileConnector
 from mhvp.banking.models import (
     AccountPurpose,
     BankConnection,
@@ -166,7 +168,7 @@ async def import_statement(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         data = BlobStore(request.app.state.settings).get(document.storage_ref)
         try:
-            parsed = camt.parse(data)
+            parsed = FileConnector.parse(data, document.filename)  # CAMT.053 or MT940
         except ValueError as exc:
             raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from None
         try:
@@ -271,6 +273,10 @@ async def reconciliation(
     bank_account_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
+        from mhvp.properties.models import PropertyBankAccount
+
+        if await session.get(PropertyBankAccount, bank_account_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         return await svc.reconcile(session, bank_account_id)
 
 
@@ -614,9 +620,13 @@ async def run_auto_post(
         if not enabled:
             return {"enabled": False, "posted": 0}
         posted = 0
+        # Chronological order: a later payment of the same contract must not see the earlier
+        # month still open, otherwise both open items match and the later one stays manual.
         new = (
             await session.scalars(
-                select(BankTransaction).where(BankTransaction.status == TransactionStatus.NEW)
+                select(BankTransaction)
+                .where(BankTransaction.status == TransactionStatus.NEW)
+                .order_by(BankTransaction.booking_date, BankTransaction.created_at)
             )
         ).all()
         for row in new:
@@ -652,6 +662,28 @@ async def metrics(request: Request, principal: TenantPrincipal = Depends(READ)) 
             "auto_reversed": reversed_count,
             "error_rate": round(reversed_count / len(auto), 4) if auto else None,
         }
+
+
+@router.get(
+    "/matching-metrics",
+    summary="Abdeckungsgrad und Fehlerquote des Bankabgleichs je Zeitraum (getrennt)",
+)
+async def matching_metrics(
+    request: Request,
+    period_from: Annotated[date | None, Query(alias="from")] = None,
+    period_to: Annotated[date | None, Query(alias="to")] = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """Coverage = automatically and unambiguously assigned transactions / transactions of the
+    period; error rate = automatic assignments later reversed (corrected or cancelled) /
+    automatic assignments. See ``mhvp.banking.matching_metrics`` (M12 acceptance, A45)."""
+    if period_from is not None and period_to is not None and period_from > period_to:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Der Zeitraum ist ungültig (von > bis).")
+    async with tenant_tx(request, principal) as session:
+        result = await matching_metrics_svc.compute(
+            session, period_from=period_from, period_to=period_to
+        )
+        return result.as_dict()
 
 
 class AutomationIn(_In):
@@ -699,6 +731,9 @@ class PaymentOrderIn(_In):
 class OrderPatch(_In):
     execution_date: date | None = None
     purpose: str | None = Field(default=None, min_length=1, max_length=140)
+    # D35: amount and payee IBAN are payment relevant; a change voids all approvals.
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=2)
+    counterpart_iban: str | None = Field(default=None, min_length=15, max_length=34)
 
 
 class BatchIn(_In):
@@ -791,16 +826,17 @@ async def patch_order(
 ) -> OrderOut:
     async with tenant_tx(request, principal) as session:
         order = await _order(session, order_id)
-        if order.status not in (OrderStatus.DRAFT, OrderStatus.APPROVED):
-            raise ProblemError(
-                ErrorCodes.CONFLICT, detail="Eingereichte Aufträge sind unveränderlich."
+        changed = await payments.change_order(session, order, body.model_dump(exclude_none=True))
+        if changed:
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="payment_order.approvals_invalidated",
+                entity_type="payment_order",
+                entity_id=order.id,
+                actor_user_id=principal.user_id,
+                payload={"fields": sorted(body.model_dump(exclude_none=True))},
             )
-        before = payments.snapshot(order)
-        for key, value in body.model_dump(exclude_none=True).items():
-            setattr(order, key, value)
-        if payments.snapshot(order) != before:
-            await payments.invalidate(session, order)
-        await session.flush()
         return await _order_out(session, order)
 
 
@@ -927,43 +963,71 @@ async def bank_status(
                         ErrorCodes.CONFLICT,
                         detail="Ausgeführte Aufträge werden über die Rückgabe korrigiert.",
                     )
-                order.status = OrderStatus.REJECTED
+                if order.status is OrderStatus.REJECTED:
+                    continue
+                order.status = OrderStatus.REJECTED  # D37: the payable stays fully open
+                await emit(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    type="payment_order.rejected",
+                    entity_type="payment_order",
+                    entity_id=order.id,
+                    actor_user_id=principal.user_id,
+                    payload={"reason": body.reason, "open_amount": str(order.amount)},
+                )
             elif body.status == "executed":
                 if body.bank_transaction_id is None:
                     raise ProblemError(
                         ErrorCodes.VALIDATION, detail="Ausführung nur mit Bankumsatz als Nachweis."
                     )
+                before = order.status
                 await payments.record_execution(
                     session,
                     order,
                     bank_transaction_id=body.bank_transaction_id,
                     user_id=principal.user_id,
                 )
-            elif body.status == "returned":
-                if order.status is OrderStatus.RETURNED:
-                    continue
-                if order.journal_entry_id is None:
-                    raise ProblemError(
-                        ErrorCodes.CONFLICT, detail="Nur ausgeführte Aufträge können zurückkommen."
+                if before is not order.status and order.status is OrderStatus.PARTIALLY_EXECUTED:
+                    # D37: only the confirmed part is settled; the rest stays open with a note.
+                    await emit(
+                        session,
+                        tenant_id=principal.tenant_id,
+                        type="payment_order.partially_executed",
+                        entity_type="payment_order",
+                        entity_id=order.id,
+                        actor_user_id=principal.user_id,
+                        payload={
+                            "reason": body.reason,
+                            "executed_amount": str(order.executed_amount),
+                            "open_amount": str(order.amount - (order.executed_amount or 0)),
+                        },
                     )
-                from mhvp.accounting import services as acc_svc
-                from mhvp.accounting.models import JournalEntry, Ledger
-
-                entry = await session.get(
-                    JournalEntry, order.journal_entry_id, with_for_update=True
-                )
-                ledger = await session.get(Ledger, order.ledger_id)
-                if entry is None or ledger is None:  # pragma: no cover
-                    raise ProblemError(ErrorCodes.CONFLICT)
-                await acc_svc.reverse(
+            elif body.status == "returned":
+                reversal = await payments.record_return(
                     session,
-                    ledger,
-                    entry,
+                    order,
+                    reason=body.reason,
+                    bank_transaction_id=body.bank_transaction_id,
                     user_id=principal.user_id,
-                    reason=body.reason or "Rückgabe durch die Bank",
                     booking_date=local_today(),
                 )
-                order.status = OrderStatus.RETURNED
+                if reversal is not None:  # D38: reversal, never an edit of the posting
+                    await emit(
+                        session,
+                        tenant_id=principal.tenant_id,
+                        type="payment_order.returned",
+                        entity_type="payment_order",
+                        entity_id=order.id,
+                        actor_user_id=principal.user_id,
+                        payload={
+                            "reason": body.reason,
+                            "reversal_id": str(reversal.id),
+                            "reversed_entry_id": str(reversal.reverses_id),
+                            "bank_transaction_id": (
+                                str(body.bank_transaction_id) if body.bank_transaction_id else None
+                            ),
+                        },
+                    )
         batch.status = body.status
         await session.flush()
         return [await _order_out(session, o) for o in orders]

@@ -235,6 +235,8 @@ def test_accept_candidate_files_document_and_writes_audit_decision(
     )
     assert len(rows) == 1
     assert rows[0].decided_by == world.users["revadmin"]
+    assert rows[0].before_state is not None
+    assert rows[0].after_state is not None
     assert rows[0].before_state["status"] == "open"
     assert rows[0].after_state["status"] == "resolved"
     assert rows[0].after_state["applied_category_id"] == str(ids["category_a"])

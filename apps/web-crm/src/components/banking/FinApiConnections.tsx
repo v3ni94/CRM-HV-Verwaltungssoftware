@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { bff } from "@/lib/bff";
+import { FinApiConsentBanner } from "@/components/banking/FinApiConsentBanner";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -29,6 +30,7 @@ type FinApiConnection = {
   status: string;
   web_form_url: string | null;
   web_form_status: string | null;
+  consent_valid_until?: string | null;
   last_error: string | null;
   auto_update_enabled: boolean;
   accounts: FinApiAccount[];
@@ -124,6 +126,18 @@ export function FinApiConnections() {
                 <span className="font-medium">{c.bank_name}</span>
                 <StatusPill variant={STATUS_VARIANT[c.status] ?? "neutral"} label={t(`status.${c.status}`)} />
               </div>
+              <FinApiConsentBanner
+                status={c.status}
+                consentValidUntil={c.consent_valid_until ?? null}
+                busy={busy}
+                onRenew={async () => {
+                  const updated = await act<FinApiConnection>(
+                    `/api/bff/banking/finapi/connections/${c.id}/reauthorize`,
+                    { method: "POST" }
+                  );
+                  if (updated?.web_form_url) window.open(updated.web_form_url, "_blank", "noopener");
+                }}
+              />
               {c.web_form_url && c.status === "web_form_pending" ? (
                 <p className="mt-1 text-xs text-muted">{t("webFormHint")}</p>
               ) : null}

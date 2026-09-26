@@ -723,3 +723,101 @@ class ExportRun(IdMixin, TimestampMixin, TenantMixin, Base):
     # Export log remark, e.g. "Kontenzuordnung zu prüfen" for a DATEV export (M18-01): the CRM
     # account numbers are emitted unmapped, no Kontenrahmen assignment is invented.
     note: Mapped[str | None] = mapped_column(String(200))
+    # Audit export (A26, 7.7, D55): queued -> running -> done | failed. Journal and DATEV runs
+    # are written complete and therefore start as "done" (migration 0096).
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="done", server_default="done"
+    )
+    params: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    error: Mapped[str | None] = mapped_column(Text)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AdminFeeInvoiceStatus(StrEnum):
+    ISSUED = "issued"
+    RELEASED = "released"
+
+
+class AdminFeeInvoice(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Issued Verwalterhonorar invoice of the tenant (M13-04, A12, 13.5 E-Rechnung).
+
+    Written by ``POST /accounting/admin-fees/{id}/invoice-issue`` once the gapless number is
+    allocated; the amounts and lines are frozen here so that the XRechnung XML
+    (``mhvp.accounting.xrechnung``) is reproducible. Tax identifiers are never copied: the XML
+    reads them from ``TenantBillingSettings`` at generation time (encrypted at rest). Rows are
+    not posted anywhere: the revenue posting of the fee stays behind G1.
+    """
+
+    __tablename__ = "admin_fee_invoice"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "number", name="uq_admin_fee_invoice_number"),
+        Index("ix_admin_fee_invoice_tenant_id", "tenant_id"),
+    )
+
+    fee_setting_id: Mapped[uuid.UUID] = _fk("admin_fee_setting.id")
+    property_id: Mapped[uuid.UUID] = _fk("property.id")
+    number: Mapped[str] = mapped_column(String(32), nullable=False)
+    invoice_date: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[AdminFeeInvoiceStatus] = mapped_column(
+        _enum(AdminFeeInvoiceStatus, "admin_fee_invoice_status"),
+        nullable=False,
+        default=AdminFeeInvoiceStatus.ISSUED,
+        server_default="issued",
+    )
+    currency: Mapped[str] = mapped_column(
+        String(3), nullable=False, default="EUR", server_default="EUR"
+    )
+    net: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    vat_percent: Mapped[Decimal] = mapped_column(RATE, nullable=False)
+    vat: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    gross: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    # [{"text", "quantity", "unit_price", "amount"}]; the sum of "amount" equals net (B06),
+    # a minimum or maximum fee is an explicit adjustment line, never a hidden difference.
+    lines: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    # Debtor of the fee (E13, D58): the legal entity the fee is a cost in and, for an SE fee,
+    # the owner party. Both nullable when the entity is not yet created.
+    debtor_legal_entity_id: Mapped[uuid.UUID | None] = _fk("legal_entity.id", nullable=True)
+    invoice_debtor_party_id: Mapped[uuid.UUID | None] = _fk("party.id", nullable=True)
+    # Leitweg-ID as entered in TenantBillingSettings at issue time (BT-10 BuyerReference).
+    buyer_reference: Mapped[str | None] = mapped_column(String(64))
+    xml_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+
+
+class DatevAccountMapping(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Operator maintained assignment of a CRM ledger account number to a DATEV Sachkonto
+    (A36, M18-01). Pure master data: no chart of accounts (SKR03/SKR04) is preloaded, every
+    row is entered or imported by the operator (rule M18-04).
+
+    ``ledger_id`` empty means the row applies to every ledger of the tenant; a row with a
+    ledger wins over the tenant wide row. ``valid_from`` empty means "since ever"; among
+    several rows the latest ``valid_from`` not after the booking date wins. Uniqueness per
+    (tenant, ledger or none, account_code, valid_from or none) is enforced by an expression
+    index in migration 0099.
+    """
+
+    __tablename__ = "datev_account_mapping"
+    __table_args__ = (
+        Index("ix_datev_account_mapping_tenant_id", "tenant_id"),
+        Index("ix_datev_account_mapping_ledger_id", "ledger_id"),
+        Index(
+            "ux_datev_account_mapping_key",
+            "tenant_id",
+            text("COALESCE(ledger_id, '00000000-0000-0000-0000-000000000000'::uuid)"),
+            "account_code",
+            text("COALESCE(valid_from, '0001-01-01'::date)"),
+            unique=True,
+        ),
+    )
+
+    ledger_id: Mapped[uuid.UUID | None] = _fk("ledger.id", nullable=True, ondelete="CASCADE")
+    account_code: Mapped[str] = mapped_column(String(32), nullable=False)
+    datev_account: Mapped[str] = mapped_column(String(16), nullable=False)
+    label: Mapped[str | None] = mapped_column(String(200))
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    valid_from: Mapped[date | None] = mapped_column(Date)

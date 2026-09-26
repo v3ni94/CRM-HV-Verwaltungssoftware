@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from mhvp.ai import tasks
+from mhvp.ai import evaluate, tasks
 from mhvp.ai.models import AiTask
 from mhvp.core.problems import ProblemError
 from mhvp.objektakte.masking import contains_iban, mask_identifiers
@@ -108,9 +108,10 @@ def test_recorded_answers_merge_into_expected_proposal(case: dict[str, Any]) -> 
         assert new_name is not None
         assert new_name.endswith(expected["new_last_name"])
     assert proposals.title_for(old_name, new_name, changes) == expected["title"]
-    salutation = "Frau" if case["id"] == "kampmeier_mueller" else None
-    last = new_name.split()[-1] if new_name else None
-    assert proposals.greeting_for(salutation, last, new_name) == expected["greeting"]
+    # Greeting (gender only from the contact record or the sender's signature) and every
+    # other pair through the shared scorer of the offline evaluation (M7-08).
+    pairs = evaluate.score_case(AiTask.CONTACT_MASTER_DATA_CHANGE, case)
+    assert [got for got, _ in pairs] == [want for _, want in pairs]
 
 
 def test_reply_draft_text() -> None:

@@ -11,6 +11,10 @@ from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 
 CENT = Decimal("0.01")
 RULE_VERSION = "operating-costs-v1"
+# Rule versions by first day of validity (A01, D28): a version applies to statements whose
+# period starts on or after its date. The snapshot keeps the version used (A-045); a later
+# entry never changes an already calculated or issued statement.
+RULE_VERSIONS: tuple[tuple[date, str], ...] = ((date.min, RULE_VERSION),)
 
 
 @dataclass(frozen=True)
@@ -32,6 +36,14 @@ def distribute(total: Decimal, shares: list[Share]) -> dict[tuple[str, str], Dec
     for s in order[:rest]:
         floored[s.key] += CENT
     return floored
+
+
+def rule_version(period_from: date) -> str:
+    """Version whose validity starts latest but not after the period start (D28)."""
+    applicable = [v for valid_from, v in RULE_VERSIONS if valid_from <= period_from]
+    if not applicable:
+        raise ValueError("Keine Regelversion für den Zeitraum")
+    return applicable[-1]
 
 
 def days(start: date, end: date) -> int:

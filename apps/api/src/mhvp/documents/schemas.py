@@ -137,6 +137,12 @@ class DmsConnectionIn(_In):
     base_url: str | None = Field(default=None, max_length=500)
     secret: str | None = Field(default=None, max_length=4000, description="nur schreibbar")
     options: dict[str, str] = Field(default_factory=dict)
+    # Paperless (A30): Geheimnis des Post-Consume-Webhooks, nur schreibbar (leer = behalten),
+    # und Schalter "Belegeingang aus Paperless automatisch" (M14-05, Standard aus).
+    webhook_secret: str | None = Field(
+        default=None, min_length=16, max_length=200, description="nur schreibbar"
+    )
+    auto_receipt_intake: bool = False
 
 
 class DmsConnectionOut(_Out):
@@ -145,6 +151,8 @@ class DmsConnectionOut(_Out):
     base_url: str | None
     has_secret: bool
     options: dict[str, str]
+    has_webhook_secret: bool = False
+    auto_receipt_intake: bool = False
 
 
 class DmsDocumentOut(_Out):

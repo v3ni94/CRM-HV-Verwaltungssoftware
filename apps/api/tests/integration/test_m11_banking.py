@@ -296,3 +296,169 @@ def test_camt_import_identity_transfer_and_reconciliation(
 
     clerk = bearer(login(client, world, "m11clerk"))
     assert client.get(f"{B}/transactions", headers=clerk).status_code == 403
+
+
+# A28 (M11-02): MT940 upload on the same import path as CAMT.053 -----------------------------
+
+IBAN_MT = "DE91100000000123456789"
+
+
+def _mt940(statement_no: str, iban: str, opening: str, closing: str, lines: list[str]) -> bytes:
+    body = "\r\n".join(lines)
+    return (
+        f":20:STARTUMSE\r\n:25:{iban}\r\n:28C:{statement_no}\r\n:60F:C260131EUR{opening}\r\n"
+        f"{body}\r\n:62F:C260228EUR{closing}\r\n-\r\n"
+    ).encode("latin-1")
+
+
+def _line61(day: str, dc: str, amount: str, purpose: str, bank_ref: str | None = None) -> str:
+    ref = f"//{bank_ref}" if bank_ref else ""
+    # value date 26MMDD, entry date MMDD, D/C, funds code R, amount with comma, type NTRF
+    return (
+        f":61:26{day}{day}{dc}R{amount}NTRFNONREF{ref}\r\n"
+        f":86:166?00SEPA-GUTSCHRIFT?20EREF+E-{day}?21SVWZ+{purpose}?30COBADEFFXXX?31{PAYER}"
+        "?32Maria Muster?33mann"
+    )
+
+
+async def _second_tenant(settings: Any) -> World:
+    """Own tenant with its own administrator for the tenant separation check."""
+    from mhvp.core import crypto
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+
+    crypto.set_master_key(b"k" * 32)
+    engine = create_app_engine(settings)
+    factory = create_session_factory(engine)
+    try:
+        b, _ = await services.provision_tenant(factory, slug=f"bk2-{RUN}", name=f"Bank B {RUN}")
+        world = World(tenant_a=b, tenant_b=b, app_url=settings.database_url.get_secret_value())
+        uid = await services.create_user(
+            factory, email=world.email("m11adminb"), display_name="b", password=PASSWORD
+        )
+        world.users["m11adminb"] = uid
+        await services.add_member(
+            factory, tenant_id=b, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
+        )
+        return world
+    finally:
+        await engine.dispose()
+
+
+@pytest.fixture(scope="module")
+def world_b(database: Database, redis_url: str) -> World:
+    return asyncio.run(_second_tenant(_settings(database, redis_url)))
+
+
+def test_mt940_import_reimport_and_tenant_separation(
+    client: TestClient, world: World, world_b: World
+) -> None:
+    h = bearer(login(client, world, "m11admin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "712", "name": "Swifthaus", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    account = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": IBAN_MT,
+                "holder": "GdWE Swifthaus",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+
+    # Two real identical payments (D05): one with a bank reference, one without (derived).
+    file_1 = _mt940(
+        "00020/001",
+        IBAN_MT,
+        "1000,00",
+        "1700,00",
+        [
+            _line61("0203", "C", "400,00", "Hausgeld Februar", "BR-MT-1"),
+            _line61("0203", "C", "400,00", "Hausgeld Februar"),
+            _line61("0210", "D", "100,00", "Entgelt"),
+        ],
+    )
+    doc = _ok(
+        client.post(
+            "/api/v1/documents",
+            files={"file": ("auszug.sta", file_1, "text/plain")},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    run = _ok(client.post(f"{B}/imports", json={"document_id": doc}, headers=h), 201)
+    assert run["source"] == "file:mt940"
+    assert run["counts"]["new"] == 3
+    assert run["counts"]["statements"] == 1
+    assert run["counts"]["possible_duplicates"] == 1  # hash hint only, both are kept
+    txs = _ok(client.get(f"{B}/transactions", params={"bank_account_id": account}, headers=h))
+    assert sorted(Decimal(t["amount"]) for t in txs) == [
+        Decimal("-100.00"),
+        Decimal("400.00"),
+        Decimal("400.00"),
+    ]
+    assert all(t["status"] == "new" for t in txs)  # references present: nothing for review
+    credit = next(t for t in txs if t["amount"] == "400.00" and t["purpose"] == "Hausgeld Februar")
+    assert credit["counterpart_name"] == "Maria Mustermann"
+    assert credit["counterpart_iban_suffix"] == PAYER[-4:]
+    assert credit["end_to_end_id"] == "E-0203"
+
+    # Re-import of the same file: no additional effect (B08, D05).
+    again = _ok(client.post(f"{B}/imports", json={"document_id": doc}, headers=h), 201)
+    assert again["counts"]["new"] == 0
+    assert again["counts"]["duplicates"] == 3
+    assert again["counts"]["statements"] == 0
+    rec = _ok(client.get(f"{B}/accounts/{account}/reconciliation", headers=h))
+    assert [Decimal(r["statement_difference"]) for r in rec] == [Decimal("0.00")]
+
+    # Content based detection: an MT940 uploaded with an .xml name is still parsed as MT940,
+    # a non MT940 text file with .sta name is refused with a German message.
+    file_2 = _mt940(
+        "00021/001",
+        IBAN_MT,
+        "1700,00",
+        "1750,00",
+        [_line61("0220", "C", "50,00", "Nachzahlung", "BR-MT-2")],
+    )
+    doc_2 = _upload(client, h, "auszug.xml", file_2)
+    assert (
+        _ok(client.post(f"{B}/imports", json={"document_id": doc_2}, headers=h), 201)["counts"][
+            "new"
+        ]
+        == 1
+    )
+    junk = client.post(
+        f"{B}/imports",
+        json={
+            "document_id": _ok(
+                client.post(
+                    "/api/v1/documents",
+                    files={"file": ("k.sta", b"kein auszug", "text/plain")},
+                    headers=h,
+                ),
+                201,
+            )["id"]
+        },
+        headers=h,
+    )
+    assert junk.status_code == 422
+    assert "MT940" in junk.json()["detail"]
+
+    # Tenant separation: the other tenant neither sees the document nor the transactions.
+    hb = bearer(login(client, world_b, "m11adminb"))
+    assert client.post(f"{B}/imports", json={"document_id": doc}, headers=hb).status_code == 404
+    assert (
+        _ok(client.get(f"{B}/transactions", params={"bank_account_id": account}, headers=hb)) == []
+    )
+    assert client.get(f"{B}/accounts/{account}/reconciliation", headers=hb).status_code == 404

@@ -4,7 +4,16 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Date, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -65,3 +74,27 @@ class ChangeRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="proposed")
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decision_note: Mapped[str | None] = mapped_column(Text)
+
+
+class PortalReadReceipt(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Retrieval of a document through the portal (11.3, D34, A53).
+
+    A row records only that a portal account opened or downloaded a document at a point in
+    time. It is an indication ("Indiz"), never a delivery ("Zustellung") and never legally
+    assessed receipt ("Zugang"): those stay in ``mhvp.communication`` (dispatch) and in the
+    documented delivery date. Listing documents writes nothing; the expiry of an invitation
+    writes nothing and triggers no legal consequence. No IP address is stored: a shortened
+    address is not needed for the purpose and its lawfulness is not decided (rule 0.1.3).
+    """
+
+    __tablename__ = "portal_read_receipt"
+    __table_args__ = (
+        Index("ix_portal_read_receipt_document", "tenant_id", "document_id", "occurred_at"),
+        CheckConstraint("kind IN ('opened', 'downloaded')", name="ck_portal_read_receipt_kind"),
+    )
+
+    account_id: Mapped[uuid.UUID] = _fk("portal_account.id", ondelete="CASCADE")
+    document_id: Mapped[uuid.UUID] = _fk("document.id", ondelete="CASCADE")
+    # opened (metadata retrieved through the portal) or downloaded (content retrieved)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

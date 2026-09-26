@@ -10,7 +10,13 @@ import { ui } from "@/lib/ui";
 
 const TIERS = ["small", "large", "embedding"] as const;
 type Tier = (typeof TIERS)[number];
-type TierForm = { model: string; input: string; output: string };
+type TierForm = { model: string; input: string; output: string; maxOutput: string };
+/** Tiers that answer prompts; the connection test and the output limit apply to these only. */
+const PROMPT_TIERS: readonly Tier[] = ["small", "large"];
+const INTEGER = /^\d+$/;
+
+type TierTest = { tier: "small" | "large"; model: string; ok: boolean; duration_ms: number; error: string | null };
+type ProviderTest = { provider: string; tiers: TierTest[] };
 
 const DECIMAL = /^\d+([.,]\d{1,8})?$/;
 const norm = (v: string) => v.trim().replace(",", ".");
@@ -18,7 +24,7 @@ const norm = (v: string) => v.trim().replace(",", ".");
 function tierOf(models: Record<string, unknown>, tier: Tier): TierForm {
   const m = (models[tier] ?? {}) as Record<string, unknown>;
   const s = (v: unknown) => (v === undefined || v === null ? "" : String(v));
-  return { model: s(m.model), input: s(m.input_eur_per_mtok), output: s(m.output_eur_per_mtok) };
+  return { model: s(m.model), input: s(m.input_eur_per_mtok), output: s(m.output_eur_per_mtok), maxOutput: s(m.max_output_tokens) };
 }
 
 /** Provider configuration (9.2): only the Anthropic adapter exists in the API so far. */
@@ -38,6 +44,8 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<ProviderTest | null>(null);
 
   const setTier = (tier: Tier, key: keyof TierForm, value: string) =>
     setTiers((prev) => ({ ...prev, [tier]: { ...prev[tier], [key]: value } }));
@@ -50,6 +58,8 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
       if (any && (!f.model.trim() || !DECIMAL.test(norm(f.input)) || !DECIMAL.test(norm(f.output)))) {
         return t("tierInvalid", { tier: t(`tier.${tier}`) });
       }
+      const limit = f.maxOutput.trim();
+      if (limit && (!INTEGER.test(limit) || Number(limit) < 1)) return t("maxOutputInvalid", { tier: t(`tier.${tier}`) });
     }
     return null;
   };
@@ -75,7 +85,13 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
     for (const tier of TIERS) {
       const f = tiers[tier];
       if (f.model.trim()) {
-        models[tier] = { model: f.model.trim(), input_eur_per_mtok: norm(f.input), output_eur_per_mtok: norm(f.output) };
+        const limit = f.maxOutput.trim();
+        models[tier] = {
+          model: f.model.trim(),
+          input_eur_per_mtok: norm(f.input),
+          output_eur_per_mtok: norm(f.output),
+          ...(PROMPT_TIERS.includes(tier) && limit ? { max_output_tokens: Number(limit) } : {}),
+        };
       }
     }
     const body: ProviderIn = {
@@ -96,6 +112,19 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
     setSaved(res.data);
     setApiKey("");
     setMessage(t("saved"));
+  };
+
+  /** One minimal prompt per configured tier; the API neither grants nor withdraws the release. */
+  const testConnection = async () => {
+    setError(null);
+    setMessage(null);
+    setTestResult(null);
+    if (!saved) return setError(t("testUnsaved"));
+    setTesting(true);
+    const res = await bff<ProviderTest>(`/api/bff/ai/providers/${name}/test`, { method: "POST" });
+    setTesting(false);
+    if (!res.ok) return setError(res.message);
+    setTestResult(res.data);
   };
 
   const release = async () => {
@@ -138,7 +167,7 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
         <legend className="text-sm font-medium">{t("models")}</legend>
         <p className="text-xs text-muted">{t("modelsHint")}</p>
         {TIERS.map((tier) => (
-          <div key={tier} className="grid gap-2 sm:grid-cols-3">
+          <div key={tier} className="grid gap-2 sm:grid-cols-4">
             <div>
               <label htmlFor={`model-${tier}`} className={ui.label}>
                 {t("modelFor", { tier: t(`tier.${tier}`) })}
@@ -157,6 +186,15 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
               </label>
               <input id={`out-${tier}`} inputMode="decimal" className={ui.input} value={tiers[tier].output} onChange={(e) => setTier(tier, "output", e.target.value)} />
             </div>
+            {PROMPT_TIERS.includes(tier) ? (
+              <div>
+                <label htmlFor={`max-${tier}`} className={ui.label}>
+                  {t("maxOutput", { tier: t(`tier.${tier}`) })}
+                </label>
+                <input id={`max-${tier}`} inputMode="numeric" className={ui.input} value={tiers[tier].maxOutput} placeholder="16000" onChange={(e) => setTier(tier, "maxOutput", e.target.value)} />
+                <p className={ui.help}>{t("maxOutputHint")}</p>
+              </div>
+            ) : null}
           </div>
         ))}
       </fieldset>
@@ -214,6 +252,26 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
           {message}
         </p>
       ) : null}
+      {testing ? (
+        <p role="status" className={ui.notice}>
+          {t("testRunning")}
+        </p>
+      ) : null}
+      {testResult ? (
+        <div className={ui.notice} data-testid="provider-test-result">
+          <p className="font-medium">{t("testResultTitle")}</p>
+          <ul className="mt-1 flex flex-col gap-1">
+            {testResult.tiers.map((r) => (
+              <li key={r.tier} data-testid={`provider-test-${r.tier}`}>
+                <span className={r.ok ? "text-success-fg" : "text-danger-fg"}>
+                  {t("testLine", { tier: t(`tier.${r.tier}`), status: r.ok ? t("testOk") : t("testFailed"), model: r.model, ms: r.duration_ms })}
+                </span>
+                {r.error ? <span className="block text-xs">{t("testError", { error: r.error })}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <button type="submit" className={ui.primary} disabled={busy}>
@@ -222,8 +280,12 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
         <button type="button" className={ui.button} onClick={release} disabled={busy || !saved || !!saved.released_at}>
           {t("release")}
         </button>
+        <button type="button" className={ui.button} onClick={testConnection} disabled={busy || testing || !saved?.has_api_key}>
+          {t("test")}
+        </button>
       </div>
       <p className="text-xs text-muted">{t("fourEyesHint")}</p>
+      <p className="text-xs text-muted">{t("testHint")}</p>
     </form>
   );
 }

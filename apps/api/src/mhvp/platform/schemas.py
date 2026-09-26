@@ -101,6 +101,7 @@ class TenantBillingSettingsOut(BaseModel):
     vat_id_masked: str | None
     tax_number_masked: str | None
     leitweg_id: str | None
+    payee_iban_masked: str | None
     kleinunternehmer_note: str | None
     datev_consultant_number: str | None
     datev_client_number: str | None
@@ -118,7 +119,21 @@ class TenantBillingSettingsPatch(BaseModel):
     vat_id: str | None = Field(default=None, max_length=32)
     tax_number: str | None = Field(default=None, max_length=32)
     leitweg_id: str | None = Field(default=None, max_length=64)
+    payee_iban: str | None = Field(default=None, max_length=34)
     kleinunternehmer_note: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("payee_iban")
+    @classmethod
+    def _payee_iban(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        from mhvp.contacts.validation import InvalidValueError, normalise_iban
+
+        try:
+            return normalise_iban(value)
+        except InvalidValueError as exc:
+            raise ValueError(str(exc)) from None
+
     datev_consultant_number: str | None = Field(default=None, max_length=32)
     datev_client_number: str | None = Field(default=None, max_length=32)
     datev_chart_of_accounts: Literal["unset", "skr03", "skr04"] | None = None
@@ -184,6 +199,25 @@ class MemberOut(BaseModel):
     mobile_phone: str | None = None
     portal_access: str | None = None
     portal_access_reason: str | None = None
+    # A37: legal entity scope (only effective for scoped roles, see mhvp.core.auth.scope).
+    legal_entity_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class MemberLegalEntities(BaseModel):
+    """Zugriffsbereich je Rechtsträger (A37, docs/rules/M18-05-steuerberaterzugang.md). Nur für
+    Rollen mit eingeschränktem Bereich (Steuerberater) wirksam; leere Liste bedeutet dort kein
+    Zugriff."""
+
+    legal_entity_ids: list[uuid.UUID] = Field(default_factory=list, max_length=500)
+
+
+class LegalEntityOption(BaseModel):
+    """Rechtsträger des Mandanten zur Auswahl in der Mitarbeiterverwaltung (A37)."""
+
+    id: uuid.UUID
+    name: str
+    kind: str
+    property_id: uuid.UUID | None = None
 
 
 class MemberMobilePhone(BaseModel):

@@ -10,8 +10,13 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
-type Member = components["schemas"]["MemberOut"];
+type Member = components["schemas"]["MemberOut"] & { legal_entity_ids?: string[] };
 type Role = components["schemas"]["RoleOut"];
+/** Rechtsträger des Mandanten zur Auswahl des Zugriffsbereichs (A37, GET /tenant/legal-entities). */
+export type LegalEntityOption = { id: string; name: string; kind: string; property_id?: string | null };
+/** Rollen, deren Zugriff durch den Zugriffsbereich je Rechtsträger begrenzt wird
+ * (Backend `mhvp.core.auth.scope.SCOPED_ROLES`). */
+const SCOPED_ROLES = ["tax_advisor"];
 
 function StatusBadge({ status }: { status: string }) {
   const t = useTranslations("Members");
@@ -198,6 +203,80 @@ function MobilePhoneEditor({ member, onSaved }: { member: Member; onSaved: (phon
   );
 }
 
+/** Zugriffsbereich je Rechtsträger für Steuerberater (A37, docs/rules/M18-05-steuerberaterzugang.md).
+ * Nur sichtbar, wenn das Mitglied ausschließlich Rollen mit eingeschränktem Bereich hat; eine
+ * leere Auswahl bedeutet für diese Rollen keinen Zugriff. */
+function LegalEntitiesEditor({
+  member,
+  options,
+  onSaved,
+}: {
+  member: Member;
+  options: LegalEntityOption[];
+  onSaved: (ids: string[]) => void;
+}) {
+  const t = useTranslations("Members");
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>(member.legal_entity_ids ?? []);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const scoped = member.roles.length > 0 && member.roles.every((r) => SCOPED_ROLES.includes(r));
+  if (!scoped) return null;
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const res = await bff<null>(`/api/bff/tenant/members/${member.membership_id}/legal-entities`, {
+      method: "PUT",
+      body: JSON.stringify({ legal_entity_ids: selected }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      onSaved(selected);
+      setOpen(false);
+    } else {
+      setError(res.message);
+    }
+  }
+
+  const count = member.legal_entity_ids?.length ?? 0;
+  if (!open) {
+    return (
+      <button type="button" className={ui.buttonSm} onClick={() => setOpen(true)}>
+        {t("editLegalEntities", { count })}
+      </button>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2">
+      <p className="text-xs text-muted">{t("legalEntitiesHint")}</p>
+      {options.length === 0 ? <p className="text-xs text-muted">{t("legalEntitiesEmpty")}</p> : null}
+      {options.map((o) => (
+        <label key={o.id} className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={selected.includes(o.id)}
+            onChange={(e) =>
+              setSelected((prev) => (e.target.checked ? [...prev, o.id] : prev.filter((x) => x !== o.id)))
+            }
+          />
+          {o.name}
+        </label>
+      ))}
+      {selected.length === 0 ? <p className={ui.error}>{t("legalEntitiesNone")}</p> : null}
+      {error ? <p className={ui.error}>{error}</p> : null}
+      <div className="flex gap-2">
+        <button type="button" className={ui.button} disabled={busy} onClick={() => void save()}>
+          {t("save")}
+        </button>
+        <button type="button" className={ui.button} disabled={busy} onClick={() => setOpen(false)}>
+          {t("cancel")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ResetPassword({ membershipId }: { membershipId: string }) {
   const t = useTranslations("Members");
   const [open, setOpen] = useState(false);
@@ -255,12 +334,24 @@ function ResetPassword({ membershipId }: { membershipId: string }) {
   );
 }
 
-function AddMemberForm({ roles, onCreated }: { roles: Role[]; onCreated: (member: Member) => void }) {
+export type MemberPrefill = { email?: string; roleCodes?: string[] };
+
+function AddMemberForm({
+  roles,
+  onCreated,
+  prefill,
+}: {
+  roles: Role[];
+  onCreated: (member: Member) => void;
+  prefill?: MemberPrefill;
+}) {
   const t = useTranslations("Members");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefill?.email ?? "");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
-  const [roleCodes, setRoleCodes] = useState<string[]>([]);
+  const [roleCodes, setRoleCodes] = useState<string[]>(
+    (prefill?.roleCodes ?? []).filter((code) => roles.some((r) => r.code === code)),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -335,14 +426,20 @@ export function MembersAdmin({
   initialMembers,
   roles,
   competenceCatalogue,
+  legalEntityOptions,
   canCreate,
   canUpdate,
+  canUpdateScope,
+  prefill,
 }: {
   initialMembers: Member[];
   roles: Role[];
   competenceCatalogue: { code: string; label: string }[];
+  legalEntityOptions?: LegalEntityOption[];
   canCreate: boolean;
   canUpdate: boolean;
+  canUpdateScope?: boolean;
+  prefill?: MemberPrefill;
 }) {
   const t = useTranslations("Members");
   const [members, setMembers] = useState(initialMembers);
@@ -388,6 +485,9 @@ export function MembersAdmin({
                   <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
                   <CompetencesEditor member={m} catalogue={competenceCatalogue} onSaved={(competences) => updateMember(m.membership_id, { competences })} />
                   <MobilePhoneEditor member={m} onSaved={(mobile_phone) => updateMember(m.membership_id, { mobile_phone })} />
+                  {canUpdateScope ? (
+                    <LegalEntitiesEditor member={m} options={legalEntityOptions ?? []} onSaved={(legal_entity_ids) => updateMember(m.membership_id, { legal_entity_ids })} />
+                  ) : null}
                   <ResetPassword membershipId={m.membership_id} />
                   <button
                     type="button"
@@ -439,6 +539,9 @@ export function MembersAdmin({
                       <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
                       <CompetencesEditor member={m} catalogue={competenceCatalogue} onSaved={(competences) => updateMember(m.membership_id, { competences })} />
                   <MobilePhoneEditor member={m} onSaved={(mobile_phone) => updateMember(m.membership_id, { mobile_phone })} />
+                      {canUpdateScope ? (
+                        <LegalEntitiesEditor member={m} options={legalEntityOptions ?? []} onSaved={(legal_entity_ids) => updateMember(m.membership_id, { legal_entity_ids })} />
+                      ) : null}
                       <ResetPassword membershipId={m.membership_id} />
                       <button
                         type="button"
@@ -456,7 +559,9 @@ export function MembersAdmin({
           </tbody>
         </table>
       </div>
-      {canCreate ? <AddMemberForm roles={roles} onCreated={(member) => setMembers((prev) => [...prev, member])} /> : null}
+      {canCreate ? (
+        <AddMemberForm roles={roles} prefill={prefill} onCreated={(member) => setMembers((prev) => [...prev, member])} />
+      ) : null}
     </div>
   );
 }

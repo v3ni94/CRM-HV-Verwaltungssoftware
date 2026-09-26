@@ -6,7 +6,8 @@
 from datetime import date, time
 from decimal import Decimal
 
-from mhvp.handover import uprotokoll_import as importer
+import mhvp.handover.uprotokoll_import as importer
+from mhvp.core import sqldump
 
 DUMP = r"""
 -- MariaDB dump 10.19
@@ -43,6 +44,16 @@ VALUES (1201,101,'photo','flur.jpg','a1b2.jpg','protocols/101/a1b2.jpg','image/j
 
 INSERT INTO `users` (`id`,`username`,`email`,`password_hash`,`role`)
 VALUES (1,'admin','admin@example.test','x','admin');
+
+INSERT INTO `protocols` (`id`, `protocol_number`, `protocol_type`, `status`, `version`,
+`parent_protocol_id`, `property_id`, `street`, `change_reason`)
+VALUES (103,'UP-000101','rental','completed',2,101,1,'Musterstraße','Zählerstand korrigiert');
+
+INSERT INTO `protocol_emails` (`id`,`protocol_id`,`recipient_email`,`subject`,`body`,`status`,
+`sent_at`)
+VALUES (1301,101,'erika@example.test','Übergabeprotokoll UP-000101','Sehr geehrte ...','sent',
+ '2026-01-15 11:05:00'),
+       (1302,999,'niemand@example.test','Verwaist',NULL,'failed',NULL);
 """
 
 
@@ -57,13 +68,16 @@ def test_parse_dump_reads_every_table() -> None:
         "protocol_files",
         "users",
     } <= set(tables)
-    assert len(tables["protocols"]) == 2
+    assert len(tables["protocols"]) == 3
     assert len(tables["protocol_participants"]) == 2
+    assert len(tables["protocol_emails"]) == 2
 
 
 def test_parse_dump_handles_quotes_escapes_and_null() -> None:
     tables = importer.parse_dump(DUMP)
-    first, second = tables["protocols"]
+    first, second, third = tables["protocols"]
+    assert third["parent_protocol_id"] == 101
+    assert first.get("parent_protocol_id") is None
     assert first["protocol_number"] == "UP-000101"
     assert "O'Brien" in first["internal_note"]
     assert second["property_id"] is None
@@ -85,14 +99,14 @@ def test_parse_dump_skips_malformed_statement_without_raising() -> None:
 
 
 def test_coerce_typed_conversions() -> None:
-    assert importer._to_date("2026-01-15") == date(2026, 1, 15)
-    assert importer._to_date(None) is None
-    assert importer._to_time("09:30:00") == time(9, 30, 0)
-    assert importer._to_decimal("04512.7") == Decimal("4512.7")
-    assert importer._to_decimal(None) is None
-    assert importer._to_bool(1) is True
-    assert importer._to_bool(0) is False
-    assert importer._to_bool("0") is False
+    assert sqldump.to_date("2026-01-15") == date(2026, 1, 15)
+    assert sqldump.to_date(None) is None
+    assert sqldump.to_time("09:30:00") == time(9, 30, 0)
+    assert sqldump.to_decimal("04512.7") == Decimal("4512.7")
+    assert sqldump.to_decimal(None) is None
+    assert sqldump.to_bool(1) is True
+    assert sqldump.to_bool(0) is False
+    assert sqldump.to_bool("0") is False
 
 
 async def test_build_plan_reports_counts_and_unmatched_objects() -> None:
@@ -112,11 +126,18 @@ async def test_build_plan_reports_counts_and_unmatched_objects() -> None:
     import uuid
 
     plan = await importer.build_plan(_Session(), uuid.uuid4(), tables)  # type: ignore[arg-type]
-    assert plan.counts["protocols"] == 2
+    assert plan.counts["protocols"] == 3
     # property_id=1 exists in the dump but no CRM property matches in this fake session
-    assert plan.unmatched_objects == 1
+    # (protocols 101 and 103 both reference it)
+    assert plan.unmatched_objects == 2
     assert plan.duplicates == 0
-    assert len(plan.protocols) == 2
+    assert len(plan.protocols) == 3
+    assert plan.versions_with_parent == 1
+    assert plan.emails_total == 2
+    assert plan.as_dict()["versions_with_parent"] == 1
+    version_two = next(p for p in plan.protocols if p["source_id"] == 103)
+    assert version_two["parent_source_id"] == 101
+    assert version_two["version"] == 2
 
 
 def test_import_result_serializes_counts() -> None:
@@ -124,3 +145,26 @@ def test_import_result_serializes_counts() -> None:
     data = result.as_dict()
     assert data["created"] == {"protocols": 2}
     assert data["skipped_duplicates"] == 1
+
+
+def test_email_note_text_has_time_recipient_subject_but_no_body() -> None:
+    tables = importer.parse_dump(DUMP)
+    sent, failed = tables["protocol_emails"]
+    text = importer.email_note_text(sent)
+    assert text.startswith("E-Mail aus U-Protokoll: 15.01.2026 11:05 an erika@example.test")
+    assert "Betreff: Übergabeprotokoll UP-000101" in text
+    assert "Status: sent" in text
+    assert "Sehr geehrte" not in text
+    # Missing time and body: nothing is invented, the note still names the recipient.
+    assert importer.email_note_text(failed).startswith(
+        "E-Mail aus U-Protokoll: unbekannt an niemand@example.test, Betreff: Verwaist"
+    )
+
+
+def test_import_result_reports_version_links_and_email_history() -> None:
+    result = importer.ImportResult(versions_linked=1, emails_total=2, emails_imported=1)
+    data = result.as_dict()
+    assert data["versions_linked"] == 1
+    assert data["versions_unresolved"] == 0
+    assert data["emails_total"] == 2
+    assert data["emails_imported"] == 1

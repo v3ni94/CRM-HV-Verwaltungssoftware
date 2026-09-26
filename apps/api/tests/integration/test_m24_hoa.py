@@ -427,3 +427,338 @@ def test_hoa_statement_d01_d03(clients: tuple[TestClient, TestClient], world: Wo
     assert {sid, v2["id"]} <= {x["id"] for x in sts}
     assert len(_ok(client.get(f"{H}/statements/{v2['id']}", headers=h))["cost_items"]) == 1
     assert client.post(f"{H}/plans/{plan['id']}/apply", headers=h).status_code == 409
+
+
+# D18, D19, D54 (task list A18 to A20, 26.09.2026) ---------------------------------------------
+
+
+def _hoa_ledger(client: TestClient, h: dict[str, str], number: str) -> dict[str, Any]:
+    """Own HOA property with default chart for one test; keys by code, accounts by number."""
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": number, "name": f"WEG {number}", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    keys = {
+        k["code"]: k["id"]
+        for k in _ok(client.get(f"/api/v1/properties/{prop['id']}/allocation-keys", headers=h))
+    }
+    template = _ok(client.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    acc = {
+        a["number"]: a["id"] for a in _ok(client.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    return {"property": prop["id"], "hoa": hoa, "keys": keys, "ledger": ledger, "acc": acc}
+
+
+def test_d18_sub_community_without_basis_blocks_release(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """D18 (W03): a cost item allocated by a key that reaches only units 01 and 02 of three is a
+    sub community. With a free filter as basis the package shows the finding and the internal
+    approval is refused; with a resolution named as source the same split is releasable."""
+    client, _ = clients
+    h = bearer(login(client, world, "m24admin"))
+    h2 = bearer(login(client, world, "m24second"))
+    w = _hoa_ledger(client, h, "742")
+    units = {
+        no: _owner(client, h, w["property"], no, "1000", w["keys"]["MEA"], {})[0]
+        for no in ("01", "02", "03")
+    }
+    haus_a = _ok(
+        client.post(
+            f"/api/v1/properties/{w['property']}/allocation-keys",
+            json={"code": "HAUS_A", "name": "Haus A", "unit_of_measure": "MEA", "kind": "static"},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    for no in ("01", "02"):  # unit 03 is not part of Haus A
+        _ok(
+            client.post(
+                f"/api/v1/units/{units[no]}/allocation-values",
+                json={"allocation_key_id": haus_a, "value": "500", "valid_from": "2020-01-01"},
+                headers=h,
+            ),
+            201,
+        )
+
+    def statement(year: int, basis: str) -> tuple[str, dict[str, Any]]:
+        st = _ok(
+            client.post(
+                f"{H}/statements", json={"ledger_id": w["ledger"], "year": year}, headers=h
+            ),
+            201,
+        )["id"]
+        for label, key, item_basis in [
+            ("Versicherung", w["keys"]["MEA"], "Gemeinschaftsordnung, Verteilung nach MEA"),
+            ("Aufzug Haus A", haus_a, basis),
+        ]:
+            _ok(
+                client.post(
+                    f"{H}/statements/{st}/costs",
+                    json={
+                        "label": label,
+                        "amount": "1000.00",
+                        "allocation_key_id": key,
+                        "basis": item_basis,
+                        "account_id": w["acc"]["043000"],
+                    },
+                    headers=h,
+                ),
+                201,
+            )
+        calc = _ok(client.post(f"{H}/statements/{st}/calculate", headers=h))
+        return st, calc["snapshot"]
+
+    # Free filter: the split reaches two units, the basis names no source.
+    sid, snap = statement(2025, "Filter Haus A")
+    split = next(p for p in snap["positions"] if p["label"] == "Aufzug Haus A")["split"]
+    assert sorted(split.values()) == ["500.00", "500.00"]
+    assert units["03"] not in split
+    package = _ok(client.get(f"{H}/statements/{sid}/package", headers=h))
+    assert [f["code"] for f in package["blocking"]] == ["scope_unfounded"]
+    assert "Aufzug Haus A" in package["blocking"][0]["detail"]
+    assert "W03" in package["blocking"][0]["detail"]
+    assert package["releasable"] is False
+    blocked = client.post(
+        f"{H}/statements/{sid}/transition", json={"target": "internally_approved"}, headers=h2
+    )
+    assert blocked.status_code == 409
+    assert "belegte Grundlage" in blocked.json()["detail"]
+    assert _ok(client.get(f"{H}/statements/{sid}", headers=h))["status"] == "calculated"
+
+    # Same split with a documented source: no finding, approval possible.
+    sid2, _ = statement(2024, "Beschluss Nr. 4 vom 12.05.2024: Aufzugskosten nur Haus A")
+    package2 = _ok(client.get(f"{H}/statements/{sid2}/package", headers=h))
+    assert (package2["blocking"], package2["releasable"]) == ([], True)
+    approved = _ok(
+        client.post(
+            f"{H}/statements/{sid2}/transition", json={"target": "internally_approved"}, headers=h2
+        )
+    )
+    assert approved["status"] == "internally_approved"
+
+
+def test_d19_reserve_contribution_unpaid_no_settlement_entry(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """D19 (W08): resolved reserve contribution 6.000,00, paid 4.500,00 onto the reserve bank
+    account, opening 10.000,00. Expected by hand: Soll 6.000,00, Ist 4.500,00, arrears 1.500,00,
+    accounting closing 14.500,00, bank balance 4.500,00, difference -10.000,00 explained; the
+    calculation writes no journal entry."""
+    client, _ = clients
+    h = bearer(login(client, world, "m24admin"))
+    w = _hoa_ledger(client, h, "743")
+    _, c1 = _owner(client, h, w["property"], "01", "1000", w["keys"]["MEA"], {"reserve": "6000.00"})
+    _ok(
+        client.put(
+            f"{A}/ledgers/{w['ledger']}/payment-type-accounts",
+            json={"payment_type_code": "reserve", "account_id": w["acc"]["060200"]},
+            headers=h,
+        )
+    )
+    run = _ok(
+        client.post(
+            f"{A}/receivable-runs",
+            json={"period_month": "2025-01-01", "scope": "contract", "scope_id": c1["id"]},
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.post(f"{A}/receivable-runs/{run['id']}/post", headers=h))
+    item = _ok(
+        client.get(
+            f"{A}/ledgers/{w['ledger']}/open-items", params={"as_of": "2025-01-31"}, headers=h
+        )
+    )[0]
+    assert item["remaining"] == "6000.00"
+    draft = _ok(
+        client.post(
+            f"{A}/ledgers/{w['ledger']}/entries",
+            json={
+                "kind": "debtor_payment",
+                "booking_date": "2025-02-05",
+                "text": "Rücklage Teilzahlung",
+                "lines": [
+                    {"account_id": w["acc"]["001201"], "debit": "4500.00"},
+                    {"account_id": item["account_id"], "credit": "4500.00"},
+                ],
+                "settlements": [{"open_item_id": item["id"], "amount": "4500.00"}],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.post(f"{A}/ledgers/{w['ledger']}/entries/{draft['id']}/post", headers=h))
+    before = _ok(client.get(f"{A}/ledgers/{w['ledger']}/entries", headers=h))
+    st = _ok(
+        client.post(
+            f"{H}/statements",
+            json={"ledger_id": w["ledger"], "year": 2025, "reserve_opening": "10000.00"},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    _ok(
+        client.post(
+            f"{H}/statements/{st}/costs",
+            json={
+                "label": "Versicherung",
+                "amount": "100.00",
+                "allocation_key_id": w["keys"]["MEA"],
+                "basis": "Gemeinschaftsordnung",
+                "account_id": w["acc"]["043000"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    snap = _ok(client.post(f"{H}/statements/{st}/calculate", headers=h))["snapshot"]
+    reserve = snap["reserve"]
+    assert (
+        reserve["contributions_resolved"],
+        reserve["contributions_paid"],
+        reserve["contributions_open"],
+    ) == ("6000.00", "4500.00", "1500.00")
+    assert (reserve["closing"], reserve["bank_balance"], reserve["bank_difference"]) == (
+        "14500.00",
+        "4500.00",
+        "-10000.00",
+    )
+    assert "keine Ausgleichsbuchung" in reserve["bank_difference_note"]
+    assert snap["asset_report"]["legal_minimum"]["reserve_closing"] == "14500.00"
+    unit = snap["units"][0]
+    assert (unit["reserve_due"], unit["reserve_paid"]) == ("6000.00", "4500.00")
+    after = _ok(client.get(f"{A}/ledgers/{w['ledger']}/entries", headers=h))
+    assert len(after) == len(before)  # the difference is explained, never posted away
+    package = _ok(client.get(f"{H}/statements/{st}/package", headers=h))
+    assert package["reserve"]["bank_balance"] == "4500.00"
+
+
+def test_d54_contested_resolution_blocks_posting_and_reverses_nothing(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """D54: a contest recorded on the resolution locks the result posting until the resolution
+    is final; validity state and follow up steps are shown apart; a contest recorded after the
+    posting leaves the posted entries and the statement untouched."""
+    client, gated = clients
+    h = bearer(login(client, world, "m24admin"))
+    h2 = bearer(login(client, world, "m24second"))
+    gh = bearer(login(gated, world, "m24admin"))
+    w = _hoa_ledger(client, h, "744")
+    _, c1 = _owner(client, h, w["property"], "01", "1000", w["keys"]["MEA"], {"hoa_fee": "1200.00"})
+    for code in ("hoa_fee", "statement_result"):
+        _ok(
+            client.put(
+                f"{A}/ledgers/{w['ledger']}/payment-type-accounts",
+                json={"payment_type_code": code, "account_id": w["acc"]["060100"]},
+                headers=h,
+            )
+        )
+    run = _ok(  # one posted month carries the resolved advance and creates the debtor account
+        client.post(
+            f"{A}/receivable-runs",
+            json={"period_month": "2025-01-01", "scope": "contract", "scope_id": c1["id"]},
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.post(f"{A}/receivable-runs/{run['id']}/post", headers=h))
+    sid = _ok(
+        client.post(f"{H}/statements", json={"ledger_id": w["ledger"], "year": 2025}, headers=h),
+        201,
+    )["id"]
+    _ok(
+        client.post(
+            f"{H}/statements/{sid}/costs",
+            json={
+                "label": "Bewirtschaftung",
+                "amount": "1500.00",
+                "allocation_key_id": w["keys"]["MEA"],
+                "basis": "Gemeinschaftsordnung",
+                "account_id": w["acc"]["043000"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    calc = _ok(client.post(f"{H}/statements/{sid}/calculate", headers=h))
+    unit = calc["snapshot"]["units"][0]
+    assert (unit["result"], unit["arrears"]) == ("300.00", "1200.00")  # 1.500,00 - 1.200,00
+    _ok(
+        client.post(
+            f"{H}/statements/{sid}/transition", json={"target": "internally_approved"}, headers=h2
+        )
+    )
+    rid = _ok(
+        client.post(
+            f"{H}/resolutions",
+            json={
+                "legal_entity_id": w["hoa"],
+                "decided_on": "2026-05-10",
+                "subject": "Abrechnung 2025",
+                "wording": "Die Abrechnungsspitzen 2025 werden beschlossen.",
+                "status": "positive",
+                "subject_type": "hoa_statement",
+                "subject_id": sid,
+                "snapshot_hash": calc["snapshot_hash"],
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    _ok(
+        client.post(
+            f"{H}/statements/{sid}/transition",
+            json={"target": "resolved", "resolution_id": rid},
+            headers=h,
+        )
+    )
+    for target in ("issued", "due"):
+        _ok(gated.post(f"{H}/statements/{sid}/transition", json={"target": target}, headers=gh))
+
+    # Contest recorded: nothing is deleted, the posting is locked, state and steps are apart.
+    _ok(client.patch(f"{H}/resolutions/{rid}", json={"status": "contested"}, headers=h))
+    package = _ok(client.get(f"{H}/statements/{sid}/package", headers=h))
+    validity = package["resolution"]["validity"]
+    assert package["resolution"]["status"] == "contested"
+    assert validity["state"].startswith("angefochten")
+    assert validity["posting_allowed"] is False
+    assert "keine automatische Stornierung" in validity["follow_up"]
+    locked = gated.post(f"{H}/statements/{sid}/post", headers=gh)
+    assert locked.status_code == 409
+    assert "D54" in locked.json()["detail"]
+    st = _ok(client.get(f"{H}/statements/{sid}", headers=h))
+    assert (st["status"], st["resolution_id"], st["posted_entry_ids"]) == ("due", rid, [])
+    collection = _ok(
+        client.get(f"{H}/resolutions", params={"legal_entity_id": w["hoa"]}, headers=h)
+    )
+    assert [(r["id"], r["status"]) for r in collection] == [(rid, "contested")]
+
+    # Final resolution: posting possible; a later contest reverses nothing automatically.
+    _ok(client.patch(f"{H}/resolutions/{rid}", json={"status": "final"}, headers=h))
+    posted = _ok(gated.post(f"{H}/statements/{sid}/post", headers=gh))
+    assert posted["status"] == "posted"
+    assert len(posted["posted_entry_ids"]) == 1
+    _ok(client.patch(f"{H}/resolutions/{rid}", json={"status": "contested"}, headers=h))
+    again = _ok(gated.post(f"{H}/statements/{sid}/post", headers=gh))
+    assert (again["status"], again["posted_entry_ids"]) == ("posted", posted["posted_entry_ids"])
+    entries = _ok(client.get(f"{A}/ledgers/{w['ledger']}/entries", headers=h))
+    result_entries = [e for e in entries if e["id"] in posted["posted_entry_ids"]]
+    assert [e["status"] for e in result_entries] == ["posted"]
+    assert len(entries) == len(
+        _ok(client.get(f"{A}/ledgers/{w['ledger']}/entries", headers=h))
+    )  # no reversal entry appeared
+    package = _ok(client.get(f"{H}/statements/{sid}/package", headers=h))
+    assert package["resolution"]["validity"]["posting_allowed"] is False
+    assert package["statement"]["status"] == "posted"

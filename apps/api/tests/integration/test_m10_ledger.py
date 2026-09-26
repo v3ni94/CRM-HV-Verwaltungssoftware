@@ -514,3 +514,106 @@ def test_gapless_numbers_under_concurrency(
 
     numbers = asyncio.run(run())
     assert sorted(numbers) == list(range(1, 11))
+
+
+def test_d49_historical_open_items_after_later_payment_and_reversal(
+    client: TestClient, world: World
+) -> None:
+    """D49 (B07, rule 0.1.7): the open item stock as of a historical cut off stays the same
+    after a payment and a reversal booked after the cut off; a reversal booked before the cut
+    off changes the stock, and only as a counter entry, never by deleting the original.
+    Expected values: receivable 1.000,00 on 01.03.; as of 31.03. = 1.000,00 before and after
+    the payment of 600,00 on 10.04. and its reversal on 15.04.; as of 30.04. = 400,00 after
+    the payment and 1.000,00 after its reversal; reversal of the receivable on 20.03. gives
+    0,00 as of 31.03. and still 1.000,00 as of 19.03."""
+    h = bearer(login(client, world, "m10admin"))
+    ledger, acc, debtor = _hoa_ledger(client, h, "705")
+
+    def stock(as_of: str) -> list[tuple[str, Decimal]]:
+        rows = _ok(
+            client.get(f"{A}/ledgers/{ledger}/open-items", params={"as_of": as_of}, headers=h)
+        )
+        return [(r["id"], Decimal(r["remaining"])) for r in rows]
+
+    receivable = _book(
+        client,
+        h,
+        ledger,
+        _entry(
+            "receivable",
+            "2026-03-01",
+            [_line(debtor, "1000.00"), _line(acc["060100"], "0", "1000.00")],
+            due_date="2026-03-03",
+        ),
+    )
+    snapshot = stock("2026-03-31")
+    assert [amount for _, amount in snapshot] == [Decimal("1000.00")]
+    oi = snapshot[0][0]
+
+    # Payment with booking date after the cut off: the historical stock does not move.
+    payment = _book(
+        client,
+        h,
+        ledger,
+        _entry(
+            "debtor_payment",
+            "2026-04-10",
+            [_line(acc["001200"], "600.00"), _line(debtor, "0", "600.00")],
+            settlements=[{"open_item_id": oi, "amount": "600.00"}],
+        ),
+    )
+    assert stock("2026-03-31") == snapshot
+    assert stock("2026-04-30") == [(oi, Decimal("400.00"))]
+
+    # Reversal of the payment with booking date after the cut off: still the same stock.
+    rev_payment = _ok(
+        client.post(
+            f"{A}/ledgers/{ledger}/entries/{payment['id']}/reverse",
+            json={"reason": "Rücklastschrift", "booking_date": "2026-04-15"},
+            headers=h,
+        ),
+        201,
+    )
+    assert rev_payment["kind"] == "reversal"
+    assert stock("2026-03-31") == snapshot
+    assert stock("2026-04-14") == [(oi, Decimal("400.00"))]
+    assert stock("2026-04-30") == [(oi, Decimal("1000.00"))]
+
+    assert (
+        client.post(
+            f"{A}/ledgers/{ledger}/entries/{receivable['id']}/reverse",
+            json={"reason": "vor der Buchung", "booking_date": "2026-02-28"},
+            headers=h,
+        ).status_code
+        == 422
+    )  # a reversal dated before the original is rejected (rule 0.1.7)
+
+    # Reversal of the receivable with booking date before the cut off (after the original):
+    # the stock as of 31.03. changes, as of 19.03. it does not. The original stays posted.
+    rev_receivable = _ok(
+        client.post(
+            f"{A}/ledgers/{ledger}/entries/{receivable['id']}/reverse",
+            json={"reason": "Sollstellung falsch", "booking_date": "2026-03-20"},
+            headers=h,
+        ),
+        201,
+    )
+    assert rev_receivable["reverses_id"] == receivable["id"]
+    assert stock("2026-03-31") == []
+    assert stock("2026-03-19") == snapshot
+    assert stock("2026-04-30") == []
+    original = _ok(client.get(f"{A}/ledgers/{ledger}/entries/{receivable['id']}", headers=h))
+    assert original["status"] == "posted"
+    assert original["reversed_by_id"] == rev_receivable["id"]
+    posted = _ok(
+        client.get(
+            f"{A}/ledgers/{ledger}/entries",
+            params={"status": "posted", "start": "2026-03-01", "end": "2026-04-30"},
+            headers=h,
+        )
+    )
+    assert len(posted) == 4  # receivable, payment and two reversals; nothing deleted
+    assert _ok(client.get(f"{A}/ledgers/{ledger}/checks", headers=h)) == {
+        "ok": True,
+        "findings": [],
+    }

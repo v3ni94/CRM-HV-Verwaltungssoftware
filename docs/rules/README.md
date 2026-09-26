@@ -28,9 +28,14 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | ID | Title | Master prompt section | Status |
 | --- | --- | --- | --- |
 | [M2-07](M2-07.md) | Löschen nur Administrator | M2 | implemented, not accepted |
+| [M13-04](M13-04.md) | XRechnung für Verwalterhonorar-Rechnungen nur aus eingetragenen Mandantendaten | M13, 13.5 | implemented, not accepted |
 | [M16-01](M16-01.md) | Mahngebühr nur mit hinterlegtem Betrag, Rechnung an Gemeinschaft nur mit vertraglicher Grundlage | M16 | implemented, not accepted |
 | [M16-02](M16-02.md) | Mahnstufen je Objekt erben vom Mandanten, Mahnschreiben nur als Entwurf | M16 | implemented, not accepted |
+| [M15-02](M15-02-pain008.md) | SEPA-Basislastschrift pain.008: Mandatsprüfung, Sequenz, Vier-Augen, Datei nur hinter G2 | M15, 7.5 SEPA | implemented, not accepted |
+| [M18-02](M18-02-pruefexport.md) | Prüfexport: maschinell auswertbar im Umfang von Abschnitt 7.7, kein Datenträgerüberlassungsformat | M18, 7.7, D55 | implemented, not accepted |
 | [M18-03](M18-03.md) | DATEV-Buchungsstapel: EXTF-Header nur mit Beraterdaten, keine erfundene Kontenzuordnung | M18 | implemented, not accepted |
+| [M18-04](M18-04-datev-kontenzuordnung.md) | DATEV-Kontenzuordnung je Mandant: Betreiberpflege ohne vorbelegten Kontenrahmen, Export nur mit vollständiger Zuordnung (MHVP-BILL-0008) | M18, A36 | implemented, not accepted |
+| [M18-05](M18-05-steuerberaterzugang.md) | Steuerberaterzugang: Zugriffsbereich je Rechtsträger (`membership.legal_entity_ids`), leerer Bereich bedeutet kein Zugriff, fremde Rechtsträger 404 | M18, M18-02, A37 | implemented, not accepted |
 | [M26-RL](M26-rent-law.md) | Mieterhöhung Regelwerk | 8, M26 | implemented, not accepted |
 | [M28-01](M28-01.md) | Makler: Anzeigen, keine FLOWFACT-Anbindung | M28 | implemented, not accepted |
 | [M26-02](M26-02.md) | OpenImmo-Export: Format-Mapping, nur lesend, kein Portal-Upload | M26 | implemented, not accepted |
@@ -48,6 +53,8 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M35-02](M35-02.md) | objektakte-Übernahme: Klassifikation Stufe 1 (Regeln) | M35 | implemented, not accepted |
 | [M35-03](M35-03.md) | objektakte-Übernahme Stufe 4: Berechtigungsschlüssel `objektakte:*`, Benutzerabbildung nur als Vorschlag, KI-Protokoll nur lesend | M35 | implemented, not accepted |
 | [M21-05](M21-05.md) | WhatsApp nur mit freigegebenen Vorlagen und Einwilligung | M21 | implemented, not accepted |
+| [M21-06](M21-06.md) | Zugriffsmatrix auf jedem Pfad: GdWE-Einsicht, fremde Akten, KI-Kontext, freigegebene Fassung (D29 bis D31) | M21, M6, M7, 6.9.6, 14, E06 | implemented, not accepted |
+| [M9-02](M9-02-automation.md) | Regel-Engine Stufe 1: nur Ticket, Benachrichtigung und Ticketfeld, Tiefe 1, Testlauf ohne Wirkung | M9, 15.2 | implemented, not accepted |
 | [M7-06](M7-06.md) | Tabellenimport deterministisch, KI nur für Spaltenzuordnung und Restzeilen | M7 | implemented, not accepted |
 | [B01](B01.md) | Richtiger Rechtsträger | 7.1 | implemented, not accepted |
 | [B02](B02.md) | Entwurf und Buchung | 7.1 | implemented, not accepted |
@@ -58,22 +65,22 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [B07](B07.md) | Stichtagswahrheit | 7.1 | implemented, not accepted |
 | [B08](B08.md) | Keine doppelte wirtschaftliche Wirkung | 7.1 | implemented, not accepted |
 | [B09](B09.md) | Abstimmung | 7.1 | implemented, not accepted |
-| A01 | Ergebnisstand | 7.6 | specified, not implemented |
-| A02 | Betriebskosten Miete | 7.6 | implemented, not accepted (M17, `test_m17_operating_costs.py`) |
-| A03 | Schlüssel | 7.6 | implemented, not accepted (M17, time weighted keys) |
-| A04 | Vorauszahlungen und Fristen | 7.6 | implemented, not accepted (M17, advances and deadline orientation) |
+| A01 | Ergebnisstand | 7.6 | implemented, not accepted (M17, rule version by period start in `statement_snapshot.rule_version`, D28 tested; document version and difference report open) |
+| A02 | Betriebskosten Miete | 7.6 | implemented, not accepted (M17, `test_m17_operating_costs.py`; D22: account allocation category and posted split are checked, cost type schema stays M17-01) |
+| A03 | Schlüssel | 7.6 | implemented, not accepted (M17, time weighted keys; D21: SEV refuses template keys, key source in position basis, key facts in the snapshot) |
+| A04 | Vorauszahlungen und Fristen | 7.6 | implemented, not accepted (M17, advances and deadline orientation; D23: access day checked at issue, never the calculation day) |
 | A05 | Nutzerwechsel, Leerstand, Heizkosten | 7.6 | implemented, not accepted (M17, vacancy share to owner, heating external only) |
-| A06 | Eigentümerabrechnung Miete/SEV | 7.6 | specified, not implemented |
+| [A06](A06-owner-statement.md) | Eigentümerabrechnung Miete/SEV | 7.6 | implemented, not accepted (M17 task A25, `mhvp.billing.owner_statement`, `test_m17_owner_statement.py`; PDF behind G3) |
 | A07 | Bedienung | 7.6 | specified, not implemented |
 | W01 | Eigene Gemeinschaft | 7.8 | implemented (M24), ledger check |
 | W02 | Wirtschaftsplan | 7.8 | implemented (M24), behind G4 |
-| W03 | Kostenverteilung | 7.8 | implemented, not accepted (M24, `mhvp.hoa.calc.unit_weights`) |
+| [W03](W03-cost-allocation.md) | Kostenverteilung | 7.8 | implemented, not accepted (M24, `mhvp.hoa.calc.unit_weights`; D18 partial scope check in `mhvp.hoa.package`) |
 | W04 | Jahresabrechnung als nachvollziehbare Überleitung | 7.8 | specified, not implemented |
 | W05 | Abrechnungsspitze und Rückstände | 7.8 | implemented (M24), [W05](W05-hoa-result.md) |
-| W06 | Beschluss und Buchung | 7.8 | implemented (M24), [W06](W06-resolution.md) |
+| W06 | Beschluss und Buchung | 7.8 | implemented (M24), [W06](W06-resolution.md); D54 contested resolution locks the posting, reverses nothing |
 | W07 | Eigentümerwechsel | 7.8 | open, M24-01 |
-| W08 | Erhaltungsrücklagen | 7.8 | implemented (M24), D03 tested |
-| W09 | Sonderumlagen und Maßnahmen | 7.8 | implemented, not accepted (special levy and amendments per W09-01, `test_w09_special_levy.py`) |
+| W08 | Erhaltungsrücklagen | 7.8 | implemented (M24), D03 and D19 tested (bank balance shown apart, no settlement entry) |
+| W09 | Sonderumlagen und Maßnahmen | 7.8 | implemented, not accepted (special levy and amendments per W09-01, D20 partial refund, `test_w09_special_levy.py`) |
 | W10 | Darlehen, Versicherungen, größere Maßnahmen | 7.8 | specified, not implemented |
 | W11 | Vermögensbericht | 7.8 | partly implemented (M24 asset report); structure open, M24-02 |
 | W12 | Abrechnungspaket | 7.8 | implemented, not accepted (package and blocking checks, `test_w09_special_levy.py::test_w12_package_blocks_release`) |
@@ -103,3 +110,5 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | S04 | Differenzierte Fristen | 7.11 | specified, not implemented |
 | S05 | WEG-Dauerunterlagen, Sperren und Löschung | 7.11 | specified, not implemented |
 | S06 | Datenschutz und Auskunft | 7.11 | specified, not implemented |
+| [A07-tenant-letters](A07-tenant-letters.md) | Bedienung: Anschreiben Guthaben/Nachzahlung und Vorauszahlungsvorschlag je Mieter | 7.6 A07 | implemented, not accepted |
+| [M9-06](M9-06-tagesjobs.md) | Tagesjobs Tagesübersicht und Fristenliste: Orientierung, Vorfrist aus Einstellungen, keine Rechtsfristen | M9, 15.1 | implemented, not accepted |

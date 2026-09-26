@@ -5,9 +5,14 @@ Absenders (Name, Anschrift, Telefon, E-Mail) und legt dazu einen ``AiProposal`` 
 
 Ablauf und Grenzen (rule 0.1.6, KI liefert nur Vorschläge):
 
-1. Deterministische Vorstufe (``detect``): Schlüsselwörter, das Muster "von X in Y", PLZ/Ort,
-   Straße/Hausnummer, E-Mail- und Telefonwerte aus dem Text, Absenderabgleich über den beim
-   Mail-Eingang gesetzten Kontakt (``Message.contact_id``), sonst Namenssuche im Mandanten.
+1. Deterministische Vorstufe (``detect``): Schlüsselwörter je Kategorie, die Muster "von X in
+   Y", "heiße jetzt X", "neuer Name lautet X", "trage wieder meinen Geburtsnamen X",
+   Umfirmierung ("firmiert unter X GmbH"), PLZ/Ort in beiden Reihenfolgen, Straße/Hausnummer
+   (Suffixe, Präfixe wie "Am", Zusätze wie "7a"), ein Datum "ab dem ..." zur Anschrift,
+   E-Mail- und Telefonwerte im Umfeld der Schlüsselwörter, die Anrede aus der eigenen Signatur
+   des Absenders, Absenderabgleich über den beim Mail-Eingang gesetzten Kontakt
+   (``Message.contact_id``), sonst Namenssuche im Mandanten. Der Korpus in
+   ``tests/unit/test_ticket_proposal_corpus.py`` sichert die Trefferquote (M19-05).
 2. Verfeinerung über den vorhandenen KI-Provider (``AiTask.CONTACT_MASTER_DATA_CHANGE``, gleiche
    Freigabe-, Budget- und Auditlogik wie alle Läufe). E-Mail-Adressen, Telefonnummern und
    IBANs verlassen die Plattform nur maskiert (``mhvp.objektakte.masking.mask_identifiers``);
@@ -19,7 +24,11 @@ Ablauf und Grenzen (rule 0.1.6, KI liefert nur Vorschläge):
    Annahme und Korrektur übernehmen die Felder über denselben Weg wie ``PUT /contacts/{id}``
    (Änderungshistorie über ``contact.updated`` mit Diff, Version, Audit). Jede Entscheidung
    schreibt ein ``AiExample`` des Mandanten (Few-Shot-Kontext künftiger Läufe, 9.1).
-5. Der vorbereitete Antwortentwurf wird nur auf Anforderung als ``Message``-Entwurf am Ticket
+5. Der vorbereitete Antwortentwurf (``reply_draft``) bestätigt je Änderungsart: Name und
+   Firma ("Stammdaten soeben korrigiert"), Anschrift mit Datum (aus der Mail, sonst Tag der
+   Korrektur), E-Mail und Telefon mit dem neuen Wert. Die Anrede nutzt das Geschlecht nur, wenn
+   es aus dem Kontakt oder der Signatur der Mail bekannt ist ("Hallo Frau Müller"), sonst
+   "Guten Tag Vorname Nachname". Er wird nur auf Anforderung als ``Message``-Entwurf am Ticket
    angelegt und läuft über den bestehenden Antwortweg (Entwurf, Einreichen, Vier-Augen-Freigabe,
    ``mhvp.communication.routers``); nichts wird hier versendet.
 """
@@ -30,7 +39,7 @@ import logging
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -85,56 +94,288 @@ KEYWORDS: dict[str, tuple[str, ...]] = {
         "mein name hat",
         "neuer name",
         "neuen namen",
+        "neuer nachname",
+        "neuen nachnamen",
         "heirat",
         "hochzeit",
         "geheiratet",
+        "scheidung",
+        "geschieden",
         "nachname",
+        "familienname",
+        "geburtsname",
+        "mädchenname",
+        "name lautet",
         "heiße jetzt",
         "heisse jetzt",
+        "heiße nun",
+        "heisse nun",
+        "heiße ich",
+        "heisse ich",
+        "heiße ab",
+        "heisse ab",
+        "heiße seit",
+        "heisse seit",
+        "namen geändert",
+        "name geändert",
+    ),
+    "company": (
+        "umfirmiert",
+        "umfirmierung",
+        "firmiert",
+        "firmierung",
+        "firmenname",
+        "firma heißt",
+        "firma heisst",
+        "gesellschaft heißt",
+        "unternehmen heißt",
     ),
     "address": (
         "umgezogen",
         "umzug",
+        "umziehen",
+        "ziehe um",
+        "ziehen um",
+        "ziehe ich um",
+        "ziehen wir um",
         "neue adresse",
         "neue anschrift",
+        "neue wohnung",
+        "neue wohnanschrift",
+        "neue postanschrift",
         "adressänderung",
+        "anschriftenänderung",
         "adresse hat sich",
         "anschrift hat sich",
+        "adresse lautet",
+        "anschrift lautet",
+        "adresse geändert",
+        "anschrift geändert",
         "wohne jetzt",
+        "wohne ab",
+        "wohne seit",
+        "wohne ich",
+        "wohnen jetzt",
+        "wohnen ab",
+        "wohnen seit",
+        "wohnen wir",
+        "wohnhaft",
     ),
     "phone": (
         "neue telefonnummer",
         "neue rufnummer",
         "neue handynummer",
         "neue mobilnummer",
+        "neue mobilfunknummer",
+        "neue festnetznummer",
+        "neue nummer",
         "telefonnummer hat sich",
         "rufnummer hat sich",
-        "erreichbar unter",
+        "handynummer hat sich",
+        "mobilnummer hat sich",
+        "nummer hat sich",
+        "telefonnummer geändert",
+        "rufnummer geändert",
+        "handynummer geändert",
+        "telefonnummer lautet",
+        "rufnummer lautet",
+        "handynummer lautet",
+        "telefonisch jetzt",
+        "telefonisch ab sofort",
+        "telefonisch nur noch",
+        "ab sofort erreichbar",
+        "jetzt erreichbar",
+        "nun erreichbar",
+        "künftig erreichbar",
+        "zukünftig erreichbar",
+        "nur noch erreichbar",
+        "ab sofort unter",
+        "künftig unter",
+        "zukünftig unter",
+        "nur noch unter",
     ),
     "email": (
         "neue e-mail",
         "neue email",
         "neue mailadresse",
+        "neue mail-adresse",
+        "neue e-mailadresse",
         "e-mail-adresse hat sich",
         "e-mail hat sich",
         "emailadresse hat sich",
+        "mailadresse hat sich",
+        "e-mail-adresse lautet",
+        "e-mail-adresse geändert",
+        "mailadresse geändert",
+        "e-mail ab sofort",
+        "e-mails ab sofort",
+        "e-mails bitte",
+        "e-mails künftig",
+        "e-mails zukünftig",
+        "mails bitte",
+        "mails künftig",
+        "per e-mail bitte",
+        "ab sofort unter",
+        "künftig unter",
+        "zukünftig unter",
+        "nur noch unter",
     ),
     "bank": ("bankverbindung", "iban", "kontonummer", "konto hat sich", "neues konto"),
 }
+# Keywords that name the changed value itself; a value may then stand anywhere in the text.
+# The generic ones ("ab sofort unter") only count when the value follows within a short range.
+_SPECIFIC_MARKERS = {"phone": ("nummer", "telefon"), "email": ("mail",)}
+_GENERIC_RANGE = 120
 
-_NAME_WORD = r"[A-ZÄÖÜ][\wäöüß]+(?:-[A-ZÄÖÜ][\wäöüß]+)?"
-_NAME_SEQ = rf"{_NAME_WORD}(?:\s+{_NAME_WORD}){{0,2}}"
+# Words that end a captured name, street or city (line starts, greetings, connectors).
+_STOP_WORDS: frozenset[str] = frozenset(
+    {
+        "ab",
+        "alle",
+        "als",
+        "auch",
+        "beste",
+        "bitte",
+        "danke",
+        "das",
+        "der",
+        "die",
+        "freundliche",
+        "geaendert",
+        "geändert",
+        "gewechselt",
+        "gruss",
+        "gruß",
+        "grüsse",
+        "grüße",
+        "herzliche",
+        "ich",
+        "ihre",
+        "liebe",
+        "mein",
+        "meine",
+        "mit",
+        "neue",
+        "seit",
+        "sie",
+        "umbenannt",
+        "und",
+        "unsere",
+        "viele",
+        "vielen",
+        "wir",
+        "zu",
+    }
+)
+_HONORIFICS = ("frau", "herr", "herrn", "dr.", "prof.", "dr", "prof")
+_STREET_LEAD_STOP = frozenset(
+    {
+        "anschrift",
+        "adresse",
+        "wohnanschrift",
+        "postanschrift",
+        "wohnung",
+        "neue",
+        "meine",
+        "unsere",
+        "lautet",
+        "jetzt",
+        "nun",
+        "ab",
+        "in",
+        "der",
+        "die",
+        "nr",
+        "nr.",
+    }
+)
+
+_NAME_WORD = r"[A-ZÄÖÜ][\wäöüß]+(?:-[A-ZÄÖÜ][\wäöüß]+)*"
+_NAME_SEQ = rf"{_NAME_WORD}(?:[ \t]+{_NAME_WORD}){{0,3}}"
 _VON_IN = re.compile(rf"\bvon\s+({_NAME_SEQ})\s+(?:in|zu|auf)\s+({_NAME_SEQ})\b")
+_QUAL = r"(?:(?:jetzt|nun|wieder|künftig|zukünftig|ab[ \t]+sofort|seit[ \t]+\S+)[ \t]+){0,2}"
+_NEW_NAME = re.compile(
+    rf"(?:hei(?:ß|ss)en?[ \t]+(?:ich[ \t]+|wir[ \t]+)?{_QUAL}:?[ \t]*"
+    rf"|(?:neuer?|mein[ \t]+neuer|unser[ \t]+neuer)[ \t]+(?:name|nachname|familienname)"
+    rf"(?:[ \t]+(?:lautet|ist))?[ \t]*:?[ \t]*"
+    rf"|(?:name|nachname|familienname)[ \t]+(?:lautet|ist)[ \t]+{_QUAL}:?[ \t]*"
+    rf"|(?:trage|führe|führen|tragen)[ \t]+(?:ich[ \t]+|wir[ \t]+)?{_QUAL}"
+    rf"(?:meinen[ \t]+|unseren[ \t]+|den[ \t]+)?(?:geburtsnamen|mädchennamen|nachnamen|namen)[ \t]+"
+    rf"|(?:geburtsnamen?|mädchennamen?)[ \t]+"
+    rf")({_NAME_SEQ})",
+    re.IGNORECASE,
+)
+_LEGAL_FORM = (
+    r"(?:GmbH(?:[ \t]*&[ \t]*Co\.?[ \t]*KG)?|AG(?:[ \t]*&[ \t]*Co\.?[ \t]*KG)?|KG|OHG|GbR|SE"
+    r"|e\.[ \t]?K\.|e\.[ \t]?V\.|UG(?:[ \t]*\(haftungsbeschränkt\))?|mbH|Ltd\.?|Inc\.?)"
+)
+_COMPANY_WORD = r"(?:[A-ZÄÖÜ][\wäöüß.\-]*|&|und|\+)"
+_COMPANY = rf"((?:{_COMPANY_WORD}[ \t]+){{1,5}}{_LEGAL_FORM})(?![\wäöüß])"
+_COMPANY_VON_IN = re.compile(rf"\bvon[ \t]+{_COMPANY}[ \t]+(?:in|zu|auf)[ \t]+{_COMPANY}")
+_COMPANY_NEW = re.compile(
+    rf"(?:firmier(?:t|en)[ \t]+{_QUAL}(?:unter|als)[ \t]+"
+    rf"|(?:firma|gesellschaft|unternehmen|wir)[ \t]+hei(?:ß|ss)(?:t|en)[ \t]+{_QUAL}:?[ \t]*"
+    rf"|(?:neuer[ \t]+firmenname|neue[ \t]+firmierung|firmenname|firmierung)"
+    rf"(?:[ \t]+(?:lautet|ist))?(?:[ \t]+(?:jetzt|nun|ab[ \t]+sofort))?[ \t]*:?[ \t]*"
+    rf"){_COMPANY}",
+    re.IGNORECASE,
+)
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}\b")
 _PHONE = re.compile(r"(?<![\w])(?:\+49|0049|0)[ /()\-]?(?:\d[ /()\-]?){5,13}\d(?![\w])")
-_POSTAL_CITY = re.compile(
-    r"\b(\d{5})\s+([A-ZÄÖÜ][\wäöüß\-]+(?:\s+(?:am|an|im|bei)\s+\w+|\s+[A-ZÄÖÜ][\wäöüß\-]+)?)"
+_CITY_WORD = r"[A-ZÄÖÜ][\wäöüß\-]+"
+_CITY = (
+    rf"{_CITY_WORD}(?:[ \t]+(?:am|an|im|in|bei|an[ \t]+der|in[ \t]+der)[ \t]+{_CITY_WORD}"
+    rf"|[ \t]+{_CITY_WORD}){{0,2}}"
+)
+_POSTAL_CITY = re.compile(rf"\b(\d{{5}})[ \t]+({_CITY})")
+_CITY_POSTAL = re.compile(rf"\b({_CITY}),?[ \t]+(\d{{5}})\b")
+_STREET_SUFFIX = (
+    r"(?i:straße|strasse|str\.|str\b|weg|platz|allee|gasse|ring|damm|ufer|chaussee|steig|stieg"
+    r"|hof|markt|promenade|wall|graben|berg|feld|winkel|pfad|zeile|park|kamp|busch|garten"
+    r"|anger|höhe|hoehe|tal|brücke|bruecke|redder|twiete|stegen)"
+)
+_STREET_WORD = r"[A-ZÄÖÜ][\wäöüß\-]*"
+_STREET_PREFIX = (
+    r"(?:Am|An[ \t]+der|An[ \t]+den|Im|In[ \t]+der|In[ \t]+den|Auf[ \t]+dem|Auf[ \t]+der|Zum|Zur"
+    r"|Unter[ \t]+den|Hinter[ \t]+dem|Vor[ \t]+dem|Bei[ \t]+der|Alte|Alter|Neue|Neuer|Obere"
+    r"|Untere|Kleine|Große|Grosse)"
 )
 _STREET = re.compile(
-    r"\b([A-ZÄÖÜ][\wäöüß\-]*(?:\s+[A-ZÄÖÜ][\wäöüß\-]*)?"
-    r"(?:straße|strasse|str\.|weg|platz|allee|gasse|ring|damm|ufer|chaussee))\s+(\d+\s?[a-zA-Z]?)\b"
+    rf"\b((?:{_STREET_WORD}[ \t]+){{0,2}}{_STREET_WORD}{_STREET_SUFFIX}"
+    rf"|{_STREET_PREFIX}[ \t]+{_STREET_WORD}(?:[ \t]+{_STREET_WORD})?"
+    rf"|{_STREET_WORD}(?:[ \t]+{_STREET_WORD})?[ \t]+{_STREET_SUFFIX})"
+    rf"[ \t]+(?:Nr\.?[ \t]*)?(\d{{1,4}}[ \t]?[a-zA-Z]?(?:[ \t]?[-/][ \t]?\d{{1,4}}[a-zA-Z]?)?)"
+    rf"(?!\d|\.\d)"
+)
+_HOUSE_ADDITION = re.compile(r"^(\d{1,4})[ \t]([a-zA-Z])$")
+_MONTHS = {
+    "januar": 1,
+    "februar": 2,
+    "märz": 3,
+    "maerz": 3,
+    "april": 4,
+    "mai": 5,
+    "juni": 6,
+    "juli": 7,
+    "august": 8,
+    "september": 9,
+    "oktober": 10,
+    "november": 11,
+    "dezember": 12,
+}
+_ADDRESS_DATE = re.compile(
+    r"\b(?:ab|zum|seit)[ \t]+(?:dem[ \t]+|den[ \t]+)?"
+    r"(?:(\d{1,2})\.[ \t]?(\d{1,2})\.[ \t]?(\d{4}|\d{2})"
+    r"|(\d{1,2})\.[ \t]?(" + "|".join(_MONTHS) + r")[ \t]+(\d{4}))\b",
+    re.IGNORECASE,
 )
 _TRAILING_STOP = re.compile(r"\s+(?:geändert|geaendert|umbenannt|gewechselt)$", re.IGNORECASE)
+_SIGNATURE_SALUTATION = re.compile(
+    rf"\b(Frau|Herr|Herrn)[ \t]+(?:Dr\.[ \t]+|Prof\.[ \t]+)?({_NAME_SEQ})"
+)
+_SIGNATURE_LINE = re.compile(
+    rf"^[ \t]*(Ihre|Ihr|Eure|Euer)[ \t]+({_NAME_SEQ})[ \t]*$", re.MULTILINE
+)
 
 
 # Deterministic stage ------------------------------------------------------------------------
@@ -147,6 +388,12 @@ class Detection:
     name_new: str | None = None
     changes: list[dict[str, Any]] = field(default_factory=list)
     bank_change_mentioned: bool = False
+    company_old: str | None = None
+    company_new: str | None = None
+    # Date named for the new address ("ab dem 01.10.2026"), ISO 8601; only used in the reply.
+    address_valid_from: str | None = None
+    # "Frau" or "Herr" when the sender signs with a salutation ("Frau Isabel Roth", "Ihr Max").
+    salutation: str | None = None
 
     @property
     def hit(self) -> bool:
@@ -164,6 +411,154 @@ def _change(field_name: str, old: str | None, new: str | None, confidence: float
     return {"field": field_name, "old": old, "new": new, "confidence": confidence}
 
 
+def _trim_words(value: str, *, leading: frozenset[str] = frozenset()) -> str:
+    """Drops honorifics and leading marker words, then everything from the first stop word."""
+    words = value.replace("\n", " ").split()
+    while words and (words[0].lower() in _HONORIFICS or words[0].lower() in leading):
+        words.pop(0)
+    kept: list[str] = []
+    for word in words:
+        if word.lower() in _STOP_WORDS:
+            break
+        kept.append(word)
+    return " ".join(kept)
+
+
+def _clean_name(value: str) -> str:
+    return _trim_words(_TRAILING_STOP.sub("", value).strip(" ,.;:"))
+
+
+def _clean_city(value: str) -> str | None:
+    city = _trim_words(value.strip(" ,.;:"))
+    if not city or city.lower().endswith(("nummer", "nr", "nr.")):
+        return None
+    return city
+
+
+def _keyword_positions(lower: str, category: str) -> list[tuple[int, bool]]:
+    """Start offsets of the category's keywords, flagged whether the keyword is specific."""
+    markers = _SPECIFIC_MARKERS.get(category, ())
+    found: list[tuple[int, bool]] = []
+    for word in KEYWORDS[category]:
+        start = lower.find(word)
+        while start >= 0:
+            found.append((start, any(m in word for m in markers)))
+            start = lower.find(word, start + 1)
+    return sorted(found)
+
+
+def _value_after(
+    text: str, lower: str, category: str, pattern: re.Pattern[str], skip: str | None = None
+) -> str | None:
+    """First value of ``pattern`` that follows a keyword of the category: directly after a
+    generic keyword (short range) or anywhere after a specific one; as a fallback the first
+    value in the text when a specific keyword exists at all."""
+    values = [(m.start(), m.group(0).strip()) for m in pattern.finditer(text)]
+    values = [(pos, v) for pos, v in values if skip is None or v.lower() != skip]
+    if not values:
+        return None
+    positions = _keyword_positions(lower, category)
+    for start, specific in positions:
+        for pos, value in values:
+            if pos >= start and (specific or pos - start <= _GENERIC_RANGE):
+                return value
+    if any(specific for _, specific in positions):
+        return values[0][1]
+    return None
+
+
+def _detect_company(text: str, result: Detection) -> None:
+    match = _COMPANY_VON_IN.search(text)
+    if match:
+        result.company_old = match.group(1).strip()
+        result.company_new = match.group(2).strip()
+    else:
+        found = _COMPANY_NEW.search(text)
+        if found:
+            result.company_new = found.group(1).strip()
+    if result.company_new and result.company_new != result.company_old:
+        result.changes.append(_change("company_name", result.company_old, result.company_new, 0.7))
+
+
+def _detect_person_name(text: str, result: Detection) -> None:
+    match = _VON_IN.search(text)
+    if match:
+        old_full, new_full = _clean_name(match.group(1)), _clean_name(match.group(2))
+        if old_full and new_full:
+            result.name_old, result.name_new = old_full, new_full
+            old_first, old_last = _split_name(old_full)
+            new_first, new_last = _split_name(new_full)
+            if old_last != new_last:
+                result.changes.append(_change("last_name", old_last, new_last, 0.8))
+            if new_first and old_first and old_first != new_first:
+                result.changes.append(_change("first_name", old_first, new_first, 0.6))
+            return
+    found = _NEW_NAME.search(text)
+    if found:
+        new_full = _clean_name(found.group(1))
+        if new_full:
+            result.name_new = new_full
+            _, new_last = _split_name(new_full)
+            result.changes.append(_change("last_name", None, new_last, 0.7))
+
+
+def _iso_date(match: re.Match[str]) -> str | None:
+    try:
+        if match.group(1):
+            day, month, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            if year < 100:
+                year += 2000
+        else:
+            day, year = int(match.group(4)), int(match.group(6))
+            month = _MONTHS[match.group(5).lower()]
+        return date(year, month, day).isoformat()
+    except (ValueError, KeyError):
+        return None
+
+
+def _detect_address(text: str, result: Detection) -> None:
+    street = _STREET.search(text)
+    if street:
+        name = _trim_words(street.group(1), leading=_STREET_LEAD_STOP)
+        number = _HOUSE_ADDITION.sub(r"\1\2", street.group(2).strip())
+        if name:
+            result.changes.append(_change("street", None, name, 0.6))
+            result.changes.append(_change("house_number", None, number, 0.6))
+    postal_code = city = None
+    postal = _POSTAL_CITY.search(text)
+    if postal:
+        postal_code, city = postal.group(1), _clean_city(postal.group(2))
+    if city is None:
+        reverse = _CITY_POSTAL.search(text)
+        if reverse:
+            candidate = _clean_city(reverse.group(1))
+            if candidate:
+                postal_code, city = reverse.group(2), candidate
+    if postal_code and city:
+        result.changes.append(_change("postal_code", None, postal_code, 0.7))
+        result.changes.append(_change("city", None, city, 0.6))
+    when = _ADDRESS_DATE.search(text)
+    if when:
+        result.address_valid_from = _iso_date(when)
+
+
+def _detect_salutation(text: str, result: Detection) -> None:
+    """Gender only when the sender signs with it; "Sehr geehrte Frau X" addresses the
+    recipient and is ignored unless X is the sender's own (old or new) surname."""
+    surnames = {_split_name(n)[1].lower() for n in (result.name_new, result.name_old) if n}
+    for match in _SIGNATURE_SALUTATION.finditer(text):
+        name = _clean_name(match.group(2))
+        own = bool(name) and (not surnames or _split_name(name)[1].lower() in surnames)
+        if own and (surnames or text.rstrip().endswith(match.group(0).strip())):
+            result.salutation = "Frau" if match.group(1) == "Frau" else "Herr"
+            return
+    line = _SIGNATURE_LINE.search(text)
+    if line:
+        name = _clean_name(line.group(2))
+        if name and (not surnames or _split_name(name)[1].lower() in surnames):
+            result.salutation = "Frau" if line.group(1) in ("Ihre", "Eure") else "Herr"
+
+
 def detect(subject: str | None, body: str | None, sender: str | None = None) -> Detection:
     """Keyword and pattern stage; never raises. Only the sender's own data is targeted; values
     for phone and e-mail come from here (the provider only sees placeholders)."""
@@ -175,39 +570,27 @@ def detect(subject: str | None, body: str | None, sender: str | None = None) -> 
             result.categories.append(category)
     result.bank_change_mentioned = "bank" in result.categories
 
-    match = _VON_IN.search(text)
-    if match and "name" in result.categories:
-        old_full = _TRAILING_STOP.sub("", match.group(1)).strip()
-        new_full = _TRAILING_STOP.sub("", match.group(2)).strip()
-        result.name_old, result.name_new = old_full, new_full
-        old_first, old_last = _split_name(old_full)
-        new_first, new_last = _split_name(new_full)
-        if old_last != new_last:
-            result.changes.append(_change("last_name", old_last, new_last, 0.8))
-        if new_first and old_first and old_first != new_first:
-            result.changes.append(_change("first_name", old_first, new_first, 0.6))
+    if "company" in result.categories:
+        _detect_company(text, result)
+    if "name" in result.categories and result.company_new is None:
+        _detect_person_name(text, result)
 
     if "address" in result.categories:
-        street = _STREET.search(text)
-        if street:
-            result.changes.append(_change("street", None, street.group(1).strip(), 0.6))
-            result.changes.append(_change("house_number", None, street.group(2).strip(), 0.6))
-        postal = _POSTAL_CITY.search(text)
-        if postal:
-            result.changes.append(_change("postal_code", None, postal.group(1), 0.7))
-            result.changes.append(_change("city", None, postal.group(2).strip(), 0.6))
+        _detect_address(text, result)
 
     if "phone" in result.categories:
-        phone = _PHONE.search(body or "")
+        phone = _value_after(body or "", (body or "").lower(), "phone", _PHONE)
         if phone:
-            result.changes.append(_change("phone", None, phone.group(0).strip(), 0.7))
+            result.changes.append(_change("phone", None, phone, 0.7))
 
     if "email" in result.categories:
-        sender_lower = (sender or "").lower()
-        for found in _EMAIL.findall(body or ""):
-            if found.lower() != sender_lower:
-                result.changes.append(_change("email", None, found, 0.7))
-                break
+        email = _value_after(
+            body or "", (body or "").lower(), "email", _EMAIL, (sender or "").lower() or None
+        )
+        if email:
+            result.changes.append(_change("email", None, email, 0.7))
+
+    _detect_salutation(body or "", result)
     return result
 
 
@@ -226,6 +609,21 @@ async def match_contact(
 ) -> Match:
     if message.contact_id is not None:
         return Match(message.contact_id, "sender_email")
+    if detection.company_old:
+        companies = list(
+            await session.scalars(
+                select(Contact)
+                .where(
+                    Contact.deleted_at.is_(None),
+                    Contact.kind == ContactKind.COMPANY,
+                    func.lower(Contact.company_name) == detection.company_old.lower(),
+                )
+                .order_by(Contact.display_name)
+                .limit(6)
+            )
+        )
+        if len(companies) == 1:
+            return Match(companies[0].id, "name")
     if detection.name_old:
         first, last = _split_name(detection.name_old)
         query = select(Contact).where(
@@ -321,6 +719,9 @@ def _full_name(contact: Contact | None) -> str | None:
 
 
 def _apply_name(base: str | None, changes: list[dict[str, Any]]) -> str | None:
+    company = next((c["new"] for c in changes if c["field"] == "company_name"), None)
+    if company:
+        return str(company)
     first, last = _split_name(base) if base else (None, None)
     values: dict[str, str | None] = {"first_name": first, "last_name": last}
     for change in changes:
@@ -353,36 +754,101 @@ def title_for(old_name: str | None, new_name: str | None, changes: list[dict[str
 
 
 def greeting_for(salutation: str | None, last_name: str | None, full_name: str | None) -> str:
+    """ "Hallo Frau Müller" only when the gender is known (contact record or the sender's own
+    signature in the mail); otherwise the neutral "Guten Tag Vorname Nachname"."""
     if salutation in ("Herr", "Frau") and last_name:
         return f"Hallo {salutation} {last_name}"
     if full_name:
-        return f"Hallo {full_name}"
+        return f"Guten Tag {full_name}"
     return "Guten Tag"
 
 
-def reply_draft(subject: str | None, greeting: str) -> dict[str, str]:
+def _format_date(iso: str | None) -> str | None:
+    if not iso:
+        return None
+    try:
+        return date.fromisoformat(iso).strftime("%d.%m.%Y")
+    except ValueError:
+        return None
+
+
+def reply_sentences(
+    changes: list[dict[str, Any]] | None,
+    address_valid_from: str | None = None,
+    today: date | None = None,
+) -> str:
+    """One confirmation sentence per kind of change: name and company ("Stammdaten
+    korrigiert"), address with the date it applies from (the date named in the mail, else the
+    day of the correction), e-mail and phone with the new value."""
+    values = {c["field"]: str(c.get("new") or "").strip() for c in changes or []}
+    parts: list[str] = []
+    if any(f in values for f in _NAME_FIELDS) or not values:
+        parts.append("Wir haben unsere Stammdaten soeben korrigiert.")
+    if any(f in values for f in _ADDRESS_FIELDS):
+        line1 = " ".join(v for v in (values.get("street"), values.get("house_number")) if v)
+        line2 = " ".join(v for v in (values.get("postal_code"), values.get("city")) if v)
+        address = ", ".join(p for p in (line1, line2) if p)
+        when = _format_date(address_valid_from)
+        if when:
+            parts.append(
+                f"Ihre neue Anschrift {address} haben wir ab dem {when} in unseren "
+                "Stammdaten hinterlegt."
+            )
+        else:
+            stamp = (today or datetime.now(UTC).date()).strftime("%d.%m.%Y")
+            parts.append(
+                f"Ihre neue Anschrift {address} haben wir zum {stamp} in unseren "
+                "Stammdaten hinterlegt."
+            )
+    if values.get("email"):
+        parts.append(
+            f"Ihre neue E-Mail-Adresse {values['email']} haben wir hinterlegt und schreiben "
+            "Sie künftig unter dieser Adresse an."
+        )
+    if values.get("phone"):
+        parts.append(f"Ihre neue Telefonnummer {values['phone']} haben wir hinterlegt.")
+    return " ".join(parts)
+
+
+def reply_draft(
+    subject: str | None,
+    greeting: str,
+    changes: list[dict[str, Any]] | None = None,
+    address_valid_from: str | None = None,
+    today: date | None = None,
+) -> dict[str, str]:
     return {
         "subject": f"AW: {subject or 'Ihre Stammdaten'}"[:998],
         "body": (
-            f"{greeting},\n\nvielen Dank. Wir haben unsere Stammdaten soeben korrigiert.\n\n"
+            f"{greeting},\n\nvielen Dank. "
+            f"{reply_sentences(changes, address_valid_from, today)}\n\n"
             "Mit freundlichen Grüßen\n[Name]\n[Firma]"
         ),
     }
 
 
 def _reply_for(
-    contact: Contact | None, changes: list[dict[str, Any]], subject: str | None
+    contact: Contact | None,
+    changes: list[dict[str, Any]],
+    subject: str | None,
+    mail_salutation: str | None = None,
+    address_valid_from: str | None = None,
 ) -> dict[str, str]:
     values = {
-        "salutation": contact.salutation if contact else None,
+        "salutation": (contact.salutation if contact else None) or mail_salutation,
         "last_name": contact.last_name if contact else None,
         "first_name": contact.first_name if contact else None,
+        "company_name": contact.company_name if contact else None,
     }
     for change in changes:
         if change["field"] in values:
             values[change["field"]] = change["new"]
-    full = " ".join(p for p in (values["first_name"], values["last_name"]) if p) or None
-    return reply_draft(subject, greeting_for(values["salutation"], values["last_name"], full))
+    first, last = values["first_name"], values["last_name"]
+    full = f"{first} {last}" if first and last else None
+    if full is None and values["company_name"]:
+        return reply_draft(subject, "Sehr geehrte Damen und Herren", changes, address_valid_from)
+    greeting = greeting_for(values["salutation"], values["last_name"], full)
+    return reply_draft(subject, greeting, changes, address_valid_from)
 
 
 async def _existing(
@@ -462,6 +928,8 @@ async def propose_contact_change(
             else None
         ),
         "reason": (ai or {}).get("reason"),
+        "address_valid_from": detection.address_valid_from,
+        "mail_salutation": detection.salutation,
         "source": {
             "deterministic": {
                 "categories": detection.categories,
@@ -472,7 +940,9 @@ async def propose_contact_change(
             "ai_reason": skip_reason,
             "model": run.model,
         },
-        "reply_draft": _reply_for(contact, changes, message.subject),
+        "reply_draft": _reply_for(
+            contact, changes, message.subject, detection.salutation, detection.address_valid_from
+        ),
     }
     proposal = AiProposal(
         tenant_id=ticket.tenant_id,
@@ -942,7 +1412,9 @@ async def correct_proposal(
         applied = await apply_changes(session, principal, contact_id, changes, proposal.id)
         proposal.proposed = {
             **proposal.proposed,
-            "reply_draft": _reply_after(await session.get(Contact, contact_id), proposal.proposed),
+            "reply_draft": _reply_after(
+                await session.get(Contact, contact_id), proposal.proposed, changes
+            ),
         }
         await _decide(
             session,
@@ -956,10 +1428,20 @@ async def correct_proposal(
         return await _out(session, proposal)
 
 
-def _reply_after(contact: Contact | None, proposed: dict[str, Any]) -> dict[str, str]:
-    """Reply draft recomputed from the contact as it is after the change was written."""
+def _reply_after(
+    contact: Contact | None, proposed: dict[str, Any], changes: list[dict[str, Any]]
+) -> dict[str, str]:
+    """Reply draft recomputed from the contact as it is after the change was written; the
+    sentences follow the corrected fields, the greeting the stored contact."""
     subject = str(proposed.get("reply_draft", {}).get("subject", "AW: ")).removeprefix("AW: ")
-    return _reply_for(contact, [], subject)
+    name_changes = [c for c in changes if c["field"] not in _NAME_FIELDS]
+    return _reply_for(
+        contact,
+        name_changes,
+        subject,
+        proposed.get("mail_salutation"),
+        proposed.get("address_valid_from"),
+    )
 
 
 @router.post("/tickets/{ticket_id}/proposals/{proposal_id}/reject", summary="Vorschlag ablehnen")

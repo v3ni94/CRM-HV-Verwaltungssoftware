@@ -2,10 +2,11 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { DigestCard, type Digest } from "@/components/dashboard/DigestCard";
 import { TicketAnalytics } from "@/components/dashboard/TicketAnalytics";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TileSkeleton } from "@/components/ui/Skeleton";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -113,6 +114,21 @@ async function DashboardData() {
   );
 }
 
+/** Karte "Tagesübersicht" (A40): dieselben Daten wie die Benachrichtigung um 07:00 Uhr. */
+async function DigestData() {
+  const t = await getTranslations("Digest");
+  const response = await serverFetch("/api/v1/workspace/digest");
+  redirectIfUnauthenticated(response);
+  if (!response.ok) {
+    return (
+      <p role="alert" className={ui.alert}>
+        {t("loadError")}
+      </p>
+    );
+  }
+  return <DigestCard digest={(await response.json()) as Digest} />;
+}
+
 export default async function DashboardPage() {
   const t = await getTranslations("Workspace");
   const { data: me } = await serverApi().GET("/api/v1/auth/me");
@@ -130,6 +146,9 @@ export default async function DashboardPage() {
         }
       >
         <DashboardData />
+      </Suspense>
+      <Suspense fallback={<TileSkeleton />}>
+        <DigestData />
       </Suspense>
       {canSeeAnalytics ? <TicketAnalytics /> : null}
     </div>

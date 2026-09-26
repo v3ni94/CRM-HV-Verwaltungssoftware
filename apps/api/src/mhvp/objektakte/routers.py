@@ -211,8 +211,9 @@ async def update_sync_settings(
     request: Request, body: SyncSettingsIn, principal: TenantPrincipal = Depends(SETTINGS_WRITE)
 ) -> dict[str, Any]:
     """`enabled` switches the daily job on for this tenant only (default off, ADR 0003);
-    `dump_path` is the absolute `.sql` export path on the worker (validated again at run time
-    by `mhvp.objektakte.tasks.read_dump_file`)."""
+    `dump_path` is the absolute `.sql` export path on the worker inside
+    `Settings.objektakte_dump_dir` (validated again at run time by
+    `mhvp.objektakte.tasks.read_dump_file`, symlinks resolved)."""
     async with tenant_tx(request, principal) as session:
         state = await importer.get_or_create_sync_state(session, principal.tenant_id)
         if body.dump_path is not None:
@@ -221,6 +222,14 @@ async def update_sync_settings(
                 raise ProblemError(
                     ErrorCodes.VALIDATION,
                     detail="Der Exportpfad muss absolut sein und auf .sql enden.",
+                )
+            from mhvp.objektakte.tasks import path_within_dump_dir
+
+            dump_dir = request.app.state.settings.objektakte_dump_dir
+            if path and not path_within_dump_dir(path, dump_dir):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail=f"Der Exportpfad muss im Exportverzeichnis {dump_dir} liegen.",
                 )
             state.dump_path = path or None
         if body.enabled is not None:
@@ -244,10 +253,21 @@ async def trigger_sync_run(
     """With an uploaded complete export the run happens right now in this request and returns
     its report. Without a file the configured `dump_path` is read by the worker
     (`mhvp.objektakte.sync_tenant`), and the report appears on `GET /objektakte/sync` once the
-    task has finished. Both paths use the same water mark and the same idempotent apply."""
+    task has finished. Both paths use the same water mark and the same idempotent apply.
+
+    The per tenant switch `enabled` applies to both paths: the queued run is refused while it
+    is off, and an upload while it is off is reserved for administrators
+    (`tenant_settings:update`, the permission that owns the switch)."""
     if file is not None:
         text = await _read_dump(file)
         async with tenant_tx(request, principal) as session:
+            state = await importer.get_or_create_sync_state(session, principal.tenant_id)
+            if not state.enabled and not principal.has("tenant_settings:update"):
+                raise ProblemError(
+                    ErrorCodes.FORBIDDEN,
+                    detail="Der objektakte-Import ist für diesen Mandanten ausgeschaltet; "
+                    "ein Import per Upload ist dann Administratoren vorbehalten.",
+                )
             report = await importer.run_differential_import(
                 session,
                 principal.tenant_id,
@@ -262,6 +282,12 @@ async def trigger_sync_run(
             raise ProblemError(
                 ErrorCodes.VALIDATION,
                 detail="Kein Exportpfad hinterlegt; Export hochladen oder Pfad einstellen.",
+            )
+        if not state.enabled:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Der objektakte-Import ist für diesen Mandanten ausgeschaltet; "
+                "zuerst einschalten oder den Export hochladen.",
             )
         tenant_id = principal.tenant_id
     from mhvp.objektakte.tasks import sync_tenant

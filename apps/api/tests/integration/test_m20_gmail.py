@@ -291,7 +291,10 @@ def test_oauth_client_consent_and_mailbox_access(
     # A mail in this box is invisible to a member without a grant.
     fake.add("o1", _eml(f"o{RUN}@example.com", f"OAuth Test {RUN}", f"<o1-{RUN}@x>"))
     assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["created"] == 1
-    subjects = lambda hdr: {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=hdr))}  # noqa: E731
+
+    def subjects(hdr: dict[str, str]) -> set[str]:
+        return {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=hdr))}
+
     assert f"OAuth Test {RUN}" not in subjects(clerk)
 
     # Explicit grant makes it visible; removing the grant hides it again.

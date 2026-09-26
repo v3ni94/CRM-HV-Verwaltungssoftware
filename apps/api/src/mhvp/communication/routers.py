@@ -10,7 +10,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,7 +68,7 @@ class MailAppointmentIn(_In):
 class MailDraftPatchIn(_In):
     subject: str | None = Field(default=None, max_length=998)
     body: str | None = None
-    to_addresses: list[str] | None = None
+    to_addresses: list[EmailStr] | None = Field(default=None, max_length=20)
 
 
 class MailRejectIn(_In):
@@ -236,6 +236,26 @@ async def _accessible_mailboxes(session: AsyncSession, user_id: uuid.UUID | None
     """Mailboxes visible to a member: default ones plus explicitly granted ones."""
     granted = select(MailboxUser.mailbox_id).where(MailboxUser.user_id == user_id)
     return select(Mailbox.id).where(or_(Mailbox.is_default.is_(True), Mailbox.id.in_(granted)))
+
+
+async def mailbox_accessible(
+    session: AsyncSession, principal: TenantPrincipal, mailbox: Mailbox
+) -> bool:
+    """Whether the acting user may write through ``mailbox``: administrators
+    (``tenant_settings:update``, the permission that manages mailboxes) always, members only
+    for the default mailbox or one granted via ``MailboxUser`` (same rule as the mail list)."""
+    if principal.has("tenant_settings:update"):
+        return True
+    if mailbox.is_default:
+        return True
+    if principal.user_id is None:
+        return False
+    grant = await session.scalar(
+        select(MailboxUser.mailbox_id).where(
+            MailboxUser.mailbox_id == mailbox.id, MailboxUser.user_id == principal.user_id
+        )
+    )
+    return grant is not None
 
 
 @router.get("/mailboxes", summary="Postfächer (ohne Zugangsdaten)")

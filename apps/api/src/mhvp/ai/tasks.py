@@ -167,6 +167,22 @@ class ExtractedInvoice(_Out):
     discount_until: str | None = Field(description="ISO-Datum JJJJ-MM-TT, sonst null")
     order_reference: str | None
     property_number_guess: str | None
+    section_35a_amount: str | None = Field(
+        default=None,
+        description=(
+            "Anteil haushaltsnaher Dienstleistungen oder Handwerkerleistungen nach § 35a EStG "
+            "(Arbeits- und Fahrtkosten), nur wenn die Rechnung ihn ausdrücklich ausweist oder "
+            "je Position belegt; sonst null. Nie schätzen."
+        ),
+    )
+    section_35a_basis: Literal["invoice_statement", "line_items", "estimate"] | None = Field(
+        default=None,
+        description=(
+            "Woher der § 35a Anteil stammt: invoice_statement (Rechnung weist ihn aus), "
+            "line_items (aus einzeln ausgewiesenen Lohnpositionen), estimate (eigene Schätzung, "
+            "gilt nicht als belegt)"
+        ),
+    )
     warnings: list[str] = Field(description="eigene Unsicherheiten des Modells")
     confidence: float = Confidence
 
@@ -267,7 +283,36 @@ class ContactChangeResult(_Out):
     reason: str | None = Field(description="Anlass laut Mail, z. B. Hochzeit oder Umzug")
 
 
+Severity = Literal["low", "medium", "high"]
+
+
+class StatementFinding(_Out):
+    """Eine Auffälligkeit an einem Abrechnungsentwurf (A35, 9.2 ``check_statement``). Nur ein
+    Hinweis mit Schweregrad; nie ein Betrag, keine Korrektur, keine Entscheidung (rule 0.1.6)."""
+
+    field: str = Field(
+        max_length=64,
+        description=(
+            "geprüftes Merkmal, z. B. previous_year_change, key_without_source, "
+            "position_without_account, totals_mismatch, advances, reserve"
+        ),
+    )
+    description: str = Field(max_length=600, description="kurzer Hinweis auf Deutsch, ohne Beträge")
+    severity: Severity
+    position: str | None = Field(description="Bezug auf eine Position (P1, P2, ...), sonst null")
+    unit: str | None = Field(description="Bezug auf eine Einheit (Einheitsnummer), sonst null")
+
+
+class CheckStatementResult(_Out):
+    findings: list[StatementFinding]
+    overall: Literal["unauffaellig", "pruefen", "kritisch"] = Field(
+        description="Gesamteinschätzung; die Plattform leitet sie auch aus den Schweregraden ab"
+    )
+    summary: str = Field(max_length=1000, description="ein bis drei Sätze, ohne Beträge")
+
+
 SCHEMAS: dict[AiTask, type[_Out]] = {
+    AiTask.CHECK_STATEMENT: CheckStatementResult,
     AiTask.EXTRACT_CONTACTS: ContactsResult,
     AiTask.EXTRACT_PROPERTY: PropertyResult,
     AiTask.EXTRACT_INVOICE: InvoiceExtractionResult,
@@ -280,6 +325,7 @@ SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.CONTACT_MASTER_DATA_CHANGE: ContactChangeResult,
 }
 DEFAULT_TIERS: dict[AiTask, str] = {
+    AiTask.CHECK_STATEMENT: "large",
     AiTask.EXTRACT_CONTACTS: "large",
     AiTask.EXTRACT_PROPERTY: "large",
     AiTask.EXTRACT_INVOICE: "large",

@@ -3,6 +3,7 @@ Spiegeldaten, Uebernahme des Moduls Learning aus dem Immoware Hub."""
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 from mhvp.immoware.learning import (
     compute_caldav_facts,
@@ -29,7 +30,7 @@ class FakeContact:
     org: str | None = None
     emails: list[str] = field(default_factory=list)
     phones: list[str] = field(default_factory=list)
-    addresses: list[dict] = field(default_factory=list)
+    addresses: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass

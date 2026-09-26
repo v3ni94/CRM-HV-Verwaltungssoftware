@@ -23,12 +23,15 @@ als gelernten Wissenseintrag (siehe Kapitel Einstellungen, KI und Wissensbasis).
 
 ## Rechnung erfassen
 
-Aus einem Mailanhang heraus über Als Rechnung erfassen: Die KI liest Aussteller, Nummern,
-Daten, Beträge, Skonto und Objektbezug als Vorschlag aus, mit Warnhinweis bei
-IBAN-Abweichung oder möglicher Dublette. Übernommen wird die Erfassung erst im
-Rechnungseingang nach Vier-Augen-Prüfung; die IBAN wird dort maskiert angezeigt und muss
-anhand des Originals bestätigt werden (siehe Kapitel Belegeingang). Fremdwährung ist
-gesperrt. Eine automatische Erfassung ohne diesen Schritt ist zurückgestellt.
+Aus einem Mailanhang heraus über Als Rechnung erfassen: Je Anhang einer eingegangenen
+Mail startet die Schaltfläche einen Belegentwurf im Belegeingang (Quelle Mail-Anhang).
+Die KI liest Aussteller, Nummern, Daten, Beträge, Skonto und Objektbezug als Vorschlag
+mit Sicherheit je Feld aus. Nach dem Start erscheint der Link Entwurf im Belegeingang
+öffnen, der direkt zur Feldprüfung führt. Übernommen wird der Entwurf erst dort nach der
+Prüfung durch eine Person; die IBAN wird maskiert angezeigt und muss aus dem Original
+eingetragen und bestätigt werden (siehe Kapitel Belegeingang). Nur PDF, Bild oder
+Textanhänge sind möglich. Dieselbe Schaltfläche steht in der Ticket-Ansicht unter Anhänge
+aus E-Mails. Eine automatische Erfassung ohne diesen Schritt ist zurückgestellt.
 
 ## Weiterleitung
 

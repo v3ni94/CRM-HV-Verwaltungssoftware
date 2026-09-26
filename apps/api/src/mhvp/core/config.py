@@ -61,6 +61,21 @@ class Settings(BaseSettings):
     # Run AI tasks inside the request instead of the worker (development and tests only).
     ai_inline: bool = False
     document_max_bytes: int = Field(default=50 * 1024 * 1024, gt=0, le=1024 * 1024 * 1024)
+    # Directory on the worker that holds the objektakte export files (M35 Stufe 5). A tenant's
+    # ``dump_path`` must lie inside it so that no tenant setting can point the worker at an
+    # arbitrary file (another tenant's export, system files); see docs/reviews 26.09.2026.
+    objektakte_dump_dir: str = "/data/objektakte-export"
+    # Size limit of one export file the worker reads for the differential import (checked via
+    # stat before reading). The upload path has its own 200 MB limit.
+    objektakte_dump_max_bytes: int = Field(default=512 * 1024 * 1024, gt=0, le=4 * 1024**3)
+
+    # Rate limits per minute (A49): operator configuration, not a legal rule. Authenticated
+    # requests count per tenant and user or API key, unauthenticated ones per client address.
+    rate_limit_enabled: bool = True
+    rate_limit_per_minute_user: int = Field(default=600, ge=1)
+    rate_limit_per_minute_anonymous: int = Field(default=120, ge=1)
+    # Only behind a proxy that overwrites X-Forwarded-For (Traefik); otherwise spoofable.
+    rate_limit_trust_forwarded_for: bool = False
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 
