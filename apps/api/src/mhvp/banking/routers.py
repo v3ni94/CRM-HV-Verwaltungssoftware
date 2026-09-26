@@ -362,6 +362,93 @@ async def tx_candidates(
         }
 
 
+def _posting_out(proposal: Any) -> dict[str, Any]:
+    return {
+        "id": proposal.id,
+        "task_run_id": proposal.task_run_id,
+        "entity_type": proposal.entity_type,
+        "decision": proposal.decision.value,
+        "created_at": proposal.created_at,
+        "proposed": proposal.proposed,
+    }
+
+
+@router.post(
+    "/transactions/{tx_id}/ai-posting",
+    status_code=202,
+    summary="KI-Kontierungsvorschlag anstoßen (nur Vorschlag, deaktiviert bis Freigabe)",
+)
+async def start_ai_posting(
+    tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    """M7-09, M12-01: only with the tenant switch ``ai_posting_enabled`` and a released AI
+    provider with DPA evidence, otherwise ``MHVP-AI-0001``. The result is an ``AiProposal``
+    of entity type ``posting``; nothing is posted and the transaction is not changed."""
+    from mhvp.ai import gateway, jobs
+    from mhvp.banking import ai_posting
+    from mhvp.core.auth.principal import sessions
+
+    async with tenant_tx(request, principal) as session:
+        blocked = await gateway.posting_block_reason(session)
+        if blocked is not None:
+            raise ProblemError(ErrorCodes.AI_POSTING_NOT_RELEASED, detail=blocked)
+        row = await _tx(session, tx_id)
+        payload, context = await ai_posting.payload_for(session, row)
+        run = ai_posting.queue_run(
+            session,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            payload=payload,
+            context=context,
+        )
+        await session.flush()
+        run_id = run.id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="bank_transaction.ai_posting_requested",
+            entity_type="bank_transaction",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"run_id": str(run_id)},
+        )
+    settings = request.app.state.settings
+    if settings.ai_inline:
+        await jobs.run_and_propose(
+            sessions(request), principal.tenant_id, run_id, BlobStore(settings), principal.user_id
+        )
+    else:
+        from mhvp.worker import get_celery
+
+        get_celery().send_task(
+            "mhvp.ai.run",
+            args=[
+                str(principal.tenant_id),
+                str(run_id),
+                str(principal.user_id) if principal.user_id else None,
+            ],
+            queue="io",
+        )
+    return await get_ai_posting(tx_id, request, principal)
+
+
+@router.get("/transactions/{tx_id}/ai-posting", summary="KI-Kontierungsvorschläge lesen")
+async def get_ai_posting(
+    tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.banking import ai_posting
+
+    async with tenant_tx(request, principal) as session:
+        if await session.get(BankTransaction, tx_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        proposals = await ai_posting.proposals_for(session, tx_id)
+        return {
+            "bank_transaction_id": tx_id,
+            "proposals": [_posting_out(p) for p in proposals],
+            "note": "Vorschlag der KI, keine Buchung.",
+        }
+
+
 async def _book(
     session: Any, principal: TenantPrincipal, row: BankTransaction, body: BookIn
 ) -> Any:

@@ -43,14 +43,15 @@ def test_every_case_scores_at_least_one_pair() -> None:
             assert evaluate.score_case(task, case), f"{task.value}/{case['id']}"
 
 
-def test_propose_posting_has_no_schema_and_is_not_evaluated() -> None:
-    """Documented as open (docs/OPEN_QUESTIONS.md M7-09): no schema, no set, no scorer."""
+def test_propose_posting_has_schema_and_a_first_evaluation_set() -> None:
+    """M7-09 umgesetzt, deaktiviert bis Freigabe M12-01: Schema, Scorer und zehn Fälle."""
     from mhvp.ai import tasks
 
-    assert AiTask.PROPOSE_POSTING not in tasks.SCHEMAS
-    assert AiTask.PROPOSE_POSTING not in evaluate.SCORERS
-    assert AiTask.PROPOSE_POSTING not in evaluate.INPUT_SCORERS
-    assert not (FOLDER / AiTask.PROPOSE_POSTING.value).exists()
+    assert AiTask.PROPOSE_POSTING in tasks.SCHEMAS
+    assert AiTask.PROPOSE_POSTING in evaluate.INPUT_SCORERS
+    cases = evaluate.load_cases(FOLDER, AiTask.PROPOSE_POSTING)
+    assert len(cases) >= evaluate.min_cases(AiTask.PROPOSE_POSTING) == 10
+    assert any("injection" in c["id"] for c in cases)
 
 
 def test_merge_suggestion_falls_back_only_for_empty_classification_fields() -> None:

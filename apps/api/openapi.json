@@ -19194,6 +19194,44 @@
         "title": "PortalTicketIn",
         "type": "object"
       },
+      "PostingEnabledIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "PostingEnabledIn",
+        "type": "object"
+      },
+      "PostingEnabledOut": {
+        "properties": {
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "PostingEnabledOut",
+        "type": "object"
+      },
       "PreferredChannel": {
         "enum": [
           "post",
@@ -33640,6 +33678,68 @@
         ]
       }
     },
+    "/api/v1/ai/posting-enabled": {
+      "get": {
+        "description": "M7-09, M12-01: tenant switch plus the reason why ``propose_posting`` would be blocked\n(switch off, no released provider with DPA evidence).",
+        "operationId": "get_posting_enabled_api_v1_ai_posting_enabled_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostingEnabledOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "KI-Kontierung (Einstellung)",
+        "tags": [
+          "KI-Assistent"
+        ]
+      },
+      "put": {
+        "description": "Default off. Even when on, a run needs a released provider with DPA evidence; the\nresult is a proposal of entity type ``posting`` and is never posted (rule 0.1.6).",
+        "operationId": "put_posting_enabled_api_v1_ai_posting_enabled_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostingEnabledIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostingEnabledOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Kontierung ein- oder ausschalten",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
     "/api/v1/ai/proposals/{proposal_id}": {
       "get": {
         "operationId": "get_proposal_api_v1_ai_proposals__proposal_id__get",
@@ -36790,6 +36890,95 @@
           }
         },
         "summary": "Bankumsätze",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{tx_id}/ai-posting": {
+      "get": {
+        "operationId": "get_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Ai Posting Api V1 Banking Transactions  Tx Id  Ai Posting Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Kontierungsvorschläge lesen",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "post": {
+        "description": "M7-09, M12-01: only with the tenant switch ``ai_posting_enabled`` and a released AI\nprovider with DPA evidence, otherwise ``MHVP-AI-0001``. The result is an ``AiProposal``\nof entity type ``posting``; nothing is posted and the transaction is not changed.",
+        "operationId": "start_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Ai Posting Api V1 Banking Transactions  Tx Id  Ai Posting Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Kontierungsvorschlag anstoßen (nur Vorschlag, deaktiviert bis Freigabe)",
         "tags": [
           "Bank"
         ]

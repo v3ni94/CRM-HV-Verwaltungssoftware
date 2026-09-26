@@ -195,6 +195,15 @@ class ErrorCodes:
             "receivables with VAT are not posted automatically (M14-02, M13-03, D45)."
         ),
     )
+    AI_POSTING_NOT_RELEASED = ErrorCode(
+        "MHVP-AI-0001",
+        403,
+        "KI-Kontierung ist nicht freigegeben",
+        (
+            "propose_posting needs tenant_settings.ai_posting_enabled and a released AI "
+            "provider with DPA evidence (M7-09, M12-01)."
+        ),
+    )
     RELEASE_GATE_CLOSED = ErrorCode(
         "MHVP-GATE-0001",
         403,

@@ -296,6 +296,12 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     invoice_intake_auto: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # M7-09, M12-01 KI-Kontierung (``propose_posting``): Bankumsätze enthalten Personenbezug;
+    # die Aufgabe läuft nur bei true und freigegebenem Anbieter mit AVV. Standard aus; das
+    # Ergebnis ist immer nur ein Vorschlag (entity_type posting), nie eine Buchung.
+    ai_posting_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     # Portalrechte je CRM-Rolle (Betreiberentscheidung 25.09.2026, M2-08 entschieden,
     # docs/rules/M2-07.md): Überschreibungen der eingebauten Grundeinstellung
     # (``mhvp.portal.staff_access.DEFAULT_STAFF_PORTAL_PERMISSIONS``). Shape:

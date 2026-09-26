@@ -121,5 +121,8 @@ limits, ambiguous rows, low confidence) and at least one prompt injection case. 
 `_draft_reply` runs `communication.suggest.playbook_fields`, `_map_columns` runs
 `table_mapper.mapping_usable` and `apply_mapping` on the case's small table, and
 `_contact_change` runs the deterministic stage and `tickets.proposals.merge`, title and greeting.
-These scorers take the case input as well (`INPUT_SCORERS`). `propose_posting` has no schema
-yet and no set (docs/OPEN_QUESTIONS.md M7-09). Test: `tests/unit/test_a46_ai_eval.py`.
+These scorers take the case input as well (`INPUT_SCORERS`). `propose_posting` (M7-09) has
+`PostingProposalResult`, prompt v1 and a first set of 10 cases scored by `_propose_posting`
+(`banking.ai_posting.normalize_result`); the minimum for this task is 10 until release
+(`evaluate.MIN_CASES_BY_TASK`). The task is disabled until M12-01 (tenant switch
+`ai_posting_enabled` plus released provider). Test: `tests/unit/test_a46_ai_eval.py`.

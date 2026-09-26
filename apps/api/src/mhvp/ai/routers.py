@@ -332,6 +332,47 @@ async def put_invoice_intake_auto(
         return s.InvoiceIntakeAutoOut(enabled=body.enabled)
 
 
+@router.get("/ai/posting-enabled", summary="KI-Kontierung (Einstellung)")
+async def get_posting_enabled(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.PostingEnabledOut:
+    """M7-09, M12-01: tenant switch plus the reason why ``propose_posting`` would be blocked
+    (switch off, no released provider with DPA evidence)."""
+    async with tenant_tx(request, principal) as session:
+        return s.PostingEnabledOut(
+            enabled=await gateway.posting_enabled(session),
+            blocked_reason=await gateway.posting_block_reason(session),
+        )
+
+
+@router.put("/ai/posting-enabled", summary="KI-Kontierung ein- oder ausschalten")
+async def put_posting_enabled(
+    body: s.PostingEnabledIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.PostingEnabledOut:
+    """Default off. Even when on, a run needs a released provider with DPA evidence; the
+    result is a proposal of entity type ``posting`` and is never posted (rule 0.1.6)."""
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row.ai_posting_enabled = body.enabled
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ai_posting_enabled.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"enabled": body.enabled},
+        )
+        await session.flush()
+        return s.PostingEnabledOut(
+            enabled=body.enabled, blocked_reason=await gateway.posting_block_reason(session)
+        )
+
+
 @router.get("/ai/usage", summary="KI-Kosten im laufenden Monat")
 async def usage(request: Request, principal: TenantPrincipal = Depends(READ)) -> s.UsageOut:
     now = datetime.now(UTC)
