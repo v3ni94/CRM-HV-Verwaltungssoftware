@@ -161,6 +161,10 @@ class Meeting(IdMixin, TimestampMixin, TenantMixin, Base):
     )  # planned, invited, held, closed
     chair_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     minutes_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
+    # Resolution deadline of a virtual meeting (M9-07): entered with its source (resolution
+    # or community rules with reference); never computed, shown in the deadline list (A41).
+    resolution_deadline_at: Mapped[date | None] = mapped_column(Date)
+    resolution_deadline_source: Mapped[str | None] = mapped_column(Text)
 
 
 class AgendaItem(IdMixin, TenantMixin, Base):

@@ -998,7 +998,8 @@
       "meter_calibration": "Eichfrist Zähler",
       "bank_consent": "Ablauf Bankzustimmung",
       "document_retention_end": "Ende Aufbewahrung",
-      "service_contract_notice": "Kündigungsfrist Dienstleistervertrag"
+      "service_contract_notice": "Kündigungsfrist Dienstleistervertrag",
+      "meeting_resolution_deadline": "Beschlussfrist virtuelle Versammlung"
     },
     "status": {
       "open": "offen",
@@ -1591,6 +1592,15 @@
   "HoaWork": {
     "subjectKind": "Beschlussgegenstand",
     "subjectKindNone": "nicht angegeben",
+    "resolutionDeadline": {
+      "title": "Beschlussfrist der virtuellen Versammlung",
+      "date": "Beschlussfrist",
+      "source": "Quelle (Beschluss oder Gemeinschaftsordnung mit Fundstelle)",
+      "hint": "Die Frist wird eingetragen, nicht berechnet. Sie erscheint in der Fristenliste mit 7 Tagen Vorfrist und ist Orientierung, zu prüfen.",
+      "sourceRequired": "Bitte die Quelle der Frist angeben.",
+      "save": "Frist speichern",
+      "saved": "Frist gespeichert."
+    },
     "noLedger": "Für die Gemeinschaft ist noch kein Buchungskreis angelegt.",
     "plans": "Wirtschaftspläne",
     "statements": "Hausgeldabrechnungen",

@@ -54,6 +54,38 @@ class MeetingIn(MeetingBaseIn):
     voting_principle: str = Field(default="head", pattern="^(head|mea|unit)$")
     voting_principle_basis: str | None = Field(default=None, max_length=4000)
     virtual_basis_resolution_id: uuid.UUID | None = None
+    resolution_deadline_at: date | None = None
+    resolution_deadline_source: str | None = Field(default=None, max_length=4000)
+
+
+class MeetingPatch(MeetingBaseIn):
+    """Resolution deadline of a virtual meeting (M9-07). ``null`` clears both fields."""
+
+    resolution_deadline_at: date | None = None
+    resolution_deadline_source: str | None = Field(default=None, max_length=4000)
+
+
+def validate_resolution_deadline(mode: str, deadline: date | None, source: str | None) -> None:
+    """A resolution deadline is only kept for virtual meetings and always with its source
+    (resolution or community rules with reference, M9-07). The date is entered, not
+    computed; it is orientation only (M1-09)."""
+    if deadline is None:
+        if source and source.strip():
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Quelle ohne Beschlussfrist ist nicht zulässig."
+            )
+        return
+    if mode != "virtual":
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Beschlussfrist nur für virtuelle Versammlungen.",
+        )
+    if source is None or len(source.strip()) < 3:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Beschlussfrist nur mit Quelle (Beschluss oder Gemeinschaftsordnung mit "
+            "Fundstelle).",
+        )
 
 
 class AgendaIn(MeetingBaseIn):
@@ -228,6 +260,8 @@ def _meeting_out(m: Meeting) -> dict[str, Any]:
         "invited_at": m.invited_at,
         "voting_principle": m.voting_principle,
         "status": m.status,
+        "resolution_deadline_at": m.resolution_deadline_at,
+        "resolution_deadline_source": m.resolution_deadline_source,
     }
 
 
@@ -253,10 +287,38 @@ async def create_meeting(
                 ErrorCodes.VALIDATION,
                 detail="Abweichendes Stimmprinzip nur mit dokumentierter Grundlage.",
             )
+        validate_resolution_deadline(
+            body.mode, body.resolution_deadline_at, body.resolution_deadline_source
+        )
         row = Meeting(
             tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
         )
         session.add(row)
+        await session.flush()
+        return _meeting_out(row)
+
+
+@router.patch("/meetings/{meeting_id}", summary="Beschlussfrist der Versammlung (M9-07)")
+async def patch_meeting(
+    meeting_id: uuid.UUID,
+    body: MeetingPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, Meeting, meeting_id)
+        fields = body.model_dump(exclude_unset=True)
+        deadline = fields.get("resolution_deadline_at", row.resolution_deadline_at)
+        source = fields.get("resolution_deadline_source", row.resolution_deadline_source)
+        if (
+            "resolution_deadline_at" in fields
+            and deadline is None
+            and ("resolution_deadline_source" not in fields)
+        ):
+            source = None
+        validate_resolution_deadline(row.mode, deadline, source)
+        row.resolution_deadline_at = deadline
+        row.resolution_deadline_source = source.strip() if source else None
         await session.flush()
         return _meeting_out(row)
 
