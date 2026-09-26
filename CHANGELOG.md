@@ -5,7 +5,7 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
-## 1.23.0 (26.09.2026) Fix- und Abschlusswelle: Vier-Augen nach Betreiberentscheidung, Review-Befunde Tickets und Mail, Sicherheit, Performance, Bedienbarkeit, Vertragsformular, Import-Robustheit, Anhang D 54 von 58
+## 1.25.0 (26.09.2026) Zusammenführung mit 1.24.0 und Fix- und Abschlusswelle: Vier-Augen nach Betreiberentscheidung, Review-Befunde Tickets und Mail, Sicherheit, Performance, Bedienbarkeit, Vertragsformular, Import-Robustheit, Anhang D 54 von 58
 
 - Tickets und Mail: Betreiberentscheidung M20-03 umgesetzt: Vier-Augen-Freigabe nur für Mitarbeiter mit Kennzeichen Azubi oder neuer Mitarbeiter (Einstellungen, Benutzer, optional befristet), alle anderen senden Ticketantworten direkt; Verfasser und Freigeber mit Zeitpunkt als Ticketereignisse und im Mailverlauf sichtbar; Notbremse alle Antworten mit Freigabe (Standard aus); Freigabeberechtigte werden benachrichtigt (Migration 0129, Regel M20-06)
 - Prüfung Tickets und Mail: 31 von 34 Befunden behoben, darunter Doppelversand bei Verbindungsfehler ausgeschlossen (zweiphasiger Versand mit Nachweis), Rechnungsweiterleitung nach Commit, Postfach löschen als Deaktivierung ohne Sichtbarkeitsverlust, Mailliste mit Vorschau statt Volltext, Thread-Zuordnung über References und Gmail-Thread, abgewiesene Anhänge sichtbar, Kommentare mit Autor, interne Beschreibung, Zuweisungsereignis, Archivierung nach Commit, Arbeitsaufträge mit Terminvorschlägen im Ticket (Migration 0126)
@@ -17,6 +17,29 @@ unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge ob
 - Abnahme und Tests: Anhang D jetzt 54 von 58 technisch bestanden (offen nur D24 bis D27 wegen fehlender Betreiberregeln); Playwright gegen den Stack 12 CRM und 11 Portal grün inklusive Fototest; 66 neue Abdeckungstests; Ergebnisbuchung nach Eigentümerwechsel repariert, Versionsvergleich der WEG-Abrechnung als Endpunkt und Anzeige; Seed-Skript und Test-Datenbankaufbau stabil
 - Dokumentation: Entscheidungsvorlage für den Betreiber (docs/reviews/2026-09-26-entscheidungsvorlage-betreiber.md), Handbuchkapitel für alle Funktionen seit 1.20, Lückenliste konsolidiert (A72 bis A89), Plan-Dokumente mit Stand 26.09.2026, Reviews Performance, Sicherheit 1.22, Bedienbarkeit CRM und Portal
 - Offen (Betreiber): OpenImmo-XSD beschaffen (M26-02), Zins und Tilgung in der Jahresabrechnung (M24-03), Heizkosten und Verbrauchsinformation (D24 bis D27), Freigabestufen G1 bis G5 mit Steuerberatung, Rechtsberatung und Bank, Serverhärtung (M9-05)
+- Zusammenführung: Stände 1.23.0 bis 1.24.0 der parallelen Sitzung übernommen (Migrationen Erledigungsnotiz und Hallo Heidi laufen jetzt als 0130 und 0131 hinter 0126 bis 0129)
+
+## 1.24.0 (26.09.2026) Ticketfilter, Erledigungsnotiz, Hallo Heidi, Wissensdatenbank, Assistent-Rolle
+
+- Tickets und Mail: Umschalter "Erledigte anzeigen" in den Übersichten, erledigte Vorgänge sind standardmäßig ausgeblendet. Kontakt-, Objekt- und Einheitenseite zeigen die volle Historie. Statusauswahl im Ticket nach Rolle: Administratoren wählen jeden Status, andere nur die erlaubten Folgestatus.
+- Tickets: Erledigungsnotiz beim Abschluss (Art aus fester Liste plus Freitext, auch in der Bulk-Aktion und beim Zusammenführen). Jeder Abschluss wird als Lernbeispiel gespeichert, gelernte Playbooks erhalten den Schritt "Erledigung", Vorschläge zeigen "Bei ähnlichen Vorgängen wurde".
+- Tickets: Anruf-Mails der KI-Telefonassistenz (Hallo Heidi) werden erkannt, Anrufer über Objekt plus Name, sonst Name oder Rufnummer zugeordnet, Objekt und Einheit am Ticket gesetzt. Eine unbekannte Rufnummer erzeugt automatisch den Vorschlag "Telefonnummer ergänzen" mit Antwortentwurf; "Freigeben und antworten" übernimmt die Nummer und legt die Antwort als Entwurf an. Einstellungen je Mandant unter Postfächer.
+- Einstellungen: neue Seite "Wissen" mit gelernten Playbooks (Trefferzahl, letzte Nutzung, Deaktivieren) und Lernbeispielen mit Filter.
+- Assistent: Eine Rolle aus der Chatanweisung ("Rolle bank") wird beim Tabellenimport auf alle Kontakte gesetzt, die Werte bank und verwalter sind neu. Ohne erkennbare Rolle fragt der Assistent nach. Rolle nachträglich für einen Importlauf setzbar (Importverlauf und POST /ai/import-runs/{id}/apply-role).
+- Migrationen 0126 (Erledigungsnotiz, playbook.last_used_at, KI-Aufgabe ticket_resolution) und 0127 (Anrufassistenz, KI-Aufgabe call_summary).
+
+## 1.23.1 (26.09.2026) Upload-Seite für Immoware24-Listen
+
+- Importe: neue Seite "Immoware24 Listenimport" (/importe/immoware24-listen) mit Upload im Browser für Objektdaten, Kontaktlisten (Rolle je Datei, auch Dienstleister) und die Zuordnung von Eigentümern und Mietern zu Einheiten. Je Abschnitt Testlauf und Übernehmen mit Bestätigung, Bericht mit Zählern, nicht gefundenen und mehrdeutigen Namen sowie Konflikten. Neuer Endpunkt POST /imports/immoware24/lists/zuordnung.
+
+## 1.23.0 (26.09.2026) Objektbezüge im Kontakt, CSV-Zuordnung, Gmail-Archivierung, Ticketfilter
+
+- Kontakte: Abschnitt "Beziehungen zu Objekten und Einheiten" (Mieter, Eigentümer, Kategorie, Zeitraum, Status) unten auf der Kontaktseite, neuer Reiter "Tickets" mit allen personenbezogenen Tickets. Rollen Mieter und Eigentümer werden aus Verträgen, Eigentümerzuordnungen und Objektakte-Zuordnungen automatisch abgeleitet, Backfill über POST /contacts/roles/recompute.
+- Import: neues CLI `python -m mhvp.imports.zuordnung` verknüpft Eigentümer und Mieter aus den Objektdaten mit den importierten Kontakten und legt Verträge mit vereinbartem Zahlbetrag an (idempotent, Testlauf als Standard, Bericht zu Leerstand, mehrdeutigen Namen und Konflikten). Kontaktimport speichert Briefanrede, Bundesland und Exportnamen; Rolle Dienstleister auch über die API. Handbuch `docs/handbuch/import-zuordnung.md`.
+- Immoware24: "Alle unverknüpften Kontakte übernehmen" scheiterte mit internem Fehler (Telefon ohne Pflichtfeld Label), behoben.
+- Gmail: Beim Abruf wird die Gmail-Kennung jeder Nachricht gespeichert, fehlende Kennungen der letzten 90 Tage werden beim nächsten Abruf nachgetragen. Damit greift "Erledigt archiviert Mail" bei done, closed und rejected.
+- Tickets: Übersichten blenden done, closed und rejected standardmäßig aus (`include_closed=true` zeigt sie), Mailübersicht analog. Mandantenadministratoren dürfen jeden Status in jeden anderen setzen, ohne Zwischenschritte (Ereignis mit Kennzeichen admin_override). Suche "beinhaltet" jetzt auch über Betreff und Absender verknüpfter Mails sowie Kontakt-E-Mail.
+- Server: Runbook um vertrauenswürdige Betreiber-IP (fail2ban ignoreip, sshd Match Address) und den zweiten Teil des Vorfalls vom 26.09.2026 ergänzt.
 
 ## 1.22.1 (26.09.2026) SSH-Härtung: Passwortanmeldung bleibt aktiv
 

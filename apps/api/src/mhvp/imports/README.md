@@ -32,6 +32,23 @@ a note. Duplicates by `external_ids["immoware24"]` are not created again, they r
 additional role. Handbook: `docs/handbuch/import-kontakte.md`. Tests:
 `tests/unit/test_kontakte_import.py`, `tests/integration/test_kontakte_import.py`.
 
+## Zuordnung CLI (26.09.2026)
+
+`python -m mhvp.imports.zuordnung FILE --tenant <slug> [--user <email>] [--apply]
+[--start-date YYYY-MM-DD] [--skip-handed-over]` is the third step after `objektdaten` and
+`kontakte`. It reads the same object list, finds units by `source_id` ("<object>/<unit>") and
+matches the current owner and tenant by normalised name (case, whitespace, "u." equals "&")
+against contacts with `external_ids["immoware24"]` (exported name in
+`external_ids["immoware24_name"]`, display name, reordered first and last name as fallback).
+Ambiguous names are reported, never guessed. Per match it uses the contact's single member
+party (created if missing) and creates an ownership contract (WEG-Verwaltung, WEG mit
+SE-Verwaltung; SEV flag when the unit is let) or a tenancy (Mietverwaltung, WEG mit
+SE-Verwaltung) with debtor account, a monthly payment (`hoa_fee` or `rent`) and a monthly
+schedule, and adds the role eigentuemer or mieter. Start date defaults to 1 January of the
+current year and is reported as assumption. An active contract of the same kind with the same
+party is left as is; another party or a missing landlord is a conflict. Handbook:
+`docs/handbuch/import-zuordnung.md`. Tests: `tests/unit/test_zuordnung_import.py`,
+`tests/integration/test_zuordnung_import.py`.
 ## Abgleichbericht Parallelbetrieb (26.09.2026, A68)
 
 `reconciliation.py` compares the staged rows of the report types `journal` and

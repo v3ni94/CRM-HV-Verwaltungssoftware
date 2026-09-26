@@ -4,13 +4,16 @@
 Immoware24 exports one list per contact group (owners, tenants, banks, others) with the columns
 id, Name, Briefanrede, Benutzername, Adresse, Stadt, PLZ, Staat, Land, Landesvorwahl, Vorwahl,
 Telefonnummer, E-Mail. This command creates the contacts of those lists for one tenant and sets
-the operator role (Eigentümer, Mieter, Bank, Sonstiges) from the list. The Immoware24 id is kept
-in ``external_ids["immoware24"]``; a contact that already carries the id is not created again,
-it only receives the additional role. Names are split heuristically ("Nachname, Vorname" or
-"Vorname Nachname"); everything unclear stays in the name fields as exported and is listed in
-the report. No contract, receivable or bank account is created (rule 0.1.3); an IBAN column,
-if the export carries one, is only reported masked as a proposal (M19-05, four eyes release of
-bank accounts in ``mhvp.contacts``) and never stored.
+the operator role (Eigentümer, Mieter, Dienstleister, Bank, Sonstiges) from the list. The
+Immoware24 id is kept in ``external_ids["immoware24"]``, the exported name in
+``external_ids["immoware24_name"]``, the user name in ``external_ids["immoware24_user"]``;
+Briefanrede and Staat (federal state) are kept as source note in ``notes``. A contact that
+already carries the id is not created again, it only receives the additional role. Names are
+split heuristically ("Nachname, Vorname" or "Vorname Nachname"); everything unclear stays in
+the name fields as exported and is listed in the report. No contract, receivable or bank
+account is created (rule 0.1.3); an IBAN column, if the export carries one, is only reported
+masked as a proposal (M19-05, four eyes release of bank accounts in ``mhvp.contacts``) and never
+stored.
 
 The files are read with ``mhvp.imports.csvtext`` (encoding, delimiter, quoting, spacing, empty
 and repeated header rows, column order and extra columns are tolerated and reported). Rows
@@ -395,8 +398,18 @@ def prepare_row(row: ContactRow) -> Prepared:
         data["salutation"] = salutation(row.salutation_line)
         if note:
             notes.append(note)
+    # The name as exported; ``mhvp.imports.zuordnung`` matches the object list against it.
+    data["external_ids"]["immoware24_name"] = row.name.strip()[:200]
     if row.username:
         data["external_ids"]["immoware24_user"] = row.username
+    # Letter salutation and federal state have no field of their own; kept as a source note.
+    source_notes: list[str] = [
+        f"{label} laut Altsystem: {value}"
+        for label, value in (("Briefanrede", row.salutation_line), ("Bundesland", row.state))
+        if value
+    ]
+    if source_notes:
+        data["notes"] = "\n".join(source_notes)
     country = "DE"
     if row.country:
         mapped = COUNTRIES.get(row.country.strip().lower())
@@ -427,7 +440,6 @@ def prepare_row(row: ContactRow) -> Prepared:
         ]
     else:
         data["completeness"] = Completeness.INCOMPLETE.value
-    source_notes: list[str] = []
     phone = compose_phone(row.country_code, row.area_code, row.phone)
     if phone:
         try:
@@ -589,7 +601,8 @@ def load_files(specs: list[str]) -> ParsedKontakte:
             role = ROLE_BY_KEYWORD.get(role_text.strip().lower())
             if role is None:
                 raise ValueError(
-                    f"Rolle {role_text!r} unbekannt (eigentuemer, mieter, bank, sonstige)"
+                    f"Rolle {role_text!r} unbekannt "
+                    "(eigentuemer, mieter, dienstleister, bank, sonstige)"
                 )
         else:
             path = spec
@@ -635,7 +648,7 @@ async def run(argv: list[str] | None = None) -> int:
         "files",
         nargs="+",
         help="CSV-Dateien (UTF-8 oder Windows-1252; Semikolon, Komma, Tab); Rolle aus dem "
-        "Dateinamen (eigentuemer, mieter, bank, sonstige) oder als ROLLE=PFAD",
+        "Dateinamen (eigentuemer, mieter, dienstleister, bank, sonstige) oder als ROLLE=PFAD",
     )
     parser.add_argument(
         "--tenant", required=True, help="Mandanten-Slug, z. B. hausverwaltung-mueller"

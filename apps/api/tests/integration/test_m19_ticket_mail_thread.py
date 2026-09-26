@@ -29,6 +29,7 @@ from tests.integration.test_m20_mail_approval import FakeGmail, _upload
 
 pytestmark = pytest.mark.integration
 T = "/api/v1/tickets"
+SETTINGS = "/api/v1/tenant/settings"
 M = "/api/v1/mail"
 PNG = (
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00"
@@ -278,7 +279,9 @@ def test_ticket_thread_reply_with_tnr_and_inbound_assignment(
     assert foreign_ref.status_code == 404, foreign_ref.text
 
     # Antwort: Entwurf im Postausgang (pending), Betreff mit genau einer Kennung TNR#<nummer>,
-    # Kopie übernommen, In-Reply-To und References gesetzt.
+    # Kopie übernommen, In-Reply-To und References gesetzt. Der Admin trägt kein Kennzeichen
+    # (M20-03: Direktversand), deshalb für diesen Freigabeweg die Notbremse des Mandanten setzen.
+    _ok(client.patch(SETTINGS, json={"ticket_reply_approval_all": True}, headers=admin))
     first = _ok(client.post(f"{T}/{ticket_id}/reply", json=reply, headers=admin), 201)
     assert first["status"] == "pending"
     assert first["subject"] == f"AW: Wasserschaden Küche {RUN} TNR#{number}"
@@ -441,7 +444,11 @@ def test_reply_to_closed_ticket_reopens_and_notifies(client: TestClient, world: 
     _ok(
         client.patch(
             f"{T}/{ticket_id}",
-            json={"assignee_user_id": str(world.users["tmtadmin"]), "status": "done"},
+            json={
+                "assignee_user_id": str(world.users["tmtadmin"]),
+                "status": "done",
+                "resolution": {"kind": "auskunft_erteilt"},
+            },
             headers=admin,
         )
     )

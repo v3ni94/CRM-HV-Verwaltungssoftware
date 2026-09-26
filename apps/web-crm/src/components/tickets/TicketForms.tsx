@@ -4,10 +4,29 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
+import { ResolutionDialog, isClosingStatus } from "@/components/tickets/ResolutionDialog";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 export const STATUSES = ["new", "in_progress", "waiting", "done", "closed", "rejected"] as const;
+/** Mirror of TICKET_FLOW in apps/api/src/mhvp/tickets/status.py (operator 26.09.2026). Users with
+ * tickets:delete (tenant admin) may switch to any status; everyone else follows this flow. */
+export const TICKET_FLOW: Record<string, readonly string[]> = {
+  new: ["in_progress", "waiting", "rejected", "done"],
+  in_progress: ["waiting", "done", "rejected"],
+  waiting: ["in_progress", "done", "rejected"],
+  done: ["closed", "in_progress"],
+  closed: [],
+  rejected: ["in_progress"],
+};
+
+/** Status options offered in the ticket status select: current status first allowed as is. */
+export function allowedStatuses(current: string, canChangeAnyStatus: boolean): string[] {
+  if (canChangeAnyStatus) return [...STATUSES];
+  const next = TICKET_FLOW[current] ?? [];
+  return STATUSES.filter((s) => s === current || next.includes(s));
+}
+
 export const PRIORITIES = ["low", "normal", "high", "urgent", "immediate"] as const;
 
 type TemplateSummary = {
@@ -118,12 +137,14 @@ export function TicketEdit({
   status,
   priority,
   internalDescription = "",
+  canChangeAnyStatus = false,
 }: {
   id: string;
   status: string;
   priority: string;
   /** 6.6 interne Beschreibung (Review 26.09.2026, M6): nur für Mitarbeiter, nie im Portal. */
   internalDescription?: string;
+  canChangeAnyStatus?: boolean;
 }) {
   const t = useTranslations("Tickets");
   const router = useRouter();
@@ -133,6 +154,7 @@ export function TicketEdit({
   const [internalSaved, setInternalSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [closing, setClosing] = useState<string | null>(null);
   const send = async (path: string, method: string, body: unknown) => {
     setBusy(true);
     setError(null);
@@ -147,8 +169,13 @@ export function TicketEdit({
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("status")}</span>
-          <select className={ui.input} value={status} disabled={busy} onChange={(e) => send("", "PATCH", { status: e.target.value })}>
-            {STATUSES.map((s) => (
+          <select className={ui.input} value={status} disabled={busy} onChange={(e) => {
+              const next = e.target.value;
+              if (isClosingStatus(next)) setClosing(next);
+              else void send("", "PATCH", { status: next });
+            }}
+          >
+            {allowedStatuses(status, canChangeAnyStatus).map((s) => (
               <option key={s} value={s}>
                 {t(`statuses.${s}`)}
               </option>
@@ -166,6 +193,16 @@ export function TicketEdit({
           </select>
         </label>
       </div>
+      {closing ? (
+        <ResolutionDialog
+          status={closing}
+          busy={busy}
+          onCancel={() => setClosing(null)}
+          onConfirm={async (resolution) => {
+            if (await send("", "PATCH", { status: closing, resolution })) setClosing(null);
+          }}
+        />
+      ) : null}
       <div className="flex flex-col gap-1">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("internalDescription")}</span>

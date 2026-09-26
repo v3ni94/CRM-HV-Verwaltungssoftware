@@ -139,7 +139,8 @@
       "communication": "Kommunikation",
       "bank": "Bankverbindungen",
       "notes": "Notizen",
-      "consents": "Einwilligungen"
+      "consents": "Einwilligungen",
+      "tickets": "Tickets"
     },
     "calls": {
       "title": "Anrufe"
@@ -205,6 +206,18 @@
       "cancel": "Abbrechen",
       "noPermission": "Freigabe nur mit Recht contacts:approve durch eine zweite Person.",
       "platformAdmin": "Plattformadministratoren geben keine IBAN frei, die Freigabe erfolgt durch eine zweite Person des Mandanten."
+    },
+    "relations": {
+      "title": "Beziehungen zu Objekten und Einheiten",
+      "empty": "Keine Objektbezüge hinterlegt.",
+      "object": "Objekt",
+      "unit": "Einheit",
+      "role": "Rolle",
+      "period": "Zeitraum",
+      "status": "Status",
+      "active": "aktiv",
+      "ended": "beendet",
+      "since": "seit {date}"
     }
   },
   "ContactForm": {
@@ -529,7 +542,8 @@
       "ai:extract_property": "KI: Objekt aus Unterlagen",
       "immoware24:objektdaten": "Immoware24-Liste: Objektdaten",
       "immoware24:kontakte": "Immoware24-Liste: Kontakte",
-      "objektakte": "objektakte-Export (Übernahme)"
+      "objektakte": "objektakte-Export (Übernahme)",
+      "immoware24:zuordnung": "Immoware24-Liste: Zuordnung"
     },
     "status": {
       "applied": "übernommen",
@@ -554,7 +568,20 @@
     "undoConfirm": "Import wirklich zurücknehmen? Datensätze, auf die spätere Daten aufbauen, bleiben erhalten.",
     "undoneAt": "Zurückgenommen am {at}",
     "immoware24Link": "Importassistent öffnen",
-    "reconciliationLink": "Abgleichbericht Parallelbetrieb"
+    "reconciliationLink": "Abgleichbericht Parallelbetrieb",
+    "listImportLink": "Immoware24 Listenimport",
+    "roleTitle": "Rolle nachträglich setzen",
+    "roleLabel": "Rolle für alle angelegten Kontakte",
+    "roleApply": "Rolle setzen",
+    "roleDone": "Rolle {role} für {count} Kontakte gesetzt.",
+    "role": {
+      "eigentuemer": "Eigentümer",
+      "mieter": "Mieter",
+      "verwalter": "Verwalter",
+      "dienstleister": "Dienstleister",
+      "bank": "Bank",
+      "sonstiges": "Sonstige"
+    }
   },
   "AiSettings": {
     "title": "KI-Einstellungen",
@@ -662,10 +689,10 @@
     }
   },
   "ImmowareLists": {
-    "title": "Immoware24-Listen",
-    "intro": "Objektliste und Kontaktlisten aus Immoware24 als CSV direkt anlegen (UTF-8 oder Windows-1252; Semikolon, Komma oder Tabulator werden erkannt). Erst Testlauf, dann Übernahme. Es entstehen keine Verträge, Sollstellungen, Bankverbindungen oder Buchungen.",
+    "title": "Immoware24 Listenimport",
+    "intro": "Reihenfolge einhalten: 1. Objekte und Einheiten, 2. Kontakte, 3. Zuordnung Eigentümer und Mieter. Je Abschnitt erst Testlauf, dann Übernehmen. Dateien als CSV aus Immoware24 (UTF-8 oder Windows-1252; Semikolon, Komma oder Tabulator werden erkannt). Bankverbindungen und Buchungen entstehen nicht.",
     "objektdaten": {
-      "title": "Objektdaten",
+      "title": "1. Objekte und Einheiten",
       "help": "Export Objektdaten mit den Spalten Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer. Eigentümer, Mieter und Beträge werden nur als Herkunftsnotiz an der Einheit gespeichert.",
       "file": "Objektliste (csv)",
       "numberMap": "Nummernzuordnung (ALT=NEU, je Zeile oder durch Komma getrennt)",
@@ -690,15 +717,15 @@
       }
     },
     "kontakte": {
-      "title": "Kontakte",
-      "help": "Je Kontaktgruppe eine Liste (Spalten id und Name erforderlich). Derselbe Kontakt in mehreren Listen erhält alle Rollen.",
-      "file": "Datei {index} (csv)",
-      "role": "Rolle für Datei {index}",
+      "title": "2. Kontakte",
+      "help": "Je Kontaktgruppe eine Liste (Spalten id und Name erforderlich). Die Rolle wird aus dem Dateinamen vorbelegt und kann geändert werden. Derselbe Kontakt in mehreren Listen erhält alle Rollen.",
+      "role": "Rolle für {name}",
       "roleOption": {
         "eigentuemer": "Eigentümer",
         "mieter": "Mieter",
         "bank": "Bank",
-        "sonstige": "Sonstige"
+        "sonstige": "Sonstige",
+        "dienstleister": "Dienstleister"
       },
       "colFile": "Datei",
       "colLine": "Zeile",
@@ -712,7 +739,8 @@
         "role_added": "Rolle ergänzt",
         "invalid": "Zeilen ungültig",
         "duplicate": "Duplikate in der Datei"
-      }
+      },
+      "files": "Kontaktlisten (csv, mehrere Dateien möglich)"
     },
     "fileNotes": "Hinweise zur Datei",
     "colStatus": "Status",
@@ -729,13 +757,45 @@
     "testRun": "Testlauf",
     "apply": "Übernehmen",
     "applyHint": "Übernehmen wird nach einem Testlauf mit denselben Dateien und Einstellungen freigeschaltet.",
-    "applyConfirm": "Die Daten aus dem Testlauf jetzt übernehmen? Vorhandene Datensätze werden nicht überschrieben.",
+    "applyConfirm": "Daten werden geschrieben. Fortfahren?",
     "fileRequired": "Bitte eine Datei auswählen.",
     "resultTest": "Testlauf, es wurde nichts gespeichert.",
     "resultApplied": "Übernommen. Der Lauf ist unter Importe aufgeführt.",
     "runLink": "Importlauf öffnen",
     "noEntries": "Keine Einträge.",
-    "busy": "Wird verarbeitet"
+    "busy": "Wird verarbeitet",
+    "colCount": "Zähler",
+    "colValue": "Anzahl",
+    "zuordnung": {
+      "title": "3. Zuordnung Eigentümer und Mieter",
+      "help": "Objektliste wie in Schritt 1. Eigentümer und Mieter werden über den Namen den importierten Kontakten zugeordnet und als Verträge mit monatlicher Zahlung angelegt. Vorhandene Verträge werden nicht überschrieben, mehrdeutige Namen werden nur gemeldet.",
+      "file": "Objektliste (csv) für die Zuordnung",
+      "startDate": "Vertragsbeginn",
+      "startDateHelp": "Standard ist der 01.01. des laufenden Jahres.",
+      "startUsed": "Vertragsbeginn {date}.",
+      "startAssumed": "Angenommen, bitte prüfen.",
+      "colUnit": "VE",
+      "notFoundTitle": "Nicht gefunden",
+      "ambiguousTitle": "Mehrdeutig",
+      "conflictsTitle": "Konflikte",
+      "notesTitle": "Hinweise",
+      "count": {
+        "einheiten_gesamt": "Einheiten gesamt",
+        "eigentuemer_zugeordnet": "Eigentümer zugeordnet",
+        "mieter_zugeordnet": "Mieter zugeordnet",
+        "leerstand": "Leerstand",
+        "parties_angelegt": "Parteien angelegt",
+        "vertraege_angelegt": "Verträge angelegt",
+        "vertraege_vorhanden": "Verträge bereits vorhanden",
+        "zahlungen_angelegt": "Zahlungen angelegt",
+        "einheit_fehlt": "Einheiten nicht importiert",
+        "uebersprungen_abgegeben": "Abgegeben übersprungen",
+        "zahlungen_cent_hoa_fee": "Summe Hausgeld monatlich",
+        "zahlungen_cent_rent": "Summe Miete monatlich"
+      }
+    },
+    "backToImports": "Zurück zu Importe",
+    "noPermission": "Für den Listenimport fehlt die Berechtigung (Importe anlegen sowie Objekte, Kontakte und Verträge anlegen)."
   },
   "Immoware24": {
     "title": "Importassistent",
@@ -832,7 +892,8 @@
     "colFile": "Einheiten laut Datei",
     "colPlatform": "Einheiten in der Plattform",
     "colDifference": "Differenz",
-    "restart": "Weiteren Bericht importieren"
+    "restart": "Weiteren Bericht importieren",
+    "listImportLink": "Listenimport (Objektdaten, Kontakte, Zuordnung) öffnen"
   },
   "Workspace": {
     "dashboard": "Start",
@@ -2105,6 +2166,23 @@
         "city": "Ort",
         "phone": "Telefon",
         "email": "E-Mail"
+      },
+      "acceptAndReply": "Freigeben und antworten",
+      "acceptAndReplyHint": "Übernimmt die Stammdaten und legt den Antwortentwurf am Ticket an. Der Versand erfolgt erst nach Freigabe im Mailmodul.",
+      "call": {
+        "phone": "Anrufernummer",
+        "name": "Anrufer",
+        "property": "Objekt",
+        "unit": "Einheit",
+        "concern": "Anliegen",
+        "unknown": "nicht erkannt",
+        "label": {
+          "mobile": "Mobil",
+          "other": "Festnetz oder unbekannt",
+          "work": "Geschäftlich",
+          "private": "Privat",
+          "fax": "Fax"
+        }
       }
     },
     "title": "Tickets",
@@ -2198,7 +2276,8 @@
       "category": "Kategorie",
       "createdFrom": "Erstellt ab",
       "createdTo": "Erstellt bis",
-      "reset": "Zurücksetzen"
+      "reset": "Zurücksetzen",
+      "showClosed": "Erledigte anzeigen"
     },
     "reply": {
       "title": "Antworten",
@@ -2329,7 +2408,29 @@
     "internalDescription": "Interne Beschreibung",
     "internalDescriptionHint": "Nur für Mitarbeiter sichtbar, nicht im Portal.",
     "internalDescriptionSaved": "Gespeichert.",
-    "saveInternalDescription": "Interne Beschreibung speichern"
+    "saveInternalDescription": "Interne Beschreibung speichern",
+    "resolution": {
+      "title": "Erledigung: {status}",
+      "hint": "Kurz beschreiben, was gemacht wurde. Das System lernt daraus für ähnliche Vorgänge.",
+      "hintBulk": "Gilt für alle {count} ausgewählten Tickets. Kurz beschreiben, was gemacht wurde.",
+      "kind": "Was wurde gemacht",
+      "choose": "Bitte wählen",
+      "note": "Notiz (optional)",
+      "noteRequired": "Beschreibung (Pflicht bei Sonstiges)",
+      "confirm": "Abschließen",
+      "cancel": "Abbrechen",
+      "kinds": {
+        "stammdaten_ergaenzt": "Stammdaten ergänzt",
+        "handwerker_beauftragt": "Handwerker beauftragt",
+        "auskunft_erteilt": "Auskunft erteilt",
+        "weitergeleitet": "Weitergeleitet",
+        "kein_handlungsbedarf": "Kein Handlungsbedarf",
+        "abgelehnt": "Abgelehnt",
+        "zusammengefuehrt": "Zusammengeführt",
+        "sonstiges": "Sonstiges"
+      }
+    },
+    "resolutionLabel": "Erledigung"
   },
   "Automation": {
     "title": "Automatisierung",
@@ -2798,7 +2899,8 @@
     "tnrSuggestion": "Mögliche Zuordnung zu TNR#{number}: Der Absender ist nicht am Ticket beteiligt, die Mail wurde deshalb nicht automatisch zugeordnet.",
     "sendingHint": "Freigegeben, Versand noch ohne Nachweis. Eine erneute Freigabe prüft den Versand anhand der Message-ID und sendet nur, wenn die Nachricht nicht angekommen ist.",
     "attachmentsRejected": "Nicht übernommene Anhänge: {list}",
-    "loadingDetail": "Nachricht wird geladen..."
+    "loadingDetail": "Nachricht wird geladen...",
+    "showClosed": "Erledigte anzeigen"
   },
   "Platform": {
     "title": "Plattform",
@@ -3267,6 +3369,10 @@
     "weg": {
       "title": "WEG",
       "description": "Mehrheitsregeln je Beschlussgegenstand mit Fundstelle und Freigabe."
+    },
+    "knowledge": {
+      "title": "Wissensdatenbank",
+      "description": "Gelernte Playbooks und Lernbeispiele aus Erledigungen ansehen."
     }
   },
   "Members": {
@@ -3570,7 +3676,13 @@
     "invoiceForwardingLearningList": "Lernliste (automatisch bestätigt)",
     "forwardInvoice": "Weiterleiten?",
     "forwardInvoiceConfirm": "Diese Rechnung an die hinterlegte Adresse weiterleiten?",
-    "forwardInvoiceDone": "Weitergeleitet."
+    "forwardInvoiceDone": "Weitergeleitet.",
+    "callAssistantTitle": "Telefonassistenz (Hallo Heidi)",
+    "callAssistantHint": "Gesprächsprotokolle der Telefonassistenz werden am Ticket ausgewertet: Anrufer, Objekt, Einheit und Anliegen. Ist die Rufnummer neu, entsteht der Vorschlag Stammdaten ergänzen mit Antwortentwurf.",
+    "callAssistantEnabled": "Protokoll-Mails auswerten",
+    "callAssistantSenders": "Absendermuster (Teil der Absenderadresse, durch Komma getrennt)",
+    "callAssistantKeywords": "Kennwörter im Betreff (durch Komma getrennt)",
+    "callAssistantDefaultsHint": "Leere Felder nutzen die eingebauten Muster."
   },
   "Dms": {
     "area": "Verwaltung",
@@ -5911,5 +6023,57 @@
     "generateFile": "Datei als Dokument ablegen",
     "cancel": "Verwerfen",
     "confirmCancel": "Lastschriftlauf verwerfen? Freigaben werden aufgehoben."
+  },
+  "Knowledge": {
+    "title": "Wissensdatenbank",
+    "description": "Gelernte Playbooks und Lernbeispiele aus Erledigungen und bestätigten Vorschlägen.",
+    "tabs": {
+      "playbooks": "Playbooks",
+      "examples": "Lernbeispiele"
+    },
+    "playbooks": {
+      "empty": "Noch keine Playbooks gelernt.",
+      "title": "Titel",
+      "trigger": "Auslöser",
+      "steps": "Schritte",
+      "usage": "Treffer",
+      "lastUsed": "Letzte Nutzung",
+      "status": "Status",
+      "actions": "Aktionen",
+      "never": "nie",
+      "deactivate": "Deaktivieren",
+      "edit": "Bearbeiten",
+      "statuses": {
+        "draft": "Entwurf",
+        "active": "aktiv",
+        "archived": "deaktiviert"
+      }
+    },
+    "examples": {
+      "empty": "Keine Lernbeispiele.",
+      "date": "Datum",
+      "task": "Aufgabe",
+      "decision": "Entscheidung",
+      "text": "Kurztext",
+      "filter": "Aufgabe filtern",
+      "all": "Alle Aufgaben",
+      "more": "Weitere laden",
+      "total": "{total} Einträge"
+    },
+    "tasks": {
+      "ticket_resolution": "Ticketerledigung",
+      "contact_master_data_change": "Stammdatenänderung",
+      "classify_document": "Dokumentklassifizierung",
+      "classify_email": "Mailklassifizierung",
+      "draft_reply": "Antwortentwurf",
+      "propose_posting": "Kontierung",
+      "extract_invoice": "Rechnungserkennung",
+      "extract_contacts": "Kontakterkennung",
+      "extract_property": "Objekterkennung",
+      "map_columns": "Spaltenzuordnung",
+      "check_statement": "Abrechnungsprüfung",
+      "answer_question": "Fragen",
+      "summarize": "Zusammenfassung"
+    }
   }
 }

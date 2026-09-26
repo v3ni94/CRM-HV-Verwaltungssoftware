@@ -1439,6 +1439,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/examples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lernbeispiele (Wissensdatenbank)
+         * @description Bestätigte Lernbeispiele des Mandanten, neueste zuerst, optional nach Aufgabe gefiltert
+         *     (unter anderem ``ticket_resolution`` aus Erledigungsnotizen).
+         */
+        get: operations["list_examples_api_v1_ai_examples_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/fast-table-import": {
         parameters: {
             query?: never;
@@ -1455,6 +1476,26 @@ export interface paths {
          */
         put: operations["put_fast_table_import_api_v1_ai_fast_table_import_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/import-runs/{import_id}/apply-role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importlauf: Rolle nachträglich setzen
+         * @description Adds the role to every contact the import run created; existing roles are kept.
+         */
+        post: operations["apply_import_role_api_v1_ai_import_runs__import_id__apply_role_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3104,6 +3145,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contacts/roles/recompute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abgeleitete Rollen neu berechnen
+         * @description Adds eigentuemer/mieter from active contracts and ownerships; never removes roles.
+         */
+        post: operations["recompute_roles_api_v1_contacts_roles_recompute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts/{contact_id}": {
         parameters: {
             query?: never;
@@ -3305,7 +3366,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Objektbezüge eines Kontakts */
+        get: operations["list_object_relations_api_v1_contacts__contact_id__relations_get"];
         put?: never;
         /** Beziehung anlegen */
         post: operations["add_relation_api_v1_contacts__contact_id__relations_post"];
@@ -6151,6 +6213,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/imports/immoware24/lists/zuordnung": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eigentümer und Mieter der Objektliste als Verträge (Testlauf oder Übernahme)
+         * @description Third step after objektdaten and kontakte (handbuch/import-zuordnung.md). ``start_date``
+         *     defaults to 1 January of the current year (reported as assumed). The contracts are not
+         *     registered as undo items; the report lists every conflict, ambiguous and unknown name.
+         */
+        post: operations["import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/imports/immoware24/mappings": {
         parameters: {
             query?: never;
@@ -6802,6 +6886,28 @@ export interface paths {
         /** Leerstandsliste (Mietobjekte) */
         get: operations["vacancies_api_v1_letting_vacancies_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/call-assistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Telefonassistenz (Hallo Heidi): Erkennungsmuster der Protokoll-Mails */
+        get: operations["get_call_assistant_api_v1_mail_call_assistant_get"];
+        /**
+         * Telefonassistenz (Hallo Heidi): Erkennungsmuster speichern
+         * @description Absendermuster (Teil der Absenderadresse) und Kennwörter (Betreff, im Text nur mit
+         *     beschrifteter Rufnummer). Leere Listen nutzen die eingebauten Muster.
+         */
+        put: operations["put_call_assistant_api_v1_mail_call_assistant_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -11322,6 +11428,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tickets/{ticket_id}/proposals/{proposal_id}/accept-and-reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vorschlag freigeben und Antwortentwurf am Ticket anlegen (kein Versand)
+         * @description Hallo-Heidi-Anruf: übernimmt die Stammdaten wie ``accept`` und legt den vorbereiteten
+         *     Antwortentwurf als ausgehende Nachricht am Ticket an. Der Versand läuft über den
+         *     bestehenden Freigabepfad in ``/mail/messages`` (Einreichen, Vier-Augen-Freigabe).
+         */
+        post: operations["accept_and_reply_api_v1_tickets__ticket_id__proposals__proposal_id__accept_and_reply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tickets/{ticket_id}/proposals/{proposal_id}/correct": {
         parameters: {
             query?: never;
@@ -12125,7 +12253,7 @@ export interface components {
          * AiTask
          * @enum {string}
          */
-        AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change";
+        AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change" | "ticket_resolution" | "call_summary";
         /**
          * AlertChannel
          * @enum {string}
@@ -12333,6 +12461,22 @@ export interface components {
              * Format: uuid
              */
             playbook_id: string;
+        };
+        /** ApplyRoleIn */
+        ApplyRoleIn: {
+            /** @description Rolle, die allen angelegten Kontakten ergänzt wird */
+            role: components["schemas"]["ContactRoleCode"];
+        };
+        /** ApplyRoleOut */
+        ApplyRoleOut: {
+            /** Contacts Changed */
+            contacts_changed: number;
+            /**
+             * Import Run Id
+             * Format: uuid
+             */
+            import_run_id: string;
+            role: components["schemas"]["ContactRoleCode"];
         };
         /** AssignAccountIn */
         AssignAccountIn: {
@@ -12698,6 +12842,11 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** BoardStatementIn */
+        BoardStatementIn: {
+            /** Statement */
+            statement: string;
+        };
         /** Body_apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post */
         Body_apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post: {
             /** File */
@@ -12729,6 +12878,18 @@ export interface components {
              * @default false
              */
             skip_handed_over: boolean;
+        };
+        /** Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post */
+        Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post: {
+            /** File */
+            file: string;
+            /**
+             * Skip Handed Over
+             * @default false
+             */
+            skip_handed_over: boolean;
+            /** Start Date */
+            start_date?: string | null;
         };
         /** Body_match_files_api_v1_handover_imports_uprotokoll_files_post */
         Body_match_files_api_v1_handover_imports_uprotokoll_files_post: {
@@ -13022,6 +13183,7 @@ export interface components {
         };
         /** BulkStatusIn */
         BulkStatusIn: {
+            resolution?: components["schemas"]["ResolutionIn"] | null;
             status: components["schemas"]["TicketStatus"];
             /** Ticket Ids */
             ticket_ids: string[];
@@ -13176,6 +13338,27 @@ export interface components {
              * Format: uuid
              */
             contact_id: string;
+        };
+        /** CallAssistantSettingsIn */
+        CallAssistantSettingsIn: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Keywords */
+            keywords?: string[];
+            /** Sender Patterns */
+            sender_patterns?: string[];
+        };
+        /** CallAssistantSettingsOut */
+        CallAssistantSettingsOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Keywords */
+            keywords: string[];
+            /** Sender Patterns */
+            sender_patterns: string[];
         };
         /** CallNoteIn */
         CallNoteIn: {
@@ -13352,6 +13535,8 @@ export interface components {
         ChangeIn: {
             /** Field */
             field: string;
+            /** Label */
+            label?: ("work" | "mobile" | "private" | "fax" | "other") | null;
             /** New */
             new?: string | null;
             /** Old */
@@ -18120,6 +18305,45 @@ export interface components {
              */
             purpose: string;
         };
+        /**
+         * ObjectRelationOut
+         * @description Object or unit reference of a contact (tenancy, ownership, property contact).
+         */
+        ObjectRelationOut: {
+            /** Active */
+            active: boolean;
+            /** Category Code */
+            category_code?: string | null;
+            /** Contract Id */
+            contract_id?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "mieter" | "eigentuemer" | "kontakt";
+            /** Property City */
+            property_city?: string | null;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Property Name */
+            property_name: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "contract" | "property_owner" | "property_contact";
+            /** Unit Id */
+            unit_id?: string | null;
+            /** Unit Label */
+            unit_label?: string | null;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+        };
         /** OccupancyRow */
         OccupancyRow: {
             /** Owner Party */
@@ -18691,6 +18915,14 @@ export interface components {
              * Format: date-time
              */
             scheduled_at: string;
+        };
+        /**
+         * PortalBoardStatementIn
+         * @description Statement of the board on one report version (A76, PÜ09): text only, no release.
+         */
+        PortalBoardStatementIn: {
+            /** Text */
+            text: string;
         };
         /** PortalChangeIn */
         PortalChangeIn: {
@@ -19589,6 +19821,11 @@ export interface components {
             /** Purpose */
             purpose: string | null;
         };
+        /** RecomputeRolesOut */
+        RecomputeRolesOut: {
+            /** Changed */
+            changed: number;
+        };
         /**
          * ReconciliationNoteIn
          * @description Explained difference of the cash flow reconciliation (W04): signed amount that bridges
@@ -19968,6 +20205,23 @@ export interface components {
              */
             mandatory: boolean;
         };
+        /**
+         * ResolutionIn
+         * @description Erledigungsnotiz beim Setzen auf done, closed oder rejected: Art plus Freitext, der
+         *     Freitext ist bei ``sonstiges`` Pflicht.
+         */
+        ResolutionIn: {
+            kind: components["schemas"]["ResolutionKind"];
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * ResolutionKind
+         * @description Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``
+         *     setzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt.
+         * @enum {string}
+         */
+        ResolutionKind: "stammdaten_ergaenzt" | "handwerker_beauftragt" | "auskunft_erteilt" | "weitergeleitet" | "kein_handlungsbedarf" | "abgelehnt" | "zusammengefuehrt" | "sonstiges";
         /** RetentionProfileIn */
         RetentionProfileIn: {
             /** Document Class */
@@ -21021,6 +21275,7 @@ export interface components {
         };
         /** TicketMergeIn */
         TicketMergeIn: {
+            resolution?: components["schemas"]["ResolutionIn"] | null;
             /** Target Ticket Id */
             target_ticket_id?: string | null;
             /** Ticket Ids */
@@ -21045,6 +21300,7 @@ export interface components {
             priority?: components["schemas"]["Priority"] | null;
             /** Property Id */
             property_id?: string | null;
+            resolution?: components["schemas"]["ResolutionIn"] | null;
             status?: components["schemas"]["TicketStatus"] | null;
             /** Team Id */
             team_id?: string | null;
@@ -21853,11 +22109,6 @@ export interface components {
             /** Name */
             name: string;
         };
-        /** BoardStatementIn */
-        mhvp__hoa__board__BoardStatementIn: {
-            /** Statement */
-            statement: string;
-        };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
             /**
@@ -21871,14 +22122,6 @@ export interface components {
             slug: string;
             /** Status */
             status: string;
-        };
-        /**
-         * BoardStatementIn
-         * @description Statement of the board on one report version (A76, PÜ09): text only, no release.
-         */
-        mhvp__portal__board__BoardStatementIn: {
-            /** Text */
-            text: string;
         };
         /** BankAccountIn */
         mhvp__properties__schemas__BankAccountIn: {
@@ -25272,6 +25515,41 @@ export interface operations {
             };
         };
     };
+    list_examples_api_v1_ai_examples_get: {
+        parameters: {
+            query?: {
+                task?: components["schemas"]["AiTask"] | null;
+                page?: number;
+                per_page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_fast_table_import_api_v1_ai_fast_table_import_get: {
         parameters: {
             query?: never;
@@ -25312,6 +25590,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FastTableImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_import_role_api_v1_ai_import_runs__import_id__apply_role_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyRoleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyRoleOut"];
                 };
             };
             /** @description Validation Error */
@@ -28670,6 +28983,26 @@ export interface operations {
             };
         };
     };
+    recompute_roles_api_v1_contacts_roles_recompute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecomputeRolesOut"];
+                };
+            };
+        };
+    };
     get_contact_api_v1_contacts__contact_id__get: {
         parameters: {
             query?: never;
@@ -29151,6 +29484,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_object_relations_api_v1_contacts__contact_id__relations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectRelationOut"][];
                 };
             };
             /** @description Validation Error */
@@ -32004,7 +32368,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__hoa__board__BoardStatementIn"];
+                "application/json": components["schemas"]["BoardStatementIn"];
             };
         };
         responses: {
@@ -35675,6 +36039,43 @@ export interface operations {
             };
         };
     };
+    import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post: {
+        parameters: {
+            query?: {
+                mode?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_mappings_api_v1_imports_immoware24_mappings_get: {
         parameters: {
             query?: {
@@ -37158,6 +37559,59 @@ export interface operations {
             };
         };
     };
+    get_call_assistant_api_v1_mail_call_assistant_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAssistantSettingsOut"];
+                };
+            };
+        };
+    };
+    put_call_assistant_api_v1_mail_call_assistant_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CallAssistantSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAssistantSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ingest_api_v1_mail_ingest_post: {
         parameters: {
             query?: never;
@@ -37452,6 +37906,8 @@ export interface operations {
                 ticket_id?: string | null;
                 mailbox_id?: string | null;
                 q?: string | null;
+                /** @description Erledigte Nachrichten zeigen (Status done oder verknüpftes Ticket done, closed, rejected); gilt nur ohne status-Filter */
+                include_closed?: boolean;
                 limit?: number;
             };
             header?: never;
@@ -40779,7 +41235,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__portal__board__BoardStatementIn"];
+                "application/json": components["schemas"]["PortalBoardStatementIn"];
             };
         };
         responses: {
@@ -46216,7 +46672,12 @@ export interface operations {
                 status?: string | null;
                 property_id?: string | null;
                 unit_id?: string | null;
+                /** @description Kontakt oder Initiator (contact_id ODER initiator_contact_id) */
                 contact_id?: string | null;
+                /** @description Nur Initiator */
+                initiator_contact_id?: string | null;
+                /** @description Personenbezug: contact_id ODER initiator_contact_id */
+                any_contact_id?: string | null;
                 /** @description Rolle des verknüpften Kontakts zur Einheit: owner oder tenant */
                 contact_role?: string | null;
                 /** @description Bearbeiter, primär oder zusätzlich zugewiesen */
@@ -46229,10 +46690,12 @@ export interface operations {
                 /** @description Erstellt bis (inklusive) */
                 created_to?: string | null;
                 mine?: boolean;
-                /** @description Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse */
+                /** @description Nummer, Titel, Beschreibung, Kontaktname oder E-Mail, Objektadresse, Betreff oder Absender verknüpfter Mails (beinhaltet) */
                 q?: string | null;
                 /** @description Zusammengeführte Tickets zeigen */
                 include_merged?: boolean;
+                /** @description Erledigte Tickets (done, closed, rejected) zeigen; gilt nur ohne status-Filter */
+                include_closed?: boolean;
                 /** @description Quelltickets eines Ziels */
                 merged_into?: string | null;
                 limit?: number;
@@ -47165,6 +47628,38 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_and_reply_api_v1_tickets__ticket_id__proposals__proposal_id__accept_and_reply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

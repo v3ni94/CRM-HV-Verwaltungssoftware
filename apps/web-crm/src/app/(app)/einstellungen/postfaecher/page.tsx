@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { CallAssistantSettings, type CallAssistant } from "@/components/mail/CallAssistantSettings";
 import { InvoiceForwardingSettings, type InvoiceForwarding } from "@/components/mail/InvoiceForwardingSettings";
 import { MailboxSettings, type Mailbox, type Member, type OAuthStatus } from "@/components/mail/MailboxSettings";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -29,6 +30,7 @@ export default async function MailboxSettingsPage({
     api.GET("/api/v1/tenant/members"),
     api.GET("/api/v1/mail/invoice-forwarding"),
   ]);
+  const callAssistant = await api.GET("/api/v1/mail/call-assistant");
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
@@ -52,6 +54,15 @@ export default async function MailboxSettingsPage({
             sender_allowlist: [],
             learning_list: [],
           }) as InvoiceForwarding
+        }
+      />
+      <CallAssistantSettings
+        initial={
+          (callAssistant.data ?? {
+            enabled: true,
+            sender_patterns: [],
+            keywords: [],
+          }) as CallAssistant
         }
       />
     </div>

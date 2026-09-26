@@ -130,6 +130,25 @@ async def create_contact(
         return out
 
 
+@router.post("/contacts/roles/recompute", summary="Abgeleitete Rollen neu berechnen")
+async def recompute_roles(
+    request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> schemas.RecomputeRolesOut:
+    """Adds eigentuemer/mieter from active contracts and ownerships; never removes roles."""
+    async with tenant_tx(request, principal) as session:
+        changed = await services.recompute_all(session, principal.tenant_id)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="contact.roles_recomputed",
+            entity_type="contact",
+            entity_id=None,
+            actor_user_id=principal.user_id,
+            payload={"changed": changed},
+        )
+        return schemas.RecomputeRolesOut(changed=changed)
+
+
 @router.get("/contacts/duplicates", summary="Dublettenvorschläge für neue Angaben")
 async def duplicates(
     request: Request,
@@ -538,6 +557,15 @@ async def add_relation(
         return schemas.RelationOut(id=relation.id, **body.model_dump())
 
 
+@router.get("/contacts/{contact_id}/relations", summary="Objektbezüge eines Kontakts")
+async def list_object_relations(
+    contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[schemas.ObjectRelationOut]:
+    async with tenant_tx(request, principal) as session:
+        contact = await _active(session, contact_id)
+        return await services.object_relations(session, contact)
+
+
 @router.get("/contacts/{contact_id}/consents", summary="Einwilligungen")
 async def list_consents(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -652,6 +680,7 @@ async def create_party(
                 PartyMember(tenant_id=principal.tenant_id, party_id=party.id, **member.model_dump())
             )
         await session.flush()
+        await services.recompute_for_party(session, party.id)
         await emit(
             session,
             tenant_id=principal.tenant_id,

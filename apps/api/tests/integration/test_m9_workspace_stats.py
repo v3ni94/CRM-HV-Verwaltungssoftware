@@ -144,7 +144,13 @@ def test_dashboard_stats(
     # t1: resolved today after 5 hours -> counted in "done_in_range" and average resolution.
     _force_dates(settings, world.tenant_a, t1["id"], created_at=now)
     _ok(client.patch(f"/api/v1/tickets/{t1['id']}", json={"status": "in_progress"}, headers=h))
-    _ok(client.patch(f"/api/v1/tickets/{t1['id']}", json={"status": "done"}, headers=h))
+    _ok(
+        client.patch(
+            f"/api/v1/tickets/{t1['id']}",
+            json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=h,
+        )
+    )
     _force_dates(settings, world.tenant_a, t1["id"], resolved_at=now.replace(hour=5))
 
     # t2: stays open, in progress.
@@ -206,5 +212,8 @@ def test_dashboard_stats(
     # Caretaker without tickets:read has no access; a caretaker here is not seeded, so check
     # the permission dependency directly via a role with tickets:read removed is out of scope
     # for this integration test (covered by the permission matrix tests).
-    ids_seen = {r["id"] for r in _ok(client.get("/api/v1/tickets", headers=h))}
+    ids_seen = {
+        r["id"]
+        for r in _ok(client.get("/api/v1/tickets", params={"include_closed": "true"}, headers=h))
+    }
     assert {t1["id"], t2["id"], t3["id"]} <= ids_seen

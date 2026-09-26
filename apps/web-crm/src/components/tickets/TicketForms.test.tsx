@@ -57,4 +57,22 @@ describe("Tickets", () => {
     expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ internal_description: "Schlüssel beim Hausmeister" });
     expect(await screen.findByText("Gespeichert.")).toBeInTheDocument();
   });
+
+  it("offers only TICKET_FLOW successors to non admins", () => {
+    renderIntl(<TicketEdit id={ID} status="rejected" priority="normal" />);
+    const options = Array.from((screen.getByLabelText("Status") as HTMLSelectElement).options).map((o) => o.value);
+    expect(options).toEqual(["in_progress", "rejected"]);
+  });
+
+  it("offers no other status for closed tickets to non admins", () => {
+    renderIntl(<TicketEdit id={ID} status="closed" priority="normal" />);
+    const options = Array.from((screen.getByLabelText("Status") as HTMLSelectElement).options).map((o) => o.value);
+    expect(options).toEqual(["closed"]);
+  });
+
+  it("offers every status to tenant admins", () => {
+    renderIntl(<TicketEdit id={ID} status="closed" priority="normal" canChangeAnyStatus />);
+    const options = Array.from((screen.getByLabelText("Status") as HTMLSelectElement).options).map((o) => o.value);
+    expect(options).toEqual(["new", "in_progress", "waiting", "done", "closed", "rejected"]);
+  });
 });

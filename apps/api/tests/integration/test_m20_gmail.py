@@ -207,6 +207,9 @@ def test_gmail_sync_creates_tickets_and_threads(
     assert second["ticket_id"]
     assert first["ticket_id"] != second["ticket_id"]
     assert first["document_id"]  # raw mail stored as document
+    # Gmail id is kept on ingest so "Erledigt archiviert Mail" can find the message (26.09.2026).
+    assert first["gmail_message_id"]
+    assert second["gmail_message_id"]
     # H6: a ticket from mail has an SLA clock like a manually created one.
     clock = _ok(client.get(f"/api/v1/sla/tickets/{first['ticket_id']}/sla", headers=h))
     assert clock["state"] == "running"
@@ -468,5 +471,11 @@ def test_gmail_ids_enable_archiving_and_thread_fallback(
     assert second["thread_id"] == first["id"]
 
     # Ticket done: both Gmail messages are archived (mailbox default archive_on_ticket_done).
-    _ok(client.patch(f"/api/v1/tickets/{first['ticket_id']}", json={"status": "done"}, headers=h))
+    _ok(
+        client.patch(
+            f"/api/v1/tickets/{first['ticket_id']}",
+            json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=h,
+        )
+    )
     assert sorted(fake.archived) == ["i1", "i2"]

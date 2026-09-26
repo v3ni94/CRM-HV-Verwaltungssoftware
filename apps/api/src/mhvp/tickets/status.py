@@ -16,8 +16,10 @@ archived mails behind an open ticket.
 import logging
 import uuid
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,6 +47,57 @@ TICKET_FLOW: dict[TicketStatus, set[TicketStatus]] = {
 
 # Statuses that end a ticket; they set resolved_at, stop the SLA clock and archive mails.
 CLOSING_STATUSES = frozenset({TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED})
+
+
+class ResolutionKind(StrEnum):
+    """Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``
+    setzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt."""
+
+    STAMMDATEN_ERGAENZT = "stammdaten_ergaenzt"
+    HANDWERKER_BEAUFTRAGT = "handwerker_beauftragt"
+    AUSKUNFT_ERTEILT = "auskunft_erteilt"
+    WEITERGELEITET = "weitergeleitet"
+    KEIN_HANDLUNGSBEDARF = "kein_handlungsbedarf"
+    ABGELEHNT = "abgelehnt"
+    ZUSAMMENGEFUEHRT = "zusammengefuehrt"
+    SONSTIGES = "sonstiges"
+
+
+RESOLUTION_LABELS: dict[str, str] = {
+    ResolutionKind.STAMMDATEN_ERGAENZT: "Stammdaten ergänzt",
+    ResolutionKind.HANDWERKER_BEAUFTRAGT: "Handwerker beauftragt",
+    ResolutionKind.AUSKUNFT_ERTEILT: "Auskunft erteilt",
+    ResolutionKind.WEITERGELEITET: "Weitergeleitet",
+    ResolutionKind.KEIN_HANDLUNGSBEDARF: "Kein Handlungsbedarf",
+    ResolutionKind.ABGELEHNT: "Abgelehnt",
+    ResolutionKind.ZUSAMMENGEFUEHRT: "Zusammengeführt",
+    ResolutionKind.SONSTIGES: "Sonstiges",
+}
+
+
+class ResolutionIn(BaseModel):
+    """Erledigungsnotiz beim Setzen auf done, closed oder rejected: Art plus Freitext, der
+    Freitext ist bei ``sonstiges`` Pflicht."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: ResolutionKind
+    note: str | None = Field(default=None, max_length=4000)
+
+    @model_validator(mode="after")
+    def _note_for_other(self) -> "ResolutionIn":
+        self.note = (self.note or "").strip() or None
+        if self.kind is ResolutionKind.SONSTIGES and not self.note:
+            raise ValueError("Bei Sonstiges ist eine Beschreibung erforderlich.")
+        return self
+
+
+def resolution_text(kind: str | None, note: str | None) -> str:
+    """Lesbare Erledigung, zum Beispiel ``Stammdaten ergänzt: Telefonnummer nachgetragen``."""
+    if not kind:
+        return (note or "").strip()
+    label = RESOLUTION_LABELS.get(kind, kind)
+    return f"{label}: {note.strip()}" if note and note.strip() else label
 
 
 def check_required_extra_fields(
@@ -88,12 +141,26 @@ async def queue_learn_playbook(session: AsyncSession, settings: Any, ticket: Tic
             log.warning("could not queue playbook learning", extra={"ticket_id": str(ticket.id)})
 
 
+async def record_resolution_example(session: AsyncSession, ticket: Ticket) -> None:
+    """Speichert je Abschluss ein Lernbeispiel (``AiExample``, Aufgabe ``ticket_resolution``);
+    ein Fehler darf den Statuswechsel nie stören (eigener Savepoint)."""
+    from mhvp.communication.suggest import resolution_example
+
+    try:
+        async with session.begin_nested():
+            session.add(await resolution_example(session, ticket))
+    except Exception:
+        log.warning("could not store resolution example", extra={"ticket_id": str(ticket.id)})
+
+
 async def assert_transition_allowed(
-    session: AsyncSession, ticket: Ticket, new_status: TicketStatus
+    session: AsyncSession, ticket: Ticket, new_status: TicketStatus, *, skip_flow: bool = False
 ) -> None:
     """Raises ``ProblemError`` when the flow forbids the change or the completion checks
-    (required checklist items, required template fields) fail for done and closed."""
-    if new_status not in TICKET_FLOW[ticket.status]:
+    (required checklist items, required template fields) fail for done and closed.
+    ``skip_flow`` (Betreiber 26.09.2026: Mandantenadministratoren setzen jeden Status in jeden
+    anderen, ohne Zwischenschritte) lässt nur die Flussprüfung aus, nie die Abschlussprüfungen."""
+    if not skip_flow and new_status not in TICKET_FLOW[ticket.status]:
         raise ProblemError(
             ErrorCodes.CONFLICT,
             detail=f"Wechsel {ticket.status.value} nach {new_status.value} unzulässig.",
@@ -131,17 +198,33 @@ async def transition_status(
     actor_user_id: uuid.UUID | None,
     *,
     bulk: bool = False,
+    skip_flow: bool = False,
+    resolution: ResolutionIn | None = None,
 ) -> bool:
     """Applies a status change with all side effects. Returns False when the status is
     unchanged. Raises ``ProblemError`` for a forbidden transition or failed completion checks.
-    The caller holds the row lock (``with_for_update``) and commits."""
+    The caller holds the row lock (``with_for_update``) and commits. ``skip_flow`` marks the
+    event with ``admin_override`` when the flow would have forbidden the change. A closing
+    status requires ``resolution`` (Erledigungsnotiz), also for the admin bypass; it is stored
+    on the ticket and as a learning example (``AiExample``, task ``ticket_resolution``)."""
     if new_status is ticket.status:
         return False
-    await assert_transition_allowed(session, ticket, new_status)
+    closing = new_status in CLOSING_STATUSES
+    admin_override = skip_flow and new_status not in TICKET_FLOW[ticket.status]
+    await assert_transition_allowed(session, ticket, new_status, skip_flow=skip_flow)
+    if closing and resolution is None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Beim Abschluss ist eine Erledigungsnotiz (resolution) erforderlich.",
+        )
     previous = ticket.status
     data: dict[str, Any] = {"from": previous.value, "to": new_status.value}
     if bulk:
         data["bulk"] = True
+    if admin_override:
+        data["admin_override"] = True
+    if closing and resolution is not None:
+        data["resolution"] = {"kind": resolution.kind.value, "note": resolution.note}
     session.add(
         TicketEvent(
             tenant_id=ticket.tenant_id,
@@ -152,8 +235,15 @@ async def transition_status(
         )
     )
     ticket.status = new_status
-    closing = new_status in CLOSING_STATUSES
     ticket.resolved_at = datetime.now(UTC) if closing else None
+    if closing and resolution is not None:
+        ticket.resolution_kind = resolution.kind.value
+        ticket.resolution_note = resolution.note
+        ticket.resolved_by = actor_user_id
+    elif not closing:
+        ticket.resolution_kind = None
+        ticket.resolution_note = None
+        ticket.resolved_by = None
     await _sync_sla_clock(session, ticket, closing)
     await emit(
         session,
@@ -164,6 +254,8 @@ async def transition_status(
         actor_user_id=actor_user_id,
         payload={"from": previous.value, "to": new_status.value, "number": ticket.number},
     )
+    if closing:
+        await record_resolution_example(session, ticket)
     if new_status in (TicketStatus.DONE, TicketStatus.CLOSED):
         await queue_learn_playbook(session, settings, ticket)
     if closing:

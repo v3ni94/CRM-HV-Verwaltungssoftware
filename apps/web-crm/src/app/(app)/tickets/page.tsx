@@ -52,11 +52,14 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
   const params = await searchParams;
   // M36: merged source tickets stay hidden unless the filter is switched on.
   const showMerged = params.merged === "1";
+  // Operator 26.09.2026: done, closed and rejected tickets stay hidden unless erledigt=1.
+  const showClosed = params.erledigt === "1";
 
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
   const query = new URLSearchParams();
   query.set("include_merged", String(showMerged));
+  if (showClosed) query.set("include_closed", "true");
   for (const key of FORWARDED_KEYS) {
     const value = params[key];
     if (value) query.set(key, value);
@@ -77,6 +80,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
       if (value) sp.set(key, value);
     }
     if (showMerged) sp.set("merged", "1");
+    if (showClosed) sp.set("erledigt", "1");
     if (target > 1) sp.set("page", String(target));
     const qs = sp.toString();
     return `/tickets${qs ? `?${qs}` : ""}`;
@@ -92,7 +96,9 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
     const value = params[key];
     if (value) mergedToggleQuery.set(key, value);
   }
+  if (showClosed) mergedToggleQuery.set("erledigt", "1");
   if (!showMerged) mergedToggleQuery.set("merged", "1");
+
 
   return (
     <div className="flex flex-col gap-4">

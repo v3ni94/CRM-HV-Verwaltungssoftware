@@ -34,6 +34,23 @@ Accept and correct write the contact through the same path as `PUT /contacts/{id
 and IBANs never proposed (docs/rules/M19-05.md).
 
 
+## Hallo-Heidi-Anrufe (`call_assistant.py`, 26.09.2026)
+
+Protokoll-Mails der KI-Telefonassistenz werden in `propose_contact_change` erkannt (Absendermuster
+wie `hallo-heidi`, Kennwort `hallo heidi` im Betreff, im Text nur mit beschrifteter Rufnummer;
+je Mandant über `GET/PUT /mail/call-assistant`, Spalte `tenant_settings.call_assistant`,
+Migration 0131). Regex liefert Anrufernummer (E.164, Label `mobile` bei +4915/16/17, sonst
+`other`), Anrufername, Objekt (Nummer oder Anschrift), Einheit (Whg., WE, Etage) und Anliegen;
+der KI-Task `call_summary` ergänzt nur Lücken, die Nummer sieht er maskiert. Zuordnung: Objekt,
+dann Personen mit laufendem Miet- oder Eigentumsvertrag dort per Namensabgleich, sonst Name im
+Mandanten (nur eindeutig, sonst Kandidaten), sonst eindeutige Rufnummer. Ticket erhält
+`contact_id`, `property_id`, `unit_id` (nur wenn leer), das Ergebnis steht als Ereignis
+`call_summary` am Ticket. Ist die Nummer neu, entsteht ein Vorschlag (`proposed.kind = "call"`,
+Feld `phone` mit `label`) mit Antwortentwurf (Playbook, sonst generischer Text).
+`POST /tickets/{id}/proposals/{pid}/accept-and-reply` übernimmt die Nummer und legt den Entwurf
+an die E-Mail-Adresse des Kontakts am Ticket an; versendet wird nur über den Freigabepfad des
+Mailmoduls.
+
 ## Antwortvorlagen (`reply_templates.py`, model `TicketReplyTemplate`, 26.09.2026)
 
 Vorgefertigte Antworten je Mandant (Betreiberrückmeldung 26.09.2026): Name, Betreff und Text
@@ -103,3 +120,36 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 (tickets:read) returns the proposals a provider made in the portal (A58) with status, the
 confirmed appointment (`scheduled_at`, `confirmed_proposal_id`) and the open count. Read only;
 proposing and accepting stay in `mhvp.portal.routers`. CRM page `/auftraege/{id}`.
+
+## Erledigungsnotiz und Lernen aus Erledigungen (Betreiberauftrag 26.09.2026)
+
+Beim Setzen auf `done`, `closed` oder `rejected` verlangt `transition_status` ein Feld
+`resolution` (`ResolutionIn`): `kind` aus `ResolutionKind` (`stammdaten_ergaenzt`,
+`handwerker_beauftragt`, `auskunft_erteilt`, `weitergeleitet`, `kein_handlungsbedarf`,
+`abgelehnt`, `sonstiges`; `zusammengefuehrt` nur für Quelltickets einer Zusammenführung) und
+`note` (Freitext, Pflicht bei `sonstiges`). Ohne `resolution` antwortet die API mit 422, auch
+beim Admin-Bypass (`skip_flow`); die Flussprüfung (409) kommt zuerst. Gespeichert werden
+`ticket.resolution_kind`, `resolution_note`, `resolved_by` (Migration 0130) und die Notiz im
+`TicketEvent` `status` (`data.resolution`); Wiedereröffnen leert die Felder.
+
+* `PATCH /tickets/{id}` und `POST /tickets/bulk-status` nehmen `resolution` an, Bulk als
+  gemeinsame Notiz aller Tickets. `POST /tickets/merge` nimmt eine optionale gemeinsame
+  `resolution`; ohne sie erhalten die Quelltickets `zusammengefuehrt` mit Verweis auf das Ziel.
+* Lernen: je Abschluss ein `AiExample` (Aufgabe `ticket_resolution`, kein KI-Lauf) mit Eingabe
+  Betreff, Anliegen, Kategorie, Thema, erkannte Entitäten (Objekt, Einheit, Kontakt) und Ausgabe
+  Art, Notiz, Status, zuletzt versendete Antwort. `learn_playbook_from_ticket` nimmt die
+  Erledigung in den Prompt und als Schritt `Erledigung: ...` in das gelernte Playbook auf; ein
+  bestehendes ähnliches Playbook erhält den Schritt ergänzt (höchstens 20 Schritte).
+* Vorschläge (`communication/suggest.py`, `resolution_hint`): aus den letzten 200
+  Erledigungsbeispielen werden die drei ähnlichsten (Schlagwortüberlappung mit Betreff und
+  Anliegen) als "Bei ähnlichen Vorgängen wurde: ..." in Prompt und `suggestion.resolution_hint`
+  übernommen.
+* Wissensdatenbank: `GET /ai/examples` (`tenant_settings:read`, `task`, `page`, `per_page`,
+  Antwort `data` plus `meta`), Playbooks über `GET /mail/playbooks` (jetzt mit
+  `last_used_at`, gesetzt beim Anwenden). Seite `/einstellungen/wissen` mit den Reitern
+  Playbooks (Deaktivieren mit `communication:update`, Bearbeiten unter `/mail/playbooks`) und
+  Lernbeispiele (Filter nach Aufgabe).
+* Frontend: Abschlussdialog `ResolutionDialog` im Ticket und in der Bulk-Aktion.
+* Tests: `tests/integration/test_ticket_resolution.py`,
+  `tests/unit/test_ticket_resolution_learning.py`, Vitest `ResolutionDialog.test.tsx` und
+  `KnowledgeBase.test.tsx`.

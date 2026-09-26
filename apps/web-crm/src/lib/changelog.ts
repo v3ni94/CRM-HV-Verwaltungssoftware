@@ -17,10 +17,10 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.23.0",
+    version: "1.25.0",
     date: "26.09.2026",
     title:
-      "Fix- und Abschlusswelle: Vier-Augen nach Betreiberentscheidung, Review-Befunde Tickets und Mail, Sicherheit, Performance, Bedienbarkeit, Vertragsformular, Import-Robustheit, Anhang D 54 von 58",
+      "Zusammenführung mit 1.24.0 und Fix- und Abschlusswelle: Vier-Augen nach Betreiberentscheidung, Review-Befunde Tickets und Mail, Sicherheit, Performance, Bedienbarkeit, Vertragsformular, Import-Robustheit, Anhang D 54 von 58",
     changes: [
       "Tickets und Mail: Betreiberentscheidung M20-03 umgesetzt: Vier-Augen-Freigabe nur für Mitarbeiter mit Kennzeichen Azubi oder neuer Mitarbeiter (Einstellungen, Benutzer, optional befristet), alle anderen senden Ticketantworten direkt; Verfasser und Freigeber mit Zeitpunkt als Ticketereignisse und im Mailverlauf sichtbar; Notbremse alle Antworten mit Freigabe (Standard aus); Freigabeberechtigte werden benachrichtigt (Migration 0129, Regel M20-06)",
       "Prüfung Tickets und Mail: 31 von 34 Befunden behoben, darunter Doppelversand bei Verbindungsfehler ausgeschlossen (zweiphasiger Versand mit Nachweis), Rechnungsweiterleitung nach Commit, Postfach löschen als Deaktivierung ohne Sichtbarkeitsverlust, Mailliste mit Vorschau statt Volltext, Thread-Zuordnung über References und Gmail-Thread, abgewiesene Anhänge sichtbar, Kommentare mit Autor, interne Beschreibung, Zuweisungsereignis, Archivierung nach Commit, Arbeitsaufträge mit Terminvorschlägen im Ticket (Migration 0126)",
@@ -32,6 +32,39 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Abnahme und Tests: Anhang D jetzt 54 von 58 technisch bestanden (offen nur D24 bis D27 wegen fehlender Betreiberregeln); Playwright gegen den Stack 12 CRM und 11 Portal grün inklusive Fototest; 66 neue Abdeckungstests; Ergebnisbuchung nach Eigentümerwechsel repariert, Versionsvergleich der WEG-Abrechnung als Endpunkt und Anzeige; Seed-Skript und Test-Datenbankaufbau stabil",
       "Dokumentation: Entscheidungsvorlage für den Betreiber (docs/reviews/2026-09-26-entscheidungsvorlage-betreiber.md), Handbuchkapitel für alle Funktionen seit 1.20, Lückenliste konsolidiert (A72 bis A89), Plan-Dokumente mit Stand 26.09.2026, Reviews Performance, Sicherheit 1.22, Bedienbarkeit CRM und Portal",
       "Offen (Betreiber): OpenImmo-XSD beschaffen (M26-02), Zins und Tilgung in der Jahresabrechnung (M24-03), Heizkosten und Verbrauchsinformation (D24 bis D27), Freigabestufen G1 bis G5 mit Steuerberatung, Rechtsberatung und Bank, Serverhärtung (M9-05)",
+      "Zusammenführung: Stände 1.23.0 bis 1.24.0 der parallelen Sitzung übernommen (Migrationen Erledigungsnotiz und Hallo Heidi laufen jetzt als 0130 und 0131 hinter 0126 bis 0129)",
+    ],
+  },
+  {
+    version: "1.24.0",
+    date: "26.09.2026",
+    title: "Ticketfilter, Erledigungsnotiz, Hallo Heidi, Wissensdatenbank, Assistent-Rolle",
+    changes: [
+      "Tickets und Mail: erledigte Vorgänge ausgeblendet, Umschalter Erledigte anzeigen, Statusauswahl nach Rolle",
+      "Tickets: Erledigungsnotiz beim Abschluss, jeder Abschluss wird als Lernbeispiel gespeichert",
+      "Tickets: Anrufe der KI-Telefonassistenz werden erkannt, neue Rufnummern als Stammdatenvorschlag mit Antwortentwurf",
+      "Einstellungen: Seite Wissen mit gelernten Playbooks und Lernbeispielen",
+      "Assistent: Rolle aus der Chatanweisung beim Tabellenimport, nachträglich je Importlauf setzbar",
+    ],
+  },
+  {
+    version: "1.23.1",
+    date: "26.09.2026",
+    title: "Upload-Seite für Immoware24-Listen",
+    changes: [
+      "Importe: Objektdaten, Kontaktlisten und Zuordnung von Eigentümern und Mietern im Browser hochladen, mit Testlauf, Übernehmen und Bericht",
+    ],
+  },
+  {
+    version: "1.23.0",
+    date: "26.09.2026",
+    title: "Objektbezüge im Kontakt, CSV-Zuordnung, Gmail-Archivierung, Ticketfilter",
+    changes: [
+      "Kontakte: Beziehungen zu Objekten und Einheiten auf der Kontaktseite, Reiter Tickets, Rollen Mieter und Eigentümer werden automatisch abgeleitet",
+      "Import: Zuordnung von Eigentümern und Mietern aus den Objektdaten zu Einheiten mit Verträgen und vereinbartem Zahlbetrag",
+      "Immoware24: Fehler bei Alle unverknüpften Kontakte übernehmen behoben",
+      "Gmail: Kennung der Nachrichten wird gespeichert, Archivierung bei Abschluss eines Tickets greift",
+      "Tickets: erledigte Vorgänge in Übersichten ausgeblendet, Administratoren wechseln Status ohne Zwischenschritte, Suche über Betreff und Absender der Mails",
     ],
   },
   {

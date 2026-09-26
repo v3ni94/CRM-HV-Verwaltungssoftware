@@ -2,6 +2,7 @@
 
 import asyncio
 import uuid
+from typing import Any
 
 from celery import shared_task
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -31,8 +32,29 @@ def _uuid(value: object) -> uuid.UUID | None:
     return uuid.UUID(str(value)) if value else None
 
 
-def _answer_text(run: AiTaskRun) -> str:
+def _role_text(preview: dict[str, Any]) -> str:
+    """Confirms the role taken from the chat instruction, or asks for one (26.09.2026)."""
+    role, count = preview.get("default_role"), int(preview.get("role_count") or 0)
+    lines = []
+    if role:
+        lines.append(f"Rolle {role} für {count} Kontakte gesetzt.")
+    elif preview.get("without_role"):
+        lines.append(
+            f"{preview['without_role']} Kontakte haben keine Rolle. {imports.ROLE_QUESTION} "
+            'Antworten Sie zum Beispiel mit "Rolle bank" oder wählen Sie die Rolle in der '
+            "Vorschau."
+        )
+    if preview.get("tags"):
+        lines.append(f"Tags {', '.join(preview['tags'])} für alle Kontakte vorgesehen.")
+    return "\n".join(lines)
+
+
+def _answer_text(run: AiTaskRun, contacts_preview: dict[str, Any] | None = None) -> str:
     output = run.output or {}
+    if contacts_preview is not None:
+        extra = _role_text(contacts_preview)
+        base = "Vorschlag erstellt. Bitte Vorschau prüfen und bestätigen."
+        return f"{base}\n{extra}" if extra else base
     if run.task is AiTask.ANSWER_QUESTION:
         text = str(output.get("answer", ""))
         if not output.get("answerable", True):
@@ -92,6 +114,7 @@ async def run_and_propose(
             return row  # type: ignore[return-value]
     async with tenant_transaction(factory, tenant_id) as session:
         run = await session.get(AiTaskRun, run_id)  # type: ignore[assignment]
+        contacts_preview: dict[str, Any] | None = None
         assert run is not None  # noqa: S101
         proposal_id = None
         if run.status is RunStatus.SUCCEEDED and run.task is AiTask.CHECK_STATEMENT:
@@ -131,7 +154,10 @@ async def run_and_propose(
         ):
             output = run.output or {}
             if run.task is AiTask.EXTRACT_CONTACTS:
-                preview = await imports.contacts_preview(session, output)
+                preview = await imports.contacts_preview(
+                    session, output, str(run.input_ref.get("instruction", ""))
+                )
+                contacts_preview = preview
                 entity_type = "contacts"
             elif run.task is AiTask.EXTRACT_PROPERTY:
                 preview = imports.property_preview(output)
@@ -151,7 +177,7 @@ async def run_and_propose(
             proposal_id = proposal.id
         if run.conversation_id is not None:
             content = (
-                _answer_text(run)
+                _answer_text(run, contacts_preview)
                 if run.status is RunStatus.SUCCEEDED
                 else f"Nicht ausgeführt: {run.error}"
             )

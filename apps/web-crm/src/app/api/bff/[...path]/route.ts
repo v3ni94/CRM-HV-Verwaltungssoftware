@@ -30,6 +30,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/attachments/${ID}/invoice-extraction$`) },
   { method: "GET", pattern: /^mail\/invoice-forwarding$/ },
   { method: "PUT", pattern: /^mail\/invoice-forwarding$/ },
+  { method: "GET", pattern: /^mail\/call-assistant$/ },
+  { method: "PUT", pattern: /^mail\/call-assistant$/ },
   // KI-Vorschläge und Playbooks (M20 Übernahme aus dem Immoware Hub).
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/suggest$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/apply-playbook$`) },
@@ -72,6 +74,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
     pattern: new RegExp(`^contacts/${ID}/(export|notes|consents|duplicates|sepa-mandates)$`),
   },
   { method: "POST", pattern: new RegExp(`^contacts/${ID}/(notes|consents)$`) },
+  { method: "GET", pattern: new RegExp(`^contacts/${ID}/relations$`) },
+  { method: "POST", pattern: /^contacts\/roles\/recompute$/ },
   { method: "POST", pattern: new RegExp(`^consents/${ID}/revoke$`) },
   {
     method: "POST",
@@ -137,6 +141,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^ai/conversations/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^ai/conversations/${ID}/messages$`) },
   { method: "GET", pattern: new RegExp(`^ai/runs/${ID}$`) },
+  { method: "GET", pattern: /^ai\/examples$/ },
   { method: "GET", pattern: new RegExp(`^ai/proposals/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^ai/proposals/${ID}/(apply|reject)$`) },
   { method: "GET", pattern: /^ai\/usage$/ },
@@ -159,13 +164,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^imports$/ },
   { method: "GET", pattern: new RegExp(`^imports/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^imports/${ID}/undo$`) },
+  { method: "POST", pattern: new RegExp(`^ai/import-runs/${ID}/apply-role$`) },
   // Immoware24 import assistant (M8, 13.1).
   { method: "GET", pattern: /^imports\/immoware24\/(fields|mappings|overview)$/ },
   { method: "POST", pattern: /^imports\/immoware24\/(mappings|files)$/ },
   { method: "GET", pattern: new RegExp(`^imports/immoware24/files/${ID}(/rows|/reconciliation)?$`) },
   { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/(validate|test-run|apply)$`) },
   // Immoware24-Listen (Objektdaten, Kontakte) als CSV-Upload, Testlauf oder Übernahme.
-  { method: "POST", pattern: /^imports\/immoware24\/lists\/(objektdaten|kontakte)$/ },
+  { method: "POST", pattern: /^imports\/immoware24\/lists\/(objektdaten|kontakte|zuordnung)$/ },
   // Abgleichberichte des Parallelbetriebs (A68): Liste, Erstellen, JSON, CSV, Spaltenzuordnung.
   { method: "GET", pattern: /^imports\/reconciliation-reports(\/columns)?$/ },
   { method: "POST", pattern: /^imports\/reconciliation-reports$/ },
@@ -387,7 +393,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^tickets/${ID}$`) },
   // Stammdatenänderung aus der Ticket-Mail (Vorschlag, Entscheidung, Antwortentwurf; 26.09.2026).
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/proposals$`) },
-  { method: "POST", pattern: new RegExp(`^tickets/${ID}/proposals/(contact-change|${ID}/(accept|correct|reject|reply-draft))$`) },
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/proposals/(contact-change|${ID}/(accept|accept-and-reply|correct|reject|reply-draft))$`) },
   { method: "POST", pattern: /^tickets\/merge$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}$`) },
   // Energieausweis am Objekt (A63): Objektstammdaten vollständig speichern.
@@ -513,7 +519,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
 const MULTIPART = new RegExp(
-  `^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte)|letting/listings/${ID}/images)$`,
+  `^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung)|letting/listings/${ID}/images)$`,
 );
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;

@@ -203,7 +203,10 @@ def _playbook_out(p: Playbook) -> dict[str, Any]:
             "source_ticket_id",
             "status",
             "usage_count",
+            "last_used_at",
             "created_by",
+            "created_at",
+            "updated_at",
         )
     }
 
@@ -657,6 +660,7 @@ def _messages_query(
     ticket_id: uuid.UUID | None,
     mailbox_id: uuid.UUID | None,
     q: str | None,
+    include_closed: bool = True,
 ) -> Any:
     """Filter of the mail list and its count. Members see messages without mailbox, of the
     default mailboxes and of mailboxes shared with them; administrators every message."""
@@ -669,6 +673,16 @@ def _messages_query(
         query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
     if status:
         query = query.where(Message.status == status)
+    elif not include_closed and ticket_id is None:
+        # Erledigte Vorgänge standardmäßig ausgeblendet (1.23.0 der Parallel-Session)
+        from mhvp.tickets.models import Ticket
+        from mhvp.tickets.status import CLOSING_STATUSES
+
+        closed_ticket = select(Ticket.id).where(Ticket.status.in_(CLOSING_STATUSES))
+        query = query.where(
+            Message.status != "done",
+            or_(Message.ticket_id.is_(None), Message.ticket_id.not_in(closed_ticket)),
+        )
     if contact_id:
         query = query.where(Message.contact_id == contact_id)
     if direction:
@@ -698,6 +712,13 @@ async def messages(
     ticket_id: uuid.UUID | None = None,
     mailbox_id: uuid.UUID | None = None,
     q: str | None = None,
+    include_closed: bool = Query(
+        default=False,
+        description=(
+            "Erledigte Nachrichten zeigen (Status done oder verknüpftes Ticket done, closed,"
+            " rejected); gilt nur ohne status-Filter"
+        ),
+    ),
     limit: int = Query(default=100, ge=1, le=500),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
@@ -712,6 +733,7 @@ async def messages(
             ticket_id=ticket_id,
             mailbox_id=mailbox_id,
             q=q,
+            include_closed=include_closed,
         ).order_by(Message.created_at.desc())
         return [_list_out(m) for m in (await session.scalars(query.limit(limit))).all()]
 
@@ -907,6 +929,80 @@ async def put_invoice_forwarding(
         row.updated_by = principal.user_id
         await session.flush()
     return await get_invoice_forwarding(request, principal)
+
+
+class CallAssistantSettingsIn(_In):
+    enabled: bool = True
+    sender_patterns: list[str] = Field(default_factory=list, max_length=50)
+    keywords: list[str] = Field(default_factory=list, max_length=50)
+
+
+class CallAssistantSettingsOut(BaseModel):
+    enabled: bool
+    sender_patterns: list[str]
+    keywords: list[str]
+
+
+def _call_assistant_out(raw: dict[str, Any] | None) -> CallAssistantSettingsOut:
+    from mhvp.tickets.call_assistant import config_from
+
+    cfg = config_from(raw)
+    return CallAssistantSettingsOut(
+        enabled=cfg.enabled,
+        sender_patterns=list(cfg.sender_patterns),
+        keywords=list(cfg.keywords),
+    )
+
+
+@router.get(
+    "/call-assistant",
+    summary="Telefonassistenz (Hallo Heidi): Erkennungsmuster der Protokoll-Mails",
+)
+async def get_call_assistant(
+    request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> CallAssistantSettingsOut:
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        raw = await session.scalar(
+            select(TenantSettings.call_assistant).where(
+                TenantSettings.tenant_id == principal.tenant_id
+            )
+        )
+    return _call_assistant_out(raw)
+
+
+@router.put(
+    "/call-assistant",
+    summary="Telefonassistenz (Hallo Heidi): Erkennungsmuster speichern",
+)
+async def put_call_assistant(
+    body: CallAssistantSettingsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(ADMIN),
+) -> CallAssistantSettingsOut:
+    """Absendermuster (Teil der Absenderadresse) und Kennwörter (Betreff, im Text nur mit
+    beschrifteter Rufnummer). Leere Listen nutzen die eingebauten Muster."""
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(TenantSettings).where(TenantSettings.tenant_id == principal.tenant_id)
+        )
+        if row is None:
+            row = TenantSettings(tenant_id=principal.tenant_id, created_by=principal.user_id)
+            session.add(row)
+            await session.flush()
+        row.call_assistant = {
+            "enabled": body.enabled,
+            "sender_patterns": sorted(
+                {s.lower().strip()[:200] for s in body.sender_patterns if s.strip()}
+            ),
+            "keywords": sorted({k.lower().strip()[:200] for k in body.keywords if k.strip()}),
+        }
+        row.updated_by = principal.user_id
+        await session.flush()
+        return _call_assistant_out(row.call_assistant)
 
 
 @router.post(
@@ -1562,6 +1658,7 @@ async def apply_playbook(
         else:
             body_text = mail.draft_reply(salutation, row.subject, ticket.number if ticket else None)
         playbook.usage_count += 1
+        playbook.last_used_at = datetime.now(UTC)
         draft = Message(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,

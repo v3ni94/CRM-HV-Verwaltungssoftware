@@ -35,7 +35,14 @@ from mhvp.tickets.models import (
     WorkOrder,
     WorkOrderEvent,
 )
-from mhvp.tickets.status import assign_ticket, transition_status
+from mhvp.tickets.status import (
+    CLOSING_STATUSES,
+    ResolutionIn,
+    ResolutionKind,
+    assign_ticket,
+    record_resolution_example,
+    transition_status,
+)
 
 router = APIRouter(tags=["Tickets und Aufträge"])
 READ = require_permission("tickets:read")
@@ -66,6 +73,15 @@ SLA_HOURS = {
     Priority.NORMAL: 168,
     Priority.LOW: 336,
 }
+
+
+def _may_skip_flow(principal: TenantPrincipal) -> bool:
+    """Betreiber 26.09.2026: Mandantenadministratoren setzen jeden Status in jeden anderen,
+    ohne Zwischenschritte. Kennzeichen ist ``tickets:delete`` (nur tenant_admin und
+    Plattform-Admin, Regel M2-07). Alle anderen bleiben an TICKET_FLOW gebunden."""
+    return principal.has("tickets:delete")
+
+
 ORDER_FLOW = {
     OrderStatus.DRAFT: {OrderStatus.REQUESTED, OrderStatus.CANCELLED},
     OrderStatus.REQUESTED: {
@@ -162,6 +178,8 @@ class TicketIn(_In):
 
 class TicketPatch(_In):
     status: TicketStatus | None = None
+    # Erledigungsnotiz, Pflicht beim Setzen auf done, closed oder rejected.
+    resolution: ResolutionIn | None = None
     priority: Priority | None = None
     assignee_user_id: uuid.UUID | None = None
     team_id: uuid.UUID | None = None
@@ -185,6 +203,8 @@ class AssigneeIn(_In):
 class BulkStatusIn(_In):
     ticket_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
     status: TicketStatus
+    # Gemeinsame Erledigungsnotiz für alle Tickets, Pflicht bei abschließendem Status.
+    resolution: ResolutionIn | None = None
 
 
 class ChecklistTogglePatch(_In):
@@ -224,6 +244,8 @@ class TicketMergeIn(_In):
     title: str | None = Field(default=None, max_length=300)
     # M36: merge the sources into this existing ticket instead of creating a new one.
     target_ticket_id: uuid.UUID | None = None
+    # Optional gemeinsame Erledigungsnotiz der Quelltickets; ohne sie gilt zusammengefuehrt.
+    resolution: ResolutionIn | None = None
 
     @model_validator(mode="after")
     def _check_counts(self) -> "TicketMergeIn":
@@ -262,6 +284,9 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             "resolved_at",
             "time_spent_minutes",
             "merged_into_ticket_id",
+            "resolution_kind",
+            "resolution_note",
+            "resolved_by",
             "created_at",
         )
     } | {
@@ -1521,6 +1546,19 @@ async def merge_tickets(
             t.status = TicketStatus.CLOSED
             t.resolved_at = datetime.now(UTC)
             t.merged_into_ticket_id = target.id
+            t.resolution_kind = (
+                body.resolution.kind.value
+                if body.resolution
+                else ResolutionKind.ZUSAMMENGEFUEHRT.value
+            )
+            t.resolution_note = (
+                body.resolution.note
+                if body.resolution
+                else f"Zusammengeführt in Ticket {target.number}."
+            )
+            t.resolved_by = principal.user_id
+            if body.resolution:
+                await record_resolution_example(session, t)
             clock = await session.scalar(select(SlaClock).where(SlaClock.ticket_id == t.id))
             if clock is not None:
                 await mark_resolved(session, clock)
@@ -1575,7 +1613,13 @@ async def list_tickets(
     ),
     property_id: uuid.UUID | None = None,
     unit_id: uuid.UUID | None = None,
-    contact_id: uuid.UUID | None = None,
+    contact_id: uuid.UUID | None = Query(
+        default=None, description="Kontakt oder Initiator (contact_id ODER initiator_contact_id)"
+    ),
+    initiator_contact_id: uuid.UUID | None = Query(default=None, description="Nur Initiator"),
+    any_contact_id: uuid.UUID | None = Query(
+        default=None, description="Personenbezug: contact_id ODER initiator_contact_id"
+    ),
     contact_role: str | None = Query(
         default=None, description="Rolle des verknüpften Kontakts zur Einheit: owner oder tenant"
     ),
@@ -1591,9 +1635,18 @@ async def list_tickets(
     q: str | None = Query(
         default=None,
         max_length=300,
-        description="Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse",
+        description=(
+            "Nummer, Titel, Beschreibung, Kontaktname oder E-Mail, Objektadresse,"
+            " Betreff oder Absender verknüpfter Mails (beinhaltet)"
+        ),
     ),
     include_merged: bool = Query(default=True, description="Zusammengeführte Tickets zeigen"),
+    include_closed: bool = Query(
+        default=False,
+        description=(
+            "Erledigte Tickets (done, closed, rejected) zeigen; gilt nur ohne status-Filter"
+        ),
+    ),
     merged_into: uuid.UUID | None = Query(default=None, description="Quelltickets eines Ziels"),
     limit: int = Query(default=100, ge=1, le=500),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
@@ -1608,7 +1661,8 @@ async def list_tickets(
     """Liste der Tickets, neueste Nummer zuerst. Paginierung (review 26.09.2026, H7): die
     Antwort bleibt eine Liste (bestehende Aufrufer); Gesamtzahl und Seite stehen in den
     Kopfzeilen ``X-Total-Count``, ``X-Page`` und ``X-Page-Size``."""
-    from mhvp.contacts.models import Contact, PartyMember
+    from mhvp.communication.models import Message
+    from mhvp.contacts.models import Contact, ContactEmail, PartyMember
     from mhvp.contracts.models import Contract, ContractKind
     from mhvp.properties.models import Property, PropertyOwner, Unit
 
@@ -1629,7 +1683,28 @@ async def list_tickets(
                     | (Property.house_number.ilike(escaped, escape="\\"))
                 )
             )
-            text_match = title_match | description_match | contact_name_match | property_match
+            # Betreiber 26.09.2026: "beinhaltet"-Suche auch ueber Betreff und Absender der
+            # verknuepften Mails sowie die E-Mail-Adressen des Kontakts.
+            message_match = Ticket.id.in_(
+                select(Message.ticket_id).where(
+                    Message.ticket_id.is_not(None),
+                    (Message.subject.ilike(escaped, escape="\\"))
+                    | (Message.from_address.ilike(escaped, escape="\\")),
+                )
+            )
+            contact_email_match = Ticket.contact_id.in_(
+                select(ContactEmail.contact_id).where(
+                    ContactEmail.email.ilike(escaped, escape="\\")
+                )
+            )
+            text_match = (
+                title_match
+                | description_match
+                | contact_name_match
+                | contact_email_match
+                | property_match
+                | message_match
+            )
             query = query.where(
                 (Ticket.number == int(term)) | text_match
                 if term.isdigit() and len(term) <= 9
@@ -1642,14 +1717,19 @@ async def list_tickets(
         statuses = _parse_status_filter(status)
         if statuses:
             query = query.where(Ticket.status.in_(statuses))
+        elif not include_closed and merged_into is None:
+            query = query.where(Ticket.status.not_in(CLOSING_STATUSES))
         if property_id:
             query = query.where(Ticket.property_id == property_id)
         if unit_id:
             query = query.where(Ticket.unit_id == unit_id)
-        if contact_id:
-            query = query.where(
-                (Ticket.contact_id == contact_id) | (Ticket.initiator_contact_id == contact_id)
-            )
+        for person in (contact_id, any_contact_id):
+            if person:
+                query = query.where(
+                    (Ticket.contact_id == person) | (Ticket.initiator_contact_id == person)
+                )
+        if initiator_contact_id:
+            query = query.where(Ticket.initiator_contact_id == initiator_contact_id)
         if contact_role:
             if contact_role not in ("owner", "tenant"):
                 raise ProblemError(
@@ -1843,7 +1923,13 @@ async def patch_ticket(
             ticket.extra_fields = values
         if body.status and body.status is not ticket.status:
             await transition_status(
-                session, request.app.state.settings, ticket, body.status, principal.user_id
+                session,
+                request.app.state.settings,
+                ticket,
+                body.status,
+                principal.user_id,
+                skip_flow=_may_skip_flow(principal),
+                resolution=body.resolution,
             )
         if body.assignee_user_id:
             await assign_ticket(session, ticket, body.assignee_user_id, principal.user_id)
@@ -2039,6 +2125,8 @@ async def bulk_status(
                     body.status,
                     principal.user_id,
                     bulk=True,
+                    skip_flow=_may_skip_flow(principal),
+                    resolution=body.resolution,
                 )
             except ProblemError as exc:
                 failed.append({"id": str(ticket.id), "reason": exc.detail})

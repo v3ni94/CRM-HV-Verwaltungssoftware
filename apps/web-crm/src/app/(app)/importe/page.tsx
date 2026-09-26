@@ -32,6 +32,9 @@ export default async function ImportsPage() {
         <Link href="/importe/immoware24" className="text-sm font-medium hover:underline">
           {t("immoware24Link")}
         </Link>
+        <Link href="/importe/immoware24-listen" className="text-sm font-medium hover:underline">
+          {t("listImportLink")}
+        </Link>
         <Link href="/importe/abgleich" className="text-sm font-medium hover:underline">
           {t("reconciliationLink")}
         </Link>

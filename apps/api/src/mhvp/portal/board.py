@@ -294,7 +294,7 @@ class BoardNoteIn(BaseModel):
     cost_item_id: uuid.UUID | None = None
 
 
-class BoardStatementIn(BaseModel):
+class PortalBoardStatementIn(BaseModel):
     """Statement of the board on one report version (A76, PÜ09): text only, no release."""
 
     model_config = ConfigDict(extra="forbid")
@@ -677,7 +677,7 @@ async def list_reports(
 async def set_report_statement(
     engagement_id: uuid.UUID,
     report_id: uuid.UUID,
-    body: BoardStatementIn,
+    body: PortalBoardStatementIn,
     request: Request,
     ctx: Any = Depends(_board_user),
 ) -> dict[str, Any]:

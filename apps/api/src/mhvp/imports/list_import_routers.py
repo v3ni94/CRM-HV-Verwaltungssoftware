@@ -1,13 +1,15 @@
 """Immoware24 list imports over the API (/api/v1/imports/immoware24/lists).
 
-The same logic as the operator commands ``python -m mhvp.imports.objektdaten`` and
-``python -m mhvp.imports.kontakte`` (parse, prepare, apply_prepared), reachable from the CRM so
-that no SSH access is needed. ``mode=preview`` runs everything inside a savepoint that is rolled
-back; ``mode=apply`` writes and records an ``ImportRun`` (source ``immoware24:objektdaten`` or
-``immoware24:kontakte``) whose items allow the usual undo (/imports/{id}/undo).
+The same logic as the operator commands ``python -m mhvp.imports.objektdaten``,
+``python -m mhvp.imports.kontakte`` and ``python -m mhvp.imports.zuordnung``, reachable from the
+CRM so that no SSH access is needed. ``mode=preview`` runs everything inside a savepoint that is
+rolled back; ``mode=apply`` writes and records an ``ImportRun`` (source
+``immoware24:objektdaten``, ``immoware24:kontakte`` or ``immoware24:zuordnung``). Objekte and
+Kontakte register their items for the usual undo (/imports/{id}/undo).
 """
 
 import argparse
+from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
@@ -18,7 +20,7 @@ from mhvp.contacts.models import ContactRoleCode
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.imports import kontakte, objektdaten
+from mhvp.imports import kontakte, objektdaten, zuordnung
 from mhvp.imports.csvtext import decode_csv
 from mhvp.imports.routers import WRITE, _need_domain
 
@@ -28,6 +30,7 @@ MODE = Query(default="preview", pattern="^(preview|apply)$")
 LIST_ROLES: dict[str, ContactRoleCode] = {
     "eigentuemer": ContactRoleCode.EIGENTUEMER,
     "mieter": ContactRoleCode.MIETER,
+    "dienstleister": ContactRoleCode.DIENSTLEISTER,
     "bank": ContactRoleCode.BANK,
     "sonstige": ContactRoleCode.SONSTIGES,
 }
@@ -144,7 +147,10 @@ async def import_kontakte(
         if role is None:
             raise ProblemError(
                 ErrorCodes.VALIDATION,
-                detail=f"Rolle {role_text!r} unbekannt (eigentuemer, mieter, bank, sonstige).",
+                detail=(
+                    f"Rolle {role_text!r} unbekannt "
+                    "(eigentuemer, mieter, dienstleister, bank, sonstige)."
+                ),
             )
         text, encoding_note = await _read_csv(upload)
         if encoding_note:
@@ -167,3 +173,43 @@ async def import_kontakte(
 
     async with tenant_tx(request, principal) as session:
         return await _run(session, principal, mode=mode, source="immoware24:kontakte", work=work)
+
+
+@router.post(
+    "/zuordnung",
+    summary="Eigentümer und Mieter der Objektliste als Verträge (Testlauf oder Übernahme)",
+)
+async def import_zuordnung(
+    request: Request,
+    mode: str = MODE,
+    file: UploadFile = File(),
+    start_date: date | None = Form(default=None),
+    skip_handed_over: bool = Form(default=False),
+    principal: TenantPrincipal = Depends(WRITE),
+) -> dict[str, Any]:
+    """Third step after objektdaten and kontakte (handbuch/import-zuordnung.md). ``start_date``
+    defaults to 1 January of the current year (reported as assumed). The contracts are not
+    registered as undo items; the report lists every conflict, ambiguous and unknown name."""
+    _need_domain(principal)
+    text, _note = await _read_csv(file)
+    try:
+        rows = objektdaten.parse_objektdaten(text, file.filename).rows
+    except (ValueError, StopIteration) as exc:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc) or "Datei unlesbar.") from exc
+    start = start_date or zuordnung.default_start_date()
+
+    async def work(session: Any, recorder: Recorder | None) -> dict[str, Any]:
+        report = await zuordnung.apply_rows(
+            session,
+            principal.tenant_id,
+            principal.user_id,
+            rows,
+            apply=recorder is not None,
+            start=start,
+            start_assumed=start_date is None,
+            skip_handed_over=skip_handed_over,
+        )
+        return report.as_dict()
+
+    async with tenant_tx(request, principal) as session:
+        return await _run(session, principal, mode=mode, source="immoware24:zuordnung", work=work)

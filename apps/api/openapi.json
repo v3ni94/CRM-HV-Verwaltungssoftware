@@ -676,7 +676,9 @@
           "answer_question",
           "summarize",
           "classify_document",
-          "contact_master_data_change"
+          "contact_master_data_change",
+          "ticket_resolution",
+          "call_summary"
         ],
         "title": "AiTask",
         "type": "string"
@@ -1311,6 +1313,43 @@
           "playbook_id"
         ],
         "title": "ApplyPlaybookIn",
+        "type": "object"
+      },
+      "ApplyRoleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/ContactRoleCode",
+            "description": "Rolle, die allen angelegten Kontakten ergänzt wird"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "ApplyRoleIn",
+        "type": "object"
+      },
+      "ApplyRoleOut": {
+        "properties": {
+          "contacts_changed": {
+            "title": "Contacts Changed",
+            "type": "integer"
+          },
+          "import_run_id": {
+            "format": "uuid",
+            "title": "Import Run Id",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ContactRoleCode"
+          }
+        },
+        "required": [
+          "import_run_id",
+          "role",
+          "contacts_changed"
+        ],
+        "title": "ApplyRoleOut",
         "type": "object"
       },
       "AssignAccountIn": {
@@ -2366,6 +2405,22 @@
         "title": "BoardNoteIn",
         "type": "object"
       },
+      "BoardStatementIn": {
+        "additionalProperties": false,
+        "properties": {
+          "statement": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement"
+        ],
+        "title": "BoardStatementIn",
+        "type": "object"
+      },
       "Body_apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post": {
         "properties": {
           "file": {
@@ -2441,6 +2496,37 @@
           "file"
         ],
         "title": "Body_import_objektdaten_api_v1_imports_immoware24_lists_objektdaten_post",
+        "type": "object"
+      },
+      "Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "skip_handed_over": {
+            "default": false,
+            "title": "Skip Handed Over",
+            "type": "boolean"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post",
         "type": "object"
       },
       "Body_match_files_api_v1_handover_imports_uprotokoll_files_post": {
@@ -3648,6 +3734,16 @@
       "BulkStatusIn": {
         "additionalProperties": false,
         "properties": {
+          "resolution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolutionIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "status": {
             "$ref": "#/components/schemas/TicketStatus"
           },
@@ -4070,6 +4166,63 @@
           "contact_id"
         ],
         "title": "CallAssignIn",
+        "type": "object"
+      },
+      "CallAssistantSettingsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Keywords",
+            "type": "array"
+          },
+          "sender_patterns": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Sender Patterns",
+            "type": "array"
+          }
+        },
+        "title": "CallAssistantSettingsIn",
+        "type": "object"
+      },
+      "CallAssistantSettingsOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "sender_patterns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sender Patterns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "sender_patterns",
+          "keywords"
+        ],
+        "title": "CallAssistantSettingsOut",
         "type": "object"
       },
       "CallNoteIn": {
@@ -4580,6 +4733,24 @@
             "maxLength": 64,
             "title": "Field",
             "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "enum": [
+                  "work",
+                  "mobile",
+                  "private",
+                  "fax",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
           },
           "new": {
             "anyOf": [
@@ -19548,6 +19719,132 @@
         "title": "OAuthStartIn",
         "type": "object"
       },
+      "ObjectRelationOut": {
+        "description": "Object or unit reference of a contact (tenancy, ownership, property contact).",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "category_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Code"
+          },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "kind": {
+            "enum": [
+              "mieter",
+              "eigentuemer",
+              "kontakt"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "property_city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property City"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "property_name": {
+            "title": "Property Name",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "contract",
+              "property_owner",
+              "property_contact"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "unit_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Label"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "kind",
+          "property_id",
+          "property_name",
+          "active",
+          "source"
+        ],
+        "title": "ObjectRelationOut",
+        "type": "object"
+      },
       "OccupancyRow": {
         "properties": {
           "owner_party": {
@@ -21142,6 +21439,23 @@
           "scheduled_at"
         ],
         "title": "PortalAppointmentIn",
+        "type": "object"
+      },
+      "PortalBoardStatementIn": {
+        "additionalProperties": false,
+        "description": "Statement of the board on one report version (A76, PÜ09): text only, no release.",
+        "properties": {
+          "text": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "PortalBoardStatementIn",
         "type": "object"
       },
       "PortalChangeIn": {
@@ -24184,6 +24498,19 @@
         "title": "RecentTransactionOut",
         "type": "object"
       },
+      "RecomputeRolesOut": {
+        "properties": {
+          "changed": {
+            "title": "Changed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changed"
+        ],
+        "title": "RecomputeRolesOut",
+        "type": "object"
+      },
       "ReconciliationNoteIn": {
         "additionalProperties": false,
         "description": "Explained difference of the cash flow reconciliation (W04): signed amount that bridges\nthe costs booked in the year to the distributed costs, with the reason.",
@@ -25373,6 +25700,47 @@
         ],
         "title": "RequiredDocumentIn",
         "type": "object"
+      },
+      "ResolutionIn": {
+        "additionalProperties": false,
+        "description": "Erledigungsnotiz beim Setzen auf done, closed oder rejected: Art plus Freitext, der\nFreitext ist bei ``sonstiges`` Pflicht.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ResolutionKind"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "ResolutionIn",
+        "type": "object"
+      },
+      "ResolutionKind": {
+        "description": "Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``\nsetzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt.",
+        "enum": [
+          "stammdaten_ergaenzt",
+          "handwerker_beauftragt",
+          "auskunft_erteilt",
+          "weitergeleitet",
+          "kein_handlungsbedarf",
+          "abgelehnt",
+          "zusammengefuehrt",
+          "sonstiges"
+        ],
+        "title": "ResolutionKind",
+        "type": "string"
       },
       "RetentionProfileIn": {
         "additionalProperties": false,
@@ -28748,6 +29116,16 @@
       "TicketMergeIn": {
         "additionalProperties": false,
         "properties": {
+          "resolution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolutionIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "target_ticket_id": {
             "anyOf": [
               {
@@ -28874,6 +29252,16 @@
               }
             ],
             "title": "Property Id"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolutionIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "status": {
             "anyOf": [
@@ -31599,22 +31987,6 @@
         "title": "TenantOut",
         "type": "object"
       },
-      "mhvp__hoa__board__BoardStatementIn": {
-        "additionalProperties": false,
-        "properties": {
-          "statement": {
-            "maxLength": 8000,
-            "minLength": 1,
-            "title": "Statement",
-            "type": "string"
-          }
-        },
-        "required": [
-          "statement"
-        ],
-        "title": "BoardStatementIn",
-        "type": "object"
-      },
       "mhvp__platform__schemas__TenantOut": {
         "properties": {
           "id": {
@@ -31642,23 +32014,6 @@
           "status"
         ],
         "title": "TenantOut",
-        "type": "object"
-      },
-      "mhvp__portal__board__BoardStatementIn": {
-        "additionalProperties": false,
-        "description": "Statement of the board on one report version (A76, PÜ09): text only, no release.",
-        "properties": {
-          "text": {
-            "maxLength": 8000,
-            "minLength": 1,
-            "title": "Text",
-            "type": "string"
-          }
-        },
-        "required": [
-          "text"
-        ],
-        "title": "BoardStatementIn",
         "type": "object"
       },
       "mhvp__properties__schemas__BankAccountIn": {
@@ -37099,6 +37454,81 @@
         ]
       }
     },
+    "/api/v1/ai/examples": {
+      "get": {
+        "description": "Bestätigte Lernbeispiele des Mandanten, neueste zuerst, optional nach Aufgabe gefiltert\n(unter anderem ``ticket_resolution`` aus Erledigungsnotizen).",
+        "operationId": "list_examples_api_v1_ai_examples_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "task",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AiTask"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Task"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Per Page",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Examples Api V1 Ai Examples Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lernbeispiele (Wissensdatenbank)",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
     "/api/v1/ai/fast-table-import": {
       "get": {
         "operationId": "get_fast_table_import_api_v1_ai_fast_table_import_get",
@@ -37155,6 +37585,60 @@
           }
         },
         "summary": "Schnellen Tabellenimport setzen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/import-runs/{import_id}/apply-role": {
+      "post": {
+        "description": "Adds the role to every contact the import run created; existing roles are kept.",
+        "operationId": "apply_import_role_api_v1_ai_import_runs__import_id__apply_role_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyRoleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyRoleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importlauf: Rolle nachträglich setzen",
         "tags": [
           "KI-Assistent"
         ]
@@ -42121,6 +42605,28 @@
         ]
       }
     },
+    "/api/v1/contacts/roles/recompute": {
+      "post": {
+        "description": "Adds eigentuemer/mieter from active contracts and ownerships; never removes roles.",
+        "operationId": "recompute_roles_api_v1_contacts_roles_recompute_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecomputeRolesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Abgeleitete Rollen neu berechnen",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
     "/api/v1/contacts/{contact_id}": {
       "delete": {
         "operationId": "delete_contact_api_v1_contacts__contact_id__delete",
@@ -42898,6 +43404,51 @@
       }
     },
     "/api/v1/contacts/{contact_id}/relations": {
+      "get": {
+        "operationId": "list_object_relations_api_v1_contacts__contact_id__relations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ObjectRelationOut"
+                  },
+                  "title": "Response List Object Relations Api V1 Contacts  Contact Id  Relations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objektbezüge eines Kontakts",
+        "tags": [
+          "Kontakte"
+        ]
+      },
       "post": {
         "operationId": "add_relation_api_v1_contacts__contact_id__relations_post",
         "parameters": [
@@ -47349,7 +47900,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__hoa__board__BoardStatementIn"
+                "$ref": "#/components/schemas/BoardStatementIn"
               }
             }
           },
@@ -52694,6 +53245,63 @@
         ]
       }
     },
+    "/api/v1/imports/immoware24/lists/zuordnung": {
+      "post": {
+        "description": "Third step after objektdaten and kontakte (handbuch/import-zuordnung.md). ``start_date``\ndefaults to 1 January of the current year (reported as assumed). The contracts are not\nregistered as undo items; the report lists every conflict, ambiguous and unknown name.",
+        "operationId": "import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "preview",
+              "pattern": "^(preview|apply)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Zuordnung Api V1 Imports Immoware24 Lists Zuordnung Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümer und Mieter der Objektliste als Verträge (Testlauf oder Übernahme)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
     "/api/v1/imports/immoware24/mappings": {
       "get": {
         "operationId": "list_mappings_api_v1_imports_immoware24_mappings_get",
@@ -54777,6 +55385,67 @@
         ]
       }
     },
+    "/api/v1/mail/call-assistant": {
+      "get": {
+        "operationId": "get_call_assistant_api_v1_mail_call_assistant_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallAssistantSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Telefonassistenz (Hallo Heidi): Erkennungsmuster der Protokoll-Mails",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "put": {
+        "description": "Absendermuster (Teil der Absenderadresse) und Kennwörter (Betreff, im Text nur mit\nbeschrifteter Rufnummer). Leere Listen nutzen die eingebauten Muster.",
+        "operationId": "put_call_assistant_api_v1_mail_call_assistant_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallAssistantSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallAssistantSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Telefonassistenz (Hallo Heidi): Erkennungsmuster speichern",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/ingest": {
       "post": {
         "operationId": "ingest_api_v1_mail_ingest_post",
@@ -55245,6 +55914,18 @@
                 }
               ],
               "title": "Q"
+            }
+          },
+          {
+            "description": "Erledigte Nachrichten zeigen (Status done oder verknüpftes Ticket done, closed, rejected); gilt nur ohne status-Filter",
+            "in": "query",
+            "name": "include_closed",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Erledigte Nachrichten zeigen (Status done oder verknüpftes Ticket done, closed, rejected); gilt nur ohne status-Filter",
+              "title": "Include Closed",
+              "type": "boolean"
             }
           },
           {
@@ -60285,7 +60966,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__portal__board__BoardStatementIn"
+                "$ref": "#/components/schemas/PortalBoardStatementIn"
               }
             }
           },
@@ -68227,6 +68908,7 @@
             }
           },
           {
+            "description": "Kontakt oder Initiator (contact_id ODER initiator_contact_id)",
             "in": "query",
             "name": "contact_id",
             "required": false,
@@ -68240,7 +68922,46 @@
                   "type": "null"
                 }
               ],
+              "description": "Kontakt oder Initiator (contact_id ODER initiator_contact_id)",
               "title": "Contact Id"
+            }
+          },
+          {
+            "description": "Nur Initiator",
+            "in": "query",
+            "name": "initiator_contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nur Initiator",
+              "title": "Initiator Contact Id"
+            }
+          },
+          {
+            "description": "Personenbezug: contact_id ODER initiator_contact_id",
+            "in": "query",
+            "name": "any_contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Personenbezug: contact_id ODER initiator_contact_id",
+              "title": "Any Contact Id"
             }
           },
           {
@@ -68379,7 +69100,7 @@
             }
           },
           {
-            "description": "Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse",
+            "description": "Nummer, Titel, Beschreibung, Kontaktname oder E-Mail, Objektadresse, Betreff oder Absender verknüpfter Mails (beinhaltet)",
             "in": "query",
             "name": "q",
             "required": false,
@@ -68393,7 +69114,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse",
+              "description": "Nummer, Titel, Beschreibung, Kontaktname oder E-Mail, Objektadresse, Betreff oder Absender verknüpfter Mails (beinhaltet)",
               "title": "Q"
             }
           },
@@ -68406,6 +69127,18 @@
               "default": true,
               "description": "Zusammengeführte Tickets zeigen",
               "title": "Include Merged",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Erledigte Tickets (done, closed, rejected) zeigen; gilt nur ohne status-Filter",
+            "in": "query",
+            "name": "include_closed",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Erledigte Tickets (done, closed, rejected) zeigen; gilt nur ohne status-Filter",
+              "title": "Include Closed",
               "type": "boolean"
             }
           },
@@ -69860,6 +70593,61 @@
           }
         },
         "summary": "Vorschlag akzeptieren",
+        "tags": [
+          "Tickets und Aufträge",
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/proposals/{proposal_id}/accept-and-reply": {
+      "post": {
+        "description": "Hallo-Heidi-Anruf: übernimmt die Stammdaten wie ``accept`` und legt den vorbereiteten\nAntwortentwurf als ausgehende Nachricht am Ticket an. Der Versand läuft über den\nbestehenden Freigabepfad in ``/mail/messages`` (Einreichen, Vier-Augen-Freigabe).",
+        "operationId": "accept_and_reply_api_v1_tickets__ticket_id__proposals__proposal_id__accept_and_reply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlag freigeben und Antwortentwurf am Ticket anlegen (kein Versand)",
         "tags": [
           "Tickets und Aufträge",
           "Tickets und Aufträge"

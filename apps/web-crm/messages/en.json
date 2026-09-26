@@ -139,7 +139,8 @@
       "communication": "Communication",
       "bank": "Bank accounts",
       "notes": "Notes",
-      "consents": "Consents"
+      "consents": "Consents",
+      "tickets": "Tickets"
     },
     "calls": {
       "title": "Calls"
@@ -205,6 +206,18 @@
       "cancel": "Cancel",
       "noPermission": "Release only with permission contacts:approve by a second person.",
       "platformAdmin": "Platform administrators do not release IBANs; a second person of the tenant releases them."
+    },
+    "relations": {
+      "title": "Relations to properties and units",
+      "empty": "No property relations recorded.",
+      "object": "Property",
+      "unit": "Unit",
+      "role": "Role",
+      "period": "Period",
+      "status": "Status",
+      "active": "active",
+      "ended": "ended",
+      "since": "since {date}"
     }
   },
   "ContactForm": {
@@ -529,7 +542,8 @@
       "ai:extract_property": "AI: property from documents",
       "immoware24:objektdaten": "Immoware24 list: property data",
       "immoware24:kontakte": "Immoware24 list: contacts",
-      "objektakte": "objektakte export (takeover)"
+      "objektakte": "objektakte export (takeover)",
+      "immoware24:zuordnung": "Immoware24 list: assignment"
     },
     "status": {
       "applied": "applied",
@@ -554,7 +568,20 @@
     "undoConfirm": "Really undo the import? Records that later data builds on are kept.",
     "undoneAt": "Undone on {at}",
     "immoware24Link": "Open import assistant",
-    "reconciliationLink": "Parallel operation reconciliation"
+    "reconciliationLink": "Parallel operation reconciliation",
+    "listImportLink": "Immoware24 list import",
+    "roleTitle": "Set role afterwards",
+    "roleLabel": "Role for all created contacts",
+    "roleApply": "Set role",
+    "roleDone": "Role {role} set for {count} contacts.",
+    "role": {
+      "eigentuemer": "Owner",
+      "mieter": "Tenant",
+      "verwalter": "Manager",
+      "dienstleister": "Service provider",
+      "bank": "Bank",
+      "sonstiges": "Other"
+    }
   },
   "AiSettings": {
     "title": "AI settings",
@@ -662,10 +689,10 @@
     }
   },
   "ImmowareLists": {
-    "title": "Immoware24 lists",
-    "intro": "Create the object list and contact lists from Immoware24 as CSV directly (UTF-8 or Windows-1252; semicolon, comma or tab are detected). Test run first, then apply. No contracts, receivables, bank accounts or postings are created.",
+    "title": "Immoware24 Listenimport",
+    "intro": "Keep the order: 1. properties and units, 2. contacts, 3. assignment of owners and tenants. Per section run the test first, then apply. Files as CSV from Immoware24 (UTF-8 or Windows-1252; semicolon, comma or tab are detected). No bank accounts or postings are created.",
     "objektdaten": {
-      "title": "Property data",
+      "title": "1. Properties and units",
       "help": "Export of property data with the columns Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer. Owners, tenants and amounts are only stored as a source note on the unit.",
       "file": "Property list (csv)",
       "numberMap": "Number mapping (OLD=NEW, one per line or separated by commas)",
@@ -690,15 +717,15 @@
       }
     },
     "kontakte": {
-      "title": "Contacts",
-      "help": "One list per contact group (columns id and Name required). The same contact in several lists receives all roles.",
-      "file": "File {index} (csv)",
-      "role": "Role for file {index}",
+      "title": "2. Contacts",
+      "help": "One list per contact group (columns id and Name required). The role is prefilled from the file name and can be changed. The same contact in several lists receives all roles.",
+      "role": "Role for {name}",
       "roleOption": {
         "eigentuemer": "Owner",
         "mieter": "Tenant",
         "bank": "Bank",
-        "sonstige": "Other"
+        "sonstige": "Other",
+        "dienstleister": "Service provider"
       },
       "colFile": "File",
       "colLine": "Line",
@@ -712,7 +739,8 @@
         "role_added": "Role added",
         "invalid": "Lines invalid",
         "duplicate": "Duplicates in the file"
-      }
+      },
+      "files": "Contact lists (csv, several files allowed)"
     },
     "fileNotes": "File notes",
     "colStatus": "Status",
@@ -729,13 +757,45 @@
     "testRun": "Test run",
     "apply": "Apply",
     "applyHint": "Apply is enabled after a test run with the same files and settings.",
-    "applyConfirm": "Apply the data from the test run now? Existing records are not overwritten.",
+    "applyConfirm": "Data will be written. Continue?",
     "fileRequired": "Please select a file.",
     "resultTest": "Test run, nothing was saved.",
     "resultApplied": "Applied. The run is listed under imports.",
     "runLink": "Open import run",
     "noEntries": "No entries.",
-    "busy": "Processing"
+    "busy": "Processing",
+    "colCount": "Counter",
+    "colValue": "Value",
+    "zuordnung": {
+      "title": "3. Owner and tenant assignment",
+      "help": "Object list as in step 1. Owners and tenants are matched by name to the imported contacts and created as contracts with a monthly payment. Existing contracts are never overwritten, ambiguous names are only reported.",
+      "file": "Object list (csv) for the assignment",
+      "startDate": "Contract start",
+      "startDateHelp": "Default is 1 January of the current year.",
+      "startUsed": "Contract start {date}.",
+      "startAssumed": "Assumed, please check.",
+      "colUnit": "Unit",
+      "notFoundTitle": "Not found",
+      "ambiguousTitle": "Ambiguous",
+      "conflictsTitle": "Conflicts",
+      "notesTitle": "Notes",
+      "count": {
+        "einheiten_gesamt": "Units total",
+        "eigentuemer_zugeordnet": "Owners assigned",
+        "mieter_zugeordnet": "Tenants assigned",
+        "leerstand": "Vacant",
+        "parties_angelegt": "Parties created",
+        "vertraege_angelegt": "Contracts created",
+        "vertraege_vorhanden": "Contracts already present",
+        "zahlungen_angelegt": "Payments created",
+        "einheit_fehlt": "Units not imported",
+        "uebersprungen_abgegeben": "Handed over, skipped",
+        "zahlungen_cent_hoa_fee": "Monthly HOA fees total",
+        "zahlungen_cent_rent": "Monthly rent total"
+      }
+    },
+    "backToImports": "Back to imports",
+    "noPermission": "Missing permission for the list import (create imports and create properties, contacts and contracts)."
   },
   "Immoware24": {
     "title": "Import assistant",
@@ -832,7 +892,8 @@
     "colFile": "Units according to file",
     "colPlatform": "Units in the platform",
     "colDifference": "Difference",
-    "restart": "Import another report"
+    "restart": "Import another report",
+    "listImportLink": "Open list import (objects, contacts, assignment)"
   },
   "Workspace": {
     "dashboard": "Home",
@@ -2105,6 +2166,23 @@
         "city": "City",
         "phone": "Phone",
         "email": "E-mail"
+      },
+      "acceptAndReply": "Approve and reply",
+      "acceptAndReplyHint": "Applies the master data and creates the reply draft on the ticket. Sending happens only after approval in the mail module.",
+      "call": {
+        "phone": "Caller number",
+        "name": "Caller",
+        "property": "Property",
+        "unit": "Unit",
+        "concern": "Concern",
+        "unknown": "not recognised",
+        "label": {
+          "mobile": "Mobile",
+          "other": "Landline or unknown",
+          "work": "Work",
+          "private": "Private",
+          "fax": "Fax"
+        }
       }
     },
     "title": "Tickets",
@@ -2198,7 +2276,8 @@
       "category": "Category",
       "createdFrom": "Created from",
       "createdTo": "Created to",
-      "reset": "Reset"
+      "reset": "Reset",
+      "showClosed": "Show completed"
     },
     "reply": {
       "title": "Reply",
@@ -2329,7 +2408,29 @@
     "internalDescription": "Internal description",
     "internalDescriptionHint": "Visible to staff only, not in the portal.",
     "internalDescriptionSaved": "Saved.",
-    "saveInternalDescription": "Save internal description"
+    "saveInternalDescription": "Save internal description",
+    "resolution": {
+      "title": "Resolution: {status}",
+      "hint": "Briefly describe what was done. The system learns from it for similar cases.",
+      "hintBulk": "Applies to all {count} selected tickets. Briefly describe what was done.",
+      "kind": "What was done",
+      "choose": "Please choose",
+      "note": "Note (optional)",
+      "noteRequired": "Description (required for other)",
+      "confirm": "Complete",
+      "cancel": "Cancel",
+      "kinds": {
+        "stammdaten_ergaenzt": "Master data completed",
+        "handwerker_beauftragt": "Contractor commissioned",
+        "auskunft_erteilt": "Information provided",
+        "weitergeleitet": "Forwarded",
+        "kein_handlungsbedarf": "No action required",
+        "abgelehnt": "Rejected",
+        "zusammengefuehrt": "Merged",
+        "sonstiges": "Other"
+      }
+    },
+    "resolutionLabel": "Resolution"
   },
   "Automation": {
     "title": "Automation",
@@ -2798,7 +2899,8 @@
     "tnrSuggestion": "Possible assignment to TNR#{number}: the sender is not a participant of the ticket, so the mail was not assigned automatically.",
     "sendingHint": "Approved, dispatch not yet confirmed. Approving again verifies the dispatch by Message-ID and only sends when the message did not go out.",
     "attachmentsRejected": "Attachments not stored: {list}",
-    "loadingDetail": "Loading message..."
+    "loadingDetail": "Loading message...",
+    "showClosed": "Show completed"
   },
   "Platform": {
     "title": "Platform",
@@ -3267,6 +3369,10 @@
     "weg": {
       "title": "Owners' associations",
       "description": "Majority rules per resolution subject with source and release."
+    },
+    "knowledge": {
+      "title": "Knowledge base",
+      "description": "View learned playbooks and learning examples from resolutions."
     }
   },
   "Members": {
@@ -3570,7 +3676,13 @@
     "invoiceForwardingLearningList": "Learning list (auto-confirmed)",
     "forwardInvoice": "Forward?",
     "forwardInvoiceConfirm": "Forward this invoice to the configured address?",
-    "forwardInvoiceDone": "Forwarded."
+    "forwardInvoiceDone": "Forwarded.",
+    "callAssistantTitle": "Phone assistant (Hallo Heidi)",
+    "callAssistantHint": "Call protocols of the phone assistant are evaluated on the ticket: caller, property, unit and concern. A new number creates the proposal to complete the master data with a reply draft.",
+    "callAssistantEnabled": "Evaluate protocol mails",
+    "callAssistantSenders": "Sender patterns (part of the sender address, comma separated)",
+    "callAssistantKeywords": "Keywords in the subject (comma separated)",
+    "callAssistantDefaultsHint": "Empty fields use the built in patterns."
   },
   "Dms": {
     "area": "Administration",
@@ -5911,5 +6023,57 @@
     "generateFile": "Store file as document",
     "cancel": "Cancel",
     "confirmCancel": "Cancel direct debit run? Approvals are voided."
+  },
+  "Knowledge": {
+    "title": "Knowledge base",
+    "description": "Learned playbooks and learning examples from resolutions and confirmed proposals.",
+    "tabs": {
+      "playbooks": "Playbooks",
+      "examples": "Learning examples"
+    },
+    "playbooks": {
+      "empty": "No playbooks learned yet.",
+      "title": "Title",
+      "trigger": "Trigger",
+      "steps": "Steps",
+      "usage": "Hits",
+      "lastUsed": "Last used",
+      "status": "Status",
+      "actions": "Actions",
+      "never": "never",
+      "deactivate": "Deactivate",
+      "edit": "Edit",
+      "statuses": {
+        "draft": "Draft",
+        "active": "active",
+        "archived": "deactivated"
+      }
+    },
+    "examples": {
+      "empty": "No learning examples.",
+      "date": "Date",
+      "task": "Task",
+      "decision": "Decision",
+      "text": "Summary",
+      "filter": "Filter by task",
+      "all": "All tasks",
+      "more": "Load more",
+      "total": "{total} entries"
+    },
+    "tasks": {
+      "ticket_resolution": "Ticket resolution",
+      "contact_master_data_change": "Master data change",
+      "classify_document": "Document classification",
+      "classify_email": "Mail classification",
+      "draft_reply": "Reply draft",
+      "propose_posting": "Posting",
+      "extract_invoice": "Invoice extraction",
+      "extract_contacts": "Contact extraction",
+      "extract_property": "Property extraction",
+      "map_columns": "Column mapping",
+      "check_statement": "Statement check",
+      "answer_question": "Questions",
+      "summarize": "Summary"
+    }
   }
 }

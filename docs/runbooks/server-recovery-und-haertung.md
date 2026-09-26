@@ -157,6 +157,27 @@ Wirksamkeit prüfen:
 
     sshd -T | grep -Ei '^(passwordauthentication|permitrootlogin|kbdinteractiveauthentication)'
 
+### C2a. Vertrauenswürdige Betreiber-IP (26.09.2026)
+
+Die feste Büro-IP des Betreibers wird nie gesperrt und behält Passwort- und Root-Login, auch
+wenn die allgemeinen Einstellungen später verschärft werden:
+
+    printf '[DEFAULT]\nignoreip = 127.0.0.1/8 ::1 <BUERO-IP>\n' > /etc/fail2ban/jail.d/10-mhvp-ignoreip.local
+    fail2ban-client reload
+
+In `/etc/ssh/sshd_config.d/0-mhvp-password.conf` (Name mit `0-`, damit die Datei vor allen
+anderen Drop-ins gelesen wird) zusätzlich:
+
+    Match Address <BUERO-IP>
+        MaxAuthTries 10
+        PasswordAuthentication yes
+        PermitRootLogin yes
+
+Stand 26.09.2026: eingetragen für 80.151.213.155. Bei Wechsel des Anschlusses beide Stellen
+anpassen. Vorfall 26.09.2026, zweiter Teil: Ein parallel arbeitender Chat hat die Passwort-
+anmeldung erneut abgeschaltet (Historie /root/.bash_history). Regel: SSH-Konfiguration und
+Server-Neustarts nur aus einem Kanal und nur mit ausdrücklicher Freigabe des Betreibers.
+
 ### C3. fail2ban
 
 Falls installiert (`systemctl status fail2ban`): Jail `sshd` aktivieren und prüfen

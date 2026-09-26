@@ -2,7 +2,7 @@
 
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy import Select, String, cast, delete, func, literal_column, or_, select
@@ -30,9 +30,12 @@ from mhvp.contacts.models import (
     PartyMember,
 )
 from mhvp.contacts.validation import mask_iban, normalise_iban, normalise_phone
+from mhvp.contracts.models import Contract
 from mhvp.core import crypto
 from mhvp.core.events import DomainEvent, emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.objektakte.models import ObjektakteAssignment
+from mhvp.properties.models import Property, PropertyContact, PropertyOwner, Unit
 
 _CHILDREN = (
     ContactAddress,
@@ -305,15 +308,223 @@ def apply_fields(
     contact.roles = sorted({r.value for r in data.roles})
 
 
-async def recompute_derived_roles(session: AsyncSession, contact: Contact) -> None:
-    """Derive eigentuemer/mieter from ownership/tenancy contracts (6.9, task M3-01).
+TENANCY_ROLE = "mieter"
+OWNER_ROLE = "eigentuemer"
 
-    No contract module referencing `party` exists yet in this codebase (rental and WEG
-    contracts land in a later milestone per section 18); this is a no-op placeholder until
-    then, kept so the derivation hook has one call site. Manually set roles are never
-    touched here.
+
+def derive_roles(contract_kinds: set[str], has_owner_link: bool) -> set[str]:
+    """Map active contract kinds and ownership links to contact roles (6.9)."""
+    derived: set[str] = set()
+    if "tenancy" in contract_kinds:
+        derived.add(TENANCY_ROLE)
+    if "ownership" in contract_kinds or has_owner_link:
+        derived.add(OWNER_ROLE)
+    return derived
+
+
+def merge_roles(current: list[str] | None, derived: set[str]) -> list[str]:
+    """Add derived roles; manually set roles are never removed."""
+    return sorted(set(current or []) | derived)
+
+
+async def recompute_derived_roles(
+    session: AsyncSession, contact: Contact, today: date | None = None
+) -> bool:
+    """Derive eigentuemer/mieter from active contracts and ownerships (6.9, task M3-01).
+
+    Parties are resolved over party_member. A contract is active when end_date is null or
+    not before today, a property owner when valid_to is null or not before today. Objektakte
+    staging assignments (owner/tenant) count as well. Returns True when roles changed.
     """
-    return None
+    day = today or datetime.now(UTC).date()
+    party_ids = select(PartyMember.party_id).where(PartyMember.contact_id == contact.id)
+    kinds = {
+        (k.value if hasattr(k, "value") else str(k))
+        for k in (
+            await session.scalars(
+                select(Contract.kind)
+                .where(
+                    Contract.tenant_id == contact.tenant_id,
+                    Contract.party_id.in_(party_ids),
+                    or_(Contract.end_date.is_(None), Contract.end_date >= day),
+                )
+                .distinct()
+            )
+        ).all()
+    }
+    owner = await session.scalar(
+        select(PropertyOwner.id)
+        .where(
+            PropertyOwner.tenant_id == contact.tenant_id,
+            PropertyOwner.party_id.in_(party_ids),
+            or_(PropertyOwner.valid_to.is_(None), PropertyOwner.valid_to >= day),
+        )
+        .limit(1)
+    )
+    for role in (
+        await session.scalars(
+            select(ObjektakteAssignment.role)
+            .where(
+                ObjektakteAssignment.tenant_id == contact.tenant_id,
+                ObjektakteAssignment.contact_id == contact.id,
+                or_(ObjektakteAssignment.valid_to.is_(None), ObjektakteAssignment.valid_to >= day),
+            )
+            .distinct()
+        )
+    ).all():
+        kinds.add("tenancy" if str(getattr(role, "value", role)) == "tenant" else "ownership")
+    merged = merge_roles(contact.roles, derive_roles(kinds, owner is not None))
+    if merged == sorted(contact.roles or []):
+        return False
+    contact.roles = merged
+    return True
+
+
+async def recompute_for_contacts(
+    session: AsyncSession, contact_ids: list[uuid.UUID] | set[uuid.UUID]
+) -> int:
+    changed = 0
+    for contact_id in contact_ids:
+        contact = await session.get(Contact, contact_id)
+        if contact is not None and contact.deleted_at is None:
+            changed += int(await recompute_derived_roles(session, contact))
+    await session.flush()
+    return changed
+
+
+async def recompute_for_party(session: AsyncSession, party_id: uuid.UUID) -> int:
+    ids = (
+        await session.scalars(
+            select(PartyMember.contact_id).where(PartyMember.party_id == party_id)
+        )
+    ).all()
+    return await recompute_for_contacts(session, set(ids))
+
+
+async def recompute_all(session: AsyncSession, tenant_id: uuid.UUID, batch: int = 500) -> int:
+    """Backfill for the whole tenant, keyset paginated by id."""
+    changed = 0
+    last: uuid.UUID | None = None
+    while True:
+        stmt = (
+            select(Contact)
+            .where(Contact.tenant_id == tenant_id, Contact.deleted_at.is_(None))
+            .order_by(Contact.id)
+            .limit(batch)
+        )
+        if last is not None:
+            stmt = stmt.where(Contact.id > last)
+        rows = list((await session.scalars(stmt)).all())
+        if not rows:
+            break
+        for contact in rows:
+            changed += int(await recompute_derived_roles(session, contact))
+        await session.flush()
+        last = rows[-1].id
+        if len(rows) < batch:
+            break
+    return changed
+
+
+def is_active(valid_to: date | None, today: date) -> bool:
+    return valid_to is None or valid_to >= today
+
+
+def sort_relations(rows: list[schemas.ObjectRelationOut]) -> list[schemas.ObjectRelationOut]:
+    """Active first, then valid_from descending (missing dates last)."""
+    return sorted(
+        rows,
+        key=lambda r: (
+            not r.active,
+            -(r.valid_from.toordinal() if r.valid_from else 0),
+            r.property_name,
+        ),
+    )
+
+
+def _unit_label(unit: Unit | None) -> str | None:
+    if unit is None:
+        return None
+    return f"{unit.number} {unit.label}".strip() if unit.label else unit.number
+
+
+async def object_relations(
+    session: AsyncSession, contact: Contact, today: date | None = None
+) -> list[schemas.ObjectRelationOut]:
+    """Contracts and ownerships over the contact's parties plus direct property contacts."""
+    day = today or datetime.now(UTC).date()
+    tenant = contact.tenant_id
+    party_ids = select(PartyMember.party_id).where(
+        PartyMember.contact_id == contact.id, PartyMember.tenant_id == tenant
+    )
+    out: list[schemas.ObjectRelationOut] = []
+    contracts = (
+        await session.execute(
+            select(Contract, Property, Unit)
+            .join(Property, Property.id == Contract.property_id)
+            .outerjoin(Unit, Unit.id == Contract.unit_id)
+            .where(Contract.tenant_id == tenant, Contract.party_id.in_(party_ids))
+        )
+    ).all()
+    for contract, prop, unit in contracts:
+        kind_value = getattr(contract.kind, "value", contract.kind)
+        out.append(
+            schemas.ObjectRelationOut(
+                kind="mieter" if kind_value == "tenancy" else "eigentuemer",
+                property_id=prop.id,
+                property_name=prop.name,
+                property_city=prop.city,
+                unit_id=contract.unit_id,
+                unit_label=_unit_label(unit),
+                valid_from=contract.start_date,
+                valid_to=contract.end_date,
+                active=is_active(contract.end_date, day),
+                source="contract",
+                contract_id=contract.id,
+            )
+        )
+    owners = (
+        await session.execute(
+            select(PropertyOwner, Property)
+            .join(Property, Property.id == PropertyOwner.property_id)
+            .where(PropertyOwner.tenant_id == tenant, PropertyOwner.party_id.in_(party_ids))
+        )
+    ).all()
+    for owner, prop in owners:
+        out.append(
+            schemas.ObjectRelationOut(
+                kind="eigentuemer",
+                property_id=prop.id,
+                property_name=prop.name,
+                property_city=prop.city,
+                valid_from=owner.valid_from,
+                valid_to=owner.valid_to,
+                active=is_active(owner.valid_to, day),
+                source="property_owner",
+            )
+        )
+    links = (
+        await session.execute(
+            select(PropertyContact, Property)
+            .join(Property, Property.id == PropertyContact.property_id)
+            .where(PropertyContact.tenant_id == tenant, PropertyContact.contact_id == contact.id)
+        )
+    ).all()
+    for link, prop in links:
+        out.append(
+            schemas.ObjectRelationOut(
+                kind="kontakt",
+                property_id=prop.id,
+                property_name=prop.name,
+                property_city=prop.city,
+                valid_from=link.valid_from,
+                valid_to=link.valid_to,
+                active=is_active(link.valid_to, day),
+                source="property_contact",
+                category_code=link.category_code,
+            )
+        )
+    return sort_relations(out)
 
 
 async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactOut | None:

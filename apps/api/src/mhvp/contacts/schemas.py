@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
@@ -365,3 +365,24 @@ class SearchHit(BaseModel):
     title: str
     subtitle: str | None
     score: float
+
+
+class ObjectRelationOut(BaseModel):
+    """Object or unit reference of a contact (tenancy, ownership, property contact)."""
+
+    kind: Literal["mieter", "eigentuemer", "kontakt"]
+    property_id: uuid.UUID
+    property_name: str
+    property_city: str | None = None
+    unit_id: uuid.UUID | None = None
+    unit_label: str | None = None
+    valid_from: date | None = None
+    valid_to: date | None = None
+    active: bool
+    source: Literal["contract", "property_owner", "property_contact"]
+    contract_id: uuid.UUID | None = None
+    category_code: str | None = None
+
+
+class RecomputeRolesOut(BaseModel):
+    changed: int

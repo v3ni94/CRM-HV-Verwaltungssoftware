@@ -97,6 +97,12 @@ def test_phone_and_street() -> None:
     assert split_street(None) == (None, None)
 
 
+def test_role_from_filename_dienstleister() -> None:
+    assert role_from_filename("/import/5e23c88c-Dienstleisterutf8.csv") is (
+        ContactRoleCode.DIENSTLEISTER
+    )
+
+
 def test_parse_and_prepare() -> None:
     rows = parse_kontakte(SAMPLE, ContactRoleCode.MIETER, "mieter.csv").rows
     assert len(rows) == 7
@@ -111,7 +117,11 @@ def test_parse_and_prepare() -> None:
         "Herr",
     )
     assert hamacher.roles == [ContactRoleCode.MIETER]
-    assert hamacher.external_ids == {"immoware24": "111"}
+    assert hamacher.external_ids == {"immoware24": "111", "immoware24_name": "Sven Hamacher"}
+    assert hamacher.notes == (
+        "Briefanrede laut Altsystem: Sehr geehrter Herr Sven Hamacher\n"
+        "Bundesland laut Altsystem: Nordrhein-Westfalen"
+    )
     assert hamacher.addresses[0].street == "Dürener Straße"
     assert hamacher.addresses[0].house_number == "37"
     assert hamacher.addresses[0].postal_code == "52399"

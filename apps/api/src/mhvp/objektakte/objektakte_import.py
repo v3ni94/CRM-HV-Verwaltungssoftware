@@ -46,6 +46,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import Contact, ContactKind
+from mhvp.contacts.services import recompute_for_contacts
 from mhvp.core.auth.principal import TenantPrincipal
 from mhvp.core.sqldump import field_str as _s
 from mhvp.core.sqldump import parse_dump as parse_dump  # re-exported for the router/tests
@@ -841,6 +842,17 @@ async def apply_tables(
             source_id=source_id,
         )
         _created("parties_ownerunitassignment")
+
+    # Derived roles (eigentuemer/mieter) from the assignments just written; manual roles stay.
+    await session.flush()
+    await recompute_for_contacts(
+        session,
+        {
+            cid
+            for row in tables.get("parties_ownerunitassignment", [])
+            if (cid := contact_map.get(str(row.get("owner_id")))) is not None
+        },
+    )
 
     category_map = await _import_categories(
         session, tenant_id, tables.get("documents_documentcategory", []), _created, _skipped

@@ -242,7 +242,7 @@ def test_merge_into_existing_target(client: TestClient, world: World, app_engine
     def ids(params: dict[str, Any]) -> set[str]:
         return {t["id"] for t in _ok(client.get(T, params=params, headers=h))}
 
-    everything = ids({"q": RUN})
+    everything = ids({"q": RUN, "include_closed": "true"})
     assert {target["id"], sa, source_b_id, fresh["id"]} <= everything
     visible = ids({"q": RUN, "include_merged": "false"})
     assert target["id"] in visible
@@ -251,6 +251,6 @@ def test_merge_into_existing_target(client: TestClient, world: World, app_engine
     assert ids({"merged_into": target["id"]}) == {sa, source_b_id}
     assert ids({"q": str(target["number"])}) >= {target["id"]}
     assert ids({"q": f"#{target['number']}", "include_merged": "false"}) >= {target["id"]}
-    assert ids({"q": f"Wohnung 3 {RUN}"}) == {sa}
+    assert ids({"q": f"Wohnung 3 {RUN}", "include_closed": "true"}) == {sa}
     assert ids({"q": "9" * 30}) == set()
     assert ids({"q": f"kein Treffer {RUN}"}) == set()

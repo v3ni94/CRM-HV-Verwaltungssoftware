@@ -335,6 +335,12 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     ticket_reply_approval_all: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # Hallo-Heidi-Anrufe (Betreiberauftrag 26.09.2026, ``mhvp.tickets.call_assistant``):
+    # Erkennung der Gesprächsprotokoll-Mails. Shape: {"enabled": bool, "sender_patterns": [str],
+    # "keywords": [str]}; fehlende Schlüssel nutzen die eingebauten Muster.
+    call_assistant: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 

@@ -130,7 +130,9 @@ def test_ticket_to_order_to_invoice(client: TestClient, world: World) -> None:
 
     assert (
         client.patch(
-            f"/api/v1/tickets/{ticket['id']}", json={"status": "closed"}, headers=tech
+            f"/api/v1/tickets/{ticket['id']}",
+            json={"status": "closed", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=tech,
         ).status_code
         == 409
     )
@@ -277,7 +279,13 @@ def test_ticket_to_order_to_invoice(client: TestClient, world: World) -> None:
     )
     assert accepted["invoice_id"] == invoice["id"]
 
-    _ok(client.patch(f"/api/v1/tickets/{ticket['id']}", json={"status": "done"}, headers=tech))
+    _ok(
+        client.patch(
+            f"/api/v1/tickets/{ticket['id']}",
+            json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=tech,
+        )
+    )
     full = _ok(client.get(f"/api/v1/tickets/{ticket['id']}", headers=h))
     assert full["resolved_at"] is not None
     assert [o["status"] for o in full["work_orders"]] == ["quoted", "accepted"] or sorted(
@@ -330,8 +338,20 @@ def test_every_closing_status_triggers_mail_archiving(
             )["id"]
         )
     for ticket_id, status in zip(ids, ("done", "rejected", "done"), strict=True):
-        _ok(client.patch(f"/api/v1/tickets/{ticket_id}", json={"status": status}, headers=h))
-    _ok(client.patch(f"/api/v1/tickets/{ids[2]}", json={"status": "closed"}, headers=h))
+        _ok(
+            client.patch(
+                f"/api/v1/tickets/{ticket_id}",
+                json={"status": status, "resolution": {"kind": "auskunft_erteilt"}},
+                headers=h,
+            )
+        )
+    _ok(
+        client.patch(
+            f"/api/v1/tickets/{ids[2]}",
+            json={"status": "closed", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=h,
+        )
+    )
     assert calls.count(ids[0]) == 1
     assert calls.count(ids[1]) == 1  # rejected archives as well
     assert calls.count(ids[2]) == 2  # done, then closed

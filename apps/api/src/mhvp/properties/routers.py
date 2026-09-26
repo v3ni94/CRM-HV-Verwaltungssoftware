@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from mhvp.banking import account_selection
 from mhvp.banking.routers import BankAccountListOut, account_list_out
 from mhvp.contacts.models import Contact, ContactBankAccount, Party
+from mhvp.contacts.services import recompute_for_party
 from mhvp.contacts.validation import mask_iban
 from mhvp.core import crypto
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
@@ -615,6 +616,8 @@ async def add_owner(
         )
         session.add(owner)
         entity_id = await svc.owner_entity(session, prop, body.party_id)
+        await session.flush()
+        await recompute_for_party(session, body.party_id)
         await emit(
             session,
             tenant_id=principal.tenant_id,

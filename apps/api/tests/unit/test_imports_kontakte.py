@@ -113,9 +113,9 @@ EXPECTED = _snapshot(REFERENCE)
 
 def test_reference_is_sane() -> None:
     assert [e["external_ids"] for e in EXPECTED] == [
-        {"immoware24": "4711"},
-        {"immoware24": "4712"},
-        {"immoware24": "3"},
+        {"immoware24": "4711", "immoware24_name": "Müller, Jörg"},
+        {"immoware24": "4712", "immoware24_name": "Erika Mieter"},
+        {"immoware24": "3", "immoware24_name": "Sparkasse Köln Bonn"},
     ]
     first = EXPECTED[0]
     assert (first["first_name"], first["last_name"], first["salutation"]) == (

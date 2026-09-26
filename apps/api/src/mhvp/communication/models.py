@@ -190,6 +190,7 @@ class Playbook(IdMixin, TimestampMixin, TenantMixin, Base):
         String(16), nullable=False, default="draft"
     )  # draft, active, archived
     usage_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 

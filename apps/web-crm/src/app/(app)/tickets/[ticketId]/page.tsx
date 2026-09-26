@@ -33,6 +33,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   if (!data) return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
   // auth/me is shared with the app layout through the per request cache (review M5).
   const me = await getMe();
+  const canChangeAnyStatus = me.data?.permissions.includes("tickets:delete") ?? false;
   const canManageSla = me.data?.permissions.includes("sla:update") ?? false;
   const canReply =
     (me.data?.permissions.includes("tickets:update") ?? false) && (me.data?.permissions.includes("communication:update") ?? false);
@@ -62,7 +63,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   const mergedInto = data.merged_into_ticket_id ? String(data.merged_into_ticket_id) : null;
   const [mergedTarget, mergedSources, contact, property] = await Promise.all([
     mergedInto ? api.GET("/api/v1/tickets/{ticket_id}", { params: { path: { ticket_id: mergedInto } } }) : null,
-    api.GET("/api/v1/tickets", { params: { query: { merged_into: ticketId } } }),
+    api.GET("/api/v1/tickets", { params: { query: { merged_into: ticketId, include_closed: true } } }),
     data.contact_id ? api.GET("/api/v1/contacts/{contact_id}", { params: { path: { contact_id: String(data.contact_id) } } }) : null,
     data.property_id ? api.GET("/api/v1/properties/{property_id}", { params: { path: { property_id: String(data.property_id) } } }) : null,
   ]);
@@ -106,6 +107,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
             id={ticketId}
             status={String(data.status)}
             priority={String(data.priority)}
+            canChangeAnyStatus={canChangeAnyStatus}
             internalDescription={data.internal_description ? String(data.internal_description) : ""}
           />
           <TicketChecklist

@@ -6,6 +6,7 @@ import { BankAccountApproval } from "@/components/contacts/BankAccountApproval";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
+import { RelationsPanel } from "@/components/contacts/RelationsPanel";
 import { RolePills } from "@/components/contacts/RolePills";
 import { SepaMandatesPanel } from "@/components/contacts/SepaMandatesPanel";
 import {
@@ -24,6 +25,7 @@ export const dynamic = "force-dynamic";
 const TABS = [
   "stammdaten",
   "kommunikation",
+  "tickets",
   "bankverbindungen",
   "notizen",
   "einwilligungen",
@@ -32,6 +34,7 @@ type Tab = (typeof TABS)[number];
 const TAB_KEY: Record<Tab, string> = {
   stammdaten: "master",
   kommunikation: "communication",
+  tickets: "tickets",
   bankverbindungen: "bank",
   notizen: "notes",
   einwilligungen: "consents",
@@ -98,14 +101,19 @@ export default async function ContactDetailPage({
           })
         ).data ?? [])
       : [];
+  // Personal tickets: linked contact or initiator (any_contact_id), deduplicated by id.
   const tickets =
-    tab === "kommunikation"
-      ? ((
-          await api.GET("/api/v1/tickets", {
-            params: { query: { contact_id: id, limit: 50 } },
-          })
-        ).data ?? [])
+    tab === "tickets"
+      ? [
+          ...new Map(
+            ((await api.GET("/api/v1/tickets", { params: { query: { any_contact_id: id, limit: 100, include_closed: true } } })).data ?? []).map(
+              (x) => [String((x as { id: unknown }).id), x],
+            ),
+          ).values(),
+        ]
       : [];
+  const relations =
+    (await api.GET("/api/v1/contacts/{contact_id}/relations", { params: { path: { contact_id: id } } })).data ?? [];
   // Anrufliste (13.5, A70): typisierter BFF-Fetch, kein generierter Client nötig.
   const callsRes =
     tab === "kommunikation"
@@ -378,9 +386,7 @@ export default async function ContactDetailPage({
         </section>
       ) : null}
 
-      {tab === "kommunikation" ? (
-        <TicketsSection tickets={tickets as TicketSummary[]} />
-      ) : null}
+      {tab === "tickets" ? <TicketsSection tickets={tickets as TicketSummary[]} /> : null}
       {tab === "kommunikation" ? (
         <section>
           <h2 className="mb-1 text-sm font-semibold">{t("calls.title")}</h2>
@@ -391,12 +397,10 @@ export default async function ContactDetailPage({
           />
         </section>
       ) : null}
-      {tab === "notizen" ? (
-        <NotesPanel contactId={contact.id} notes={notes} />
-      ) : null}
-      {tab === "einwilligungen" ? (
-        <ConsentsPanel contactId={contact.id} consents={consents} />
-      ) : null}
+      {tab === "notizen" ? <NotesPanel contactId={contact.id} notes={notes} /> : null}
+      {tab === "einwilligungen" ? <ConsentsPanel contactId={contact.id} consents={consents} /> : null}
+
+      <RelationsPanel relations={relations} />
     </div>
   );
 }

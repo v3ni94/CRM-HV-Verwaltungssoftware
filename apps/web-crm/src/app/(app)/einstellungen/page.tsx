@@ -22,6 +22,7 @@ export default async function SettingsPage() {
     { href: "/einstellungen/rollen", title: t("roles.title"), description: t("roles.description"), show: can("roles:read") },
     { href: "/einstellungen/mandant", title: t("company.title"), description: t("company.description"), show: can("tenant_settings:read") },
     { href: "/einstellungen/ki", title: t("ai.title"), description: t("ai.description"), show: can("tenant_settings:update") },
+    { href: "/einstellungen/wissen", title: t("knowledge.title"), description: t("knowledge.description"), show: can("tenant_settings:read") },
     { href: "/einstellungen/postfaecher", title: t("mail.title"), description: t("mail.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/dms", title: t("dms.title"), description: t("dms.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/bank", title: t("bank.title"), description: t("bank.description"), show: can("tenant_settings:update") },
