@@ -110,9 +110,19 @@ Automatisiert über `scripts/server/harden-ssh.sh` (Schritte C1 und C2). Ablauf:
 3. In einem zweiten Terminal `ssh -i <privater-schlüssel> root@<server-ip>` testen. Erst wenn das
    gelingt, die Kontrollverbindung schließen.
 
-Das Skript trägt den Schlüssel ein, bevor die Passwortanmeldung abgeschaltet wird. Wer die Schritte
-von Hand ausführt, hält dieselbe Reihenfolge ein: Schlüssel eintragen, Schlüssel-Login in zweitem
+Betreiberentscheidung 26.09.2026: Die Passwortanmeldung bleibt vorerst aktiv. Ohne Option trägt das
+Skript nur den Schlüssel ein, legt cloud-init still und schreibt ein Drop-in, das Passwort und
+Schlüssel erlaubt. Erst mit `--nur-schluessel` schaltet es die Passwortanmeldung ab. Das Skript
+trägt den Schlüssel immer ein, bevor die Passwortanmeldung abgeschaltet wird. Wer die Schritte von
+Hand ausführt, hält dieselbe Reihenfolge ein: Schlüssel eintragen, Schlüssel-Login in zweitem
 Terminal testen, erst danach das Drop-in aktivieren.
+
+Vorfall 26.09.2026: Auf dem Server lag ein älteres Drop-in `90-hardening.conf` mit
+`PasswordAuthentication no`, das nicht aus diesem Skript stammt. Es sperrte den Passwort-Login,
+nachdem cloud-init das Passwort zurückgesetzt hatte. Behoben über
+`/etc/ssh/sshd_config.d/00-mhvp-password.conf` (heute vom Skript als `00-mhvp-ssh.conf` verwaltet).
+Fremde Drop-ins unter `/etc/ssh/sshd_config.d/` vor jeder Änderung mit
+`grep -rn -iE "PasswordAuthentication|PermitRootLogin" /etc/ssh/sshd_config.d/` sichten.
 
 ### C1. cloud-init nach der Erstinstallation stilllegen
 
@@ -131,9 +141,9 @@ Datei `/etc/cloud/cloud.cfg.d/99-mhvp.cfg`:
 
 Das Skript legt beides an: die Sperrdatei und als Rückfallebene die cfg-Datei.
 
-### C2. SSH nur per Schlüssel
+### C2. SSH nur per Schlüssel (nur mit `--nur-schluessel`)
 
-Drop-in `/etc/ssh/sshd_config.d/10-mhvp-hardening.conf`:
+Drop-in `/etc/ssh/sshd_config.d/00-mhvp-ssh.conf`:
 
     PasswordAuthentication no
     KbdInteractiveAuthentication no
@@ -142,7 +152,7 @@ Drop-in `/etc/ssh/sshd_config.d/10-mhvp-hardening.conf`:
 
 Hinweis: sshd übernimmt den ersten gefundenen Wert. Drop-ins werden über `Include` am Anfang der
 `sshd_config` gelesen und in Namensreihenfolge ausgewertet. Eine Datei wie
-`50-cloud-init.conf` mit `PasswordAuthentication yes` wird deshalb von `10-...` übersteuert.
+`50-cloud-init.conf` oder `90-hardening.conf` wird deshalb von `00-...` übersteuert.
 Wirksamkeit prüfen:
 
     sshd -T | grep -Ei '^(passwordauthentication|permitrootlogin|kbdinteractiveauthentication)'

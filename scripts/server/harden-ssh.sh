@@ -1,17 +1,23 @@
 #!/usr/bin/env bash
 # SSH-Härtung des Betreiberservers (M9-05), idempotent.
 # Aufruf als root:  bash harden-ssh.sh "ssh-ed25519 AAAA... kommentar"
+#                   bash harden-ssh.sh --nur-schluessel "ssh-ed25519 AAAA... kommentar"
+# Standard: Schlüssel eintragen, cloud-init stilllegen, Passwortanmeldung bleibt aktiv.
+# Nur mit --nur-schluessel wird die Passwortanmeldung abgeschaltet (Betreiberentscheidung 26.09.2026).
 # Vorher eine Kontrollverbindung offen lassen, siehe docs/runbooks/server-recovery-und-haertung.md.
 set -euo pipefail
 
 readonly AUTH_DIR=/root/.ssh
 readonly AUTH_FILE="${AUTH_DIR}/authorized_keys"
-readonly DROPIN=/etc/ssh/sshd_config.d/10-mhvp-hardening.conf
+readonly DROPIN=/etc/ssh/sshd_config.d/00-mhvp-ssh.conf
+readonly OLD_DROPIN=/etc/ssh/sshd_config.d/10-mhvp-hardening.conf
 readonly CLOUD_CFG=/etc/cloud/cloud.cfg.d/99-mhvp.cfg
 readonly CLOUD_DISABLED=/etc/cloud/cloud-init.disabled
 
 die() { echo "FEHLER: $*" >&2; exit 1; }
 
+keys_only=0
+if [[ "${1:-}" == "--nur-schluessel" ]]; then keys_only=1; shift; fi
 [[ $# -ge 1 && -n "${1:-}" ]] || die "Kein öffentlicher Schlüssel angegeben. Aufruf: $0 \"ssh-ed25519 AAAA... kommentar\""
 [[ ${EUID} -eq 0 ]] || die "Bitte als root ausführen."
 
@@ -48,13 +54,24 @@ if [[ -f "${DROPIN}" ]]; then
   backup="$(mktemp)"
   cp -p "${DROPIN}" "${backup}"
 fi
-cat > "${DROPIN}" <<'CONF'
-# Verwaltet durch scripts/server/harden-ssh.sh (M9-05). Nicht von Hand ändern.
+if [[ ${keys_only} -eq 1 ]]; then
+  cat > "${DROPIN}" <<'CONF'
+# Verwaltet durch scripts/server/harden-ssh.sh (M9-05, nur Schlüssel). Nicht von Hand ändern.
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin prohibit-password
 PubkeyAuthentication yes
 CONF
+else
+  cat > "${DROPIN}" <<'CONF'
+# Verwaltet durch scripts/server/harden-ssh.sh (M9-05, Passwort und Schlüssel). Nicht von Hand ändern.
+PasswordAuthentication yes
+KbdInteractiveAuthentication yes
+PermitRootLogin yes
+PubkeyAuthentication yes
+CONF
+fi
+rm -f "${OLD_DROPIN}"
 chmod 644 "${DROPIN}"
 
 # 3. Konfiguration prüfen, bei Fehler zurückrollen

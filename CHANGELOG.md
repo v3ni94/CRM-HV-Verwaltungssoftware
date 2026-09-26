@@ -5,6 +5,11 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.22.1 (26.09.2026) SSH-Härtung: Passwortanmeldung bleibt aktiv
+
+- Server: `scripts/server/harden-ssh.sh` lässt die Passwortanmeldung standardmäßig aktiv und schaltet sie nur mit `--nur-schluessel` ab. Drop-in heißt jetzt `00-mhvp-ssh.conf` und hat Vorrang vor fremden Drop-ins.
+- Runbook Server-Recovery: Vorfall 26.09.2026 (Drop-in `90-hardening.conf` sperrte Passwort-Login nach cloud-init-Reset) dokumentiert.
+
 ## 1.22.0 (26.09.2026) Vier-Augen-IBAN, Fristen, Bankabgleich, Mahnwesen, WEG-Mehrheiten
 
 - Kontakte: neue oder geänderte Bankverbindungen (IBAN) brauchen die Freigabe einer zweiten Person (contacts:approve), der Ersteller darf nicht selbst freigeben; nicht freigegebene Konten werden in Lastschrift, Zahlung, SEPA-Mandat und Rechnungsabgleich nicht verwendet. Bestandskonten gelten mit Migration 0109 als freigegeben
