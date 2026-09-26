@@ -27,6 +27,7 @@ MODE = Query(default="preview", pattern="^(preview|apply)$")
 LIST_ROLES: dict[str, ContactRoleCode] = {
     "eigentuemer": ContactRoleCode.EIGENTUEMER,
     "mieter": ContactRoleCode.MIETER,
+    "dienstleister": ContactRoleCode.DIENSTLEISTER,
     "bank": ContactRoleCode.BANK,
     "sonstige": ContactRoleCode.SONSTIGES,
 }
@@ -140,7 +141,10 @@ async def import_kontakte(
         if role is None:
             raise ProblemError(
                 ErrorCodes.VALIDATION,
-                detail=f"Rolle {role_text!r} unbekannt (eigentuemer, mieter, bank, sonstige).",
+                detail=(
+                    f"Rolle {role_text!r} unbekannt "
+                    "(eigentuemer, mieter, dienstleister, bank, sonstige)."
+                ),
             )
         text = await _read_csv(upload)
         try:
