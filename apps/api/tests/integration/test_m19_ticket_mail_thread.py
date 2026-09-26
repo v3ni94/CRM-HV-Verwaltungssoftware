@@ -441,7 +441,11 @@ def test_reply_to_closed_ticket_reopens_and_notifies(client: TestClient, world: 
     _ok(
         client.patch(
             f"{T}/{ticket_id}",
-            json={"assignee_user_id": str(world.users["tmtadmin"]), "status": "done"},
+            json={
+                "assignee_user_id": str(world.users["tmtadmin"]),
+                "status": "done",
+                "resolution": {"kind": "auskunft_erteilt"},
+            },
             headers=admin,
         )
     )

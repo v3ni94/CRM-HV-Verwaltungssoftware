@@ -2188,7 +2188,29 @@
       "download": "Download",
       "replyTo": "Reply to this mail",
       "openMail": "Open in mailbox"
-    }
+    },
+    "resolution": {
+      "title": "Resolution: {status}",
+      "hint": "Briefly describe what was done. The system learns from it for similar cases.",
+      "hintBulk": "Applies to all {count} selected tickets. Briefly describe what was done.",
+      "kind": "What was done",
+      "choose": "Please choose",
+      "note": "Note (optional)",
+      "noteRequired": "Description (required for other)",
+      "confirm": "Complete",
+      "cancel": "Cancel",
+      "kinds": {
+        "stammdaten_ergaenzt": "Master data completed",
+        "handwerker_beauftragt": "Contractor commissioned",
+        "auskunft_erteilt": "Information provided",
+        "weitergeleitet": "Forwarded",
+        "kein_handlungsbedarf": "No action required",
+        "abgelehnt": "Rejected",
+        "zusammengefuehrt": "Merged",
+        "sonstiges": "Other"
+      }
+    },
+    "resolutionLabel": "Resolution"
   },
   "Automation": {
     "title": "Automation",
@@ -3038,6 +3060,10 @@
     "weg": {
       "title": "Owners' associations",
       "description": "Majority rules per resolution subject with source and release."
+    },
+    "knowledge": {
+      "title": "Knowledge base",
+      "description": "View learned playbooks and learning examples from resolutions."
     }
   },
   "Members": {
@@ -5255,6 +5281,58 @@
       "open_ended": "Open ended",
       "cancelled": "Cancelled",
       "expired": "Ended"
+    }
+  },
+  "Knowledge": {
+    "title": "Knowledge base",
+    "description": "Learned playbooks and learning examples from resolutions and confirmed proposals.",
+    "tabs": {
+      "playbooks": "Playbooks",
+      "examples": "Learning examples"
+    },
+    "playbooks": {
+      "empty": "No playbooks learned yet.",
+      "title": "Title",
+      "trigger": "Trigger",
+      "steps": "Steps",
+      "usage": "Hits",
+      "lastUsed": "Last used",
+      "status": "Status",
+      "actions": "Actions",
+      "never": "never",
+      "deactivate": "Deactivate",
+      "edit": "Edit",
+      "statuses": {
+        "draft": "Draft",
+        "active": "active",
+        "archived": "deactivated"
+      }
+    },
+    "examples": {
+      "empty": "No learning examples.",
+      "date": "Date",
+      "task": "Task",
+      "decision": "Decision",
+      "text": "Summary",
+      "filter": "Filter by task",
+      "all": "All tasks",
+      "more": "Load more",
+      "total": "{total} entries"
+    },
+    "tasks": {
+      "ticket_resolution": "Ticket resolution",
+      "contact_master_data_change": "Master data change",
+      "classify_document": "Document classification",
+      "classify_email": "Mail classification",
+      "draft_reply": "Reply draft",
+      "propose_posting": "Posting",
+      "extract_invoice": "Invoice extraction",
+      "extract_contacts": "Contact extraction",
+      "extract_property": "Property extraction",
+      "map_columns": "Column mapping",
+      "check_statement": "Statement check",
+      "answer_question": "Questions",
+      "summarize": "Summary"
     }
   }
 }

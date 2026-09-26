@@ -37,6 +37,9 @@ from mhvp.tickets.models import (
 )
 from mhvp.tickets.status import (
     CLOSING_STATUSES,
+    ResolutionIn,
+    ResolutionKind,
+    record_resolution_example,
     transition_status,
 )
 from mhvp.workspace.services import notify
@@ -175,6 +178,8 @@ class TicketIn(_In):
 
 class TicketPatch(_In):
     status: TicketStatus | None = None
+    # Erledigungsnotiz, Pflicht beim Setzen auf done, closed oder rejected.
+    resolution: ResolutionIn | None = None
     priority: Priority | None = None
     assignee_user_id: uuid.UUID | None = None
     team_id: uuid.UUID | None = None
@@ -196,6 +201,8 @@ class AssigneeIn(_In):
 class BulkStatusIn(_In):
     ticket_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
     status: TicketStatus
+    # Gemeinsame Erledigungsnotiz für alle Tickets, Pflicht bei abschließendem Status.
+    resolution: ResolutionIn | None = None
 
 
 class ChecklistTogglePatch(_In):
@@ -235,6 +242,8 @@ class TicketMergeIn(_In):
     title: str | None = Field(default=None, max_length=300)
     # M36: merge the sources into this existing ticket instead of creating a new one.
     target_ticket_id: uuid.UUID | None = None
+    # Optional gemeinsame Erledigungsnotiz der Quelltickets; ohne sie gilt zusammengefuehrt.
+    resolution: ResolutionIn | None = None
 
     @model_validator(mode="after")
     def _check_counts(self) -> "TicketMergeIn":
@@ -272,6 +281,9 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             "resolved_at",
             "time_spent_minutes",
             "merged_into_ticket_id",
+            "resolution_kind",
+            "resolution_note",
+            "resolved_by",
             "created_at",
         )
     } | {
@@ -1421,6 +1433,19 @@ async def merge_tickets(
             t.status = TicketStatus.CLOSED
             t.resolved_at = datetime.now(UTC)
             t.merged_into_ticket_id = target.id
+            t.resolution_kind = (
+                body.resolution.kind.value
+                if body.resolution
+                else ResolutionKind.ZUSAMMENGEFUEHRT.value
+            )
+            t.resolution_note = (
+                body.resolution.note
+                if body.resolution
+                else f"Zusammengeführt in Ticket {target.number}."
+            )
+            t.resolved_by = principal.user_id
+            if body.resolution:
+                await record_resolution_example(session, t)
             clock = await session.scalar(select(SlaClock).where(SlaClock.ticket_id == t.id))
             if clock is not None:
                 await mark_resolved(session, clock)
@@ -1780,6 +1805,7 @@ async def patch_ticket(
                 body.status,
                 principal.user_id,
                 skip_flow=_may_skip_flow(principal),
+                resolution=body.resolution,
             )
         if body.assignee_user_id and body.assignee_user_id != ticket.assignee_user_id:
             ticket.assignee_user_id = body.assignee_user_id
@@ -1984,6 +2010,7 @@ async def bulk_status(
                     principal.user_id,
                     bulk=True,
                     skip_flow=_may_skip_flow(principal),
+                    resolution=body.resolution,
                 )
             except ProblemError as exc:
                 failed.append({"id": str(ticket.id), "reason": exc.detail})

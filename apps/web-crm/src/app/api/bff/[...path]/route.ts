@@ -123,6 +123,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^ai/conversations/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^ai/conversations/${ID}/messages$`) },
   { method: "GET", pattern: new RegExp(`^ai/runs/${ID}$`) },
+  { method: "GET", pattern: /^ai\/examples$/ },
   { method: "GET", pattern: new RegExp(`^ai/proposals/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^ai/proposals/${ID}/(apply|reject)$`) },
   { method: "GET", pattern: /^ai\/usage$/ },

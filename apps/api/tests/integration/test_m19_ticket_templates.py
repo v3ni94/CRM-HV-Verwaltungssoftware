@@ -136,7 +136,11 @@ def test_template_crud_and_ticket_checklist_and_iban(client: TestClient, world: 
             f"/api/v1/tickets/{ticket['id']}/checklist/vertrag", json={"done": True}, headers=care
         )
     )
-    resp = client.patch(f"/api/v1/tickets/{ticket['id']}", json={"status": "done"}, headers=care)
+    resp = client.patch(
+        f"/api/v1/tickets/{ticket['id']}",
+        json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+        headers=care,
+    )
     assert resp.status_code == 422
 
     # Invalid IBAN is rejected.
@@ -157,7 +161,11 @@ def test_template_crud_and_ticket_checklist_and_iban(client: TestClient, world: 
 
     # Checklist has an open required item again? No: only "vertrag" is required and it is done.
     done = _ok(
-        client.patch(f"/api/v1/tickets/{ticket['id']}", json={"status": "done"}, headers=care)
+        client.patch(
+            f"/api/v1/tickets/{ticket['id']}",
+            json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=care,
+        )
     )
     assert done["status"] == "done"
     assert done["extra_fields"]["iban"] == "DE89370400440532013000"
@@ -179,7 +187,11 @@ def test_template_open_required_checklist_blocks_closure(client: TestClient, wor
         201,
     )
     ticket = _ok(client.post("/api/v1/tickets", json={"template_id": tpl["id"]}, headers=care), 201)
-    resp = client.patch(f"/api/v1/tickets/{ticket['id']}", json={"status": "done"}, headers=care)
+    resp = client.patch(
+        f"/api/v1/tickets/{ticket['id']}",
+        json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+        headers=care,
+    )
     assert resp.status_code == 422
     assert "Checkliste unvollständig" in resp.json()["detail"]
 
@@ -190,7 +202,13 @@ def test_template_open_required_checklist_blocks_closure(client: TestClient, wor
             headers=care,
         )
     )
-    _ok(client.patch(f"/api/v1/tickets/{ticket['id']}", json={"status": "done"}, headers=care))
+    _ok(
+        client.patch(
+            f"/api/v1/tickets/{ticket['id']}",
+            json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=care,
+        )
+    )
 
 
 def test_bulk_status_limit_standard_vs_admin(client: TestClient, world: World) -> None:

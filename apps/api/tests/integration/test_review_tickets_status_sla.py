@@ -84,7 +84,13 @@ def test_patch_done_stops_clock_and_emits_status_event(client: TestClient, world
     assert _clock(client, h, ticket["id"])["state"] == "running"
 
     _ok(client.patch(f"{T}/{ticket['id']}", json={"status": "in_progress"}, headers=h))
-    _ok(client.patch(f"{T}/{ticket['id']}", json={"status": "done"}, headers=h))
+    _ok(
+        client.patch(
+            f"{T}/{ticket['id']}",
+            json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=h,
+        )
+    )
     clock = _clock(client, h, ticket["id"])
     assert clock["state"] == "done"
     assert clock["resolved_at"] is not None
@@ -103,9 +109,10 @@ def test_patch_done_stops_clock_and_emits_status_event(client: TestClient, world
     assert (clock["state"], clock["resolved_at"]) == ("running", None)
     assert _ok(client.get(f"{T}/{ticket['id']}", headers=h))["resolved_at"] is None
 
-    # A forbidden transition changes nothing and emits nothing.
+    # Closing without an Erledigungsnotiz changes nothing and emits nothing (also for the
+    # admin bypass, which would allow in_progress to closed).
     assert (
-        client.patch(f"{T}/{ticket['id']}", json={"status": "closed"}, headers=h).status_code == 409
+        client.patch(f"{T}/{ticket['id']}", json={"status": "closed"}, headers=h).status_code == 422
     )
     assert len(_events(client, h, ticket["id"])) == 3
 
@@ -115,19 +122,36 @@ def test_bulk_status_stops_clocks_and_reports_failures(client: TestClient, world
     first = _ticket(client, h, f"Uhr Bulk 1 {RUN}")
     second = _ticket(client, h, f"Uhr Bulk 2 {RUN}")
     closed = _ticket(client, h, f"Uhr Bulk 3 {RUN}")
-    _ok(client.patch(f"{T}/{closed['id']}", json={"status": "done"}, headers=h))
-    _ok(client.patch(f"{T}/{closed['id']}", json={"status": "closed"}, headers=h))
+    _ok(
+        client.patch(
+            f"{T}/{closed['id']}",
+            json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=h,
+        )
+    )
+    _ok(
+        client.patch(
+            f"{T}/{closed['id']}",
+            json={"status": "closed", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=h,
+        )
+    )
 
     result = _ok(
         client.post(
             f"{T}/bulk-status",
-            json={"ticket_ids": [first["id"], second["id"], closed["id"]], "status": "rejected"},
+            json={
+                "ticket_ids": [first["id"], second["id"], closed["id"]],
+                "status": "rejected",
+                "resolution": {"kind": "auskunft_erteilt"},
+            },
             headers=h,
         )
     )
-    assert {c["id"] for c in result["changed"]} == {first["id"], second["id"]}
-    assert [f["id"] for f in result["failed"]] == [closed["id"]]
-    assert "unzulässig" in result["failed"][0]["reason"]
+    # rvadmin is tenant_admin: the admin bypass allows closed to rejected as well.
+    assert {c["id"] for c in result["changed"]} == {first["id"], second["id"], closed["id"]}
+    assert result["failed"] == []
+    assert _events(client, h, closed["id"])[0]["payload"]["to"] == "rejected"
     for ticket in (first, second):
         assert _clock(client, h, ticket["id"])["state"] == "done"
         events = _events(client, h, ticket["id"])
@@ -174,7 +198,13 @@ def test_sla_backfill_starts_clocks_for_open_tickets_without_one(
     h = bearer(login(client, world, "rvadmin"))
     open_ticket = _ticket(client, h, f"Nachlauf offen {RUN}")
     done_ticket = _ticket(client, h, f"Nachlauf erledigt {RUN}")
-    _ok(client.patch(f"{T}/{done_ticket['id']}", json={"status": "done"}, headers=h))
+    _ok(
+        client.patch(
+            f"{T}/{done_ticket['id']}",
+            json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=h,
+        )
+    )
 
     async def run() -> int:
         engine = create_app_engine(_settings(database, redis_url))

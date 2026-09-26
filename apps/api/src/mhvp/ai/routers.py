@@ -13,6 +13,7 @@ from mhvp.ai import connection_test, gateway, imports, jobs, tasks
 from mhvp.ai import schemas as s
 from mhvp.ai.models import (
     AiConversation,
+    AiExample,
     AiKnowledgeEntry,
     AiKnowledgeKind,
     AiMessage,
@@ -39,6 +40,7 @@ CREATE = require_permission("ai:create")
 UNDO = require_permission("ai:delete")
 APPROVE = require_permission("ai:approve")
 SETTINGS = require_permission("tenant_settings:update")
+SETTINGS_READ = require_permission("tenant_settings:read")
 AUDIT_PERMISSION = "audit:read"  # sees the chats of all users of the tenant (audit trail)
 
 
@@ -745,6 +747,63 @@ def _masked_proposal(proposal: AiProposal) -> s.ProposalOut:
         proposed["invoice"] = invoice
         out.proposed = proposed
     return out
+
+
+def _example_summary(row: AiExample) -> tuple[str | None, str]:
+    """Entscheidung und Kurztext eines Lernbeispiels für die Wissensdatenbank-Seite."""
+    result = row.result or {}
+    features = row.features or {}
+    decision = result.get("kind") or result.get("decision") or result.get("status")
+    text = (
+        result.get("note")
+        or features.get("betreff")
+        or features.get("subject")
+        or features.get("filename")
+        or ""
+    )
+    return (str(decision) if decision else None), str(text)[:300]
+
+
+@router.get("/ai/examples", summary="Lernbeispiele (Wissensdatenbank)")
+async def list_examples(
+    request: Request,
+    task: AiTask | None = None,
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=50, ge=1, le=200),
+    principal: TenantPrincipal = Depends(SETTINGS_READ),
+) -> dict[str, Any]:
+    """Bestätigte Lernbeispiele des Mandanten, neueste zuerst, optional nach Aufgabe gefiltert
+    (unter anderem ``ticket_resolution`` aus Erledigungsnotizen)."""
+    async with tenant_tx(request, principal) as session:
+        query = select(AiExample)
+        if task is not None:
+            query = query.where(AiExample.task == task)
+        total = await session.scalar(select(func.count()).select_from(query.subquery()))
+        rows = (
+            await session.scalars(
+                query.order_by(AiExample.created_at.desc(), AiExample.id)
+                .offset((page - 1) * per_page)
+                .limit(per_page)
+            )
+        ).all()
+        items = []
+        for r in rows:
+            decision, text = _example_summary(r)
+            items.append(
+                {
+                    "id": r.id,
+                    "task": r.task.value,
+                    "created_at": r.created_at,
+                    "decision": decision,
+                    "text": text,
+                    "features": r.features,
+                    "result": r.result,
+                }
+            )
+        return {
+            "data": items,
+            "meta": {"page": page, "per_page": per_page, "total": int(total or 0)},
+        }
 
 
 @router.get("/ai/proposals/{proposal_id}", summary="Vorschlag lesen")

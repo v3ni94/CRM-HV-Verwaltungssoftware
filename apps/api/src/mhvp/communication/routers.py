@@ -182,7 +182,10 @@ def _playbook_out(p: Playbook) -> dict[str, Any]:
             "source_ticket_id",
             "status",
             "usage_count",
+            "last_used_at",
             "created_by",
+            "created_at",
+            "updated_at",
         )
     }
 
@@ -1279,6 +1282,7 @@ async def apply_playbook(
         else:
             body_text = mail.draft_reply(salutation, row.subject, ticket.number if ticket else None)
         playbook.usage_count += 1
+        playbook.last_used_at = datetime.now(UTC)
         draft = Message(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
