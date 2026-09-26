@@ -17689,6 +17689,132 @@
         "title": "OAuthStartIn",
         "type": "object"
       },
+      "ObjectRelationOut": {
+        "description": "Object or unit reference of a contact (tenancy, ownership, property contact).",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "category_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Code"
+          },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "kind": {
+            "enum": [
+              "mieter",
+              "eigentuemer",
+              "kontakt"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "property_city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property City"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "property_name": {
+            "title": "Property Name",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "contract",
+              "property_owner",
+              "property_contact"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "unit_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Label"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "kind",
+          "property_id",
+          "property_name",
+          "active",
+          "source"
+        ],
+        "title": "ObjectRelationOut",
+        "type": "object"
+      },
       "OccupancyRow": {
         "properties": {
           "owner_party": {
@@ -21969,6 +22095,19 @@
           "purpose"
         ],
         "title": "RecentTransactionOut",
+        "type": "object"
+      },
+      "RecomputeRolesOut": {
+        "properties": {
+          "changed": {
+            "title": "Changed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changed"
+        ],
+        "title": "RecomputeRolesOut",
         "type": "object"
       },
       "RefreshRequest": {
@@ -38629,6 +38768,28 @@
         ]
       }
     },
+    "/api/v1/contacts/roles/recompute": {
+      "post": {
+        "description": "Adds eigentuemer/mieter from active contracts and ownerships; never removes roles.",
+        "operationId": "recompute_roles_api_v1_contacts_roles_recompute_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecomputeRolesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Abgeleitete Rollen neu berechnen",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
     "/api/v1/contacts/{contact_id}": {
       "delete": {
         "operationId": "delete_contact_api_v1_contacts__contact_id__delete",
@@ -39347,6 +39508,51 @@
       }
     },
     "/api/v1/contacts/{contact_id}/relations": {
+      "get": {
+        "operationId": "list_object_relations_api_v1_contacts__contact_id__relations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ObjectRelationOut"
+                  },
+                  "title": "Response List Object Relations Api V1 Contacts  Contact Id  Relations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objektbezüge eines Kontakts",
+        "tags": [
+          "Kontakte"
+        ]
+      },
       "post": {
         "operationId": "add_relation_api_v1_contacts__contact_id__relations_post",
         "parameters": [
@@ -61071,6 +61277,7 @@
             }
           },
           {
+            "description": "Kontakt oder Initiator (contact_id ODER initiator_contact_id)",
             "in": "query",
             "name": "contact_id",
             "required": false,
@@ -61084,7 +61291,46 @@
                   "type": "null"
                 }
               ],
+              "description": "Kontakt oder Initiator (contact_id ODER initiator_contact_id)",
               "title": "Contact Id"
+            }
+          },
+          {
+            "description": "Nur Initiator",
+            "in": "query",
+            "name": "initiator_contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nur Initiator",
+              "title": "Initiator Contact Id"
+            }
+          },
+          {
+            "description": "Personenbezug: contact_id ODER initiator_contact_id",
+            "in": "query",
+            "name": "any_contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Personenbezug: contact_id ODER initiator_contact_id",
+              "title": "Any Contact Id"
             }
           },
           {

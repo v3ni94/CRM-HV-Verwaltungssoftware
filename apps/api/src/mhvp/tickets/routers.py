@@ -1186,7 +1186,13 @@ async def list_tickets(
     ),
     property_id: uuid.UUID | None = None,
     unit_id: uuid.UUID | None = None,
-    contact_id: uuid.UUID | None = None,
+    contact_id: uuid.UUID | None = Query(
+        default=None, description="Kontakt oder Initiator (contact_id ODER initiator_contact_id)"
+    ),
+    initiator_contact_id: uuid.UUID | None = Query(default=None, description="Nur Initiator"),
+    any_contact_id: uuid.UUID | None = Query(
+        default=None, description="Personenbezug: contact_id ODER initiator_contact_id"
+    ),
     contact_role: str | None = Query(
         default=None, description="Rolle des verknüpften Kontakts zur Einheit: owner oder tenant"
     ),
@@ -1247,10 +1253,13 @@ async def list_tickets(
             query = query.where(Ticket.property_id == property_id)
         if unit_id:
             query = query.where(Ticket.unit_id == unit_id)
-        if contact_id:
-            query = query.where(
-                (Ticket.contact_id == contact_id) | (Ticket.initiator_contact_id == contact_id)
-            )
+        for person in (contact_id, any_contact_id):
+            if person:
+                query = query.where(
+                    (Ticket.contact_id == person) | (Ticket.initiator_contact_id == person)
+                )
+        if initiator_contact_id:
+            query = query.where(Ticket.initiator_contact_id == initiator_contact_id)
         if contact_role:
             if contact_role not in ("owner", "tenant"):
                 raise ProblemError(

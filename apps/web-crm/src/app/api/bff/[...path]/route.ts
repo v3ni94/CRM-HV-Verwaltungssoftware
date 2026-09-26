@@ -66,6 +66,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
     pattern: new RegExp(`^contacts/${ID}/(export|notes|consents|duplicates|sepa-mandates)$`),
   },
   { method: "POST", pattern: new RegExp(`^contacts/${ID}/(notes|consents)$`) },
+  { method: "GET", pattern: new RegExp(`^contacts/${ID}/relations$`) },
+  { method: "POST", pattern: /^contacts\/roles\/recompute$/ },
   { method: "POST", pattern: new RegExp(`^consents/${ID}/revoke$`) },
   {
     method: "POST",

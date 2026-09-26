@@ -10,7 +10,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.contacts.models import ContactBankAccount, Party, PartyMember
-from mhvp.contacts.services import approval_block_reason
+from mhvp.contacts.services import approval_block_reason, recompute_for_party
 from mhvp.contacts.validation import mask_iban
 from mhvp.contracts import schemas as s
 from mhvp.contracts import services as svc
@@ -135,6 +135,7 @@ async def _create(
         "Für die Einheit besteht im Zeitraum bereits ein Vertrag dieser Art "
         "(Mietverhältnis oder Eigentum).",
     )
+    await recompute_for_party(session, party.id)
     return contract
 
 
@@ -251,6 +252,7 @@ async def new_version(
         session.add(new)
         await _flush(session, "Die Version überschneidet sich mit einem anderen Vertrag.")
         await svc.move_open_rows(session, old, new, body.effective_date)
+        await recompute_for_party(session, new.party_id)
         await _event(
             session,
             principal,

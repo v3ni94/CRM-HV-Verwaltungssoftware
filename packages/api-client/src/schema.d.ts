@@ -2958,6 +2958,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contacts/roles/recompute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abgeleitete Rollen neu berechnen
+         * @description Adds eigentuemer/mieter from active contracts and ownerships; never removes roles.
+         */
+        post: operations["recompute_roles_api_v1_contacts_roles_recompute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts/{contact_id}": {
         parameters: {
             query?: never;
@@ -3142,7 +3162,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Objektbezüge eines Kontakts */
+        get: operations["list_object_relations_api_v1_contacts__contact_id__relations_get"];
         put?: never;
         /** Beziehung anlegen */
         post: operations["add_relation_api_v1_contacts__contact_id__relations_post"];
@@ -16255,6 +16276,45 @@ export interface components {
              */
             purpose: string;
         };
+        /**
+         * ObjectRelationOut
+         * @description Object or unit reference of a contact (tenancy, ownership, property contact).
+         */
+        ObjectRelationOut: {
+            /** Active */
+            active: boolean;
+            /** Category Code */
+            category_code?: string | null;
+            /** Contract Id */
+            contract_id?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "mieter" | "eigentuemer" | "kontakt";
+            /** Property City */
+            property_city?: string | null;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Property Name */
+            property_name: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "contract" | "property_owner" | "property_contact";
+            /** Unit Id */
+            unit_id?: string | null;
+            /** Unit Label */
+            unit_label?: string | null;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+        };
         /** OccupancyRow */
         OccupancyRow: {
             /** Owner Party */
@@ -17624,6 +17684,11 @@ export interface components {
             id: string;
             /** Purpose */
             purpose: string | null;
+        };
+        /** RecomputeRolesOut */
+        RecomputeRolesOut: {
+            /** Changed */
+            changed: number;
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -26161,6 +26226,26 @@ export interface operations {
             };
         };
     };
+    recompute_roles_api_v1_contacts_roles_recompute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecomputeRolesOut"];
+                };
+            };
+        };
+    };
     get_contact_api_v1_contacts__contact_id__get: {
         parameters: {
             query?: never;
@@ -26609,6 +26694,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_object_relations_api_v1_contacts__contact_id__relations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectRelationOut"][];
                 };
             };
             /** @description Validation Error */
@@ -41368,7 +41484,12 @@ export interface operations {
                 status?: string | null;
                 property_id?: string | null;
                 unit_id?: string | null;
+                /** @description Kontakt oder Initiator (contact_id ODER initiator_contact_id) */
                 contact_id?: string | null;
+                /** @description Nur Initiator */
+                initiator_contact_id?: string | null;
+                /** @description Personenbezug: contact_id ODER initiator_contact_id */
+                any_contact_id?: string | null;
                 /** @description Rolle des verknüpften Kontakts zur Einheit: owner oder tenant */
                 contact_role?: string | null;
                 /** @description Bearbeiter, primär oder zusätzlich zugewiesen */

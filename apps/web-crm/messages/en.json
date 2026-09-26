@@ -136,7 +136,20 @@
       "communication": "Communication",
       "bank": "Bank accounts",
       "notes": "Notes",
-      "consents": "Consents"
+      "consents": "Consents",
+      "tickets": "Tickets"
+    },
+    "relations": {
+      "title": "Relations to properties and units",
+      "empty": "No property relations recorded.",
+      "object": "Property",
+      "unit": "Unit",
+      "role": "Role",
+      "period": "Period",
+      "status": "Status",
+      "active": "active",
+      "ended": "ended",
+      "since": "since {date}"
     },
     "created": "Created on",
     "updated": "Changed on",

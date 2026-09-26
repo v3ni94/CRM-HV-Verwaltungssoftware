@@ -136,7 +136,20 @@
       "communication": "Kommunikation",
       "bank": "Bankverbindungen",
       "notes": "Notizen",
-      "consents": "Einwilligungen"
+      "consents": "Einwilligungen",
+      "tickets": "Tickets"
+    },
+    "relations": {
+      "title": "Beziehungen zu Objekten und Einheiten",
+      "empty": "Keine Objektbezüge hinterlegt.",
+      "object": "Objekt",
+      "unit": "Einheit",
+      "role": "Rolle",
+      "period": "Zeitraum",
+      "status": "Status",
+      "active": "aktiv",
+      "ended": "beendet",
+      "since": "seit {date}"
     },
     "created": "Angelegt am",
     "updated": "Geändert am",
