@@ -1,12 +1,10 @@
-from typing import cast
-
-from sqlalchemy import Table
-
 """M14-05 automatischer Belegeingang: Heuristik und Idempotenz der Kandidatenauswahl."""
 
 import uuid
+from typing import cast
 
 import pytest
+from sqlalchemy import Table, UniqueConstraint
 
 from mhvp.communication.invoice_intake import (
     PDF,
@@ -80,7 +78,7 @@ def test_marker_unique_and_switch_default_off() -> None:
     uniques = [
         tuple(c.name for c in con.columns)
         for con in table.constraints
-        if con.__class__.__name__ == "UniqueConstraint"
+        if isinstance(con, UniqueConstraint)
     ]
     assert ("tenant_id", "document_id") in uniques
     column = TenantSettings.__table__.c.invoice_intake_auto

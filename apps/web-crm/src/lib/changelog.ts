@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.20.1",
+    date: "26.09.2026",
+    title: "Pflege: Plan-Dokumente, Formatierung, Typprüfung",
+    changes: [
+      "Plan-Dokumente auf den tatsächlichen Stand gebracht, Migrationen formatiert, Typfehler in Testdateien behoben",
+    ],
+  },
+  {
     version: "1.20.0",
     date: "26.09.2026",
     title: "Übergabeprotokoll, Portal, Belegeingang, Betrieb",
