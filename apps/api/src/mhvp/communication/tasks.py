@@ -7,7 +7,7 @@ import uuid
 
 from celery import shared_task
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from mhvp.communication.gmail import GmailError, enabled_gmail_mailboxes, sync_one
@@ -36,10 +36,18 @@ async def gmail_sync_all_once(settings: Settings) -> dict[str, int]:
             for mailbox_id in boxes:
                 totals["mailboxes"] += 1
                 # One transaction per mailbox: a failing mailbox never rolls back another.
+                run_ids: list[uuid.UUID] = []
+                actor: uuid.UUID | None = None
                 try:
                     async with tenant_transaction(factory, tenant_id) as session:
-                        counts = await sync_one(session, settings, mailbox_id)
+                        created_ids: list[uuid.UUID] = []
+                        counts = await sync_one(session, settings, mailbox_id, created_ids)
+                        run_ids, actor = await _auto_intake(
+                            session, tenant_id, mailbox_id, created_ids
+                        )
                     totals["created"] += counts["created"]
+                    totals["intake_runs"] = totals.get("intake_runs", 0) + len(run_ids)
+                    _dispatch_runs(settings, tenant_id, run_ids, actor)
                 except GmailError as exc:
                     totals["failed"] += 1
                     log.warning(
@@ -57,6 +65,49 @@ async def gmail_sync_all_once(settings: Settings) -> dict[str, int]:
     finally:
         await engine.dispose()
     return totals
+
+
+async def _auto_intake(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    mailbox_id: uuid.UUID,
+    created_ids: list[uuid.UUID],
+) -> tuple[list[uuid.UUID], uuid.UUID | None]:
+    """M14-05: legt bei aktivem Schalter die extract_invoice-Läufe der neuen Nachrichten an.
+    Eigener Savepoint: ein Fehler hier rollt den Mailabruf nie zurück."""
+    from mhvp.communication.invoice_intake import intake_for_messages
+    from mhvp.communication.models import Mailbox
+
+    if not created_ids:
+        return [], None
+    box = await session.get(Mailbox, mailbox_id)
+    actor = box.created_by if box is not None else None
+    try:
+        async with session.begin_nested():
+            return await intake_for_messages(session, tenant_id, created_ids, actor), actor
+    except Exception:
+        log.exception("invoice intake auto failed", extra={"mailbox_id": str(mailbox_id)})
+        return [], actor
+
+
+def _dispatch_runs(
+    settings: Settings,
+    tenant_id: uuid.UUID,
+    run_ids: list[uuid.UUID],
+    actor: uuid.UUID | None,
+) -> None:
+    """Stößt die angelegten Läufe nach dem Commit über die bestehende Gateway-Task an."""
+    if not run_ids:
+        return
+    from mhvp.worker import get_celery
+
+    celery = get_celery()
+    for run_id in run_ids:
+        celery.send_task(
+            "mhvp.ai.run",
+            args=[str(tenant_id), str(run_id), str(actor) if actor else None],
+            queue="io",
+        )
 
 
 @shared_task(name="mhvp.communication.gmail_sync_all")

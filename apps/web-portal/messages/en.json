@@ -40,7 +40,6 @@
     "logout": "Sign out",
     "footer": "All entries are stored by the property management. Internal notes of the management are not visible here.",
     "nav": {
-      "handoverStaff": "Handover protocols (management)",
       "start": "Overview",
       "documents": "Documents",
       "tickets": "Reports",
@@ -50,7 +49,6 @@
       "orders": "Orders"
     },
     "start": {
-      "handoverStaff": "View the management's handover protocols",
       "title": "Overview",
       "greetingTenantOwner": "Your contract data and requests at a glance.",
       "greetingProvider": "Your orders from the property management.",
@@ -68,7 +66,10 @@
     "title": "Documents",
     "empty": "No released documents.",
     "download": "Download",
-    "created": "Provided on"
+    "created": "Provided on",
+    "handoversTitle": "Handover protocols",
+    "handoversEmpty": "No handover protocols available.",
+    "handoverDate": "Handover on"
   },
   "Tickets": {
     "title": "Reports",
@@ -174,21 +175,6 @@
       "rejected": "Rejected",
       "cancelled": "Cancelled"
     }
-  },
-  "HandoverStaff": {
-    "title": "Handover protocols",
-    "intro": "All handover protocols of the tenant, read only. Internal notes of the management are not visible here.",
-    "empty": "No handover protocols available.",
-    "forbidden": "This view requires the portal permission to read handover protocols. Please contact the administration.",
-    "object": "Property",
-    "unit": "Unit",
-    "manualObject": "Property entered manually",
-    "noObject": "Without property reference",
-    "date": "Handover on",
-    "pdf": "Open PDF",
-    "detail": "Open protocol",
-    "version": "Version",
-    "notSet": "not specified"
   },
   "Handover": {
     "title": "Handover protocols",

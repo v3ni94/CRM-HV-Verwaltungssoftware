@@ -12,13 +12,7 @@ export type Me = {
     start_date: string | null;
     end_date: string | null;
   }[];
-  /** Staff portal permissions (M2-08): empty or absent for external portal users. */
-  permissions?: string[];
 };
-
-export function hasStaffPermission(me: Me, permission: string): boolean {
-  return Boolean(me.permissions?.includes(permission));
-}
 
 export function isProvider(me: Me): boolean {
   return me.roles.includes("provider");

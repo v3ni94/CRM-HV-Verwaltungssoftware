@@ -21,12 +21,3 @@ abgeschlossener Protokolle. Dateien liegen als Dokumente (M6) mit Verknüpfung
 Nicht enthalten (offen): Zustellung des Einladungscodes für den Portalzugang (M30-01 in
 `docs/OPEN_QUESTIONS.md`), Datenübernahme aus U-Protokoll (M30-03), Entfernen von
 Bildmetadaten (M30-04), zweiter Faktor für Gehilfen (M30-05).
-
-## Mitarbeiterportal und Import-Fortschreibung (26.09.2026)
-
-- `portal_staff.py`: `GET /api/v1/portal/handover-protocols`, `/{id}`, `/{id}/pdf` für
-  Mitgliedschaften mit dem Portalrecht `handover:read` (`mhvp.portal.staff_access`), nur lesend,
-  gleicher Feldfilter wie für Beteiligte; externe Portalnutzer erhalten 403.
-- `uprotokoll_import.py`: zweiter Durchlauf verknüpft Protokollversionen mit dem Vorgänger
-  (`parent_protocol_id` -> `parent_id`) und übernimmt `protocol_emails` als interne Hinweise
-  (Zeitpunkt, Empfänger, Betreff, Status, kein Mailtext), beides idempotent.

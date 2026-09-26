@@ -141,7 +141,7 @@ async def staff_permissions(session: AsyncSession, account: PortalAccount) -> fr
     from mhvp.workspace.services import local_today
 
     # Only a currently valid staff grant counts: a grant deactivated on a role change into an
-    # exempt role (valid_to in the past, mhvp.platform.staff_portal_sync) unlocks nothing.
+    # exempt role (valid_to in the past, see the role change in platform.routers) unlocks nothing.
     today = local_today()
     has_staff_grant = await session.scalar(
         select(AccessGrant.id).where(

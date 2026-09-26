@@ -17,7 +17,7 @@ from sqlalchemy.dialects import postgresql
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
 revision: str = "0093"
-down_revision: str | None = "0083"
+down_revision: str | None = "0086"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

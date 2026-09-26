@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.ai import connection_test, gateway, imports, jobs, tasks
 from mhvp.ai import schemas as s
@@ -294,6 +295,43 @@ async def put_fast_table_import(
         return s.FastTableImportOut(enabled=body.enabled)
 
 
+@router.get("/ai/invoice-intake-auto", summary="Automatischer Belegeingang (Einstellung)")
+async def get_invoice_intake_auto(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.InvoiceIntakeAutoOut:
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        value = await session.scalar(select(TenantSettings.invoice_intake_auto))
+        return s.InvoiceIntakeAutoOut(enabled=bool(value))
+
+
+@router.put("/ai/invoice-intake-auto", summary="Automatischen Belegeingang setzen")
+async def put_invoice_intake_auto(
+    body: s.InvoiceIntakeAutoIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.InvoiceIntakeAutoOut:
+    """M14-05: when on, the Gmail sync starts one ``extract_invoice`` run per new PDF attachment
+    that looks like an invoice (heuristic in ``mhvp.communication.invoice_intake``). Default off;
+    every run is a proposal only and costs AI budget."""
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row.invoice_intake_auto = body.enabled
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="invoice_intake_auto.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"enabled": body.enabled},
+        )
+        return s.InvoiceIntakeAutoOut(enabled=body.enabled)
+
+
 @router.get("/ai/usage", summary="KI-Kosten im laufenden Monat")
 async def usage(request: Request, principal: TenantPrincipal = Depends(READ)) -> s.UsageOut:
     now = datetime.now(UTC)
@@ -451,6 +489,69 @@ async def get_conversation(
         )
 
 
+async def create_extraction_run(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    task: AiTask,
+    document_ids: list[uuid.UUID],
+    content: str,
+    context_type: str,
+    context_id: uuid.UUID | None,
+    trigger: str | None = None,
+) -> uuid.UUID:
+    """Creates conversation, queued run and user message of an extraction start inside the
+    caller's tenant transaction and returns the run id. Shared by the intake actions and the
+    automatic invoice intake (M14-05); execution goes through the unchanged gateway."""
+    prompt = tasks.prompt(task)
+    conversation = AiConversation(
+        tenant_id=tenant_id,
+        created_by=user_id,
+        context_type=context_type,
+        context_id=context_id,
+        title=content[:200],
+    )
+    session.add(conversation)
+    await session.flush()
+    context = {
+        "context_type": context_type,
+        "context_id": str(context_id) if context_id else None,
+    }
+    ref: dict[str, Any] = {
+        "instruction": content,
+        "document_ids": [str(d) for d in document_ids],
+        "context": context,
+    }
+    if trigger:
+        ref["trigger"] = trigger
+    run = AiTaskRun(
+        tenant_id=tenant_id,
+        created_by=user_id,
+        task=task,
+        conversation_id=conversation.id,
+        prompt_version=prompt.version,
+        input_hash=gateway.input_hash(
+            task, prompt.version, content, {**context, "docs": ref["document_ids"]}
+        ),
+        input_ref=ref,
+        status=RunStatus.QUEUED,
+    )
+    session.add(run)
+    await session.flush()
+    session.add(
+        AiMessage(
+            tenant_id=tenant_id,
+            conversation_id=conversation.id,
+            role="user",
+            content=content,
+            document_ids=document_ids,
+            task_run_id=run.id,
+        )
+    )
+    await session.flush()
+    return run.id
+
+
 async def start_extraction_run(
     request: Request,
     principal: TenantPrincipal,
@@ -463,53 +564,19 @@ async def start_extraction_run(
     """Starts an extraction run in a fresh conversation of the acting user (intake actions: mail
     attachment, Paperless pull). Same path as a chat message (gateway tier escalation, budget and
     release checks unchanged); the caller enforces its own permission before calling this."""
-    prompt = tasks.prompt(task)
     async with tenant_tx(request, principal) as session:
         for document_id in document_ids:
             await _get(session, Document, document_id)
-        conversation = AiConversation(
-            tenant_id=principal.tenant_id,
-            created_by=principal.user_id,
-            context_type=context_type,
-            context_id=context_id,
-            title=content[:200],
+        run_id = await create_extraction_run(
+            session,
+            principal.tenant_id,
+            principal.user_id,
+            task,
+            document_ids,
+            content,
+            context_type,
+            context_id,
         )
-        session.add(conversation)
-        await session.flush()
-        context = {
-            "context_type": context_type,
-            "context_id": str(context_id) if context_id else None,
-        }
-        ref = {
-            "instruction": content,
-            "document_ids": [str(d) for d in document_ids],
-            "context": context,
-        }
-        run = AiTaskRun(
-            tenant_id=principal.tenant_id,
-            created_by=principal.user_id,
-            task=task,
-            conversation_id=conversation.id,
-            prompt_version=prompt.version,
-            input_hash=gateway.input_hash(
-                task, prompt.version, content, {**context, "docs": ref["document_ids"]}
-            ),
-            input_ref=ref,
-            status=RunStatus.QUEUED,
-        )
-        session.add(run)
-        await session.flush()
-        session.add(
-            AiMessage(
-                tenant_id=principal.tenant_id,
-                conversation_id=conversation.id,
-                role="user",
-                content=content,
-                document_ids=document_ids,
-                task_run_id=run.id,
-            )
-        )
-        run_id = run.id
     settings = request.app.state.settings
     if settings.ai_inline:
         await jobs.run_and_propose(

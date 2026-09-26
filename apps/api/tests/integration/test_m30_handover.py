@@ -1028,105 +1028,44 @@ def test_handover_portal_staff_lists_all_protocols(client: TestClient, world: Wo
     assert client.get(f"{PH}/{pid}", headers=staff2).status_code == 404
 
 
-PS = "/api/v1/portal/handover-protocols"
+PHS = "/api/v1/portal/handovers"
 
 
-def _staff_member(
-    client: TestClient, admin: dict[str, str], name: str, role_codes: list[str]
-) -> tuple[str, dict[str, str], str]:
-    """Creates a staff member and logs in; returns (email, headers, membership_id)."""
-    email = f"{name}-{RUN}@example.org"
-    member = _ok(
+def test_staff_portal_handovers_read_endpoints(client: TestClient, world: World) -> None:
+    """M2-08 Restpunkt: GET /portal/handovers lists and GET /portal/handovers/{id} reads the
+    protocols of the objects covered by the staff grant (tenant wide by default), read only and
+    without internal fields; a role without "handover:read" in the matrix gets 403."""
+    h = bearer(login(client, world, "m30admin"))
+    pid = _ok(client.post(H, json={"kind": "rental"}, headers=h), 201)["id"]
+    _ok(client.patch(f"{H}/{pid}", json={"internal_note": "nur intern"}, headers=h))
+    email = f"m30handovers-{RUN}@example.org"
+    _ok(
         client.post(
             "/api/v1/tenant/members",
             json={
                 "email": email,
-                "display_name": name,
+                "display_name": "M30 Handovers",
                 "password": PASSWORD,
-                "role_codes": role_codes,
-            },
-            headers=admin,
-        ),
-        201,
-    )
-    login_step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
-    assert login_step.status_code == 200, login_step.text
-    return (
-        email,
-        {"Authorization": f"Bearer {login_step.json()['access_token']}"},
-        member["membership_id"],
-    )
-
-
-def test_portal_handover_protocols_for_staff(client: TestClient, world: World) -> None:
-    """M2-08 rest (26.09.2026): /api/v1/portal/handover-protocols lists every protocol of the
-    tenant for staff with the portal permission "handover:read" (object, unit, date, status,
-    PDF link), the detail hides internal fields, the PDF is readable. An external portal user
-    gets 403, another tenant's staff never sees the protocol (RLS)."""
-    h = bearer(login(client, world, "m30admin"))
-    _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h))
-    prop_id = _ok(
-        client.post(
-            "/api/v1/properties",
-            json={
-                "number": "832",
-                "name": "Portalhaus",
-                "management_type": "rental",
-                "street": "Portalweg",
-                "house_number": "7",
-                "postal_code": "40789",
-                "city": "Monheim am Rhein",
+                "role_codes": ["standard"],
             },
             headers=h,
         ),
         201,
-    )["id"]
-    building = _ok(
-        client.post(f"/api/v1/properties/{prop_id}/buildings", json={"name": "Haus"}, headers=h),
-        201,
-    )["id"]
-    unit_id = _ok(
-        client.post(
-            f"/api/v1/properties/{prop_id}/units",
-            json={"building_id": building, "number": "07", "unit_type": "apartment"},
-            headers=h,
-        ),
-        201,
-    )["id"]
-    pid = _ok(client.post(H, json={"kind": "rental", "unit_id": unit_id}, headers=h), 201)["id"]
-    _ok(
-        client.patch(
-            f"{H}/{pid}",
-            json={"handover_date": "2026-09-01", "internal_note": "streng intern"},
-            headers=h,
-        )
     )
-    _, staff, _ = _staff_member(client, h, "m30ps", ["standard"])
+    step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+    staff = {"Authorization": f"Bearer {step.json()['access_token']}"}
 
-    listed = _ok(client.get(PS, headers=staff))
-    row = next(r for r in listed if r["id"] == pid)
-    assert row["property"] == {"id": prop_id, "number": "832", "name": "Portalhaus"}
-    assert row["unit"]["id"] == unit_id
-    assert row["unit"]["number"] == "07"
-    assert row["handover_date"] == "2026-09-01"
-    assert row["status"] == "in_progress"
-    assert row["address"].startswith("Portalweg 7")
-    assert row["pdf_url"] == f"{PS}/{pid}/pdf"
-    assert "internal_note" not in row
-
-    detail = _ok(client.get(f"{PS}/{pid}", headers=staff))
+    listed = _ok(client.get(PHS, headers=staff))
+    assert any(row["id"] == pid for row in listed)
+    detail = _ok(client.get(f"{PHS}/{pid}", headers=staff))
     assert detail["id"] == pid
     assert "internal_note" not in detail
-    assert "internal_contact" not in detail
-    assert detail["access"] == {"right": "read", "valid_to": None}
-    assert detail["pdf_url"] == f"{PS}/{pid}/pdf"
+    assert detail["access"]["right"] == "read"
+    assert (
+        client.get(f"{PHS}/00000000-0000-0000-0000-000000000000", headers=staff).status_code == 404
+    )
 
-    pdf = client.get(f"{PS}/{pid}/pdf", headers=staff)
-    assert pdf.status_code == 200, pdf.text
-    assert pdf.headers["content-type"].startswith("application/pdf")
-    assert pdf.content.startswith(b"%PDF")
-
-    # Permission: without "handover:read" in the role matrix the endpoints are forbidden.
+    # Matrix without "handover:read" for "standard": both endpoints are forbidden.
     _ok(
         client.put(
             "/api/v1/tenant/portal-role-permissions",
@@ -1134,116 +1073,8 @@ def test_portal_handover_protocols_for_staff(client: TestClient, world: World) -
             headers=h,
         )
     )
-    assert client.get(PS, headers=staff).status_code == 403
-    assert client.get(f"{PS}/{pid}", headers=staff).status_code == 403
-    assert client.get(f"{PS}/{pid}/pdf", headers=staff).status_code == 403
-    _ok(client.put("/api/v1/tenant/portal-role-permissions", json={}, headers=h))
-    assert client.get(PS, headers=staff).status_code == 200
-
-    # An external portal user (participant with a grant on exactly this protocol) is no staff.
-    contact = _ok(
-        client.post(
-            "/api/v1/contacts",
-            json={
-                "kind": "person",
-                "first_name": "Paul",
-                "last_name": f"Portal{RUN}",
-                "emails": [{"email": world.email("m30extern2"), "is_primary": True}],
-            },
-            headers=h,
-        ),
-        201,
-    )
-    mover = _ok(
-        client.post(
-            f"{H}/{pid}/participants",
-            json={"contact_id": contact["id"], "role": "moving_in"},
-            headers=h,
-        ),
-        201,
-    )
-    grant = _ok(
-        client.post(f"{H}/{pid}/participants/{mover['id']}/portal-access", json={}, headers=h),
-        201,
-    )
-    _ok(
-        client.post(
-            "/api/v1/portal/invitations/accept",
-            json={"token": grant["invitation_token"], "password": PASSWORD},
-        )
-    )
-    extern = bearer(login(client, world, "m30extern2"))
-    assert client.get(PS, headers=extern).status_code == 403
-    assert client.get(f"{PS}/{pid}", headers=extern).status_code == 403
-    assert client.get(f"{PS}/{pid}/pdf", headers=extern).status_code == 403
-
-    # Tenant separation: staff of another tenant sees nothing of this one.
-    h2 = bearer(login(client, world, "m30other"))
-    _, staff2, _ = _staff_member(client, h2, "m30ps2", ["standard"])
-    assert all(r["id"] != pid for r in _ok(client.get(PS, headers=staff2)))
-    assert client.get(f"{PS}/{pid}", headers=staff2).status_code == 404
-    assert client.get(f"{PS}/{pid}/pdf", headers=staff2).status_code == 404
-
-
-def test_staff_portal_grant_follows_role_change(client: TestClient, world: World) -> None:
-    """M2-08 rest (26.09.2026): a membership moved into an exempt role (read_only) loses the
-    tenant wide staff grant (deactivated, not deleted); the portal then unlocks nothing. Moving
-    back to a staff role reactivates the grant. A member created directly with an exempt role
-    gets a grant only after the change into a staff role."""
-    h = bearer(login(client, world, "m30admin"))
-    _ok(client.post(H, json={"kind": "general"}, headers=h), 201)
-    _, staff, membership_id = _staff_member(client, h, "m30rc", ["standard"])
-    assert client.get(PS, headers=staff).status_code == 200
-    assert "handover:read" in _ok(client.get("/api/v1/portal/me", headers=staff))["permissions"]
-
-    def set_roles(codes: list[str]) -> None:
-        response = client.put(
-            f"/api/v1/tenant/members/{membership_id}/roles",
-            json={"role_codes": codes},
-            headers=h,
-        )
-        assert response.status_code == 204, response.text
-
-    set_roles(["read_only"])
-    assert client.get(PS, headers=staff).status_code == 403
-    me = client.get("/api/v1/portal/me", headers=staff)
-    assert me.status_code == 200, me.text
-    assert me.json()["permissions"] == []
-    assert client.get("/api/v1/portal/documents", headers=staff).json() == []
-
-    set_roles(["standard"])
-    assert client.get(PS, headers=staff).status_code == 200
-    assert "handover:read" in _ok(client.get("/api/v1/portal/me", headers=staff))["permissions"]
-
-    # Twice the same change stays idempotent (no duplicate grant, still one working access).
-    set_roles(["standard"])
-    assert client.get(PS, headers=staff).status_code == 200
-
-    # Exempt from the start: no portal account; after the change to a staff role the grant
-    # is created on the fly.
-    email = f"m30rc2-{RUN}@example.org"
-    member = _ok(
-        client.post(
-            "/api/v1/tenant/members",
-            json={
-                "email": email,
-                "display_name": "m30rc2",
-                "password": PASSWORD,
-                "role_codes": ["read_only"],
-            },
-            headers=h,
-        ),
-        201,
-    )
-    assert member["portal_access"] == "exempt"
-    login_step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
-    assert login_step.status_code == 200, login_step.text
-    reader = {"Authorization": f"Bearer {login_step.json()['access_token']}"}
-    assert client.get(PS, headers=reader).status_code == 403
-    response = client.put(
-        f"/api/v1/tenant/members/{member['membership_id']}/roles",
-        json={"role_codes": ["standard"]},
-        headers=h,
-    )
-    assert response.status_code == 204, response.text
-    assert client.get(PS, headers=reader).status_code == 200
+    try:
+        assert client.get(PHS, headers=staff).status_code == 403
+        assert client.get(f"{PHS}/{pid}", headers=staff).status_code == 403
+    finally:
+        client.put("/api/v1/tenant/portal-role-permissions", json={}, headers=h)

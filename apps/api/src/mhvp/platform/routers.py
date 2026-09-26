@@ -375,7 +375,13 @@ async def resync_portal_role_permissions(
     async with tenant_tx(request, principal) as session:
         rows = (
             await session.execute(
-                select(Membership.id, Membership.contact_id, User.email, User.display_name)
+                select(
+                    Membership.id,
+                    Membership.user_id,
+                    Membership.contact_id,
+                    User.email,
+                    User.display_name,
+                )
                 .join(User, User.id == Membership.user_id)
                 .where(Membership.tenant_id == principal.tenant_id)
             )
@@ -393,7 +399,13 @@ async def resync_portal_role_permissions(
     applied = 0
     for member in rows:
         role_codes = roles_by_membership.get(member.id, [])
-        if member.contact_id is None or is_staff_role_exempt(role_codes):
+        if is_staff_role_exempt(role_codes):
+            # M2-08: an exempt member keeps no staff portal access (idempotent).
+            await revoke_staff_portal_access(
+                request, principal=principal, user_id=member.user_id, role_codes=role_codes
+            )
+            continue
+        if member.contact_id is None:
             continue
         await ensure_staff_portal_access(
             request,
@@ -1027,14 +1039,86 @@ async def put_member_roles(
         role_codes=body.role_codes,
         actor_user_id=principal.user_id,
     )
-    # M2-08 rest (26.09.2026): the staff portal grant follows the roles (deactivated on a
-    # change into an exempt role, reactivated or created on the way back).
-    from mhvp.platform.staff_portal_sync import sync_staff_grant_after_role_change
+    # M2-08 (Restpunkt, 26.09.2026): a role change into an exempt role set withdraws an
+    # existing staff portal access; only the creation path checked the exemption before.
+    from mhvp.portal.staff_access import is_staff_role_exempt
 
-    await sync_staff_grant_after_role_change(
-        request, principal=principal, membership_id=membership_id, role_codes=body.role_codes
-    )
+    if is_staff_role_exempt(body.role_codes):
+        await revoke_staff_portal_access(
+            request, principal=principal, user_id=membership.user_id, role_codes=body.role_codes
+        )
+    elif membership.contact_id is not None:
+        # Change out of the exempt set: restore the mandatory staff access right away.
+        async with platform_transaction(sessions(request)) as session:
+            user = await session.get(User, membership.user_id)
+        if user is not None:
+            await ensure_staff_portal_access(
+                request,
+                principal=principal,
+                contact_id=membership.contact_id,
+                email=user.email,
+                display_name=user.display_name,
+                role_codes=body.role_codes,
+            )
     return Response(status_code=204)
+
+
+async def revoke_staff_portal_access(
+    request: Request,
+    *,
+    principal: TenantPrincipal,
+    user_id: uuid.UUID,
+    role_codes: list[str],
+) -> bool:
+    """Withdraws the tenant wide staff grant of this user's portal account (M2-08). The account
+    itself is kept for the audit trail; it is disabled when no other grant remains, so the
+    portal login is refused (``portal_user`` requires an active account). External grants are
+    never touched. Records ``portal_account.staff_access_revoked``. Returns True if a staff
+    grant was removed, False when there was nothing to withdraw (idempotent)."""
+    from sqlalchemy import delete as sa_delete
+
+    from mhvp.portal import access
+    from mhvp.portal.access import STAFF_ACCESS_LEGAL_BASIS
+    from mhvp.portal.models import AccessGrant, PortalAccount
+
+    async with tenant_tx(request, principal) as session:
+        account = await session.scalar(
+            select(PortalAccount).where(
+                PortalAccount.tenant_id == principal.tenant_id, PortalAccount.user_id == user_id
+            )
+        )
+        if account is None or not await access.has_staff_grant(session, account.id):
+            return False
+        await session.execute(
+            sa_delete(AccessGrant).where(
+                AccessGrant.account_id == account.id,
+                AccessGrant.legal_basis == STAFF_ACCESS_LEGAL_BASIS,
+            )
+        )
+        disabled = False
+        if (
+            not await access.has_external_grant(session, account.id)
+            and account.status != "disabled"
+        ):
+            account.status = "disabled"
+            disabled = True
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="portal_account.staff_access_revoked",
+            entity_type="portal_account",
+            entity_id=account.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "roles": sorted(role_codes),
+                "account_disabled": disabled,
+                "reason": (
+                    "Rollenwechsel in eine vom Portal ausgenommene Rolle, der "
+                    "Mitarbeiterzugang wurde entzogen."
+                ),
+            },
+        )
+    return True
 
 
 @tenant_router.get("/competence-catalogue", summary="Kompetenzkatalog (Basis und Mandant)")

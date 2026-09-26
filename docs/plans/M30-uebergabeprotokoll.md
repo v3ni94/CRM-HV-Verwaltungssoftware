@@ -123,14 +123,26 @@ Postausgang mit Vier-Augen-Freigabe (M20).
    Hinweis (`handover_note`, Kategorie `other`, `is_internal`, `import_source =
    "uprotokoll:email:<id>"`) mit Zeitpunkt, Empfänger, Betreff und Sendestatus übernommen; der
    Mailtext wird nie übernommen. Beide Schritte sind idempotent und wirken auch auf Protokolle,
-   die ein früherer Lauf ohne diese Schritte angelegt hat.
-4b. **Portal für Mitarbeiter** (umgesetzt 26.09.2026, M2-08 Rest): `GET
-   /api/v1/portal/handover-protocols` (Liste mit Objekt, Einheit, Datum, Status, PDF-Link),
-   `/{id}` (ohne interne Felder) und `/{id}/pdf` für Mitgliedschaften mit dem Portalrecht
-   `handover:read` (`mhvp.handover.portal_staff`); Portalseite `/uebergabeprotokolle` mit
-   Navigationslink und Startkachel nur bei vorhandenem Recht. Beim Rollenwechsel in eine
-   ausgenommene Rolle wird der mandantenweite Zugriffsgrant deaktiviert, beim Rückwechsel
-   wieder aktiviert (`mhvp.platform.staff_portal_sync`).
+   die ein früherer Lauf ohne diese Schritte angelegt hat. Dateien:
+   `apps/api/src/mhvp/handover/uprotokoll_import.py` (`_link_predecessors`,
+   `_import_email_history`, `email_note_text`), Tests `tests/unit/test_m30_uprotokoll_import.py`,
+   `tests/integration/test_m30_handover.py::test_uprotokoll_import_preview_apply_and_files`.
+
+## Fotos (M30-04, 26.09.2026)
+
+- Beim Hochladen von Fotos zum Übergabeprotokoll (CRM und Portal, beide über
+  `POST /handover/protocols/{id}/documents`) entfernt `mhvp.handover.images.sanitize_image`
+  alle Metadaten (EXIF einschließlich GPS, XMP, IPTC, PNG-Textblöcke) und skaliert das Bild
+  auf eine maximale Kantenlänge, Einstellung `handover_image_max_edge` (Standard 2000 px,
+  kein Hochskalieren). Die EXIF-Ausrichtung wird vorher in die Pixel übernommen.
+- Betroffen sind JPEG, PNG und WebP; andere Dateien (PDF, Office) bleiben unverändert.
+  Ein nicht lesbares Bild wird mit Validierungsfehler abgelehnt, damit kein Original mit
+  Ortsdaten gespeichert wird. Das Original wird nicht zusätzlich gespeichert; die Prüfsumme
+  im Dokumentenindex bezieht sich auf das bereinigte Bild.
+- Pillow ist über reportlab bereits installiert und wird genutzt; keine neue Abhängigkeit.
+- Andere Dokumentuploads und die Datenübernahme aus U-Protokoll (dort bereits bereinigte
+  Bilder) sind nicht betroffen. Die Ortsermittlung per Browser wird nicht übernommen.
+- Tests: `apps/api/tests/unit/test_m30_handover_images.py`.
 
 ## Dateien (Stufe 3)
 
@@ -161,6 +173,38 @@ Postausgang mit Vier-Augen-Freigabe (M20).
 - `docs/rules/M30-06.md`, `docs/rules/README.md`
 - `apps/api/tests/integration/test_m30_handover.py::test_helper_access_flow`
 
+## Zustellung des Einladungscodes für Gehilfen (M30-01, 26.09.2026)
+
+Befund: Der Einladungscode wird nur als SHA-256-Hash gespeichert (`portal_account.invitation_hash`).
+Ein bereits erzeugter Code lässt sich daher nicht erneut anzeigen oder nachträglich in einen
+Entwurf übernehmen. Umsetzung ohne Migration:
+
+- Beim Anlegen (`POST /handover/protocols/{id}/helper-access`) steuert die Option
+  `invitation_as_mail_draft` (Standard `true`, im CRM "Einladung als E-Mail-Entwurf anlegen"),
+  ob der Entwurf sofort mit dem Code angelegt wird. Ist sie aus oder fehlt ein Postfach, wird
+  der Code einmalig in der Antwort angezeigt.
+- `POST /handover/protocols/{id}/helper-access/{grant_id}/invitation-draft` erzeugt einen neuen
+  Code und legt einen E-Mail-Entwurf im Postausgang an (`direction=out`, `status=draft`). Der
+  Versand verlangt weiterhin die Vier-Augen-Freigabe, es wird nichts versendet. Ohne Postfach
+  oder ohne E-Mail-Adresse antwortet der Endpunkt mit 409. Der Code erscheint nicht in der Antwort.
+- `POST /handover/protocols/{id}/helper-access/{grant_id}/invitation-letter` erzeugt einen neuen
+  Code und liefert ein Anschreiben als PDF auf dem Briefbogen des Mandanten (Renderer aus
+  `mhvp.documents.letters`). Abweichung vom Auftrag (GET): der Endpunkt ist POST, weil er den
+  Code rotiert; ein Vorabruf per GET dürfte keinen bereits übermittelten Code entwerten.
+  Ohne erfasste Anschrift trägt das Anschreiben nur den Namen.
+- Jede neue Zustellung macht einen früher übermittelten Code ungültig; das CRM fragt vorher nach.
+  Für aktivierte Zugänge antworten beide Endpunkte mit 409.
+- Text (`invitation_text`): Protokollnummer, Portal-URL (Einstellung `web_portal_url`, ohne
+  Einstellung ein allgemeiner Hinweis auf das Kundenportal), Code, Gültigkeit
+  (`INVITE_DAYS`, 14 Tage, einmalig verwendbar) und Hinweis auf Passwort und zweiten Faktor.
+- CRM: im Gehilfeneintrag die Schaltflächen "E-Mail-Entwurf erstellen" und "Anschreiben
+  herunterladen" (ohne E-Mail nur das Anschreiben); sie ersetzen dort "Erneut zustellen"
+  (der Endpunkt `resend` bleibt bestehen und nutzt denselben Text).
+- Dateien: `apps/api/src/mhvp/handover/routers.py`, `apps/api/src/mhvp/core/config.py`,
+  `apps/api/tests/unit/test_m30_helper_invitation.py`,
+  `apps/web-crm/src/components/handover/HelperAccessSection.tsx` und `.test.tsx`,
+  `apps/web-crm/src/app/api/bff/[...path]/route.ts`, `apps/web-crm/messages/de.json`.
+
 ## Dateien (Stufe 4: Datenübernahme U-Protokoll, 25.09.2026)
 
 - `apps/api/src/mhvp/handover/uprotokoll_import.py` (Parser, Vorschau, Übernahme)
@@ -186,18 +230,3 @@ Postausgang mit Vier-Augen-Freigabe (M20).
 Keine Geldflüsse. Die Kautionsangaben (Betrag, IBAN) werden nur erfasst und im PDF
 ausgegeben; sie erzeugen keine Forderung und keine Zahlung (G1, G2 unberührt). Die IBAN
 wird formal geprüft (Mod 97), ein Prüfkennzeichen "IBAN geprüft" setzt nur die Verwaltung.
-
-## Dateien (Stufe 4a und 4b: Versionen, E-Mail-Historie, Mitarbeiterportal, 26.09.2026)
-
-- `apps/api/src/mhvp/handover/uprotokoll_import.py` (`_link_predecessors`,
-  `_import_email_history`, `email_note_text`, Zähler in `ImportPlan` und `ImportResult`)
-- `apps/api/src/mhvp/handover/portal_staff.py` (neu), `apps/api/src/mhvp/main.py` (Registrierung)
-- `apps/api/src/mhvp/platform/staff_portal_sync.py` (neu), `apps/api/src/mhvp/platform/routers.py`
-  (`put_member_roles`), `apps/api/src/mhvp/portal/access.py` (`staff_permissions` nur gültige Grants)
-- `apps/web-portal/src/app/(portal)/uebergabeprotokolle/page.tsx`,
-  `apps/web-portal/src/components/handover/StaffProtocolList.tsx`, `StartTiles.tsx`, `layout.tsx`,
-  BFF und Dateiproxy (Positivlisten), `messages/de.json`, `messages/en.json`
-- Tests: `tests/unit/test_m30_uprotokoll_import.py`,
-  `tests/integration/test_m30_handover.py` (`test_uprotokoll_import_preview_apply_and_files`,
-  `test_portal_handover_protocols_for_staff`, `test_staff_portal_grant_follows_role_change`),
-  `apps/web-portal/src/components/handover/StaffProtocolList.test.tsx`, `StartTiles.test.tsx`

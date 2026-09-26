@@ -101,6 +101,14 @@ class FastTableImportOut(BaseModel):
     enabled: bool
 
 
+class InvoiceIntakeAutoIn(_In):
+    enabled: bool
+
+
+class InvoiceIntakeAutoOut(BaseModel):
+    enabled: bool
+
+
 class UsageOut(BaseModel):
     month: str
     spent_eur: Decimal

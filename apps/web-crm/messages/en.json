@@ -3755,7 +3755,12 @@
       "confirmRevoke": "Really end the access?",
       "tokenTitle": "Invitation code",
       "tokenHelp": "No mailbox configured, so no e-mail draft is possible. Please transmit the code to the helper once.",
-      "mailDrafted": "An e-mail draft with the invitation code was created in the outbox and awaits approval."
+      "mailDrafted": "An e-mail draft with the invitation code was created in the outbox and awaits approval.",
+      "invitationDraft": "Create email draft",
+      "invitationLetter": "Download letter",
+      "mailDraftOption": "Create the invitation as an email draft",
+      "tokenHelpManual": "No email draft was created. The code is shown only now; alternatively download a letter later.",
+      "confirmNewCode": "A new invitation code will be generated and any code sent so far becomes invalid. Continue?"
     },
     "dispatch": {
       "title": "Delivery to the participants",
@@ -3798,7 +3803,8 @@
       "tokenTitle": "Invitation (shown only once)",
       "tokenHelp": "Please pass the invitation code together with the portal address to the participant. The code is valid for 14 days; in the portal the participant sets the password and configures the second factor.",
       "done": "Portal access set up."
-    }
+    },
+    "appointmentCreatedLink": "Open appointment on {date} in calendar"
   },
   "ImmowareSettings": {
     "title": "Immoware24 connection",
@@ -4422,5 +4428,12 @@
       "tenantCosts": "Allocated to tenants",
       "ownerBurden": "Owner burden"
     }
+  },
+  "InvoiceIntakeAuto": {
+    "title": "Automatic invoice intake",
+    "label": "Capture invoices from new emails automatically",
+    "hint": "When the Gmail mailboxes are synced, exactly one AI extraction is started for each new PDF attachment whose subject, sender or file name indicates an invoice (Rechnung, Invoice, Beleg, RE-). The result is a proposal under incoming invoices, nothing is posted.",
+    "costHint": "Every automatic extraction incurs AI costs and uses the monthly AI provider budget. Budget and release checks apply unchanged. Default: off.",
+    "saved": "Setting saved."
   }
 }

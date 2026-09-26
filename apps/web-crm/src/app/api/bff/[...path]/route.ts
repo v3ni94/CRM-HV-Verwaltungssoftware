@@ -110,6 +110,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^ai\/usage$/ },
   { method: "GET", pattern: /^ai\/providers$/ },
   { method: "PUT", pattern: /^ai\/routing$/ },
+  { method: "PUT", pattern: /^ai\/invoice-intake-auto$/ },
   { method: "PUT", pattern: /^ai\/providers\/(anthropic|openai)$/ },
   { method: "POST", pattern: /^ai\/providers\/(anthropic|openai)\/release$/ },
   // Verbindungstest je Stufe (Einstellungen, KI-Anbieter); erteilt keine Freigabe.
@@ -261,6 +262,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/helper-access$`) },
   { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/helper-access/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/helper-access/${ID}/resend$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/helper-access/${ID}/invitation-draft$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/helper-access/${ID}/invitation-letter$`) },
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)(/order)?$`) },
   { method: "PATCH", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },

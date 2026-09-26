@@ -289,6 +289,13 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     ai_fast_table_import: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("true")
     )
+    # M14-05 automatischer Belegeingang: bei true startet der Gmail-Abruf für neue PDF-Anhänge,
+    # die nach der Heuristik in ``mhvp.communication.invoice_intake`` wie eine Rechnung aussehen,
+    # je Anhang genau einen ``extract_invoice``-Lauf (nur Vorschlag). Standard aus; Aktivierung
+    # und Kostenrahmen entscheidet der Betreiber.
+    invoice_intake_auto: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     # Portalrechte je CRM-Rolle (Betreiberentscheidung 25.09.2026, M2-08 entschieden,
     # docs/rules/M2-07.md): Überschreibungen der eingebauten Grundeinstellung
     # (``mhvp.portal.staff_access.DEFAULT_STAFF_PORTAL_PERMISSIONS``). Shape:

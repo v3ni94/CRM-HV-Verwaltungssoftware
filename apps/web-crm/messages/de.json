@@ -3420,6 +3420,7 @@
     "broker": "Makler",
     "createAppointment": "Termin anlegen",
     "appointmentTitle": "Übergabe",
+    "appointmentCreatedLink": "Termin am {date} im Kalender öffnen",
     "new": "Neues Übergabeprotokoll",
     "search": "Suchen",
     "searchPlaceholder": "Nummer, Ticket, Adresse, Objekt",
@@ -3755,7 +3756,12 @@
       "confirmRevoke": "Zugang wirklich beenden?",
       "tokenTitle": "Einladungscode",
       "tokenHelp": "Kein Postfach hinterlegt, daher kein E-Mail-Entwurf möglich. Bitte den Code einmalig an den Gehilfen übermitteln.",
-      "mailDrafted": "Ein E-Mail-Entwurf mit dem Einladungscode wurde im Postausgang angelegt und wartet auf Freigabe."
+      "mailDrafted": "Ein E-Mail-Entwurf mit dem Einladungscode wurde im Postausgang angelegt und wartet auf Freigabe.",
+      "mailDraftOption": "Einladung als E-Mail-Entwurf anlegen",
+      "tokenHelpManual": "Kein E-Mail-Entwurf angelegt. Der Code wird nur jetzt angezeigt; alternativ später ein Anschreiben herunterladen.",
+      "invitationDraft": "E-Mail-Entwurf erstellen",
+      "invitationLetter": "Anschreiben herunterladen",
+      "confirmNewCode": "Es wird ein neuer Einladungscode erzeugt, ein bisher übermittelter Code wird ungültig. Fortfahren?"
     },
     "dispatch": {
       "title": "Zustellung an die Beteiligten",
@@ -4422,5 +4428,12 @@
       "tenantCosts": "Auf Mieter umgelegt",
       "ownerBurden": "Eigentümerbelastung"
     }
+  },
+  "InvoiceIntakeAuto": {
+    "title": "Automatischer Belegeingang",
+    "label": "Rechnungen aus neuen E-Mails automatisch erfassen",
+    "hint": "Beim Abruf der Gmail-Postfächer wird für jeden neuen PDF-Anhang, dessen Betreff, Absender oder Dateiname auf eine Rechnung hindeutet (Rechnung, Invoice, Beleg, RE-), genau eine KI-Extraktion gestartet. Das Ergebnis ist ein Vorschlag unter Rechnungseingang, gebucht wird nichts.",
+    "costHint": "Jede automatische Extraktion verursacht KI-Kosten und belastet das Monatsbudget der KI-Anbieter. Budget- und Freigabeprüfungen gelten unverändert. Standard: aus.",
+    "saved": "Einstellung gespeichert."
   }
 }

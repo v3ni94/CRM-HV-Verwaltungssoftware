@@ -50,7 +50,7 @@ from mhvp.documents.paperless_webhook import router as paperless_webhook_router
 from mhvp.documents.routers import router as documents_router
 from mhvp.handover.imports import router as handover_imports_router
 from mhvp.handover.portal import router as handover_portal_router
-from mhvp.handover.portal_staff import router as handover_portal_staff_router
+from mhvp.handover.portal import staff_router as handover_staff_portal_router
 from mhvp.handover.routers import router as handover_router
 from mhvp.hoa.levies import router as hoa_levies_router
 from mhvp.hoa.meetings import router as hoa_meetings_router
@@ -178,7 +178,7 @@ def create_app(
     app.include_router(handover_router, prefix=API_PREFIX)
     app.include_router(handover_imports_router, prefix=API_PREFIX)
     app.include_router(handover_portal_router, prefix=API_PREFIX)
-    app.include_router(handover_portal_staff_router, prefix=API_PREFIX)
+    app.include_router(handover_staff_portal_router, prefix=API_PREFIX)
     app.include_router(imports_router, prefix=API_PREFIX)
     app.include_router(list_imports_router, prefix=API_PREFIX)
     app.include_router(ai_router, prefix=API_PREFIX)

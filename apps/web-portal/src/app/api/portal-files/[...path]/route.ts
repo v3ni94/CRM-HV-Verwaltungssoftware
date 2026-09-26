@@ -9,7 +9,6 @@ const ID = "[0-9a-fA-F-]{36}";
 const ALLOWED: RegExp[] = [
   new RegExp(`^portal/handover/${ID}/documents/${ID}/content$`),
   new RegExp(`^portal/handover/${ID}/pdf$`),
-  new RegExp(`^portal/handover-protocols/${ID}/pdf$`),
   new RegExp(`^portal/documents/${ID}/download$`),
 ];
 const MAX_BYTES = 60 * 1024 * 1024;

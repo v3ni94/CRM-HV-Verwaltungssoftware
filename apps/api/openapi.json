@@ -10795,6 +10795,11 @@
             ],
             "title": "Expires Days"
           },
+          "invitation_as_mail_draft": {
+            "default": true,
+            "title": "Invitation As Mail Draft",
+            "type": "boolean"
+          },
           "kind": {
             "default": "helper",
             "pattern": "^(helper|tenant|owner)$",
@@ -12664,6 +12669,33 @@
           "lines"
         ],
         "title": "InvoiceIn",
+        "type": "object"
+      },
+      "InvoiceIntakeAutoIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "InvoiceIntakeAutoIn",
+        "type": "object"
+      },
+      "InvoiceIntakeAutoOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "InvoiceIntakeAutoOut",
         "type": "object"
       },
       "InvoiceKind": {
@@ -33351,6 +33383,67 @@
         ]
       }
     },
+    "/api/v1/ai/invoice-intake-auto": {
+      "get": {
+        "operationId": "get_invoice_intake_auto_api_v1_ai_invoice_intake_auto_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceIntakeAutoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Automatischer Belegeingang (Einstellung)",
+        "tags": [
+          "KI-Assistent"
+        ]
+      },
+      "put": {
+        "description": "M14-05: when on, the Gmail sync starts one ``extract_invoice`` run per new PDF attachment\nthat looks like an invoice (heuristic in ``mhvp.communication.invoice_intake``). Default off;\nevery run is a proposal only and costs AI budget.",
+        "operationId": "put_invoice_intake_auto_api_v1_ai_invoice_intake_auto_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceIntakeAutoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceIntakeAutoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Automatischen Belegeingang setzen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
     "/api/v1/ai/knowledge": {
       "get": {
         "operationId": "list_knowledge_api_v1_ai_knowledge_get",
@@ -41268,6 +41361,112 @@
           }
         },
         "summary": "Gehilfenzugang beenden",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/invitation-draft": {
+      "post": {
+        "description": "Mail draft in the outbox, nothing is sent. The code is never part of the response.",
+        "operationId": "helper_invitation_draft_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Helper Invitation Draft Api V1 Handover Protocols  Protocol Id  Helper Access  Grant Id  Invitation Draft Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einladung als E-Mail-Entwurf anlegen (neuer Einladungscode, Vier-Augen-Freigabe)",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/invitation-letter": {
+      "post": {
+        "description": "Letter on the tenant letterhead (M6 renderer). POST, not GET: issuing the letter\nrotates the invitation code, a prefetch must not invalidate a code already handed out.",
+        "operationId": "helper_invitation_letter_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_letter_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einladung als Anschreiben (PDF, neuer Einladungscode)",
         "tags": [
           "handover"
         ]
@@ -52481,149 +52680,6 @@
         ]
       }
     },
-    "/api/v1/portal/handover-protocols": {
-      "get": {
-        "operationId": "list_protocols_api_v1_portal_handover_protocols_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "include_archived",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Include Archived",
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  "title": "Response List Protocols Api V1 Portal Handover Protocols Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Übergabeprotokolle des Mandanten (Mitarbeiter)",
-        "tags": [
-          "Portal"
-        ]
-      }
-    },
-    "/api/v1/portal/handover-protocols/{protocol_id}": {
-      "get": {
-        "description": "Same field filter as for participants: internal remarks, the internal contact and the\nmanagement number never leave the CRM, not even for staff reading through the portal.",
-        "operationId": "get_protocol_api_v1_portal_handover_protocols__protocol_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "protocol_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Protocol Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Protocol Api V1 Portal Handover Protocols  Protocol Id  Get",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Übergabeprotokoll lesen (Mitarbeiter)",
-        "tags": [
-          "Portal"
-        ]
-      }
-    },
-    "/api/v1/portal/handover-protocols/{protocol_id}/pdf": {
-      "get": {
-        "operationId": "get_pdf_api_v1_portal_handover_protocols__protocol_id__pdf_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "protocol_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Protocol Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "download",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Download",
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/pdf": {}
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "PDF eines Übergabeprotokolls (Mitarbeiter)",
-        "tags": [
-          "Portal"
-        ]
-      }
-    },
     "/api/v1/portal/handover/protocols": {
       "get": {
         "description": "List of every protocol of the tenant for staff with \"handover:read\"; minimal fields\nonly, the full record still goes through the participant/staff detail path below. External\nportal users never reach this endpoint (no tenant wide grant, no staff permission set).",
@@ -53371,6 +53427,124 @@
           }
         },
         "summary": "Teildatensatz ändern",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handovers": {
+      "get": {
+        "description": "Protocols of the objects the staff portal account may see (portal permission\n\"handover:read\", M2-08); read only, no internal fields.",
+        "operationId": "staff_list_handovers_api_v1_portal_handovers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Staff List Handovers Api V1 Portal Handovers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokolle lesen (Mitarbeiter)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handovers/{protocol_id}": {
+      "get": {
+        "description": "Detail, read only, with the same hidden field filter as for participants (internal\nnote, internal contact, management number, internal remarks, versions).",
+        "operationId": "staff_get_handover_api_v1_portal_handovers__protocol_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Staff Get Handover Api V1 Portal Handovers  Protocol Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übergabeprotokoll lesen (Mitarbeiter)",
         "tags": [
           "Portal"
         ]

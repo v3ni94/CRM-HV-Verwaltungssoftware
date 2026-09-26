@@ -27,6 +27,7 @@ from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRole
 from mhvp.handover import pdf as pdf_renderer
 from mhvp.handover import services as svc
+from mhvp.handover.images import ImageSanitizeError, sanitize_image
 from mhvp.handover.models import STATUSES, STEPS, HandoverProtocol, HandoverSignature
 from mhvp.workspace.services import local_today
 
@@ -487,6 +488,14 @@ async def upload_document(
     data = await file.read(limit + 1)
     mime = (file.content_type or "application/octet-stream").split(";")[0].strip()
     documents.check_upload(mime, data, limit)
+    try:
+        data = sanitize_image(
+            data, mime, max_edge=request.app.state.settings.handover_image_max_edge
+        )
+    except ImageSanitizeError as exc:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Bild konnte nicht gelesen werden."
+        ) from exc
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
         svc.require_unlocked(p)
@@ -1009,6 +1018,9 @@ class HelperAccessIn(_In):
     register_as_participant: bool = False
     participant_role: str | None = Field(default=None, pattern="^(moving_in|moving_out)$")
     expires_days: int | None = Field(default=None, ge=1, le=365)
+    # M30-01: the invitation code is stored only as a hash, so the mail draft must be prepared
+    # while the code exists in clear text. False shows the code once in the response instead.
+    invitation_as_mail_draft: bool = True
 
 
 async def _find_or_create_contact(
@@ -1047,6 +1059,49 @@ async def _find_or_create_contact(
     )
     await session.flush()
     return contact.id
+
+
+def _portal_url(request: Request) -> str | None:
+    url = getattr(request.app.state.settings, "web_portal_url", None)
+    return str(url).rstrip("/") if url else None
+
+
+def invitation_text(
+    *,
+    number: str,
+    name: str | None,
+    token: str,
+    expires_at: datetime | None,
+    portal_url: str | None,
+) -> tuple[str, str]:
+    """Subject and body of the invitation (M30-01), shared by the mail draft and the letter.
+
+    The code exists in clear text only while this text is built; it is stored as a hash."""
+    greeting = f"Guten Tag {name}," if name else "Guten Tag,"
+    where = (
+        f"Bitte rufen Sie das Portal unter {portal_url} auf"
+        if portal_url
+        else "Bitte rufen Sie das Kundenportal der Verwaltung auf"
+    )
+    valid = (
+        f"Der Einladungscode ist bis zum {expires_at.astimezone(UTC):%d.%m.%Y} gültig und kann "
+        "nur einmal verwendet werden."
+        if expires_at is not None
+        else "Der Einladungscode kann nur einmal verwendet werden."
+    )
+    body = (
+        f"{greeting}\n\n"
+        f"für das Übergabeprotokoll {number} wurde für Sie ein Zugang im Portal eingerichtet. "
+        "Dort können Sie das Protokoll ausfüllen und abschließen.\n\n"
+        f"{where} und geben Sie bei der Aktivierung den folgenden Einladungscode ein:\n"
+        f"{token}\n\n"
+        f"{valid}\n\n"
+        "Bei der Aktivierung vergeben Sie ein Passwort. Anschließend richten Sie einen zweiten "
+        "Faktor ein (Einmalcode aus einer Authenticator-App auf Ihrem Smartphone), der bei "
+        "jeder Anmeldung abgefragt wird.\n\n"
+        "Bitte geben Sie den Einladungscode nicht an Dritte weiter."
+    )
+    return f"Zugang zum Übergabeprotokoll {number}", body
 
 
 async def _draft_invitation_mail(
@@ -1089,7 +1144,7 @@ async def _draft_invitation_mail(
 async def list_helper_access(
     protocol_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
-    from mhvp.contacts.models import Contact
+    from mhvp.contacts.models import Contact, ContactEmail
     from mhvp.portal.models import AccessGrant, PortalAccount
 
     async with tenant_tx(request, principal) as session:
@@ -1121,6 +1176,13 @@ async def list_helper_access(
                     "valid_to": grant.valid_to,
                     "account_status": account.status,
                     "activated": account.activated_at is not None,
+                    "has_email": bool(
+                        await session.scalar(
+                            select(ContactEmail.id)
+                            .where(ContactEmail.contact_id == account.contact_id)
+                            .limit(1)
+                        )
+                    ),
                 }
             )
         return out
@@ -1204,19 +1266,20 @@ async def create_helper_access(
         grant.valid_to = valid_to
         await session.flush()
         mail_id = None
-        if token is not None:
+        if token is not None and body.invitation_as_mail_draft:
+            subject, text = invitation_text(
+                number=p.number,
+                name=display_name,
+                token=token,
+                expires_at=account.invitation_expires_at,
+                portal_url=_portal_url(request),
+            )
             mail_id = await _draft_invitation_mail(
                 session,
                 principal,
                 to_email=email,
-                subject=f"Zugang zum Übergabeprotokoll {p.number}",
-                body_text=(
-                    f"Sehr geehrte/r {display_name},\n\n"
-                    f"für das Übergabeprotokoll {p.number} wurde ein Zugang eingerichtet.\n"
-                    f"Einladungscode: {token}\n\n"
-                    "Bitte melden Sie sich im Portal an, um das Protokoll auszufüllen und "
-                    "abzuschließen."
-                ),
+                subject=subject,
+                body_text=text,
                 contact_id=contact_id,
             )
         await _event(
@@ -1312,11 +1375,166 @@ async def resend_helper_access(
                 principal,
                 to_email=email,
                 subject=f"Zugang zum Übergabeprotokoll {p.number} (erneut)",
-                body_text=f"Ihr Einladungscode: {token}",
+                body_text=invitation_text(
+                    number=p.number,
+                    name=None,
+                    token=token,
+                    expires_at=account.invitation_expires_at,
+                    portal_url=_portal_url(request),
+                )[1],
                 contact_id=account.contact_id,
             )
         await _event(session, principal, "handover.helper_access.resent", p, grant_id=str(grant_id))
         return {"invitation_token": token if mail_id is None else None, "mail_draft_id": mail_id}
+
+
+async def _rotate_invitation(
+    session: Any, principal: TenantPrincipal, p: HandoverProtocol, grant_id: uuid.UUID
+) -> tuple[Any, str, str | None, str | None]:
+    """New one time invitation code for a not yet activated helper access (M30-01).
+
+    Only the hash is stored, so a code shown earlier cannot be recovered; every delivery path
+    issues a fresh code and thereby invalidates the previous one. Returns the account, the
+    clear text token, the primary e-mail and the display name of the contact."""
+    from mhvp.contacts.models import Contact, ContactEmail
+    from mhvp.portal.models import AccessGrant, PortalAccount
+    from mhvp.portal.routers import INVITE_DAYS, _hash
+
+    grant = await session.get(AccessGrant, grant_id)
+    if grant is None or grant.scope_type != "handover" or grant.scope_id != p.id:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    account = await session.get(PortalAccount, grant.account_id)
+    if account is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    if account.activated_at is not None:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Der Zugang wurde bereits aktiviert, ein Einladungscode ist nicht nötig.",
+        )
+    secret = secrets.token_urlsafe(32)
+    account.invitation_hash = _hash(secret)
+    account.invitation_expires_at = datetime.now(UTC) + timedelta(days=INVITE_DAYS)
+    email = await session.scalar(
+        select(ContactEmail.email).where(
+            ContactEmail.contact_id == account.contact_id, ContactEmail.is_primary.is_(True)
+        )
+    )
+    contact = await session.get(Contact, account.contact_id)
+    name = contact.display_name if contact is not None else None
+    return account, f"{principal.tenant_id.hex}.{secret}", email, name
+
+
+@router.post(
+    "/protocols/{protocol_id}/helper-access/{grant_id}/invitation-draft",
+    summary="Einladung als E-Mail-Entwurf anlegen (neuer Einladungscode, Vier-Augen-Freigabe)",
+)
+async def helper_invitation_draft(
+    protocol_id: uuid.UUID,
+    grant_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Mail draft in the outbox, nothing is sent. The code is never part of the response."""
+    from mhvp.communication.models import Mailbox
+
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        if not await session.scalar(select(Mailbox.id).where(Mailbox.enabled.is_(True)).limit(1)):
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Kein aktiviertes Postfach hinterlegt. Bitte das Anschreiben verwenden.",
+            )
+        account, token, email, name = await _rotate_invitation(session, principal, p, grant_id)
+        if not email:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Für den Beteiligten ist keine E-Mail-Adresse erfasst. Bitte das "
+                "Anschreiben verwenden.",
+            )
+        subject, text = invitation_text(
+            number=p.number,
+            name=name,
+            token=token,
+            expires_at=account.invitation_expires_at,
+            portal_url=_portal_url(request),
+        )
+        mail_id = await _draft_invitation_mail(
+            session,
+            principal,
+            to_email=email,
+            subject=subject,
+            body_text=text,
+            contact_id=account.contact_id,
+        )
+        await session.flush()
+        await _event(
+            session,
+            principal,
+            "handover.helper_access.invitation_drafted",
+            p,
+            grant_id=str(grant_id),
+            mail_draft_id=str(mail_id),
+        )
+        return {"mail_draft_id": mail_id, "invitation_expires_at": account.invitation_expires_at}
+
+
+@router.post(
+    "/protocols/{protocol_id}/helper-access/{grant_id}/invitation-letter",
+    summary="Einladung als Anschreiben (PDF, neuer Einladungscode)",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def helper_invitation_letter(
+    protocol_id: uuid.UUID,
+    grant_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> Response:
+    """Letter on the tenant letterhead (M6 renderer). POST, not GET: issuing the letter
+    rotates the invitation code, a prefetch must not invalidate a code already handed out."""
+    from mhvp.documents import letters
+
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        head = await documents.letterhead(session, _blobs(request))
+        account, token, _email, name = await _rotate_invitation(session, principal, p, grant_id)
+        try:
+            _contact, lines, _data = await documents.recipient(session, account.contact_id)
+        except ProblemError:
+            lines = [name or ""]  # no postal address recorded: name only, address by hand
+        subject, text = invitation_text(
+            number=p.number,
+            name=name,
+            token=token,
+            expires_at=account.invitation_expires_at,
+            portal_url=_portal_url(request),
+        )
+        content = letters.render_pdf(
+            head,
+            letters.Letter(
+                recipient_lines=lines,
+                subject=letters.render_text("{{ s }}", {"s": subject}),
+                body=letters.render_text("{{ b }}", {"b": text}),
+                letter_date=local_today(),
+                info=[("Protokoll", p.number)],
+            ),
+        )
+        await session.flush()
+        await _event(
+            session,
+            principal,
+            "handover.helper_access.invitation_letter",
+            p,
+            grant_id=str(grant_id),
+        )
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "content-disposition": f'attachment; filename="einladung-{p.number}.pdf"',
+            "cache-control": "no-store",
+        },
+    )
 
 
 async def portal_access_of(

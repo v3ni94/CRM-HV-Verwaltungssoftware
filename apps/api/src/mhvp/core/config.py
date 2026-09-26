@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     # Only behind a proxy that overwrites X-Forwarded-For (Traefik); otherwise spoofable.
     rate_limit_trust_forwarded_for: bool = False
 
+    # Handover photos (M30-04): longest edge after scaling, metadata is always stripped.
+    handover_image_max_edge: int = Field(default=2000, ge=100, le=20000)
+
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 
     # Envelope encryption (3.5): base64 encoded 32 byte master key, never stored in the DB.
@@ -96,6 +99,8 @@ class Settings(BaseSettings):
     # Public URLs for the OAuth redirect (API callback) and the return to the CRM screen.
     api_public_url: str | None = None
     web_crm_url: str | None = None
+    # Public URL of the portal (M21), used in invitation texts (M30-01); omitted if unset.
+    web_portal_url: str | None = None
     # WhatsApp Business Platform (Meta Cloud API, M35): app level secrets shared by all
     # tenants of this Meta App; per tenant config (phone_number_id, access token, templates)
     # lives in ``mhvp.sla.models.WhatsAppConfig``. Webhook verification (GET) compares

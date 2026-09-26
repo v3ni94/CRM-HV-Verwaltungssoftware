@@ -30,12 +30,14 @@ Zuordnung und die Startvorschläge für Reaktions- und Lösungsfristen stehen in
 
 ## Nicht umgesetzt (offene Punkte)
 
-- Einstellungsseite `/einstellungen/sla` (Tabs Regeln, Bereitschaft, Kalender) und SLA-Badge im
-  Ticket-Detail sind aus Zeitgründen nicht gebaut; nur die BFF-Allowlist ist vorbereitet.
-- i18n-Namespace `Sla` in `de.json`/`en.json` fehlt noch.
-- E-Mail-Versand der Eskalation ist protokolliert (`EmergencyAlert`), aber nicht an den
-  bestehenden Mailversand (Gmail/SMTP aus `communication`) angebunden; nur interne
-  Benachrichtigungen (`workspace.services.notify`) sind verdrahtet.
+- Stand 26.09.2026: umgesetzt in `apps/web-crm/src/app/(app)/einstellungen/sla/page.tsx`
+  (Einstellungsseite, Tabs Regeln, Bereitschaft, Kalender) und
+  `apps/web-crm/src/components/tickets/SlaBadge.tsx` (SLA-Badge im Ticket-Detail).
+- Stand 26.09.2026: umgesetzt, i18n-Namespace `Sla` liegt in
+  `apps/web-crm/messages/de.json` und `apps/web-crm/messages/en.json` (seit 1.17.5).
+- Stand 26.09.2026: E-Mail-Versand der Eskalation ist seit 1.16.0 an den bestehenden
+  Mailversand (`mhvp.communication.transport`, Gmail `send_raw` oder SMTP) angebunden;
+  Details siehe `docs/plans/M35-sla-eskalation-kanaele.md`.
 - Permission-Namensgebung: der Auftrag nennt `sla:manage`; da das Rechtemodell (`ACTIONS`) keine
   Aktion `manage` kennt, wird stattdessen `sla:update` (Regeln, Eskalation, Bereitschaft,
   Kalender) verwendet, analog zu den übrigen Modulen.

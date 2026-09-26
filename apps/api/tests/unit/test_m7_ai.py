@@ -252,7 +252,7 @@ def test_provider_status_error_carries_provider_message() -> None:
     def response(status: int, body: Mapping[str, object]) -> httpx.Response:
         return httpx.Response(status, request=httpx.Request("POST", "https://x"), json=body)
 
-    body = {
+    body: dict[str, object] = {
         "type": "error",
         "error": {"type": "authentication_error", "message": "invalid x-api-key"},
     }
@@ -278,7 +278,7 @@ def test_provider_status_error_carries_provider_message() -> None:
     assert "sk-ant-secret" not in str(info.value)
 
     # OpenAI: message on the top level of the body, 5xx is retryable, long text is truncated.
-    long_body = {"message": "x" * 1000}
+    long_body: dict[str, object] = {"message": "x" * 1000}
     o_exc = openai.InternalServerError(
         "Error code: 503 - {...}",
         response=response(503, long_body),
@@ -328,6 +328,7 @@ def test_run_and_propose_marks_unexpected_exception_as_failed(
     from contextlib import asynccontextmanager
     from types import SimpleNamespace
 
+    from mhvp.ai import gateway as gateway_module
     from mhvp.ai import jobs
     from mhvp.ai.models import RunStatus
 
@@ -338,7 +339,7 @@ def test_run_and_propose_marks_unexpected_exception_as_failed(
     async def boom(*args: object, **kwargs: object) -> object:
         raise KeyError("storage_ref")
 
-    monkeypatch.setattr(gateway, "execute", boom)
+    monkeypatch.setattr(gateway_module, "execute", boom)
     row = SimpleNamespace(
         id=uuid.uuid4(), status=RunStatus.RUNNING, error=None, conversation_id=uuid.uuid4()
     )

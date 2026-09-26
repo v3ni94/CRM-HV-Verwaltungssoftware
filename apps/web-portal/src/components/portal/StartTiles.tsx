@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 
-import { hasStaffPermission, type Me } from "@/components/portal/types";
+import type { Me } from "@/components/portal/types";
 import { ui } from "@/lib/ui";
 
 /** Rollenabhängige Kacheln der Startseite: Dienstleister sehen nur ihre Aufträge, Mieter und
@@ -21,9 +21,6 @@ export function StartTiles({ me }: { me: Me }) {
         { href: "/daten", label: t("start.data") },
         { href: "/uebergabe", label: t("start.handover") },
       ];
-  if (hasStaffPermission(me, "handover:read")) {
-    tiles.push({ href: "/uebergabeprotokolle", label: t("start.handoverStaff") });
-  }
   return (
     <div className={ui.pageGap}>
       <p className="text-sm text-muted">

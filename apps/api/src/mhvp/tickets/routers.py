@@ -1232,7 +1232,9 @@ async def list_tickets(
             )
             text_match = title_match | description_match | contact_name_match | property_match
             query = query.where(
-                (Ticket.number == int(term)) | text_match if term.isdigit() else text_match
+                (Ticket.number == int(term)) | text_match
+                if term.isdigit() and len(term) <= 9
+                else text_match
             )
         if not include_merged:
             query = query.where(Ticket.merged_into_ticket_id.is_(None))
@@ -1360,6 +1362,7 @@ async def add_assignee_endpoint(
         ticket = await session.get(Ticket, ticket_id, with_for_update=True)
         if ticket is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        _assert_not_merged(ticket)
         await add_assignee(session, ticket, body.user_id, body.reason, primary=body.primary)
         if body.primary:
             ticket.assignee_user_id = body.user_id
@@ -1661,6 +1664,9 @@ async def bulk_status(
             ticket = by_id.get(ticket_id)
             if ticket is None:
                 failed.append({"id": str(ticket_id), "reason": "Ticket nicht gefunden."})
+                continue
+            if ticket.merged_into_ticket_id is not None:
+                failed.append({"id": str(ticket.id), "reason": "Ticket ist zusammengeführt."})
                 continue
             if body.status is ticket.status:
                 changed.append({"id": str(ticket.id), "status": ticket.status.value})

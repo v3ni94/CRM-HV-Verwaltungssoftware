@@ -1452,6 +1452,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/invoice-intake-auto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Automatischer Belegeingang (Einstellung) */
+        get: operations["get_invoice_intake_auto_api_v1_ai_invoice_intake_auto_get"];
+        /**
+         * Automatischen Belegeingang setzen
+         * @description M14-05: when on, the Gmail sync starts one ``extract_invoice`` run per new PDF attachment
+         *     that looks like an invoice (heuristic in ``mhvp.communication.invoice_intake``). Default off;
+         *     every run is a proposal only and costs AI budget.
+         */
+        put: operations["put_invoice_intake_auto_api_v1_ai_invoice_intake_auto_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/knowledge": {
         parameters: {
             query?: never;
@@ -3836,6 +3859,47 @@ export interface paths {
         post?: never;
         /** Gehilfenzugang beenden */
         delete: operations["revoke_helper_access_api_v1_handover_protocols__protocol_id__helper_access__grant_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/invitation-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Einladung als E-Mail-Entwurf anlegen (neuer Einladungscode, Vier-Augen-Freigabe)
+         * @description Mail draft in the outbox, nothing is sent. The code is never part of the response.
+         */
+        post: operations["helper_invitation_draft_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/invitation-letter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Einladung als Anschreiben (PDF, neuer Einladungscode)
+         * @description Letter on the tenant letterhead (M6 renderer). POST, not GET: issuing the letter
+         *     rotates the invitation code, a prefetch must not invalidate a code already handed out.
+         */
+        post: operations["helper_invitation_letter_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_letter_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7407,61 +7471,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/portal/handover-protocols": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Übergabeprotokolle des Mandanten (Mitarbeiter) */
-        get: operations["list_protocols_api_v1_portal_handover_protocols_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/portal/handover-protocols/{protocol_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Übergabeprotokoll lesen (Mitarbeiter)
-         * @description Same field filter as for participants: internal remarks, the internal contact and the
-         *     management number never leave the CRM, not even for staff reading through the portal.
-         */
-        get: operations["get_protocol_api_v1_portal_handover_protocols__protocol_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/portal/handover-protocols/{protocol_id}/pdf": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** PDF eines Übergabeprotokolls (Mitarbeiter) */
-        get: operations["get_pdf_api_v1_portal_handover_protocols__protocol_id__pdf_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/portal/handover/protocols": {
         parameters: {
             query?: never;
@@ -7697,6 +7706,48 @@ export interface paths {
         head?: never;
         /** Teildatensatz ändern */
         patch: operations["patch_item_api_v1_portal_handover__protocol_id___section___item_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/portal/handovers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Übergabeprotokolle lesen (Mitarbeiter)
+         * @description Protocols of the objects the staff portal account may see (portal permission
+         *     "handover:read", M2-08); read only, no internal fields.
+         */
+        get: operations["staff_list_handovers_api_v1_portal_handovers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/handovers/{protocol_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Übergabeprotokoll lesen (Mitarbeiter)
+         * @description Detail, read only, with the same hidden field filter as for participants (internal
+         *     note, internal contact, management number, internal remarks, versions).
+         */
+        get: operations["staff_get_handover_api_v1_portal_handovers__protocol_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/portal/invitations/accept": {
@@ -13824,6 +13875,11 @@ export interface components {
             /** Expires Days */
             expires_days?: number | null;
             /**
+             * Invitation As Mail Draft
+             * @default true
+             */
+            invitation_as_mail_draft: boolean;
+            /**
              * Kind
              * @default helper
              */
@@ -14445,6 +14501,16 @@ export interface components {
             supersedes_id?: string | null;
             /** Vat */
             vat: number | string;
+        };
+        /** InvoiceIntakeAutoIn */
+        InvoiceIntakeAutoIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** InvoiceIntakeAutoOut */
+        InvoiceIntakeAutoOut: {
+            /** Enabled */
+            enabled: boolean;
         };
         /**
          * InvoiceKind
@@ -22653,6 +22719,59 @@ export interface operations {
             };
         };
     };
+    get_invoice_intake_auto_api_v1_ai_invoice_intake_auto_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceIntakeAutoOut"];
+                };
+            };
+        };
+    };
+    put_invoice_intake_auto_api_v1_ai_invoice_intake_auto_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceIntakeAutoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceIntakeAutoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_knowledge_api_v1_ai_knowledge_get: {
         parameters: {
             query?: {
@@ -27860,6 +27979,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    helper_invitation_draft_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    helper_invitation_letter_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_letter_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
             };
             /** @description Validation Error */
             422: {
@@ -35557,105 +35742,6 @@ export interface operations {
             };
         };
     };
-    list_protocols_api_v1_portal_handover_protocols_get: {
-        parameters: {
-            query?: {
-                include_archived?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_protocol_api_v1_portal_handover_protocols__protocol_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                protocol_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_pdf_api_v1_portal_handover_protocols__protocol_id__pdf_get: {
-        parameters: {
-            query?: {
-                download?: boolean;
-            };
-            header?: never;
-            path: {
-                protocol_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/pdf": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     list_protocols_staff_api_v1_portal_handover_protocols_get: {
         parameters: {
             query?: never;
@@ -36124,6 +36210,73 @@ export interface operations {
                 protocol_id: string;
                 section: string;
                 item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    staff_list_handovers_api_v1_portal_handovers_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    staff_get_handover_api_v1_portal_handovers__protocol_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
             };
             cookie?: never;
         };

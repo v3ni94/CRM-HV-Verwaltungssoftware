@@ -1198,3 +1198,48 @@ def test_external_portal_grant_refused_for_staff_account(client: TestClient, wor
     )
     assert refused.status_code == 409, refused.text
     assert "Mitarbeiterzugang" in refused.json()["detail"]
+
+
+def test_role_change_into_exempt_role_revokes_staff_portal_access(
+    client: TestClient, world: World
+) -> None:
+    """M2-08 Restpunkt: changing a member's roles into an exempt set (here ``read_only``)
+    withdraws the existing staff portal access immediately (portal login refused, event
+    ``portal_account.staff_access_revoked``); changing back restores it."""
+    admin = bearer(login(client, world, "admin"))
+    email = f"rolechange-{RUN}@example.org"
+    created = client.post(
+        "/api/v1/tenant/members",
+        json={
+            "email": email,
+            "display_name": "Rollenwechsel Person",
+            "password": PASSWORD,
+            "role_codes": ["standard"],
+        },
+        headers=admin,
+    )
+    assert created.status_code == 201, created.text
+    membership_id = created.json()["membership_id"]
+
+    def portal_me() -> int:
+        step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+        assert step.status_code == 200, step.text
+        token = {"Authorization": f"Bearer {step.json()['access_token']}"}
+        return client.get("/api/v1/portal/me", headers=token).status_code
+
+    assert portal_me() == 200
+    changed = client.put(
+        f"/api/v1/tenant/members/{membership_id}/roles",
+        json={"role_codes": ["read_only"]},
+        headers=admin,
+    )
+    assert changed.status_code == 204, changed.text
+    assert portal_me() == 403
+
+    back = client.put(
+        f"/api/v1/tenant/members/{membership_id}/roles",
+        json={"role_codes": ["standard"]},
+        headers=admin,
+    )
+    assert back.status_code == 204, back.text
+    assert portal_me() == 200

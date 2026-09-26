@@ -17,7 +17,7 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.20.0",
+    version: "1.21.0",
     date: "26.09.2026",
     title:
       "Master-Prompt-Umsetzung Welle 5: Abnahmefälle Anhang D, Lastschrift, XRechnung, E-Rechnung, Eigentümerabrechnung, Prüfexport, Regel-Engine, Tagesjobs, Portal und Importassistent",
@@ -27,12 +27,34 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Buchhaltung: SEPA-Lastschriftdatei pain.008 mit Mandatsprüfung, Sequenztyp und Vorabinformation als Entwurf (Datei hinter G2); XRechnung UBL 2.1 für Verwalterhonorare, mit KoSIT-Validator geprüft; E-Rechnung lesen (XRechnung, ZUGFeRD) im Belegeingang mit Widerspruchsanzeige; Eigentümerabrechnung Miete und SEV als Entwurf (Regel A06); Prüfexport nach Abschnitt 7.7 als ZIP mit Prüfsummen; DATEV-Kontenzuordnung je Mandant mit Sperre bei fehlender Zuordnung; Steuerberaterzugang je Rechtsträger; Rechtsträger der verwaltenden Gesellschaft per Einrichtungsschritt; MT940-Import; Kennzahlen Abdeckungsgrad und Fehlerquote des Bankabgleichs",
       "Mahnwesen und Abrechnung: Textbausteine je Mahnstufe mit Forderungsaufstellung, Mahnbescheid-Vorbereitung als PDF mit Hinweis auf anwaltliche Prüfung, Anschreiben Guthaben und Nachzahlung je Mieter aus dem Snapshot (Regel A07), KI-Plausibilität des Abrechnungsentwurfs (check_statement, 24 Evaluationsfälle)",
       "Automatisierung und Jobs: Regel-Engine Stufe 1 (Auslöser, Bedingungen, Aktionen Ticket, Benachrichtigung, Feld setzen, Testlauf, Protokoll), Tagesübersicht 07:00 und Fristenliste 20:00 mit Vorfrist, Dokumenteingang 06:30 mit Zuordnungsvorschlägen, protokollierte Spiegellöschung, Erinnerung vor Ablauf der finAPI-Zustimmung, Paperless-Webhook mit Signaturprüfung, Idempotency-Key für alle schreibenden Endpunkte, Ratenbegrenzung mit X-RateLimit-Headern",
-      "Portal und Übergabe: Mitarbeiterzugriff auf Übergabeprotokolle, Portalzugang folgt Rollenwechsel, Versionsverknüpfung beim U-Protokoll-Import, Lesebestätigung als Indiz beim Dokumentabruf (Datenmodell), Schwarzes Brett (Datenmodell)",
+      "Übergabe und Portal: Versionsverknüpfung beim U-Protokoll-Import, Lesebestätigung als Indiz beim Dokumentabruf (Datenmodell), Schwarzes Brett (Datenmodell)",
       "Importassistent: Immoware24-Listen (Objektdaten, Kontakte) über die Oberfläche mit Testlauf und Übernahme; Schnellpfad für Eigentümer- und Mieterlisten mit deterministischer Zeilenumsetzung; Evaluationsdatensätze für alle KI-Aufgaben mit mindestens 20 Fällen",
       "KI-Chat: Freitext-Kontakte aus eingefügtem Text, Verbindungstest je Modellstufe, Ausgabegrenze je Stufe; Tickets: Erkennungskorpus für Stammdatenänderungen (100 Prozent Trefferquote im Korpus), Antwortentwürfe je Änderungsart; objektakte: Synchronisationsstand, Benutzerabbildung, KI-Kostenauswertung, Listenablage als Dokument, Eigentümer- und Mieterlisten; Anzeigen: Bilder je Anzeige für den OpenImmo-Export",
       "Sicherheit: Review der 1.19.0-Endpunkte (docs/reviews/2026-09-26-sicherheitsreview-1.19.0.md), acht Befunde behoben (Dump-Pfad auf Exportverzeichnis begrenzt, Größenlimits, Postfachprüfung bei Ticketantworten, LIKE-Escaping, CSV-Formelschutz); englische Übersetzungen vollständig mit Prüfskript im Lint",
       "Technik: Migration 0108 (Fremdschlüssel admin_fee_invoice.tenant_id mit ON DELETE RESTRICT), Modelle und Migrationen ohne Abweichung im Autogenerate-Vergleich, Ratenbegrenzung in der Testkonfiguration abgeschaltet und nur im eigenen Test aktiv, Celery-Testisolation (D50)",
       "Offen: Regel-Engine Stufe 2, Portal Eigentümer (Beschlüsse, Ansprechpartner, Hausgeldkonto), Portalrolle Beirat, Fotoanhang an Portaltickets, CRM-Anzeige der Lesebestätigungen und Pflege des Schwarzen Bretts; Betreiberentscheidungen in docs/OPEN_QUESTIONS.md (unter anderem M10-05, M12-03, M16-14, M7-08, M15-01, M18-01)",
+    ],
+  },
+  {
+    version: "1.20.1",
+    date: "26.09.2026",
+    title: "Pflege: Plan-Dokumente, Formatierung, Typprüfung",
+    changes: [
+      "Plan-Dokumente auf den tatsächlichen Stand gebracht, Migrationen formatiert, Typfehler in Testdateien behoben",
+    ],
+  },
+  {
+    version: "1.20.0",
+    date: "26.09.2026",
+    title: "Übergabeprotokoll, Portal, Belegeingang, Betrieb",
+    changes: [
+      "Übergabeprotokoll: Fotos verlieren beim Hochladen EXIF- und GPS-Daten und werden auf höchstens 2000 px verkleinert",
+      "Übergabeprotokoll: Einladungscode für Gehilfen als E-Mail-Entwurf oder PDF-Anschreiben, jede Zustellung erzeugt einen neuen Code",
+      "Übergabeprotokoll: Termin anlegen mit Vorbelegung von Titel, Ort und Beteiligten, danach Link in den Kalender",
+      "Portal: Mitarbeiter sehen Übergabeprotokolle ihrer Objekte, Rollenwechsel in eine ausgenommene Rolle entzieht den Zugang sofort",
+      "Belegeingang: Schalter für den automatischen Eingang aus neuen Mail-Anhängen (Einstellungen, DMS), standardmäßig aus, Ergebnis nur als Vorschlag",
+      "Tickets: Integrationstest für die Zusammenführung, Sperre zusammengeführter Tickets greift jetzt auch bei Zuweisern und Sammelstatus",
+      "Betrieb: Runbook und Skript für Serverzugang, SSH-Härtung und Stilllegung von cloud-init",
     ],
   },
   {
