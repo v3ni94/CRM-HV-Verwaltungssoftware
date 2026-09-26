@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { KontakteCard, ListImports, ObjektdatenCard, roleFromFileName, ZuordnungCard } from "./ListImports";
+import { AdressenCard, KontakteCard, ListImports, ObjektdatenCard, roleFromFileName, ZuordnungCard } from "./ListImports";
 
 const fetchMock = vi.fn();
 beforeEach(() => {
@@ -166,10 +166,95 @@ describe("ZuordnungCard", () => {
 });
 
 describe("ListImports", () => {
-  it("renders the order hint and the three sections in order", () => {
+  it("renders the order hint and the sections in order", () => {
     renderIntl(<ListImports />);
     expect(screen.getByTestId("immoware-lists-order")).toHaveTextContent("erst Testlauf, dann Übernehmen");
     const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
-    expect(headings).toEqual(["1. Objekte und Einheiten", "2. Kontakte", "3. Zuordnung Eigentümer und Mieter"]);
+    expect(headings).toEqual(["1. Objekte und Einheiten",
+      "1a. Adressen nachtragen", "2. Kontakte", "3. Zuordnung Eigentümer und Mieter"]);
+  });
+});
+
+describe("AdressenCard", () => {
+  it("derives addresses from names without a body and uploads an address list", async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        jsonResponse({
+          mode: url.includes("mode=apply") ? "apply" : "preview",
+          apply: url.includes("mode=apply"),
+          counts: {
+            filled: 1,
+            skipped: 0,
+            unrecognised: 1,
+            conflicts: 0,
+            unknown: 0,
+          },
+          filled: [
+            {
+              number: "082",
+              name: "Shalomweg 3",
+              street: "Shalomweg",
+              house_number: "3",
+            },
+          ],
+          unrecognised: [{ number: "084", name: "Garagenhof Nord" }],
+          conflicts: url.includes("adressen?")
+            ? [
+                {
+                  line: 3,
+                  number: "083",
+                  field: "Straße",
+                  current: "Am Panke Park",
+                  list: "Andere Straße",
+                },
+              ]
+            : [],
+          unknown: [],
+          problems: [],
+        }),
+      ),
+    );
+    renderIntl(<AdressenCard />);
+    expect(screen.getByTestId("adressen-derive-apply")).toBeDisabled();
+    await userEvent.click(screen.getByTestId("adressen-derive-test"));
+    expect(await screen.findByTestId("adressen-report-mode")).toHaveTextContent(
+      "Testlauf",
+    );
+    expect(fetchMock.mock.calls[0]![0]).toBe(
+      "/api/bff/imports/immoware24/lists/adressen-ableiten?mode=preview",
+    );
+    expect(fetchMock.mock.calls[0]![1].body).toBeUndefined();
+    expect(screen.getByTestId("adressen-filled")).toHaveTextContent(
+      "Shalomweg",
+    );
+    expect(screen.getByTestId("adressen-unrecognised")).toHaveTextContent(
+      "Garagenhof Nord",
+    );
+    await userEvent.click(screen.getByTestId("adressen-derive-apply"));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.at(-1)![0]).toContain(
+        "adressen-ableiten?mode=apply",
+      ),
+    );
+
+    expect(screen.getByTestId("adressen-list-apply")).toBeDisabled();
+    await userEvent.upload(
+      screen.getByLabelText("Adressliste (csv oder xlsx)"),
+      csv("adressen.csv"),
+    );
+    await userEvent.click(screen.getByTestId("adressen-list-test"));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.at(-1)![0]).toBe(
+        "/api/bff/imports/immoware24/lists/adressen?mode=preview",
+      ),
+    );
+    expect(
+      ((fetchMock.mock.calls.at(-1)![1].body as FormData).get("file") as File)
+        .name,
+    ).toBe("adressen.csv");
+    expect(await screen.findByTestId("adressen-conflicts")).toHaveTextContent(
+      "Andere Straße",
+    );
+    expect(screen.getByTestId("adressen-list-apply")).toBeEnabled();
   });
 });

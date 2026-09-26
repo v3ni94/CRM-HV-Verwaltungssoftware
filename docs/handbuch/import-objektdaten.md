@@ -55,6 +55,31 @@ Importassistent, Abschnitt "Immoware24-Listen" ohne Serverzugang zur Verfügung.
 `mode=apply` als multipart mit `file`, `number_map` (Text) und `skip_handed_over` (true oder
 false). Die Antwort ist der Bericht des Befehls, bei Übernahme zusätzlich `import_run_id`.
 
+## Adressen nachtragen (Schritt 1a)
+
+Die Objektliste aus Immoware24 enthält keine Adressspalten. Nach dem Import fehlen deshalb Straße, Hausnummer, PLZ und Ort. Auf der Seite Importe, Immoware24 Listenimport, Abschnitt "1a. Adressen nachtragen", gibt es zwei Wege. Beide füllen nur leere Felder, überschreiben nie und können beliebig oft wiederholt werden. Je Weg erst Testlauf, dann Übernehmen; jede Übernahme erscheint als Importlauf (`immoware24:adressen-ableiten` bzw. `immoware24:adressen`).
+
+**Aus Objektnamen ableiten.** Für alle Objekte ohne Straße werden Straße und Hausnummer aus der Bezeichnung gewonnen. Kennzeichen wie `Z ABGEGEBEN`, `Y ABRECHNUNG` und ein führendes `WEG` werden vorher entfernt. Beispiele:
+
+| Bezeichnung | Straße | Hausnummer |
+|---|---|---|
+| Shalomweg 3 | Shalomweg | 3 |
+| Z ABGEGEBEN Brunnenstraße 145 | Brunnenstraße | 145 |
+| WEG Am Panke Park 67-85 | Am Panke Park | 67-85 |
+| Am Panke Park 1-21 H1 | Am Panke Park | 1-21 H1 |
+
+Namen ohne erkennbare Hausnummer (zum Beispiel "Garagenhof Nord") werden als nicht erkennbar gemeldet und bleiben leer. PLZ und Ort lassen sich aus dem Namen nicht ableiten.
+
+**Adressliste hochladen.** CSV (UTF-8) oder Excel (xlsx) mit einer Kopfzeile. Erkannte Spalten:
+
+- Objektnummer: `Objekt-Nummer`, `Objektnummer`, `Objekt-Nr.`; Immoware24-Formen wie `82`, `082` oder `82.0` werden wie beim Objektimport auf drei Stellen gebracht.
+- Straße: `Straße`, `Strasse`, `Str.`; steht die Hausnummer mit in dieser Spalte und fehlt eine eigene Spalte, wird sie abgetrennt.
+- Hausnummer: `Hausnummer`, `Nr.`
+- PLZ: `PLZ`, `Postleitzahl`
+- Ort: `Ort`, `Stadt`
+
+Weicht ein Wert der Liste von einem bereits gefüllten Feld ab, wird das als Konflikt gemeldet (Zeile, Objekt, Feld, vorhandener Wert, Wert laut Liste) und nicht übernommen. Objektnummern, die im Mandanten nicht vorhanden sind, werden unter "Nicht zugeordnet" aufgeführt.
+
 ## Ablauf auf dem Server
 
 1. Datei nach `/opt/mhvp/import/objektdaten.csv` legen (UTF-8, Semikolon, wie exportiert).

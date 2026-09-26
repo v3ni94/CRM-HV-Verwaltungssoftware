@@ -16,11 +16,12 @@ from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 
 from mhvp.ai.imports import Recorder
 from mhvp.ai.models import ImportRun, ImportStatus
+from mhvp.ai.table_mapper import load_csv, load_xlsx
 from mhvp.contacts.models import ContactRoleCode
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.imports import kontakte, objektdaten, zuordnung
+from mhvp.imports import adressen, kontakte, objektdaten, zuordnung
 from mhvp.imports.routers import WRITE, _need_domain
 
 router = APIRouter(prefix="/imports/immoware24/lists", tags=["Import Immoware24"])
@@ -202,3 +203,65 @@ async def import_zuordnung(
 
     async with tenant_tx(request, principal) as session:
         return await _run(session, principal, mode=mode, source="immoware24:zuordnung", work=work)
+
+
+@router.post(
+    "/adressen-ableiten",
+    summary="Straße und Hausnummer der Objekte aus dem Objektnamen (Testlauf oder Übernahme)",
+)
+async def derive_adressen(
+    request: Request,
+    mode: str = MODE,
+    principal: TenantPrincipal = Depends(WRITE),
+) -> dict[str, Any]:
+    """Only objects with an empty street; only empty fields are filled
+    (handbuch/import-objektdaten.md)."""
+    _need_domain(principal)
+
+    async def work(session: Any, recorder: Recorder | None) -> dict[str, Any]:
+        return await adressen.derive_from_names(
+            session, principal.tenant_id, apply=recorder is not None
+        )
+
+    async with tenant_tx(request, principal) as session:
+        return await _run(
+            session, principal, mode=mode, source="immoware24:adressen-ableiten", work=work
+        )
+
+
+@router.post(
+    "/adressen", summary="Adressen der Objekte aus einer Adressliste (Testlauf oder Übernahme)"
+)
+async def import_adressen(
+    request: Request,
+    mode: str = MODE,
+    file: UploadFile = File(),
+    principal: TenantPrincipal = Depends(WRITE),
+) -> dict[str, Any]:
+    """CSV or XLSX with object number and street, house number, postal code, city. Fills only
+    empty fields; differences to filled fields are reported as conflicts, never overwritten."""
+    _need_domain(principal)
+    data = await file.read()
+    if not data:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Die Datei ist leer.")
+    if len(data) > MAX_LIST_BYTES:
+        raise ProblemError(ErrorCodes.UPLOAD_REJECTED, detail="Die Datei ist zu groß.")
+    try:
+        if data[:2] == b"PK":
+            header, body, _ = load_xlsx(data)
+        else:
+            header, body, _ = load_csv(data)
+        rows = [header, *body]
+        adressen.map_headers(header)
+    except ValueError as exc:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc) or "Datei unlesbar.") from exc
+    except Exception as exc:  # broken xlsx or csv
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Datei unlesbar.") from exc
+
+    async def work(session: Any, recorder: Recorder | None) -> dict[str, Any]:
+        return await adressen.apply_address_list(
+            session, principal.tenant_id, rows, apply=recorder is not None
+        )
+
+    async with tenant_tx(request, principal) as session:
+        return await _run(session, principal, mode=mode, source="immoware24:adressen", work=work)

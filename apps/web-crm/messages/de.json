@@ -679,7 +679,7 @@
   },
   "ImmowareLists": {
     "title": "Immoware24 Listenimport",
-    "intro": "Reihenfolge einhalten: 1. Objekte und Einheiten, 2. Kontakte, 3. Zuordnung Eigentümer und Mieter. Je Abschnitt erst Testlauf, dann Übernehmen. Dateien als CSV (UTF-8, Semikolon) aus Immoware24.",
+    "intro": "Reihenfolge einhalten: 1. Objekte und Einheiten, 1a. Adressen, 2. Kontakte, 3. Zuordnung Eigentümer und Mieter. Je Abschnitt erst Testlauf, dann Übernehmen. Dateien als CSV (UTF-8, Semikolon) aus Immoware24.",
     "objektdaten": {
       "title": "1. Objekte und Einheiten",
       "help": "Export Objektdaten mit den Spalten Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer. Eigentümer, Mieter und Beträge werden nur als Herkunftsnotiz an der Einheit gespeichert.",
@@ -752,6 +752,34 @@
     "busy": "Wird verarbeitet",
     "colCount": "Zähler",
     "colValue": "Anzahl",
+    "adressen": {
+      "title": "1a. Adressen nachtragen",
+      "help": "Die Objektliste enthält keine Adressen. Straße, Hausnummer, PLZ und Ort werden hier ergänzt. Es werden nur leere Felder gefüllt, vorhandene Angaben werden nie überschrieben.",
+      "deriveTitle": "Aus Objektnamen ableiten",
+      "deriveHelp": "Für Objekte ohne Straße werden Straße und Hausnummer aus der Bezeichnung übernommen, zum Beispiel Shalomweg 3. Kennzeichen wie Z ABGEGEBEN, Y ABRECHNUNG und WEG werden vorher entfernt.",
+      "listTitle": "Adressliste",
+      "listHelp": "CSV oder Excel mit Objektnummer und den Spalten Straße, Hausnummer, PLZ, Ort. Straße und Hausnummer dürfen in einer Spalte stehen. Abweichungen zu bereits gefüllten Feldern werden als Konflikt gemeldet.",
+      "file": "Adressliste (csv oder xlsx)",
+      "filledTitle": "Gefüllt",
+      "unrecognisedTitle": "Nicht erkennbare Namen",
+      "conflictsTitle": "Konflikte",
+      "problemsTitle": "Nicht zugeordnet",
+      "unknownObject": "Zeile {line}: Objekt {number} nicht vorhanden",
+      "colStreet": "Straße",
+      "colHouseNumber": "Hausnummer",
+      "colPostalCode": "PLZ",
+      "colCity": "Ort",
+      "colField": "Feld",
+      "colCurrent": "Vorhanden",
+      "colList": "Laut Liste",
+      "count": {
+        "filled": "Objekte gefüllt",
+        "skipped": "Übersprungen",
+        "unrecognised": "Namen nicht erkennbar",
+        "conflicts": "Konflikte",
+        "unknown": "Objekte unbekannt"
+      }
+    },
     "zuordnung": {
       "title": "3. Zuordnung Eigentümer und Mieter",
       "help": "Objektliste wie in Schritt 1. Eigentümer und Mieter werden über den Namen den importierten Kontakten zugeordnet und als Verträge mit monatlicher Zahlung angelegt. Vorhandene Verträge werden nicht überschrieben, mehrdeutige Namen werden nur gemeldet.",
