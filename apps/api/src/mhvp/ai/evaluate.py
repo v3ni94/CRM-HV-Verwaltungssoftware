@@ -17,6 +17,13 @@ from mhvp.ai.models import AiTask
 
 THRESHOLD = 0.95
 MIN_CASES = 20
+# propose_posting (M7-09) is implemented but disabled until M12-01; its first set has 10
+# synthetic cases. M7-09 asks for at least 20 before the task is released.
+MIN_CASES_BY_TASK: dict[AiTask, int] = {AiTask.PROPOSE_POSTING: 10}
+
+
+def min_cases(task: AiTask | str) -> int:
+    return MIN_CASES_BY_TASK.get(AiTask(task), MIN_CASES)
 
 
 def _f1(tp: int, fp: int, fn: int) -> float:
@@ -221,6 +228,33 @@ def _contact_change(
     return pairs
 
 
+def _propose_posting(
+    output: dict[str, Any], expected: dict[str, Any], case_input: dict[str, Any]
+) -> list[tuple[Any, Any]]:
+    """M7-09: the normalisation in ``mhvp.banking.ai_posting.normalize_result`` (unknown
+    accounts, open items and cost objects cleared, split sum checked against the amount, no
+    confidence without an account, never postable) on a recorded answer, compared with
+    independently expected account, cost object, split count, warning count and confidence
+    band."""
+    from mhvp.banking.ai_posting import normalize_result
+
+    result = normalize_result(
+        output,
+        amount=case_input["amount"],
+        accounts=set(case_input["accounts"]),
+        open_items=set(case_input["open_items"]),
+        cost_objects=set(case_input["cost_objects"]),
+    )
+    return [
+        (result["account_number"], expected["account_number"]),
+        (result["cost_object"], expected["cost_object"]),
+        (len(result["splits"]), expected["split_count"]),
+        (len(result["warnings"]), expected["warning_count"]),
+        (result["confidence"] >= 0.5, expected["confident"]),
+        (result["postable"], False),
+    ]
+
+
 Scorer = Callable[[dict[str, Any], Any], list[tuple[Any, Any]]]
 InputScorer = Callable[[dict[str, Any], Any, dict[str, Any]], list[tuple[Any, Any]]]
 
@@ -238,9 +272,8 @@ INPUT_SCORERS: dict[AiTask, InputScorer] = {
     AiTask.DRAFT_REPLY: _draft_reply,
     AiTask.MAP_COLUMNS: _map_columns,
     AiTask.CONTACT_MASTER_DATA_CHANGE: _contact_change,
+    AiTask.PROPOSE_POSTING: _propose_posting,
 }
-# ``propose_posting`` (9.2, M12) has no registered schema in ``tasks.SCHEMAS`` yet and
-# therefore no evaluation set (docs/OPEN_QUESTIONS.md M7-09).
 
 
 def load_cases(folder: Path, task: AiTask) -> list[dict[str, Any]]:
@@ -275,7 +308,9 @@ def main(argv: list[str]) -> int:
     folder = Path(argv[1]) if len(argv) > 1 else Path("tests/ai_eval")
     report = evaluate(folder)
     print(json.dumps(report, indent=2))  # noqa: T201 - CLI output
-    failed = [t for t, r in report.items() if r["cases"] < MIN_CASES or r["field_f1"] < THRESHOLD]
+    failed = [
+        t for t, r in report.items() if r["cases"] < min_cases(t) or r["field_f1"] < THRESHOLD
+    ]
     return 1 if failed else 0
 
 

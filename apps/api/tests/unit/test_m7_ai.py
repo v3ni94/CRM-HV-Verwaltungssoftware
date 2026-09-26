@@ -57,8 +57,8 @@ def test_table_text() -> None:
 
 def test_offline_evaluation_meets_threshold() -> None:
     report = evaluate.evaluate(Path(__file__).parents[1] / "ai_eval")
-    for result in report.values():
-        assert result["cases"] >= evaluate.MIN_CASES
+    for task, result in report.items():
+        assert result["cases"] >= evaluate.min_cases(task)
         assert result["field_f1"] >= evaluate.THRESHOLD
 
 

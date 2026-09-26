@@ -394,6 +394,32 @@ async def fast_table_import_enabled(session: AsyncSession) -> bool:
     return True if value is None else bool(value)
 
 
+POSTING_NOT_RELEASED = "KI-Kontierung ist nicht freigegeben"
+
+
+async def posting_enabled(session: AsyncSession) -> bool:
+    """Tenant switch ``ai_posting_enabled`` (M7-09, M12-01); default off."""
+    from mhvp.platform.models import TenantSettings
+
+    value = await session.scalar(select(TenantSettings.ai_posting_enabled))
+    return bool(value)
+
+
+async def posting_block_reason(session: AsyncSession) -> str | None:
+    """Why ``propose_posting`` must not run, or ``None``. Both conditions are required: the
+    tenant switch and at least one released provider with DPA evidence and training opt-out
+    (rule 0.1.13, M7-01 mechanics in ``routes``). Bank transactions carry personal data."""
+    if not await posting_enabled(session):
+        return f"{POSTING_NOT_RELEASED}: Mandantenschalter ai_posting_enabled ist aus."
+    try:
+        usable, reasons = await routes(session, AiTask.PROPOSE_POSTING)
+    except GatewayBlockedError as exc:
+        return f"{POSTING_NOT_RELEASED}: {exc}"
+    if not usable:
+        return f"{POSTING_NOT_RELEASED}: " + ("; ".join(reasons) or "kein Anbieter freigegeben")
+    return None
+
+
 async def _provider_order(session: AsyncSession, strategy: str) -> list[AiProvider]:
     """Preferred provider first; "alternate" starts with the provider not used last."""
     if strategy in ONLY:
@@ -545,6 +571,8 @@ def confidence_of(task: AiTask, data: dict[str, Any]) -> Decimal | None:
         items = data.get("contacts", [])
     elif task is AiTask.EXTRACT_PROPERTY:
         items = [*data.get("units", []), *data.get("parties", [])]
+    elif task is AiTask.PROPOSE_POSTING:
+        items = data.get("proposals", [])
     values = [min(max(float(i.get("confidence", 0)), 0.0), 1.0) for i in items]
     if not values:
         return None
@@ -1058,6 +1086,10 @@ async def execute(
         task = run.task
         prompt = tasks.prompt(task, run.prompt_version)
         try:
+            if task is AiTask.PROPOSE_POSTING:
+                blocked = await posting_block_reason(session)
+                if blocked is not None:
+                    raise GatewayBlockedError(blocked)
             item = await build_input(session, blobs, run)
             estimated_chars = (
                 len(item.text) if not item.chunks else max(len(c) for c in item.chunks)

@@ -109,6 +109,21 @@ async def run_and_propose(
             session.add(check)
             await session.flush()
             proposal_id = check.id
+        if run.status is RunStatus.SUCCEEDED and run.task is AiTask.PROPOSE_POSTING:
+            # M7-09 KI-Kontierung: proposal only (entity_type posting); nothing is posted and
+            # the bank transaction stays untouched (rule 0.1.6, 7.4).
+            from mhvp.banking import ai_posting
+
+            posting = AiProposal(
+                tenant_id=tenant_id,
+                task_run_id=run.id,
+                entity_type=ai_posting.ENTITY_TYPE,
+                context_id=_uuid(run.input_ref.get("context", {}).get("context_id")),
+                proposed=ai_posting.proposal_payload(run),
+            )
+            session.add(posting)
+            await session.flush()
+            proposal_id = posting.id
         if run.status is RunStatus.SUCCEEDED and run.task in (
             AiTask.EXTRACT_CONTACTS,
             AiTask.EXTRACT_PROPERTY,

@@ -1511,6 +1511,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/posting-enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * KI-Kontierung (Einstellung)
+         * @description M7-09, M12-01: tenant switch plus the reason why ``propose_posting`` would be blocked
+         *     (switch off, no released provider with DPA evidence).
+         */
+        get: operations["get_posting_enabled_api_v1_ai_posting_enabled_get"];
+        /**
+         * KI-Kontierung ein- oder ausschalten
+         * @description Default off. Even when on, a run needs a released provider with DPA evidence; the
+         *     result is a proposal of entity type ``posting`` and is never posted (rule 0.1.6).
+         */
+        put: operations["put_posting_enabled_api_v1_ai_posting_enabled_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/proposals/{proposal_id}": {
         parameters: {
             query?: never;
@@ -2656,6 +2682,29 @@ export interface paths {
         get: operations["transactions_api_v1_banking_transactions_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions/{tx_id}/ai-posting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KI-Kontierungsvorschläge lesen */
+        get: operations["get_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_get"];
+        put?: never;
+        /**
+         * KI-Kontierungsvorschlag anstoßen (nur Vorschlag, deaktiviert bis Freigabe)
+         * @description M7-09, M12-01: only with the tenant switch ``ai_posting_enabled`` and a released AI
+         *     provider with DPA evidence, otherwise ``MHVP-AI-0001``. The result is an ``AiProposal``
+         *     of entity type ``posting``; nothing is posted and the transaction is not changed.
+         */
+        post: operations["start_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16617,6 +16666,18 @@ export interface components {
             /** Unit Id */
             unit_id?: string | null;
         };
+        /** PostingEnabledIn */
+        PostingEnabledIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** PostingEnabledOut */
+        PostingEnabledOut: {
+            /** Blocked Reason */
+            blocked_reason?: string | null;
+            /** Enabled */
+            enabled: boolean;
+        };
         /**
          * PreferredChannel
          * @enum {string}
@@ -22901,6 +22962,59 @@ export interface operations {
             };
         };
     };
+    get_posting_enabled_api_v1_ai_posting_enabled_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostingEnabledOut"];
+                };
+            };
+        };
+    };
+    put_posting_enabled_api_v1_ai_posting_enabled_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostingEnabledIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostingEnabledOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_proposal_api_v1_ai_proposals__proposal_id__get: {
         parameters: {
             query?: never;
@@ -25079,6 +25193,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
