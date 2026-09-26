@@ -1,3 +1,7 @@
+from typing import cast
+
+from sqlalchemy import Table
+
 """M14-05 automatischer Belegeingang: Heuristik und Idempotenz der Kandidatenauswahl."""
 
 import uuid
@@ -72,9 +76,10 @@ def test_candidates_idempotent_per_document() -> None:
 
 
 def test_marker_unique_and_switch_default_off() -> None:
+    table = cast(Table, InvoiceIntakeAutoRun.__table__)
     uniques = [
         tuple(c.name for c in con.columns)
-        for con in InvoiceIntakeAutoRun.__table__.constraints
+        for con in table.constraints
         if con.__class__.__name__ == "UniqueConstraint"
     ]
     assert ("tenant_id", "document_id") in uniques
