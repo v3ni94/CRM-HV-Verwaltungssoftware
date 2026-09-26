@@ -1,9 +1,9 @@
 # Kontakte aus den Immoware24-Kontaktlisten anlegen
 
-Stand 26.09.2026. Immoware24 exportiert je Kontaktgruppe eine Liste (Eigentümer, Mieter, Bank,
-Sonstige) mit den Spalten id, Name, Briefanrede, Benutzername, Adresse, Stadt, PLZ, Staat, Land,
+Stand 26.09.2026. Immoware24 exportiert je Kontaktgruppe eine Liste (Eigentümer, Mieter, Dienstleister,
+Bank, Sonstige) mit den Spalten id, Name, Briefanrede, Benutzername, Adresse, Stadt, PLZ, Staat, Land,
 Landesvorwahl, Vorwahl, Telefonnummer, E-Mail. Ein Befehl auf dem Server legt daraus die Kontakte
-des gewählten Mandanten an; die Rolle (Eigentümer, Mieter, Bank, Sonstiges) ergibt sich aus dem
+des gewählten Mandanten an; die Rolle (Eigentümer, Mieter, Dienstleister, Bank, Sonstiges) ergibt sich aus dem
 Dateinamen oder wird als `ROLLE=PFAD` angegeben. Derselbe Import steht im CRM unter Importe,
 Importassistent, Abschnitt "Immoware24-Listen" ohne Serverzugang zur Verfügung.
 
@@ -11,8 +11,10 @@ Importassistent, Abschnitt "Immoware24-Listen" ohne Serverzugang zur Verfügung.
 
 * Je Zeile ein Kontakt mit Rolle, Anschrift (Straße und Hausnummer getrennt, Land aus der
   Spalte Land, Vorgabe DE), Telefon in internationaler Schreibweise aus Landesvorwahl, Vorwahl und
-  Nummer, E-Mail. Die Immoware24-Nummer bleibt als externe Kennung erhalten (auch der
-  Benutzername, falls vorhanden).
+  Nummer, E-Mail. Die Immoware24-Nummer bleibt als externe Kennung erhalten, ebenso der Name
+  wie exportiert (für die Zuordnung zu Einheiten) und der Benutzername, falls vorhanden.
+* Briefanrede und Staat (Bundesland) haben kein eigenes Feld; sie stehen als Notiz "laut
+  Altsystem" am Kontakt.
 * Personen und Firmen werden am Namen unterschieden (Rechtsform, Bank, Sparkasse, WEG, Stadt,
   Amt, Verein und weitere Schlüsselwörter; Banklisten immer Firma). "Nachname, Vorname" wird
   direkt übernommen. Bei "Vorname Nachname" entscheidet der Nachname aus der Briefanrede
@@ -24,7 +26,8 @@ Importassistent, Abschnitt "Immoware24-Listen" ohne Serverzugang zur Verfügung.
 * Derselbe Kontakt in zwei Listen (zum Beispiel Eigentümer und Sonstige mit gleicher id) wird
   nur einmal angelegt und erhält beide Rollen.
 * Es entstehen keine Verträge, Sollstellungen, Bankverbindungen oder Buchungen. Die Zuordnung
-  zu Objekten und Einheiten folgt über den Importassistenten (Verträge) oder manuell.
+  zu Einheiten folgt mit `python -m mhvp.imports.zuordnung` (siehe `import-zuordnung.md`),
+  über den Importassistenten (Verträge) oder manuell.
 
 ## Ablauf über die Oberfläche
 
@@ -46,7 +49,7 @@ Importassistent, Abschnitt "Immoware24-Listen" ohne Serverzugang zur Verfügung.
 
 Über die Schnittstelle: `POST /api/v1/imports/immoware24/lists/kontakte?mode=preview` oder
 `mode=apply` als multipart mit den Feldern `files` und `roles` in gleicher Reihenfolge (eine
-Rolle je Datei: eigentuemer, mieter, bank, sonstige). Die Antwort ist der Bericht des Befehls,
+Rolle je Datei: eigentuemer, mieter, dienstleister, bank, sonstige). Die Antwort ist der Bericht des Befehls,
 bei Übernahme zusätzlich `import_run_id`.
 
 ## Ablauf auf dem Server
