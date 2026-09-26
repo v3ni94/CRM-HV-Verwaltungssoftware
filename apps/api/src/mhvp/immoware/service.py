@@ -184,7 +184,13 @@ async def take_over_contacts(
     bereits verknuepfte oder als Duplikat erkannte Zeilen werden uebersprungen (idempotent)."""
     from mhvp.contacts import schemas as contact_schemas
     from mhvp.contacts import services as contact_services
-    from mhvp.contacts.models import Contact, ContactEmail, ContactKind, ContactPhone
+    from mhvp.contacts.models import (
+        Contact,
+        ContactEmail,
+        ContactKind,
+        ContactPhone,
+        PhoneLabel,
+    )
     from mhvp.immoware.models import ImmowareDavContact
 
     stmt = select(ImmowareDavContact).where(
@@ -233,10 +239,24 @@ async def take_over_contacts(
         )
         session.add(contact)
         await session.flush()
-        for email in row.emails:
+        for email in dict.fromkeys(e.strip() for e in row.emails if e and e.strip()):
+            if len(email) > 320:
+                continue
             session.add(ContactEmail(tenant_id=tenant_id, contact_id=contact.id, email=email))
-        for phone in row.phones:
-            session.add(ContactPhone(tenant_id=tenant_id, contact_id=contact.id, number=phone))
+        for phone in dict.fromkeys(p.strip() for p in row.phones if p and p.strip()):
+            # ``contact_phone.label`` ist Pflicht (NOT NULL, Betreibermeldung 26.09.2026);
+            # vCard-Typen liegen im Spiegel nicht vor, daher "other". Nummern ueber 32 Zeichen
+            # passen nicht in die Spalte und werden ausgelassen statt den Lauf abzubrechen.
+            if len(phone) > 32:
+                continue
+            session.add(
+                ContactPhone(
+                    tenant_id=tenant_id,
+                    contact_id=contact.id,
+                    label=PhoneLabel.OTHER,
+                    number=phone,
+                )
+            )
         row.matched_contact_id = contact.id
         created += 1
     await session.flush()
