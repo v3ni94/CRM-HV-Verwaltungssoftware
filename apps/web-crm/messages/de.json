@@ -3753,5 +3753,12 @@
       "extracting": "Der Beleg wird ausgewertet. Die Anzeige aktualisiert sich automatisch.",
       "decided": "Über diesen Entwurf wurde bereits entschieden."
     }
+  },
+  "InvoiceIntakeAuto": {
+    "title": "Automatischer Belegeingang",
+    "label": "Rechnungen aus neuen E-Mails automatisch erfassen",
+    "hint": "Beim Abruf der Gmail-Postfächer wird für jeden neuen PDF-Anhang, dessen Betreff, Absender oder Dateiname auf eine Rechnung hindeutet (Rechnung, Invoice, Beleg, RE-), genau eine KI-Extraktion gestartet. Das Ergebnis ist ein Vorschlag unter Rechnungseingang, gebucht wird nichts.",
+    "costHint": "Jede automatische Extraktion verursacht KI-Kosten und belastet das Monatsbudget der KI-Anbieter. Budget- und Freigabeprüfungen gelten unverändert. Standard: aus.",
+    "saved": "Einstellung gespeichert."
   }
 }

@@ -11324,6 +11324,33 @@
         "title": "InvoiceIn",
         "type": "object"
       },
+      "InvoiceIntakeAutoIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "InvoiceIntakeAutoIn",
+        "type": "object"
+      },
+      "InvoiceIntakeAutoOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "InvoiceIntakeAutoOut",
+        "type": "object"
+      },
       "InvoiceKind": {
         "enum": [
           "invoice",
@@ -29906,6 +29933,67 @@
           }
         },
         "summary": "Schnellen Tabellenimport setzen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/invoice-intake-auto": {
+      "get": {
+        "operationId": "get_invoice_intake_auto_api_v1_ai_invoice_intake_auto_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceIntakeAutoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Automatischer Belegeingang (Einstellung)",
+        "tags": [
+          "KI-Assistent"
+        ]
+      },
+      "put": {
+        "description": "M14-05: when on, the Gmail sync starts one ``extract_invoice`` run per new PDF attachment\nthat looks like an invoice (heuristic in ``mhvp.communication.invoice_intake``). Default off;\nevery run is a proposal only and costs AI budget.",
+        "operationId": "put_invoice_intake_auto_api_v1_ai_invoice_intake_auto_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceIntakeAutoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceIntakeAutoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Automatischen Belegeingang setzen",
         "tags": [
           "KI-Assistent"
         ]

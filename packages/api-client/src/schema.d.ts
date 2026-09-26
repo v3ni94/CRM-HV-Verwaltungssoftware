@@ -1021,6 +1021,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/invoice-intake-auto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Automatischer Belegeingang (Einstellung) */
+        get: operations["get_invoice_intake_auto_api_v1_ai_invoice_intake_auto_get"];
+        /**
+         * Automatischen Belegeingang setzen
+         * @description M14-05: when on, the Gmail sync starts one ``extract_invoice`` run per new PDF attachment
+         *     that looks like an invoice (heuristic in ``mhvp.communication.invoice_intake``). Default off;
+         *     every run is a proposal only and costs AI budget.
+         */
+        put: operations["put_invoice_intake_auto_api_v1_ai_invoice_intake_auto_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/knowledge": {
         parameters: {
             query?: never;
@@ -12630,6 +12653,16 @@ export interface components {
             /** Vat */
             vat: number | string;
         };
+        /** InvoiceIntakeAutoIn */
+        InvoiceIntakeAutoIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** InvoiceIntakeAutoOut */
+        InvoiceIntakeAutoOut: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /**
          * InvoiceKind
          * @enum {string}
@@ -19607,6 +19640,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FastTableImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_invoice_intake_auto_api_v1_ai_invoice_intake_auto_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceIntakeAutoOut"];
+                };
+            };
+        };
+    };
+    put_invoice_intake_auto_api_v1_ai_invoice_intake_auto_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceIntakeAutoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceIntakeAutoOut"];
                 };
             };
             /** @description Validation Error */
