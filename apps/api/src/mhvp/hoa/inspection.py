@@ -42,6 +42,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from mhvp.contacts.models import Contact
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import (
+    ensure_session_legal_entity_allowed,
+    session_allowed_legal_entity_ids,
+)
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 from mhvp.core.events import emit
@@ -235,6 +239,9 @@ async def _load(session: AsyncSession, request_id: uuid.UUID) -> InspectionReque
     row = await session.get(InspectionRequest, request_id)
     if row is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    # A37: a membership scoped to legal entities sees only requests of its own communities
+    # (Sicherheitsreview 1.22, Befund 5); foreign ones answer 404.
+    ensure_session_legal_entity_allowed(session, row.legal_entity_id)
     return row
 
 
@@ -298,6 +305,9 @@ async def list_requests(
             query = query.where(InspectionRequest.legal_entity_id == legal_entity_id)
         if property_id is not None:
             query = query.where(InspectionRequest.property_id == property_id)
+        allowed = session_allowed_legal_entity_ids(session)
+        if allowed is not None:
+            query = query.where(InspectionRequest.legal_entity_id.in_(list(allowed)))
         rows = (await session.scalars(query)).all()
         return [RequestOut.model_validate(r, from_attributes=True) for r in rows]
 
@@ -315,6 +325,7 @@ async def create_request(
         entity = await session.get(LegalEntity, body.legal_entity_id)
         if entity is None or entity.kind is not LegalEntityKind.HOA or entity.property_id is None:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Keine Gemeinschaft mit Objekt.")
+        ensure_session_legal_entity_allowed(session, entity.id)
         if await session.get(Contact, body.applicant_contact_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Antragsteller fehlt.")
         row = InspectionRequest(
@@ -531,6 +542,19 @@ async def create_package(
                 problems.append(f"{doc.filename}: keine lokale Kopie")
         if problems:
             raise ProblemError(ErrorCodes.VALIDATION, detail="; ".join(problems))
+        # Review 1.22 Nr. 14: the package is built in memory and stored as one document, so
+        # the indexed sizes are summed before any blob is read and capped by the document
+        # limit of the tenant (the ZIP could not be stored above it anyway).
+        limit = request.app.state.settings.document_max_bytes
+        total = sum(int(docs[i].size) for i in wanted)
+        if total > limit:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=(
+                    f"Paket zu groß: {total} Bytes in {len(wanted)} Dokumenten, zulässig sind"
+                    f" {limit} Bytes. Bitte in mehrere Pakete aufteilen."
+                ),
+            )
         categories = {c.id: c.code for c in (await session.scalars(select(DocumentCategory))).all()}
         blobs = _blobs(request)
         entries: list[tuple[PackageEntry, bytes]] = []
@@ -618,7 +642,9 @@ async def download_package(
         if _sha256(data) != document.sha256:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Prüfsumme des Pakets weicht ab.")
         previous = row.status
-        if row.status == "provided":
+        # Review 1.22 Nr. 15: a read right only records the retrieval; the status moves to
+        # retrieved only for a principal with hoa:update (same right as the transition).
+        if row.status == "provided" and principal.has("hoa:update"):
             row.status = "retrieved"
         await _trail(
             session,

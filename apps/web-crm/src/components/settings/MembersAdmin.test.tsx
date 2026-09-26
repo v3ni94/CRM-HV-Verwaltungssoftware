@@ -20,6 +20,9 @@ const member = {
   status: "active",
   last_login_at: null,
   contact_id: null,
+  reply_approval_required: false,
+  reply_approval_reason: null,
+  reply_approval_until: null,
 };
 
 describe("MembersAdmin", () => {
@@ -130,5 +133,36 @@ describe("MembersAdmin", () => {
     expect(call).toBeDefined();
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({ legal_entity_ids: [HOA1] });
     await waitFor(() => expect(table.getByRole("button", { name: "Rechtsträger (1)" })).toBeInTheDocument());
+  });
+
+  it("sets the reply approval flag of a member (M20-03) through the settings permission", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith(`/api/bff/tenant/members/${MEMBER_ID}/reply-approval`) && init?.method === "PUT") {
+        return jsonResponse({ ...member, reply_approval_required: true, reply_approval_reason: "azubi", reply_approval_until: "2027-03-31" });
+      }
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+    renderIntl(
+      <MembersAdmin initialMembers={[member]} roles={roles} competenceCatalogue={competenceCatalogue} canCreate canUpdate canUpdateScope />,
+    );
+    const table = within(screen.getByRole("table"));
+    await userEvent.click(table.getByRole("button", { name: "Freigabepflicht für Ticketantworten" }));
+    const editor = within(table.getByTestId("reply-approval-editor"));
+    await userEvent.click(editor.getByRole("checkbox"));
+    await userEvent.selectOptions(editor.getByRole("combobox"), "azubi");
+    await userEvent.type(editor.getByLabelText("Befristet bis"), "2027-03-31");
+    await userEvent.click(editor.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(table.getByText(/Freigabepflicht: Azubi/)).toBeInTheDocument());
+    expect(table.getByText(/bis 31.03.2027/)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/bff/tenant/members/${MEMBER_ID}/reply-approval`,
+      expect.objectContaining({ method: "PUT", body: JSON.stringify({ required: true, reason: "azubi", until: "2027-03-31" }) }),
+    );
+  });
+
+  it("hides the reply approval editor without the settings permission", () => {
+    renderIntl(<MembersAdmin initialMembers={[member]} roles={roles} competenceCatalogue={competenceCatalogue} canCreate canUpdate />);
+    expect(screen.queryByTestId("reply-approval-toggle")).not.toBeInTheDocument();
   });
 });

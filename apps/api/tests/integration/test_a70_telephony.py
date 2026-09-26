@@ -173,9 +173,12 @@ def test_valid_signature_records_unique_match_and_folds_started_into_ended(
     ref = f"call-unique-{RUN}"
     first = _ok(_deliver(client, SLUG_A, SECRET_A, _event("call.started", NUMBER_UNIQUE, ref)))
     assert first["status"] == "recorded"
-    assert first["match_status"] == "matched"
-    assert first["contact_id"] == contacts["unique"]
-    assert first["proposal"] == "none"  # answered call, no open ticket: no proposal
+    # Review 1.22 Nr. 18: the answer to the telephone system carries no match information.
+    assert set(first) == {"status", "call_id"}
+    started = next(r for r in _ok(client.get(C, headers=h)) if r["id"] == first["call_id"])
+    assert started["match_status"] == "matched"
+    assert started["contact_id"] == contacts["unique"]
+    assert started["proposal_status"] == "none"  # answered call, no open ticket: no proposal
     ended = _ok(
         _deliver(
             client,
@@ -206,10 +209,10 @@ def test_ambiguous_number_gives_candidates_and_manual_assignment(
     out = _ok(
         _deliver(client, SLUG_A, SECRET_A, _event("call.started", "0211 12345602", f"amb-{RUN}"))
     )
-    assert out["match_status"] == "ambiguous"
-    assert out["contact_id"] is None
-    assert out["candidates"] == 2
+    assert set(out) == {"status", "call_id"}
     row = next(r for r in _ok(client.get(C, headers=h)) if r["id"] == out["call_id"])
+    assert row["match_status"] == "ambiguous"
+    assert row["contact_id"] is None
     assert set(row["candidate_contact_ids"]) == {contacts["shared1"], contacts["shared2"]}
     assert row["number"] == NUMBER_SHARED  # normalised to E.164
     assigned = _ok(
@@ -228,13 +231,14 @@ def test_unknown_number_and_unreadable_number(client: TestClient, world: World) 
     unknown = _ok(
         _deliver(client, SLUG_A, SECRET_A, _event("call.started", NUMBER_UNKNOWN, f"unk-{RUN}"))
     )
-    assert unknown["match_status"] == "unknown"
-    assert unknown["contact_id"] is None
     anonymous = _ok(
         _deliver(client, SLUG_A, SECRET_A, _event("call.missed", "anonym", f"anon-{RUN}"))
     )
-    assert anonymous["match_status"] == "unknown"
-    assert anonymous["proposal"] == "proposed"
+    rows = {r["id"]: r for r in _ok(client.get(C, headers=h))}
+    assert rows[unknown["call_id"]]["match_status"] == "unknown"
+    assert rows[unknown["call_id"]]["contact_id"] is None
+    assert rows[anonymous["call_id"]]["match_status"] == "unknown"
+    assert rows[anonymous["call_id"]]["proposal_status"] == "proposed"
 
 
 def test_missed_call_proposes_callback_and_accept_creates_one_ticket(
@@ -251,7 +255,9 @@ def test_missed_call_proposes_callback_and_accept_creates_one_ticket(
     out = _ok(
         _deliver(client, SLUG_A, SECRET_A, _event("call.missed", NUMBER_UNIQUE, f"miss-{RUN}"))
     )
-    assert out["proposal"] == "proposed"
+    assert set(out) == {"status", "call_id"}
+    missed = next(r for r in _ok(client.get(C, headers=h)) if r["id"] == out["call_id"])
+    assert missed["proposal_status"] == "proposed"
     # No ticket by the webhook itself (rule 0.1.6).
     after = {
         t["id"]
@@ -275,8 +281,8 @@ def test_missed_call_proposes_callback_and_accept_creates_one_ticket(
     related = _ok(
         _deliver(client, SLUG_A, SECRET_A, _event("call.started", NUMBER_UNIQUE, f"rel-{RUN}"))
     )
-    assert related["proposal"] == "proposed"
     rel_row = next(r for r in _ok(client.get(C, headers=h)) if r["id"] == related["call_id"])
+    assert rel_row["proposal_status"] == "proposed"
     assert rel_row["related_ticket_id"] == created["ticket_id"]
     dismissed = _ok(client.post(f"{C}/{related['call_id']}/proposal/dismiss", headers=h))
     assert dismissed["proposal_status"] == "dismissed"
@@ -354,14 +360,16 @@ def test_tenant_separation(client: TestClient, world: World, contacts: dict[str,
     a_call = _ok(
         _deliver(client, SLUG_A, SECRET_A, _event("call.missed", NUMBER_UNIQUE, f"sep-{RUN}"))
     )
-    assert a_call["contact_id"] == contacts["unique"]
+    a_row = next(r for r in _ok(client.get(C, headers=ha)) if r["id"] == a_call["call_id"])
+    assert a_row["contact_id"] == contacts["unique"]
     # The same number in B matches nothing: A's contacts are invisible (RLS).
     b_call = _ok(
         _deliver(client, SLUG_B, SECRET_B, _event("call.missed", NUMBER_UNIQUE, f"sep-{RUN}"))
     )
-    assert b_call["match_status"] == "unknown"
     assert b_call["call_id"] != a_call["call_id"]
-    b_ids = {r["id"] for r in _ok(client.get(C, headers=hb))}
+    b_rows = {r["id"]: r for r in _ok(client.get(C, headers=hb))}
+    assert b_rows[b_call["call_id"]]["match_status"] == "unknown"
+    b_ids = set(b_rows)
     assert b_call["call_id"] in b_ids
     assert a_call["call_id"] not in b_ids
     assert client.get(f"/api/v1/contacts/{contacts['unique']}/calls", headers=hb).status_code == 404

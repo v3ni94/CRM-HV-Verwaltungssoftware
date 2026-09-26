@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { DatevMappingsAdmin, type DatevMapping, type LedgerOption } from "@/components/settings/DatevMappingsAdmin";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,7 @@ async function getJson<T>(path: string, fallback: T): Promise<T> {
  *  accounting:update, Bericht mit accounting:read. */
 export default async function DatevMappingsPage() {
   const t = await getTranslations("DatevMappings");
-  const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("accounting:read")) notFound();

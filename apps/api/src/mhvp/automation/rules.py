@@ -6,7 +6,10 @@ Evaluation context of an event (``build_context`` in ``services``)::
     {"type": "ticket.created", "entity_type": "ticket", "entity_id": "...",
      "actor_user_id": "...", "payload": {...}, "entity": {...ticket fields...}}
 
-Field paths are dot separated (``payload.number``, ``entity.category``). Comparison is
+Field paths are dot separated (``payload.number``, ``entity.category``). Related master data
+(A81) is addressed as ``property.*``, ``unit.*``, ``contact.*`` and ``contract.*`` with the
+closed catalogue ``RELATED_FIELDS`` (no money values); ``services.enrich_context`` loads only
+the groups a rule set uses, with one query per group. Comparison is
 deterministic: ``eq``/``ne`` compare normalised values (UUIDs and enums as strings),
 ``contains`` works on strings (case insensitive) and lists, ``gt``/``lt`` compare numbers
 or, when both sides are strings, strings.
@@ -26,6 +29,64 @@ AUTOMATION_MARKER = "automation"
 MAX_CONDITION_DEPTH = 5
 MAX_CONDITIONS = 50
 _PLACEHOLDER = re.compile(r"\{([a-zA-Z0-9_.]+)\}")
+
+# Related master data a condition may read (A81). Closed catalogue: identifiers, kinds and
+# status values only, never amounts, balances or bank data. ``contract.status`` is derived
+# from the contract dates at evaluation time (``future``, ``active``, ``terminated``, ``ended``).
+RELATED_FIELDS: dict[str, tuple[str, ...]] = {
+    "property": (
+        "number",
+        "name",
+        "management_type",
+        "management_mode",
+        "status",
+        "city",
+        "postal_code",
+        "manager_user_id",
+    ),
+    "unit": ("number", "unit_type", "floor", "label", "city", "is_fictional"),
+    "contact": (
+        "kind",
+        "roles",
+        "tags",
+        "blocked",
+        "language",
+        "preferred_channel",
+        "display_name",
+    ),
+    "contract": (
+        "kind",
+        "status",
+        "number",
+        "start_date",
+        "end_date",
+        "termination_date",
+        "sev_enabled",
+    ),
+}
+RELATED_GROUPS: tuple[str, ...] = tuple(RELATED_FIELDS)
+
+
+def condition_fields(node: dict[str, Any] | None) -> set[str]:
+    """Every field path used by the leaves of a (validated) condition tree."""
+    if not node:
+        return set()
+    if node.get("op") in GROUP_OPS:
+        out: set[str] = set()
+        for child in node.get("conditions", []):
+            out |= condition_fields(child)
+        return out
+    field = node.get("field")
+    return {field} if isinstance(field, str) else set()
+
+
+def related_groups(node: dict[str, Any] | None) -> set[str]:
+    """Related data groups (``property``, ``unit``, ``contact``, ``contract``) a tree reads."""
+    return {
+        path.split(".", 1)[0]
+        for path in condition_fields(node)
+        if path.split(".", 1)[0] in RELATED_FIELDS
+    }
 
 
 class RuleDefinitionError(ValueError):
@@ -122,6 +183,13 @@ def validate_conditions(node: dict[str, Any] | None, *, _depth: int = 0) -> int:
         field = node.get("field")
         if not isinstance(field, str) or not re.fullmatch(r"[a-zA-Z0-9_.]{1,200}", field):
             raise RuleDefinitionError("Bedingung braucht ein gültiges Feld.")
+        group, _, rest = field.partition(".")
+        if group in RELATED_FIELDS and rest not in RELATED_FIELDS[group]:
+            raise RuleDefinitionError(
+                f"Feld '{field}' ist nicht verfügbar. Erlaubt für {group}: "
+                + ", ".join(RELATED_FIELDS[group])
+                + "."
+            )
         if "value" not in node:
             raise RuleDefinitionError(f"Bedingung für '{field}' braucht einen Wert.")
         value = node["value"]

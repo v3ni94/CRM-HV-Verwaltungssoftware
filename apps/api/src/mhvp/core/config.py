@@ -82,6 +82,10 @@ class Settings(BaseSettings):
 
     # Handover photos (M30-04): longest edge after scaling, metadata is always stripped.
     handover_image_max_edge: int = Field(default=2000, ge=100, le=20000)
+    # OpenImmo 1.2.7 XSD stored by the operator (M26-02); the schema is copyrighted by the
+    # OpenImmo e.V. and not bundled. Empty: exports get a structural check only, with the
+    # operator notice "XSD nicht hinterlegt".
+    openimmo_xsd_path: str | None = None
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 

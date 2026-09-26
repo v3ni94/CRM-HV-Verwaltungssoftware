@@ -526,3 +526,11 @@ die vor Stufe 1 vollständig zu inventarisieren sind.
 ## 7. Offene Entscheidungen für den Betreiber
 
 Siehe `docs/OPEN_QUESTIONS.md`, Punkte M35-01 bis M35-07.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: Stufen 1 bis 5 (Datenmodell, Dokumentenmigration, Klassifikation mit Maskierung, Review Center, Listen, Vollständigkeitsprüfung, Nachforderungsschreiben, Berechtigungsschlüssel `objektakte:*`, Differenzimport mit Wasserstand und Löschmarkierungen, Synchronisationsstand im CRM), Regeln M35-01 bis M35-03, Celery-Jobs in `objektakte/tasks.py`, Router `routers`, `sync_router`, `review_routers`, `rules_routers`, `lists_routers`, `completeness_routers`, `ai_call_routers` (alle in `main.py` registriert).
+* Tests: Integrationstests `tests/integration/test_m35_*`, Vitest `SyncStatus` und weitere objektakte-Komponenten.
+* Offen: Entscheidungen in Abschnitt 7 (Datenhoheit gemappter Stammdatenfelder im Parallelbetrieb, Abschaltung), Benutzerabbildung, KI-Kosten, Listenablage und Anzeigenbilder laufen in anderer Sitzung (Lückenliste, Vorbemerkung), `contact.updated` aus dem Differenzimport (Lückenliste A87).

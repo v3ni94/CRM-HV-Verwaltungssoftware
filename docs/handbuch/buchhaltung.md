@@ -137,7 +137,7 @@ freie Mittel), Zahlungen je Debitor und Erträge je Erlöskonto für einen Zeitr
 Prüfexport (ZIP je Rechtsträger und Zeitraum mit CSV je Tabelle und SHA-256-Prüfsumme, im
 Hintergrund erstellt). Über die Schnittstelle zusätzlich Journal-Export als CSV mit
 Prüfsumme und DATEV-Buchungsstapel, sofern Beraterdaten und Kontenzuordnung hinterlegt
-sind (Einstellungen, Rechnungsstellung und Steuer, DATEV-Zuordnungen).
+sind (Einstellungen, Buchhaltung, DATEV; Kapitel Einstellungen).
 
 ## Verwalterhonorar
 

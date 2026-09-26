@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { PortalFormsAdmin, type PortalFormTemplate } from "@/components/settings/PortalFormsAdmin";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverFetch, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,7 @@ export const dynamic = "force-dynamic";
  *  Backend geprüft; hier nur die Anzeige der Aktionen). */
 export default async function PortalFormsPage() {
   const t = await getTranslations("PortalForms");
-  const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("tickets:read")) notFound();

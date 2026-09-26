@@ -47,3 +47,11 @@ Vorbereitung eingehender Mails (Absender, Rolle, Einheit, passende Dokumente, An
 Siehe `docs/OPEN_QUESTIONS.md` (M34-01 Freigabeworkflow für Wissenseinträge, M34-02
 Google-Drive-Suche noch nicht gegen einen echten Drive-Account verifiziert, M34-03 Umgang mit
 mehrdeutigen Rollen bei mehreren aktiven Verträgen derselben Partei).
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: `ai_knowledge_entry` (Migration 0051), API `/api/v1/ai/knowledge`, Mail-Vorbereitung `mhvp.communication.preparation` mit Dokumentsuche strikt je Objekt (Regel M20-05), Korrektur als gelernter Eintrag, CRM-Abschnitt Wissensbasis und Panel Vorbereitung.
+* Tests: `test_m34_ai_knowledge.py`.
+* Offen: M34-01 bis M34-03 wie oben.

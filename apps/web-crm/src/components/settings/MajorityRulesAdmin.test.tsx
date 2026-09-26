@@ -53,3 +53,26 @@ describe("MajorityRulesAdmin", () => {
     });
   });
 });
+
+describe("MajorityRulesAdmin usability (review 26.09.2026)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("explains why the form cannot be sent and blocks an invalid custom fraction", async () => {
+    renderIntl(<MajorityRulesAdmin rules={[]} entities={[]} canManage={true} />);
+    expect(screen.getByText("Fundstelle mit mindestens 3 Zeichen angeben.")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Fundstelle"), "GO § 7");
+    await userEvent.selectOptions(screen.getByLabelText("Mehrheit"), "custom");
+    await userEvent.type(screen.getByLabelText("Zähler"), "5");
+    await userEvent.type(screen.getByLabelText("Nenner"), "3");
+    expect(screen.getByText(/Zähler und Nenner als ganze Zahlen/)).toBeInTheDocument();
+    expect(screen.getByText("Regel anlegen")).toBeDisabled();
+  });
+
+  it("confirms a saved rule", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse(rule, 201));
+    renderIntl(<MajorityRulesAdmin rules={[]} entities={[]} canManage={true} />);
+    await userEvent.type(screen.getByLabelText("Fundstelle"), "Gemeinschaftsordnung § 7");
+    await userEvent.click(screen.getByText("Regel anlegen"));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Gespeichert."));
+  });
+});

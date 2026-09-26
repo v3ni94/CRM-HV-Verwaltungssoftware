@@ -48,3 +48,10 @@ Vor Einsatz gegen die aktuelle Anbieterdokumentation prüfen.
 ## Offen
 
 - M35-08: Wahl des SMS-Anbieters und Zugangsdaten durch den Betreiber offen.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: `SlaRule.channels_by_level`, Systemmail über `mhvp.communication.transport`, SMS-Gateway je Mandant (`sla_sms_gateway`, Migration 0055), Endpunkte `/api/v1/sla/sms-gateway` und `/tenant/members/{id}/mobile-phone`.
+* Tests wie oben. Offen: M35-08 (SMS-Anbieter und Zugangsdaten beim Betreiber).

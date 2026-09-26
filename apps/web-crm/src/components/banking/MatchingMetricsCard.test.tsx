@@ -27,7 +27,9 @@ describe("MatchingMetricsCard", () => {
   it("shows coverage and error rate apart for the requested period", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse(METRICS));
     renderIntl(<MatchingMetricsCard initialFrom="2026-03-01" initialTo="2026-03-31" />);
+    expect(screen.getByRole("status")).toHaveTextContent("Kennzahlen werden geladen.");
     expect(await screen.findByTestId("metric-coverage")).toHaveTextContent("40,0 %");
+    expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByTestId("metric-error-rate")).toHaveTextContent("50,0 %");
     expect(screen.getByText(/2 von 5/)).toBeInTheDocument();
     expect(screen.getByText(/1 von 2/)).toBeInTheDocument();

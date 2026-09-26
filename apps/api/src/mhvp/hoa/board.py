@@ -1,20 +1,28 @@
-"""CRM side of the board audit room (7.9.2 PÜ06 to PÜ08, A52): list of engagements, board
-portal access per engagement (invitation like an owner, role ``board``) and the management
-answer to a board question. The board itself acts only through ``mhvp.portal.board``."""
+"""CRM side of the board audit room (7.9.2 PÜ06 to PÜ09, A52, A72): list of engagements,
+candidate bookings for audit items (filter by account, vendor and date), board portal access
+per engagement (invitation like an owner, role ``board``), the management answer to a board
+question and the board statement on a report (text only, no release effect). The board itself
+acts only through ``mhvp.portal.board``."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query, Request
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import (
+    ensure_session_legal_entity_allowed,
+    session_allowed_legal_entity_ids,
+)
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.hoa.models import AuditEngagement
+from mhvp.hoa.models import AuditEngagement, AuditItem, AuditReport
 from mhvp.portal.board import (
     BOARD_LEGAL_BASIS,
     BOARD_ROLE,
@@ -49,10 +57,26 @@ class BoardAnswerIn(_In):
     answer: str = Field(min_length=1, max_length=4000)
 
 
+class BoardStatementIn(_In):
+    statement: str = Field(min_length=1, max_length=8000)
+
+    @field_validator("statement")
+    @classmethod
+    def _not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Die Stellungnahme darf nicht leer sein.")
+        return value.strip()
+
+
+MAX_CANDIDATES = 200
+
+
 async def _engagement(session: AsyncSession, engagement_id: uuid.UUID) -> AuditEngagement:
     eng = await session.get(AuditEngagement, engagement_id)
     if eng is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    # Legal entity scope of the membership (A37): a foreign community answers 404.
+    ensure_session_legal_entity_allowed(session, eng.legal_entity_id)
     return eng
 
 
@@ -72,6 +96,9 @@ async def list_audits(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
+        allowed = session_allowed_legal_entity_ids(session)
+        if allowed is not None and legal_entity_id not in allowed:
+            return []
         rows = await session.scalars(
             select(AuditEngagement)
             .where(AuditEngagement.legal_entity_id == legal_entity_id)
@@ -239,6 +266,7 @@ async def revoke_board_access(
     principal: TenantPrincipal = Depends(GRANT),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
+        await _engagement(session, engagement_id)
         row = await session.get(BoardAccess, access_id)
         if row is None or row.engagement_id != engagement_id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
@@ -271,6 +299,7 @@ async def answer_board_note(
     principal: TenantPrincipal = Depends(ANSWER),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
+        await _engagement(session, engagement_id)
         note = await session.get(BoardAuditNote, note_id)
         if note is None or note.engagement_id != engagement_id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
@@ -284,3 +313,233 @@ async def answer_board_note(
             tenant_id=principal.tenant_id,
         )
         return note_out(note)
+
+
+# Candidate bookings for audit items (PÜ07, PÜ08; A72) --------------------------------------
+
+
+@router.get(
+    "/audits/{audit_id}/candidates",
+    summary="Gebuchte Positionen zur Auswahl als Prüfposition (Filter Konto, Lieferant, Datum)",
+)
+async def audit_candidates(
+    audit_id: uuid.UUID,
+    request: Request,
+    account_id: uuid.UUID | None = None,
+    vendor_contact_id: uuid.UUID | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    q: str | None = Query(default=None, max_length=200),
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """Posted journal entries of the community in the engagement period (or a narrower date
+    range inside it) with their accounts and, where an invoice is booked, the vendor. Read
+    only: the selection itself is ``POST /hoa/audits/{id}/items``; already selected entries are
+    flagged. At most ``MAX_CANDIDATES`` rows, ordered by booking date."""
+    from mhvp.accounting.models import (
+        EntryStatus,
+        Invoice,
+        JournalEntry,
+        JournalLine,
+        Ledger,
+        LedgerAccount,
+    )
+
+    async with tenant_tx(request, principal) as session:
+        eng = await _engagement(session, audit_id)
+        start = max(date_from, eng.period_from) if date_from else eng.period_from
+        end = min(date_to, eng.period_to) if date_to else eng.period_to
+        if end < start:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Zeitraum ungültig.")
+        query = (
+            select(JournalEntry)
+            .join(Ledger, Ledger.id == JournalEntry.ledger_id)
+            .where(
+                Ledger.legal_entity_id == eng.legal_entity_id,
+                JournalEntry.status == EntryStatus.POSTED,
+                JournalEntry.booking_date.between(start, end),
+            )
+        )
+        if account_id is not None:
+            query = query.where(
+                JournalEntry.id.in_(
+                    select(JournalLine.journal_entry_id).where(JournalLine.account_id == account_id)
+                )
+            )
+        if vendor_contact_id is not None:
+            by_vendor = select(Invoice).where(Invoice.provider_contact_id == vendor_contact_id)
+            query = query.where(
+                JournalEntry.id.in_(
+                    by_vendor.with_only_columns(Invoice.journal_entry_id).where(
+                        Invoice.journal_entry_id.is_not(None)
+                    )
+                )
+                | JournalEntry.document_id.in_(
+                    by_vendor.with_only_columns(Invoice.document_id).where(
+                        Invoice.document_id.is_not(None)
+                    )
+                )
+            )
+        if q:
+            query = query.where(JournalEntry.text.ilike(f"%{q.strip()}%"))
+        total = int(await session.scalar(select(func.count()).select_from(query.subquery())) or 0)
+        entries = (
+            await session.scalars(
+                query.order_by(JournalEntry.booking_date, JournalEntry.number).limit(MAX_CANDIDATES)
+            )
+        ).all()
+        entry_ids = [e.id for e in entries]
+        lines = (
+            (
+                await session.execute(
+                    select(
+                        JournalLine.journal_entry_id,
+                        LedgerAccount.id,
+                        LedgerAccount.number,
+                        LedgerAccount.name,
+                        JournalLine.debit,
+                    )
+                    .join(LedgerAccount, LedgerAccount.id == JournalLine.account_id)
+                    .where(JournalLine.journal_entry_id.in_(entry_ids))
+                )
+            ).all()
+            if entry_ids
+            else []
+        )
+        accounts: dict[uuid.UUID, list[dict[str, Any]]] = {}
+        amounts: dict[uuid.UUID, Decimal] = {}
+        for entry_id, acc_id, number, name, debit in lines:
+            accounts.setdefault(entry_id, []).append({"id": acc_id, "number": number, "name": name})
+            amounts[entry_id] = amounts.get(entry_id, Decimal("0")) + Decimal(debit)
+        invoices = (
+            (
+                await session.execute(
+                    select(
+                        Invoice.journal_entry_id,
+                        Invoice.document_id,
+                        Invoice.provider_contact_id,
+                        Invoice.number,
+                    ).where(
+                        Invoice.journal_entry_id.in_(entry_ids)
+                        | Invoice.document_id.in_([e.document_id for e in entries if e.document_id])
+                    )
+                )
+            ).all()
+            if entry_ids
+            else []
+        )
+        vendor_by_entry: dict[uuid.UUID, tuple[uuid.UUID, str]] = {}
+        vendor_by_document: dict[uuid.UUID, tuple[uuid.UUID, str]] = {}
+        for je_id, doc_id, provider, number in invoices:
+            if je_id is not None:
+                vendor_by_entry[je_id] = (provider, number)
+            if doc_id is not None:
+                vendor_by_document[doc_id] = (provider, number)
+        selected = set(
+            (
+                await session.scalars(
+                    select(AuditItem.journal_entry_id).where(
+                        AuditItem.engagement_id == eng.id, AuditItem.journal_entry_id.is_not(None)
+                    )
+                )
+            ).all()
+        )
+        rows = []
+        for e in entries:
+            vendor = vendor_by_entry.get(e.id) or (
+                vendor_by_document.get(e.document_id) if e.document_id else None
+            )
+            rows.append(
+                {
+                    "journal_entry_id": e.id,
+                    "booking_date": e.booking_date,
+                    "number": e.number,
+                    "text": e.text,
+                    "amount": amounts.get(e.id, Decimal("0")),
+                    "document_id": e.document_id,
+                    "accounts": accounts.get(e.id, []),
+                    "vendor_contact_id": vendor[0] if vendor else None,
+                    "invoice_number": vendor[1] if vendor else None,
+                    "selected": e.id in selected,
+                }
+            )
+        return {
+            "period_from": start,
+            "period_to": end,
+            "total": total,
+            "truncated": total > len(rows),
+            "items": rows,
+        }
+
+
+# Reports and board statement (PÜ09; A72) ----------------------------------------------------
+
+
+def _report_out(r: AuditReport) -> dict[str, Any]:
+    return {
+        "id": r.id,
+        "engagement_id": r.engagement_id,
+        "version": r.version,
+        "content": r.content,
+        "board_statement": r.content.get("board_statement"),
+        "created_at": r.created_at,
+    }
+
+
+@router.get("/audits/{audit_id}/reports", summary="Prüfberichte eines Prüfauftrags (PÜ09)")
+async def list_reports(
+    audit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        eng = await _engagement(session, audit_id)
+        rows = await session.scalars(
+            select(AuditReport)
+            .where(AuditReport.engagement_id == eng.id)
+            .order_by(AuditReport.version.desc())
+        )
+        return [_report_out(r) for r in rows]
+
+
+@router.post(
+    "/audit-reports/{report_id}/board-statement",
+    summary="Beiratsstellungnahme zum Prüfbericht erfassen (PÜ09, nur Text)",
+)
+async def set_board_statement(
+    report_id: uuid.UUID,
+    body: BoardStatementIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(ANSWER),
+) -> dict[str, Any]:
+    """Records the statement of the board on a report version as text. It has no release
+    effect: neither the report nor the statement (Abrechnung) changes status, and the report
+    figures stay untouched. A later statement replaces the text; the previous one is kept in
+    the history of the report content."""
+    async with tenant_tx(request, principal) as session:
+        report = await session.get(AuditReport, report_id)
+        if report is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await _engagement(session, report.engagement_id)
+        now = datetime.now(UTC)
+        content = dict(report.content)
+        history = list(content.get("board_statement_history") or [])
+        if content.get("board_statement"):
+            history.append(content["board_statement"])
+        content["board_statement"] = {
+            "text": body.statement.strip(),
+            "recorded_by": str(principal.user_id),
+            "recorded_at": now.isoformat(),
+        }
+        content["board_statement_history"] = history
+        report.content = content
+        flag_modified(report, "content")
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="audit_report.board_statement",
+            entity_type="audit_engagement",
+            entity_id=report.engagement_id,
+            actor_user_id=principal.user_id,
+            payload={"report_id": str(report.id), "version": report.version},
+        )
+        return _report_out(report)

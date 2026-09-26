@@ -2,8 +2,8 @@
 ``resolved_by``), ``playbook.last_used_at`` und die KI-Aufgabe ``ticket_resolution`` für die
 Lernbeispiele aus Erledigungen (Betreiberauftrag 26.09.2026). Keine neuen Mandantentabellen.
 
-Revision ID: 0126
-Revises: 0125
+Revision ID: 0130
+Revises: 0129
 """
 
 from collections.abc import Sequence
@@ -11,8 +11,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0126"
-down_revision: str | None = "0125"
+revision: str = "0130"
+down_revision: str | None = "0129"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -1,6 +1,7 @@
 """Property endpoints (/api/v1/properties, units, buildings, meters, catalogues)."""
 
 import uuid
+from collections.abc import Sequence
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Any
@@ -310,28 +311,45 @@ async def create_building(
 
 async def _unit_out(session: Any, unit: Unit, as_of: date | None) -> s.UnitOut:
     await session.refresh(unit)
-    out = s.UnitOut.model_validate(unit)
+    return (await _units_out(session, [unit], as_of))[0]
+
+
+async def _units_out(session: Any, units: Sequence[Unit], as_of: date | None) -> list[s.UnitOut]:
+    """Allocation values and VAT options of all units in two queries instead of two per unit
+    (performance review 26.09.2026)."""
+    if not units:
+        return []
+    ids = [u.id for u in units]
     query = (
         select(UnitAllocationValue, AllocationKey.code, AllocationKey.name)
         .join(AllocationKey, AllocationKey.id == UnitAllocationValue.allocation_key_id)
-        .where(UnitAllocationValue.unit_id == unit.id)
+        .where(UnitAllocationValue.unit_id.in_(ids))
     )
-    vat = select(UnitVatOption.option).where(UnitVatOption.unit_id == unit.id)
+    vat = select(UnitVatOption).where(UnitVatOption.unit_id.in_(ids))
     if as_of is not None:
         query = query.where(svc.valid_at(UnitAllocationValue, as_of))
         vat = vat.where(svc.valid_at(UnitVatOption, as_of))
-    rows = (
+    values: dict[uuid.UUID, list[s.AllocationValueOut]] = {}
+    for v, code, name in (
         await session.execute(
             query.order_by(AllocationKey.sort_order, UnitAllocationValue.valid_from)
         )
-    ).all()
-    out.allocation_values = [
-        s.AllocationValueOut.model_validate(v).model_copy(
-            update={"key_code": code, "key_name": name}
+    ).all():
+        values.setdefault(v.unit_id, []).append(
+            s.AllocationValueOut.model_validate(v).model_copy(
+                update={"key_code": code, "key_name": name}
+            )
         )
-        for v, code, name in rows
-    ]
-    out.vat_option = await session.scalar(vat.order_by(UnitVatOption.valid_from.desc()).limit(1))
+    # Latest option per unit: rows come newest first, the first one per unit wins.
+    options: dict[uuid.UUID, Any] = {}
+    for o in (await session.scalars(vat.order_by(UnitVatOption.valid_from.desc()))).all():
+        options.setdefault(o.unit_id, o.option)
+    out = []
+    for unit in units:
+        row = s.UnitOut.model_validate(unit)
+        row.allocation_values = values.get(unit.id, [])
+        row.vat_option = options.get(unit.id)
+        out.append(row)
     return out
 
 
@@ -427,7 +445,7 @@ async def list_units(
             (await session.scalars(select(Unit).where(Unit.property_id == property_id))).all(),
             key=lambda u: svc.natural_key(u.number),
         )
-        out = [await _unit_out(session, u, as_of) for u in units]
+        out = await _units_out(session, units, as_of)
         if with_occupants:
             occ = await _occupants(session, [u.id for u in units], as_of or _today())
             for o in out:

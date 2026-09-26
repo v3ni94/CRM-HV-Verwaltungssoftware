@@ -101,7 +101,11 @@ export function TelephonySettings({ initial, canManage }: { initial: TelephonySe
       ) : (
         <p className={ui.help}>{t("readOnly")}</p>
       )}
-      {message ? <p className={ui.success}>{message}</p> : null}
+      {message ? (
+        <p role="status" className={ui.success}>
+          {message}
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}

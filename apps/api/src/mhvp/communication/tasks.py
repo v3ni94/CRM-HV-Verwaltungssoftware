@@ -4,6 +4,7 @@ playbook learning (M20 Übernahme aus dem Immoware Hub, queue ``ai``)."""
 import asyncio
 import logging
 import uuid
+from typing import Any
 
 from celery import shared_task
 from sqlalchemy import select
@@ -48,6 +49,9 @@ async def gmail_sync_all_once(settings: Settings) -> dict[str, int]:
                     totals["created"] += counts["created"]
                     totals["intake_runs"] = totals.get("intake_runs", 0) + len(run_ids)
                     _dispatch_runs(settings, tenant_id, run_ids, actor)
+                    # Rechnungs-Weiterleitung erst nach dem Commit des Abrufs (M13).
+                    if counts["created"]:
+                        await _forward_after_commit(settings, factory, tenant_id, totals)
                 except GmailError as exc:
                     totals["failed"] += 1
                     log.warning(
@@ -65,6 +69,21 @@ async def gmail_sync_all_once(settings: Settings) -> dict[str, int]:
     finally:
         await engine.dispose()
     return totals
+
+
+async def _forward_after_commit(
+    settings: Settings, factory: Any, tenant_id: uuid.UUID, totals: dict[str, int]
+) -> None:
+    """Sendet die im Abruf vorgemerkten Weiterleitungen in eigener Transaktion (Review
+    26.09.2026, M13); ein Fehler hier berührt den bereits gespeicherten Abruf nicht."""
+    from mhvp.communication.services import forward_queued
+
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            counts = await forward_queued(session, settings, tenant_id)
+        totals["forwarded"] = totals.get("forwarded", 0) + counts["forwarded"]
+    except Exception:
+        log.exception("invoice forward queue failed", extra={"tenant_id": str(tenant_id)})
 
 
 async def _auto_intake(
@@ -113,6 +132,27 @@ def _dispatch_runs(
 @shared_task(name="mhvp.communication.gmail_sync_all")
 def gmail_sync_all() -> dict[str, int]:
     return asyncio.run(gmail_sync_all_once(get_settings()))
+
+
+async def forward_queued_once(settings: Settings, tenant_id: uuid.UUID) -> dict[str, int]:
+    """Nachlaufjob der Rechnungs-Weiterleitung (Review 26.09.2026, M13): eigene Verbindung
+    und Transaktion, damit der Versand nie innerhalb des Ingests läuft."""
+    from mhvp.communication.services import forward_queued
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    try:
+        factory = create_session_factory(engine)
+        async with tenant_transaction(factory, tenant_id) as session:
+            return await forward_queued(session, settings, tenant_id)
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.communication.forward_queued")
+def forward_queued_task(tenant_id: str) -> dict[str, int]:
+    return asyncio.run(forward_queued_once(get_settings(), uuid.UUID(tenant_id)))
 
 
 async def suggest_message_once(

@@ -25,7 +25,7 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.documents.models import Document, DocumentLink
 from mhvp.letting import flow_import as flow
-from mhvp.letting import openimmo
+from mhvp.letting import openimmo, openimmo_schema
 from mhvp.letting.models import FlowImportRun, Listing, Prospect, RentIncreaseCase
 from mhvp.platform.models import Tenant, User
 
@@ -1106,18 +1106,35 @@ async def _listing_images(session: Any, request: Request, listing_id: uuid.UUID)
     return images
 
 
-def _ensure_exportable(result: openimmo.CompletenessResult, force: bool) -> None:
-    """Export lock (M26): an incomplete listing is exported only with force=true."""
-    if result.complete or force:
+def _schema_result(request: Request, xml: bytes) -> openimmo_schema.SchemaResult:
+    """Schema check of the built document against the operator's XSD (setting
+    ``openimmo_xsd_path``) or, without one, the documented structure (M26-02)."""
+    return openimmo_schema.validate_openimmo(xml, request.app.state.settings.openimmo_xsd_path)
+
+
+def _ensure_exportable(
+    result: openimmo.CompletenessResult,
+    force: bool,
+    schema: openimmo_schema.SchemaResult | None = None,
+) -> None:
+    """Export lock (M26): an incomplete listing or a document that fails the schema check
+    is exported only with force=true."""
+    if force or (result.complete and (schema is None or schema.valid)):
         return
-    raise ProblemError(
-        ErrorCodes.VALIDATION,
-        detail=(
+    if not result.complete:
+        detail = (
             "Die Anzeige ist für den OpenImmo-Export unvollständig. Fehlende Angaben ergänzen "
             "oder den Export ausdrücklich mit force=true auslösen (trotzdem exportieren)."
-        ),
-        extensions={"openimmo": result.to_dict()},
-    )
+        )
+    else:
+        detail = (
+            "Die OpenImmo-Datei besteht die Schemaprüfung nicht. Fehler beheben oder den "
+            "Export ausdrücklich mit force=true auslösen (trotzdem exportieren)."
+        )
+    payload = result.to_dict()
+    if schema is not None:
+        payload["schema"] = schema.to_dict()
+    raise ProblemError(ErrorCodes.VALIDATION, detail=detail, extensions={"openimmo": payload})
 
 
 @router.get(
@@ -1128,12 +1145,14 @@ async def openimmo_check(
     listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        listing, prop, _unit = await _listing_and_property(session, listing_id)
+        listing, prop, unit = await _listing_and_property(session, listing_id)
         contact = await _export_contact(session, principal)
         result = openimmo.check_completeness(listing, prop, contact)
         images = await _listing_images(session, request, listing_id)
+        xml = openimmo.build_openimmo_xml(listing, prop, unit, contact=contact, images=images)
         out = result.to_dict()
         out["image_count"] = len(images)
+        out["schema"] = _schema_result(request, xml).to_dict()
         return out
 
 
@@ -1141,7 +1160,10 @@ async def openimmo_check(
     "/listings/{listing_id}/openimmo.xml",
     summary="OpenImmo 1.2.7 Export als XML (nur lesend, kein Portal-Upload)",
     response_class=Response,
-    responses={200: {"content": {"application/xml": {}}}, 422: {"description": "unvollständig"}},
+    responses={
+        200: {"content": {"application/xml": {}}},
+        422: {"description": "unvollständig oder Schemafehler"},
+    },
 )
 async def get_listing_openimmo(
     listing_id: uuid.UUID,
@@ -1152,8 +1174,9 @@ async def get_listing_openimmo(
     async with tenant_tx(request, principal) as session:
         listing, prop, unit = await _listing_and_property(session, listing_id)
         contact = await _export_contact(session, principal)
-        _ensure_exportable(openimmo.check_completeness(listing, prop, contact), force)
+        completeness = openimmo.check_completeness(listing, prop, contact)
         xml = openimmo.build_openimmo_xml(listing, prop, unit, contact=contact)
+        _ensure_exportable(completeness, force, _schema_result(request, xml))
     return Response(
         content=xml,
         media_type="application/xml",
@@ -1165,7 +1188,10 @@ async def get_listing_openimmo(
     "/listings/{listing_id}/openimmo.zip",
     summary="OpenImmo 1.2.7 Export als ZIP (XML und verknüpfte Bilder, kein Portal-Upload)",
     response_class=Response,
-    responses={200: {"content": {"application/zip": {}}}, 422: {"description": "unvollständig"}},
+    responses={
+        200: {"content": {"application/zip": {}}},
+        422: {"description": "unvollständig oder Schemafehler"},
+    },
 )
 async def get_listing_openimmo_zip(
     listing_id: uuid.UUID,
@@ -1176,9 +1202,10 @@ async def get_listing_openimmo_zip(
     async with tenant_tx(request, principal) as session:
         listing, prop, unit = await _listing_and_property(session, listing_id)
         contact = await _export_contact(session, principal)
-        _ensure_exportable(openimmo.check_completeness(listing, prop, contact), force)
+        completeness = openimmo.check_completeness(listing, prop, contact)
         images = await _listing_images(session, request, listing_id)
         xml = openimmo.build_openimmo_xml(listing, prop, unit, contact=contact, images=images)
+        _ensure_exportable(completeness, force, _schema_result(request, xml))
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("listing.xml", xml)

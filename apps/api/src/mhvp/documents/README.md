@@ -61,3 +61,16 @@ other blocker (`services.deletion_blocker`) applies and no non pending DMS mirro
 deletion and refusal is emitted again with `replay: true`. Procedure: `docs/runbooks/backup.md`;
 test: `tests/integration/test_m9_restore_replay.py`.
 
+## Further files (addendum 26.09.2026)
+
+Checked against the folder contents on 26.09.2026, the following files were not listed above:
+
+* `intake_routers.py`: document inbox proposals (A42): list, accept, reject
+* `mirror_deletion.py`: logged deletion of mirrored copies in Paperless-ngx and Google Drive (A43, 6.9.5, M6-03)
+* `property_filing.py`: direct filing of one document into a property's Drive year folder (M11-finapi stage 3)
+
+## Performance (Review 26.09.2026)
+
+`GET /documents/intake-proposals` loads the documents of a page in one IN query. Indexes
+`document(tenant_id, created_at)` and `ai_proposal(tenant_id, entity_type, decision,
+created_at)` (migration 0127). Measurements in `docs/reviews/2026-09-26-performance.md`.

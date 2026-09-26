@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { InstallHint } from "@/components/shell/InstallHint";
 import { LogoutButton } from "@/components/shell/LogoutButton";
+import { PortalNav } from "@/components/shell/PortalNav";
 import type { Me } from "@/components/portal/types";
 import { serverApi } from "@/lib/api-server";
 
@@ -64,13 +65,13 @@ export default async function PortalLayout({ children }: { children: React.React
             </div>
             <LogoutButton />
           </div>
-          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            {links.map((link) => (
-              <Link key={link.href} href={link.href} className="text-muted hover:text-fg hover:underline">
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+          {/* O02: collapsible menu below md, horizontal row from md; active page marked. */}
+          <PortalNav
+            links={links}
+            label={t("nav.label")}
+            openLabel={t("nav.open")}
+            closeLabel={t("nav.close")}
+          />
         </div>
       </header>
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-5 px-4 py-6">

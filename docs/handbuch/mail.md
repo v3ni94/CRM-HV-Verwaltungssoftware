@@ -31,7 +31,9 @@ mit Sicherheit je Feld aus. Nach dem Start erscheint der Link Entwurf im Belegei
 Prüfung durch eine Person; die IBAN wird maskiert angezeigt und muss aus dem Original
 eingetragen und bestätigt werden (siehe Kapitel Belegeingang). Nur PDF, Bild oder
 Textanhänge sind möglich. Dieselbe Schaltfläche steht in der Ticket-Ansicht unter Anhänge
-aus E-Mails. Eine automatische Erfassung ohne diesen Schritt ist zurückgestellt.
+aus E-Mails. Ist unter Einstellungen, DMS-Anbindung der automatische Belegeingang aktiv,
+entsteht für PDF-Anhänge mit Rechnungsmerkmal beim Postfachabruf selbsttätig ein
+Belegentwurf; die Prüfung durch eine Person bleibt unverändert (Kapitel Belegeingang).
 
 ## Weiterleitung
 

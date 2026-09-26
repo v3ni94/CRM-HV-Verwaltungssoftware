@@ -400,14 +400,9 @@ async def _receive(request: Request, tenant_key: str | None) -> dict[str, Any]:
 
     async with tenant_transaction(factory, tenant_id) as session:
         row, created = await record_call(session, tenant_id=tenant_id, payload=payload)
-        return {
-            "status": "recorded" if created else "updated",
-            "call_id": str(row.id),
-            "match_status": row.match_status,
-            "contact_id": str(row.contact_id) if row.contact_id else None,
-            "candidates": len(row.candidate_contact_ids),
-            "proposal": row.proposal_status,
-        }
+        # Review 1.22 Nr. 18: the telephone system learns only that the event was recorded;
+        # whether the number belongs to a contact stays inside the CRM (calls list).
+        return {"status": "recorded" if created else "updated", "call_id": str(row.id)}
 
 
 @router.post(WEBHOOK, summary="Telefonie-Webhook (HMAC je Mandant, anbieterneutral)")

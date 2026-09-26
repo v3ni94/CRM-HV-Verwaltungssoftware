@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
+import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ const RUN_VARIANT: Record<string, StatusPillVariant> = {
 
 export default async function DunningPage() {
   const t = await getTranslations("Dunning");
-  const { data, response } = await serverApi().GET("/api/v1/accounting/dunning-runs");
+  const { data, error, response } = await serverApi().GET("/api/v1/accounting/dunning-runs");
   redirectIfUnauthenticated(response);
   const today = new Date().toISOString().slice(0, 10);
   return (
@@ -34,8 +35,12 @@ export default async function DunningPage() {
       <p className={ui.notice}>{t("notice")}</p>
       <DunningPreviewButton today={today} />
       <h2 className={ui.h2}>{t("runs")}</h2>
-      {(data ?? []).length === 0 ? (
-        <EmptyState title={t("empty")} />
+      {!data ? (
+        <p role="alert" className={ui.alert}>
+          {problemMessage(error as Problem | undefined, response.status)}
+        </p>
+      ) : data.length === 0 ? (
+        <EmptyState title={t("empty")} hint={t("emptyHint")} />
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
           {(data ?? []).map((r) => (

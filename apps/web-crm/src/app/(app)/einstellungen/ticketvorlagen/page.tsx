@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { TicketTemplatesAdmin, type TicketTemplate } from "@/components/settings/TicketTemplatesAdmin";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverFetch, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,7 @@ export const dynamic = "force-dynamic";
  *  hier nur die Anzeige der Aktionen). */
 export default async function TicketTemplatesPage() {
   const t = await getTranslations("TicketTemplates");
-  const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("tickets:read")) notFound();

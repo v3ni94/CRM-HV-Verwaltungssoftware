@@ -32,7 +32,7 @@ CSV = "\n".join(
 
 
 def test_parser_reads_both_amount_columns_by_position() -> None:
-    rows = parse_objektdaten(CSV)
+    rows = parse_objektdaten(CSV).rows
     unit = rows[0].units[0]
     assert (unit.owner, unit.owner_amount) == ("Bunte, Eva", "290,00")
     assert (unit.tenant, unit.tenant_amount) == ("Stark, Tim", "1.745,50")
@@ -158,7 +158,7 @@ def test_loop_reports_vacancy_missing_unit_handed_over_and_ambiguity() -> None:
         ),
     ]
     units = [("391/1", uuid.uuid4(), uuid.uuid4())]  # 216/15 was never imported
-    rows = parse_objektdaten(CSV)
+    rows = parse_objektdaten(CSV).rows
     session = FakeSession(contacts, units)
 
     report = asyncio.run(

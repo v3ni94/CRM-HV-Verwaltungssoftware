@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { redirectIfUnauthenticated, serverApi, sessionContext } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ export default async function ProfilePage() {
   const t = await getTranslations("Profile");
   const api = serverApi();
   const [me, sessions, devices, ctx] = await Promise.all([
-    api.GET("/api/v1/auth/me"),
+    getMe(),
     api.GET("/api/v1/auth/sessions"),
     api.GET("/api/v1/auth/trusted-devices"),
     sessionContext(),

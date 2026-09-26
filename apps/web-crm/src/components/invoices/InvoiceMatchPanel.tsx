@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { BankAccountSelect } from "@/components/banking/BankAccountSelect";
 import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -27,10 +28,17 @@ export function InvoiceMatchPanel({ invoiceId }: { invoiceId: string }) {
   const [executionDate, setExecutionDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   async function load() {
     const result = await bff<Match[]>(`/api/bff/banking/invoice-matching/${invoiceId}`);
-    if (result.ok) setMatches(result.data);
+    if (result.ok) {
+      setMatches(result.data);
+      setLoadError(null);
+    } else {
+      setMatches([]);
+      setLoadError(result.message);
+    }
   }
 
   useEffect(() => {
@@ -56,11 +64,25 @@ export function InvoiceMatchPanel({ invoiceId }: { invoiceId: string }) {
     setProposalNote(result.data.proposal_note);
   }
 
-  if (matches === null) return null;
+  if (matches === null) {
+    return (
+      <section className={ui.card} data-testid="invoice-match-panel">
+        <h2 className={ui.h2}>{t("title")}</h2>
+        <p role="status" className="mt-2 text-sm text-muted">
+          {t("loading")}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className={ui.card} data-testid="invoice-match-panel">
       <h2 className={ui.h2}>{t("title")}</h2>
+      {loadError ? (
+        <p role="alert" className={ui.alert}>
+          {loadError}
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
@@ -84,12 +106,17 @@ export function InvoiceMatchPanel({ invoiceId }: { invoiceId: string }) {
         </button>
         {matches.length === 0 ? (
           <>
-            <label className="flex flex-col gap-1 text-sm">
-              {t("bankAccountId")}
-              <input className={ui.input} value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {t("executionDate")}
+            <div className="min-w-64">
+              <BankAccountSelect
+                id="invoice-match-bank-account"
+                label={t("bankAccount")}
+                value={bankAccountId || null}
+                onChange={(a) => setBankAccountId(a?.id ?? "")}
+                showBalance={false}
+              />
+            </div>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("executionDate")}</span>
               <input
                 type="date"
                 className={ui.input}
@@ -108,6 +135,7 @@ export function InvoiceMatchPanel({ invoiceId }: { invoiceId: string }) {
           </>
         ) : null}
       </div>
+      {matches.length === 0 ? <p className={`${ui.help} mt-2`}>{t("proposeHint")}</p> : null}
     </section>
   );
 }

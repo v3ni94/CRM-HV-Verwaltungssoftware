@@ -29,6 +29,10 @@ export const ui = {
   h2: "mhvp-h2 font-semibold text-fg",
   subtitle: "mhvp-label",
   table: "mhvp-table",
+  /** Wrapper for data tables: horizontal scrolling on narrow screens instead of page overflow. */
+  tableScroll: "-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0",
+  tableStickyCol: "mhvp-table--sticky-col",
+  srOnly: "sr-only",
   pageGap: "flex flex-col gap-6",
   sectionGap: "flex flex-col gap-4",
   badge: "inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs font-medium text-muted",

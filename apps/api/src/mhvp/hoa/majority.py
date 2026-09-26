@@ -19,9 +19,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import (
+    ensure_session_legal_entity_allowed,
+    session_allowed_legal_entity_ids,
+)
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import HoaMajorityRule, Resolution
+from mhvp.properties.models import LegalEntity, LegalEntityKind
 
 router = APIRouter(prefix="/hoa", tags=["WEG"])
 READ = require_permission("accounting:read")
@@ -276,7 +281,22 @@ async def _load(session: AsyncSession, rule_id: uuid.UUID) -> HoaMajorityRule:
     row = await session.get(HoaMajorityRule, rule_id, with_for_update=True)
     if row is None or not row.active:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    if row.legal_entity_id is not None:
+        ensure_session_legal_entity_allowed(session, row.legal_entity_id)
     return row
+
+
+async def _ensure_community(session: AsyncSession, legal_entity_id: uuid.UUID | None) -> None:
+    """A community override must name a GdWE of the tenant inside the legal entity scope of
+    the membership (A37); a rental owner or a missing entity is refused (Review 1.22 Nr. 21)."""
+    if legal_entity_id is None:
+        return
+    ensure_session_legal_entity_allowed(session, legal_entity_id)
+    entity = await session.get(LegalEntity, legal_entity_id)
+    if entity is None or entity.kind is not LegalEntityKind.HOA:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="legal_entity_id muss eine GdWE des Mandanten sein."
+        )
 
 
 async def _ensure_unique(
@@ -305,6 +325,13 @@ async def list_subject_rules(
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         q = select(HoaMajorityRule).where(HoaMajorityRule.active.is_(True))
+        allowed = session_allowed_legal_entity_ids(session)
+        if allowed is not None:
+            # Scoped membership (A37): tenant defaults plus the own communities only.
+            q = q.where(
+                HoaMajorityRule.legal_entity_id.is_(None)
+                | HoaMajorityRule.legal_entity_id.in_(allowed)
+            )
         if legal_entity_id is not None:
             q = q.where(
                 (HoaMajorityRule.legal_entity_id == legal_entity_id)
@@ -325,6 +352,7 @@ async def create_subject_rule(
     body: HoaSubjectRuleIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
+        await _ensure_community(session, body.legal_entity_id)
         await _ensure_unique(session, body, None)
         row = HoaMajorityRule(
             tenant_id=principal.tenant_id,
@@ -358,6 +386,7 @@ async def update_subject_rule(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await _load(session, rule_id)
+        await _ensure_community(session, body.legal_entity_id)
         await _ensure_unique(session, body, row.id)
         before = _out(row)
         for key, value in body.model_dump().items():

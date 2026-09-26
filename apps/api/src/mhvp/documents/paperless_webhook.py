@@ -60,6 +60,10 @@ router = APIRouter(prefix="/documents/webhooks", tags=["Paperless Webhook"])
 
 SOURCE_SYSTEM = "paperless"
 WINDOW_SECONDS = 300
+MAX_BODY_BYTES = 16 * 1024
+# Column widths of Document.title and Document.filename (documents/models.py).
+MAX_TITLE_CHARS = 300
+MAX_FILENAME_CHARS = 255
 SIGNATURE_HEADER = "X-MHVP-Signature"
 TIMESTAMP_HEADER = "X-MHVP-Timestamp"
 TENANT_HEADER = "X-MHVP-Tenant"
@@ -105,6 +109,21 @@ async def _resolve_tenant(factory: async_sessionmaker[AsyncSession], key: str | 
     return found
 
 
+def document_names(
+    filename: str | None, title: str | None, *, paperless_document_id: int
+) -> tuple[str, str]:
+    """(filename, title) within the column widths of ``Document`` (Sicherheitsreview 1.22,
+    Befund 8): a Paperless name over the limit is cut, never refused, and an empty name falls
+    back to ``paperless-<id>.pdf``."""
+    name = (filename or "").strip() or f"paperless-{paperless_document_id}.pdf"
+    if len(name) > MAX_FILENAME_CHARS:
+        stem, dot, ext = name.rpartition(".")
+        keep = MAX_FILENAME_CHARS - (len(ext) + 1 if dot and len(ext) <= 10 else 0)
+        name = f"{stem[:keep]}.{ext}" if dot and len(ext) <= 10 else name[:MAX_FILENAME_CHARS]
+    shown = (title or "").strip() or name
+    return name, shown[:MAX_TITLE_CHARS]
+
+
 async def _connection(session: AsyncSession) -> DmsConnection | None:
     row: DmsConnection | None = await session.scalar(
         select(DmsConnection).where(
@@ -146,13 +165,15 @@ async def index_paperless_document(
             ErrorCodes.UPLOAD_REJECTED,
             detail="Das Paperless-Dokument überschreitet die zulässige Dateigröße.",
         )
-    filename = file.filename or f"paperless-{paperless_document_id}.pdf"
+    filename, document_title = document_names(
+        file.filename, title, paperless_document_id=paperless_document_id
+    )
     document = await svc.store_document(
         session,
         blobs,
         tenant_id=tenant_id,
         data=file.content,
-        title=(title or filename),
+        title=document_title,
         filename=filename,
         mime_type=file.content_type,
         source=DocumentSource.IMPORT,
@@ -271,7 +292,14 @@ async def _receive(request: Request, tenant_key: str | None) -> dict[str, Any]:
     settings: Settings = request.app.state.settings
     resources = request.app.state.resources
     factory: async_sessionmaker[AsyncSession] = resources.session_factory
+    # Size limit before anything is read or checked (Sicherheitsreview 1.22, Befund 2), same
+    # bound as the telephony webhook: the payload is a document id and a title.
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > MAX_BODY_BYTES:
+        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE, detail="Webhook-Inhalt zu groß.")
     raw = await request.body()
+    if len(raw) > MAX_BODY_BYTES:
+        raise ProblemError(ErrorCodes.WEBHOOK_TOO_LARGE, detail="Webhook-Inhalt zu groß.")
     timestamp = request.headers.get(TIMESTAMP_HEADER)
     signature = request.headers.get(SIGNATURE_HEADER)
     tenant_id = await _resolve_tenant(factory, tenant_key or request.headers.get(TENANT_HEADER))

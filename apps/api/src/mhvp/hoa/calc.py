@@ -347,10 +347,141 @@ async def ownership_periods(
     return out
 
 
+# W10 (A78): loan instalment schedule ---------------------------------------------------------
+
+SCHEDULE_NOTE = "Orientierung, maßgeblich ist der Darlehensvertrag."
+MAX_SCHEDULE_MONTHS = 600
+
+
+def add_months(day: date, months: int) -> date:
+    """Same day of month `months` later; a missing day is clamped to the month end."""
+    month_index = day.month - 1 + months
+    year, month = day.year + month_index // 12, month_index % 12 + 1
+    last = (date(year + (month == 12), month % 12 + 1, 1) - timedelta(days=1)).day
+    return date(year, month, min(day.day, last))
+
+
+def loan_schedule(
+    principal: Decimal,
+    interest_rate_percent: Decimal,
+    term_months: int | None,
+    instalment: Decimal | None,
+    start_date: date,
+) -> dict[str, Any]:
+    """Planned instalments as orientation (W10, A78), never a posting.
+
+    Annuity plan when an instalment is given (constant instalment, interest share falls,
+    repayment share rises); linear plan when only the term is given (constant repayment
+    principal / term, the last one takes the rounding rest). Monthly interest is the open
+    balance times rate / 100 / 12, rounded half up to the cent per instalment; the first
+    instalment is due one month after the start (interest for a full month), the last one
+    closes the balance exactly. With instalment and term the plan stops after the term and
+    reports the remaining balance as `residual` (follow up financing or final instalment per
+    contract). Day counts, fees, disbursement in tranches and rate changes are not modelled.
+    """
+    from mhvp.core.problems import ErrorCodes, ProblemError
+
+    if instalment is None and term_months is None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Ratenplan braucht eine Rate oder eine Laufzeit."
+        )
+    monthly_rate = interest_rate_percent / Decimal(100) / Decimal(12)
+    balance = principal.quantize(CENT)
+    kind = "annuity" if instalment is not None else "linear"
+    limit = term_months if term_months is not None else MAX_SCHEDULE_MONTHS
+    # linear plan: constant repayment share, the last instalment takes the rounding rest
+    linear_share = (principal / Decimal(limit)).quantize(CENT, rounding=ROUND_HALF_UP)
+    rows: list[dict[str, Any]] = []
+    interest_total = repayment_total = ZERO
+    number = 0
+    while balance > ZERO and number < limit:
+        number += 1
+        interest = (balance * monthly_rate).quantize(CENT, rounding=ROUND_HALF_UP)
+        if instalment is not None:
+            if number == 1 and instalment <= interest:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Rate deckt nicht einmal den ersten Monatszins, kein Tilgungsplan.",
+                )
+            repayment = min(instalment - interest, balance)
+        else:
+            repayment = balance if number == limit else min(linear_share, balance)
+        balance -= repayment
+        interest_total += interest
+        repayment_total += repayment
+        rows.append(
+            {
+                "number": number,
+                "due_date": add_months(start_date, number).isoformat(),
+                "instalment": str(interest + repayment),
+                "interest": str(interest),
+                "repayment": str(repayment),
+                "balance": str(balance),
+            }
+        )
+    return {
+        "kind": kind,
+        "rows": rows,
+        "months": len(rows),
+        "interest_total": str(interest_total),
+        "repayment_total": str(repayment_total),
+        "residual": str(balance),
+        "last_due_date": rows[-1]["due_date"] if rows else None,
+        "note_text": SCHEDULE_NOTE,
+    }
+
+
+def schedule_comparison(
+    rows: list[dict[str, Any]], booked_items: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Plan against booked repayment and interest items per month (YYYY-MM): difference is
+    booked minus planned; months with neither plan nor booking are left out. Display only."""
+    months: dict[str, dict[str, Decimal]] = {}
+
+    def bucket(month: str) -> dict[str, Decimal]:
+        return months.setdefault(
+            month,
+            {
+                "planned_repayment": ZERO,
+                "planned_interest": ZERO,
+                "booked_repayment": ZERO,
+                "booked_interest": ZERO,
+            },
+        )
+
+    for r in rows:
+        b = bucket(str(r["due_date"])[:7])
+        b["planned_repayment"] += Decimal(r["repayment"])
+        b["planned_interest"] += Decimal(r["interest"])
+    for i in booked_items:
+        if not i["booked"] or i["kind"] not in ("repayment", "interest"):
+            continue
+        b = bucket(str(i["booking_date"])[:7])
+        b[f"booked_{i['kind']}"] += Decimal(i["amount"])
+    out = []
+    for month in sorted(months):
+        b = months[month]
+        out.append(
+            {
+                "month": month,
+                **{k: str(v) for k, v in b.items()},
+                "difference_repayment": str(b["booked_repayment"] - b["planned_repayment"]),
+                "difference_interest": str(b["booked_interest"] - b["planned_interest"]),
+            }
+        )
+    return out
+
+
 # W04 (A60): cash flow reconciliation ---------------------------------------------------------
 
 # Codes the manager may use for an explained difference (statement.reconciliation_notes).
-RECONCILIATION_NOTE_CODES = ("heating_accrual", "creditor_timing", "prior_year", "other")
+RECONCILIATION_NOTE_CODES = (
+    "heating_accrual",
+    "creditor_timing",
+    "prior_year",
+    "migration_opening",
+    "other",
+)
 _CASH = ("bank", "cash")
 
 
@@ -379,9 +510,18 @@ async def cash_flow_reconciliation(
     positions (W10 items or loan accounts), reserve, owner refunds, transit. Manual explanations
     come from `notes` (heating accrual and the like). The unexplained rest is returned as a
     finding; the package blocks while it is not zero. Transfers between own bank and cash
-    accounts carry no counter line and are therefore neither inflow nor outflow."""
+    accounts carry no counter line and are therefore neither inflow nor outflow.
+
+    Takeover year (A80, 6.9.10): posted opening balance entries of the year are the migration
+    journal of the ledger (opening entries with the old system as source; the migrated
+    journal tables of 6.9.10 stay open in M8/M10). Their cash lines form the opening balance
+    instead of the prior year balance, they are neither inflow nor outflow, and their cost
+    lines (costs of the pre period carried over from the old system) are the explained
+    difference `migration_opening` between the costs booked on the platform and the costs
+    distributed for the full year. The block `migration` shows the takeover apart."""
     from mhvp.accounting.models import (
         AccountCategory,
+        EntryKind,
         EntryStatus,
         JournalEntry,
         JournalLine,
@@ -398,7 +538,8 @@ async def cash_flow_reconciliation(
         ).all()
     }
     cash_ids = {a.id for a in accounts.values() if a.category.value in _CASH}
-    cash_accounts = []
+    accounts_by_number = {a.number: a.id for a in accounts.values()}
+    cash_accounts: list[dict[str, Any]] = []
     opening_total = closing_total = ZERO
     for a in sorted((accounts[i] for i in cash_ids), key=lambda x: x.number):
         opening = await _balance(session, a.id, start - timedelta(days=1)) + ZERO
@@ -426,7 +567,7 @@ async def cash_flow_reconciliation(
     }
     rows = (
         await session.execute(
-            select(JournalLine, JournalEntry.id)
+            select(JournalLine, JournalEntry.id, JournalEntry.kind, JournalEntry.source)
             .join(JournalEntry, JournalEntry.id == JournalLine.journal_entry_id)
             .where(
                 JournalEntry.ledger_id == ledger.id,
@@ -436,8 +577,33 @@ async def cash_flow_reconciliation(
         )
     ).all()
     by_entry: dict[uuid.UUID, list[Any]] = {}
-    for line, entry_id in rows:
+    migration_entries: dict[uuid.UUID, str] = {}
+    for line, entry_id, kind, source in rows:
+        if kind is EntryKind.OPENING_BALANCE:
+            migration_entries[entry_id] = str(source.value)
+            continue
         by_entry.setdefault(entry_id, []).append(line)
+    # A80: opening balance entries of the year (takeover from the old system).
+    migration_cash: dict[uuid.UUID, Decimal] = {}
+    migration_cost = ZERO
+    migration_other = ZERO
+    for line, entry_id, _kind, _source in rows:
+        if entry_id not in migration_entries:
+            continue
+        value = line.debit - line.credit
+        if line.account_id in cash_ids:
+            migration_cash[line.account_id] = migration_cash.get(line.account_id, ZERO) + value
+        elif accounts[line.account_id].category is AccountCategory.COST:
+            migration_cost += value
+        else:
+            migration_other += value
+    migration_cash_total = sum(migration_cash.values(), ZERO)
+    if migration_entries:
+        for cash_row in cash_accounts:
+            cash_row["opening_migration"] = str(
+                migration_cash.get(accounts_by_number[cash_row["number"]], ZERO)
+            )
+        opening_total += migration_cash_total
     inflows: dict[str, Decimal] = {}
     outflows: dict[str, Decimal] = {}
     cost_booked = ZERO  # net debit on cost accounts, all posted entries, without loan entries
@@ -489,7 +655,7 @@ async def cash_flow_reconciliation(
         amount = Decimal(str(n["amount"]))
         manual_total += amount
         manual.append({"code": n["code"], "amount": str(amount), "note": n["note"]})
-    unexplained = cost_total - cost_booked - manual_total + structure_residual
+    unexplained = cost_total - cost_booked - manual_total - migration_cost + structure_residual
     bridge = [
         {"code": "outflows", "amount": str(outflows_total)},
         {"code": "reserve", "amount": str(-flow(outflows, "reserve"))},
@@ -504,6 +670,18 @@ async def cash_flow_reconciliation(
         {"code": "creditor_timing", "amount": str(-creditor_timing)},
         {"code": "structure_residual", "amount": str(-structure_residual)},
         {"code": "cost_booked", "amount": str(cost_booked), "subtotal": True},
+        *(
+            [
+                {
+                    "code": "migration_opening",
+                    "amount": str(migration_cost),
+                    "note": "Kosten der Vorperiode aus dem Migrationsjournal (Altsystem)",
+                    "migration": True,
+                }
+            ]
+            if migration_entries
+            else []
+        ),
         *[
             {"code": m["code"], "amount": m["amount"], "note": m["note"], "manual": True}
             for m in manual
@@ -533,6 +711,23 @@ async def cash_flow_reconciliation(
         "cost_booked": str(cost_booked),
         "cost_distributed": str(cost_total),
         "explained_manual": manual,
+        # A80: takeover from the old system (opening balance entries of the year).
+        "migration": {
+            "applied": bool(migration_entries),
+            "entries": len(migration_entries),
+            "sources": sorted(set(migration_entries.values())),
+            "cutoff": ledger.migration_cutoff.isoformat() if ledger.migration_cutoff else None,
+            "cash_opening": str(migration_cash_total),
+            "cost_opening": str(migration_cost),
+            "other_opening": str(migration_other),
+            "note": (
+                "Übernahme aus Altsystem: Anfangsbestand von Bank und Kasse aus dem "
+                "Migrationsjournal statt aus dem Vorjahr; Kosten der Vorperiode als erklärte "
+                "Differenz migration_opening (6.9.10)."
+                if migration_entries
+                else "Kein Migrationsjournal im Abrechnungsjahr."
+            ),
+        },
         "unexplained": str(unexplained),
         "note": (
             "Überleitung stimmt: Geldfluss, gebuchte und verteilte Kosten sind abgestimmt."

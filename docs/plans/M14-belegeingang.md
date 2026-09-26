@@ -121,11 +121,25 @@ das Feld nur zur Prüfung sichtbar, nicht editierbar.
   E-Rechnung, der wie eine natürliche Person aussieht (`issuer_person_name`, Handwerkswort
   wie "Malerbetrieb" wird abgestreift), deterministisch durch `[NAME]` ersetzt
   (`mhvp.receipts.masking`, `extraction.known_person_names`, Tests
-  `tests/unit/test_receipts_masking.py`). Verbleibende Lücke: ein Einzelunternehmer, der
-  weder im Kontaktstamm steht noch als Aussteller in einer XML-Rechnung genannt ist und im
-  reinen PDF-Text ohne Anrede auftritt; ein Nachname allein wird bewusst nie maskiert, damit
-  Firmennamen wie "Elektro Müller GmbH" erhalten bleiben. Der Prüfer sieht den maskierten
-  Auszug (`masked_excerpt`).
+  `tests/unit/test_receipts_masking.py`). Ein Nachname allein wird bewusst nie maskiert,
+  damit Firmennamen wie "Elektro Müller GmbH" erhalten bleiben. Der Prüfer sieht den
+  maskierten Auszug (`masked_excerpt`).
+* Einzelunternehmer ohne Kontakt (A84, 26.09.2026, umgesetzt): `masking.header_person_names`
+  erkennt deterministisch und ohne Anbieteraufruf Personennamen im Absenderblock (Namenszeile
+  unter den ersten acht Zeilen, gefolgt von einer Anschriftszeile mit Straße oder PLZ;
+  Berufsbezeichnungen wie "Malermeister", "Elektromeister", akademische Titel wie
+  "Dipl.-Ing." werden abgestreift) sowie unter Grußformeln ("Mit freundlichen Grüßen",
+  "Hochachtungsvoll"). Firmennamen mit Rechtsform oder Marker (GmbH, AG, e.K., KG, OHG, UG,
+  Stadtwerke, Verband) und Zeilen mit Dokumentwörtern (Rechnung, Objekt, Kunde) sind nie
+  Kandidaten; eine Namenszeile im Kopf ohne folgende Anschrift gilt als zweifelhaft und wird
+  nur maskiert, wenn der Name im Dokument mindestens zweimal vorkommt. Jeder erkannte Name
+  erhält einen stabilen Platzhalter (`[NAME 1]`, `[NAME 2]`, beide Schreibweisen
+  `Vorname Nachname` und `Nachname, Vorname`); `extraction.field_confidences` verwirft
+  Werte mit diesen Platzhaltern wie bisher. Grenzen: nur Namen aus lateinischem Alphabet
+  mit Großschreibung, kein Name in Großbuchstaben (OCR) als Kandidat, ein Name tief im
+  Text ohne Grußformel wird nicht geraten. Tests: 21 Fälle in
+  `tests/unit/test_receipts_masking.py` (positiv, negativ, Firmenname, OCR-Leerräume,
+  zweifelhafte Treffer).
 * Die Aktion "Als Rechnung erfassen" in der Mail- und Ticketansicht nutzt
   `POST /receipts/drafts` mit `source=mail_attachment` (`components/receipts/AttachmentReceiptAction.tsx`,
   `components/tickets/TicketMailAttachments.tsx`). Der API-Endpunkt
@@ -144,3 +158,11 @@ das Feld nur zur Prüfung sichtbar, nicht editierbar.
   §-35a-Felder sind optional im Ausgabeschema beschrieben.
 * `apps/api/openapi.json` und `packages/api-client` wurden nicht neu erzeugt (parallele
   Änderungen anderer Aufgaben); `make openapi` nach dem Zusammenführen ausführen.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: `mhvp.receipts` (Entwürfe, Extraktion, E-Rechnung, Maskierung, Router), Migration 0080, Aktion "Als Rechnung erfassen" über `POST /receipts/drafts`, Paperless-Webhook (A30), Maskierung von Personenkontakten und Ausstellernamen (A65).
+* Tests: `test_m14_receipt_drafts.py` (D41, D42, D44), `test_m14_einvoice.py`, `test_m14_paperless_webhook.py`, `tests/unit/test_receipts_masking.py`.
+* Offen wie in "Offene Punkte": Feldkonfidenzen, englische Texte, M14-06, `make openapi`. A84 (Einzelunternehmer ohne Kontakt) ist heuristisch umgesetzt, siehe oben.

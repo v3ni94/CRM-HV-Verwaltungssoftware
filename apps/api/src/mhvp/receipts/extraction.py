@@ -44,6 +44,7 @@ from mhvp.documents.models import Document, TextStatus
 from mhvp.properties.models import Property
 from mhvp.receipts import einvoice
 from mhvp.receipts.masking import (
+    header_person_names,
     iban_candidates,
     iban_checksum_ok,
     issuer_person_name,
@@ -57,7 +58,8 @@ MAX_TEXT_CHARS = 200_000
 EXCERPT_CHARS = 4_000
 INSTRUCTION = (
     "Eingangsrechnung erfassen. Personenbezogene Daten wurden vor der Übermittlung maskiert "
-    "([IBAN], [E-MAIL], [TELEFON], [NAME]); Platzhalter nie als Wert übernehmen."
+    "([IBAN], [E-MAIL], [TELEFON], [NAME], [NAME 1], [NAME 2] ...); Platzhalter nie als "
+    "Wert übernehmen."
 )
 
 # Fields of the draft in display order (UI and API contract).
@@ -91,7 +93,7 @@ _WARNING_KEYWORDS: dict[str, tuple[str, ...]] = {
     "discount_percent": ("skonto",),
     "discount_until": ("skonto",),
 }
-_PLACEHOLDER = re.compile(r"\[(?:IBAN|E-MAIL|TELEFON|NAME|BIC)\]")
+_PLACEHOLDER = re.compile(r"\[(?:IBAN|E-MAIL|TELEFON|NAME(?: \d+)?|BIC)\]")
 
 
 def _field(
@@ -344,7 +346,14 @@ async def prepare(
         await session.flush()
         return draft
     names = await known_person_names(session, issuer=inv.seller_name if inv is not None else None)
-    masked = mask_text(f"Dateiname: {mask_text(document.filename, names)}\n\n{raw}", names)
+    # A84: sole trader neither in the contacts nor in an XML issuer field, heuristic and
+    # deterministic (letterhead sender block, signature), stable placeholder per name.
+    header_names = header_person_names(raw)
+    masked = mask_text(
+        f"Dateiname: {mask_text(document.filename, names, header_names=header_names)}\n\n{raw}",
+        names,
+        header_names=header_names,
+    )
     content = f"{INSTRUCTION}\n\n<daten>\n{masked}\n</daten>"
     prompt = tasks.prompt(AiTask.EXTRACT_INVOICE)
     context = {"context_type": "receipt_draft", "document_id": str(document.id)}

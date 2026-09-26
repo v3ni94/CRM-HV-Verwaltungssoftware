@@ -59,3 +59,27 @@ describe("BillingSettingsForm", () => {
     expect(screen.getByText("Nur zur Ansicht. Änderungen erfordert das Recht Mandanteneinstellungen ändern.")).toBeInTheDocument();
   });
 });
+
+describe("BillingSettingsForm validation (review 26.09.2026)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("rejects a malformed invoice prefix before calling the API", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    renderIntl(<BillingSettingsForm initial={initial} canUpdate />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Rechnungskürzel"), "hv");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("2 bis 16 Großbuchstaben oder Ziffern.");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps an account length outside 4 to 8 from reaching the API (native range check)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    renderIntl(<BillingSettingsForm initial={initial} canUpdate />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/Sachkontenlänge/), "12");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

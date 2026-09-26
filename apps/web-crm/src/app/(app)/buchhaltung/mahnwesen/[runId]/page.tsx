@@ -56,9 +56,16 @@ export default async function DunningRunPage({ params }: { params: Promise<{ run
       />
       <p className={ui.notice}>{t("feesLocked")}</p>
       <p className={ui.notice}>{t("letterNotice")}</p>
-      {data.status === "preview" && proposed > 0 ? <DunningApproveButton runId={runId} /> : null}
+      {data.status === "preview" && proposed > 0 ? (
+        <div className="flex flex-col gap-1">
+          <DunningApproveButton runId={runId} />
+          <p className={ui.help}>{t("approveHint", { count: proposed })}</p>
+        </div>
+      ) : null}
+      {data.status === "preview" && proposed === 0 ? <p className={ui.help}>{t("nothingToApprove")}</p> : null}
+      {cases.length === 0 ? <p className={ui.help}>{t("noCases")}</p> : null}
       <div className="overflow-x-auto">
-<table className="mhvp-table">
+<table className="mhvp-table mhvp-table--sticky-col">
         <thead>
           <tr>
             <th>{t("level")}</th>
@@ -71,10 +78,15 @@ export default async function DunningRunPage({ params }: { params: Promise<{ run
         </thead>
         <tbody>
           {cases.map((c, i) => (
-            <tr key={`${c.contract_id ?? "x"}-${i}`}>
-              <td>{c.level}</td>
+            <tr key={`${c.contract_id ?? "x"}-${i}`} className="align-top">
+              <td>
+                {c.level}
+                {c.level === 1 ? <span className="block text-xs text-muted">{t("reminderLevel")}</span> : null}
+              </td>
               <td className="num">{formatEur(c.total)}</td>
-              <td className="num">{formatEur(c.fee_amount)}</td>
+              <td className="num">
+                {c.level === 1 ? <span className="text-muted">{t("noFee")}</span> : formatEur(c.fee_amount)}
+              </td>
               <td>
                 <StatusPill variant={CASE_VARIANT[c.status] ?? "neutral"} label={t(`caseStatus.${c.status}`)} />
               </td>

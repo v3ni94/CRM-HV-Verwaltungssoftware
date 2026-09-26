@@ -63,7 +63,7 @@ export function InvitationForm({ code }: { code?: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3" aria-label={t("title")}>
+    <form onSubmit={onSubmit} noValidate aria-busy={busy} className="flex flex-col gap-3" aria-label={t("title")}>
       <p className="text-sm text-muted">{t("hint")}</p>
       {error ? (
         <p role="alert" className={ui.alert}>
@@ -74,7 +74,7 @@ export function InvitationForm({ code }: { code?: string }) {
         <label htmlFor="invitation-code" className={ui.label}>
           {t("code")}
         </label>
-        <input id="invitation-code" className={ui.input} autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} />
+        <input id="invitation-code" className={ui.input} autoComplete="off" aria-required="true" value={token} onChange={(e) => setToken(e.target.value)} />
       </div>
       <div>
         <label htmlFor="invitation-password" className={ui.label}>
@@ -83,6 +83,7 @@ export function InvitationForm({ code }: { code?: string }) {
         <input
           id="invitation-password"
           type="password"
+          aria-required="true"
           autoComplete="new-password"
           className={ui.input}
           value={password}
@@ -96,6 +97,7 @@ export function InvitationForm({ code }: { code?: string }) {
         <input
           id="invitation-repeat"
           type="password"
+          aria-required="true"
           autoComplete="new-password"
           className={ui.input}
           value={repeat}

@@ -41,9 +41,13 @@ function ContactRow({ contact }: { contact: PropertyContacts["contacts"][number]
     <>
       <dt className={ui.label}>{label}</dt>
       <dd className="flex flex-col gap-0.5">
-        <span>{contact.name}</span>
+        <span className="break-words">{contact.name}</span>
         {contact.phones.map((phone) => (
-          <a key={phone} href={`tel:${phone}`} className="text-muted underline">
+          <a
+            key={phone}
+            href={`tel:${phone}`}
+            className="inline-flex min-h-9 w-fit items-center rounded-sm text-muted underline focus:outline-none focus:ring-2 focus:ring-gold/40"
+          >
             {phone}
           </a>
         ))}

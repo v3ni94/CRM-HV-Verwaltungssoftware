@@ -117,3 +117,11 @@ Anlass: die DAV-Anbindung funktioniert in Produktion nicht, Kontakte wurden nich
 6. Offener Punkt: ob das DAV-Modul bei Immoware24 tatsächlich gebucht ist, bleibt unbekannt und
    ist in `docs/OPEN_QUESTIONS.md` beim Betreiber eingetragen; die Diagnose macht den Verdacht nur
    sichtbar, ersetzt aber nicht die Rückfrage beim Immoware24-Support.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: Nur lesender DAV-Client, Spiegeltabellen mit RLS (Migration 0044), Discovery und Diagnose (Migration 0063), Kontakte- und Dokumentübernahme (Migration 0066), Lernphase (M33), CRM-Seiten Einstellungen und Übersicht.
+* Tests: `tests/unit/test_immoware_dav.py`, `test_m32_immoware.py`.
+* Offen: ob das DAV-Modul bei Immoware24 gebucht ist (Betreiber, `docs/OPEN_QUESTIONS.md`); der Abschnitt "Offene Punkte" oben enthält sonst nur erledigte Einträge.

@@ -176,3 +176,9 @@ den Worker) und Upload eines vollständigen Exports (POST mit Datei, sofortiger 
 mit `documents:create`; Liste der Löschmarkierungen mit Filter offen/aufgelöst und Verweis auf
 den betroffenen Datensatz (Objekt, Kontakt; andere Zieltabellen ohne eigene Seite nur als Text).
 Test: `SyncStatus.test.tsx`.
+
+## Weitere Dateien (Nachtrag 26.09.2026)
+
+Im Abgleich mit dem Ordnerinhalt am 26.09.2026 fehlten oben:
+
+* `tasks.py`: Celery-Jobs der objektakte-Übernahme, Stufe 5 (täglicher Differenzimport je Mandant, Standard aus)

@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = 3000;
+// Default 3000; E2E_PORT lets a parallel run use a free port (scripts/e2e-backend.sh).
+const port = Number(process.env.E2E_PORT ?? 3000);
 // Local override for a pre-installed Chromium whose revision differs from the
 // @playwright/test release. Only applied when the variable is set (never in CI,
 // where the workflow installs matching browsers).
@@ -31,8 +32,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Requires a prior `pnpm build`.
-    command: "pnpm start",
+    // Requires a prior `pnpm build` (NEXT_DIST_DIR selects the build folder, see next.config.ts).
+    command: `pnpm exec next start --port ${port}`,
     url: `http://127.0.0.1:${port}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

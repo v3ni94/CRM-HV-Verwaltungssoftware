@@ -9,6 +9,8 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Test runs may build into their own folder (e.g. .next-e2e) so parallel builds do not collide.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   outputFileTracingRoot: repoRoot,
   transpilePackages: ["@mhvp/ui", "@mhvp/api-client"],
   poweredByHeader: false,

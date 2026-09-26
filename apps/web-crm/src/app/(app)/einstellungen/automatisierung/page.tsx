@@ -10,9 +10,9 @@ import {
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
   redirectIfUnauthenticated,
-  serverApi,
   serverFetch,
 } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +22,7 @@ export const dynamic = "force-dynamic";
  *  Briefvorlagen (M23), Ereignistypen und KI-Aufgaben aus /automation/meta. */
 export default async function AutomationPage() {
   const t = await getTranslations("Automation");
-  const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (

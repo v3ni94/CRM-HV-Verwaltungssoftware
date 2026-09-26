@@ -36,6 +36,12 @@ export type ThreadMessage = {
   rejection_note: string | null;
   send_error: string | null;
   attachments: ThreadAttachment[];
+  /** M20-03 traceability of outbound replies: who drafted, who approved, flag at drafting. */
+  created_by_name?: string | null;
+  approved_by_name?: string | null;
+  approved_at?: string | null;
+  author_approval_required?: boolean;
+  author_approval_reason?: string | null;
 };
 
 /** Display status of a message: outbound drafts, pending, sent, or failed (send error
@@ -177,6 +183,19 @@ export function TicketMailThread({
                 </SafeLine>
               ) : null}
             </div>
+            {!inbound && m.created_by_name ? (
+              <p className="text-xs text-muted" data-testid="ticket-mail-trace">
+                {t("draftedBy", { name: m.created_by_name, at: formatDateTime(m.created_at) })}
+                {m.author_approval_required
+                  ? ` ${t("draftFlag", { reason: t(`approvalReason.${m.author_approval_reason ?? "azubi"}`) })}`
+                  : ""}
+                {m.approved_by_name && m.approved_at
+                  ? `, ${m.approved_by_name === m.created_by_name ? t("selfApproved", { at: formatDateTime(m.approved_at) }) : t("approvedBy", { name: m.approved_by_name, at: formatDateTime(m.approved_at) })}`
+                  : m.status === "pending"
+                    ? `, ${t("awaitingApproval")}`
+                    : ""}
+              </p>
+            ) : null}
             {status === "failed" && m.send_error ? (
               <p role="alert" className={ui.alert}>
                 {t("sendError")}: <SafeLine>{m.send_error}</SafeLine>

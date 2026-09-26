@@ -230,3 +230,11 @@ Entwurf übernehmen. Umsetzung ohne Migration:
 Keine Geldflüsse. Die Kautionsangaben (Betrag, IBAN) werden nur erfasst und im PDF
 ausgegeben; sie erzeugen keine Forderung und keine Zahlung (G1, G2 unberührt). Die IBAN
 wird formal geprüft (Mod 97), ein Prüfkennzeichen "IBAN geprüft" setzt nur die Verwaltung.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: Stufen 1 bis 4 (Datenmodell und API, CRM-Oberfläche, Gehilfenzugang über das Portal mit Einladungscode und Zustellung, Datenübernahme aus U-Protokoll), Fotos mit Metadatenbereinigung (M30-04, `mhvp.handover.images`, seit A55 auch für Portal-Uploads), Festschreibung und Versionen (Regel M30-01), Gehilfenzugang und Sichtbarkeit (Regel M30-06), Mitarbeiter-Leseendpunkte im Portal (M2-08), Termin aus der Übergabe in den Kalender (M23-03).
+* Tests: `test_m30_handover.py`, `tests/unit/test_m30_handover_images.py`, Vitest `HandoverEditor`, `HandoverAppointmentButton`.
+* Offen: Versionen und Portalanzeige laufen in anderer Sitzung (Lückenliste, Vorbemerkung), Pillow als direkte Abhängigkeit (Lückenliste A85), HEIC (A72).

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { TelephonySettings, type TelephonySettingsOut } from "@/components/settings/TelephonySettings";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,7 @@ export const dynamic = "force-dynamic";
  *  benennen. Lesen mit tenant_settings:read, Speichern mit tenant_settings:update. */
 export default async function TelephonySettingsPage() {
   const t = await getTranslations("TelephonySettings");
-  const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("tenant_settings:read")) notFound();

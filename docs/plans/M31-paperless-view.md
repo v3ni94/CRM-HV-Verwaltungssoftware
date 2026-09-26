@@ -64,3 +64,10 @@ Integrationstests für die Router-Endpunkte liegen inzwischen vor: `tests/integr
 test_m31_dms.py` (Paperless per `httpx.MockTransport` gefakt; Happy Path Objekt- und
 Ticketsuche, Datei-Proxy, Berechtigung, Mandantentrennung, Validierung, Verhalten ohne
 gepflegte `object_field_id` bzw. ohne eingerichtete Anbindung).
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: `mhvp.documents.paperless_search`, Endpunkte für Objekt, Ticket und Datei-Proxy, `DmsDocumentsPanel.tsx` in Ticket- und Objektseite, Pflege der Feld-IDs unter Einstellungen, DMS; Wiederverwendung durch Paperless-Eingang (M14) und Mail-Vorbereitung (M34).
+* Tests: `tests/unit/test_documents_paperless_search.py`, `test_m31_dms.py`. Keine offenen Punkte in diesem Plan.

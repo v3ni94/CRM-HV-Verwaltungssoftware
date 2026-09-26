@@ -66,3 +66,7 @@ with updates only after a compatibility test.
 
 - `docs/MASTER-PROMPT.md` sections 3.2, 4.1, 4.2, 4.3, 6.9.14, annex E (E16)
 - `docs/plans/M1.md` section 3
+
+## Nachtrag 26.09.2026: Pillow als direkte Abhängigkeit
+
+Pillow (12.x) war bisher nur transitiv über reportlab installiert, wird aber direkt in `mhvp.handover.images` (Metadaten entfernen, Skalieren von Fotos aus Übergabeprotokoll und Portal) verwendet. Es steht jetzt als direkte Abhängigkeit in `apps/api/pyproject.toml`, damit ein Wegfall bei reportlab die Bildpipeline nicht unbemerkt bricht (Lückenliste A85).

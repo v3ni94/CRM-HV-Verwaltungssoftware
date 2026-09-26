@@ -21,7 +21,10 @@ export function InspectionRequestCreate({ legalEntityId, basePath }: { legalEnti
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const valid = contact !== null && /^\d{4}-\d{2}-\d{2}$/.test(requestedOn) && (kinds.length > 0 || text.trim().length > 0);
+  const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(requestedOn);
+  const scopeValid = kinds.length > 0 || text.trim().length > 0;
+  const valid = contact !== null && dateValid && scopeValid;
+  const hint = contact === null ? t("chooseApplicant") : !dateValid ? t("dateRequired") : !scopeValid ? t("scopeRequired") : null;
 
   const search = async (q: string) => {
     setQuery(q);
@@ -63,10 +66,11 @@ export function InspectionRequestCreate({ legalEntityId, basePath }: { legalEnti
           <span className={ui.label}>{t("requestedOn")}</span>
           <input className={ui.input} type="date" value={requestedOn} onChange={(e) => setRequestedOn(e.target.value)} />
         </label>
-        <button type="button" className={ui.button} onClick={create} disabled={busy || !valid}>
+        <button type="button" className={ui.primary} onClick={create} disabled={busy || !valid}>
           {t("create")}
         </button>
       </div>
+      {hint ? <p className={ui.help}>{hint}</p> : null}
       {!contact && hits.length > 0 ? (
         <ul className="flex flex-wrap gap-2 text-sm">
           {hits.map((h) => (

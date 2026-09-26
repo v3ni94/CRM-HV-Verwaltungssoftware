@@ -115,6 +115,16 @@ def _by_objekt(report: Any) -> dict[str, Any]:
     return {e["objekt"]: e for e in report["objekte"]}
 
 
+def _post_objektdaten(c: TestClient, h: dict[str, str], mode: str, data: bytes, **form: Any) -> Any:
+    return c.post(
+        f"{BASE}/objektdaten",
+        params={"mode": mode},
+        files={"file": ("objektdaten.csv", data, "text/csv")},
+        data=form,
+        headers=h,
+    )
+
+
 def test_objektdaten_preview_then_apply(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "liadmin"))
     overview = "/api/v1/imports/immoware24/overview"
@@ -257,3 +267,112 @@ def test_tenant_separation(client: TestClient, world: World) -> None:
     contacts_a = _ok(_kontakte(client, a, "apply"))
     assert contacts_a["counts"]
     assert _ok(_kontakte(client, b, "preview"))["counts"] == {"created": 2, "role_added": 1}
+
+
+def test_export_variants_give_the_same_preview(client: TestClient, world: World) -> None:
+    """Windows-1252, BOM, comma or tab delimiter, repeated header and empty lines: the test run
+    reports the same counts and objects as the plain UTF-8 export, plus file notes."""
+    h = bearer(login(client, world, "libadmin"))
+    reference = _ok(_post_objektdaten(client, h, "preview", OBJEKTDATEN.encode("utf-8")))
+    assert reference["datei_hinweise"] == []
+    header, *rows = OBJEKTDATEN.strip("\n").split("\n")
+    variants = {
+        "cp1252": OBJEKTDATEN.encode("cp1252"),
+        "bom": b"\xef\xbb\xbf" + OBJEKTDATEN.encode("utf-8"),
+        "comma": "\n".join(
+            ",".join(f'"{c}"' for c in line.split(";")) for line in [header, *rows]
+        ).encode("utf-8"),
+        "tab": OBJEKTDATEN.replace(";", "\t").encode("utf-8"),
+        "repeated_header": "\n".join([header, rows[0], "", header, *rows[1:], ""]).encode("utf-8"),
+    }
+    for name, data in variants.items():
+        report = _ok(_post_objektdaten(client, h, "preview", data))
+        assert report["counts"] == reference["counts"], name
+        assert _by_objekt(report).keys() == _by_objekt(reference).keys(), name
+        assert _by_objekt(report)["81"]["einheiten"] == {"created": 2}, name
+    assert any(
+        "Windows-1252" in n
+        for n in _ok(_post_objektdaten(client, h, "preview", variants["cp1252"]))["datei_hinweise"]
+    )
+    assert any(
+        "Komma" in n
+        for n in _ok(_post_objektdaten(client, h, "preview", variants["comma"]))["datei_hinweise"]
+    )
+    notes = _ok(_post_objektdaten(client, h, "preview", variants["repeated_header"]))[
+        "datei_hinweise"
+    ]
+    assert any("wiederholte Kopfzeile" in n for n in notes)
+    assert any("leere Zeile" in n for n in notes)
+
+    missing = _post_objektdaten(client, h, "preview", b"Objekt-Nummer;Objekt;VE-Nummer\n1;x;1\n")
+    assert missing.status_code == 422, missing.text
+    assert "Spalte fehlt: Verwaltungsart" in missing.json()["detail"]
+    assert "Gefundene Spalten: Objekt-Nummer, Objekt, VE-Nummer" in missing.json()["detail"]
+
+
+def test_kontakte_duplicates_iban_and_idempotent_apply(client: TestClient, world: World) -> None:
+    """A repeated id within one file is reported and created once; an IBAN column is only a
+    masked proposal and never becomes a bank account; test run and apply count the same, and
+    a second apply changes nothing."""
+    h = bearer(login(client, world, "libadmin"))
+    overview = "/api/v1/imports/immoware24/overview"
+    before = _ok(client.get(overview, headers=h))
+    text = (
+        "id;Name;Briefanrede;Adresse;PLZ;Stadt;Telefon;Email;IBAN\n"
+        "9001;Duplikat, Dora;Sehr geehrte Frau Duplikat;Musterstraße 1a;12345;Musterstadt;"
+        "0221 / 12 34 56 7;Dora <dora@example.org>;DE02 1203 0000 0000 2020 51\n"
+        "9002;Beispiel GmbH & Co. KG;;Am Markt 3-5;12345;Musterstadt;;;\n"
+        "9001;Duplikat, Dora;Sehr geehrte Frau Duplikat;Musterstraße 1a;12345;Musterstadt;;;\n"
+    ).encode("cp1252")
+
+    def post(mode: str) -> Any:
+        return client.post(
+            f"{BASE}/kontakte",
+            params={"mode": mode},
+            files=[("files", ("mieter.csv", text, "text/csv"))],
+            data={"roles": ["mieter"]},
+            headers=h,
+        )
+
+    preview = _ok(post("preview"))
+    assert preview["counts"] == {"created": 2, "duplicate": 1}
+    assert any("Windows-1252" in n for n in preview["datei_hinweise"])
+    rows = {(r["zeile"], r["id"]): r for r in preview["kontakte"]}
+    assert rows[(4, "9001")]["status"] == "duplicate"
+    assert rows[(4, "9001")]["hinweise"] == ["id 9001 bereits in Zeile 2, nicht erneut angelegt"]
+    assert any(
+        "DE02 **** **** 2051" in n and "nicht übernommen" in n
+        for n in rows[(2, "9001")]["hinweise"]
+    )
+    assert _ok(client.get(overview, headers=h)) == before
+
+    applied = _ok(post("apply"))
+    assert applied["counts"] == preview["counts"]
+    assert _ok(client.get(overview, headers=h))["contacts"] == before["contacts"] + 2
+    run = _ok(client.get(f"/api/v1/imports/{applied['import_run_id']}", headers=h))
+    contact_ids = [i["entity_id"] for i in run["items"] if i["entity_type"] == "contact"]
+    contacts = {
+        c["external_ids"]["immoware24"]: c
+        for c in (_ok(client.get(f"/api/v1/contacts/{cid}", headers=h)) for cid in contact_ids)
+    }
+    dora = contacts["9001"]
+    assert dora["bank_accounts"] == []
+    assert "120300000000202051" not in str(dora)
+    assert "DE02 **** **** 2051" in (dora["notes"] or "")
+    assert (dora["first_name"], dora["last_name"], dora["salutation"]) == (
+        "Dora",
+        "Duplikat",
+        "Frau",
+    )
+    assert dora["addresses"][0]["street"] == "Musterstraße"
+    assert dora["addresses"][0]["house_number"] == "1a"
+    assert dora["phones"][0]["number"] == "+492211234567"
+    assert dora["emails"][0]["email"] == "dora@example.org"
+    firma = contacts["9002"]
+    assert firma["kind"] == "company"
+    assert firma["legal_form"] == "GmbH & Co. KG"
+    assert firma["addresses"][0]["house_number"] == "3-5"
+
+    again = _ok(post("apply"))
+    assert again["counts"] == {"unchanged": 2, "duplicate": 1}
+    assert _ok(client.get(overview, headers=h))["contacts"] == before["contacts"] + 2

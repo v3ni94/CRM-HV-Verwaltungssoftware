@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { CompanySettings } from "@/components/settings/CompanySettings";
 import { BillingSettingsForm, type BillingSettings } from "@/components/settings/BillingSettings";
 import { ManagerEntitySetup, type ManagerEntityStatus } from "@/components/settings/ManagerEntitySetup";
+import { TicketReplyApprovalAll } from "@/components/settings/TicketReplyApprovalAll";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -13,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function CompanySettingsPage() {
   const t = await getTranslations("CompanySettings");
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
   if (!can("tenant_settings:read")) notFound();
@@ -29,6 +31,7 @@ export default async function CompanySettingsPage() {
       <PageHeader title={t("title")} />
       <CompanySettings initial={settings.data.company} branding={settings.data.branding} canUpdate={can("tenant_settings:update")} />
       <ManagerEntitySetup initial={managerData} canUpdate={can("tenant_settings:update")} />
+      <TicketReplyApprovalAll initial={settings.data.ticket_reply_approval_all} canUpdate={can("tenant_settings:update")} />
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">{tb("title")}</h2>
         {billingData ? (

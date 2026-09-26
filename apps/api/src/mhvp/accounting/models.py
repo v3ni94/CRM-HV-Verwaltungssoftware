@@ -289,6 +289,9 @@ class JournalEntry(IdMixin, TimestampMixin, TenantMixin, Base):
             name="number_when_posted",
         ),
         CheckConstraint("kind <> 'reversal' OR reverses_id IS NOT NULL", name="reversal_ref"),
+        # Journal filters: status and booking date per ledger (performance review 26.09.2026).
+        Index("ix_journal_entry_ledger_status", "tenant_id", "ledger_id", "status"),
+        Index("ix_journal_entry_ledger_booking_date", "tenant_id", "ledger_id", "booking_date"),
     )
 
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
@@ -332,6 +335,8 @@ class JournalLine(IdMixin, TenantMixin, Base):
         CheckConstraint(
             "(debit > 0 AND credit = 0) OR (credit > 0 AND debit = 0)", name="one_side_positive"
         ),
+        Index("ix_journal_line_journal_entry_id", "journal_entry_id"),
+        Index("ix_journal_line_account_id", "account_id"),
     )
 
     journal_entry_id: Mapped[uuid.UUID] = _fk("journal_entry.id", ondelete="CASCADE")
@@ -507,6 +512,8 @@ class Invoice(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "invoice"
     __table_args__ = (
         Index("ix_invoice_creditor_number", "tenant_id", "provider_contact_id", "number"),
+        Index("ix_invoice_tenant_ledger_id", "tenant_id", "ledger_id"),
+        Index("ix_invoice_tenant_review_status_date", "tenant_id", "review_status", "invoice_date"),
     )
 
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
@@ -552,6 +559,7 @@ class Invoice(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class InvoiceLine(IdMixin, TenantMixin, Base):
     __tablename__ = "invoice_line"
+    __table_args__ = (Index("ix_invoice_line_invoice_id", "invoice_id"),)
 
     invoice_id: Mapped[uuid.UUID] = _fk("invoice.id", ondelete="CASCADE")
     account_id: Mapped[uuid.UUID] = _fk("ledger_account.id")
@@ -568,6 +576,7 @@ class InvoiceReview(IdMixin, TenantMixin, Base):
     """PÜ05: person, time, reviewed version, scope, result and reason per review step."""
 
     __tablename__ = "invoice_review"
+    __table_args__ = (Index("ix_invoice_review_invoice_id", "invoice_id"),)
 
     invoice_id: Mapped[uuid.UUID] = _fk("invoice.id", ondelete="CASCADE")
     step: Mapped[str] = mapped_column(

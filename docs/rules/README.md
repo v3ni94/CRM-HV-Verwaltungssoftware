@@ -55,7 +55,9 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M21-05](M21-05.md) | WhatsApp nur mit freigegebenen Vorlagen und Einwilligung | M21 | implemented, not accepted |
 | [M21-06](M21-06.md) | Zugriffsmatrix auf jedem Pfad: GdWE-Einsicht, fremde Akten, KI-Kontext, freigegebene Fassung (D29 bis D31) | M21, M6, M7, 6.9.6, 14, E06 | implemented, not accepted |
 | [M21-07](M21-07.md) | Prüfungsraum Beirat: Portalrolle `board` je Prüfauftrag, nur Lesen und Vermerk, keine Buchung oder Freigabe, Belege nur aus Prüfpositionen (PÜ07, PÜ08) | M21, M25, 7.9.2, 14, D32, D33 | implemented, not accepted |
-| [M9-02](M9-02-automation.md) | Regel-Engine Stufe 1: nur Ticket, Benachrichtigung und Ticketfeld, Tiefe 1, Testlauf ohne Wirkung | M9, 15.2 | implemented, not accepted |
+| [M19-02](M19-02-ticket-templates.md) | Ticketvorlagen mit Checkliste und Pflichtfeldern (inkl. IBAN), Sammelstatuswechsel | M19, 6.6 | implemented, not accepted |
+| [M25-01](M25-01-mehrheitsregeln.md) | Mehrheitsregeln je Beschlussgegenstand: Prüfung "erreicht / nicht erreicht / nicht prüfbar" ohne Statusänderung, Freigabe durch zweite Person | M25, 6.9.12, W13 | implemented, not accepted |
+| [M9-02](M9-02-automation.md) | Regel-Engine Stufe 1 und 2: Ticket, Benachrichtigung, Ticketfeld, Webhook (signiert), Mail- und Briefentwurf, KI-Aufgabe; Zeitplan als Auslöser; Tiefe 1, Testlauf ohne Wirkung | M9, 15.2 | implemented, not accepted |
 | [M7-06](M7-06.md) | Tabellenimport deterministisch, KI nur für Spaltenzuordnung und Restzeilen | M7 | implemented, not accepted |
 | [B01](B01.md) | Richtiger Rechtsträger | 7.1 | implemented, not accepted |
 | [B02](B02.md) | Entwurf und Buchung | 7.1 | implemented, not accepted |
@@ -85,7 +87,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [W10](W10-loans-insurance-measures.md) | Darlehen, Versicherungen, größere Maßnahmen | 7.8 | implemented, not accepted (A59: `mhvp.hoa.finance`, items only with journal entry reference; treatment in the statement open, M24-03) |
 | W11 | Vermögensbericht | 7.8 | partly implemented (M24 asset report); structure open, M24-02 |
 | W12 | Abrechnungspaket | 7.8 | implemented, not accepted (package and blocking checks, `test_w09_special_levy.py::test_w12_package_blocks_release`) |
-| W13 | Beirat und Versammlung | 7.8 | implemented, not accepted (M25); majority rules open, M25-01 |
+| W13 | Beirat und Versammlung | 7.8 | implemented, not accepted (M25); majority rules per subject kind since 26.09.2026, see [M25-01](M25-01-mehrheitsregeln.md); minutes draft A62 |
 | PÜ01 | Vollständigkeit | 7.9.1 | implemented, not accepted (M14 findings; recipient and reference hints, `test_pue_invoice_checks.py`) |
 | PÜ02 | Sachliche Prüfung | 7.9.1 | partly implemented (factual review step M14, missing reference hint); order/budget match open |
 | PÜ03 | Rechnerische/steuerliche Prüfung | 7.9.1 | implemented, not accepted (M14 arithmetic findings and review step) |
@@ -115,3 +117,6 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M9-06](M9-06-tagesjobs.md) | Tagesjobs Tagesübersicht und Fristenliste: Orientierung, Vorfrist aus Einstellungen, keine Rechtsfristen | M9, 15.1 | implemented, not accepted |
 | [A61](A61-einsicht.md) | Einsichtsanfragen außerhalb des Portals protokollieren | 14, M25 (PÜ12, PÜ13) | implemented, not accepted |
 | [M19-06](M19-06-tnr.md) | Ticketnummer im Betreff (TNR#<nummer>), Zuordnung eingehender Mails nur bei bekanntem Absender, Wiedereröffnung, Postfachzugriff je Mail | M19, M20, 6.6 | implemented, not accepted |
+| [M20-06](M20-06-mail-versand-nachweis.md) | Mailversand nur mit Nachweis: Idempotenzschlüssel je Versand, kein zweiter Versand, Weiterleitung erst nach Commit, Postfach-Soft-Delete | M20, 6.6 | implemented, not accepted |
+
+Index checked against the files in this folder on 26.09.2026: every rule file has one row above (`M19-02` and `M25-01` were added, `M9-02` and `W13` updated).

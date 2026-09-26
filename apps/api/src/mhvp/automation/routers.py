@@ -22,7 +22,7 @@ from mhvp.automation.models import (
     AutomationRule,
     AutomationRun,
 )
-from mhvp.automation.rules import normalise
+from mhvp.automation.rules import RELATED_FIELDS, normalise, related_groups
 from mhvp.automation.schedule import FREQUENCIES
 from mhvp.automation.schemas import (
     AI_TASKS,
@@ -142,6 +142,8 @@ async def meta(principal: TenantPrincipal = Depends(_read_principal)) -> dict[st
         "ai_tasks": list(AI_TASKS),
         "settable_ticket_fields": list(SETTABLE_TICKET_FIELDS),
         "condition_ops": ["eq", "ne", "contains", "gt", "lt"],
+        # A81: related master data a condition may read, grouped for the form.
+        "related_fields": {group: list(fields) for group, fields in RELATED_FIELDS.items()},
     }
 
 
@@ -325,6 +327,8 @@ async def dry_run_rule(
                 payload=body.payload,
                 actor_user_id=principal.user_id,
                 entity_override=body.entity or None,
+                related=related_groups(rule.conditions),
+                tenant_id=principal.tenant_id,
             )
         result = await dry_run(
             session,

@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 /** Regel-Engine (A38 Stufe 1, A39 Stufe 2, MASTER-PROMPT 15.2): Regeln mit Auslöser (Ereignis
@@ -77,18 +78,58 @@ const SETTABLE_FIELDS = [
   "category",
   "assignee_user_id",
 ] as const;
-/** Bekannte Bedingungsfelder (Auswahl); "custom" erlaubt jeden Pfad wie payload.number. */
-const KNOWN_FIELDS = [
-  "entity.category",
-  "entity.priority",
-  "entity.topic",
-  "entity.title",
-  "entity.team_id",
-  "entity.source",
-  "entity.status",
-  "payload.source",
-  "payload.number",
+/** Bekannte Bedingungsfelder, gruppiert nach Ticket, Ereignis und verknüpften Stammdaten
+ * (A81: Objekt, Einheit, Kontakt, Vertrag); "custom" erlaubt jeden Pfad wie payload.number. */
+const FIELD_GROUPS = [
+  {
+    key: "ticket",
+    fields: [
+      "entity.category",
+      "entity.priority",
+      "entity.topic",
+      "entity.title",
+      "entity.team_id",
+      "entity.source",
+      "entity.status",
+    ],
+  },
+  { key: "event", fields: ["payload.source", "payload.number"] },
+  {
+    key: "property",
+    fields: [
+      "property.number",
+      "property.management_type",
+      "property.status",
+      "property.city",
+      "property.manager_user_id",
+    ],
+  },
+  { key: "unit", fields: ["unit.number", "unit.unit_type", "unit.floor"] },
+  {
+    key: "contact",
+    fields: ["contact.roles", "contact.tags", "contact.kind", "contact.blocked"],
+  },
+  {
+    key: "contract",
+    fields: ["contract.kind", "contract.status", "contract.number"],
+  },
 ] as const;
+const KNOWN_FIELDS = FIELD_GROUPS.flatMap((g) => g.fields) as readonly string[];
+/** Feste Wertelisten für Auswahlfelder der verknüpften Stammdaten (Codes der API). */
+const FIELD_VALUES: Record<string, readonly string[]> = {
+  "property.management_type": ["rental", "hoa", "hoa_with_sev"],
+  "property.status": ["onboarding", "active", "terminated"],
+  "contact.roles": [
+    "eigentuemer",
+    "mieter",
+    "verwalter",
+    "dienstleister",
+    "bank",
+    "sonstiges",
+  ],
+  "contract.kind": ["tenancy", "ownership"],
+  "contract.status": ["future", "active", "terminated", "ended"],
+};
 const ACTION_TYPES: ActionType[] = [
   "set_ticket_field",
   "notify",
@@ -224,9 +265,11 @@ export function summariseAction(a: Action, t: T, pickers: Pickers): string {
 }
 
 function describeCondition(row: ConditionRow, t: T, pickers: Pickers): string {
-  const known = (KNOWN_FIELDS as readonly string[]).includes(row.field);
+  const known = KNOWN_FIELDS.includes(row.field);
   const field = known ? t(`fields.${row.field}`) : row.field;
   let value = row.value;
+  if (FIELD_VALUES[row.field]?.includes(value))
+    value = t(`fieldValues.${row.field}.${value}`);
   if (
     row.field === "entity.priority" &&
     PRIORITIES.includes(value as (typeof PRIORITIES)[number])
@@ -315,10 +358,13 @@ function ConditionsEditor({
       </div>
       {rows.length === 0 ? (
         <p className={ui.help}>{t("noConditions")}</p>
-      ) : null}
+      ) : (
+        <p className={ui.help}>{t("relatedHelp")}</p>
+      )}
       {rows.map((row, i) => {
-        const known = (KNOWN_FIELDS as readonly string[]).includes(row.field);
+        const known = KNOWN_FIELDS.includes(row.field);
         const custom = !known && row.field !== "";
+        const values = FIELD_VALUES[row.field];
         return (
           <div key={i} className="flex flex-wrap items-center gap-2">
             <select
@@ -334,10 +380,14 @@ function ConditionsEditor({
               }
             >
               <option value="">{t("chooseField")}</option>
-              {KNOWN_FIELDS.map((f) => (
-                <option key={f} value={f}>
-                  {t(`fields.${f}`)}
-                </option>
+              {FIELD_GROUPS.map((group) => (
+                <optgroup key={group.key} label={t(`fieldGroups.${group.key}`)}>
+                  {group.fields.map((f) => (
+                    <option key={f} value={f}>
+                      {t(`fields.${f}`)}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
               <option value={CUSTOM}>{t("customField")}</option>
             </select>
@@ -373,6 +423,20 @@ function ConditionsEditor({
                 {PRIORITIES.map((p) => (
                   <option key={p} value={p}>
                     {t(`priorities.${p}`)}
+                  </option>
+                ))}
+              </select>
+            ) : values ? (
+              <select
+                aria-label={t("value")}
+                className={ui.input}
+                value={row.value}
+                onChange={(e) => update(i, { value: e.target.value })}
+              >
+                <option value="">{t("choose")}</option>
+                {values.map((v) => (
+                  <option key={v} value={v}>
+                    {t(`fieldValues.${row.field}.${v}`)}
                   </option>
                 ))}
               </select>
@@ -1615,6 +1679,7 @@ export function AutomationAdmin({
         {runs.length === 0 ? (
           <p className={ui.help}>{t("noRuns")}</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className={ui.table}>
             <thead>
               <tr>
@@ -1628,7 +1693,7 @@ export function AutomationAdmin({
             <tbody>
               {runs.map((run) => (
                 <tr key={run.id}>
-                  <td>{new Date(run.started_at).toLocaleString("de-DE")}</td>
+                  <td className="tabular-nums">{formatDateTime(run.started_at)}</td>
                   <td>{run.rule_name ?? run.rule_id}</td>
                   <td>{run.event_type}</td>
                   <td>
@@ -1656,6 +1721,7 @@ export function AutomationAdmin({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </div>

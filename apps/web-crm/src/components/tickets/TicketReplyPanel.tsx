@@ -41,7 +41,9 @@ const PLACEHOLDER_RE = /\{[a-zA-Z_]+\}/;
  *  vorbelegt (nur beteiligte Absender), Betreff mit Kennung TNR#<nummer>, Text frei oder aus
  *  einer Antwortvorlage, eigene Anhänge aus Dokumenten oder Upload. Die Antwort geht als
  *  eingereichter Entwurf in den Postausgang und wird erst nach der Vier-Augen-Freigabe über
- *  das Postfach des Tickets versendet. Es wird nichts ohne Klick angelegt. */
+ *  das Postfach des Tickets versendet. Es wird nichts ohne Klick angelegt. M20-03: mit der
+ *  Mandanteneinstellung Direktversand (Standard aus) sendet das Backend eine einfache Antwort
+ *  eines Nutzers mit Freigaberecht sofort; die Antwort kommt dann mit Status sent zurück. */
 export function TicketReplyPanel({
   ticketId,
   canSend,
@@ -377,7 +379,7 @@ export function TicketReplyPanel({
       ) : null}
       {sent ? (
         <p className={ui.success} data-testid="ticket-reply-sent">
-          {t("sent")}{" "}
+          {sent.status === "sent" ? t("sentDirect") : t("sent")}{" "}
           <Link href={`/mail?message=${sent.id}`} className="font-medium hover:underline">
             {t("openMail")}
           </Link>

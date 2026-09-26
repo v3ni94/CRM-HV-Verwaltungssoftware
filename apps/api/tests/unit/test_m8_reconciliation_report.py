@@ -161,3 +161,28 @@ def test_beat_time_from_settings(settings: Settings) -> None:
     assert entry["schedule"] == crontab(hour=6, minute=15)
     with pytest.raises(ValueError, match="import_reconciliation_time"):
         make_settings(import_reconciliation_time="6:15")
+
+
+def test_csv_neutralises_formula_prefixes() -> None:
+    """Sicherheitsreview 1.22, Befund 6: text cells from the imported lists never start a
+    spreadsheet formula; amounts keep their sign."""
+    text = rec.report_csv(
+        {
+            "lines": [
+                {
+                    "property_number": '=HYPERLINK("http://x")',
+                    "metric": "kontosaldo",
+                    "key": "+060100",
+                    "source": "-10.00",
+                    "platform": "0",
+                    "difference": "-10.00",
+                    "deviates": True,
+                    "hint": "@Objekt fehlt",
+                }
+            ]
+        }
+    )
+    row = text.splitlines()[1]
+    assert row.startswith(
+        '"\'=HYPERLINK(""http://x"")";kontosaldo;\'+060100;-10,00;0,00;-10,00;ja;\'@Objekt fehlt'
+    )

@@ -30,7 +30,7 @@ SAMPLE = "\n".join(
 
 
 def test_parse_groups_units_and_reads_owner_and_tenant_amounts() -> None:
-    rows = parse_objektdaten(SAMPLE)
+    rows = parse_objektdaten(SAMPLE).rows
     assert [r.source_number for r in rows] == ["359", "216", "81", "10012", "600"]
     weg = rows[0]
     assert weg.management == "WEG-Verwaltung"
@@ -45,7 +45,7 @@ def test_parse_groups_units_and_reads_owner_and_tenant_amounts() -> None:
 
 
 def test_parse_rejects_missing_columns() -> None:
-    with pytest.raises(ValueError, match="Spalten fehlen"):
+    with pytest.raises(ValueError, match="Spalten fehlen: Objekt-Nummer, Objekt, Verwaltungsart"):
         parse_objektdaten("Nr;Name\n1;x\n")
 
 
@@ -56,7 +56,8 @@ def test_number_normalisation() -> None:
     assert "führenden Nullen" in (note or "")
     assert normalise_number("10012", {})[0] is None
     assert normalise_number("10012", {"10012": "012"})[0] == "012"
-    assert normalise_number("10012", {"10012": "12"})[0] is None
+    assert normalise_number("10012", {"10012": "12"})[0] == "012"
+    assert normalise_number("10012", {"10012": "1234"})[0] is None
 
 
 def test_prefix_classification() -> None:
@@ -102,4 +103,6 @@ def test_prepare_reports_problems_per_property() -> None:
     assert by_src["81"].number == "081"
     assert any("nicht dreistellig" in p for p in by_src["10012"].problems)
     assert by_src["600"].management_type == "hoa_with_sev"
-    assert any("VE-Nummer 1 kommt 2 mal" in p for p in by_src["600"].problems)
+    assert any(
+        "VE-Nummer 1 kommt 2 mal mit abweichenden Angaben" in p for p in by_src["600"].problems
+    )

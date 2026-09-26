@@ -21,7 +21,6 @@ from typing import Any
 from sqlalchemy import select
 
 from mhvp.imports import objektdaten
-from mhvp.imports.kontakte import _HOUSE_NUMBER
 from mhvp.properties.models import Property
 
 FIELDS = ("street", "house_number", "postal_code", "city")
@@ -45,6 +44,14 @@ def clean_name(name: str) -> str:
     text, _, _ = objektdaten.classify_name(name)
     text = _OTHER_PREFIX.sub("", text).strip()
     return _WEG_PREFIX.sub("", text).strip()
+
+
+# Wie kontakte._HOUSE_NUMBER, zusaetzlich mit Hausnummernbereich und Gebaeudekennung
+# ("1-21 H1", "67-85") wie in den Objektnamen aus Immoware24.
+_HOUSE_NUMBER = re.compile(
+    r"^(?P<street>.+?)\s+(?P<number>\d+(?:\s?[a-zA-Z]{1,2})?(?:\s?[-/]\s?\d+(?:\s?[a-zA-Z]{1,2})?)?"
+    r"(?:\s+H\d+)?)\s*$"
+)
 
 
 def split_address(text: str | None) -> tuple[str | None, str | None]:
