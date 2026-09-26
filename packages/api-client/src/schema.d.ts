@@ -3416,6 +3416,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contracts/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importverträge freigeben
+         * @description Gibt ausstehende Verträge frei (``ids`` oder ``all`` mit optionaler ``source``). Jeder
+         *     Vertrag erhält ``approved_by``/``approved_at`` und ein Ereignis ``contract.approved``.
+         *     Bereits entschiedene Verträge werden übergangen (wiederholter Klick ohne Wirkung).
+         */
+        post: operations["approve_contracts_api_v1_contracts_approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/pending-approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Importverträge mit ausstehender Freigabe
+         * @description Verträge mit ``approval_status = pending``. Ihre Zahlungspläne erzeugen im
+         *     Sollstellungslauf keine Forderungen, bis die Geschäftsführung sie freigibt.
+         */
+        get: operations["pending_approval_api_v1_contracts_pending_approval_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contracts/{contract_id}": {
         parameters: {
             query?: never;
@@ -3483,6 +3526,28 @@ export interface paths {
         put?: never;
         /** Sollstellung erfassen */
         post: operations["add_payment_api_v1_contracts__contract_id__payments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/{contract_id}/reject-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importvertrag ablehnen
+         * @description Fehlzuordnung: beendet den ausstehenden Vertrag zum Beginn (``end_date = start_date``,
+         *     Zahlungen und Zahlungspläne ebenso) und markiert ihn ``rejected``. Er erzeugt keine
+         *     Sollstellung; die Einheit ist ab dem Folgetag für die richtige Zuordnung frei.
+         */
+        post: operations["reject_import_api_v1_contracts__contract_id__reject_import_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12571,6 +12636,28 @@ export interface components {
             import_run_id: string;
             role: components["schemas"]["ContactRoleCode"];
         };
+        /**
+         * ApproveIn
+         * @description Either ``ids`` or ``all`` (optionally limited to one ``source``).
+         */
+        ApproveIn: {
+            /**
+             * All
+             * @default false
+             */
+            all: boolean;
+            /** Ids */
+            ids?: string[];
+            /** Source */
+            source?: string | null;
+        };
+        /** ApproveOut */
+        ApproveOut: {
+            /** Approved */
+            approved: number;
+            /** Ids */
+            ids: string[];
+        };
         /** AssignAccountIn */
         AssignAccountIn: {
             /**
@@ -14420,6 +14507,15 @@ export interface components {
             acquisition_kind: components["schemas"]["AcquisitionKind"] | null;
             /** Allocation Loss Risk */
             allocation_loss_risk: boolean;
+            /**
+             * Approval Status
+             * @default approved
+             */
+            approval_status: string;
+            /** Approved At */
+            approved_at?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
             /** Benefit Burden Date */
             benefit_burden_date: string | null;
             debtor_account: components["schemas"]["DebtorAccountOut"];
@@ -14468,6 +14564,8 @@ export interface components {
             sev_enabled: boolean;
             /** Sev Fee Debtor Party Id */
             sev_fee_debtor_party_id: string | null;
+            /** Source */
+            source?: string | null;
             /** Special Succession Liability */
             special_succession_liability: boolean;
             /**
@@ -18953,6 +19051,57 @@ export interface components {
             /** Payment Type Code */
             payment_type_code: string;
         };
+        /**
+         * PendingContractOut
+         * @description Imported contract awaiting management approval before the receivable run.
+         */
+        PendingContractOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["ContractKind"];
+            /**
+             * Monthly Amount
+             * @description Summe der am Beginn gültigen Zahlungen (brutto)
+             */
+            monthly_amount: string;
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: string;
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Party Name */
+            party_name: string;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Property Name */
+            property_name: string;
+            /** Property Number */
+            property_number: string;
+            /** Source */
+            source: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /** Unit Number */
+            unit_number: string;
+        };
         /** PhoneIn */
         PhoneIn: {
             /**
@@ -20090,6 +20239,29 @@ export interface components {
         RefreshRequest: {
             /** Refresh Token */
             refresh_token: string;
+        };
+        /** RejectImportIn */
+        RejectImportIn: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** RejectImportOut */
+        RejectImportOut: {
+            /**
+             * Approval Status
+             * @constant
+             */
+            approval_status: "rejected";
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
         };
         /** RejectIn */
         RejectIn: {
@@ -29897,6 +30069,81 @@ export interface operations {
             };
         };
     };
+    approve_contracts_api_v1_contracts_approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pending_approval_api_v1_contracts_pending_approval_get: {
+        parameters: {
+            query?: {
+                source?: string | null;
+                property_id?: string | null;
+                kind?: components["schemas"]["ContractKind"] | null;
+                limit?: number;
+                page?: number;
+                page_size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Aktuelle Seite */
+                    "X-Page"?: number;
+                    /** @description Einträge je Seite */
+                    "X-Page-Size"?: number;
+                    /** @description Gesamtzahl der Einträge der Filterung */
+                    "X-Total-Count"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingContractOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_contract_api_v1_contracts__contract_id__get: {
         parameters: {
             query?: never;
@@ -30082,6 +30329,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_import_api_v1_contracts__contract_id__reject_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RejectImportOut"];
                 };
             };
             /** @description Validation Error */

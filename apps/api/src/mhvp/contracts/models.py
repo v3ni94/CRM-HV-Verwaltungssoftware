@@ -118,6 +118,14 @@ class DepositMovementKind(StrEnum):
     OFFSET = "offset"
 
 
+class ContractApprovalStatus(StrEnum):
+    """Management approval of imported contracts before the first receivable run."""
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 _PERIOD = "daterange(start_date, end_date, '[]')"
 
 
@@ -146,6 +154,11 @@ class Contract(IdMixin, TimestampMixin, TenantMixin, Base):
         Index("ix_contract_tenant_end_date", "tenant_id", "end_date"),
         Index("ix_contract_tenant_termination_date", "tenant_id", "termination_date"),
         Index("ix_contract_tenant_kind", "tenant_id", "kind"),
+        Index("ix_contract_tenant_approval_status", "tenant_id", "approval_status"),
+        CheckConstraint(
+            "approval_status IN ('pending', 'approved', 'rejected')",
+            name="approval_status_values",
+        ),
     )
 
     kind: Mapped[ContractKind] = mapped_column(_enum(ContractKind, "contract_kind"), nullable=False)
@@ -186,6 +199,14 @@ class Contract(IdMixin, TimestampMixin, TenantMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     supersedes_contract_id: Mapped[uuid.UUID | None] = _fk("contract.id", nullable=True)
+    # Origin and management approval (migration 0133): imported contracts start ``pending`` and
+    # are skipped by the receivable run until approved; manual and existing ones are approved.
+    source: Mapped[str | None] = mapped_column(Text)
+    approval_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="approved", server_default="approved"
+    )
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class DebtorAccountReservation(IdMixin, TimestampMixin, TenantMixin, Base):

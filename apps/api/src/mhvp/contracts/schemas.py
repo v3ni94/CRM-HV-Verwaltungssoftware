@@ -1,9 +1,9 @@
 """API schemas for contracts (6.3, 6.9.2, 6.9.11)."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -186,6 +186,10 @@ class ContractOut(_Out):
     special_succession_liability: bool
     notes: str | None
     supersedes_contract_id: uuid.UUID | None
+    source: str | None = None
+    approval_status: str = "approved"
+    approved_by: uuid.UUID | None = None
+    approved_at: datetime | None = None
     payments: list[PaymentOut] = Field(default_factory=list)
     schedules: list[ScheduleOut] = Field(default_factory=list)
 
@@ -294,3 +298,51 @@ class OccupancyRow(BaseModel):
     ownership_contract_id: uuid.UUID | None
     owner_party: str | None
     vacant: bool
+
+
+class PendingContractOut(BaseModel):
+    """Imported contract awaiting management approval before the receivable run."""
+
+    id: uuid.UUID
+    number: str
+    kind: ContractKind
+    property_id: uuid.UUID
+    property_number: str
+    property_name: str
+    unit_id: uuid.UUID
+    unit_number: str
+    party_id: uuid.UUID
+    party_name: str
+    start_date: date
+    monthly_amount: Decimal = Field(description="Summe der am Beginn gültigen Zahlungen (brutto)")
+    source: str | None
+    notes: str | None
+
+
+class ApproveIn(_In):
+    """Either ``ids`` or ``all`` (optionally limited to one ``source``)."""
+
+    ids: list[uuid.UUID] = Field(default_factory=list, max_length=5000)
+    all: bool = False
+    source: str | None = None
+
+    @model_validator(mode="after")
+    def _one_way(self) -> Self:
+        if bool(self.ids) == self.all:
+            raise ValueError("Entweder ids oder all angeben")
+        return self
+
+
+class ApproveOut(BaseModel):
+    approved: int
+    ids: list[uuid.UUID]
+
+
+class RejectImportIn(_In):
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class RejectImportOut(BaseModel):
+    id: uuid.UUID
+    approval_status: Literal["rejected"]
+    end_date: date

@@ -65,6 +65,8 @@ TENANCY_MANAGEMENT = frozenset({"Mietverwaltung", "WEG mit SE-Verwaltung"})
 SEV_MANAGEMENT = "WEG mit SE-Verwaltung"
 VACANT = "leerstand"
 EVENT_SOURCE = "import.zuordnung"
+# Origin of contracts created here; they start pending management approval (migration 0133).
+CONTRACT_SOURCE = "immoware24:zuordnung"
 PAYMENT_TYPE = {ContractKind.OWNERSHIP: "hoa_fee", ContractKind.TENANCY: "rent"}
 ROLE = {
     ContractKind.OWNERSHIP: ContactRoleCode.EIGENTUEMER,
@@ -367,6 +369,8 @@ async def assign(
                 title_transfer_date=ctx.start if ownership else None,
                 sev_enabled=ownership and sev,
                 sev_fee_debtor_party_id=party.id if ownership and sev else None,
+                source=CONTRACT_SOURCE,
+                approval_status="pending",
                 notes=(
                     f"Aus Immoware24 Objektdaten übernommen (Zeile {unit.line}). "
                     f"Beginn {ctx.start:%d.%m.%Y} ist eine Annahme des Imports."

@@ -54,6 +54,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^service-contracts/${ID}$`) },
   // Vertragsformular (A88): Anlage, neue Version, Beendigung, Zahlungsplan, Kaution, Mandatsverweis.
   { method: "POST", pattern: /^contracts$/ },
+  // Freigabe der Importverträge vor der Sollstellung (Betreiberauftrag 26.09.2026).
+  { method: "GET", pattern: /^contracts\/pending-approval$/ },
+  { method: "POST", pattern: /^contracts\/approve$/ },
+  { method: "POST", pattern: new RegExp(`^contracts/${ID}/reject-import$`) },
   { method: "GET", pattern: new RegExp(`^contracts/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/(versions|termination|schedules|deposits)$`) },
   { method: "GET", pattern: /^sepa-mandates$/ },

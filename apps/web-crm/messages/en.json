@@ -1467,6 +1467,7 @@
     "handover": "Handover protocols"
   },
   "Receivables": {
+    "skippedPending": "{count} contracts skipped, approval pending",
     "title": "Receivables",
     "notice": "Preview first, then post. Prorated amounts and other intervals stay manual. Postings are not the leading bookkeeping until release gate G1.",
     "month": "Month",
@@ -6224,5 +6225,47 @@
       "tenancy": "Tenancy"
     },
     "toProperty": "Properties"
+  },
+  "ContractApproval": {
+    "title": "Imported contract approval",
+    "description": "Contracts from the Immoware24 import await approval by management. Until then their payment schedules create no receivables.",
+    "assumption": "Start date and amounts of these contracts are assumptions of the import. Please check before approving, the first receivable run uses these values.",
+    "loadError": "The list could not be loaded.",
+    "empty": "No contracts awaiting approval.",
+    "noSource": "no source",
+    "noPermission": "Approving and rejecting requires the permission contracts:approve.",
+    "filters": {
+      "source": "Source",
+      "property": "Property",
+      "kind": "Kind",
+      "all": "All"
+    },
+    "kinds": {
+      "ownership": "Ownership",
+      "tenancy": "Tenancy"
+    },
+    "columns": {
+      "property": "Property",
+      "unit": "Unit",
+      "party": "Party",
+      "kind": "Kind",
+      "start": "Start",
+      "monthly": "Monthly amount",
+      "source": "Source"
+    },
+    "sumCount": "{count} contracts",
+    "perMonth": "per month",
+    "selectAll": "Select all",
+    "select": "Select contract {number}",
+    "approveSelected": "Approve selected ({count})",
+    "approveAll": "Approve all",
+    "confirmApprove": "Approve {count} contracts? Start date and amounts are assumptions of the import; after approval the payment schedules create receivables.",
+    "approved": "{count} contracts approved.",
+    "reject": "Reject",
+    "confirmReject": "Reject contract {number} as a wrong assignment? The contract ends at its start on {date} and creates no receivables.",
+    "rejected": "Contract {number} rejected.",
+    "pendingBadge": "Approval pending",
+    "rejectedBadge": "Import rejected",
+    "link": "Imported contract approval"
   }
 }

@@ -1467,6 +1467,7 @@
     "handover": "Übergabeprotokolle"
   },
   "Receivables": {
+    "skippedPending": "{count} Verträge übersprungen, Freigabe ausstehend",
     "title": "Sollstellungen",
     "notice": "Erst Vorschau, dann Buchen. Zeitanteilige Beträge und abweichende Intervalle bleiben manuell. Buchungen sind bis zur Freigabestufe G1 nicht die führende Buchhaltung.",
     "month": "Monat",
@@ -6224,5 +6225,47 @@
       "tenancy": "Mietvertrag"
     },
     "toProperty": "Objekte"
+  },
+  "ContractApproval": {
+    "title": "Freigabe Importverträge",
+    "description": "Verträge aus dem Immoware24 Import warten auf die Freigabe durch die Geschäftsführung. Bis dahin erzeugen ihre Zahlungspläne keine Sollstellung.",
+    "assumption": "Vertragsbeginn und Beträge dieser Verträge sind Annahmen des Imports. Bitte vor der Freigabe prüfen, die erste Sollstellung folgt aus diesen Angaben.",
+    "loadError": "Die Liste konnte nicht geladen werden.",
+    "empty": "Keine Verträge mit ausstehender Freigabe.",
+    "noSource": "ohne Quelle",
+    "noPermission": "Freigeben und Ablehnen erfordert die Berechtigung contracts:approve.",
+    "filters": {
+      "source": "Quelle",
+      "property": "Objekt",
+      "kind": "Art",
+      "all": "Alle"
+    },
+    "kinds": {
+      "ownership": "Eigentum",
+      "tenancy": "Mietverhältnis"
+    },
+    "columns": {
+      "property": "Objekt",
+      "unit": "Einheit",
+      "party": "Partei",
+      "kind": "Art",
+      "start": "Beginn",
+      "monthly": "Monatsbetrag",
+      "source": "Quelle"
+    },
+    "sumCount": "{count} Verträge",
+    "perMonth": "je Monat",
+    "selectAll": "Alle auswählen",
+    "select": "Vertrag {number} auswählen",
+    "approveSelected": "Ausgewählte freigeben ({count})",
+    "approveAll": "Alle freigeben",
+    "confirmApprove": "{count} Verträge freigeben? Vertragsbeginn und Beträge sind Annahmen des Imports; nach der Freigabe erzeugen die Zahlungspläne Sollstellungen.",
+    "approved": "{count} Verträge freigegeben.",
+    "reject": "Ablehnen",
+    "confirmReject": "Vertrag {number} als Fehlzuordnung ablehnen? Der Vertrag endet zum Beginn am {date} und erzeugt keine Sollstellung.",
+    "rejected": "Vertrag {number} abgelehnt.",
+    "pendingBadge": "Freigabe ausstehend",
+    "rejectedBadge": "Import abgelehnt",
+    "link": "Freigabe Importverträge"
   }
 }

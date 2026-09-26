@@ -1363,6 +1363,61 @@
         "title": "ApplyRoleOut",
         "type": "object"
       },
+      "ApproveIn": {
+        "additionalProperties": false,
+        "description": "Either ``ids`` or ``all`` (optionally limited to one ``source``).",
+        "properties": {
+          "all": {
+            "default": false,
+            "title": "All",
+            "type": "boolean"
+          },
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 5000,
+            "title": "Ids",
+            "type": "array"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "title": "ApproveIn",
+        "type": "object"
+      },
+      "ApproveOut": {
+        "properties": {
+          "approved": {
+            "title": "Approved",
+            "type": "integer"
+          },
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "approved",
+          "ids"
+        ],
+        "title": "ApproveOut",
+        "type": "object"
+      },
       "AssignAccountIn": {
         "additionalProperties": false,
         "properties": {
@@ -7210,6 +7265,35 @@
             "title": "Allocation Loss Risk",
             "type": "boolean"
           },
+          "approval_status": {
+            "default": "approved",
+            "title": "Approval Status",
+            "type": "string"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
           "benefit_burden_date": {
             "anyOf": [
               {
@@ -7347,6 +7431,17 @@
               }
             ],
             "title": "Sev Fee Debtor Party Id"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
           },
           "special_succession_liability": {
             "title": "Special Succession Liability",
@@ -21254,6 +21349,105 @@
         "title": "PaymentTypeMappingIn",
         "type": "object"
       },
+      "PendingContractOut": {
+        "description": "Imported contract awaiting management approval before the receivable run.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ContractKind"
+          },
+          "monthly_amount": {
+            "description": "Summe der am Beginn gültigen Zahlungen (brutto)",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Amount",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "party_name": {
+            "title": "Party Name",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "property_name": {
+            "title": "Property Name",
+            "type": "string"
+          },
+          "property_number": {
+            "title": "Property Number",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          },
+          "unit_number": {
+            "title": "Unit Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "kind",
+          "property_id",
+          "property_number",
+          "property_name",
+          "unit_id",
+          "unit_number",
+          "party_id",
+          "party_name",
+          "start_date",
+          "monthly_amount",
+          "source",
+          "notes"
+        ],
+        "title": "PendingContractOut",
+        "type": "object"
+      },
       "PhoneIn": {
         "additionalProperties": false,
         "properties": {
@@ -24927,6 +25121,51 @@
           "refresh_token"
         ],
         "title": "RefreshRequest",
+        "type": "object"
+      },
+      "RejectImportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "RejectImportIn",
+        "type": "object"
+      },
+      "RejectImportOut": {
+        "properties": {
+          "approval_status": {
+            "const": "rejected",
+            "title": "Approval Status",
+            "type": "string"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "approval_status",
+          "end_date"
+        ],
+        "title": "RejectImportOut",
         "type": "object"
       },
       "RejectIn": {
@@ -44118,6 +44357,196 @@
         ]
       }
     },
+    "/api/v1/contracts/approve": {
+      "post": {
+        "description": "Gibt ausstehende Verträge frei (``ids`` oder ``all`` mit optionaler ``source``). Jeder\nVertrag erhält ``approved_by``/``approved_at`` und ein Ereignis ``contract.approved``.\nBereits entschiedene Verträge werden übergangen (wiederholter Klick ohne Wirkung).",
+        "operationId": "approve_contracts_api_v1_contracts_approve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApproveOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importverträge freigeben",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/pending-approval": {
+      "get": {
+        "description": "Verträge mit ``approval_status = pending``. Ihre Zahlungspläne erzeugen im\nSollstellungslauf keine Forderungen, bis die Geschäftsführung sie freigibt.",
+        "operationId": "pending_approval_api_v1_contracts_pending_approval_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ContractKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 1000,
+              "maximum": 5000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 5000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PendingContractOut"
+                  },
+                  "title": "Response Pending Approval Api V1 Contracts Pending Approval Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Page": {
+                "description": "Aktuelle Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Einträge je Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Total-Count": {
+                "description": "Gesamtzahl der Einträge der Filterung",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importverträge mit ausstehender Freigabe",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
     "/api/v1/contracts/{contract_id}": {
       "get": {
         "operationId": "get_contract_api_v1_contracts__contract_id__get",
@@ -44406,6 +44835,60 @@
           }
         },
         "summary": "Sollstellung erfassen",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/{contract_id}/reject-import": {
+      "post": {
+        "description": "Fehlzuordnung: beendet den ausstehenden Vertrag zum Beginn (``end_date = start_date``,\nZahlungen und Zahlungspläne ebenso) und markiert ihn ``rejected``. Er erzeugt keine\nSollstellung; die Einheit ist ab dem Folgetag für die richtige Zuordnung frei.",
+        "operationId": "reject_import_api_v1_contracts__contract_id__reject_import_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RejectImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importvertrag ablehnen",
         "tags": [
           "Verträge"
         ]

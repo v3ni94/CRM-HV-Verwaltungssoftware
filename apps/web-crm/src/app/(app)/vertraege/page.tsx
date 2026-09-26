@@ -14,9 +14,11 @@ export const dynamic = "force-dynamic";
  *  eigene Zeilen, sortiert nach Nummer und Version wie in der API. */
 export default async function ContractsPage() {
   const t = await getTranslations("ContractForm");
+  const ta = await getTranslations("ContractApproval");
   const [me, response] = await Promise.all([getMe(), serverFetch("/api/v1/contracts?limit=500")]);
   redirectIfUnauthenticated(response);
   const rows = response.ok ? ((await response.json()) as ContractOut[]) : null;
+  const pending = (rows ?? []).filter((c) => c.approval_status === "pending").length;
   const canCreate = (me.data?.permissions ?? []).includes("contracts:create");
 
   return (
@@ -25,11 +27,17 @@ export default async function ContractsPage() {
         title={t("page.list")}
         description={t("page.listDescription")}
         action={
-          canCreate ? (
-            <Link href="/vertraege/neu" className={ui.primary}>
-              {t("page.new")}
+          <div className="flex flex-wrap gap-2">
+            <Link href="/vertraege/freigabe" className={ui.button}>
+              {ta("link")}
+              {pending > 0 ? ` (${pending})` : ""}
             </Link>
-          ) : null
+            {canCreate ? (
+              <Link href="/vertraege/neu" className={ui.primary}>
+                {t("page.new")}
+              </Link>
+            ) : null}
+          </div>
         }
       />
       {rows === null ? (
@@ -55,7 +63,15 @@ export default async function ContractsPage() {
                   <td>
                     {c.number} ({t("edit.version", { n: c.version })})
                   </td>
-                  <td>{t(`kinds.${c.kind}`)}</td>
+                  <td>
+                    {t(`kinds.${c.kind}`)}
+                    {c.approval_status === "pending" ? (
+                      <>
+                        {" "}
+                        <span className={ui.badgeWarning}>{ta("pendingBadge")}</span>
+                      </>
+                    ) : null}
+                  </td>
                   <td>
                     {formatDate(c.start_date)}
                     {c.end_date ? ` bis ${formatDate(c.end_date)}` : ""}
