@@ -2974,7 +2974,15 @@
     "sendingHint": "Freigegeben, Versand noch ohne Nachweis. Eine erneute Freigabe prüft den Versand anhand der Message-ID und sendet nur, wenn die Nachricht nicht angekommen ist.",
     "attachmentsRejected": "Nicht übernommene Anhänge: {list}",
     "loadingDetail": "Nachricht wird geladen...",
-    "showClosed": "Erledigte anzeigen"
+    "showClosed": "Erledigte anzeigen",
+    "actionsLabel": "Aktionen zur Nachricht",
+    "selectAll": "Alle auswählen",
+    "bulkToolbar": "Sammelaktionen",
+    "selectedCount": "{count} ausgewählt",
+    "bulkMarkDone": "Als erledigt markieren",
+    "clearSelection": "Auswahl aufheben",
+    "bulkFailed": "{count, plural, one {# Nachricht konnte nicht geändert werden.} other {# Nachrichten konnten nicht geändert werden.}}",
+    "selectMessageRow": "Nachricht auswählen: {subject}"
   },
   "Platform": {
     "title": "Plattform",

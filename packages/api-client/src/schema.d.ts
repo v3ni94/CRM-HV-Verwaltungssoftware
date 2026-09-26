@@ -7092,6 +7092,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/messages/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sammelaktion: mehrere Nachrichten erledigen
+         * @description Wie ``PATCH /messages/{id}`` mit ``status=done`` je Nachricht. Nicht vorhandene oder
+         *     nicht zugängliche Nachrichten landen ohne Unterscheidung in ``failed`` (kein Rückschluss).
+         */
+        post: operations["bulk_messages_api_v1_mail_messages_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/messages/count": {
         parameters: {
             query?: never;
@@ -17514,6 +17535,13 @@ export interface components {
             property_id?: string | null;
             /** Status */
             status?: string | null;
+        };
+        /** MailBulkIn */
+        MailBulkIn: {
+            /** Action */
+            action: string;
+            /** Ids */
+            ids: string[];
         };
         /** MailDraftPatchIn */
         MailDraftPatchIn: {
@@ -38193,6 +38221,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_messages_api_v1_mail_messages_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailBulkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

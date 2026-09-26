@@ -24,6 +24,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/thread$`) },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}$`) },
+  { method: "POST", pattern: /^mail\/messages\/bulk$/ },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}/draft$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/(reply-draft|submit|approve|reject|ticket|forward-invoice)$`) },
   // Rechnung aus E-Mail-Anhang erfassen (M14 KI-Extraktion).

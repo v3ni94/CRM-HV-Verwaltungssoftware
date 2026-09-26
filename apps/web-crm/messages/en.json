@@ -2974,7 +2974,15 @@
     "sendingHint": "Approved, dispatch not yet confirmed. Approving again verifies the dispatch by Message-ID and only sends when the message did not go out.",
     "attachmentsRejected": "Attachments not stored: {list}",
     "loadingDetail": "Loading message...",
-    "showClosed": "Show completed"
+    "showClosed": "Show completed",
+    "actionsLabel": "Message actions",
+    "selectAll": "Select all",
+    "bulkToolbar": "Bulk actions",
+    "selectedCount": "{count} selected",
+    "bulkMarkDone": "Mark as done",
+    "clearSelection": "Clear selection",
+    "bulkFailed": "{count, plural, one {# message could not be changed.} other {# messages could not be changed.}}",
+    "selectMessageRow": "Select message: {subject}"
   },
   "Platform": {
     "title": "Platform",

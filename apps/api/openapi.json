@@ -17115,6 +17115,32 @@
         "title": "MailAssignIn",
         "type": "object"
       },
+      "MailBulkIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "pattern": "^done$",
+            "title": "Action",
+            "type": "string"
+          },
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids",
+          "action"
+        ],
+        "title": "MailBulkIn",
+        "type": "object"
+      },
       "MailDraftPatchIn": {
         "additionalProperties": false,
         "properties": {
@@ -56409,6 +56435,50 @@
           }
         },
         "summary": "Vorgangsliste (ohne Text, mit Vorschau)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/bulk": {
+      "post": {
+        "description": "Wie ``PATCH /messages/{id}`` mit ``status=done`` je Nachricht. Nicht vorhandene oder\nnicht zugängliche Nachrichten landen ohne Unterscheidung in ``failed`` (kein Rückschluss).",
+        "operationId": "bulk_messages_api_v1_mail_messages_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailBulkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Bulk Messages Api V1 Mail Messages Bulk Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sammelaktion: mehrere Nachrichten erledigen",
         "tags": [
           "Postfach"
         ]

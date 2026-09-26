@@ -64,6 +64,11 @@ class MailAssignIn(_In):
     status: str | None = Field(default=None, pattern="^(new|assigned|done)$")
 
 
+class MailBulkIn(_In):
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=200)
+    action: str = Field(pattern="^done$")
+
+
 class MailAppointmentIn(_In):
     index: int = Field(ge=0, le=4)
     title: str = Field(min_length=1, max_length=300)
@@ -812,6 +817,30 @@ async def assign(
             row.status = "assigned"
         await session.flush()
         return _out(row)
+
+
+@router.post("/messages/bulk", summary="Sammelaktion: mehrere Nachrichten erledigen")
+async def bulk_messages(
+    body: MailBulkIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Wie ``PATCH /messages/{id}`` mit ``status=done`` je Nachricht. Nicht vorhandene oder
+    nicht zugängliche Nachrichten landen ohne Unterscheidung in ``failed`` (kein Rückschluss)."""
+    changed: list[str] = []
+    failed: list[dict[str, str]] = []
+    ids = list(dict.fromkeys(body.ids))
+    async with tenant_tx(request, principal) as session:
+        for message_id in ids:
+            try:
+                row = await _message(session, message_id, principal)
+            except ProblemError:
+                failed.append({"id": str(message_id), "reason": "not_found"})
+                continue
+            row.status = "done"
+            changed.append(str(message_id))
+        await session.flush()
+    return {"changed": changed, "failed": failed}
 
 
 @router.post("/messages/{message_id}/ticket", status_code=201, summary="Ticket aus E-Mail")
