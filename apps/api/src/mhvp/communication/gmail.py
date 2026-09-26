@@ -9,7 +9,7 @@ current inbox and relies on Message-ID deduplication.
 import base64
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -87,6 +87,14 @@ class GmailClient:
         if r.status_code != 200:
             raise GmailError(f"Posteingang nicht lesbar (HTTP {r.status_code}).")
         return [m["id"] for m in r.json().get("messages", [])]
+
+    async def find_by_header_id(self, header_message_id: str) -> str | None:
+        """Gmail id of the message with this RFC 822 Message-ID header, or None."""
+        r = await self._get("messages", q=f"rfc822msgid:{header_message_id}", maxResults=1)
+        if r.status_code != 200:
+            raise GmailError(f"Nachrichtensuche fehlgeschlagen (HTTP {r.status_code}).")
+        found = r.json().get("messages") or []
+        return str(found[0]["id"]) if found else None
 
     async def list_since(self, history_id: str, limit: int) -> list[str] | None:
         """Message ids added since history_id; None when the history is expired."""
@@ -311,6 +319,10 @@ async def sync_mailbox(
                 if first_failure is None:
                     first_failure = f"Nachricht {mid}: {type(exc).__name__}: {exc}"[:1000]
                 continue
+            # Gmail-Kennung merken, sonst kann "Erledigt archiviert Mail" die Nachricht im
+            # Postfach nicht finden (Betreibermeldung 26.09.2026: alle Eingangsmails ohne id).
+            if message.gmail_message_id is None:
+                message.gmail_message_id = mid
             counts["created" if created else "duplicates"] += 1
             if created and created_ids is not None:
                 created_ids.append(message.id)
@@ -321,6 +333,44 @@ async def sync_mailbox(
         raise
     finally:
         mailbox.last_synced_at = datetime.now(UTC)
+    await session.flush()
+    return counts
+
+
+async def backfill_gmail_ids(
+    session: AsyncSession, mailbox: Mailbox, client: GmailClient, limit: int = 500
+) -> dict[str, int]:
+    """Traegt fehlende ``gmail_message_id`` fuer Eingangsmails dieses Postfachs nach
+    (Suche per rfc822msgid-Header). Einmaliger Nachtrag nach dem Fehler vom 26.09.2026."""
+    from mhvp.communication.models import Message
+
+    rows = list(
+        await session.scalars(
+            select(Message)
+            .where(
+                Message.mailbox_id == mailbox.id,
+                Message.direction == "in",
+                Message.gmail_message_id.is_(None),
+                Message.header_message_id.is_not(None),
+                Message.received_at >= datetime.now(UTC) - timedelta(days=90),
+            )
+            .order_by(Message.received_at.desc())
+            .limit(limit)
+        )
+    )
+    counts = {"checked": 0, "filled": 0, "not_found": 0, "failed": 0}
+    for row in rows:
+        counts["checked"] += 1
+        try:
+            gid = await client.find_by_header_id(str(row.header_message_id))
+        except (GmailError, httpx.HTTPError):
+            counts["failed"] += 1
+            continue
+        if gid is None:
+            counts["not_found"] += 1
+            continue
+        row.gmail_message_id = gid
+        counts["filled"] += 1
     await session.flush()
     return counts
 
@@ -344,8 +394,16 @@ async def sync_one(
     client_id, client_secret = await oauth_client(session, settings)
     client = make_client(client_id, client_secret, mailbox)
     try:
-        return await sync_mailbox(
+        counts = await sync_mailbox(
             session, BlobStore(settings), settings, mailbox, client, created_ids
         )
+        # Nachtrag fehlender Gmail-Kennungen (Eingangsmails der letzten 90 Tage), damit
+        # "Erledigt archiviert Mail" auch fuer Altbestand greift. Nie den Abruf stoeren.
+        try:
+            filled = await backfill_gmail_ids(session, mailbox, client)
+            counts["backfilled"] = filled["filled"]
+        except (GmailError, httpx.HTTPError) as exc:
+            log.warning("gmail id backfill failed", extra={"reason": str(exc)[:200]})
+        return counts
     finally:
         await client.aclose()

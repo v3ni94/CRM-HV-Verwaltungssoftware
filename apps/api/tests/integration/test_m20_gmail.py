@@ -172,7 +172,12 @@ def test_gmail_sync_creates_tickets_and_threads(
     fake.add("g1", _eml(f"a{RUN}@example.com", f"Heizung defekt {RUN}", f"<g1-{RUN}@x>"))
     fake.add("g2", _eml(f"b{RUN}@example.com", f"Frage Abrechnung {RUN}", f"<g2-{RUN}@x>"))
     result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
-    assert result == {"fetched": 2, "created": 2, "duplicates": 0, "failed": 0}
+    assert {k: result[k] for k in ("fetched", "created", "duplicates", "failed")} == {
+        "fetched": 2,
+        "created": 2,
+        "duplicates": 0,
+        "failed": 0,
+    }
 
     msgs = {m["subject"]: m for m in _ok(client.get(f"{M}/messages", headers=h))}
     first, second = msgs[f"Heizung defekt {RUN}"], msgs[f"Frage Abrechnung {RUN}"]
@@ -180,6 +185,9 @@ def test_gmail_sync_creates_tickets_and_threads(
     assert second["ticket_id"]
     assert first["ticket_id"] != second["ticket_id"]
     assert first["document_id"]  # raw mail stored as document
+    # Gmail id is kept on ingest so "Erledigt archiviert Mail" can find the message (26.09.2026).
+    assert first["gmail_message_id"]
+    assert second["gmail_message_id"]
 
     # Unchanged history: nothing new, nothing duplicated.
     assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["created"] == 0
