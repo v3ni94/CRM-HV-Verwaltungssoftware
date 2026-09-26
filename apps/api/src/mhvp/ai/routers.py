@@ -892,6 +892,33 @@ async def undo_import(
         return out
 
 
+@router.post(
+    "/ai/import-runs/{import_id}/apply-role", summary="Importlauf: Rolle nachträglich setzen"
+)
+async def apply_import_role(
+    import_id: uuid.UUID,
+    body: s.ApplyRoleIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> s.ApplyRoleOut:
+    """Adds the role to every contact the import run created; existing roles are kept."""
+    if "contacts:update" not in principal.permissions:
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="contacts:update required")
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, ImportRun, import_id)
+        changed = await imports.apply_role(session, row, body.role.value)
+        row.summary = {**(row.summary or {}), "role_applied": body.role.value}
+        await _event(
+            session,
+            principal,
+            "import_run.role_applied",
+            row.id,
+            role=body.role.value,
+            contacts_changed=changed,
+        )
+        return s.ApplyRoleOut(import_run_id=row.id, role=body.role, contacts_changed=changed)
+
+
 # Knowledge base (Welle 3 item 14): manually curated per tenant and optionally per property,
 # plus entries learned from mail preparation corrections (mhvp.communication.preparation). Read
 # only context for AI runs; never written by AI on its own (rule 0.1.6).

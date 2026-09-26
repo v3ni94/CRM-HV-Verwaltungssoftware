@@ -558,7 +558,19 @@
     "undoneAt": "Zurückgenommen am {at}",
     "immoware24Link": "Importassistent öffnen",
     "reconciliationLink": "Abgleichbericht Parallelbetrieb",
-    "listImportLink": "Immoware24 Listenimport"
+    "listImportLink": "Immoware24 Listenimport",
+    "roleTitle": "Rolle nachträglich setzen",
+    "roleLabel": "Rolle für alle angelegten Kontakte",
+    "roleApply": "Rolle setzen",
+    "roleDone": "Rolle {role} für {count} Kontakte gesetzt.",
+    "role": {
+      "eigentuemer": "Eigentümer",
+      "mieter": "Mieter",
+      "verwalter": "Verwalter",
+      "dienstleister": "Dienstleister",
+      "bank": "Bank",
+      "sonstiges": "Sonstige"
+    }
   },
   "AiSettings": {
     "title": "KI-Einstellungen",

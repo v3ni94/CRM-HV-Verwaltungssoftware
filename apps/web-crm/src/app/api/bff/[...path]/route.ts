@@ -145,6 +145,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^imports$/ },
   { method: "GET", pattern: new RegExp(`^imports/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^imports/${ID}/undo$`) },
+  { method: "POST", pattern: new RegExp(`^ai/import-runs/${ID}/apply-role$`) },
   // Immoware24 import assistant (M8, 13.1).
   { method: "GET", pattern: /^imports\/immoware24\/(fields|mappings|overview)$/ },
   { method: "POST", pattern: /^imports\/immoware24\/(mappings|files)$/ },

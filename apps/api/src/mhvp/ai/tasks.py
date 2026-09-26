@@ -38,7 +38,7 @@ class ExtractedContact(_Out):
     phones: list[str]
     emails: list[str]
     iban: str | None
-    role: Literal["owner", "tenant", "provider", "other"] | None
+    role: Literal["owner", "tenant", "provider", "bank", "manager", "other"] | None
     unit_number: str | None
     co_members: list[str] = Field(description="weitere Personen derselben Vertragspartei")
     confidence: float = Confidence
@@ -84,7 +84,7 @@ class ColumnMapping(_Out):
 class ColumnMappingResult(_Out):
     mappings: list[ColumnMapping]
     has_header: bool = Field(description="false, wenn die erste Zeile bereits Daten enthält")
-    default_role: Literal["owner", "tenant", "provider", "other"] | None = Field(
+    default_role: Literal["owner", "tenant", "provider", "bank", "manager", "other"] | None = Field(
         description="Rolle, die für alle Zeilen gilt, falls keine Spalte die Rolle nennt"
     )
     confidence: float = Confidence

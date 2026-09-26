@@ -1564,3 +1564,92 @@ def test_a47_property_list_fast_path_sends_only_residual_rows(
     )
     assert len(contracts) == 96  # 48 ownerships plus 48 tenancies with a start date
     assert client.get(f"/api/v1/imports/{applied['id']}", headers=other).status_code == 404
+
+
+BANK_HEADER = ["Name", "Straße", "PLZ", "Ort", "Telefon", "E-Mail"]
+BANK_MAPPING = {**CONTACT_MAPPING, "default_role": None}
+
+
+def _bank_csv(prefix: str, count: int) -> bytes:
+    rows = [BANK_HEADER] + [
+        [f"{prefix} Bank{n} AG", f"Bankweg {n}", "40789", "Monheim am Rhein", "", ""]
+        for n in range(1, count + 1)
+    ]
+    return "\n".join(";".join(r) for r in rows).encode("utf-8")
+
+
+def _last_answer(c: TestClient, h: dict[str, str], run: dict[str, Any]) -> str:
+    for conversation in _ok(c.get("/api/v1/ai/conversations", headers=h), 200):
+        full = _ok(c.get(f"/api/v1/ai/conversations/{conversation['id']}", headers=h), 200)
+        for message in full["messages"]:
+            if message["role"] == "assistant" and message["task_run_id"] == run["id"]:
+                return str(message["content"])
+    raise AssertionError("no answer")
+
+
+def test_role_from_chat_instruction_is_applied_to_table_import(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
+    """26.09.2026: "ROLLE bank hinterlegen" in the chat sets role bank on every imported
+    contact, the answer confirms it, and the instruction reaches the map_columns call."""
+    admin = _setup_provider(client, world)
+    _ok(client.put("/api/v1/ai/fast-table-import", json={"enabled": True}, headers=admin), 200)
+    doc = _upload(client, admin, "banken.csv", _bank_csv(f"R{RUN}", 3), "text/csv")
+    fake.queue.append(BANK_MAPPING)
+    run = _chat(client, admin, "extract_contacts", "ROLLE bank hinterlegen, Tag Bank", [doc])
+    assert run["status"] == "succeeded", run
+    assert "ROLLE bank hinterlegen" in fake.calls[0]["messages"][0]["content"]
+    assert (
+        "Standardrolle (roles) aus der Anweisung: bank" in fake.calls[0]["messages"][0]["content"]
+    )
+    proposal = _ok(client.get(f"/api/v1/ai/proposals/{run['proposal_id']}", headers=admin), 200)
+    rows = proposal["proposed"]["rows"]
+    assert len(rows) == 3
+    assert all(r["contact"]["roles"] == ["bank"] for r in rows)
+    assert all(r["contact"]["tags"] == ["Bank"] for r in rows)
+    assert "Rolle bank für 3 Kontakte gesetzt." in _last_answer(client, admin, run)
+    applied = _ok(
+        client.post(
+            f"/api/v1/ai/proposals/{run['proposal_id']}/apply",
+            json={"contacts": [{"index": i} for i in range(3)]},
+            headers=admin,
+        )
+    )
+    assert applied["summary"]["role"] == "bank"
+    contact_ids = [i["entity_id"] for i in applied["items"] if i["entity_type"] == "contact"]
+    for contact_id in contact_ids:
+        contact = _ok(client.get(f"/api/v1/contacts/{contact_id}", headers=admin), 200)
+        assert "bank" in contact["roles"]
+
+
+def test_table_import_without_role_asks_and_apply_role_sets_it_later(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
+    admin = _setup_provider(client, world)
+    _ok(client.put("/api/v1/ai/fast-table-import", json={"enabled": True}, headers=admin), 200)
+    doc = _upload(client, admin, "banken.csv", _bank_csv(f"S{RUN}", 2), "text/csv")
+    fake.queue.append(BANK_MAPPING)
+    run = _chat(client, admin, "extract_contacts", "Kontakte anlegen", [doc])
+    assert run["status"] == "succeeded", run
+    proposal = _ok(client.get(f"/api/v1/ai/proposals/{run['proposal_id']}", headers=admin), 200)
+    assert "Welche Rolle sollen die Kontakte erhalten?" in proposal["proposed"]["questions"]
+    assert "Welche Rolle sollen die Kontakte erhalten?" in _last_answer(client, admin, run)
+    applied = _ok(
+        client.post(
+            f"/api/v1/ai/proposals/{run['proposal_id']}/apply",
+            json={"contacts": [{"index": 0}, {"index": 1}]},
+            headers=admin,
+        )
+    )
+    url = f"/api/v1/ai/import-runs/{applied['id']}/apply-role"
+    assert client.post(url, json={"role": "chef"}, headers=admin).status_code == 422
+    result = _ok(client.post(url, json={"role": "bank"}, headers=admin), 200)
+    assert result["contacts_changed"] == 2
+    again = _ok(client.post(url, json={"role": "bank"}, headers=admin), 200)
+    assert again["contacts_changed"] == 0
+    contact_ids = [i["entity_id"] for i in applied["items"] if i["entity_type"] == "contact"]
+    for contact_id in contact_ids:
+        contact = _ok(client.get(f"/api/v1/contacts/{contact_id}", headers=admin), 200)
+        assert contact["roles"] == ["bank"]
+    other = bearer(login(client, world, "m7other"))
+    assert client.post(url, json={"role": "bank"}, headers=other).status_code == 404

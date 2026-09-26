@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import invoices as acc_invoices
 from mhvp.accounting.models import Invoice, InvoiceKind, Ledger, PostingStatus
+from mhvp.ai import instructions as chat_instructions
 from mhvp.ai.models import AiTaskRun, ImportRun, ImportRunItem, ImportStatus
 from mhvp.contacts import schemas as cs
 from mhvp.contacts import services as contact_services
@@ -36,8 +37,17 @@ from mhvp.properties.models import Building, PropertyOwner, Unit
 # Preview -----------------------------------------------------------------------------------
 
 
-def _contact_in(item: dict[str, Any], notes: list[str]) -> cs.ContactIn | None:
-    """Map an extracted contact to ``ContactIn``; invalid parts are dropped with a note."""
+def _contact_in(
+    item: dict[str, Any],
+    notes: list[str],
+    *,
+    default_role: str | None = None,
+    tags: list[str] | None = None,
+) -> cs.ContactIn | None:
+    """Map an extracted contact to ``ContactIn``; invalid parts are dropped with a note.
+
+    ``default_role`` (a ContactRoleCode value from the chat instruction) is added to the
+    row's own role, never replaces it; ``tags`` from the instruction are added the same way."""
     base: dict[str, Any] = {
         "kind": item["kind"],
         "salutation": item.get("salutation"),
@@ -70,6 +80,10 @@ def _contact_in(item: dict[str, Any], notes: list[str]) -> cs.ContactIn | None:
             notes.append("IBAN ist ungültig und wurde nicht übernommen.")
     role = item.get("role")
     base["types"] = [role] if role in ("owner", "tenant") else []
+    roles = {r for r in (chat_instructions.contact_role(role), default_role) if r}
+    base["roles"] = sorted(roles)
+    if tags:
+        base["tags"] = list(tags)
     try:
         contact = cs.ContactIn.model_validate(base)
     except ValidationError as exc:
@@ -81,11 +95,18 @@ def _contact_in(item: dict[str, Any], notes: list[str]) -> cs.ContactIn | None:
     return contact
 
 
-async def contacts_preview(session: AsyncSession, output: dict[str, Any]) -> dict[str, Any]:
+ROLE_QUESTION = "Welche Rolle sollen die Kontakte erhalten?"
+
+
+async def contacts_preview(
+    session: AsyncSession, output: dict[str, Any], instruction: str | None = None
+) -> dict[str, Any]:
+    default_role = chat_instructions.role_from_instruction(instruction)
+    tags = chat_instructions.tags_from_instruction(instruction)
     rows = []
     for index, item in enumerate(output.get("contacts", [])):
         notes: list[str] = []
-        contact = _contact_in(item, notes)
+        contact = _contact_in(item, notes, default_role=default_role, tags=tags)
         duplicates: list[dict[str, Any]] = []
         if contact is not None:
             probe = cs.DuplicateQuery(
@@ -129,7 +150,20 @@ async def contacts_preview(session: AsyncSession, output: dict[str, Any]) -> dic
                 "notes": notes,
             }
         )
-    return {"rows": rows, "questions": output.get("questions", [])}
+    questions = list(output.get("questions", []))
+    without_role = sum(1 for r in rows if r["contact"] is not None and not r["contact"]["roles"])
+    if rows and default_role is None and without_role and ROLE_QUESTION not in questions:
+        questions.append(ROLE_QUESTION)
+    return {
+        "rows": rows,
+        "questions": questions,
+        "default_role": default_role,
+        "tags": tags,
+        "role_count": sum(
+            1 for r in rows if r["contact"] is not None and default_role in r["contact"]["roles"]
+        ),
+        "without_role": without_role,
+    }
 
 
 def _decimal(value: str | None) -> Decimal | None:
@@ -460,13 +494,19 @@ async def apply_contacts(
     """Create selected contacts, each with its own party (10.1 step 5)."""
     recorder = Recorder(session, run)
     rows = {r["index"]: r for r in preview["rows"]}
-    created = linked = 0
+    created = linked = roles_added = 0
     for choice in selection:
         row = rows.get(choice.index)
         if row is None or choice.action == "skip":
             continue
         if choice.action == "link":
             linked += 1
+            role = preview.get("default_role")
+            if role and choice.contact_id is not None:
+                existing = await session.get(Contact, choice.contact_id)
+                if existing is not None and role not in (existing.roles or []):
+                    existing.roles = sorted({*(existing.roles or []), role})
+                    roles_added += 1
             continue
         if row["contact"] is None:
             raise ProblemError(ErrorCodes.VALIDATION, detail=f"Zeile {choice.index} ist ungültig.")
@@ -476,7 +516,35 @@ async def apply_contacts(
         party = await create_party(session, principal.tenant_id, principal.user_id, [contact])
         recorder.add("party", party.id)
         created += 1
-    return {"contacts_created": created, "linked_existing": linked}
+    summary: dict[str, Any] = {"contacts_created": created, "linked_existing": linked}
+    if preview.get("default_role"):
+        summary["role"] = preview["default_role"]
+        summary["roles_added_existing"] = roles_added
+    return summary
+
+
+async def apply_role(session: AsyncSession, run: ImportRun, role: str) -> int:
+    """Adds ``role`` to every contact created by ``run`` (never removes a role). Contacts
+    already undone or deleted are skipped. Returns the number of contacts changed."""
+    ids = (
+        await session.scalars(
+            select(ImportRunItem.entity_id).where(
+                ImportRunItem.import_run_id == run.id,
+                ImportRunItem.entity_type == "contact",
+                ImportRunItem.undone.is_(False),
+            )
+        )
+    ).all()
+    changed = 0
+    for contact_id in ids:
+        contact = await session.get(Contact, contact_id)
+        if contact is None or getattr(contact, "deleted_at", None) is not None:
+            continue
+        if role not in (contact.roles or []):
+            contact.roles = sorted({*(contact.roles or []), role})
+            changed += 1
+    await session.flush()
+    return changed
 
 
 async def apply_property(
