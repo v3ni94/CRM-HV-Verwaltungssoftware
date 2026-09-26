@@ -49,6 +49,21 @@ current year and is reported as assumption. An active contract of the same kind 
 party is left as is; another party or a missing landlord is a conflict. Handbook:
 `docs/handbuch/import-zuordnung.md`. Tests: `tests/unit/test_zuordnung_import.py`,
 `tests/integration/test_zuordnung_import.py`.
+
+## Kontaktereignisse der Listenimporte (26.09.2026, A87)
+
+`kontakte.apply_prepared` emits `contact.created` (payload `kind`, `source =
+"import.kontakte"`) for every created contact and `contact.updated` (payload `fields:
+["roles"]`, audit diff old/new, version bump) when a second list adds a role;
+`zuordnung.apply_rows` emits one `contact.updated` (`source = "import.zuordnung"`, counted as
+`kontakte_aktualisiert`) per contact whose roles changed through the assigned contracts or the
+derived roles. The helpers live in `kontakte.py` (`emit_contact_created`, `emit_roles_updated`).
+The events are outbox rows in the same transaction as the import; a test run (CLI without
+`--apply`, API `mode=preview`) is rolled back and leaves no event, so no after-commit hook is
+needed. The webhook dispatcher (`mhvp.core.webhooks.enqueue_deliveries`) and the rule engine
+read them like the events of the manual API. Not covered: the staging import
+(`services._apply_contact`) and the objektakte difference import. Test:
+`tests/integration/test_a87_import_contact_events.py`.
 ## Abgleichbericht Parallelbetrieb (26.09.2026, A68)
 
 `reconciliation.py` compares the staged rows of the report types `journal` and

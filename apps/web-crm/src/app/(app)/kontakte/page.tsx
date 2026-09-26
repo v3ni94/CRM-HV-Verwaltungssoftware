@@ -144,6 +144,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                     {c.display_name}
                     {c.blocked ? <span className="ml-2 text-xs text-danger-fg">{t("blocked")}</span> : null}
                     {c.completeness === "incomplete" ? <span className="ml-2 text-xs text-muted">{t("incomplete")}</span> : null}
+                    {c.iban_pending ? <span className="ml-2 text-xs text-warning-fg">{t("ibanPending")}</span> : null}
                   </span>
                   <span className="text-sm text-muted">{tl(`kind.${c.kind}`)}</span>
                   <RolePills roles={c.roles} />
@@ -184,6 +185,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                         </Link>
                         {c.blocked ? <span className="ml-2 text-xs text-danger-fg">{t("blocked")}</span> : null}
                         {c.completeness === "incomplete" ? <span className="ml-2 text-xs text-muted">{t("incomplete")}</span> : null}
+                    {c.iban_pending ? <span className="ml-2 text-xs text-warning-fg">{t("ibanPending")}</span> : null}
                       </td>
                       <td>{tl(`kind.${c.kind}`)}</td>
                       <td>

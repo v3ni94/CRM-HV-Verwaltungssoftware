@@ -72,6 +72,7 @@ class DocumentHit(_Out):
     mime_type: str
     category_id: uuid.UUID | None
     created_at: datetime
+    is_draft: bool = False
     snippet: str | None = None
 
 

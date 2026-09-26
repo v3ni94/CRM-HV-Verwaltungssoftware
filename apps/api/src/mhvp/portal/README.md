@@ -51,6 +51,16 @@ endpoints under `/portal/board`. The board reads its engagements, positions and 
 released through the positions only (`released_document_ids`), and records notes and questions;
 the management answers in `mhvp.hoa.board`. No CRM right is granted.
 
+Portal accounts per contact (A86, addendum 26.09.2026): `GET /portal-admin/accounts?contact_id=`
+(`contacts:read`, tenant separated by RLS, empty list for an unknown or foreign contact) returns
+`PortalAccountOut` rows: e-mail of the platform user, `status` of `PortalAccount` (`invited` until
+the invitation is accepted, then `active`), `locked` (platform user inactive or `locked_until` in
+the future), `invited_at` (creation), `invitation_expires_at`, `activated_at`, `last_login_at`.
+The invitation hash, the token and password data are never returned; the token appears once in
+the answer of `POST /portal-admin/accounts` only. The CRM contact page (section Portalzugang)
+reads this on mount. Note: `last_login_at` is written by `mhvp.core.auth.service.verify_totp`
+only, a password only login leaves it empty (open point, outside this module).
+
 ## Further files (addendum 26.09.2026)
 
 Checked against the folder contents on 26.09.2026, the following files were not listed above:

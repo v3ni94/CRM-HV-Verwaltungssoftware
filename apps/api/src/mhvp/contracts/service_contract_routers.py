@@ -71,6 +71,8 @@ class ServiceContractPatch(_Terms):
 class ServiceContractOut(BaseModel):
     id: uuid.UUID
     provider_contact_id: uuid.UUID
+    # Display name of the linked provider contact (review backlog: no raw id in the CRM).
+    provider_name: str
     property_id: uuid.UUID | None
     title: str
     starts_at: date
@@ -86,11 +88,12 @@ class ServiceContractOut(BaseModel):
     orientation_only: bool = True
 
 
-def _out(row: ServiceContract, today: date) -> ServiceContractOut:
+def _out(row: ServiceContract, today: date, provider_name: str) -> ServiceContractOut:
     terms = terms_of(row, today)
     return ServiceContractOut(
         id=row.id,
         provider_contact_id=row.provider_contact_id,
+        provider_name=provider_name,
         property_id=row.property_id,
         title=row.title,
         starts_at=row.starts_at,
@@ -110,11 +113,19 @@ def _today() -> date:
     return local_date(datetime.now(UTC))
 
 
-async def _check_refs(session: Any, contact_id: uuid.UUID, property_id: uuid.UUID | None) -> None:
-    if await session.get(Contact, contact_id) is None:
+async def _check_refs(session: Any, contact_id: uuid.UUID, property_id: uuid.UUID | None) -> str:
+    """Validate the references and return the provider's display name."""
+    contact = await session.get(Contact, contact_id)
+    if contact is None:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Der Dienstleister ist unbekannt.")
     if property_id is not None and await session.get(Property, property_id) is None:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Das Objekt ist unbekannt.")
+    return str(contact.display_name)
+
+
+async def _provider_name(session: Any, contact_id: uuid.UUID) -> str:
+    name = await session.scalar(select(Contact.display_name).where(Contact.id == contact_id))
+    return str(name) if name is not None else ""
 
 
 async def _get(session: Any, contract_id: uuid.UUID) -> ServiceContract:
@@ -146,16 +157,19 @@ async def list_service_contracts(
     principal: TenantPrincipal = Depends(READ),
 ) -> list[ServiceContractOut]:
     async with tenant_tx(request, principal) as session:
-        query = select(ServiceContract)
+        # One query with the provider name joined in (no N+1 lookup per row).
+        query = select(ServiceContract, Contact.display_name).join(
+            Contact, Contact.id == ServiceContract.provider_contact_id
+        )
         if property_id is not None:
             query = query.where(ServiceContract.property_id == property_id)
         if provider_contact_id is not None:
             query = query.where(ServiceContract.provider_contact_id == provider_contact_id)
         rows = (
-            await session.scalars(query.order_by(ServiceContract.title, ServiceContract.id))
+            await session.execute(query.order_by(ServiceContract.title, ServiceContract.id))
         ).all()
         today = _today()
-        return [_out(r, today) for r in rows]
+        return [_out(row, today, str(name)) for row, name in rows]
 
 
 @router.post("/service-contracts", status_code=201, summary="Dienstleistervertrag anlegen")
@@ -163,7 +177,7 @@ async def create_service_contract(
     body: ServiceContractIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> ServiceContractOut:
     async with tenant_tx(request, principal) as session:
-        await _check_refs(session, body.provider_contact_id, body.property_id)
+        provider_name = await _check_refs(session, body.provider_contact_id, body.property_id)
         row = ServiceContract(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -173,7 +187,7 @@ async def create_service_contract(
         session.add(row)
         await session.flush()
         await _event(session, principal, "service_contract.created", row.id)
-        return _out(row, _today())
+        return _out(row, _today(), provider_name)
 
 
 @router.get("/service-contracts/{contract_id}", summary="Dienstleistervertrag lesen")
@@ -181,7 +195,8 @@ async def get_service_contract(
     contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> ServiceContractOut:
     async with tenant_tx(request, principal) as session:
-        return _out(await _get(session, contract_id), _today())
+        row = await _get(session, contract_id)
+        return _out(row, _today(), await _provider_name(session, row.provider_contact_id))
 
 
 @router.patch("/service-contracts/{contract_id}", summary="Dienstleistervertrag ändern")
@@ -209,11 +224,11 @@ async def update_service_contract(
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail="Das Vertragsende liegt vor dem Beginn."
             )
-        await _check_refs(session, row.provider_contact_id, row.property_id)
+        provider_name = await _check_refs(session, row.provider_contact_id, row.property_id)
         row.updated_by = principal.user_id
         await session.flush()
         await _event(session, principal, "service_contract.updated", row.id)
-        return _out(row, _today())
+        return _out(row, _today(), provider_name)
 
 
 @router.delete(

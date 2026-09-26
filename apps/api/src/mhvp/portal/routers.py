@@ -234,6 +234,61 @@ async def provision_account(
         }
 
 
+class PortalAccountOut(BaseModel):
+    """Portal account of a contact as the CRM sees it (A86). Never carries the invitation
+    hash, a password hash or a token; ``status`` is the account status of the model
+    (``invited`` until the invitation is accepted, then ``active``), ``locked`` mirrors a
+    temporary login lock of the platform user."""
+
+    id: uuid.UUID
+    contact_id: uuid.UUID
+    email: str
+    status: str
+    locked: bool
+    invited_at: datetime
+    invitation_expires_at: datetime | None
+    activated_at: datetime | None
+    last_login_at: datetime | None
+
+
+@admin.get("/accounts", summary="Portalzugänge eines Kontakts")
+async def list_accounts(
+    contact_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("contacts:read")),
+) -> list[PortalAccountOut]:
+    """Portal accounts of one contact of the own tenant (RLS); an unknown or foreign contact
+    yields an empty list, never 404, so the CRM can show "kein Zugang" without a probe."""
+    from mhvp.platform.models import User
+
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.execute(
+                select(PortalAccount, User)
+                .join(User, User.id == PortalAccount.user_id)
+                .where(PortalAccount.contact_id == contact_id)
+                .order_by(PortalAccount.created_at)
+            )
+        ).all()
+        now = datetime.now(UTC)
+        return [
+            PortalAccountOut(
+                id=account.id,
+                contact_id=account.contact_id,
+                email=user.email,
+                status=account.status,
+                locked=bool(
+                    not user.active or (user.locked_until is not None and user.locked_until > now)
+                ),
+                invited_at=account.created_at,
+                invitation_expires_at=account.invitation_expires_at,
+                activated_at=account.activated_at,
+                last_login_at=user.last_login_at,
+            )
+            for account, user in rows
+        ]
+
+
 @admin.post("/accounts", status_code=201, summary="Portalzugang einladen")
 async def invite(
     body: PortalInviteIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)

@@ -90,6 +90,23 @@ def test_second_person_rejects_pending_account() -> None:
     assert session.events() == ["bank_account.rejected"]
     event = next(e for e in session.added if isinstance(e, DomainEvent))
     assert event.payload["reason"] == "Beleg fehlt"
+    # The reason is stored on the row as well, so the API can show it (migration 0132).
+    assert account.rejected_reason == "Beleg fehlt"
+    out = services.bank_account_out(account)
+    assert out.rejected_reason == "Beleg fehlt"
+    assert out.rejected_by == APPROVER
+    assert out.rejected_at == account.decided_at
+
+
+def test_approval_clears_rejected_fields_in_api_view() -> None:
+    account = _account()
+    _decide(account, APPROVER, reason="ignored on approval")
+    assert account.rejected_reason is None
+    out = services.bank_account_out(account)
+    assert out.rejected_reason is None
+    assert out.rejected_by is None
+    assert out.rejected_at is None
+    assert out.decided_by == APPROVER
 
 
 @pytest.mark.parametrize("approve", [True, False])

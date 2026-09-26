@@ -18,6 +18,7 @@ const candidate: DuplicateCandidate = {
     roles: [],
     blocked: false,
     deleted: false,
+    iban_pending: false,
     completeness: "complete",
   },
   score: 0.95,

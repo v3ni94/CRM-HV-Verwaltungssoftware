@@ -105,6 +105,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^tenant\/roles$/ },
   { method: "PUT", pattern: new RegExp(`^tenant/roles/${ID}/permissions$`) },
   // Portalrechte je Rolle (M2-08 entschieden, docs/rules/M2-07.md).
+  // Portalzugang einladen von der Kontaktakte aus (M21, Lückenliste A86).
+  { method: "GET", pattern: /^portal-admin\/accounts$/ },
+  { method: "POST", pattern: /^portal-admin\/accounts$/ },
   // Portalformulare (A56): Vorlagen je Mandant.
   { method: "GET", pattern: /^portal-admin\/forms$/ },
   { method: "POST", pattern: /^portal-admin\/forms$/ },

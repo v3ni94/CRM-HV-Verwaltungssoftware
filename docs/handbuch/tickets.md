@@ -53,7 +53,54 @@ Zusammengeführte anzeigen zeigt sie wieder.
 Weitere Filter bietet die Ticketliste über Weitere Filter: Meine Tickets, Bearbeiter,
 Objekt, Einheit, Kontakt, Rolle (Eigentümer/Mieter), Status, Priorität, Kategorie sowie
 Erstellt ab/bis. Zurücksetzen löscht alle gesetzten Filter. Die freie Suche durchsucht
-Nummer, Titel, Beschreibung, Kontakt und Adresse.
+Nummer, Titel, Beschreibung, Kontakt und Adresse sowie Betreff und Absender der
+verknüpften Mails und die E-Mail-Adresse des Kontakts.
+
+Erledigte Vorgänge (Status erledigt, abgeschlossen, abgelehnt) sind in der Ticketübersicht
+und in der Mailübersicht standardmäßig ausgeblendet (seit 1.23.0). Der Umschalter Erledigte
+anzeigen blendet sie ein; ein ausdrücklich gesetzter Statusfilter zeigt immer genau die
+gewählten Status. Die Kontakt-, Objekt- und Einheitenseite zeigen dagegen die vollständige
+Historie einschließlich erledigter Tickets.
+
+## Status und Rollen
+
+Die Statusauswahl im Ticket richtet sich nach der Rolle. Mitarbeiter sehen nur die
+zulässigen Folgestatus (neu nach in Bearbeitung, wartend, erledigt oder abgelehnt; in
+Bearbeitung nach wartend, erledigt oder abgelehnt; wartend zurück nach in Bearbeitung;
+erledigt nach abgeschlossen oder zurück nach in Bearbeitung; abgelehnt zurück nach in
+Bearbeitung; abgeschlossen ist Endstatus). Mandantenadministratoren (Recht Tickets löschen)
+dürfen jeden Status in jeden anderen setzen, ohne Zwischenschritte; ein solcher Wechsel steht
+im Verlauf mit dem Kennzeichen admin_override. Die Abschlussprüfungen (Checkliste,
+Pflichtfelder der Vorlage, Erledigungsnotiz) gelten auch für Administratoren.
+
+## Erledigungsnotiz beim Abschluss
+
+Jeder Wechsel auf erledigt, abgeschlossen oder abgelehnt verlangt eine Erledigungsnotiz
+(seit 1.24.0): eine Art aus fester Liste und ein Freitext. Die Arten sind Stammdaten ergänzt,
+Handwerker beauftragt, Auskunft erteilt, Weitergeleitet, Kein Handlungsbedarf, Abgelehnt,
+Sonstiges; bei Sonstiges ist der Freitext Pflicht, sonst freiwillig. Der Abschlussdialog
+erscheint im Ticketdetail, in der Sammelaktion Status anwenden (eine gemeinsame Notiz für alle
+gewählten Tickets) und beim Zusammenführen (gemeinsame Notiz für die Quelltickets; ohne
+Eingabe erhalten sie die Art Zusammengeführt mit Verweis auf das Zielticket). Ohne
+Erledigungsnotiz lehnt die Plattform den Abschluss ab (Meldung Beim Abschluss ist eine
+Erledigungsnotiz erforderlich).
+
+Die Notiz steht am Ticket (Art, Text, wer abgeschlossen hat) und im Verlauf beim
+Statuswechsel. Wird ein Ticket wiedereröffnet, werden Art und Text geleert; beim nächsten
+Abschluss ist eine neue Notiz nötig.
+
+### Lernen aus Erledigungen
+
+Jeder Abschluss wird als Lernbeispiel gespeichert (Betreff, Anliegen als Auszug, Kategorie,
+Thema, erkanntes Objekt, Einheit und Kontakt; Ergebnis Art, Text, Status und die zuletzt
+versendete Antwort als Auszug). Dabei läuft kein KI-Aufruf. Aus einem abgeschlossenen Ticket
+gelernte Playbooks erhalten zusätzlich den Schritt Erledigung mit der Notiz; ein bereits
+vorhandenes ähnliches Playbook wird um diesen Schritt ergänzt. Bei neuen Mails zeigt der
+KI-Vorschlag unter Bei ähnlichen Vorgängen wurde die drei ähnlichsten Erledigungen (Abgleich
+über Schlagwörter in Betreff und Anliegen, ohne Anbieteraufruf). Beispiele und Playbooks sind
+unter Einstellungen, Wissen einsehbar (Kapitel Einstellungen). Das Lernbeispiel ist ein
+Vorschlagsgedächtnis, keine Anweisung: Vorschläge werden weiterhin durch einen Mitarbeiter
+bestätigt.
 
 ## Termin anlegen
 
@@ -158,6 +205,35 @@ Verpasste Anrufe und Anrufe von Kontakten mit offenem Ticket erzeugen am Kontakt
 Vorschlag Rückruf. Ticket Rückruf anlegen legt ein Ticket mit Quelle Telefon an; ein
 offenes Ticket wird als übergeordnetes Ticket verknüpft (Kapitel Kommunikation).
 
+### Anrufe über die Telefonassistenz (Hallo Heidi)
+
+Die KI-Telefonassistenz Hallo Heidi schickt je Anruf ein Gesprächsprotokoll per Mail an das
+Postfach; daraus entsteht wie bei jeder Mail ein Ticket. Erkannt wird eine solche Mail am
+Absendermuster (Standard hallo-heidi, halloheidi, hallo.heidi), am Kennwort im Betreff
+(Standard hallo heidi) oder am Kennwort im Text, letzteres nur zusammen mit einer
+beschrifteten Rufnummer, damit eine Anrede an eine Mitarbeiterin nicht als Anruf zählt.
+Muster und Kennwörter sind je Mandant unter Einstellungen, Postfächer, Telefonassistenz
+änderbar; dort lässt sich die Erkennung auch abschalten.
+
+Aus dem Protokoll liest die Plattform Anrufernummer, Anrufername, Objekt (Nummer oder
+Anschrift), Einheit (Whg., WE, Etage) und Anliegen zunächst regelbasiert; die KI-Aufgabe
+Anrufzusammenfassung ergänzt nur fehlende Angaben, sieht Rufnummern und Kennungen maskiert
+und ist ein Vorschlag. Die Zuordnung des Anrufers läuft in dieser Reihenfolge: Objekt über
+Nummer oder Anschrift, dann Personen mit laufendem Miet- oder Eigentumsvertrag an diesem
+Objekt per Namensabgleich; ohne Objekt der Name allein, aber nur bei genau einem Treffer
+(mehrere Treffer erscheinen als Kandidaten); zuletzt eine eindeutige Rufnummer. Kontakt,
+Objekt und Einheit werden am Ticket gesetzt, soweit noch leer; das Ergebnis steht als
+Ereignis Anrufzusammenfassung im Verlauf.
+
+Ist die Anrufernummer beim zugeordneten Kontakt noch nicht hinterlegt, entsteht unter
+Vorschläge aus der E-Mail der Vorschlag Stammdaten ergänzen: Telefonnummer mit Antwortentwurf
+zum Anliegen (aus einem passenden Playbook, sonst ein allgemeiner Text). Akzeptieren übernimmt
+nur die Nummer; Freigeben und antworten übernimmt die Nummer und legt die Antwort als
+Entwurf am Ticket an, gerichtet an die E-Mail-Adresse des Anrufers. Versendet wird nichts
+automatisch; der Entwurf geht den üblichen Weg über Einreichen und Freigabe (Kapitel Mail).
+Hat der Kontakt keine E-Mail-Adresse, bleibt der Entwurf ohne Empfänger und ist vor dem
+Einreichen zu ergänzen.
+
 ### Vorschläge aus der E-Mail (Stammdatenänderung)
 
 Kündigt eine eingehende Mail eine Änderung der eigenen Stammdaten an (Anschrift, Telefon,
@@ -191,4 +267,9 @@ abzustimmen.
   Checkliste nicht oder sind bereits gesperrt (zusammengeführt); diese Zeilen einzeln im
   Ticketdetail prüfen.
 - **Ticket lässt sich nicht abschließen**: Checkliste unvollständig, Pflichtfelder der
-  Vorlage fehlen.
+  Vorlage fehlen oder die Erledigungsnotiz fehlt (bei Sonstiges auch der Freitext).
+- **Ticket ist aus der Liste verschwunden**: Es ist erledigt, abgeschlossen oder abgelehnt
+  und deshalb ausgeblendet; Erledigte anzeigen einschalten oder den Statusfilter setzen.
+- **Anruf-Mail wurde nicht als Anruf erkannt**: Absendermuster oder Kennwort passen nicht,
+  oder das Kennwort steht nur im Text ohne beschriftete Rufnummer; Einstellungen, Postfächer,
+  Telefonassistenz prüfen.

@@ -133,9 +133,9 @@
 
 - Bedingungen auf verknüpfte Stammdaten sind auf den Katalog oben beschränkt; weitere
   Felder (zum Beispiel Gebäude, Schlüssel, Zähler) nur nach Erweiterung des Katalogs.
-- Die Dokumentliste zeigt den Entwurfsstatus über die Kategorie "Entwurf"; ein eigener
-  Listenfilter `is_draft` in der Dokumenten-API (aus `source_meta`) ist noch nicht
-  umgesetzt (Dokumentdomäne, nicht Regel-Engine).
+- Erledigt 26.09.2026: `GET /api/v1/documents?is_draft=true|false` filtert auf
+  `source_meta["is_draft"]` (Dokumentdomäne), das CRM bietet unter Dokumente die Auswahl
+  "Alle, nur Entwürfe, ohne Entwürfe".
 - Regel-Webhooks kennen keine Wiederholung (anders als Abonnements nach Abschnitt 12); ob
   ein Wiederholungsplan gewünscht ist, entscheidet der Betreiber (`docs/OPEN_QUESTIONS.md`
   M9-08).

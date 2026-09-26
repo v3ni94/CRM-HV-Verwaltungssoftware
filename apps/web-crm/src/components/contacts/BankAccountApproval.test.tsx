@@ -42,6 +42,9 @@ function account(overrides: Partial<BankAccount> = {}): BankAccount {
     requested_by: CLERK,
     decided_by: null,
     decided_at: null,
+    rejected_reason: null,
+    rejected_by: null,
+    rejected_at: null,
     ...overrides,
   };
 }
@@ -212,5 +215,25 @@ describe("BankAccountApproval", () => {
     );
     expect(screen.getByText("freigegeben")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+  it("shows the stored rejection reason of a rejected IBAN", () => {
+    renderIntl(
+      <BankAccountApproval
+        contactId={CONTACT}
+        account={account({
+          approval_status: "rejected",
+          decided_by: APPROVER,
+          decided_at: "2026-09-26T10:00:00Z",
+          rejected_reason: "Kontoinhaber weicht ab",
+          rejected_by: APPROVER,
+          rejected_at: "2026-09-26T10:00:00Z",
+        })}
+        canApprove
+        currentUserId={APPROVER}
+      />,
+    );
+    expect(screen.getByTestId("bank-rejected-reason")).toHaveTextContent(
+      "Kontoinhaber weicht ab",
+    );
   });
 });

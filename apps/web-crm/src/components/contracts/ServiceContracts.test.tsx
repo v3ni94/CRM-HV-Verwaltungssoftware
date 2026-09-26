@@ -8,6 +8,7 @@ import { ServiceContracts, type ServiceContract } from "./ServiceContracts";
 const row: ServiceContract = {
   id: "01920000-0000-7000-8000-0000000000aa",
   provider_contact_id: "01920000-0000-7000-8000-0000000000bb",
+  provider_name: "Muster Service GmbH",
   property_id: null,
   title: "Hausmeisterdienst",
   starts_at: "2024-01-01",
@@ -46,12 +47,11 @@ describe("ServiceContracts", () => {
   });
 
   it("renders computed dates with the orientation badge and hides the form without rights", () => {
+    // The provider name comes from the API row, not from the option list.
     renderIntl(
       <ServiceContracts
         initial={[row]}
-        providers={[
-          { id: row.provider_contact_id, label: "Muster Service GmbH" },
-        ]}
+        providers={[]}
         properties={[]}
         canCreate={false}
         canUpdate={false}
@@ -78,6 +78,34 @@ describe("ServiceContracts", () => {
     expect(
       screen.queryByText("Dienstleistervertrag anlegen"),
     ).not.toBeInTheDocument();
+  });
+
+  it("falls back to the option list and then to unknown without a provider name", () => {
+    renderIntl(
+      <ServiceContracts
+        initial={[
+          { ...row, provider_name: "" },
+          {
+            ...row,
+            id: "01920000-0000-7000-8000-0000000000ac",
+            provider_contact_id: "01920000-0000-7000-8000-0000000000cc",
+            provider_name: "",
+            title: "Reinigung",
+          },
+        ]}
+        providers={[
+          { id: row.provider_contact_id, label: "Aus der Auswahlliste" },
+        ]}
+        properties={[]}
+        canCreate={false}
+        canUpdate={false}
+        canDelete={false}
+      />,
+    );
+    const table = within(screen.getByTestId("service-contracts-table"));
+    expect(table.getByText("Aus der Auswahlliste")).toBeInTheDocument();
+    expect(table.getByText("Unbekannt")).toBeInTheDocument();
+    expect(table.queryByText(/0000000000cc/)).not.toBeInTheDocument();
   });
 
   it("uses singular units for a one month notice period", () => {

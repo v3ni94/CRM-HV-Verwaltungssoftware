@@ -6888,6 +6888,12 @@
             "title": "Display Name",
             "type": "string"
           },
+          "iban_pending": {
+            "default": false,
+            "description": "Mindestens eine Bankverbindung wartet auf die Vier-Augen-Freigabe (M5-01).",
+            "title": "Iban Pending",
+            "type": "boolean"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -9458,6 +9464,11 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "is_draft": {
+            "default": false,
+            "title": "Is Draft",
+            "type": "boolean"
           },
           "mime_type": {
             "title": "Mime Type",
@@ -21426,6 +21437,87 @@
         "title": "PortalAccessIn",
         "type": "object"
       },
+      "PortalAccountOut": {
+        "description": "Portal account of a contact as the CRM sees it (A86). Never carries the invitation\nhash, a password hash or a token; ``status`` is the account status of the model\n(``invited`` until the invitation is accepted, then ``active``), ``locked`` mirrors a\ntemporary login lock of the platform user.",
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "invitation_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitation Expires At"
+          },
+          "invited_at": {
+            "format": "date-time",
+            "title": "Invited At",
+            "type": "string"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contact_id",
+          "email",
+          "status",
+          "locked",
+          "invited_at",
+          "invitation_expires_at",
+          "activated_at",
+          "last_login_at"
+        ],
+        "title": "PortalAccountOut",
+        "type": "object"
+      },
       "PortalAppointmentIn": {
         "additionalProperties": false,
         "properties": {
@@ -25728,7 +25820,7 @@
         "type": "object"
       },
       "ResolutionKind": {
-        "description": "Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``\nsetzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt.",
+        "description": "Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``\nsetzt die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt; das\nStatusereignis und das Lernbeispiel entstehen dabei wie bei jedem anderen Abschluss.",
         "enum": [
           "stammdaten_ergaenzt",
           "handwerker_beauftragt",
@@ -27258,6 +27350,10 @@
             "title": "Provider Contact Id",
             "type": "string"
           },
+          "provider_name": {
+            "title": "Provider Name",
+            "type": "string"
+          },
           "starts_at": {
             "format": "date",
             "title": "Starts At",
@@ -27275,6 +27371,7 @@
         "required": [
           "id",
           "provider_contact_id",
+          "provider_name",
           "property_id",
           "title",
           "starts_at",
@@ -31910,6 +32007,44 @@
           },
           "mandate_status": {
             "$ref": "#/components/schemas/ContactMandateStatus"
+          },
+          "rejected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Zeitpunkt der Ablehnung; nur bei approval_status rejected.",
+            "title": "Rejected At"
+          },
+          "rejected_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ablehnende Person; nur bei approval_status rejected gesetzt.",
+            "title": "Rejected By"
+          },
+          "rejected_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Begründung der zweiten Person bei Ablehnung (M5-01).",
+            "title": "Rejected Reason"
           },
           "requested_by": {
             "anyOf": [
@@ -44857,6 +44992,24 @@
                 }
               ],
               "title": "Category Id"
+            }
+          },
+          {
+            "description": "true: nur Entwürfe (z. B. automatisch erzeugte Briefe), false: ohne Entwürfe, leer: kein Filter",
+            "in": "query",
+            "name": "is_draft",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "true: nur Entwürfe (z. B. automatisch erzeugte Briefe), false: ohne Entwürfe, leer: kein Filter",
+              "title": "Is Draft"
             }
           },
           {
@@ -60227,6 +60380,52 @@
       }
     },
     "/api/v1/portal-admin/accounts": {
+      "get": {
+        "description": "Portal accounts of one contact of the own tenant (RLS); an unknown or foreign contact\nyields an empty list, never 404, so the CRM can show \"kein Zugang\" without a probe.",
+        "operationId": "list_accounts_api_v1_portal_admin_accounts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PortalAccountOut"
+                  },
+                  "title": "Response List Accounts Api V1 Portal Admin Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalzugänge eines Kontakts",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      },
       "post": {
         "operationId": "invite_api_v1_portal_admin_accounts_post",
         "requestBody": {

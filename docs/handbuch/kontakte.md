@@ -17,7 +17,21 @@ Hinzufügen oder Entfernen; die Aktion wird ganz oder gar nicht ausgeführt.
 
 Ein Kontakt gliedert sich in Stammdaten, Kommunikation (Telefonnummern, E-Mail-Adressen,
 Adressen), Bankverbindungen, Notizen und Einwilligungen. Bei einer Person sind Vor- oder
-Nachname Pflicht, bei einer Firma der Firmenname.
+Nachname Pflicht, bei einer Firma der Firmenname. Der Reiter Tickets zeigt alle Tickets, die
+diesem Kontakt zugeordnet sind, einschließlich der erledigten (seit 1.23.0).
+
+## Beziehungen zu Objekten und Einheiten
+
+Unten auf der Kontaktseite steht der Abschnitt Beziehungen zu Objekten und Einheiten: je
+Zeile Objekt, Einheit, Art der Beziehung (Mieter, Eigentümer), Kategorie, Zeitraum und Status.
+Die Zeilen entstehen aus den Verträgen des Kontakts, aus Eigentümerzuordnungen und aus den
+Zuordnungen der objektakte-Übernahme; sie werden nicht von Hand gepflegt. Die Rollen Mieter
+und Eigentümer werden aus denselben Quellen automatisch abgeleitet und ergänzen die von Hand
+gesetzten Rollen, entfernen aber keine. Für Bestände, die vor 1.23.0 importiert wurden, lassen
+sich die abgeleiteten Rollen einmalig über die API neu berechnen (POST
+/contacts/roles/recompute, Recht Kontakte ändern).
+Im Reiter Kommunikation steht zusätzlich der Abschnitt Portalzugang mit der Einladung in das
+Portal (Einladungscode, Link und QR-Code, nur einmal sichtbar, Einzelheiten im Kapitel Portal).
 
 ## Bankverbindungen und SEPA-Mandat
 

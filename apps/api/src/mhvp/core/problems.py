@@ -168,6 +168,12 @@ class ErrorCodes:
         "Paperless nicht erreichbar",
         "Paperless request failed or timed out.",
     )
+    STORAGE_UNAVAILABLE = ErrorCode(
+        "MHVP-DOC-0007",
+        503,
+        "Dokumentenspeicher nicht verfügbar",
+        "Object storage (S3 API) is not configured or the request failed; nothing was stored.",
+    )
     ACC_UNBALANCED = ErrorCode(
         "MHVP-ACC-0001",
         422,

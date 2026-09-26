@@ -237,6 +237,7 @@ async def decide_bank_account(
     )
     account.decided_by = actor_user_id
     account.decided_at = datetime.now(UTC)
+    account.rejected_reason = None if approve else (reason or None)
     payload: dict[str, Any] = {
         "bank_account_id": str(account.id),
         "iban_suffix": account.iban_suffix,
@@ -527,6 +528,38 @@ async def object_relations(
     return sort_relations(out)
 
 
+def bank_account_out(b: ContactBankAccount) -> schemas.BankAccountOut:
+    """API view of a contact bank account; ``rejected_*`` mirror the decision of a rejected
+    row (M5-01, M19-05 addendum), so the CRM can show the reason without reading events."""
+    rejected = b.approval_status == BankAccountApproval.REJECTED
+    return schemas.BankAccountOut(
+        id=b.id,
+        label=b.label,
+        iban_masked=mask_iban(b.iban),
+        bic=b.bic,
+        bank_name=b.bank_name,
+        holder=b.holder,
+        valid_from=b.valid_from,
+        valid_to=b.valid_to,
+        sepa_enabled=b.sepa_enabled,
+        mandate_reference=b.mandate_reference,
+        mandate_signed_on=b.mandate_signed_on,
+        mandate_granted_via=b.mandate_granted_via,
+        mandate_note=b.mandate_note,
+        mandate_document_id=b.mandate_document_id,
+        mandate_scheme=b.mandate_scheme,
+        mandate_status=b.mandate_status,
+        mandate_revoked_on=b.mandate_revoked_on,
+        approval_status=b.approval_status,
+        requested_by=b.requested_by,
+        decided_by=b.decided_by,
+        decided_at=b.decided_at,
+        rejected_reason=b.rejected_reason,
+        rejected_by=b.decided_by if rejected else None,
+        rejected_at=b.decided_at if rejected else None,
+    )
+
+
 async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactOut | None:
     contact = await session.get(Contact, contact_id)
     if contact is None:
@@ -583,32 +616,7 @@ async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactO
             schemas.IdentifierOut.model_validate(i, from_attributes=True)
             for i in await rows(ContactIdentifier)
         ],
-        bank_accounts=[
-            schemas.BankAccountOut(
-                id=b.id,
-                label=b.label,
-                iban_masked=mask_iban(b.iban),
-                bic=b.bic,
-                bank_name=b.bank_name,
-                holder=b.holder,
-                valid_from=b.valid_from,
-                valid_to=b.valid_to,
-                sepa_enabled=b.sepa_enabled,
-                mandate_reference=b.mandate_reference,
-                mandate_signed_on=b.mandate_signed_on,
-                mandate_granted_via=b.mandate_granted_via,
-                mandate_note=b.mandate_note,
-                mandate_document_id=b.mandate_document_id,
-                mandate_scheme=b.mandate_scheme,
-                mandate_status=b.mandate_status,
-                mandate_revoked_on=b.mandate_revoked_on,
-                approval_status=b.approval_status,
-                requested_by=b.requested_by,
-                decided_by=b.decided_by,
-                decided_at=b.decided_at,
-            )
-            for b in await rows(ContactBankAccount)
-        ],
+        bank_accounts=[bank_account_out(b) for b in await rows(ContactBankAccount)],
         types=sorted(t.type for t in await rows(ContactType)),
         roles=sorted(contact.roles),
         tags=tags,
@@ -643,8 +651,21 @@ async def summaries(session: AsyncSession, contacts: list[Contact]) -> list[sche
         select(
             literal_column("'type'"), ContactType.contact_id, cast(ContactType.type, String)
         ).where(ContactType.contact_id.in_(ids)),
+        # One row per contact with at least one IBAN awaiting the four eyes release (M5-01),
+        # so the list can show "IBAN wartet auf Freigabe" without a query per contact.
+        select(
+            literal_column("'iban_pending'"),
+            ContactBankAccount.contact_id,
+            literal_column("'1'"),
+        )
+        .where(
+            ContactBankAccount.contact_id.in_(ids),
+            ContactBankAccount.approval_status == BankAccountApproval.PENDING,
+        )
+        .distinct(),
     )
     emails: dict[uuid.UUID, str] = {}
+    iban_pending: set[uuid.UUID] = set()
     phones: dict[uuid.UUID, str] = {}
     cities: dict[uuid.UUID, str] = {}
     tags: dict[uuid.UUID, list[str]] = {}
@@ -660,6 +681,8 @@ async def summaries(session: AsyncSession, contacts: list[Contact]) -> list[sche
             cities[contact_id] = value
         elif kind == "tag":
             tags.setdefault(contact_id, []).append(value)
+        elif kind == "iban_pending":
+            iban_pending.add(contact_id)
         else:
             types.setdefault(contact_id, []).append(ContactTypeCode(value))
     return [
@@ -676,6 +699,7 @@ async def summaries(session: AsyncSession, contacts: list[Contact]) -> list[sche
             types=sorted(types.get(c.id, [])),
             roles=sorted(c.roles),
             deleted=c.deleted_at is not None,
+            iban_pending=c.id in iban_pending,
         )
         for c in contacts
     ]

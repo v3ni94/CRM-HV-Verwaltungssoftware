@@ -73,3 +73,30 @@ def test_open_ended_contract() -> None:
     assert (t.status, t.next_end, t.notice_deadline) == ("open_ended", date(2026, 10, 10), None)
     t = _terms(ends_at=None, cancelled_at=date(2026, 9, 15))
     assert (t.status, t.next_end) == ("cancelled", date(2026, 12, 15))
+
+
+def test_output_carries_provider_name() -> None:
+    """The list and detail output name the provider instead of only its id (review backlog)."""
+    import uuid
+
+    from mhvp.contracts.service_contract_routers import ServiceContractOut, _out
+    from mhvp.contracts.service_contracts import ServiceContract
+
+    row = ServiceContract(
+        id=uuid.uuid4(),
+        provider_contact_id=uuid.uuid4(),
+        property_id=None,
+        title="Hausmeisterdienst",
+        starts_at=date(2024, 1, 1),
+        ends_at=date(2026, 12, 31),
+        notice_period_days=3,
+        notice_period_unit="months",
+        auto_renewal_months=None,
+        cancelled_at=None,
+        notes=None,
+    )
+    out = _out(row, date(2026, 9, 26), "Muster Service GmbH")
+    assert isinstance(out, ServiceContractOut)
+    assert out.provider_name == "Muster Service GmbH"
+    assert out.provider_contact_id == row.provider_contact_id
+    assert "provider_name" in ServiceContractOut.model_fields

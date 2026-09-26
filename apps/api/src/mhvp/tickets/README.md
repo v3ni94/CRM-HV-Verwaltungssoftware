@@ -49,7 +49,9 @@ Mandanten (nur eindeutig, sonst Kandidaten), sonst eindeutige Rufnummer. Ticket 
 Feld `phone` mit `label`) mit Antwortentwurf (Playbook, sonst generischer Text).
 `POST /tickets/{id}/proposals/{pid}/accept-and-reply` übernimmt die Nummer und legt den Entwurf
 an die E-Mail-Adresse des Kontakts am Ticket an; versendet wird nur über den Freigabepfad des
-Mailmoduls.
+Mailmoduls. Ohne E-Mail-Adresse des Kontakts oder ohne zugeordneten Kontakt antwortet der
+Aufruf mit 422 und ändert nichts (kein Entwurf ohne Empfänger); `accept` ohne Antwort bleibt
+möglich.
 
 ## Antwortvorlagen (`reply_templates.py`, model `TicketReplyTemplate`, 26.09.2026)
 
@@ -135,6 +137,8 @@ beim Admin-Bypass (`skip_flow`); die Flussprüfung (409) kommt zuerst. Gespeiche
 * `PATCH /tickets/{id}` und `POST /tickets/bulk-status` nehmen `resolution` an, Bulk als
   gemeinsame Notiz aller Tickets. `POST /tickets/merge` nimmt eine optionale gemeinsame
   `resolution`; ohne sie erhalten die Quelltickets `zusammengefuehrt` mit Verweis auf das Ziel.
+  In beiden Fällen entstehen je Quellticket das `TicketEvent` `status` mit `data.resolution`
+  und `merge: true` sowie das Lernbeispiel, genau wie beim Einzelwechsel.
 * Lernen: je Abschluss ein `AiExample` (Aufgabe `ticket_resolution`, kein KI-Lauf) mit Eingabe
   Betreff, Anliegen, Kategorie, Thema, erkannte Entitäten (Objekt, Einheit, Kontakt) und Ausgabe
   Art, Notiz, Status, zuletzt versendete Antwort. `learn_playbook_from_ticket` nimmt die

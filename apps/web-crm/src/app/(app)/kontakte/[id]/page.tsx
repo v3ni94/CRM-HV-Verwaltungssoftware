@@ -6,6 +6,7 @@ import { BankAccountApproval } from "@/components/contacts/BankAccountApproval";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
+import { PortalAccessSection } from "@/components/contacts/PortalAccessSection";
 import { RelationsPanel } from "@/components/contacts/RelationsPanel";
 import { RolePills } from "@/components/contacts/RolePills";
 import { SepaMandatesPanel } from "@/components/contacts/SepaMandatesPanel";
@@ -75,6 +76,8 @@ export default async function ContactDetailPage({
     me.data?.permissions.includes("contacts:approve") ?? false;
   const currentUserId = me.data?.user_id ?? null;
   const isPlatformAdmin = me.data?.is_platform_admin ?? false;
+  const canInvitePortal =
+    me.data?.permissions.includes("contacts:update") ?? false;
   const canDismissCall =
     me.data?.permissions.includes("communication:update") ?? false;
   const notes =
@@ -387,6 +390,14 @@ export default async function ContactDetailPage({
       ) : null}
 
       {tab === "tickets" ? <TicketsSection tickets={tickets as TicketSummary[]} /> : null}
+      {tab === "kommunikation" ? (
+        <PortalAccessSection
+          contactId={contact.id}
+          displayName={contact.display_name}
+          emails={contact.emails}
+          canInvite={canInvitePortal}
+        />
+      ) : null}
       {tab === "kommunikation" ? (
         <section>
           <h2 className="mb-1 text-sm font-semibold">{t("calls.title")}</h2>

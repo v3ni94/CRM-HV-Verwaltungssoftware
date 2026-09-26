@@ -1428,6 +1428,9 @@ async def accept_and_reply(
     async with tenant_tx(request, principal) as session:
         ticket = await _ticket(session, ticket_id)
         proposal = await _pending(session, ticket_id, proposal_id)
+        # Recipient check before anything is written: without an address the proposal stays
+        # pending and can still be taken over with ``accept`` (review 1.25.0).
+        await _reply_recipients(session, proposal, await _inbound(session, proposal))
         await _accept(session, principal, ticket, proposal)
         await _reply_message(session, principal, ticket, proposal)
         return await _out(session, proposal)
@@ -1566,24 +1569,9 @@ async def _reply_message(
                 "subject": existing.subject,
                 "body": existing.body,
             }
-    message_id = proposal.proposed.get("message_id")
-    inbound = await session.get(Message, uuid.UUID(message_id)) if message_id else None
-    if inbound is None:
-        raise ProblemError(
-            ErrorCodes.CONFLICT, detail="Die eingehende E-Mail wurde nicht gefunden."
-        )
-    contact_id = (
-        uuid.UUID(proposal.final["contact_id"])
-        if proposal.final and proposal.final.get("contact_id")
-        else inbound.contact_id
-    )
-    recipients = [inbound.from_address] if inbound.from_address else []
-    if proposal.proposed.get("kind") == "call":
-        # Die Mail kam von der Telefonassistenz; geantwortet wird dem Anrufer selbst.
-        from mhvp.tickets.call_assistant import primary_email
-
-        email = await primary_email(session, contact_id)
-        recipients = [email] if email else []
+    inbound = await _inbound(session, proposal)
+    contact_id = _reply_contact_id(proposal, inbound)
+    recipients = await _reply_recipients(session, proposal, inbound, contact_id)
     draft_text = proposal.proposed.get("reply_draft") or {}
     draft = Message(
         tenant_id=principal.tenant_id,
@@ -1619,6 +1607,66 @@ async def _reply_message(
         "subject": draft.subject,
         "body": draft.body,
     }
+
+
+async def _inbound(session: AsyncSession, proposal: AiProposal) -> Message:
+    message_id = proposal.proposed.get("message_id")
+    inbound = await session.get(Message, uuid.UUID(message_id)) if message_id else None
+    if inbound is None:
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Die eingehende E-Mail wurde nicht gefunden."
+        )
+    return inbound
+
+
+def _reply_contact_id(proposal: AiProposal, inbound: Message) -> uuid.UUID | None:
+    """Contact the reply belongs to: the decided contact, before a decision the proposed one
+    (a call mail is linked to the assistant's sender, not to the caller), else the mail's."""
+    if proposal.final and proposal.final.get("contact_id"):
+        return uuid.UUID(proposal.final["contact_id"])
+    if proposal.proposed.get("kind") == "call":
+        proposed_contact = proposal.proposed.get("contact_id")
+        return uuid.UUID(proposed_contact) if proposed_contact else None
+    return inbound.contact_id
+
+
+async def _reply_recipients(
+    session: AsyncSession,
+    proposal: AiProposal,
+    inbound: Message,
+    contact_id: uuid.UUID | None = None,
+) -> list[str]:
+    """Recipients of the reply draft. A draft without a recipient is never created (review
+    1.25.0): 422 with a German detail instead. For a call mail the reply goes to the caller's
+    e-mail address, not to the sender address of the phone assistant."""
+    if proposal.proposed.get("kind") != "call":
+        if not inbound.from_address:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Die eingehende E-Mail hat keine Absenderadresse; ein Antwortentwurf"
+                " kann nicht angelegt werden.",
+            )
+        return [inbound.from_address]
+    from mhvp.tickets.call_assistant import primary_email
+
+    if contact_id is None:
+        contact_id = _reply_contact_id(proposal, inbound)
+    if contact_id is None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Dem Anruf ist kein Kontakt zugeordnet; ein Antwortentwurf kann nicht"
+            " angelegt werden. Bitte über Korrigieren einen Kontakt wählen oder den"
+            " Vorschlag ohne Antwort freigeben.",
+        )
+    email = await primary_email(session, contact_id)
+    if not email:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Der zugeordnete Kontakt hat keine E-Mail-Adresse; ein Antwortentwurf kann"
+            " nicht angelegt werden. Bitte die Adresse im Kontakt nachtragen oder den"
+            " Vorschlag ohne Antwort freigeben.",
+        )
+    return [email]
 
 
 # Worker entry point -------------------------------------------------------------------------

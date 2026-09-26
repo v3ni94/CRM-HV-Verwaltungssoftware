@@ -11,6 +11,8 @@ import { ui } from "@/lib/ui";
 export type ServiceContract = {
   id: string;
   provider_contact_id: string;
+  /** Display name of the provider contact, delivered by the API. */
+  provider_name: string;
   property_id: string | null;
   title: string;
   starts_at: string;
@@ -109,7 +111,12 @@ export function ServiceContracts({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
-  const providerName = new Map(providers.map((p) => [p.id, p.label]));
+  const providerOptions = new Map(providers.map((p) => [p.id, p.label]));
+  // The API delivers the provider name; the option list is only a fallback for old rows.
+  const providerName = (row: ServiceContract) =>
+    row.provider_name ||
+    providerOptions.get(row.provider_contact_id) ||
+    t("unknown");
   const propertyName = new Map(properties.map((p) => [p.id, p.label]));
   const showForm = editing === null ? canCreate : canUpdate;
 
@@ -242,9 +249,7 @@ export function ServiceContracts({
                   <span className="font-medium">{row.title}</span>
                   <span className={ui.badge}>{statusLabel(row)}</span>
                 </div>
-                <span className="text-muted">
-                  {providerName.get(row.provider_contact_id) ?? t("unknown")}
-                </span>
+                <span className="text-muted">{providerName(row)}</span>
                 {row.property_id ? (
                   <span className="text-muted">
                     {propertyName.get(row.property_id) ?? t("unknown")}
@@ -309,10 +314,7 @@ export function ServiceContracts({
                 {rows.map((row) => (
                   <tr key={row.id}>
                     <td>{row.title}</td>
-                    <td>
-                      {providerName.get(row.provider_contact_id) ??
-                        t("unknown")}
-                    </td>
+                    <td>{providerName(row)}</td>
                     <td>
                       {row.property_id
                         ? (propertyName.get(row.property_id) ?? t("unknown"))

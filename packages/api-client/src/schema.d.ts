@@ -8363,7 +8363,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Portalzugänge eines Kontakts
+         * @description Portal accounts of one contact of the own tenant (RLS); an unknown or foreign contact
+         *     yields an empty list, never 404, so the CRM can show "kein Zugang" without a probe.
+         */
+        get: operations["list_accounts_api_v1_portal_admin_accounts_get"];
         put?: never;
         /** Portalzugang einladen */
         post: operations["invite_api_v1_portal_admin_accounts_post"];
@@ -14212,6 +14217,12 @@ export interface components {
             /** Display Name */
             display_name: string;
             /**
+             * Iban Pending
+             * @description Mindestens eine Bankverbindung wartet auf die Vier-Augen-Freigabe (M5-01).
+             * @default false
+             */
+            iban_pending: boolean;
+            /**
              * Id
              * Format: uuid
              */
@@ -15133,6 +15144,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Is Draft
+             * @default false
+             */
+            is_draft: boolean;
             /** Mime Type */
             mime_type: string;
             /** Snippet */
@@ -18908,6 +18924,42 @@ export interface components {
             /** Email */
             email?: string | null;
         };
+        /**
+         * PortalAccountOut
+         * @description Portal account of a contact as the CRM sees it (A86). Never carries the invitation
+         *     hash, a password hash or a token; ``status`` is the account status of the model
+         *     (``invited`` until the invitation is accepted, then ``active``), ``locked`` mirrors a
+         *     temporary login lock of the platform user.
+         */
+        PortalAccountOut: {
+            /** Activated At */
+            activated_at: string | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Email */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invitation Expires At */
+            invitation_expires_at: string | null;
+            /**
+             * Invited At
+             * Format: date-time
+             */
+            invited_at: string;
+            /** Last Login At */
+            last_login_at: string | null;
+            /** Locked */
+            locked: boolean;
+            /** Status */
+            status: string;
+        };
         /** PortalAppointmentIn */
         PortalAppointmentIn: {
             /**
@@ -20218,7 +20270,8 @@ export interface components {
         /**
          * ResolutionKind
          * @description Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``
-         *     setzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt.
+         *     setzt die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt; das
+         *     Statusereignis und das Lernbeispiel entstehen dabei wie bei jedem anderen Abschluss.
          * @enum {string}
          */
         ResolutionKind: "stammdaten_ergaenzt" | "handwerker_beauftragt" | "auskunft_erteilt" | "weitergeleitet" | "kein_handlungsbedarf" | "abgelehnt" | "zusammengefuehrt" | "sonstiges";
@@ -20698,6 +20751,8 @@ export interface components {
              * Format: uuid
              */
             provider_contact_id: string;
+            /** Provider Name */
+            provider_name: string;
             /**
              * Starts At
              * Format: date
@@ -22087,6 +22142,21 @@ export interface components {
             /** Mandate Signed On */
             mandate_signed_on: string | null;
             mandate_status: components["schemas"]["ContactMandateStatus"];
+            /**
+             * Rejected At
+             * @description Zeitpunkt der Ablehnung; nur bei approval_status rejected.
+             */
+            rejected_at?: string | null;
+            /**
+             * Rejected By
+             * @description Ablehnende Person; nur bei approval_status rejected gesetzt.
+             */
+            rejected_by?: string | null;
+            /**
+             * Rejected Reason
+             * @description Begründung der zweiten Person bei Ablehnung (M5-01).
+             */
+            rejected_reason?: string | null;
             /** Requested By */
             requested_by?: string | null;
             /** Sepa Enabled */
@@ -30403,6 +30473,8 @@ export interface operations {
                 entity_type?: string | null;
                 entity_id?: string | null;
                 category_id?: string | null;
+                /** @description true: nur Entwürfe (z. B. automatisch erzeugte Briefe), false: ohne Entwürfe, leer: kein Filter */
+                is_draft?: boolean | null;
                 page?: number;
                 page_size?: number;
             };
@@ -40742,6 +40814,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_accounts_api_v1_portal_admin_accounts_get: {
+        parameters: {
+            query: {
+                contact_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalAccountOut"][];
                 };
             };
             /** @description Validation Error */

@@ -94,6 +94,7 @@
     "navCollapse": "Collapse sidebar",
     "navExpand": "Expand sidebar",
     "dms": "DMS",
+    "documents": "Documents",
     "openNav": "Open navigation",
     "immoware": "Immoware24",
     "immowareLearning": "Learning phase",
@@ -126,6 +127,7 @@
     "next": "Next",
     "blocked": "blocked",
     "incomplete": "incomplete",
+    "ibanPending": "IBAN awaiting release",
     "edit": "Edit",
     "delete": "Delete",
     "export": "GDPR disclosure",
@@ -199,6 +201,7 @@
       "decidedAt": "on {date}",
       "approvedNotice": "IBAN {iban} released.",
       "rejectedNotice": "IBAN {iban} rejected.",
+      "rejectedReason": "Reason: {reason}",
       "rejectTitle": "Reject IBAN {iban}",
       "rejectReason": "Reason for rejection",
       "rejectReasonHelp": "Required, at most {max} characters. The reason is stored in the audit log.",
@@ -218,6 +221,32 @@
       "active": "active",
       "ended": "ended",
       "since": "since {date}"
+    },
+    "portalAccess": {
+      "title": "Portal access",
+      "email": "E-mail address for the invitation",
+      "emailRequired": "Please enter an e-mail address.",
+      "invite": "Invite",
+      "noPermission": "Inviting requires the permission contacts:update.",
+      "status": {
+        "loading": "Loading",
+        "none": "No portal access",
+        "invited": "Invited, password not yet set",
+        "active": "Access active",
+        "locked": "locked",
+        "exists": "Portal access already exists",
+        "loadError": "Status not available"
+      },
+      "tokenTitle": "Invitation (shown only once)",
+      "tokenHelp": "Pass the invitation code together with the portal address to the contact. The code is valid for 14 days; in the portal the contact sets a password and the second factor.",
+      "linkTitle": "Invitation link (text and QR code)",
+      "qrAlt": "QR code of the invitation link",
+      "noPortalUrl": "No public portal address is configured, so only the invitation code is shown.",
+      "help": "Portal rights derive from the contracts of the contact. The status comes from the portal account of the contact; the invitation code is shown only once on inviting.",
+      "accountEmail": "Login: {email}",
+      "invitedAt": "Invited on {date}, code valid until {until}",
+      "activatedAt": "Activated on {date}",
+      "lastLogin": "Last login {date}"
     }
   },
   "ContactForm": {
@@ -5527,6 +5556,28 @@
       "opened": "viewed",
       "downloaded": "downloaded"
     }
+  },
+  "DocumentList": {
+    "area": "Management",
+    "title": "Documents",
+    "intro": "Stored documents of the tenant with full text search. Automatically generated letters are marked as drafts and are never sent.",
+    "draftFilter": "Drafts",
+    "draftAll": "All",
+    "draftOnly": "drafts only",
+    "draftNone": "without drafts",
+    "search": "Search",
+    "searchPlaceholder": "Title or content, at least two characters",
+    "empty": "No documents found.",
+    "emptyDrafts": "No drafts available.",
+    "colTitle": "Title",
+    "colFilename": "File",
+    "colCreated": "Stored on",
+    "colStatus": "Status",
+    "draftBadge": "Draft",
+    "pagination": "Pages",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {pages}, {total} documents"
   },
   "DocumentDetail": {
     "area": "Documents",

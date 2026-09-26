@@ -78,7 +78,7 @@ test.describe("workflows against the API @backend", () => {
     await page.getByLabel("Leistung ab").fill("2026-08-01");
     await page.getByLabel("Netto").fill("1000");
     await page.getByLabel("Kostenkonto").selectOption({ index: 1 });
-    await expect(page.getByTestId("gross")).toContainText("1190,00");
+    await expect(page.getByTestId("gross")).toContainText("1.190,00 EUR");
     await page.getByRole("button", { name: "Rechnung erfassen" }).click();
     await expect(page).toHaveURL(/\/rechnungen\/[0-9a-f-]{36}$/);
     await expect(page.getByTestId("findings")).toContainText("Originalbeleg fehlt");

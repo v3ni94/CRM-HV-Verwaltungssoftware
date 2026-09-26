@@ -43,6 +43,7 @@ from mhvp.contacts.validation import InvalidValueError, mask_iban, normalise_iba
 from mhvp.core.config import get_settings
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
+from mhvp.core.events import emit
 from mhvp.core.logging import configure_logging, get_logger
 from mhvp.imports import services as import_services
 from mhvp.imports.csvtext import Row, Table, decode_csv, read_table
@@ -121,6 +122,7 @@ COLUMNS: dict[str, tuple[str, ...]] = {
     "IBAN": ("IBAN", "Bankverbindung"),
 }
 REQUIRED = ("id", "Name")
+EVENT_SOURCE = "import.kontakte"
 
 
 @dataclass
@@ -507,6 +509,53 @@ class _DryRunError(Exception):
     pass
 
 
+async def emit_contact_created(
+    session: Any, tenant_id: uuid.UUID, user_id: uuid.UUID | None, contact: Any, *, source: str
+) -> None:
+    """Same event as ``POST /contacts`` (A87) plus the import source; the rule engine and the
+    webhook outbox read ``domain_event`` in the same transaction, so a rolled back test run
+    leaves no event behind."""
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="contact.created",
+        entity_type="contact",
+        entity_id=contact.id,
+        actor_user_id=user_id,
+        payload={"kind": contact.kind.value, "source": source},
+    )
+
+
+async def emit_roles_updated(
+    session: Any,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    contact: Any,
+    old_roles: list[str],
+    *,
+    source: str,
+) -> bool:
+    """``contact.updated`` with the field name ``roles`` as ``PUT /contacts/{id}`` sends it
+    (names only, no values in the payload; old and new in the audit log). Bumps the version like
+    the manual path. Returns False when the roles did not change."""
+    new_roles = sorted(contact.roles or [])
+    if sorted(old_roles) == new_roles:
+        return False
+    contact.version += 1
+    contact.updated_by = user_id
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="contact.updated",
+        entity_type="contact",
+        entity_id=contact.id,
+        actor_user_id=user_id,
+        payload={"fields": ["roles"], "source": source},
+        changes={"roles": {"old": sorted(old_roles), "new": new_roles}},
+    )
+    return True
+
+
 async def apply_prepared(
     session: Any,
     tenant_id: uuid.UUID,
@@ -549,12 +598,17 @@ async def apply_prepared(
                 entry["status"] = "unchanged"
                 counts["unchanged"] += 1
             else:
+                old_roles = sorted(roles)
                 existing.roles = sorted(roles | {item.row.role.value})
+                await emit_roles_updated(
+                    session, tenant_id, user_id, existing, old_roles, source=EVENT_SOURCE
+                )
                 entry["status"] = "role_added"
                 counts["role_added"] += 1
             continue
         contact = await create_contact(session, tenant_id, user_id, item.data)
         party = await create_party(session, tenant_id, user_id, [contact])
+        await emit_contact_created(session, tenant_id, user_id, contact, source=EVENT_SOURCE)
         if recorder is not None:
             recorder.add("contact", contact.id)
             recorder.add("party", party.id)

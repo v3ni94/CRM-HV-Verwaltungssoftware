@@ -64,6 +64,25 @@ Objekte ohne dreistellige Nummer), erscheinen als Hinweis "Einheit nicht importi
 Mit `--skip-handed-over` bleiben Einheiten abgegebener Objekte (Präfix "Z ABGEGEBEN") ohne
 Zuordnung.
 
+## Ablauf über die Oberfläche
+
+Seit 1.23.1 steht derselbe Schritt im CRM unter Importe, Immoware24 Listenimport
+(/importe/immoware24-listen) bereit, zusammen mit Objektdaten und Kontaktlisten (Rolle je
+Datei, auch Dienstleister). Voraussetzung sind die Rechte Importe anlegen sowie Objekte,
+Kontakte und Verträge anlegen.
+
+1. Abschnitt Zuordnung von Eigentümern und Mietern zu Einheiten öffnen, die Objektliste
+   (Export Objektdaten) hochladen, optional Vertragsbeginn und den Ausschluss abgegebener
+   Objekte setzen.
+2. Testlauf starten und den Bericht prüfen: Zähler, nicht gefundene Namen, mehrdeutige Namen,
+   Konflikte. Der Testlauf speichert nichts.
+3. Übernehmen mit Bestätigung. Der Lauf ist idempotent: bereits zugeordnete Einheiten werden
+   übersprungen, abweichende Parteien als Konflikt gemeldet, nichts wird überschrieben.
+4. Im CRM unter Verträge und auf den Kontaktseiten (Abschnitt Beziehungen zu Objekten und
+   Einheiten) Stichproben prüfen.
+
+Der Lauf erscheint im Importverlauf mit Quelle immoware24:zuordnung.
+
 ## Ablauf auf dem Server
 
 `./mhvp.sh` ist der Wrapper um `docker compose` (siehe `docs/runbooks/server-setup.md`),

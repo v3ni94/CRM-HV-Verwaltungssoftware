@@ -5,6 +5,18 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.26.0 (26.09.2026) Portalzugang am Kontakt, IBAN-Ablehnungsgrund, Importereignisse, Dokumentliste, Telefonassistenz-Korrekturen
+
+- Kontakte: Abschnitt Portalzugang auf der Kontaktakte mit Status (kein Zugang, eingeladen, aktiv, gesperrt), Einladung mit QR-Code und neuem Leseendpunkt GET /portal-admin/accounts?contact_id (A86, CRM-Teil)
+- Kontakte: Ablehnungsgrund der IBAN-Freigabe wird gespeichert und angezeigt (rejected_reason, rejected_by, rejected_at, Migration 0132), Kontaktliste zeigt den Hinweis IBAN wartet auf Freigabe ohne N+1
+- Importe: Listen- und Zuordnungsimporte lösen dieselben Ereignisse contact.created und contact.updated aus wie die manuelle Pflege (Regelwerk und Webhooks greifen, A87 teilweise)
+- Dienstleisterverträge: Anzeigename des Dienstleisters in Liste und Detail statt Kennung
+- Dokumente: neue Dokumentliste im CRM mit Volltextsuche und Entwurfsfilter (is_draft), Upload bei fehlendem oder nicht erreichbarem Dokumentenspeicher antwortet mit 503 MHVP-DOC-0007 statt 500, keine halben Dokumentzeilen
+- Tickets: Freigeben und antworten der Telefonassistenz legt keinen Entwurf ohne Empfänger mehr an (422 mit Hinweis), Zusammenführen protokolliert je Quellticket Statusereignis mit Erledigungsnotiz und Lernbeispiel
+- Abnahme: Playwright gegen den Stack 12 CRM und 11 Portal grün, zwei Specs an die neue Anzeige angepasst (Bruttobetrag formatiert, Anhangsliste der Meldung), spezifische Spec-Läufe über MHVP_E2E_PW_ARGS
+- Dokumentation: Handbuch für Erledigungsnotiz, Telefonassistenz, ausgeblendete erledigte Vorgänge, Objektbezüge und Wissen; Regeln M19-07 bis M19-09, ADR 0010 Lernbeispiele (Betreiberentscheidung), offene Fragen M19-03 und M19-04, Lückenliste A90 bis A99
+- Offen (Betreiber): Datenschutzregel für Lernbeispiele (M7-04, ADR 0010), AVV und Anbieterfreigabe Telefonassistenz (M19-03), Erledigungsartenliste (M19-04), QR-Code im Einladungs-PDF (M21-08)
+
 ## 1.25.0 (26.09.2026) Zusammenführung mit 1.24.0 und Fix- und Abschlusswelle: Vier-Augen nach Betreiberentscheidung, Review-Befunde Tickets und Mail, Sicherheit, Performance, Bedienbarkeit, Vertragsformular, Import-Robustheit, Anhang D 54 von 58
 
 - Tickets und Mail: Betreiberentscheidung M20-03 umgesetzt: Vier-Augen-Freigabe nur für Mitarbeiter mit Kennzeichen Azubi oder neuer Mitarbeiter (Einstellungen, Benutzer, optional befristet), alle anderen senden Ticketantworten direkt; Verfasser und Freigeber mit Zeitpunkt als Ticketereignisse und im Mailverlauf sichtbar; Notbremse alle Antworten mit Freigabe (Standard aus); Freigabeberechtigte werden benachrichtigt (Migration 0129, Regel M20-06)

@@ -13,7 +13,8 @@
 # Ports and build folders are configurable so a run never collides with a dev stack or with a
 # parallel run (A71): MHVP_E2E_API_PORT (8000), MHVP_E2E_WEB_PORT (3000), MHVP_E2E_PORTAL_PORT
 # (3001), NEXT_DIST_DIR (.next; e.g. .next-e2e for a separate build). MHVP_E2E_APPS selects the
-# apps ("web-crm web-portal"), MHVP_E2E_SKIP_BUILD=1 reuses an existing build.
+# apps ("web-crm web-portal"), MHVP_E2E_SKIP_BUILD=1 reuses an existing build, MHVP_E2E_PW_ARGS
+# passes extra arguments to Playwright (e.g. a spec file for a rerun).
 #
 # Uploads (import assistant, portal photos) need an S3 endpoint. Without MHVP_S3_ENDPOINT_URL a
 # throwaway moto server is started on MHVP_E2E_S3_PORT (9100) via uvx (needs network access to
@@ -114,6 +115,7 @@ for app in $APPS; do
     pnpm --filter "@mhvp/$app" build
   fi
   echo "==> Playwright $app on port $port (E2E_BACKEND=1)"
-  if ! E2E_BACKEND=1 E2E_PORT="$port" pnpm --filter "@mhvp/$app" e2e; then status=1; fi
+  # shellcheck disable=SC2086
+  if ! E2E_BACKEND=1 E2E_PORT="$port" pnpm --filter "@mhvp/$app" e2e ${MHVP_E2E_PW_ARGS:-}; then status=1; fi
 done
 exit $status

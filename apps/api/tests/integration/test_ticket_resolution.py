@@ -162,6 +162,24 @@ def test_merge_sets_resolution_of_sources(client: TestClient, world: World) -> N
     source = _ok(client.get(f"{T}/{a['id']}", headers=h))
     assert source["resolution_kind"] == "zusammengefuehrt"
     assert str(target["number"]) in source["resolution_note"]
+    assert source["resolved_by"] == str(world.users["rsadmin"])
+    # Same audit trail as transition_status: status event with the resolution and a learning
+    # example, although no resolution was passed (review 1.25.0).
+    status_events = [e for e in source["events"] if e["kind"] == "status"]
+    assert len(status_events) == 1
+    assert status_events[0]["data"]["from"] == "new"
+    assert status_events[0]["data"]["to"] == "closed"
+    assert status_events[0]["data"]["merge"] is True
+    assert status_events[0]["data"]["resolution"]["kind"] == "zusammengefuehrt"
+    assert status_events[0]["data"]["resolution"]["note"] == source["resolution_note"]
+    examples = _ok(
+        client.get("/api/v1/ai/examples", params={"task": "ticket_resolution"}, headers=h)
+    )
+    for source_id in (a["id"], b["id"]):
+        mine = [e for e in examples["data"] if e["features"].get("ticket_id") == source_id]
+        assert len(mine) == 1, source_id
+        assert mine[0]["decision"] == "zusammengefuehrt"
+        assert str(target["number"]) in mine[0]["result"]["note"]
 
     c = _ticket(client, h, f"Merge Erledigung C {RUN}")
     _ok(
@@ -176,4 +194,14 @@ def test_merge_sets_resolution_of_sources(client: TestClient, world: World) -> N
         ),
         201,
     )
-    assert _ok(client.get(f"{T}/{c['id']}", headers=h))["resolution_kind"] == "weitergeleitet"
+    third = _ok(client.get(f"{T}/{c['id']}", headers=h))
+    assert third["resolution_kind"] == "weitergeleitet"
+    status_events = [e for e in third["events"] if e["kind"] == "status"]
+    assert len(status_events) == 1
+    assert status_events[0]["data"]["resolution"] == {"kind": "weitergeleitet", "note": None}
+    examples = _ok(
+        client.get("/api/v1/ai/examples", params={"task": "ticket_resolution"}, headers=h)
+    )
+    mine = [e for e in examples["data"] if e["features"].get("ticket_id") == c["id"]]
+    assert len(mine) == 1
+    assert mine[0]["decision"] == "weitergeleitet"

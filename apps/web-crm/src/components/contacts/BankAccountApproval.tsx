@@ -104,6 +104,11 @@ export function BankAccountApproval({
           </>
         ) : null}
       </div>
+      {status === "rejected" && current.rejected_reason ? (
+        <p className="text-xs text-muted" data-testid="bank-rejected-reason">
+          {t("rejectedReason", { reason: current.rejected_reason })}
+        </p>
+      ) : null}
       {status === "pending" && ownRequest ? (
         <p className="text-xs text-muted">{t("ownRequest")}</p>
       ) : null}

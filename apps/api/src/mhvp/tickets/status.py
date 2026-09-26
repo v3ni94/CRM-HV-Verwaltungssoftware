@@ -51,7 +51,8 @@ CLOSING_STATUSES = frozenset({TicketStatus.DONE, TicketStatus.CLOSED, TicketStat
 
 class ResolutionKind(StrEnum):
     """Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``
-    setzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt."""
+    setzt die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt; das
+    Statusereignis und das Lernbeispiel entstehen dabei wie bei jedem anderen Abschluss."""
 
     STAMMDATEN_ERGAENZT = "stammdaten_ergaenzt"
     HANDWERKER_BEAUFTRAGT = "handwerker_beauftragt"

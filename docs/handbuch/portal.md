@@ -18,8 +18,16 @@ von der Verwaltung geprüft). Interne Vermerke der Verwaltung sind im Portal nie
   Verträgen des Kontakts ab (Mieter, Eigentümer) und werden bei Änderungen neu abgeleitet.
   Der Einladungscode wird nur einmal angezeigt und gilt 14 Tage; er ist zusammen mit der
   Portaladresse zu übermitteln. Im CRM steht der Einladungslink als Text und als QR-Code
-  (derzeit beim Portalzugang zum Übergabeprotokoll; ein QR-Code im PDF-Anschreiben ist
+  (auf der Kontaktakte im Reiter Kommunikation, Abschnitt Portalzugang, sowie beim
+  Portalzugang zum Übergabeprotokoll; ein QR-Code im PDF-Anschreiben ist
   Betreiberentscheidung M21-08).
+- Einladen von der Kontaktakte: Der Abschnitt Portalzugang liest beim Öffnen den Stand des
+  Portalkontos des Kontakts (Kein Portalzugang, Eingeladen mit Ablauf des Codes, Zugang aktiv
+  mit Aktivierungsdatum und letzter Anmeldung, Hinweis gesperrt bei einer Anmeldesperre) und
+  bietet ohne bestehendes Konto Einladen mit der gewählten E-Mail-Adresse an (nur mit dem
+  Recht contacts:update; lesen genügt das Recht contacts:read). Einladungscode, Hash oder
+  Passwort werden dabei nie ausgegeben. Ohne konfigurierte öffentliche Portaladresse
+  erscheint nur der Einladungscode.
 - Einladung annehmen: Code eingeben, Passwort setzen. Danach Anmeldung mit E-Mail,
   Passwort und zweitem Faktor bei jeder Anmeldung; vertrauenswürdige Geräte gibt es im
   Portal bewusst nicht.

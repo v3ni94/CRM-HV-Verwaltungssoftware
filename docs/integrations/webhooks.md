@@ -60,8 +60,8 @@ Ereignisse unten, dass weder IBAN noch Namen im signierten Body stehen.
 
 | Typ | Auslöser | Payload |
 | --- | --- | --- |
-| `contact.created` | `POST /contacts` | leer (Kontakt-ID in `entity_id`) |
-| `contact.updated` | `PUT /contacts/{id}` mit tatsächlicher Änderung | `fields`: sortierte Liste der geänderten Feldnamen (`last_name`, `addresses`, `bank_accounts`, ...), keine Werte |
+| `contact.created` | `POST /contacts`, Immoware24-Kontaktlisten (`import.kontakte`) | `kind`; bei Importen zusätzlich `source` (Kontakt-ID in `entity_id`) |
+| `contact.updated` | `PUT /contacts/{id}` mit tatsächlicher Änderung; Immoware24-Listenimporte bei Rollenänderung (`source` = `import.kontakte` oder `import.zuordnung`, nur bei Übernahme, nie im Testlauf) | `fields`: sortierte Liste der geänderten Feldnamen (`last_name`, `addresses`, `bank_accounts`, `roles`, ...), keine Werte |
 | `contact.deleted` | `DELETE /contacts/{id}` | leer |
 | `contact.mandate_iban_changed` | IBAN einer Bankverbindung mit SEPA-Mandat geändert | `mandate_reference` |
 | `invoice.issued` | `POST /accounting/admin-fees/{id}/invoice-issue` (Verwalterhonorar als XRechnung ausgestellt) | `invoice_id`, `number`, `invoice_date`, `kind` (`admin_fee`), `fee_setting_id`, `property_id`, `debtor_legal_entity_id`, `net`, `vat`, `gross` (Strings mit zwei Nachkommastellen), `currency`, `xrechnung_url` |
@@ -76,7 +76,9 @@ Neue Typen werden nur ergänzt, nie umbenannt (ADR 0009).
 * Ereignisse `invoice.received|approved|paid`, `journal_entry.posted|reversed`,
   `bank_transaction.*` aus Abschnitt 12 sind noch nicht im Katalog; sie folgen mit den
   Freigabestufen G1 und G2 (Zahlungsereignisse bleiben bis dahin intern).
-* Kontaktänderungen über Importe (Immoware24, objektakte, Kontakte-Import) erzeugen derzeit
-  kein `contact.updated`; nur die API-Änderung löst das Ereignis aus.
+* Die Immoware24-Listenimporte (Kontaktlisten, Zuordnung) erzeugen seit A87 `contact.created`
+  und `contact.updated` wie der API-Pfad (Test `tests/integration/test_a87_import_contact_events.py`).
+  Der Staging-Import (`mhvp/imports/services.py`, `_apply_contact`) und der
+  objektakte-Differenzimport erzeugen weiterhin kein Kontaktereignis (offen, siehe Lückenliste A87).
 * Das smart-einzug-Dossier (V1) bleibt offen; die Felder des Ereignisses sind allgemein und
   nicht auf smart-einzug zugeschnitten.
