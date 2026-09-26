@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { DmsConnectionSettings, type DmsConnection } from "@/components/documents/DmsConnectionSettings";
+import { InvoiceIntakeAutoSettings } from "@/components/invoices/InvoiceIntakeAutoSettings";
 import type { OAuthStatus } from "@/components/mail/MailboxSettings";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -25,9 +26,10 @@ export default async function DmsSettingsPage({
   const me = await api.GET("/api/v1/auth/me");
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
-  const [connections, oauth] = await Promise.all([
+  const [connections, oauth, intake] = await Promise.all([
     api.GET("/api/v1/dms-connections"),
     api.GET("/api/v1/mail/oauth/google"),
+    api.GET("/api/v1/ai/invoice-intake-auto"),
   ]);
   const list = (connections.data ?? []) as DmsConnection[];
   const paperless = list.find((c) => c.kind === "paperless") ?? null;
@@ -53,6 +55,7 @@ export default async function DmsSettingsPage({
         googleDrive={googleDrive}
         oauth={(oauth.data ?? { client_id: null, configured: false, source: null, redirect_uri: "" }) as OAuthStatus}
       />
+      <InvoiceIntakeAutoSettings initial={intake.data?.enabled ?? false} />
     </div>
   );
 }

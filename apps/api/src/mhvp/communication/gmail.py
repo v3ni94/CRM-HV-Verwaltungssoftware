@@ -271,8 +271,10 @@ async def sync_mailbox(
     settings: Settings,
     mailbox: Mailbox,
     client: GmailClient,
+    created_ids: list[uuid.UUID] | None = None,
 ) -> dict[str, int]:
-    """Fetch new inbox messages and ingest them; updates cursor and error state."""
+    """Fetch new inbox messages and ingest them; updates cursor and error state. Ids of newly
+    created messages are appended to ``created_ids`` when given (M14-05 automatic intake)."""
     from mhvp.communication.services import ingest_raw
 
     counts = {"fetched": 0, "created": 0, "duplicates": 0, "failed": 0}
@@ -293,7 +295,7 @@ async def sync_mailbox(
             # whole batch or poison the session (seen 25.09.2026 as PendingRollbackError).
             try:
                 async with session.begin_nested():
-                    _, created = await ingest_raw(
+                    message, created = await ingest_raw(
                         session,
                         blobs,
                         settings,
@@ -310,6 +312,8 @@ async def sync_mailbox(
                     first_failure = f"Nachricht {mid}: {type(exc).__name__}: {exc}"[:1000]
                 continue
             counts["created" if created else "duplicates"] += 1
+            if created and created_ids is not None:
+                created_ids.append(message.id)
         mailbox.gmail_history_id = new_cursor
         mailbox.last_error = first_failure
     except (GmailError, httpx.HTTPError) as exc:
@@ -329,7 +333,10 @@ async def enabled_gmail_mailboxes(session: AsyncSession) -> list[Mailbox]:
 
 
 async def sync_one(
-    session: AsyncSession, settings: Settings, mailbox_id: uuid.UUID
+    session: AsyncSession,
+    settings: Settings,
+    mailbox_id: uuid.UUID,
+    created_ids: list[uuid.UUID] | None = None,
 ) -> dict[str, int]:
     mailbox = await session.get(Mailbox, mailbox_id, with_for_update=True)
     if mailbox is None:
@@ -337,6 +344,8 @@ async def sync_one(
     client_id, client_secret = await oauth_client(session, settings)
     client = make_client(client_id, client_secret, mailbox)
     try:
-        return await sync_mailbox(session, BlobStore(settings), settings, mailbox, client)
+        return await sync_mailbox(
+            session, BlobStore(settings), settings, mailbox, client, created_ids
+        )
     finally:
         await client.aclose()

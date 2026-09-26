@@ -1875,5 +1875,12 @@
     "createAppointment": "Create appointment",
     "appointmentTitle": "Handover",
     "appointmentCreatedLink": "Open appointment on {date} in calendar"
+  },
+  "InvoiceIntakeAuto": {
+    "title": "Automatic invoice intake",
+    "label": "Capture invoices from new emails automatically",
+    "hint": "When the Gmail mailboxes are synced, exactly one AI extraction is started for each new PDF attachment whose subject, sender or file name indicates an invoice (Rechnung, Invoice, Beleg, RE-). The result is a proposal under incoming invoices, nothing is posted.",
+    "costHint": "Every automatic extraction incurs AI costs and uses the monthly AI provider budget. Budget and release checks apply unchanged. Default: off.",
+    "saved": "Setting saved."
   }
 }

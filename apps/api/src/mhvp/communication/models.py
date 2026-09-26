@@ -183,3 +183,18 @@ class Dispatch(IdMixin, TimestampMixin, TenantMixin, Base):
     evidence_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class InvoiceIntakeAutoRun(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Markierung des automatischen Belegeingangs (M14-05): je Anhang höchstens ein
+    ``extract_invoice``-Lauf. Der eindeutige Schlüssel (tenant_id, document_id) verhindert
+    doppelte Läufe auch bei parallelen oder wiederholten Abrufen."""
+
+    __tablename__ = "invoice_intake_auto_run"
+    __table_args__ = (UniqueConstraint("tenant_id", "document_id"),)
+
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document.id"), nullable=False
+    )
+    message_id: Mapped[uuid.UUID | None] = _fk("message.id")
+    task_run_id: Mapped[uuid.UUID | None] = _fk("ai_task_run.id")

@@ -104,6 +104,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^ai\/usage$/ },
   { method: "GET", pattern: /^ai\/providers$/ },
   { method: "PUT", pattern: /^ai\/routing$/ },
+  { method: "PUT", pattern: /^ai\/invoice-intake-auto$/ },
   { method: "PUT", pattern: /^ai\/providers\/(anthropic|openai)$/ },
   { method: "POST", pattern: /^ai\/providers\/(anthropic|openai)\/release$/ },
   // Wissensbasis je Mandant und Objekt (Welle 3 Punkt 14, M34).
