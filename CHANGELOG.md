@@ -5,6 +5,17 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.22.0 (26.09.2026) Vier-Augen-IBAN, Fristen, Bankabgleich, Mahnwesen, WEG-Mehrheiten
+
+- Kontakte: neue oder geänderte Bankverbindungen (IBAN) brauchen die Freigabe einer zweiten Person (contacts:approve), der Ersteller darf nicht selbst freigeben; nicht freigegebene Konten werden in Lastschrift, Zahlung, SEPA-Mandat und Rechnungsabgleich nicht verwendet. Bestandskonten gelten mit Migration 0109 als freigegeben
+- Verträge: Dienstleisterverträge mit Laufzeit, Kündigungsfrist und automatischer Verlängerung; Kündigungstermin als Orientierung in der Fristenliste mit 14 Tagen Vorfrist (Migration 0110)
+- WEG: Beschlussfrist virtueller Versammlungen mit Quellenangabe, in der Fristenliste mit 7 Tagen Vorfrist (Migration 0111)
+- Bankabgleich: Tilgungsbestimmung aus dem Verwendungszweck (Rechnungs- und Sollstellungsnummern, Monate, Quartale) setzt den passenden offenen Posten nach vorn, jede Zuordnung trägt eine Begründung
+- Mahnwesen: Zahlungserinnerung (Stufe 1) immer ohne Gebühr und Zinsen, Validierung in den Einstellungen und Schutz im Mahnlauf; Standard-Zahlungsfristen 14, 10 und 7 Tage je Stufe mit Hinweis im Formular
+- KI-Kontierung (propose_posting): Ausgabeschema, Prompt mit Datenminimierung und Sperre, aktiv nur mit Mandantenschalter und freigegebenem Anbieter mit AVV; Ergebnis nur als Vorschlag, nichts wird gebucht (Migration 0113)
+- WEG: Mehrheitsregeln je Beschlussgegenstand mit Fundstelle und Freigabe durch zweite Person, Prüfung "erreicht / nicht erreicht / nicht prüfbar" am Beschluss ohne Statusänderung (Migration 0114)
+- Tests: Integrationssuite mit 573 Tests gegen PostgreSQL grün, Migrationen 0109 bis 0114 hoch und runter geprüft
+
 ## 1.21.0 (26.09.2026) Master-Prompt-Umsetzung Welle 5: Abnahmefälle Anhang D, Lastschrift, XRechnung, E-Rechnung, Eigentümerabrechnung, Prüfexport, Regel-Engine, Tagesjobs, Portal und Importassistent
 
 - Abnahme Anhang D: 43 von 58 Fällen technisch bestanden (Protokoll docs/acceptance/PROTOKOLL-2026-09-26.md), darunter Konkurrenz und Wiederholung des Sollstellungslaufs (D48), historische Stichtage (D49), Berechtigungen aller 38 Massenendpunkte (D50), Zahlungsfreigabe und Bankrückmeldung (D35 bis D38), Aufbewahrungssperre und Import-Rücknahme (D43, D46), Prompt-Injection ohne Wirkung (D57), WEG-Fälle (D18 bis D20, D54), Beirat (D32, D33, D53), Portalzugriff über alle Pfade (D29 bis D31), Betriebskosten (D21 bis D23, D28), Restore mit Löschjournal (D47); fachliche Bestätigung bleibt offen (V16)

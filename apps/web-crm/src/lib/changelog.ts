@@ -17,6 +17,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.22.0",
+    date: "26.09.2026",
+    title: "Vier-Augen-IBAN, Fristen, Bankabgleich, Mahnwesen, WEG-Mehrheiten",
+    changes: [
+      "Kontakte: neue oder geänderte IBAN braucht die Freigabe einer zweiten Person, nicht freigegebene Konten werden in Lastschrift, Zahlung und Mandat nicht verwendet",
+      "Verträge: Dienstleisterverträge mit Kündigungsfrist, Kündigungstermin in der Fristenliste",
+      "WEG: Beschlussfrist virtueller Versammlungen in der Fristenliste, Mehrheitsregeln je Beschlussgegenstand mit Prüfung am Beschluss",
+      "Bankabgleich: Tilgungsbestimmung aus dem Verwendungszweck mit Begründung je Zuordnung",
+      "Mahnwesen: Zahlungserinnerung immer ohne Gebühr und Zinsen, Standard-Zahlungsfristen je Stufe",
+      "KI-Kontierung als Vorschlag vorbereitet, gesperrt bis zur Freigabe des Anbieters",
+    ],
+  },
+  {
     version: "1.21.0",
     date: "26.09.2026",
     title:
