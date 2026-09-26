@@ -58,11 +58,13 @@ type Tab = "inbox" | "drafts" | "pending" | "sent";
 
 const INBOX_STATUSES = ["new", "assigned", "done"] as const;
 
-function queryFor(tab: Tab, status: string, mailboxId: string, q: string): string {
+function queryFor(tab: Tab, status: string, mailboxId: string, q: string, showClosed = false): string {
   const params = new URLSearchParams();
   if (tab === "inbox") {
     params.set("direction", "in");
     if (status) params.set("status", status);
+    // Operator 26.09.2026: done mails (or mails of closed tickets) stay hidden unless shown.
+    else if (showClosed) params.set("include_closed", "true");
   } else if (tab === "drafts") {
     params.set("direction", "out");
     params.set("status", "draft");
@@ -91,6 +93,10 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("message"),
   );
+  // Operator 26.09.2026: "Erledigte anzeigen", mirrored in the URL as erledigt=1.
+  const [showClosed, setShowClosed] = useState<boolean>(() =>
+    typeof window === "undefined" ? false : new URLSearchParams(window.location.search).get("erledigt") === "1",
+  );
   const [pendingCount, setPendingCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,10 +113,10 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   }, [queryText]);
 
   const load = useCallback(
-    (activeTab: Tab, activeStatus: string, activeMailbox: string, activeQ: string) => {
+    (activeTab: Tab, activeStatus: string, activeMailbox: string, activeQ: string, activeShowClosed: boolean) => {
       setBusy(true);
       setError(null);
-      void bff<Message[]>(`/api/bff/mail/messages?${queryFor(activeTab, activeStatus, activeMailbox, activeQ)}`).then((res) => {
+      void bff<Message[]>(`/api/bff/mail/messages?${queryFor(activeTab, activeStatus, activeMailbox, activeQ, activeShowClosed)}`).then((res) => {
         setBusy(false);
         if (res.ok) {
           setMessages(res.data);
@@ -125,8 +131,8 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   );
 
   useEffect(() => {
-    load(tab, status, mailboxId, q);
-  }, [tab, status, mailboxId, q, load]);
+    load(tab, status, mailboxId, q, showClosed);
+  }, [tab, status, mailboxId, q, showClosed, load]);
 
   useEffect(() => {
     if (!canApprove) return;
@@ -135,7 +141,16 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
     });
   }, [canApprove, tab, status, q]);
 
-  const refresh = () => load(tab, status, mailboxId, q);
+  const refresh = () => load(tab, status, mailboxId, q, showClosed);
+
+  const toggleClosed = (next: boolean) => {
+    setShowClosed(next);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (next) url.searchParams.set("erledigt", "1");
+    else url.searchParams.delete("erledigt");
+    window.history.replaceState(null, "", url.toString());
+  };
 
   const selected = useMemo(() => messages?.find((m) => m.id === selectedId) ?? null, [messages, selectedId]);
 
@@ -187,6 +202,17 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
                 </option>
               ))}
             </select>
+          ) : null}
+          {tab === "inbox" && !status ? (
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={showClosed}
+                onChange={(e) => toggleClosed(e.target.checked)}
+                data-testid="toggle-closed"
+              />
+              {t("showClosed")}
+            </label>
           ) : null}
           {mailboxes.length > 0 ? (
             <select className={ui.input} value={mailboxId} onChange={(e) => setMailboxId(e.target.value)}>
