@@ -56,6 +56,15 @@ export type LetterTextPreview = {
 
 const PLACEHOLDERS = ["{frist}", "{bankverbindung}", "{gesamtbetrag}", "{forderungsinhaber}", "{objekt}", "{stufe}"];
 
+/** Zahlungsfrist je Stufe in Tagen ab Briefdatum (M16-12); Stufen ohne Eintrag bleiben leer. */
+export const DEFAULT_PAYMENT_DAYS: Record<number, number> = { 1: 14, 2: 10, 3: 7 };
+
+/** Zahlungserinnerung (Stufe 1) immer ohne Gebühr und Zinsen (M16-14); die API prüft dasselbe. */
+export function reminderFeeViolation(feeFromLevel: string, levels: DunningLevel[]): boolean {
+  if (feeFromLevel !== "" && Number(feeFromLevel) <= 1) return true;
+  return levels.some((lv) => lv.level === 1 && lv.fee_amount !== null && lv.fee_amount !== undefined && lv.fee_amount !== "" && Number(String(lv.fee_amount).replace(",", ".")) !== 0);
+}
+
 const EMPTY_LEVEL: DunningLevel = {
   level: 1,
   min_days_overdue: 7,
@@ -122,7 +131,7 @@ export function DunningSettingsForm({
 
   function addLevel() {
     const next = (levels.at(-1)?.level ?? 0) + 1;
-    setLevels((prev) => [...prev, { ...EMPTY_LEVEL, level: next }]);
+    setLevels((prev) => [...prev, { ...EMPTY_LEVEL, level: next, payment_days: DEFAULT_PAYMENT_DAYS[next] ?? null }]);
   }
 
   function removeLevel(index: number) {
@@ -176,9 +185,15 @@ export function DunningSettingsForm({
   }
 
   async function save() {
-    setBusy(true);
     setMessage(null);
     setError(null);
+    const ownFeeFromLevel = isOverride && inheritFeeFromLevel ? "" : feeFromLevel;
+    const ownLevels = isOverride && inheritLadder ? [] : levels;
+    if (reminderFeeViolation(ownFeeFromLevel, ownLevels)) {
+      setError(t("reminderNoFee"));
+      return;
+    }
+    setBusy(true);
     const body = isOverride
       ? {
           property_id: propertyId,
@@ -274,7 +289,7 @@ export function DunningSettingsForm({
           <span className={ui.label}>{t("feeFromLevel")}</span>
           <input
             type="number"
-            min={1}
+            min={2}
             className={`${ui.input} w-24`}
             value={feeFromLevel}
             onChange={(e) => setFeeFromLevel(e.target.value)}
@@ -427,6 +442,8 @@ export function DunningSettingsForm({
           </tbody>
         </table>
       </div>
+      <p className={`${ui.help} mt-2`}>{t("paymentDaysHint")}</p>
+      <p className={`${ui.help} mt-2`}>{t("reminderNoFeeHint")}</p>
       <p className={`${ui.help} mt-2`}>
         {t("letterTextHint", {
           placeholders: PLACEHOLDERS.join(", "),

@@ -111,6 +111,7 @@ describe("BFF proxy", () => {
     // Basiszinssatz stay inactive until the operator enters them (V7).
     ["GET", "accounting/dunning-settings"],
     ["PUT", "accounting/dunning-settings"],
+    ["DELETE", "accounting/dunning-settings"],
     ["POST", "accounting/dunning-settings/presets"],
     ["POST", `accounting/dunning-cases/${ID}/mark-sent`],
     ["POST", `accounting/dunning-cases/${ID}/mahnbescheid-vorbereitung`],
