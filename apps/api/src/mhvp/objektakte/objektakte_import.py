@@ -38,6 +38,7 @@ import hashlib
 import json
 import uuid
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -68,11 +69,16 @@ from mhvp.objektakte.models import (
     DriveNode,
     DriveNodeKind,
     DriveNodeStatus,
+    ObjektakteAiCall,
     ObjektakteAssignment,
     ObjektakteDocumentClass,
+    ObjektakteSourceDeletion,
+    ObjektakteSyncState,
+    ObjektakteSyncStatus,
     PartyAssignmentRole,
     ReviewCaseStatus,
 )
+from mhvp.platform.models import Membership, MembershipRole, MembershipStatus, Role, User
 from mhvp.properties.models import Building, Property, Unit
 
 # Tables of objektakte's `objects`/`parties`/`documents`/`drive`/`review` apps that this importer
@@ -91,9 +97,27 @@ KNOWN_TABLES = (
     "documents_document",
     "review_reviewcase",
     "review_reviewdecision",
+    # M35 Stufe 4 (docs/rules/M35-03.md): users/roles of the objektakte login (mapped to CRM
+    # roles as a proposal only, see `build_user_mapping`) and the external AI call protocol.
+    "roles",
+    "users",
+    "ai_calls",
 )
 
 SOURCE_SYSTEM = "objektakte"
+
+# M35 Stufe 4 (docs/rules/M35-03.md): objektakte role code -> CRM system role code
+# (`mhvp.core.auth.permissions.SYSTEM_ROLES`). objektakte knows exactly two roles
+# (`db/seeds/roles.json` of the reference repository): `admin` (everything incl.
+# `settings.write`, `users.manage`, `retention.approve`) and `sachbearbeiter` (`review.decide`,
+# `lists.generate`, `documents.ingest`, `masterdata.write`, no settings). `tenant_admin` is
+# the only CRM role holding `objektakte:delete` and tenant settings, `standard` holds
+# `objektakte:read/update/approve` plus master data. Any other code (a tenant specific
+# objektakte role) gets no proposal and is reported for a manual decision.
+OBJEKTAKTE_ROLE_MAP: dict[str, str] = {
+    "admin": "tenant_admin",
+    "sachbearbeiter": "standard",
+}
 
 # Document statuses (objektakte `documents.models.DocumentStatus`) that already carry a text
 # layer or OCR result; a document import marks these `pending` so the OCR cache ZIP endpoint
@@ -112,6 +136,62 @@ def _row_hash(row: dict[str, Any]) -> str:
 
 def _source_id(row: dict[str, Any]) -> str:
     return str(row.get("id"))
+
+
+def _json_dict(value: Any) -> dict[str, Any] | None:
+    """A JSON column of the dump: MariaDB exports it as a string, the generic parser keeps it
+    as such; only a JSON object is accepted, anything else (list, scalar, invalid) is dropped."""
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str) and value.strip().startswith("{"):
+        try:
+            parsed = json.loads(value)
+        except ValueError:
+            return None
+        return parsed if isinstance(parsed, dict) else None
+    return None
+
+
+def _source_updated_at(row: dict[str, Any]) -> datetime | None:
+    """objektakte's `updated_at` (Django `auto_now`, MariaDB DATETIME without zone; objektakte
+    runs with `USE_TZ=True`, so the stored value is UTC, docs/ASSUMPTIONS.md M35 Stufe 5)."""
+    value = _to_datetime(row.get("updated_at"))
+    return value.replace(tzinfo=UTC) if value is not None else None
+
+
+def _assign_changed(obj: Any, fields: dict[str, Any]) -> bool:
+    """Sets the mapped fields on an existing row and reports whether any value differed, so an
+    unchanged source row (or a re-run over the same export) never counts as an update."""
+    changed = False
+    for key, value in fields.items():
+        if getattr(obj, key) != value:
+            setattr(obj, key, value)
+            changed = True
+    return changed
+
+
+def filter_since(
+    tables: dict[str, list[dict[str, Any]]], since: datetime | None
+) -> tuple[dict[str, list[dict[str, Any]]], datetime | None]:
+    """Stufe 5 differential import: keeps only rows whose source `updated_at` is at or after
+    `since` (the tenant's water mark); rows of tables without `updated_at` (catalog tables) are
+    always kept, they are small and idempotent by source id. Returns the filtered tables and
+    the largest `updated_at` over the *whole* export (the next water mark). `>=` rather than
+    `>` on purpose: a row saved in the same second as the previous maximum, but after that
+    export, is then still picked up; the price is that rows at exactly the water mark are
+    re-read, which the changed-value checks turn into no-ops."""
+    filtered: dict[str, list[dict[str, Any]]] = {}
+    newest: datetime | None = None
+    for table, rows in tables.items():
+        kept: list[dict[str, Any]] = []
+        for row in rows:
+            updated = _source_updated_at(row)
+            if updated is not None and (newest is None or updated > newest):
+                newest = updated
+            if since is None or updated is None or updated >= since:
+                kept.append(row)
+        filtered[table] = kept
+    return filtered, newest
 
 
 async def _insert_or_get_by_source(
@@ -193,6 +273,10 @@ class ImportPlan:
     documents_without_property: int = 0
     documents_to_update: int = 0
     open_review_cases: int = 0
+    # Stufe 4 additions (docs/rules/M35-03.md): proposal table objektakte user -> CRM role,
+    # never applied by the importer; AI call rows to take over.
+    user_mapping: list[dict[str, Any]] = field(default_factory=list)
+    ai_calls: int = 0
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -206,6 +290,8 @@ class ImportPlan:
             "documents_without_property": self.documents_without_property,
             "documents_to_update": self.documents_to_update,
             "open_review_cases": self.open_review_cases,
+            "user_mapping": self.user_mapping,
+            "ai_calls": self.ai_calls,
         }
 
 
@@ -326,7 +412,129 @@ async def build_plan(
         if _s(row, "status") in ("open", "in_progress")
     )
 
+    # Stufe 4: user/role mapping proposal and AI call protocol (docs/rules/M35-03.md).
+    plan.user_mapping = await build_user_mapping(session, tenant_id, tables)
+    existing_ai_calls = await _existing_source_ids(
+        session, tenant_id, ObjektakteAiCall, "objektakte_ai_call"
+    )
+    dup_ai = sum(1 for row in tables.get("ai_calls", []) if _source_id(row) in existing_ai_calls)
+    if dup_ai:
+        plan.duplicates["ai_calls"] = dup_ai
+    plan.ai_calls = len(tables.get("ai_calls", [])) - dup_ai
+
     return plan
+
+
+def _user_mapping_status(row: dict[str, Any]) -> str:
+    """objektakte `users.status` plus soft delete (`deleted_at`) as one state for the report."""
+    if row.get("deleted_at") is not None:
+        return "deleted"
+    return _s(row, "status", 16) or "invited"
+
+
+async def build_user_mapping(
+    session: AsyncSession, tenant_id: uuid.UUID, tables: dict[str, list[dict[str, Any]]]
+) -> list[dict[str, Any]]:
+    """M35 Stufe 4 (docs/rules/M35-03.md): maps every objektakte `users` row to a CRM role
+    proposal. Nothing is created or changed: the CRM keeps its own user, membership and role
+    tables (`mhvp.platform.models`), and inviting a person is an explicit administrator action
+    (`/api/v1/tenant/members`, rule 0.1.6 analog: a proposal is no approval). The report says
+    per objektakte user whether a CRM user with the same e-mail exists, whether that user is
+    already an active member of this tenant with which roles, and which CRM role the
+    objektakte role maps to (`OBJEKTAKTE_ROLE_MAP`); anything not mappable is `action=manual`.
+
+    `password_hash`, `google_subject`, lock counters and the like are never read or reported
+    (rule 0.1.13); the objektakte password hashes are not portable anyway (different hasher and
+    policy) and every taken over person sets a new password on invitation.
+    """
+    roles_by_id: dict[str, str] = {
+        _source_id(r): (_s(r, "code", 24) or "") for r in tables.get("roles", [])
+    }
+    users = tables.get("users", [])
+    if not users:
+        return []
+    emails = sorted({e for e in ((_s(r, "email", 254) or "").strip().lower() for r in users) if e})
+    crm_users: dict[str, uuid.UUID] = {}
+    if emails:
+        rows = (
+            await session.execute(select(User.email, User.id).where(User.email.in_(emails)))
+        ).all()
+        crm_users = {row.email: row.id for row in rows}
+    member_roles: dict[uuid.UUID, list[str]] = {}
+    if crm_users:
+        rows_m = (
+            await session.execute(
+                select(Membership.user_id, Role.code)
+                .join(MembershipRole, MembershipRole.membership_id == Membership.id)
+                .join(Role, Role.id == MembershipRole.role_id)
+                .where(
+                    Membership.tenant_id == tenant_id,
+                    Membership.status == MembershipStatus.ACTIVE,
+                    Membership.user_id.in_(list(crm_users.values())),
+                )
+            )
+        ).all()
+        for user_id, code in rows_m:
+            member_roles.setdefault(user_id, []).append(code)
+        # An active membership without any role still counts as "member".
+        rows_n = (
+            await session.execute(
+                select(Membership.user_id).where(
+                    Membership.tenant_id == tenant_id,
+                    Membership.status == MembershipStatus.ACTIVE,
+                    Membership.user_id.in_(list(crm_users.values())),
+                )
+            )
+        ).all()
+        for (user_id,) in rows_n:
+            member_roles.setdefault(user_id, [])
+
+    mapping: list[dict[str, Any]] = []
+    for row in users:
+        email = (_s(row, "email", 254) or "").strip().lower()
+        objektakte_role = roles_by_id.get(str(row.get("role_id")), "") or _s(row, "role", 24) or ""
+        proposed = OBJEKTAKTE_ROLE_MAP.get(objektakte_role)
+        status = _user_mapping_status(row)
+        crm_user_id = crm_users.get(email)
+        roles = sorted(member_roles[crm_user_id]) if crm_user_id in member_roles else None
+        if status in ("deleted", "disabled"):
+            action = "skip"
+        elif proposed is None:
+            action = "manual"
+        elif roles is not None:
+            action = "already_member"
+        elif crm_user_id is not None:
+            action = "add_membership"
+        else:
+            action = "invite"
+        mapping.append(
+            {
+                "source_id": _source_id(row),
+                "email": email,
+                "display_name": _s(row, "display_name", 120),
+                "objektakte_role": objektakte_role or None,
+                "objektakte_status": status,
+                "proposed_role": proposed,
+                "crm_user_id": str(crm_user_id) if crm_user_id else None,
+                "crm_member_roles": roles,
+                "action": action,
+            }
+        )
+    return mapping
+
+
+async def _objektakte_user_to_crm_user(
+    session: AsyncSession, tenant_id: uuid.UUID, tables: dict[str, list[dict[str, Any]]]
+) -> dict[str, uuid.UUID]:
+    """objektakte user id -> CRM user id, only where the same e-mail already belongs to an
+    active member of this tenant (docs/rules/M35-03.md). Used to fill `decided_by` of taken
+    over review decisions; anyone else stays unset rather than pointing at the wrong person."""
+    mapping = await build_user_mapping(session, tenant_id, tables)
+    return {
+        m["source_id"]: uuid.UUID(m["crm_user_id"])
+        for m in mapping
+        if m["crm_user_id"] is not None and m["crm_member_roles"] is not None
+    }
 
 
 @dataclass
@@ -335,6 +543,14 @@ class ImportResult:
     skipped_duplicates: dict[str, int] = field(default_factory=dict)
     updated: dict[str, int] = field(default_factory=dict)
     id_map: dict[str, dict[str, str]] = field(default_factory=dict)
+    # Stufe 5: rows of the export a run looked at (after the water mark filter), source rows
+    # newly marked as deleted, and deletion markers resolved because the row reappeared.
+    considered: dict[str, int] = field(default_factory=dict)
+    deleted_marked: dict[str, int] = field(default_factory=dict)
+    deletions_resolved: dict[str, int] = field(default_factory=dict)
+    # Stufe 4 (docs/rules/M35-03.md): the user/role proposal table is part of the import
+    # report (`ImportRun.summary`), never applied here.
+    user_mapping: list[dict[str, Any]] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -342,6 +558,10 @@ class ImportResult:
             "skipped_duplicates": self.skipped_duplicates,
             "updated": self.updated,
             "id_map": self.id_map,
+            "considered": self.considered,
+            "deleted_marked": self.deleted_marked,
+            "deletions_resolved": self.deletions_resolved,
+            "user_mapping": self.user_mapping,
         }
 
 
@@ -351,10 +571,26 @@ async def apply_import(
     tables: dict[str, list[dict[str, Any]]],
 ) -> ImportResult:
     """Creates properties, units, contacts and staged assignments. Idempotent: a row whose
-    `source_id` is already present under `source_system="objektakte"` is skipped (rule 0.1.12);
-    a repeated apply of the same dump therefore changes nothing."""
-    tenant_id = principal.tenant_id
+    `source_id` is already present under `source_system="objektakte"` is skipped (rule 0.1.12)
+    or, when its mapped values differ from the export, updated in place; a repeated apply of
+    the same dump therefore changes nothing. No deletion marking here (the manual upload may
+    be a partial export); that is the differential run's job (`run_differential_import`)."""
+    return await apply_tables(session, principal.tenant_id, tables, mark_deleted=False)
+
+
+async def apply_tables(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    tables: dict[str, list[dict[str, Any]]],
+    *,
+    mark_deleted: bool,
+    full_tables: dict[str, list[dict[str, Any]]] | None = None,
+) -> ImportResult:
+    """Core apply. `tables` are the rows to create/update (already narrowed to the water mark by
+    a differential run); `full_tables` is the complete export the deletion check compares the
+    CRM against, since a row older than the water mark is filtered out but not deleted."""
     result = ImportResult()
+    result.considered = {t: len(rows) for t, rows in tables.items() if t in KNOWN_TABLES}
     property_map: dict[str, uuid.UUID] = {}
     unit_map: dict[str, uuid.UUID] = {}
     contact_map: dict[str, uuid.UUID] = {}
@@ -387,8 +623,11 @@ async def apply_import(
     def _skipped(kind: str) -> None:
         result.skipped_duplicates[kind] = result.skipped_duplicates.get(kind, 0) + 1
 
-    existing_properties: dict[str, uuid.UUID] = {
-        row.source_id: row.id
+    def _updated(kind: str) -> None:
+        result.updated[kind] = result.updated.get(kind, 0) + 1
+
+    existing_property_rows: dict[str, Property] = {
+        row.source_id: row
         for row in (
             await session.scalars(
                 select(Property).where(
@@ -398,11 +637,28 @@ async def apply_import(
         ).all()
         if row.source_id is not None
     }
+    existing_properties: dict[str, uuid.UUID] = {k: v.id for k, v in existing_property_rows.items()}
+    # Stufe 5: a differential export may carry a unit or document whose parent object row is
+    # unchanged (and therefore filtered out), so every map starts from what the CRM already
+    # holds, never only from the rows of this export.
+    property_map.update(existing_properties)
     for row in tables.get("objects_managedobject", []):
         source_id = _source_id(row)
         if source_id in existing_properties:
             property_map[source_id] = existing_properties[source_id]
-            _skipped("objects_managedobject")
+            if _assign_changed(
+                existing_property_rows[source_id],
+                {
+                    "name": _s(row, "name", 200) or existing_property_rows[source_id].name,
+                    "street": _s(row, "street", 200),
+                    "house_number": _s(row, "house_number", 20),
+                    "postal_code": _s(row, "postal_code", 20),
+                    "city": _s(row, "city", 100),
+                },
+            ):
+                _updated("objects_managedobject")
+            else:
+                _skipped("objects_managedobject")
             continue
         number = _normalized_property_number(row)
         if number is None:
@@ -438,8 +694,8 @@ async def apply_import(
         # stands in until a real building takeover exists (Stufe 2+).
         await _default_building_id(prop.id)
 
-    existing_units: dict[str, uuid.UUID] = {
-        row.source_id: row.id
+    existing_unit_rows: dict[str, Unit] = {
+        row.source_id: row
         for row in (
             await session.scalars(
                 select(Unit).where(Unit.tenant_id == tenant_id, Unit.source_system == SOURCE_SYSTEM)
@@ -447,11 +703,22 @@ async def apply_import(
         ).all()
         if row.source_id is not None
     }
+    existing_units: dict[str, uuid.UUID] = {k: v.id for k, v in existing_unit_rows.items()}
+    unit_map.update(existing_units)
     for row in tables.get("objects_unit", []):
         source_id = _source_id(row)
         if source_id in existing_units:
             unit_map[source_id] = existing_units[source_id]
-            _skipped("objects_unit")
+            if _assign_changed(
+                existing_unit_rows[source_id],
+                {
+                    "label": _s(row, "unit_label", 50),
+                    "unit_type": _s(row, "unit_type", 24) or "other",
+                },
+            ):
+                _updated("objects_unit")
+            else:
+                _skipped("objects_unit")
             continue
         property_id = property_map.get(str(row.get("object_id")))
         if property_id is None:
@@ -472,8 +739,8 @@ async def apply_import(
         unit_map[source_id] = unit.id
         _created("unit")
 
-    existing_contacts: dict[str, uuid.UUID] = {
-        row.source_id: row.id
+    existing_contact_rows: dict[str, Contact] = {
+        row.source_id: row
         for row in (
             await session.scalars(
                 select(Contact).where(
@@ -483,12 +750,27 @@ async def apply_import(
         ).all()
         if row.source_id is not None
     }
+    existing_contacts: dict[str, uuid.UUID] = {k: v.id for k, v in existing_contact_rows.items()}
+    contact_map.update(existing_contacts)
     for table, role in (("parties_owner", "eigentuemer"), ("parties_tenant", "mieter")):
         for row in tables.get(table, []):
             source_id = _source_id(row)
             if source_id in existing_contacts:
                 contact_map[source_id] = existing_contacts[source_id]
-                _skipped(table)
+                if _assign_changed(
+                    existing_contact_rows[source_id],
+                    {
+                        "kind": _contact_kind(row),
+                        "salutation": _s(row, "salutation", 50),
+                        "first_name": _s(row, "first_name", 100),
+                        "last_name": _s(row, "last_name", 100),
+                        "company_name": _s(row, "company_name", 200),
+                        "display_name": _display_name(row),
+                    },
+                ):
+                    _updated(table)
+                else:
+                    _skipped(table)
                 continue
             contact = Contact(
                 tenant_id=tenant_id,
@@ -511,13 +793,33 @@ async def apply_import(
             contact_map[source_id] = contact.id
             _created("contact")
 
-    existing_assignments = await _existing_source_ids(
-        session, tenant_id, ObjektakteAssignment, "objektakte_party_assignment"
-    )
+    existing_assignment_rows: dict[str, ObjektakteAssignment] = {
+        row.source_id: row
+        for row in (
+            await session.scalars(
+                select(ObjektakteAssignment).where(
+                    ObjektakteAssignment.tenant_id == tenant_id,
+                    ObjektakteAssignment.source_system == SOURCE_SYSTEM,
+                )
+            )
+        ).all()
+    }
     for row in tables.get("parties_ownerunitassignment", []):
         source_id = _source_id(row)
-        if source_id in existing_assignments:
-            _skipped("parties_ownerunitassignment")
+        if source_id in existing_assignment_rows:
+            if _assign_changed(
+                existing_assignment_rows[source_id],
+                {
+                    "unit_id": unit_map.get(str(row.get("unit_id"))),
+                    "contact_id": contact_map.get(str(row.get("owner_id"))),
+                    "valid_from": _to_date(row.get("valid_from")),
+                    "valid_to": _to_date(row.get("valid_to")),
+                    "share": _to_decimal(row.get("share")),
+                },
+            ):
+                _updated("parties_ownerunitassignment")
+            else:
+                _skipped("parties_ownerunitassignment")
             continue
         await _insert_or_get_by_source(
             session,
@@ -551,9 +853,16 @@ async def apply_import(
         category_map,
         _created,
         _skipped,
+        _updated,
     )
     drive_node_map = await _import_drive_nodes(
-        session, tenant_id, tables.get("drive_drivenode", []), property_map, _created, _skipped
+        session,
+        tenant_id,
+        tables.get("drive_drivenode", []),
+        property_map,
+        _created,
+        _skipped,
+        _updated,
     )
     document_map = await _import_documents(
         session,
@@ -568,8 +877,18 @@ async def apply_import(
         result,
     )
     review_case_map = await _import_review_cases(
-        session, tenant_id, tables.get("review_reviewcase", []), document_map, _created, _skipped
+        session,
+        tenant_id,
+        tables.get("review_reviewcase", []),
+        document_map,
+        _created,
+        _skipped,
+        _updated,
     )
+    # Stufe 4 (docs/rules/M35-03.md): user/role proposal (report only), `decided_by` of taken
+    # over decisions for already active members, and the objektakte AI call protocol.
+    result.user_mapping = await build_user_mapping(session, tenant_id, tables)
+    user_map = await _objektakte_user_to_crm_user(session, tenant_id, tables)
     await _import_review_decisions(
         session,
         tenant_id,
@@ -578,7 +897,20 @@ async def apply_import(
         document_map,
         _created,
         _skipped,
+        user_map,
     )
+    await _import_ai_calls(
+        session,
+        tenant_id,
+        tables.get("ai_calls", []),
+        property_map,
+        document_map,
+        _created,
+        _skipped,
+    )
+
+    if mark_deleted:
+        await _mark_missing_sources(session, tenant_id, full_tables or tables, result)
 
     await session.flush()
     result.id_map = {
@@ -629,7 +961,7 @@ async def _import_categories(
             )
         ).all()
     }
-    mapping: dict[str, uuid.UUID] = {}
+    mapping: dict[str, uuid.UUID] = dict(existing_by_source)
     for row in rows:
         source_id = _s(row, "code") or _source_id(row)
         if source_id in existing_by_source:
@@ -671,6 +1003,7 @@ async def _import_document_classes(
     category_map: dict[str, uuid.UUID],
     created: Any,
     skipped: Any,
+    updated: Any,
 ) -> dict[str, ObjektakteDocumentClass]:
     """`documents_documenttype` (with its `documents_documentsubfolder`) -> `objektakte_document_
     class` (plan section 4 item 1): the CRM category catalog is flat, so the subfolder/type level
@@ -689,28 +1022,31 @@ async def _import_document_classes(
         ).all()
         if row.source_id is not None
     }
-    mapping: dict[str, ObjektakteDocumentClass] = {}
+    mapping: dict[str, ObjektakteDocumentClass] = dict(existing)
     for row in type_rows:
         source_id = _source_id(row)
-        if source_id in existing:
-            mapping[source_id] = existing[source_id]
-            skipped("documents_documenttype")
-            continue
         subfolder = (
             subfolders_by_id.get(str(row.get("subfolder_id"))) if row.get("subfolder_id") else None
         )
+        fields = {
+            "category_id": category_map.get(str(row.get("category_id"))),
+            "subfolder_source_id": _s(row, "subfolder_id", 64),
+            "subfolder_name": _s(subfolder, "display_name", 200) if subfolder else None,
+            "type_code": _s(row, "code", 64),
+            "type_name": _s(row, "name", 200),
+            "requires_period": _to_bool(row.get("requires_period")),
+            "requires_owner": _to_bool(row.get("requires_owner")),
+            "requires_tenant": _to_bool(row.get("requires_tenant")),
+        }
+        if source_id in existing:
+            mapping[source_id] = existing[source_id]
+            if _assign_changed(existing[source_id], fields):
+                updated("documents_documenttype")
+            else:
+                skipped("documents_documenttype")
+            continue
         entry = ObjektakteDocumentClass(
-            tenant_id=tenant_id,
-            category_id=category_map.get(str(row.get("category_id"))),
-            subfolder_source_id=_s(row, "subfolder_id", 64),
-            subfolder_name=_s(subfolder, "display_name", 200) if subfolder else None,
-            type_code=_s(row, "code", 64),
-            type_name=_s(row, "name", 200),
-            requires_period=_to_bool(row.get("requires_period")),
-            requires_owner=_to_bool(row.get("requires_owner")),
-            requires_tenant=_to_bool(row.get("requires_tenant")),
-            source_system=SOURCE_SYSTEM,
-            source_id=source_id,
+            tenant_id=tenant_id, source_system=SOURCE_SYSTEM, source_id=source_id, **fields
         )
         entry = await _insert_or_get_by_source(
             session, entry, ObjektakteDocumentClass, tenant_id=tenant_id, source_id=source_id
@@ -727,12 +1063,13 @@ async def _import_drive_nodes(
     property_map: dict[str, uuid.UUID],
     created: Any,
     skipped: Any,
+    updated: Any,
 ) -> dict[str, uuid.UUID]:
     """`drive_drivenode` -> `objektakte_drive_node` (Stufe 1 tree, filled here, plan section 4
     item 1). Parent links are resolved in a second pass since a child row can precede its parent
     in the dump."""
-    existing: dict[str, uuid.UUID] = {
-        row.source_id: row.id
+    existing_rows: dict[str, DriveNode] = {
+        row.source_id: row
         for row in (
             await session.scalars(
                 select(DriveNode).where(
@@ -742,12 +1079,10 @@ async def _import_drive_nodes(
         ).all()
         if row.source_id is not None
     }
+    existing: dict[str, uuid.UUID] = {k: v.id for k, v in existing_rows.items()}
     mapping: dict[str, uuid.UUID] = dict(existing)
     for row in rows:
         source_id = _source_id(row)
-        if source_id in existing:
-            skipped("drive_drivenode")
-            continue
         try:
             node_kind = DriveNodeKind(_s(row, "node_kind") or "subfolder")
         except ValueError:
@@ -757,6 +1092,24 @@ async def _import_drive_nodes(
             status_enum = DriveNodeStatus(_s(row, "status") or "active")
         except ValueError:
             status_enum = DriveNodeStatus.ACTIVE
+        if source_id in existing:
+            if _assign_changed(
+                existing_rows[source_id],
+                {
+                    "property_id": property_map.get(str(row.get("object_id")))
+                    or existing_rows[source_id].property_id,
+                    "node_kind": node_kind,
+                    "name": (
+                        _s(row, "drive_name", 255) or _s(row, "expected_name", 255) or source_id
+                    ),
+                    "drive_parent_id": _s(row, "drive_parent_id", 128),
+                    "status": status_enum,
+                },
+            ):
+                updated("drive_drivenode")
+            else:
+                skipped("drive_drivenode")
+            continue
         node = DriveNode(
             tenant_id=tenant_id,
             property_id=property_map.get(str(row.get("object_id"))),
@@ -955,11 +1308,12 @@ async def _import_review_cases(
     document_map: dict[str, uuid.UUID],
     created: Any,
     skipped: Any,
+    updated: Any,
 ) -> dict[str, uuid.UUID]:
     """`review_reviewcase` -> `objektakte_document_review_case` (Stufe 1 table, filled here):
     open cases become the Stufe 3 review center's start set (plan section 4 item 3)."""
-    existing: dict[str, uuid.UUID] = {
-        row.source_id: row.id
+    existing_rows: dict[str, DocumentReviewCase] = {
+        row.source_id: row
         for row in (
             await session.scalars(
                 select(DocumentReviewCase).where(
@@ -970,28 +1324,34 @@ async def _import_review_cases(
         ).all()
         if row.source_id is not None
     }
+    existing: dict[str, uuid.UUID] = {k: v.id for k, v in existing_rows.items()}
     mapping = dict(existing)
     for row in rows:
         source_id = _source_id(row)
-        if source_id in existing:
-            skipped("review_reviewcase")
-            continue
         status = _s(row, "status")
-        case = DocumentReviewCase(
-            tenant_id=tenant_id,
-            document_id=document_map.get(str(row.get("document_id"))),
-            stage=_s(row, "case_type", 32) or _s(row, "case_subtype", 32) or "unknown",
-            candidates=row.get("candidates") if isinstance(row.get("candidates"), dict) else None,
-            proposed_action=(
+        fields: dict[str, Any] = {
+            "document_id": document_map.get(str(row.get("document_id"))),
+            "stage": _s(row, "case_type", 32) or _s(row, "case_subtype", 32) or "unknown",
+            "candidates": row.get("candidates")
+            if isinstance(row.get("candidates"), dict)
+            else None,
+            "proposed_action": (
                 row.get("proposed_action") if isinstance(row.get("proposed_action"), dict) else None
             ),
-            priority=int(row.get("priority") or 100),
-            status=ReviewCaseStatus(status)
+            "priority": int(row.get("priority") or 100),
+            "status": ReviewCaseStatus(status)
             if status in _REVIEW_CASE_STATUSES
             else ReviewCaseStatus.OPEN,
-            snoozed_until=_to_datetime(row.get("snoozed_until")),
-            source_system=SOURCE_SYSTEM,
-            source_id=source_id,
+            "snoozed_until": _to_datetime(row.get("snoozed_until")),
+        }
+        if source_id in existing:
+            if _assign_changed(existing_rows[source_id], fields):
+                updated("review_reviewcase")
+            else:
+                skipped("review_reviewcase")
+            continue
+        case = DocumentReviewCase(
+            tenant_id=tenant_id, source_system=SOURCE_SYSTEM, source_id=source_id, **fields
         )
         case = await _insert_or_get_by_source(
             session, case, DocumentReviewCase, tenant_id=tenant_id, source_id=source_id
@@ -1009,11 +1369,14 @@ async def _import_review_decisions(
     document_map: dict[str, uuid.UUID],
     created: Any,
     skipped: Any,
+    user_map: dict[str, uuid.UUID] | None = None,
 ) -> None:
     """`review_reviewdecision` -> `objektakte_document_review_decision`: read-only history, kept
-    only when its case was taken over (plan section 4 item 3); `decided_by` is not mapped across
-    systems in this stage (objektakte user ids do not resolve to CRM user ids without a released
-    user/role takeover, Stufe 4), so it stays unset rather than pointing at the wrong person."""
+    only when its case was taken over (plan section 4 item 3). `decided_by` (Stufe 4,
+    docs/rules/M35-03.md) is set only where the objektakte user resolves, by e-mail, to a CRM
+    user who is already an active member of this tenant (`user_map`); otherwise it stays unset
+    rather than pointing at the wrong person. The objektakte user id is kept in `before_state`
+    (`source_decided_by`) so the reference survives an unresolved mapping."""
     existing_ids = frozenset(
         str(r)
         for r in (
@@ -1033,14 +1396,22 @@ async def _import_review_decisions(
         case_id = review_case_map.get(str(row.get("review_case_id")))
         if case_id is None:
             continue
+        before_state: dict[str, Any] = dict(_json_dict(row.get("before_state")) or {})
+        source_decided_by = row.get("decided_by")
+        if source_decided_by is not None:
+            before_state["source_decided_by"] = str(source_decided_by)
+        decided_at = _to_datetime(row.get("decided_at"))
+        if decided_at is not None:
+            before_state["source_decided_at"] = decided_at.isoformat()
         await _insert_or_get_by_source(
             session,
             DocumentReviewDecision(
                 tenant_id=tenant_id,
                 review_case_id=case_id,
-                before_state=row.get("before_state")
-                if isinstance(row.get("before_state"), dict)
+                decided_by=(user_map or {}).get(str(source_decided_by))
+                if source_decided_by is not None
                 else None,
+                before_state=before_state or None,
                 after_state=row.get("after_state")
                 if isinstance(row.get("after_state"), dict)
                 else None,
@@ -1052,3 +1423,268 @@ async def _import_review_decisions(
             source_id=source_id,
         )
         created("review_reviewdecision")
+
+
+# --- Stufe 5: deletion markers and the differential run -----------------------------------
+
+# Export table -> (CRM model, CRM table name) for the deletion check. Only tables keyed by the
+# objektakte primary key take part; `documents_documentcategory` is keyed by its code and
+# matched by name as well, so a missing category row proves nothing about a deletion. Owner and
+# tenant rows both land in `contact`, so they are checked once under the pseudo table
+# `parties` (present when either export table still has the id).
+_PARTY_TABLES = ("parties_owner", "parties_tenant")
+_DELETION_TARGETS: tuple[tuple[str, type[Any], str], ...] = (
+    ("objects_managedobject", Property, "property"),
+    ("objects_unit", Unit, "unit"),
+    ("parties", Contact, "contact"),
+    ("parties_ownerunitassignment", ObjektakteAssignment, "objektakte_party_assignment"),
+    ("documents_documenttype", ObjektakteDocumentClass, "objektakte_document_class"),
+    ("drive_drivenode", DriveNode, "objektakte_drive_node"),
+    ("documents_document", Document, "document"),
+    ("review_reviewcase", DocumentReviewCase, "objektakte_document_review_case"),
+    ("review_reviewdecision", DocumentReviewDecision, "objektakte_document_review_decision"),
+)
+
+
+async def _mark_missing_sources(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    tables: dict[str, list[dict[str, Any]]],
+    result: ImportResult,
+) -> None:
+    """A source row the CRM holds (by source id) but a *complete* export no longer contains is
+    marked in `objektakte_source_deletion`; nothing is ever deleted physically (rule 0.1.7). A
+    table absent from the export is skipped entirely (it may simply not have been dumped; a
+    mysqldump of an emptied table carries no INSERT and is indistinguishable, so the deletion of
+    a table's last row is only found once the table has rows again, docs/ASSUMPTIONS.md), and
+    a marker whose row reappears is resolved rather than removed. Documents additionally get
+    `source_meta["source_deleted_at"]` so the DMS can show the state without a join."""
+    now = datetime.now(UTC)
+    markers: dict[tuple[str, str], ObjektakteSourceDeletion] = {
+        (m.source_table, m.source_id): m
+        for m in (
+            await session.scalars(
+                select(ObjektakteSourceDeletion).where(
+                    ObjektakteSourceDeletion.tenant_id == tenant_id
+                )
+            )
+        ).all()
+    }
+    for source_table, model, target_table in _DELETION_TARGETS:
+        if source_table == "parties":
+            if not any(t in tables for t in _PARTY_TABLES):
+                continue
+            present = {_source_id(r) for t in _PARTY_TABLES for r in tables.get(t, [])}
+        elif source_table in tables:
+            present = {_source_id(r) for r in tables[source_table]}
+        else:
+            continue
+        existing = (
+            await session.execute(
+                select(model.source_id, model.id).where(
+                    model.tenant_id == tenant_id,
+                    model.source_system == SOURCE_SYSTEM,
+                    model.source_id.is_not(None),
+                )
+            )
+        ).all()
+        for raw_source_id, target_id in existing:
+            source_id = str(raw_source_id)
+            marker = markers.get((source_table, source_id))
+            if source_id in present:
+                if marker is not None and marker.resolved_at is None:
+                    marker.resolved_at = now
+                    result.deletions_resolved[source_table] = (
+                        result.deletions_resolved.get(source_table, 0) + 1
+                    )
+                continue
+            if marker is not None and marker.resolved_at is None:
+                continue  # already marked, still missing
+            if marker is None:
+                marker = ObjektakteSourceDeletion(
+                    tenant_id=tenant_id,
+                    source_table=source_table,
+                    source_id=source_id,
+                    target_table=target_table,
+                    target_id=target_id,
+                    detected_at=now,
+                )
+                session.add(marker)
+                markers[(source_table, source_id)] = marker
+            else:
+                marker.detected_at = now
+                marker.resolved_at = None
+            result.deleted_marked[source_table] = result.deleted_marked.get(source_table, 0) + 1
+            if model is Document:
+                document = await session.get(Document, target_id)
+                if document is not None:
+                    document.source_meta = {
+                        **(document.source_meta or {}),
+                        "source_deleted_at": now.isoformat(),
+                    }
+
+
+async def get_or_create_sync_state(
+    session: AsyncSession, tenant_id: uuid.UUID
+) -> ObjektakteSyncState:
+    state = await session.scalar(
+        select(ObjektakteSyncState).where(ObjektakteSyncState.tenant_id == tenant_id)
+    )
+    if state is None:
+        state = ObjektakteSyncState(tenant_id=tenant_id, enabled=False)
+        session.add(state)
+        await session.flush()
+    return state
+
+
+def sync_state_as_dict(state: ObjektakteSyncState) -> dict[str, Any]:
+    return {
+        "enabled": state.enabled,
+        "dump_path": state.dump_path,
+        "last_source_updated_at": state.last_source_updated_at,
+        "last_run_at": state.last_run_at,
+        "last_status": state.last_status,
+        "last_error": state.last_error,
+        "last_report": state.last_report,
+    }
+
+
+async def run_differential_import(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    sql_text: str,
+    *,
+    trigger: str,
+    actor_user_id: uuid.UUID | None = None,
+) -> dict[str, Any]:
+    """One Stufe 5 run over a complete objektakte export for one tenant: parses the dump, keeps
+    only rows at or after the tenant's water mark, applies them idempotently, marks source rows
+    missing from the export, then advances the water mark to the export's newest `updated_at`
+    and stores the report on `ObjektakteSyncState`. The caller's transaction commits all of it
+    together, so a failed run leaves the water mark where it was (rule 0.1.9, rollback)."""
+    state = await get_or_create_sync_state(session, tenant_id)
+    started = datetime.now(UTC)
+    tables = parse_dump(sql_text)
+    filtered, newest = filter_since(tables, state.last_source_updated_at)
+    result = await apply_tables(session, tenant_id, filtered, mark_deleted=True, full_tables=tables)
+    report: dict[str, Any] = {
+        "trigger": trigger,
+        "actor_user_id": str(actor_user_id) if actor_user_id else None,
+        "started_at": started.isoformat(),
+        "finished_at": datetime.now(UTC).isoformat(),
+        "watermark_before": (
+            state.last_source_updated_at.isoformat() if state.last_source_updated_at else None
+        ),
+        "watermark_after": newest.isoformat() if newest else None,
+        "rows_in_export": {t: len(rows) for t, rows in tables.items() if t in KNOWN_TABLES},
+        "unknown_tables": sorted(set(tables) - set(KNOWN_TABLES)),
+        **{k: v for k, v in result.as_dict().items() if k != "id_map"},
+    }
+    if newest is not None and (
+        state.last_source_updated_at is None or newest > state.last_source_updated_at
+    ):
+        state.last_source_updated_at = newest
+    state.last_run_at = started
+    state.last_status = ObjektakteSyncStatus.OK
+    state.last_error = None
+    state.last_report = report
+    await session.flush()
+    return report
+
+
+async def record_failed_run(
+    session: AsyncSession, tenant_id: uuid.UUID, *, trigger: str, error: str
+) -> None:
+    """Stores a failed run on the sync state in its own transaction (the run's transaction was
+    rolled back, so the water mark is untouched); the message never carries dump content."""
+    state = await get_or_create_sync_state(session, tenant_id)
+    state.last_run_at = datetime.now(UTC)
+    state.last_status = ObjektakteSyncStatus.FAILED
+    state.last_error = f"{trigger}: {error}"[:1000]
+    await session.flush()
+
+
+_AI_CALL_INT_FIELDS = (
+    "page_from",
+    "page_to",
+    "prompt_chars",
+    "tokens_in",
+    "tokens_out",
+    "duration_ms",
+    "http_status",
+)
+
+
+def _to_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+async def _import_ai_calls(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    rows: list[dict[str, Any]],
+    property_map: dict[str, uuid.UUID],
+    document_map: dict[str, uuid.UUID],
+    created: Any,
+    skipped: Any,
+) -> None:
+    """`ai_calls` -> `objektakte_ai_call` (M35 Stufe 4, docs/rules/M35-03.md): the objektakte
+    protocol of external AI calls, read-only (cost evaluation, masking evidence). As in the
+    source, no prompt or answer text exists in the row; only hashes, counts, cost and the
+    structured summary are copied. A row whose `requested_at` is missing cannot be placed on a
+    timeline and is skipped rather than given an invented timestamp."""
+    existing = await _existing_source_ids(
+        session, tenant_id, ObjektakteAiCall, "objektakte_ai_call"
+    )
+    for row in rows:
+        source_id = _source_id(row)
+        if source_id in existing:
+            skipped("ai_calls")
+            continue
+        requested_at = _to_datetime(row.get("requested_at"))
+        if requested_at is None:
+            continue
+        # objektakte (Django, USE_TZ) stores UTC; MariaDB DATETIME carries no zone itself.
+        requested_at = requested_at.replace(tzinfo=UTC)
+        ints = {name: _to_int(row.get(name)) for name in _AI_CALL_INT_FIELDS}
+        summary = _json_dict(row.get("response_summary"))
+        await _insert_or_get_by_source(
+            session,
+            ObjektakteAiCall(
+                tenant_id=tenant_id,
+                document_id=document_map.get(str(row.get("document_id")))
+                if row.get("document_id") is not None
+                else None,
+                property_id=property_map.get(str(row.get("object_id")))
+                if row.get("object_id") is not None
+                else None,
+                purpose=_s(row, "purpose", 24) or "other",
+                provider=_s(row, "provider", 24) or "unknown",
+                model=_s(row, "model", 80) or "unknown",
+                endpoint=_s(row, "endpoint", 255),
+                region=_s(row, "region", 40),
+                prompt_hash=_s(row, "prompt_hash", 64),
+                masked_entities_count=_to_int(row.get("masked_entities_count")) or 0,
+                cost_eur=_to_decimal(row.get("cost_eur")),
+                price_list_version=_s(row, "price_list_version", 24),
+                status=_s(row, "status", 24) or "ok",
+                error_message=_s(row, "error_message", 1000),
+                fallback_used=_to_bool(row.get("fallback_used")),
+                response_summary=summary,
+                requested_at=requested_at,
+                source_system=SOURCE_SYSTEM,
+                source_id=source_id,
+                source_document_id=_s(row, "document_id", 64),
+                source_object_id=_s(row, "object_id", 64),
+                **ints,
+            ),
+            ObjektakteAiCall,
+            tenant_id=tenant_id,
+            source_id=source_id,
+        )
+        created("ai_calls")

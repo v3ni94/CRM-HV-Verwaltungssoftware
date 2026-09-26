@@ -13,7 +13,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
@@ -27,6 +27,7 @@ from mhvp.documents.models import Document, DocumentLink
 from mhvp.letting import flow_import as flow
 from mhvp.letting import openimmo
 from mhvp.letting.models import FlowImportRun, Listing, Prospect, RentIncreaseCase
+from mhvp.platform.models import Tenant, User
 
 router = APIRouter(prefix="/letting", tags=["letting"])
 READ = require_permission("contracts:read")
@@ -865,26 +866,17 @@ async def get_listings_openimmo_zip(
                 .limit(500)
             )
         ).all()
-        blobs = _blobs_store(request)
+        contact = await _export_contact(session, principal)
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
             for listing, prop, unit in rows:
-                xml = openimmo.build_openimmo_xml(listing, prop, unit)
+                images = await _listing_images(session, request, listing.id)
+                xml = openimmo.build_openimmo_xml(
+                    listing, prop, unit, contact=contact, images=images
+                )
                 archive.writestr(f"{listing.id}/listing.xml", xml)
-                links = (
-                    await session.execute(
-                        select(Document)
-                        .join(DocumentLink, DocumentLink.document_id == Document.id)
-                        .where(
-                            DocumentLink.entity_type == "listing",
-                            DocumentLink.entity_id == listing.id,
-                            Document.mime_type.ilike("image/%"),
-                        )
-                    )
-                ).scalars()
-                for document in links:
-                    data = blobs.get(document.storage_ref)
-                    archive.writestr(f"{listing.id}/images/{document.filename}", data)
+                for image in images:
+                    archive.writestr(f"{listing.id}/images/{image.filename}", image.data)
     return Response(
         content=buffer.getvalue(),
         media_type="application/zip",
@@ -1032,34 +1024,143 @@ async def _listing_and_property(session: Any, listing_id: uuid.UUID) -> tuple[Li
     return listing, prop, unit
 
 
+async def _export_contact(session: Any, principal: TenantPrincipal) -> openimmo.ExportContact:
+    """Provider and contact person for the export: tenant name as Firma, the exporting
+    user as Kontaktperson (docs/rules/M26-02.md). API key callers have no user and are
+    reported as missing contact by the check; nothing is invented."""
+    # Column selects only: the User row carries an encrypted TOTP secret bound to the
+    # platform scope, which must not be loaded inside a tenant transaction.
+    company = (
+        await session.execute(select(Tenant.name).where(Tenant.id == principal.tenant_id))
+    ).scalar_one_or_none()
+    name: str | None = None
+    email: str | None = None
+    if principal.user_id is not None:
+        row = (
+            await session.execute(
+                select(User.display_name, User.email).where(User.id == principal.user_id)
+            )
+        ).one_or_none()
+        if row is not None:
+            name, email = row
+    return openimmo.ExportContact(company=company, name=name, email=email)
+
+
+async def _listing_images(session: Any, request: Request, listing_id: uuid.UUID) -> list[Any]:
+    """Image documents linked to the listing via document_link (entity_type listing)."""
+    documents = (
+        await session.execute(
+            select(Document)
+            .join(DocumentLink, DocumentLink.document_id == Document.id)
+            .where(
+                DocumentLink.entity_type == "listing",
+                DocumentLink.entity_id == listing_id,
+                Document.mime_type.ilike("image/%"),
+            )
+            .order_by(Document.created_at)
+        )
+    ).scalars()
+    blobs = _blobs_store(request)
+    images: list[openimmo.ExportImage] = []
+    seen: set[str] = set()
+    for document in documents:
+        filename = document.filename.replace("/", "_").replace("\\", "_")
+        if filename in seen:
+            filename = f"{document.id}-{filename}"
+        seen.add(filename)
+        images.append(
+            openimmo.ExportImage(
+                filename=filename,
+                mime_type=document.mime_type,
+                data=blobs.get(document.storage_ref),
+                title=document.title,
+            )
+        )
+    return images
+
+
+def _ensure_exportable(result: openimmo.CompletenessResult, force: bool) -> None:
+    """Export lock (M26): an incomplete listing is exported only with force=true."""
+    if result.complete or force:
+        return
+    raise ProblemError(
+        ErrorCodes.VALIDATION,
+        detail=(
+            "Die Anzeige ist für den OpenImmo-Export unvollständig. Fehlende Angaben ergänzen "
+            "oder den Export ausdrücklich mit force=true auslösen (trotzdem exportieren)."
+        ),
+        extensions={"openimmo": result.to_dict()},
+    )
+
+
 @router.get(
     "/listings/{listing_id}/openimmo-check",
-    summary="OpenImmo-Export: fehlende oder ungültige Felder",
+    summary="OpenImmo-Export: Vollständigkeitsprüfung (fehlende Pflichtfelder)",
 )
 async def openimmo_check(
     listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         listing, prop, _unit = await _listing_and_property(session, listing_id)
-        return {"warnings": openimmo.check_openimmo(listing, prop)}
+        contact = await _export_contact(session, principal)
+        result = openimmo.check_completeness(listing, prop, contact)
+        images = await _listing_images(session, request, listing_id)
+        out = result.to_dict()
+        out["image_count"] = len(images)
+        return out
 
 
 @router.get(
     "/listings/{listing_id}/openimmo.xml",
-    summary="OpenImmo 1.2.7 Export (nur lesend, kein Portal-Upload)",
+    summary="OpenImmo 1.2.7 Export als XML (nur lesend, kein Portal-Upload)",
     response_class=Response,
-    responses={200: {"content": {"application/xml": {}}}},
+    responses={200: {"content": {"application/xml": {}}}, 422: {"description": "unvollständig"}},
 )
 async def get_listing_openimmo(
-    listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    listing_id: uuid.UUID,
+    request: Request,
+    force: bool = Query(default=False, description="trotzdem exportieren"),
+    principal: TenantPrincipal = Depends(READ),
 ) -> Response:
     async with tenant_tx(request, principal) as session:
         listing, prop, unit = await _listing_and_property(session, listing_id)
-        xml = openimmo.build_openimmo_xml(listing, prop, unit)
+        contact = await _export_contact(session, principal)
+        _ensure_exportable(openimmo.check_completeness(listing, prop, contact), force)
+        xml = openimmo.build_openimmo_xml(listing, prop, unit, contact=contact)
     return Response(
         content=xml,
         media_type="application/xml",
         headers={"Content-Disposition": f'attachment; filename="listing-{listing_id}.xml"'},
+    )
+
+
+@router.get(
+    "/listings/{listing_id}/openimmo.zip",
+    summary="OpenImmo 1.2.7 Export als ZIP (XML und verknüpfte Bilder, kein Portal-Upload)",
+    response_class=Response,
+    responses={200: {"content": {"application/zip": {}}}, 422: {"description": "unvollständig"}},
+)
+async def get_listing_openimmo_zip(
+    listing_id: uuid.UUID,
+    request: Request,
+    force: bool = Query(default=False, description="trotzdem exportieren"),
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        listing, prop, unit = await _listing_and_property(session, listing_id)
+        contact = await _export_contact(session, principal)
+        _ensure_exportable(openimmo.check_completeness(listing, prop, contact), force)
+        images = await _listing_images(session, request, listing_id)
+        xml = openimmo.build_openimmo_xml(listing, prop, unit, contact=contact, images=images)
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("listing.xml", xml)
+        for image in images:
+            archive.writestr(f"images/{image.filename}", image.data)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="listing-{listing_id}.zip"'},
     )
 
 

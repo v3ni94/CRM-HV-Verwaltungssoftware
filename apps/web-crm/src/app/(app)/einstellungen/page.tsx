@@ -31,6 +31,12 @@ export default async function SettingsPage() {
       description: t("ticketTemplates.description"),
       show: can("tickets:read"),
     },
+    {
+      href: "/einstellungen/antwortvorlagen",
+      title: t("replyTemplates.title"),
+      description: t("replyTemplates.description"),
+      show: can("tickets:read"),
+    },
     { href: "/einstellungen/immoware", title: t("immoware.title"), description: t("immoware.description"), show: can("immoware:read") },
     {
       href: "/einstellungen/objektakte",

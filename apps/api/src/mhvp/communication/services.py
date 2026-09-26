@@ -139,6 +139,9 @@ async def ingest_parsed(
         await create_ticket(session, row, actor_user_id)
     if row.ticket_id is not None:
         await _queue_suggestion(session, settings, tenant_id, row)
+        from mhvp.tickets.proposals import queue_for_message
+
+        await queue_for_message(session, settings, tenant_id, row)
     if property_id is None:  # Objektrechnungen laufen nie über die Weiterleitung.
         await _classify_and_maybe_forward(
             session, settings, tenant_id, actor_user_id, row, attachments

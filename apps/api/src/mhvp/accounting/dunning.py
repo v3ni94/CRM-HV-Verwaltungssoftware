@@ -22,6 +22,7 @@ for the Mahnbescheid preparation, never booked automatically.
 """
 
 import uuid
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
@@ -52,19 +53,116 @@ FEE_ACCOUNT_NUMBER = "489000"
 FEE_ACCOUNT_NAME = "Mahngebühren"
 
 
-async def settings_for(
+LEVEL_KEYS = frozenset(
+    {"level", "min_days_overdue", "text", "fee_amount", "payment_days", "letter_text"}
+)
+# Keys of a level entry an object row may leave out to inherit them from the tenant level with
+# the same number (M16-10). ``level`` and ``min_days_overdue`` are always required.
+LEVEL_INHERITABLE = ("text", "fee_amount", "payment_days", "letter_text")
+INHERITABLE_FIELDS = (
+    "levels",
+    "threshold_amount",
+    "fee_from_level",
+    "interest_enabled",
+    "interest_base_rate",
+    "interest_spread",
+)
+
+
+@dataclass
+class EffectiveSettings:
+    """Settings that apply to a property after inheritance (M16-10, docs/rules/M16-02.md).
+
+    Every field is either the object's own value or the tenant default; ``sources`` records
+    per field where it came from (``objekt`` or ``mandant``). Nothing here is invented: a
+    field without a value on both rows stays ``None`` (or an empty ladder)."""
+
+    property_id: uuid.UUID | None
+    levels: list[dict[str, Any]] = field(default_factory=list)
+    threshold_amount: Decimal = Decimal("0.00")
+    fee_from_level: int | None = None
+    interest_enabled: bool = False
+    interest_base_rate: Decimal | None = None
+    interest_spread: Decimal | None = None
+    sources: dict[str, str] = field(default_factory=dict)
+    tenant_row: DunningSettings | None = None
+    property_row: DunningSettings | None = None
+
+
+async def settings_row(
     session: AsyncSession, property_id: uuid.UUID | None
 ) -> DunningSettings | None:
-    if property_id is not None:
-        own = await session.scalar(
-            select(DunningSettings).where(DunningSettings.property_id == property_id)
-        )
-        if own is not None:
-            return own
-    default: DunningSettings | None = await session.scalar(
-        select(DunningSettings).where(DunningSettings.property_id.is_(None))
+    """The stored row for exactly this scope (tenant default when ``property_id`` is None)."""
+    scope = (
+        DunningSettings.property_id.is_(None)
+        if property_id is None
+        else DunningSettings.property_id == property_id
     )
-    return default
+    row: DunningSettings | None = await session.scalar(select(DunningSettings).where(scope))
+    return row
+
+
+def merge_levels(
+    tenant_levels: list[dict[str, Any]] | None, own_levels: list[dict[str, Any]] | None
+) -> list[dict[str, Any]]:
+    """Object ladder over tenant ladder: an object level entry replaces the tenant entry with
+    the same number; keys it leaves out are taken from that tenant entry. Levels the object
+    ladder does not list do not exist for the object (the object decides its own ladder)."""
+    if own_levels is None:
+        return [dict(lv) for lv in (tenant_levels or [])]
+    by_number = {int(lv["level"]): lv for lv in (tenant_levels or [])}
+    merged: list[dict[str, Any]] = []
+    for own in own_levels:
+        base = by_number.get(int(own["level"]), {})
+        entry = dict(own)
+        for key in LEVEL_INHERITABLE:
+            if key not in entry and key in base:
+                entry[key] = base[key]
+        merged.append(entry)
+    return sorted(merged, key=lambda lv: int(lv["level"]))
+
+
+def resolve(
+    tenant_row: DunningSettings | None,
+    property_row: DunningSettings | None,
+    property_id: uuid.UUID | None,
+) -> EffectiveSettings | None:
+    """Field level inheritance: an object row value wins when it is not NULL, otherwise the
+    tenant default applies. Returns ``None`` when neither row exists."""
+    if tenant_row is None and property_row is None:
+        return None
+    eff = EffectiveSettings(
+        property_id=property_id, tenant_row=tenant_row, property_row=property_row
+    )
+    for name in INHERITABLE_FIELDS:
+        own = getattr(property_row, name, None) if property_row is not None else None
+        base = getattr(tenant_row, name, None) if tenant_row is not None else None
+        if name == "levels":
+            eff.levels = merge_levels(base, own)
+            eff.sources[name] = "objekt" if own is not None else "mandant"
+            continue
+        value = own if own is not None else base
+        eff.sources[name] = "objekt" if own is not None else "mandant"
+        if name == "threshold_amount":
+            eff.threshold_amount = Decimal(value) if value is not None else Decimal("0.00")
+        elif name == "interest_enabled":
+            eff.interest_enabled = bool(value) if value is not None else False
+        else:
+            setattr(eff, name, value)
+    return eff
+
+
+async def settings_for(
+    session: AsyncSession, property_id: uuid.UUID | None
+) -> EffectiveSettings | None:
+    """Effective settings for a property (tenant default merged with the object override)."""
+    tenant_row = await settings_row(session, None)
+    property_row = await settings_row(session, property_id) if property_id is not None else None
+    return resolve(tenant_row, property_row, property_id)
+
+
+def level_config(settings: EffectiveSettings, level: int) -> dict[str, Any] | None:
+    return next((lv for lv in settings.levels if int(lv["level"]) == level), None)
 
 
 async def last_level(session: AsyncSession, account_id: uuid.UUID) -> int:
@@ -98,10 +196,10 @@ def interest_spread_presets() -> dict[str, str]:
     return {"verbraucher": "5", "unternehmer": "9"}
 
 
-def fee_amount_for(settings: DunningSettings, level: int) -> Decimal | None:
+def fee_amount_for(settings: EffectiveSettings, level: int) -> Decimal | None:
     if settings.fee_from_level is None or level < settings.fee_from_level:
         return None
-    config = next((lv for lv in settings.levels if int(lv["level"]) == level), None)
+    config = level_config(settings, level)
     if config is None:
         return None
     raw = config.get("fee_amount")
@@ -110,7 +208,7 @@ def fee_amount_for(settings: DunningSettings, level: int) -> Decimal | None:
     return Decimal(str(raw))
 
 
-def interest_amount_for(settings: DunningSettings, total: Decimal, days: int) -> Decimal:
+def interest_amount_for(settings: EffectiveSettings, total: Decimal, days: int) -> Decimal:
     """Informational only (Nebenforderung), never booked automatically. Zero unless the
     operator both enabled interest and maintained a Basiszinssatz; the day count and formula
     are a generic approximation and are not a legal certification (0.2)."""
@@ -157,7 +255,7 @@ async def preview(
             elif total < settings.threshold_amount:
                 reason = "Unter der Mahngrenze"
             else:
-                config = next((lv for lv in settings.levels if int(lv["level"]) == level), None)
+                config = level_config(settings, level)
                 if config is None:
                     reason = (
                         "Höchste Mahnstufe erreicht: weitere Schritte nur nach Einzelfallprüfung"

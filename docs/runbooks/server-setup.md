@@ -93,23 +93,31 @@ Staging und Produktion, jeweils mit dem passenden `.env.<env>`:
     git checkout -B deploy origin/main   # oder der freizugebende Tag/Branch
     chmod -R u=rwX,go=rX apps packages infra scripts
 
-    docker compose -p mhvp --env-file .env.prod -f infra/compose.yaml -f infra/compose.prod.yaml \
-      build api web-crm web-portal
+    TAG=$(cat VERSION)
+    docker build --build-arg MHVP_APP_VERSION=$TAG -t local/mhvp-api:$TAG apps/api
+    docker build --build-arg MHVP_APP_VERSION=$TAG -f apps/web-crm/Dockerfile -t local/mhvp-web-crm:$TAG .
+    docker build --build-arg MHVP_APP_VERSION=$TAG -f apps/web-portal/Dockerfile -t local/mhvp-web-portal:$TAG .
+    sed -i "s/^MHVP_IMAGE_TAG=.*/MHVP_IMAGE_TAG=$TAG/; s/^MHVP_APP_VERSION=.*/MHVP_APP_VERSION=$TAG/" .env.prod
+    grep -q '^MHVP_APP_VERSION=' .env.prod || echo "MHVP_APP_VERSION=$TAG" >> .env.prod
 
-    docker compose -p mhvp --env-file .env.prod -f infra/compose.yaml -f infra/compose.prod.yaml \
-      run --rm migrate
-
-    docker compose -p mhvp --env-file .env.prod -f infra/compose.yaml -f infra/compose.prod.yaml \
-      up -d
+    ./mhvp.sh run --rm migrate
+    ./mhvp.sh up -d --remove-orphans
 
     curl -fsS https://<api-host>/api/v1/health/ready
 
+`./mhvp.sh` ist der Wrapper des Betreibers um `docker compose -p mhvp --env-file .env.prod
+-f infra/compose.yaml -f infra/compose.prod.yaml` (plus Zusatzdateien wie
+`compose.hub-redirect.yaml`). Wichtig: `infra/compose.prod.yaml` enthält keine `build:`-Abschnitte,
+sondern verweist auf fertige Images `${MHVP_IMAGE_REGISTRY}/mhvp-*:${MHVP_IMAGE_TAG}`. Ein
+`./mhvp.sh build` meldet deshalb "No services to build" und ändert nichts; die laufenden
+Container behalten die alte Version, obwohl `VERSION` im Arbeitsverzeichnis bereits neu ist.
 Die drei Images (`api`, `web-crm`, `web-portal`; `worker` und `beat` teilen sich das
-`api`-Image und laufen nach dem `up -d` automatisch mit der neuen Version) werden bei
-jedem Update neu gebaut, da der Server ohne eigene Registry arbeitet (Abschnitt 4). Vor
-der Migration sichert `make deploy` automatisch; beim manuellen Block ist vorher gezielt
+`api`-Image) werden daher mit `docker build` unter dem Tag aus `VERSION` gebaut, der Tag in
+`.env.prod` gesetzt und die Container mit `up -d` neu erstellt. Vor der Migration sichert
+`make deploy` automatisch; beim manuellen Block ist vorher gezielt
 `systemctl start mhvp-backup.service` auszuführen, wenn seit dem letzten planmäßigen
-Lauf produktive Daten hinzugekommen sind.
+Lauf produktive Daten hinzugekommen sind. Prüfung: `health/ready` zeigt `"version"` gleich
+`VERSION`, `./mhvp.sh exec -T api alembic current` zeigt den erwarteten Migrationsstand.
 
 ### Prüfliste nach dem Update
 

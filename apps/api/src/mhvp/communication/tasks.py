@@ -94,6 +94,18 @@ async def suggest_message_once(
         await engine.dispose()
 
 
+@shared_task(name="mhvp.tickets.propose_contact_change")
+def propose_contact_change(tenant_id: str, ticket_id: str, message_id: str) -> str:
+    """Stammdatenänderung aus einer Ticket-Mail vorschlagen (mhvp.tickets.proposals)."""
+    from mhvp.tickets.proposals import propose_once
+
+    return asyncio.run(
+        propose_once(
+            get_settings(), uuid.UUID(tenant_id), uuid.UUID(ticket_id), uuid.UUID(message_id)
+        )
+    )
+
+
 @shared_task(name="mhvp.communication.suggest_message")
 def suggest_message(tenant_id: str, message_id: str) -> str:
     return asyncio.run(

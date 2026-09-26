@@ -44,7 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can("properties:read") ? [{ href: "/objekte?art=sev", label: t("sev"), icon: "sev" }] : []),
         ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting"), icon: "letting" }] : []),
         ...(can("documents:read") ? [{ href: "/dms", label: t("dms"), icon: "dms" }] : []),
-        ...(can("documents:read")
+        ...(can("objektakte:read")
           ? [{ href: "/objektakte", label: t("objektakte"), icon: "dms" }]
           : []),
         ...(can("immoware:read") ? [{ href: "/immoware", label: t("immoware"), icon: "dms" }] : []),
@@ -122,7 +122,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <UserMenu name={me?.display_name || me?.email || ""} email={me?.email ?? undefined} />
           </div>
         </header>
-        <main id="inhalt" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8 md:py-10">
+        <main id="inhalt" className="mx-auto w-full min-w-0 max-w-6xl flex-1 overflow-x-hidden px-4 py-8 md:px-8 md:py-10">
           {children}
         </main>
         <footer

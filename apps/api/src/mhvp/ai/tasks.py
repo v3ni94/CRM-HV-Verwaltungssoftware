@@ -225,6 +225,48 @@ class ClassifyDocumentResult(_Out):
     reasons: list[str] = Field(description="ein bis vier kurze Stichpunkte auf Deutsch")
 
 
+ContactChangeField = Literal[
+    "salutation",
+    "title",
+    "first_name",
+    "last_name",
+    "company_name",
+    "street",
+    "house_number",
+    "postal_code",
+    "city",
+    "phone",
+    "email",
+]
+
+
+class ContactFieldChange(_Out):
+    """Eine Feldänderung an den Stammdaten eines Kontakts; ``old`` ist der bisherige Wert laut
+    Mail (nicht der Datenbankstand), ``new`` der gewünschte neue Wert."""
+
+    field: ContactChangeField
+    old: str | None
+    new: str | None
+    confidence: float = Confidence
+
+
+class ContactChangeResult(_Out):
+    """Stammdatenänderung aus einer Ticket-Mail (Betreiberauftrag 26.09.2026). Nur Vorschlag;
+    Bankverbindungen werden ausschließlich als Hinweis gemeldet, eine IBAN nie als Feld
+    (rule 0.1.6, keine automatische IBAN-Änderung)."""
+
+    is_master_data_change: bool = Field(
+        description="true, wenn der Absender eine Änderung seiner eigenen Stammdaten mitteilt"
+    )
+    contact_name_old: str | None = Field(description="bisheriger voller Name laut Mail")
+    contact_name_new: str | None = Field(description="neuer voller Name laut Mail, sonst null")
+    changes: list[ContactFieldChange]
+    bank_change_mentioned: bool = Field(
+        description="true, wenn eine neue Bankverbindung oder IBAN erwähnt wird (nur Hinweis)"
+    )
+    reason: str | None = Field(description="Anlass laut Mail, z. B. Hochzeit oder Umzug")
+
+
 SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.EXTRACT_CONTACTS: ContactsResult,
     AiTask.EXTRACT_PROPERTY: PropertyResult,
@@ -235,6 +277,7 @@ SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.DRAFT_REPLY: PlaybookDraft,
     AiTask.MAP_COLUMNS: ColumnMappingResult,
     AiTask.CLASSIFY_DOCUMENT: ClassifyDocumentResult,
+    AiTask.CONTACT_MASTER_DATA_CHANGE: ContactChangeResult,
 }
 DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.EXTRACT_CONTACTS: "large",
@@ -246,6 +289,7 @@ DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.DRAFT_REPLY: "small",
     AiTask.MAP_COLUMNS: "small",
     AiTask.CLASSIFY_DOCUMENT: "small",
+    AiTask.CONTACT_MASTER_DATA_CHANGE: "small",
 }
 
 

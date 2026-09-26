@@ -13,7 +13,18 @@ from mhvp.core import crypto
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import tenant_transaction
+from mhvp.core.logging import get_logger
 from mhvp.documents.blobs import BlobStore
+
+log = get_logger("mhvp.ai.jobs")
+ERROR_MAX = 500
+
+
+def failure_text(exc: BaseException) -> str:
+    """Short error text for ``AiTaskRun.error``: class name plus message, at most ``ERROR_MAX``
+    characters, so an unexpected exception never leaves the run in RUNNING without a reason."""
+    text = f"{type(exc).__name__}: {exc}".strip().rstrip(":")
+    return text if len(text) <= ERROR_MAX else text[: ERROR_MAX - 1] + "…"
 
 
 def _uuid(value: object) -> uuid.UUID | None:
@@ -51,6 +62,33 @@ async def run_and_propose(
             row = await session.get(AiTaskRun, run_id)
             if row is not None and row.status in (RunStatus.QUEUED, RunStatus.RUNNING):
                 row.status, row.error = RunStatus.BLOCKED, str(exc)
+            return row  # type: ignore[return-value]
+    except Exception as exc:
+        # Anything unexpected (blob store, parsing, database) must not leave the run RUNNING
+        # forever: mark it FAILED with a short reason, log the traceback, and hand the result
+        # back to the chat like any other failed run. No re-raise; Celery would only retry.
+        log.exception(
+            "ai_run_unhandled_error",
+            tenant_id=str(tenant_id),
+            run_id=str(run_id),
+            error_type=type(exc).__name__,
+        )
+        async with tenant_transaction(factory, tenant_id) as session:
+            row = await session.get(AiTaskRun, run_id)
+            if row is not None and row.status in (RunStatus.QUEUED, RunStatus.RUNNING):
+                row.status, row.error = RunStatus.FAILED, failure_text(exc)
+                if row.conversation_id is not None:
+                    session.add(
+                        AiMessage(
+                            tenant_id=tenant_id,
+                            conversation_id=row.conversation_id,
+                            role="assistant",
+                            content=f"Nicht ausgeführt: {row.error}",
+                            document_ids=[],
+                            task_run_id=row.id,
+                            proposal_id=None,
+                        )
+                    )
             return row  # type: ignore[return-value]
     async with tenant_transaction(factory, tenant_id) as session:
         run = await session.get(AiTaskRun, run_id)  # type: ignore[assignment]

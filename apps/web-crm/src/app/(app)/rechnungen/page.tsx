@@ -31,7 +31,14 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   }[];
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("title")} />
+      <PageHeader
+        title={t("title")}
+        action={
+          <Link href="/rechnungen/belegeingang" className={ui.button}>
+            {t("receiptIntakeLink")}
+          </Link>
+        }
+      />
       <p className={ui.notice}>{t("notice")}</p>
       <InvoiceExtract
         ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, label: l.name }))}

@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
+from mhvp.banking import account_selection
+from mhvp.banking.routers import BankAccountListOut, account_list_out
 from mhvp.contacts.models import Contact, ContactBankAccount, Party
 from mhvp.contacts.validation import mask_iban
 from mhvp.core import crypto
@@ -688,6 +690,31 @@ async def add_account(
             payload={"kind": body.kind.value, "legal_entity_id": str(entity.id)},
         )
         return _account_out(account)
+
+
+@router.get(
+    "/properties/{property_id}/bank-account-options",
+    summary="Auswählbare Bankkonten des Objekts (Stammkonten und zugeordnete Konten)",
+)
+async def list_account_options(
+    property_id: uuid.UUID,
+    request: Request,
+    legal_entity_id: uuid.UUID | None = None,
+    q: str | None = Query(default=None, max_length=100),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[BankAccountListOut]:
+    """Bankkontenauswahl on the property page. Balance and latest transactions are only
+    included for principals with accounting:read; the assignment itself is organisation."""
+    async with tenant_tx(request, principal) as session:
+        await _get(session, Property, property_id)
+        items = await account_selection.list_accounts(
+            session,
+            property_id=property_id,
+            legal_entity_id=legal_entity_id,
+            q=q,
+            with_money=principal.has("accounting:read"),
+        )
+        return [account_list_out(i) for i in items]
 
 
 # Contacts, meters, providers, maintenance -----------------------------------------------

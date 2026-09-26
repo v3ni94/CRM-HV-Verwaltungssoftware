@@ -6,6 +6,7 @@ Target 700,00 -> two flags. After consent: rent line 600,00 ends 30.11.2026, 690
 23.09.2026 (31 + 31 + 23). The values for cap and comparison rent are test inputs, not law."""
 
 import asyncio
+import io
 from collections.abc import Iterator
 from datetime import date
 from decimal import Decimal
@@ -1013,6 +1014,36 @@ def test_listing_openimmo_export(
     assert any("Preis" in w for w in check["warnings"])
     assert any("beschreibung" in w.lower() for w in check["warnings"])
     assert any("Energieausweis" in w for w in check["warnings"])
+    # M26: structured result with stable field keys (REQUIRED_FIELDS in mhvp.letting.openimmo)
+    assert check["complete"] is False
+    missing_fields = {m["field"] for m in check["missing"]}
+    assert {"price", "description", "energy.status"} <= missing_fields
+    # address, object type, area and contact (tenant name plus exporting user) are present
+    assert not missing_fields & {
+        "address.postal_code",
+        "address.city",
+        "address.street",
+        "address.house_number",
+        "object_type",
+        "living_area_sqm",
+        "rooms",
+        "contact.company",
+        "contact.name",
+        "contact.email",
+    }
+    assert all({"field", "label", "path", "message"} <= set(m) for m in check["missing"])
+    assert check["image_count"] == 0
+
+    # export lock: incomplete listing is not exported without force=true
+    blocked = client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=h)
+    assert blocked.status_code == 422, blocked.text
+    assert "price" in {m["field"] for m in blocked.json()["openimmo"]["missing"]}
+    blocked_zip = client.get(f"{L}/listings/{listing['id']}/openimmo.zip", headers=h)
+    assert blocked_zip.status_code == 422
+    forced = client.get(f"{L}/listings/{listing['id']}/openimmo.xml?force=true", headers=h)
+    assert forced.status_code == 200
+    forced_root = ET.fromstring(forced.content)  # noqa: S314
+    assert forced_root.find("anbieter/immobilie/preise") is None
 
     filled = _ok(
         client.patch(
@@ -1036,6 +1067,10 @@ def test_listing_openimmo_export(
     assert filled["warm_rent"] == "1090.00"
     check2 = _ok(client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=h))
     assert check2["warnings"] == []
+    assert check2["complete"] is True
+    assert check2["missing"] == []
+    # energy source is a non blocking hint only
+    assert any("Energieträger" in x for x in check2["hints"])
 
     resp = client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=h)
     assert resp.status_code == 200
@@ -1084,6 +1119,64 @@ def test_listing_openimmo_export(
     aktion = verwaltung.find("aktion")
     assert aktion is not None
     assert aktion.get("aktionart") == "CHANGE"
+    assert energiepass.get("gueltig_bis") == "2030-01-01"
+    assert root.findtext("anbieter/firma")
+    kontakt = immobilie.find("kontaktperson")
+    assert kontakt is not None
+    assert kontakt.findtext("email_zentrale") == world.email("m26admin")
+    assert kontakt.findtext("name") == "m26admin"
+
+    # per listing ZIP: listing.xml plus linked image documents (document_link listing)
+    import zipfile
+
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+    image_doc = _ok(
+        client.post(
+            "/api/v1/documents",
+            files={"file": ("titelbild.png", png, "image/png")},
+            headers=h,
+        ),
+        201,
+    )
+
+    async def _link_image(settings: Any) -> None:
+        from mhvp.core import crypto
+        from mhvp.core.db.engine import create_app_engine, create_session_factory
+        from mhvp.core.db.tenancy import tenant_transaction
+        from mhvp.documents.models import DocumentLink, LinkRole
+
+        crypto.set_master_key(b"k" * 32)
+        engine = create_app_engine(settings)
+        factory = create_session_factory(engine)
+        try:
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                session.add(
+                    DocumentLink(
+                        tenant_id=world.tenant_a,
+                        document_id=UUID(image_doc["id"]),
+                        entity_type="listing",
+                        entity_id=UUID(listing["id"]),
+                        role=LinkRole.ATTACHMENT,
+                    )
+                )
+        finally:
+            await engine.dispose()
+
+    asyncio.run(_link_image(_settings(database, redis_url)))
+    check3 = _ok(client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=h))
+    assert check3["image_count"] == 1
+    single_zip = client.get(f"{L}/listings/{listing['id']}/openimmo.zip", headers=h)
+    assert single_zip.status_code == 200, single_zip.text
+    assert single_zip.headers["content-type"] == "application/zip"
+    with zipfile.ZipFile(io.BytesIO(single_zip.content)) as archive:
+        assert set(archive.namelist()) == {"listing.xml", "images/titelbild.png"}
+        assert archive.read("images/titelbild.png") == png
+        zipped_root = ET.fromstring(archive.read("listing.xml"))  # noqa: S314
+    anhang = zipped_root.find("anbieter/immobilie/anhaenge/anhang")
+    assert anhang is not None
+    assert anhang.get("gruppe") == "BILD"
+    assert anhang.findtext("format") == "PNG"
+    assert anhang.findtext("daten/pfad") == "images/titelbild.png"
 
     # address release restricted to PLZ/Ort masks street and house number
     _ok(
@@ -1130,3 +1223,5 @@ def test_listing_openimmo_export(
     other_world = asyncio.run(_other_tenant_world(_settings(database, redis_url)))
     ho = bearer(login(client, other_world, "moiother"))
     assert client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=ho).status_code == 404
+    assert client.get(f"{L}/listings/{listing['id']}/openimmo.zip", headers=ho).status_code == 404
+    assert client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=ho).status_code == 404

@@ -7,6 +7,7 @@ import { TicketAnalytics } from "./TicketAnalytics";
 
 const AGENT1 = "01920000-0000-7000-8000-00000000a001";
 const AGENT2 = "01920000-0000-7000-8000-00000000a002";
+const TICKET1 = "01920000-0000-7000-8000-00000000f404";
 
 const members = [
   { membership_id: "m1", user_id: AGENT1, email: "a1@muellerhv.de", display_name: "Anna Beispiel", roles: ["standard"], status: "active", last_login_at: null, contact_id: null },
@@ -26,6 +27,18 @@ function statsFor(range: string) {
     assignees: [
       { user_id: AGENT1, open: 0, resolved_in_range: 1, average_resolution_hours: 5 },
       { user_id: AGENT2, open: 1, resolved_in_range: 0, average_resolution_hours: null },
+    ],
+    tickets: [
+      {
+        id: TICKET1,
+        number: 404,
+        title: "Heizung defekt " + "https://example.invalid/sehr/lange/adresse/".repeat(4),
+        status: "new",
+        priority: "urgent",
+        assignee_user_id: AGENT2,
+        created_at: "2026-09-25T08:00:00Z",
+        sla_due_at: null,
+      },
     ],
   };
 }
@@ -50,9 +63,18 @@ describe("TicketAnalytics", () => {
     const tiles = within(screen.getByTestId("analytics-tiles"));
     expect(tiles.getAllByText("2").length).toBeGreaterThan(0);
     expect(tiles.getByText("3")).toBeInTheDocument();
-    const table = within(screen.getByRole("table"));
+    const tables = screen.getAllByRole("table");
+    const table = within(tables[tables.length - 1]!);
     expect(table.getByText("Anna Beispiel")).toBeInTheDocument();
     expect(table.getByText("Ben Beispiel")).toBeInTheDocument();
+    // Offene Tickets: Nummer und Titel verlinken auf das Ticket (operator 26.09.2026).
+    const tickets = within(screen.getByTestId("analytics-tickets"));
+    const links = tickets.getAllByRole("link", { name: /404|Heizung defekt/ });
+    expect(links.length).toBeGreaterThanOrEqual(2);
+    for (const link of links) expect(link).toHaveAttribute("href", `/tickets/${TICKET1}`);
+    // Tabellenspalte Titel ist auf eine Zeile gekürzt (truncate), damit lange Betreffs nicht
+    // die Seite verbreitern.
+    expect(tickets.getAllByRole("link", { name: /Heizung defekt/ }).some((l) => l.className.includes("truncate"))).toBe(true);
 
     await userEvent.click(screen.getByRole("button", { name: "Monat" }));
     await waitFor(() =>
@@ -70,8 +92,8 @@ describe("TicketAnalytics", () => {
     });
 
     renderIntl(<TicketAnalytics />);
-    await waitFor(() => expect(screen.getByRole("table")).toBeInTheDocument());
-    await waitFor(() => expect(within(screen.getByRole("table")).getByText("Anna Beispiel")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByRole("table").length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText("Anna Beispiel").length).toBeGreaterThan(0));
 
     await userEvent.click(screen.getByLabelText("Vergleichen Anna Beispiel"));
     await userEvent.click(screen.getByLabelText("Vergleichen Ben Beispiel"));

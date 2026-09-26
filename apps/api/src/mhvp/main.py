@@ -47,9 +47,12 @@ from mhvp.imports.routers import router as imports_router
 from mhvp.letting.rentlaw import platform_router as rentlaw_platform_router
 from mhvp.letting.rentlaw import tenant_router as rentlaw_router
 from mhvp.letting.routers import router as letting_router
+from mhvp.objektakte.ai_call_routers import router as objektakte_ai_call_router
 from mhvp.objektakte.completeness_routers import router as objektakte_completeness_router
+from mhvp.objektakte.lists_routers import router as objektakte_lists_router
 from mhvp.objektakte.review_routers import router as objektakte_review_router
 from mhvp.objektakte.routers import router as objektakte_router
+from mhvp.objektakte.routers import sync_router as objektakte_sync_router
 from mhvp.objektakte.rules_routers import router as objektakte_rules_router
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.licensing import router as licensing_router
@@ -57,6 +60,7 @@ from mhvp.platform.routers import platform_router, tenant_router
 from mhvp.portal.routers import admin as portal_admin_router
 from mhvp.portal.routers import router as portal_router
 from mhvp.properties.routers import router as properties_router
+from mhvp.receipts.routers import router as receipts_router
 from mhvp.sla.routers import router as sla_router
 from mhvp.sla.whatsapp_webhook import router as whatsapp_webhook_router
 from mhvp.tickets.routers import router as tickets_router
@@ -176,9 +180,13 @@ def create_app(
     app.include_router(whatsapp_webhook_router, prefix=API_PREFIX)
     app.include_router(immoware_router, prefix=API_PREFIX)
     app.include_router(objektakte_router, prefix=API_PREFIX)
+    app.include_router(objektakte_sync_router, prefix=API_PREFIX)
     app.include_router(objektakte_review_router, prefix=API_PREFIX)
     app.include_router(objektakte_completeness_router, prefix=API_PREFIX)
     app.include_router(objektakte_rules_router, prefix=API_PREFIX)
+    app.include_router(receipts_router, prefix=API_PREFIX)
+    app.include_router(objektakte_ai_call_router, prefix=API_PREFIX)
+    app.include_router(objektakte_lists_router, prefix=API_PREFIX)
     app.include_router(mail_router, prefix=API_PREFIX)
     app.include_router(dispatch_router, prefix=API_PREFIX)
     app.include_router(portal_router, prefix=API_PREFIX)

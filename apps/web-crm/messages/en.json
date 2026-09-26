@@ -232,7 +232,30 @@
     "interestSpreadPresetConsumer": "Consumer (5)",
     "interestSpreadPresetBusiness": "Business (9)",
     "save": "Save",
-    "saved": "Saved."
+    "saved": "Saved.",
+    "scopeLabel": "Scope",
+    "scopeTenant": "Tenant default (all properties)",
+    "scopeProperty": "Property {number} {name}",
+    "overridesTitle": "Properties with their own settings",
+    "overridesEmpty": "No property deviates from the tenant default.",
+    "overriddenFields": "own values: {fields}",
+    "inheritanceNotice": "The tenant default applies to this property unless overridden here. Ticking \"inherit from tenant\" leaves that value empty so the property inherits it.",
+    "tenantDefaultMissing": "Save the tenant default first, then override properties.",
+    "inheritLadder": "Inherit levels from tenant",
+    "inheritThreshold": "Inherit threshold from tenant",
+    "inheritFeeFromLevel": "Inherit fee-from level from tenant",
+    "inheritInterest": "Inherit interest from tenant",
+    "sourceObjekt": "own value",
+    "sourceMandant": "from tenant",
+    "paymentDays": "Payment deadline (days)",
+    "letterText": "Letter text (optional)",
+    "removeOverride": "Remove override",
+    "confirmRemoveOverride": "Remove the property override? The property then inherits the tenant default again.",
+    "overrideRemoved": "Override removed. The property inherits the tenant default again.",
+    "letterPdf": "Dunning letter (PDF draft)",
+    "letterFile": "File draft",
+    "letterFiled": "Draft filed",
+    "letterNotice": "Dunning letters are created as drafts on the tenant letterhead only. Sending is locked; it happens outside the platform and is recorded with \"Mark as sent\"."
   },
   "Billing": {
     "title": "Operating cost statement",
@@ -529,6 +552,52 @@
     }
   },
   "Tickets": {
+    "proposals": {
+      "title": "Proposals from the e-mail",
+      "contact": "Contact: {name}",
+      "contactMissing": "No contact assigned, choose one via Correct",
+      "reason": "Reason: {reason}",
+      "aiUsed": "AI proposal, reviewed by you",
+      "aiSkipped": "keyword detection only, no AI provider",
+      "bankHint": "The e-mail mentions a bank account. Bank data is never applied automatically, please maintain it manually with evidence.",
+      "field": "Field",
+      "old": "Old",
+      "new": "New",
+      "accept": "Accept",
+      "correct": "Correct",
+      "reject": "Reject",
+      "rejectReason": "Reason for rejection (optional)",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "addField": "Add field",
+      "removeField": "Remove",
+      "chooseContact": "Choose contact",
+      "chooseContactEmpty": "Please choose",
+      "reply": "Reply draft",
+      "send": "Send",
+      "sendHint": "Creates the draft on the ticket and submits it for approval (four eyes). It is sent only after approval.",
+      "submitted": "Reply draft created and submitted for approval.",
+      "replyStatus": "Reply in the mail module, status: {status}",
+      "decision": {
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "modified": "Applied with corrections",
+        "rejected": "Rejected"
+      },
+      "fields": {
+        "salutation": "Salutation",
+        "title": "Title",
+        "first_name": "First name",
+        "last_name": "Last name",
+        "company_name": "Company",
+        "street": "Street",
+        "house_number": "House number",
+        "postal_code": "Postal code",
+        "city": "City",
+        "phone": "Phone",
+        "email": "E-mail"
+      }
+    },
     "title": "Tickets",
     "empty": "No tickets.",
     "number": "No.",
@@ -585,7 +654,33 @@
       "mergedLocked": "This ticket is locked, work continues in the target ticket.",
       "contains": "Contains ticket",
       "showMerged": "Show merged"
-    }
+    },
+    "reply": {
+      "title": "Antwortvorlage",
+      "select": "Antwortvorlage wählen",
+      "none": "Keine Vorlage gewählt",
+      "emptyTemplates": "Keine aktiven Antwortvorlagen. Vorlagen werden unter Einstellungen, Antwortvorlagen gepflegt.",
+      "manage": "Antwortvorlagen verwalten",
+      "loadFailed": "Die Vorschau konnte nicht geladen werden.",
+      "preview": "Vorschau mit ausgefüllten Platzhaltern",
+      "to": "An",
+      "subject": "Betreff",
+      "body": "Text",
+      "mailbox": "Absender: Postfach des Tickets",
+      "noMailbox": "Für dieses Ticket ist kein sendefähiges Postfach eingerichtet.",
+      "noRecipient": "Kein Empfänger bekannt. Bitte Adresse eintragen.",
+      "attachments": "Anhänge",
+      "noAttachments": "Keine Anhänge",
+      "attachmentMissing": "Dokument nicht gefunden",
+      "removeAttachment": "Anhang entfernen",
+      "openPlaceholders": "Der Text enthält noch offene Platzhalter.",
+      "send": "Antwort senden",
+      "sendHint": "Der Versand erfolgt erst nach Klick auf Antwort senden über das Postfach des Tickets und den bestehenden Freigabeweg. Es wird nichts automatisch gesendet.",
+      "sent": "Antwort eingereicht. Sie wird nach Freigabe über das Postfach des Tickets versendet.",
+      "openMail": "Im Postfach öffnen"
+    },
+    "openTicket": "Ticket öffnen",
+    "messages": "Nachrichten"
   },
   "Mail": {
     "title": "Mail",
@@ -989,6 +1084,12 @@
     "blocked": "The assistant is blocked: {reason}",
     "failed": "That did not work: {reason}",
     "imported": "Done. The import is traceable under Imports and can be undone there.",
+    "runTimeout": "The run is not responding. Please check Settings, AI provider, or try again.",
+    "onlyNewDone": "{created, plural, =1 {1 contact created} other {# contacts created}}.",
+    "skippedList": "Skipped: {list}.",
+    "skippedIncomplete": "{count, plural, =1 {1 incomplete row (no address)} other {# incomplete rows (no address)}}",
+    "skippedExisting": "{count, plural, =1 {1 already existing} other {# already existing}}",
+    "skippedInvalid": "{count, plural, =1 {1 invalid} other {# invalid}}",
     "rejected": "Fine, nothing was created.",
     "whyNot": "What should I change first? Write the correction and I will read the data again.",
     "pleaseChoose": "Please choose first whether to import.",
@@ -1073,6 +1174,10 @@
     "objektakte": {
       "title": "Objektakte",
       "description": "Rule stage settings for document classification"
+    },
+    "replyTemplates": {
+      "title": "Antwortvorlagen",
+      "description": "Vorgefertigte Antworten für Tickets mit Platzhaltern und Standardanhängen."
     }
   },
   "MailPlaybooks": {
@@ -1329,6 +1434,70 @@
     "saved": "Saved.",
     "autoFetch": "Daily automatic fetch",
     "autoFetchHint": "Fetches transactions of assigned accounts once a day automatically (default: off). A manual \"Fetch transactions\" click is independent of this."
+  },
+  "BankAccounts": {
+    "title": "Bank accounts",
+    "intro": "Bank accounts per property and legal entity. Balance and latest transactions are read only; this only assigns, never pays.",
+    "select": "Bank account",
+    "searchPlaceholder": "Search account (holder, bank, IBAN end)",
+    "noResults": "No matching account.",
+    "noAccounts": "No bank accounts.",
+    "loading": "Loading accounts.",
+    "clear": "Clear selection",
+    "balance": "Balance",
+    "balanceUnknown": "No balance known",
+    "asOf": "As of {date}",
+    "recent": "Latest transactions",
+    "noRecent": "No transactions.",
+    "source": {
+      "finapi": "finAPI",
+      "manual": "manual"
+    },
+    "balanceSource": {
+      "finapi": "per finAPI",
+      "statement": "per statement"
+    },
+    "kind": {
+      "rent": "Rent account",
+      "hoa": "HOA account",
+      "reserve": "Reserve account",
+      "deposit": "Deposit account",
+      "hoa_fee": "HOA fee account",
+      "other": "Other account"
+    },
+    "purpose": {
+      "hausgeld": "HOA fee",
+      "miete": "Rent",
+      "general": "General"
+    },
+    "defaultProperty": "Default {purpose}",
+    "defaultLegalEntity": "Legal entity default",
+    "homeProperty": "Home property",
+    "assignedTo": "Assigned: {property}",
+    "legalEntity": "Legal entity",
+    "allLegalEntities": "All legal entities",
+    "property": "Property",
+    "allProperties": "All properties",
+    "assignTitle": "Assign account",
+    "assignHint": "An account can only be assigned to properties its legal entity acts for.",
+    "purposeLabel": "Purpose",
+    "asDefault": "Mark as default",
+    "assign": "Assign",
+    "unassign": "Remove assignment",
+    "setDefault": "Set as default",
+    "setLegalEntityDefault": "Legal entity default",
+    "unsetLegalEntityDefault": "Unset legal entity default",
+    "saved": "Saved.",
+    "error": "Action failed.",
+    "noPermission": "Assignments require accounting rights.",
+    "columns": {
+      "account": "Account",
+      "legalEntity": "Legal entity",
+      "balance": "Balance",
+      "assignments": "Assignment",
+      "actions": "Actions"
+    },
+    "propertyTab": "Bank"
   },
   "BankConnections": {
     "title": "Bank connections",
@@ -1674,6 +1843,32 @@
       "snooze": "Snooze (7 days)",
       "manualCategory": "Set class manually",
       "setManually": "Set"
+    },
+    "lists": {
+      "title": "Lists from the property file",
+      "intro": "Request lists of missing documents per property or across all properties and the document overview per category. Read only, CSV export.",
+      "kind": "List",
+      "kindMissing": "Request list of missing documents",
+      "kindDocuments": "Document overview per category",
+      "property": "Property",
+      "allProperties": "All properties",
+      "chooseProperty": "Please choose a property.",
+      "onlyIncomplete": "Only properties with missing documents",
+      "downloadCsv": "Download CSV",
+      "loading": "Loading list.",
+      "emptyMissing": "No entries.",
+      "emptyDocuments": "No documents linked to this property.",
+      "colProperty": "Property",
+      "colManagementType": "Management type",
+      "colMissing": "Missing documents",
+      "colSatisfied": "Present",
+      "complete": "Complete",
+      "documentsTotal": "{count, plural, one {# document} other {# documents}}",
+      "colTitle": "Title",
+      "colFilename": "File name",
+      "colCreated": "Created",
+      "colSource": "Source",
+      "duplicate": "Duplicate"
     }
   }
 }

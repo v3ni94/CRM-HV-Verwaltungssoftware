@@ -363,9 +363,7 @@ class InvoiceNumberCounter(IdMixin, TenantMixin, Base):
 
     prefix: Mapped[str] = mapped_column(String(16), nullable=False)
     year: Mapped[int] = mapped_column(Integer, nullable=False)
-    last_number: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
-    )
+    last_number: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
 
 class ApiKey(IdMixin, TimestampMixin, TenantMixin, Base):

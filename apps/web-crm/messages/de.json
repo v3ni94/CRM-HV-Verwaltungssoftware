@@ -806,7 +806,16 @@
       "compareClear": "Vergleich aufheben",
       "loadError": "Die Auswertung ist derzeit nicht verfügbar.",
       "hours": "{hours} Std.",
-      "noHours": "keine Angabe"
+      "noHours": "keine Angabe",
+      "ticketsTitle": "Offene Tickets",
+      "ticketsEmpty": "Keine offenen Tickets.",
+      "ticketNumber": "Nr.",
+      "ticketTitle": "Titel",
+      "ticketStatus": "Status",
+      "ticketPriority": "Priorität",
+      "ticketAssignee": "Bearbeiter",
+      "allTickets": "Alle Tickets",
+      "ticketLimitHint": "Die neuesten {count} offenen Tickets. Jede Zeile öffnet das Ticket."
     },
     "prevWeek": "Vorherige Woche",
     "nextWeek": "Nächste Woche",
@@ -1072,13 +1081,19 @@
       "confirmDelete": "Anzeige wirklich löschen?",
       "onlyDraftDelete": "Nur Anzeigen im Entwurf können gelöscht werden.",
       "openimmo": {
-        "export": "OpenImmo exportieren",
+        "export": "OpenImmo-Export",
+        "check": "Vollständigkeit prüfen",
         "downloadXml": "XML herunterladen",
+        "downloadZip": "ZIP herunterladen",
+        "downloadZipImages": "ZIP mit {count, plural, one {einem Bild} other {# Bildern}} herunterladen",
         "checking": "Prüfung läuft…",
-        "complete": "Vollständig für den Export.",
-        "missingTitle": "Fehlende oder unvollständige Angaben:",
+        "complete": "Alle Pflichtfelder sind vorhanden. Der Export kann heruntergeladen werden.",
+        "missingTitle": "Fehlende oder unvollständige Pflichtfelder. Der Export ist gesperrt, bis die Angaben ergänzt sind oder der Export ausdrücklich trotzdem ausgelöst wird:",
+        "forceLabel": "Trotzdem exportieren",
+        "forceHint": "Die Datei wird ohne die fehlenden Angaben erzeugt. Fehlende Werte werden nicht erfunden, die zugehörigen Elemente bleiben leer.",
+        "hintsTitle": "Hinweise (nicht sperrend):",
         "error": "Prüfung fehlgeschlagen.",
-        "notice": "Nur lesender Export nach OpenImmo 1.2.7 (M26-02). Kein Versand an ein Portal."
+        "notice": "Nur lesender Export nach OpenImmo 1.2.7 (M26-02), XML oder ZIP mit verknüpften Bildern. Kein Versand an ein Portal. Die Pflichtfeldliste ist ein Produktstandard, keine rechtliche Vollständigkeitsprüfung."
       }
     },
     "import": {
@@ -1256,7 +1271,30 @@
     "interestSpreadPresetConsumer": "Verbraucher (5)",
     "interestSpreadPresetBusiness": "Unternehmer (9)",
     "save": "Speichern",
-    "saved": "Gespeichert."
+    "saved": "Gespeichert.",
+    "scopeLabel": "Geltungsbereich",
+    "scopeTenant": "Mandantenvorgabe (alle Objekte)",
+    "scopeProperty": "Objekt {number} {name}",
+    "overridesTitle": "Objekte mit eigener Einstellung",
+    "overridesEmpty": "Kein Objekt weicht von der Mandantenvorgabe ab.",
+    "overriddenFields": "eigene Werte: {fields}",
+    "inheritanceNotice": "Für dieses Objekt gilt die Mandantenvorgabe, soweit hier nichts überschrieben wird. Ein Häkchen bei \"vom Mandanten übernehmen\" lässt den jeweiligen Wert leer, das Objekt erbt ihn dann.",
+    "tenantDefaultMissing": "Zuerst die Mandantenvorgabe speichern, dann Objekte überschreiben.",
+    "inheritLadder": "Mahnstufen vom Mandanten übernehmen",
+    "inheritThreshold": "Mahngrenze vom Mandanten übernehmen",
+    "inheritFeeFromLevel": "Gebühr ab Stufe vom Mandanten übernehmen",
+    "inheritInterest": "Verzugszins vom Mandanten übernehmen",
+    "sourceObjekt": "eigener Wert",
+    "sourceMandant": "vom Mandanten",
+    "paymentDays": "Zahlungsfrist (Tage)",
+    "letterText": "Brieftext (optional)",
+    "removeOverride": "Überschreibung entfernen",
+    "confirmRemoveOverride": "Die Objektüberschreibung entfernen? Das Objekt erbt danach wieder die Mandantenvorgabe.",
+    "overrideRemoved": "Überschreibung entfernt. Das Objekt erbt wieder die Mandantenvorgabe.",
+    "letterPdf": "Mahnschreiben (PDF-Entwurf)",
+    "letterFile": "Entwurf ablegen",
+    "letterFiled": "Entwurf abgelegt",
+    "letterNotice": "Mahnschreiben entstehen nur als Entwurf auf dem Briefbogen des Mandanten. Der Versand ist gesperrt; er erfolgt außerhalb der Plattform und wird mit \"Als versendet markieren\" dokumentiert."
   },
   "Billing": {
     "title": "Betriebskostenabrechnung",
@@ -1553,6 +1591,52 @@
     }
   },
   "Tickets": {
+    "proposals": {
+      "title": "Vorschläge aus der E-Mail",
+      "contact": "Kontakt: {name}",
+      "contactMissing": "Kein Kontakt zugeordnet, bitte über Korrigieren wählen",
+      "reason": "Anlass: {reason}",
+      "aiUsed": "KI-Vorschlag, geprüft durch Sie",
+      "aiSkipped": "nur Schlüsselworterkennung, kein KI-Anbieter",
+      "bankHint": "Die E-Mail erwähnt eine Bankverbindung. Bankdaten werden nie automatisch übernommen, bitte manuell mit Nachweis pflegen.",
+      "field": "Feld",
+      "old": "Alt",
+      "new": "Neu",
+      "accept": "Akzeptieren",
+      "correct": "Korrigieren",
+      "reject": "Ablehnen",
+      "rejectReason": "Grund der Ablehnung (optional)",
+      "apply": "Übernehmen",
+      "cancel": "Abbrechen",
+      "addField": "Feld hinzufügen",
+      "removeField": "Entfernen",
+      "chooseContact": "Kontakt wählen",
+      "chooseContactEmpty": "Bitte wählen",
+      "reply": "Antwortentwurf",
+      "send": "Senden",
+      "sendHint": "Legt den Entwurf am Ticket an und reicht ihn zur Freigabe ein (Vier-Augen-Prinzip). Der Versand erfolgt erst nach Freigabe.",
+      "submitted": "Antwortentwurf angelegt und zur Freigabe eingereicht.",
+      "replyStatus": "Antwort im Mailmodul, Status: {status}",
+      "decision": {
+        "pending": "Offen",
+        "accepted": "Akzeptiert",
+        "modified": "Korrigiert übernommen",
+        "rejected": "Abgelehnt"
+      },
+      "fields": {
+        "salutation": "Anrede",
+        "title": "Titel",
+        "first_name": "Vorname",
+        "last_name": "Nachname",
+        "company_name": "Firma",
+        "street": "Straße",
+        "house_number": "Hausnummer",
+        "postal_code": "PLZ",
+        "city": "Ort",
+        "phone": "Telefon",
+        "email": "E-Mail"
+      }
+    },
     "title": "Tickets",
     "empty": "Keine Tickets.",
     "number": "Nr.",
@@ -1645,7 +1729,33 @@
       "createdFrom": "Erstellt ab",
       "createdTo": "Erstellt bis",
       "reset": "Zurücksetzen"
-    }
+    },
+    "reply": {
+      "title": "Antwortvorlage",
+      "select": "Antwortvorlage wählen",
+      "none": "Keine Vorlage gewählt",
+      "emptyTemplates": "Keine aktiven Antwortvorlagen. Vorlagen werden unter Einstellungen, Antwortvorlagen gepflegt.",
+      "manage": "Antwortvorlagen verwalten",
+      "loadFailed": "Die Vorschau konnte nicht geladen werden.",
+      "preview": "Vorschau mit ausgefüllten Platzhaltern",
+      "to": "An",
+      "subject": "Betreff",
+      "body": "Text",
+      "mailbox": "Absender: Postfach des Tickets",
+      "noMailbox": "Für dieses Ticket ist kein sendefähiges Postfach eingerichtet.",
+      "noRecipient": "Kein Empfänger bekannt. Bitte Adresse eintragen.",
+      "attachments": "Anhänge",
+      "noAttachments": "Keine Anhänge",
+      "attachmentMissing": "Dokument nicht gefunden",
+      "removeAttachment": "Anhang entfernen",
+      "openPlaceholders": "Der Text enthält noch offene Platzhalter.",
+      "send": "Antwort senden",
+      "sendHint": "Der Versand erfolgt erst nach Klick auf Antwort senden über das Postfach des Tickets und den bestehenden Freigabeweg. Es wird nichts automatisch gesendet.",
+      "sent": "Antwort eingereicht. Sie wird nach Freigabe über das Postfach des Tickets versendet.",
+      "openMail": "Im Postfach öffnen"
+    },
+    "openTicket": "Ticket öffnen",
+    "messages": "Nachrichten"
   },
   "TicketTemplates": {
     "title": "Ticketvorlagen",
@@ -1683,6 +1793,36 @@
     "deactivate": "Deaktivieren",
     "activeState": "aktiv",
     "inactiveState": "inaktiv"
+  },
+  "ReplyTemplates": {
+    "title": "Antwortvorlagen",
+    "description": "Vorgefertigte Antworten für Tickets: Betreff und Text mit Platzhaltern, Thema und Standardanhänge aus dem Dokumentenmodul. Der Versand erfolgt immer aus dem Ticket nach Bestätigung.",
+    "newTemplate": "Neue Antwortvorlage",
+    "name": "Name",
+    "subject": "Betreff",
+    "body": "Text",
+    "topic": "Thema",
+    "noTopic": "Kein Thema",
+    "attachments": "Standardanhänge",
+    "searchDocuments": "Dokument suchen",
+    "search": "Suchen",
+    "noResults": "Keine Dokumente gefunden.",
+    "addAttachment": "Als Anhang übernehmen",
+    "remove": "Entfernen",
+    "placeholders": "Verfügbare Platzhalter",
+    "placeholdersHint": "Platzhalter in geschweiften Klammern werden beim Einfügen in ein Ticket ausgefüllt.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteConfirm": "Antwortvorlage wirklich löschen?",
+    "activate": "Aktivieren",
+    "deactivate": "Deaktivieren",
+    "activeState": "aktiv",
+    "inactiveState": "inaktiv",
+    "empty": "Noch keine Antwortvorlagen.",
+    "attachmentCount": "{count} Anhang/Anhänge",
+    "readOnlyHint": "Zum Anlegen und Bearbeiten ist das Recht tickets:update oder Administrator erforderlich."
   },
   "Mail": {
     "title": "Mail",
@@ -1899,7 +2039,8 @@
       "currencyBlocked": "Fremdwährung ({currency}) erkannt: wird nicht unterstützt. Die Rechnung kann nicht angelegt werden, bis der Betrag in EUR geprüft ist.",
       "createDraft": "Als Entwurf anlegen",
       "propertyGuess": "Objekthinweis aus dem Beleg: {value}"
-    }
+    },
+    "receiptIntakeLink": "Belegeingang (KI-Entwürfe)"
   },
   "Levy": {
     "title": "Sonderumlage",
@@ -2129,6 +2270,12 @@
     "blocked": "Der Assistent ist gesperrt: {reason}",
     "failed": "Das hat nicht geklappt: {reason}",
     "imported": "Erledigt. Der Import ist im Bereich Importe nachvollziehbar und lässt sich dort zurücknehmen.",
+    "runTimeout": "Der Lauf antwortet nicht. Bitte Einstellungen, KI-Anbieter prüfen oder erneut versuchen.",
+    "onlyNewDone": "{created, plural, =1 {1 Kontakt angelegt} other {# Kontakte angelegt}}.",
+    "skippedList": "Übersprungen: {list}.",
+    "skippedIncomplete": "{count, plural, =1 {1 unvollständige Zeile (ohne Adresse)} other {# unvollständige Zeilen (ohne Adresse)}}",
+    "skippedExisting": "{count, plural, =1 {1 bereits vorhandene} other {# bereits vorhandene}}",
+    "skippedInvalid": "{count, plural, =1 {1 ungültige} other {# ungültige}}",
     "rejected": "In Ordnung, ich habe nichts angelegt.",
     "whyNot": "Was soll ich vorher ändern? Schreiben Sie mir die Korrektur, dann lese ich die Daten erneut.",
     "pleaseChoose": "Bitte wählen Sie zuerst, ob ich importieren soll.",
@@ -2197,6 +2344,10 @@
     "objektakte": {
       "title": "Objektakte",
       "description": "Regeln der Regelstufe der Dokumentklassifikation"
+    },
+    "replyTemplates": {
+      "title": "Antwortvorlagen",
+      "description": "Vorgefertigte Antworten für Tickets mit Platzhaltern und Standardanhängen."
     }
   },
   "Members": {
@@ -2664,6 +2815,70 @@
     "saved": "Gespeichert.",
     "autoFetch": "Täglicher automatischer Abruf",
     "autoFetchHint": "Ruft Umsätze zugeordneter Konten einmal täglich automatisch ab (Standard: aus). Ein manueller Klick auf „Umsätze abrufen“ ist davon unabhängig."
+  },
+  "BankAccounts": {
+    "title": "Bankkonten",
+    "intro": "Bankkonten je Objekt und Rechtsträger. Kontostand und letzte Umsätze sind lesend; hier wird nur zugeordnet, nicht gezahlt.",
+    "select": "Bankkonto",
+    "searchPlaceholder": "Konto suchen (Inhaber, Bank, IBAN-Ende)",
+    "noResults": "Kein passendes Konto.",
+    "noAccounts": "Keine Bankkonten vorhanden.",
+    "loading": "Konten werden geladen.",
+    "clear": "Auswahl aufheben",
+    "balance": "Kontostand",
+    "balanceUnknown": "Kein Kontostand bekannt",
+    "asOf": "Stand {date}",
+    "recent": "Letzte Umsätze",
+    "noRecent": "Keine Umsätze vorhanden.",
+    "source": {
+      "finapi": "finAPI",
+      "manual": "manuell"
+    },
+    "balanceSource": {
+      "finapi": "laut finAPI",
+      "statement": "laut Kontoauszug"
+    },
+    "kind": {
+      "rent": "Mietkonto",
+      "hoa": "WEG-Konto",
+      "reserve": "Rücklagenkonto",
+      "deposit": "Kautionskonto",
+      "hoa_fee": "Hausgeldkonto",
+      "other": "Sonstiges Konto"
+    },
+    "purpose": {
+      "hausgeld": "Hausgeld",
+      "miete": "Miete",
+      "general": "Allgemein"
+    },
+    "defaultProperty": "Standard {purpose}",
+    "defaultLegalEntity": "Standard des Rechtsträgers",
+    "homeProperty": "Stammobjekt",
+    "assignedTo": "Zugeordnet: {property}",
+    "legalEntity": "Rechtsträger",
+    "allLegalEntities": "Alle Rechtsträger",
+    "property": "Objekt",
+    "allProperties": "Alle Objekte",
+    "assignTitle": "Konto zuordnen",
+    "assignHint": "Ein Konto kann nur Objekten zugeordnet werden, für die sein Rechtsträger handelt.",
+    "purposeLabel": "Zweck",
+    "asDefault": "Als Standard markieren",
+    "assign": "Zuordnen",
+    "unassign": "Zuordnung lösen",
+    "setDefault": "Als Standard setzen",
+    "setLegalEntityDefault": "Standard des Rechtsträgers",
+    "unsetLegalEntityDefault": "Standard des Rechtsträgers aufheben",
+    "saved": "Gespeichert.",
+    "error": "Vorgang fehlgeschlagen.",
+    "noPermission": "Zuordnungen erfordern Buchhaltungsrechte.",
+    "columns": {
+      "account": "Konto",
+      "legalEntity": "Rechtsträger",
+      "balance": "Kontostand",
+      "assignments": "Zuordnung",
+      "actions": "Aktionen"
+    },
+    "propertyTab": "Bank"
   },
   "BankConnections": {
     "title": "Bankverbindungen",
@@ -3414,6 +3629,129 @@
       "snooze": "Zurückstellen (7 Tage)",
       "manualCategory": "Klasse manuell setzen",
       "setManually": "Setzen"
+    },
+    "lists": {
+      "title": "Listen aus der Objektakte",
+      "intro": "Anforderungslisten fehlender Unterlagen je Objekt oder über alle Objekte sowie die Dokumentenübersicht je Kategorie. Nur lesend, Export als CSV.",
+      "kind": "Liste",
+      "kindMissing": "Anforderungsliste fehlender Unterlagen",
+      "kindDocuments": "Dokumentenübersicht je Kategorie",
+      "property": "Objekt",
+      "allProperties": "Alle Objekte",
+      "chooseProperty": "Bitte ein Objekt wählen.",
+      "onlyIncomplete": "Nur Objekte mit fehlenden Unterlagen",
+      "downloadCsv": "CSV herunterladen",
+      "loading": "Liste wird geladen.",
+      "emptyMissing": "Keine Einträge.",
+      "emptyDocuments": "Keine Dokumente zu diesem Objekt verknüpft.",
+      "colProperty": "Objekt",
+      "colManagementType": "Verwaltungsart",
+      "colMissing": "Fehlende Unterlagen",
+      "colSatisfied": "Vorhanden",
+      "complete": "Vollständig",
+      "documentsTotal": "{count, plural, one {# Dokument} other {# Dokumente}}",
+      "colTitle": "Titel",
+      "colFilename": "Dateiname",
+      "colCreated": "Erstellt am",
+      "colSource": "Herkunft",
+      "duplicate": "Dublette"
+    }
+  },
+  "Receipts": {
+    "title": "Belegeingang",
+    "eyebrow": "Rechnungen",
+    "description": "Eingangsrechnungen aus Mail-Anhängen, Paperless oder Upload werden von der KI als Entwurf vorgeschlagen. Jeder Wert wird geprüft, bevor eine Rechnung als Entwurf angelegt wird. Es wird nichts gebucht.",
+    "notice": "Vor der Übermittlung an den KI-Anbieter werden IBAN, E-Mail-Adressen, Telefonnummern und Personennamen maskiert. Die IBAN wird nie automatisch übernommen, sie muss aus dem Original eingetragen und bestätigt werden.",
+    "backToInvoices": "Zum Rechnungseingang",
+    "intake": {
+      "title": "Beleg erfassen",
+      "upload": "Beleg hochladen (PDF)",
+      "paperlessId": "Paperless-Dokumentnummer",
+      "paperlessStart": "Aus Paperless holen",
+      "uploading": "Beleg wird hochgeladen und ausgewertet …"
+    },
+    "list": {
+      "title": "Entwürfe",
+      "empty": "Keine Belegentwürfe.",
+      "filterOpen": "Offene",
+      "filterAll": "Alle",
+      "columns": {
+        "created": "Erfasst am",
+        "source": "Quelle",
+        "supplier": "Aussteller",
+        "number": "Rechnungsnummer",
+        "gross": "Brutto",
+        "status": "Status"
+      },
+      "open": "Prüfen"
+    },
+    "source": {
+      "upload": "Upload",
+      "mail_attachment": "Mail-Anhang",
+      "paperless": "Paperless"
+    },
+    "status": {
+      "extracting": "wird ausgewertet",
+      "proposed": "zur Prüfung",
+      "failed": "fehlgeschlagen",
+      "confirmed": "übernommen",
+      "rejected": "verworfen"
+    },
+    "review": {
+      "title": "Feldprüfung",
+      "hint": "Vorschlagswerte mit Sicherheit je Feld. Werte mit niedriger Sicherheit bitte am Original prüfen. Alle Felder können geändert werden.",
+      "columns": {
+        "field": "Feld",
+        "proposed": "Vorschlag",
+        "confidence": "Sicherheit",
+        "source": "Quelle",
+        "note": "Hinweis",
+        "value": "Geprüfter Wert"
+      },
+      "sourceLabel": {
+        "ai": "KI",
+        "local": "Plattform",
+        "none": "kein Wert"
+      },
+      "fields": {
+        "supplier_name": "Aussteller (laut Beleg)",
+        "invoice_number": "Rechnungsnummer",
+        "invoice_date": "Rechnungsdatum",
+        "due_date": "Fällig am",
+        "net": "Netto",
+        "vat": "Umsatzsteuer",
+        "gross": "Brutto",
+        "currency": "Währung",
+        "discount_percent": "Skonto in Prozent",
+        "discount_until": "Skonto bis",
+        "order_reference": "Auftragsreferenz",
+        "property_ref": "Objektbezug"
+      },
+      "warnings": "Hinweise der Plattform",
+      "questions": "Rückfragen",
+      "maskedExcerpt": "Übermittelter Text (maskiert, Auszug)",
+      "ibanCandidates": "Im Beleg erkannte IBAN (maskiert)",
+      "ibanNone": "Keine IBAN im Beleg erkannt.",
+      "ibanChecksumBad": "Prüfziffer ungültig, Beleg prüfen",
+      "ibanInput": "IBAN aus dem Original eintragen",
+      "ibanConfirm": "Ich habe die IBAN mit dem Originalbeleg verglichen und bestätige sie.",
+      "ibanHint": "Ohne Bestätigung wird keine IBAN übernommen. Eine IBAN ohne Bestätigung wird abgelehnt.",
+      "ledger": "Buchungskreis",
+      "account": "Sachkonto",
+      "provider": "Aussteller (Kontakt)",
+      "providerSearch": "Kontakt suchen",
+      "search": "Suchen",
+      "choose": "bitte wählen",
+      "propertySuggestions": "Vorgeschlagene Objekte",
+      "propertyReason": "{reason} ({score} %)",
+      "confirm": "Rechnung als Entwurf anlegen",
+      "reject": "Entwurf verwerfen",
+      "rejectReason": "Grund (optional)",
+      "confirmed": "Rechnungsentwurf angelegt.",
+      "openInvoice": "Rechnungsentwurf öffnen",
+      "failed": "Die Extraktion ist fehlgeschlagen: {reason}",
+      "extracting": "Der Beleg wird ausgewertet. Die Anzeige aktualisiert sich automatisch.",
+      "decided": "Über diesen Entwurf wurde bereits entschieden."
     }
   }
 }

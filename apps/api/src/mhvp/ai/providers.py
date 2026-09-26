@@ -1,6 +1,7 @@
 """Provider clients behind one protocol (9.1): Anthropic and OpenAI (M7-02)."""
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -16,6 +17,40 @@ class ProviderError(Exception):
     def __init__(self, message: str, *, retryable: bool = False) -> None:
         super().__init__(message)
         self.retryable = retryable
+
+
+_DETAIL_MAX = 300
+# Provider secrets never reach the error text (rule 0.1.13), even if a provider echoed one.
+_SECRET = re.compile(r"\b(sk-[A-Za-z0-9_-]{8,}|Bearer\s+\S+)")
+
+
+def status_detail(exc: object, status_code: int) -> str:
+    """Error text for an HTTP status error: ``HTTP <status>`` plus the provider's message (or an
+    excerpt of the response body), truncated to ``_DETAIL_MAX`` characters and stripped of
+    anything that looks like a key. The API key itself is never part of an SDK error."""
+    message = str(getattr(exc, "message", "") or "").strip()
+    body = getattr(exc, "body", None)
+    # The SDK message is "Error code: <status> - <body>"; prefer the provider's own message.
+    if (not message or message.startswith("Error code:")) and body is not None:
+        nested = body.get("error") if isinstance(body, dict) else None
+        provider_message = (
+            nested.get("message")
+            if isinstance(nested, dict)
+            else body.get("message")
+            if isinstance(body, dict)
+            else None
+        )
+        if isinstance(provider_message, str) and provider_message.strip():
+            message = provider_message
+        else:
+            try:
+                message = json.dumps(body, ensure_ascii=False)
+            except (TypeError, ValueError):
+                message = str(body)
+    message = _SECRET.sub("[entfernt]", " ".join(message.split()))
+    if len(message) > _DETAIL_MAX:
+        message = message[: _DETAIL_MAX - 1] + "…"
+    return f"HTTP {status_code}: {message}" if message else f"HTTP {status_code}"
 
 
 @dataclass
@@ -86,7 +121,7 @@ class AnthropicClient:
             raise ProviderError("rate limited", retryable=True) from exc
         except anthropic.APIStatusError as exc:
             raise ProviderError(
-                f"HTTP {exc.status_code}", retryable=exc.status_code >= 500
+                status_detail(exc, exc.status_code), retryable=exc.status_code >= 500
             ) from exc
         except anthropic.APIConnectionError as exc:
             raise ProviderError("connection failed", retryable=True) from exc
@@ -152,7 +187,7 @@ class OpenAIClient:
             raise ProviderError("rate limited", retryable=True) from exc
         except openai.APIStatusError as exc:
             raise ProviderError(
-                f"HTTP {exc.status_code}", retryable=exc.status_code >= 500
+                status_detail(exc, exc.status_code), retryable=exc.status_code >= 500
             ) from exc
         except openai.APIConnectionError as exc:
             raise ProviderError("connection failed", retryable=True) from exc

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { PropertyBankAccounts } from "@/components/banking/PropertyBankAccounts";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { CompletenessPanel } from "@/components/objektakte/CompletenessPanel";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
@@ -167,6 +168,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
         </section>
       </div>
 
+      <PropertyBankAccounts propertyId={propertyId} legalEntities={(data.legal_entities ?? []).map((e) => ({ id: e.id, kind: e.kind, name: e.name }))} />
       <DmsDocumentsPanel entity="property" id={propertyId} />
       <CompletenessPanel propertyId={propertyId} />
       <TicketsSection tickets={(tickets.data ?? []) as TicketSummary[]} />

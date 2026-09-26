@@ -123,10 +123,13 @@ async def suggest_for_message(
     match_text = f"{message.subject or ''}\n{body_excerpt}"
     playbook, playbook_score = await best_playbook(session, match_text)
 
+    # An IBAN never reaches the provider (rule 0.1.13); the classification does not need it.
+    from mhvp.objektakte.masking import mask_ibans
+
     prompt_text = (
-        f"Betreff: {message.subject or ''}\n"
+        f"Betreff: {mask_ibans(message.subject)}\n"
         f"Absender: {message.from_address or ''}\n"
-        f"Text (Auszug):\n{body_excerpt}\n\n"
+        f"Text (Auszug):\n{mask_ibans(body_excerpt)}\n\n"
         f"Bekannte Ticketkategorien: {', '.join(categories) or '-'}\n"
         "Bekannte Playbooks (Titel, Schlagwörter): "
         + ("; ".join(f"{p.title} ({', '.join(p.keywords)})" for p in playbooks) or "-")

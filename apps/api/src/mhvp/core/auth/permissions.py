@@ -32,6 +32,13 @@ RESOURCES: tuple[str, ...] = (
     "sla",
     "immoware",
     "banking",
+    # M35 Stufe 4 (docs/rules/M35-03.md): objektakte review and classification. `read` lists
+    # review cases, rules, required documents and the AI call history; `update` decides review
+    # cases (incl. asking the AI stage); `approve` maintains classification rules and required
+    # documents (configuration, the objektakte "settings.write" level); `delete` removes rules
+    # or required documents (docs/rules/M2-07.md: tenant_admin only). `create`/`export` are
+    # registered by the matrix but not used by any endpoint yet.
+    "objektakte",
 )
 ALL_PERMISSIONS: frozenset[str] = frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS)
 READ_ALL: frozenset[str] = frozenset(f"{r}:read" for r in RESOURCES)
@@ -68,6 +75,12 @@ _SLA_MANAGE = _rw("sla") | {"sla:approve"}
 # former name `_MASTER_RWD` for a minimal diff, but it no longer grants delete.
 _MASTER_RW = _rw("contacts") | _rw("properties") | _rw("contracts") | _rw("documents") | _rw("ai")
 _MASTER_RWD = _MASTER_RW
+
+# M35 Stufe 4 (docs/rules/M35-03.md): review work (decide cases, ask the AI stage) versus
+# maintaining the classification rule set and required documents (`approve`). Delete stays
+# with tenant_admin (docs/rules/M2-07.md).
+_OBJEKTAKTE_REVIEW = frozenset({"objektakte:read", "objektakte:update"})
+_OBJEKTAKTE_MANAGE = _OBJEKTAKTE_REVIEW | {"objektakte:approve"}
 _MASTER_R = _r("contacts") | _r("properties") | _r("contracts") | _r("documents")
 
 # Accounting (M10): postings in non-leading ledgers; approve = Festschreibung, opening balances.
@@ -82,19 +95,25 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole("tenant_admin", "Mandantenadministrator", _ADMIN),
     SystemRole("administrator", "Administrator", _ADMIN),
     SystemRole(
-        "standard", "Standard", _SETTINGS_R | _MASTER_RWD | _ACC_RW | _TICKETS | _SLA_MANAGE
+        "standard",
+        "Standard",
+        _SETTINGS_R | _MASTER_RWD | _ACC_RW | _TICKETS | _SLA_MANAGE | _OBJEKTAKTE_MANAGE,
     ),
     SystemRole("read_only", "Nur Lesezugriff", READ_ALL),
-    SystemRole("read_only_master_data", "Nur Lesezugriff Stammdaten", _SETTINGS_R | _MASTER_R),
+    SystemRole(
+        "read_only_master_data",
+        "Nur Lesezugriff Stammdaten",
+        _SETTINGS_R | _MASTER_R | _r("objektakte"),
+    ),
     SystemRole(
         "clerk_no_delete",
         "Sachbearbeiter ohne Löschen",
-        _SETTINGS_R | _MASTER_RW | _rw("tickets") | _rw("communication"),
+        _SETTINGS_R | _MASTER_RW | _rw("tickets") | _rw("communication") | _OBJEKTAKTE_REVIEW,
     ),
     SystemRole(
         "clerk_no_accounting",
         "Sachbearbeiter ohne Buchhaltung",
-        _SETTINGS_R | _MASTER_RWD | _TICKETS | _SLA_MANAGE,
+        _SETTINGS_R | _MASTER_RWD | _TICKETS | _SLA_MANAGE | _OBJEKTAKTE_REVIEW,
     ),
     SystemRole(
         "accountant_no_banking",
@@ -104,7 +123,8 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
         | _r("properties")
         | _r("contracts")
         | _rw("documents")
-        | _ACC_APPROVE,
+        | _ACC_APPROVE
+        | _r("objektakte"),
     ),
     SystemRole(
         "accountant_banking",
@@ -115,16 +135,22 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
         | _r("contracts")
         | _rw("documents")
         | _ACC_APPROVE
-        | _BANKING_APPROVE,
+        | _BANKING_APPROVE
+        | _r("objektakte"),
     ),
     # Caretakers see objects, not contracts or personal data of residents (data minimisation).
     SystemRole("caretaker", "Hausmeister", _r("properties") | _rw("tickets")),
     SystemRole(
         "technical_clerk",
         "Technischer Sachbearbeiter",
-        _SETTINGS_R | _r("contacts") | _rw("properties") | _rw("documents") | _TICKETS,
+        _SETTINGS_R
+        | _r("contacts")
+        | _rw("properties")
+        | _rw("documents")
+        | _TICKETS
+        | _OBJEKTAKTE_REVIEW,
     ),
-    SystemRole("support", "Support", _SETTINGS_R | _MASTER_R | {"audit:read"}),
+    SystemRole("support", "Support", _SETTINGS_R | _MASTER_R | {"audit:read"} | _r("objektakte")),
     SystemRole("insurance_broker", "Versicherungsmakler", frozenset()),
     # Portal users (M21, M22): no CRM rights; portal endpoints check the access matrix.
     SystemRole("portal_user", "Portalzugang", frozenset()),

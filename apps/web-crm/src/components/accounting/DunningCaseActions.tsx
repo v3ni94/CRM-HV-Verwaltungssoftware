@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { problemMessage, readProblem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 type Channel = "post" | "email" | "portal";
@@ -18,18 +19,21 @@ type Mahnbescheid = {
   hinweis: string;
 };
 
-/** Mahnhistorie: als versendet markieren (M16-09, einziger Weg, mit dem eine Stufe steigt,
- * solange Briefversand und Zustellnachweis nicht gebaut sind, M16-02) und, nur auf der
- * höchsten konfigurierten Mahnstufe, die Mahnbescheid-Vorbereitung samt JSON-Download
- * ("Vorbereitung, Prüfung durch Rechtsanwalt", docs/rules/M16-01.md). */
+/** Mahnhistorie: Mahnschreiben als PDF-Entwurf (Vorschau herunterladen oder ablegen,
+ * Versand bleibt gesperrt, docs/rules/M16-02.md), als versendet markieren (M16-09, einziger
+ * Weg, mit dem eine Stufe steigt, solange Versand und Zustellnachweis nicht freigegeben sind,
+ * M16-02) und, nur auf der höchsten konfigurierten Mahnstufe, die Mahnbescheid-Vorbereitung
+ * samt JSON-Download ("Vorbereitung, Prüfung durch Rechtsanwalt", docs/rules/M16-01.md). */
 export function DunningCaseActions({
   caseId,
   status,
   isHighestLevel,
+  hasLetter = false,
 }: {
   caseId: string;
   status: string;
   isHighestLevel: boolean;
+  hasLetter?: boolean;
 }) {
   const t = useTranslations("Dunning");
   const router = useRouter();
@@ -37,6 +41,49 @@ export function DunningCaseActions({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prep, setPrep] = useState<Mahnbescheid | null>(null);
+  const [filed, setFiled] = useState(hasLetter);
+
+  async function downloadLetter() {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/bff/accounting/dunning-cases/${caseId}/letter-preview`, {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const problem = await readProblem(response);
+        setError(problemMessage(problem, response.status));
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mahnschreiben-entwurf-${caseId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError(problemMessage(null, 0));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function fileLetter() {
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ letter_document_id: string }>(
+      `/api/bff/accounting/dunning-cases/${caseId}/letter`,
+      { method: "POST" },
+    );
+    setBusy(false);
+    if (res.ok) {
+      setFiled(true);
+      router.refresh();
+    } else setError(res.message);
+  }
 
   async function markSent() {
     setBusy(true);
@@ -75,6 +122,20 @@ export function DunningCaseActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {status === "proposed" || status === "sent" ? (
+        <>
+          <button type="button" className={ui.buttonSm} onClick={downloadLetter} disabled={busy}>
+            {t("letterPdf")}
+          </button>
+          {filed ? (
+            <span className={ui.badge}>{t("letterFiled")}</span>
+          ) : (
+            <button type="button" className={ui.buttonSm} onClick={fileLetter} disabled={busy}>
+              {t("letterFile")}
+            </button>
+          )}
+        </>
+      ) : null}
       {status === "proposed" ? (
         <>
           <select

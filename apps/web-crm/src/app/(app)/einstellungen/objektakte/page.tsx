@@ -8,14 +8,15 @@ import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-ser
 export const dynamic = "force-dynamic";
 
 /** M35 Stufe 3 part 5: Einstellungen für die Regelstufe der dreistufigen Klassifikation
- * (docs/rules/M35-02.md). Nur `documents:read` nötig zum Ansehen; das Formular selbst prüft
- * `documents:update` serverseitig über den API-Aufruf (403 wird als Fehler angezeigt). */
+ * (docs/rules/M35-02.md). Nur `objektakte:read` nötig zum Ansehen; das Formular selbst prüft
+ * `objektakte:approve` (Anlegen/Ändern) bzw. `objektakte:delete` serverseitig über den
+ * API-Aufruf (403 wird als Fehler angezeigt, M35 Stufe 4, docs/rules/M35-03.md). */
 export default async function ObjektakteRulesSettingsPage() {
   const t = await getTranslations("Objektakte");
   const api = serverApi();
   const me = await api.GET("/api/v1/auth/me");
   redirectIfUnauthenticated(me.response);
-  if (!me.data?.permissions.includes("documents:read")) notFound();
+  if (!me.data?.permissions.includes("objektakte:read")) notFound();
 
   const [categoriesRes, rulesRes] = await Promise.all([
     api.GET("/api/v1/document-categories"),

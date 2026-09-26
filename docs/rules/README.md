@@ -29,6 +29,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | --- | --- | --- | --- |
 | [M2-07](M2-07.md) | Löschen nur Administrator | M2 | implemented, not accepted |
 | [M16-01](M16-01.md) | Mahngebühr nur mit hinterlegtem Betrag, Rechnung an Gemeinschaft nur mit vertraglicher Grundlage | M16 | implemented, not accepted |
+| [M16-02](M16-02.md) | Mahnstufen je Objekt erben vom Mandanten, Mahnschreiben nur als Entwurf | M16 | implemented, not accepted |
 | [M18-03](M18-03.md) | DATEV-Buchungsstapel: EXTF-Header nur mit Beraterdaten, keine erfundene Kontenzuordnung | M18 | implemented, not accepted |
 | [M26-RL](M26-rent-law.md) | Mieterhöhung Regelwerk | 8, M26 | implemented, not accepted |
 | [M28-01](M28-01.md) | Makler: Anzeigen, keine FLOWFACT-Anbindung | M28 | implemented, not accepted |
@@ -41,9 +42,11 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M11-06](M11-06-payment-proposal-only-until-g2.md) | Zahlung nur Vorschlag bis G2 (Rechnungsabgleich) | M11, 18.0 | implemented, not accepted |
 | [M3-02](M3-02-sepa-mandate.md) | SEPA-Mandat auf der Bankverbindung des Kontakts | M3, 6.1 | implemented, not accepted |
 | [M20-05](M20-05.md) | Mail-Vorbereitung: Dokumentsuche strikt je Objekt, keine Kontoauflistung | M20, M34, 11.2 | implemented, not accepted |
+| [M19-05](M19-05.md) | Stammdatenänderung aus einer Ticket-Mail: nur Vorschlag, Entscheidung durch Menschen, nie IBAN | M19, M20, 9.1 | implemented, not accepted |
 | [M23-05](M23-05.md) | Google-Kalender: Einladungen nur nach Bestätigung, kein stiller externer Überschreib | M23 | implemented, not accepted |
 | [M35-01](M35-01.md) | objektakte-Übernahme: Quellkennung und IBAN-Regel | M35 | implemented, not accepted |
 | [M35-02](M35-02.md) | objektakte-Übernahme: Klassifikation Stufe 1 (Regeln) | M35 | implemented, not accepted |
+| [M35-03](M35-03.md) | objektakte-Übernahme Stufe 4: Berechtigungsschlüssel `objektakte:*`, Benutzerabbildung nur als Vorschlag, KI-Protokoll nur lesend | M35 | implemented, not accepted |
 | [M21-05](M21-05.md) | WhatsApp nur mit freigegebenen Vorlagen und Einwilligung | M21 | implemented, not accepted |
 | [M7-06](M7-06.md) | Tabellenimport deterministisch, KI nur für Spaltenzuordnung und Restzeilen | M7 | implemented, not accepted |
 | [B01](B01.md) | Richtiger Rechtsträger | 7.1 | implemented, not accepted |

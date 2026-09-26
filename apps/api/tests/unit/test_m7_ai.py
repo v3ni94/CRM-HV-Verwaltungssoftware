@@ -234,3 +234,122 @@ def test_estimate_tokens_is_chars_over_3_5() -> None:
     """Expected by hand: 400_000 / 3.5 = 114285.71..., truncated to 114285 tokens."""
     assert gateway.estimate_tokens(400_000) == 114285
     assert gateway.estimate_tokens(0) == 0
+
+
+def test_provider_status_error_carries_provider_message() -> None:
+    """Expected by hand: an HTTP status error names the status and the provider's message
+    (from the body), never longer than 300 characters after the prefix and never a key."""
+    import asyncio
+
+    import anthropic
+    import httpx
+    import openai
+
+    from mhvp.ai.providers import AnthropicClient, OpenAIClient, ProviderError, status_detail
+
+    def response(status: int, body: dict[str, object]) -> httpx.Response:
+        return httpx.Response(status, request=httpx.Request("POST", "https://x"), json=body)
+
+    body = {
+        "type": "error",
+        "error": {"type": "authentication_error", "message": "invalid x-api-key"},
+    }
+    exc = anthropic.AuthenticationError(
+        "Error code: 401 - {...}", response=response(401, body), body=body
+    )
+    assert status_detail(exc, 401) == "HTTP 401: invalid x-api-key"
+
+    class FailingMessages:
+        async def create(self, **kwargs: object) -> object:
+            raise exc
+
+    class FakeAnthropic:
+        messages = FailingMessages()
+
+    client = AnthropicClient("sk-ant-secret", client=FakeAnthropic())  # type: ignore[arg-type]
+    with pytest.raises(ProviderError) as info:
+        asyncio.run(client.complete(model="m", system="s", messages=[], schema={}, max_tokens=1))
+    assert str(info.value) == "HTTP 401: invalid x-api-key"
+    assert not info.value.retryable
+    assert "sk-ant-secret" not in str(info.value)
+
+    # OpenAI: message on the top level of the body, 5xx is retryable, long text is truncated.
+    long_body = {"message": "x" * 1000}
+    o_exc = openai.InternalServerError(
+        "Error code: 503 - {...}", response=response(503, long_body), body=long_body
+    )
+
+    class FailingCompletions:
+        async def create(self, **kwargs: object) -> object:
+            raise o_exc
+
+    class FakeOpenAI:
+        class chat:  # noqa: N801
+            completions = FailingCompletions()
+
+    o_client = OpenAIClient("sk-secret", client=FakeOpenAI())  # type: ignore[arg-type]
+    with pytest.raises(ProviderError) as o_info:
+        asyncio.run(o_client.complete(model="m", system="s", messages=[], schema={}, max_tokens=1))
+    text = str(o_info.value)
+    assert text.startswith("HTTP 503: xxx")
+    assert len(text) <= len("HTTP 503: ") + 300
+    assert o_info.value.retryable
+
+    # Key like strings in a provider message are removed; a plain message stays as is.
+    leaky = {"error": {"message": "key sk-abcdefghijklmnop rejected"}}
+    l_exc = anthropic.APIStatusError("Error code: 403", response=response(403, leaky), body=leaky)
+    assert status_detail(l_exc, 403) == "HTTP 403: key [entfernt] rejected"
+    assert (
+        status_detail(anthropic.APIStatusError("", response=response(500, {}), body=None), 500)
+        == "HTTP 500"
+    )
+
+
+def test_run_and_propose_marks_unexpected_exception_as_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Expected by hand: an exception outside GatewayBlockedError sets the run to FAILED with
+    class name and message (max 500 chars), adds the chat answer and does not re-raise."""
+    import asyncio
+    import uuid
+    from contextlib import asynccontextmanager
+    from types import SimpleNamespace
+
+    from mhvp.ai import jobs
+    from mhvp.ai.models import RunStatus
+
+    assert jobs.failure_text(ValueError("kaputt")) == "ValueError: kaputt"
+    assert jobs.failure_text(RuntimeError()) == "RuntimeError"
+    assert len(jobs.failure_text(ValueError("x" * 2000))) == 500
+
+    async def boom(*args: object, **kwargs: object) -> object:
+        raise KeyError("storage_ref")
+
+    monkeypatch.setattr(jobs.gateway, "execute", boom)
+    row = SimpleNamespace(
+        id=uuid.uuid4(), status=RunStatus.RUNNING, error=None, conversation_id=uuid.uuid4()
+    )
+    added: list[object] = []
+
+    class Session:
+        async def get(self, model: object, key: object) -> object:
+            return row
+
+        def add(self, obj: object) -> None:
+            added.append(obj)
+
+    @asynccontextmanager
+    async def fake_transaction(factory: object, tenant_id: uuid.UUID):  # type: ignore[no-untyped-def]
+        yield Session()
+
+    monkeypatch.setattr(jobs, "tenant_transaction", fake_transaction)
+    logged: list[str] = []
+    monkeypatch.setattr(jobs.log, "exception", lambda event, **kw: logged.append(event))
+
+    result = asyncio.run(jobs.run_and_propose(None, uuid.uuid4(), row.id, None, None))  # type: ignore[arg-type]
+    assert result is row
+    assert row.status is RunStatus.FAILED
+    assert row.error == "KeyError: 'storage_ref'"
+    assert logged == ["ai_run_unhandled_error"]
+    assert len(added) == 1
+    assert added[0].content == "Nicht ausgeführt: KeyError: 'storage_ref'"  # type: ignore[attr-defined]

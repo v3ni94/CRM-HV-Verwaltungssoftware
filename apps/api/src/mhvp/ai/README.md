@@ -71,3 +71,14 @@ none needed, XLSX/CSV rows were never chunked, and `MAX_TABLE_ROWS` (2000) and
   (`docs/OPEN_QUESTIONS.md` candidate) so umlauts in a plain text upload are not lost before the
   gateway ever sees the text.
 * `MAX_TABLE_ROWS` raised to 20000 (still visibly truncated beyond that, `[gekürzt: ...]`).
+
+## Contact master data change from a ticket mail (26.09.2026)
+
+Task `contact_master_data_change` (`ContactChangeResult`, tier `small`, prompt
+`prompts/contact_master_data_change/v1.md`) refines the deterministic detection in
+`mhvp.tickets.proposals` (docs/rules/M19-05.md). Input is the mail with IBAN, e-mail and phone
+values masked (`mhvp.objektakte.masking.mask_identifiers`); the result is an `AiProposal`
+(`entity_type="contact_change"`, `context_id` = ticket) decided in `/tickets/{id}/proposals`.
+Every decision writes an `AiExample` of the tenant, which `gateway.examples` hands to later runs
+as few-shot context. IBANs are never part of the schema nor of an applied change.
+

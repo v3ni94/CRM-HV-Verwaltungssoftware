@@ -99,7 +99,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
               />
               <Link href={`/tickets/${tk.id}`} className="flex flex-1 flex-col gap-1.5">
                 <span className="flex items-center justify-between gap-2">
-                  <span className="font-medium">
+                  <span className="min-w-0 break-words font-medium [overflow-wrap:anywhere]">
                     #{tk.number} {tk.title ?? ""}
                   </span>
                 </span>
@@ -119,7 +119,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
         ))}
       </ul>
       <div className="hidden overflow-x-auto sm:block">
-        <table className="mhvp-table">
+        <table className="mhvp-table w-full table-fixed sm:table-auto">
           <thead>
             <tr>
               <th>
@@ -138,9 +138,13 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
                 <td>
                   <input type="checkbox" aria-label={t("selectRow")} checked={selected.has(tk.id)} onChange={() => toggle(tk.id)} />
                 </td>
-                <td className="tabular-nums">{tk.number}</td>
-                <td>
-                  <Link href={`/tickets/${tk.id}`} className="font-medium hover:underline">
+                <td className="tabular-nums">
+                  <Link href={`/tickets/${tk.id}`} className="hover:underline">
+                    {tk.number}
+                  </Link>
+                </td>
+                <td className="max-w-[28rem] min-w-0">
+                  <Link href={`/tickets/${tk.id}`} className="block max-w-full truncate font-medium hover:underline" title={tk.title ?? ""}>
                     {tk.title ?? ""}
                   </Link>
                 </td>

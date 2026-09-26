@@ -1,8 +1,10 @@
 """M35 Stufe 3 part 5 (Regeln-Einstellungsseite): CRUD for `ObjektakteClassificationRule`
 (list, create, edit, activate/deactivate). The rule stage itself
 (`mhvp.objektakte.classification.classify_document`) only reads active rules; this router is
-how a tenant maintains them. Permissions match the review center: `documents:read` for the
-list, `documents:update` for create/edit/delete."""
+how a tenant maintains them. Permissions (M35 Stufe 4, docs/rules/M35-03.md):
+`objektakte:read` for the list, `objektakte:approve` for create/edit (rule maintenance is
+configuration, not review work), `objektakte:delete` for delete (docs/rules/M2-07.md, tenant
+admin only)."""
 
 import uuid
 from typing import Any
@@ -17,8 +19,9 @@ from mhvp.documents.models import DocumentCategory
 from mhvp.objektakte.models import ClassificationPatternType, ObjektakteClassificationRule
 
 router = APIRouter(prefix="/objektakte/classification-rules", tags=["objektakte-rules"])
-READ = require_permission("documents:read")
-UPDATE = require_permission("documents:update")
+READ = require_permission("objektakte:read")
+MANAGE = require_permission("objektakte:approve")
+DELETE = require_permission("objektakte:delete")
 
 
 def _out(row: ObjektakteClassificationRule) -> dict[str, Any]:
@@ -71,7 +74,7 @@ class RulePatch(BaseModel):
 
 @router.post("", status_code=201, summary="Klassifikationsregel anlegen")
 async def create_rule(
-    body: ClassificationRuleIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+    body: ClassificationRuleIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         if body.target_category_id is not None:
@@ -100,7 +103,7 @@ async def update_rule(
     rule_id: uuid.UUID,
     body: RulePatch,
     request: Request,
-    principal: TenantPrincipal = Depends(UPDATE),
+    principal: TenantPrincipal = Depends(MANAGE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await session.get(ObjektakteClassificationRule, rule_id)
@@ -120,7 +123,7 @@ async def update_rule(
 
 @router.delete("/{rule_id}", status_code=204, summary="Klassifikationsregel löschen")
 async def delete_rule(
-    rule_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+    rule_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(DELETE)
 ) -> None:
     async with tenant_tx(request, principal) as session:
         row = await session.get(ObjektakteClassificationRule, rule_id)

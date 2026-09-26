@@ -8,6 +8,9 @@ import { TicketAttachInvoiceButton } from "@/components/tickets/TicketAttachInvo
 import { TicketChecklist } from "@/components/tickets/TicketChecklist";
 import { TicketEdit } from "@/components/tickets/TicketForms";
 import { TicketMergeDialog } from "@/components/tickets/TicketMergeDialog";
+import { TicketProposals } from "@/components/tickets/TicketProposals";
+import { TicketReplyPanel } from "@/components/tickets/TicketReplyPanel";
+import { SafeLine, SafeText } from "@/components/ui/SafeText";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDateTime } from "@/lib/format";
@@ -29,6 +32,8 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   if (!data) return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
   const me = await serverApi().GET("/api/v1/auth/me");
   const canManageSla = me.data?.permissions.includes("sla:update") ?? false;
+  const canReply =
+    (me.data?.permissions.includes("tickets:update") ?? false) && (me.data?.permissions.includes("communication:update") ?? false);
   const comments = (data.comments ?? []) as Comment[];
   const events = (data.events ?? []) as Event[];
   const checklist = (data.checklist ?? []) as { key: string; label: string; required: boolean; done: boolean }[];
@@ -51,12 +56,13 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   const sources = (mergedSources.data ?? []).map((s) => ({ id: String(s.id), number: Number(s.number), title: s.title ? String(s.title) : "" }));
   const canMerge = !mergedInto && data.status !== "closed";
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader
-        breadcrumb={[{ href: "/tickets", label: t("title") }]}
-        title={`#${String(data.number)} ${String(data.title ?? "")}`}
-        description={data.public_description ? String(data.public_description) : undefined}
-      />
+    <div className="flex min-w-0 max-w-full flex-col gap-4">
+      <PageHeader breadcrumb={[{ href: "/tickets", label: t("title") }]} title={`#${String(data.number)} ${String(data.title ?? "")}`} />
+      {data.public_description ? (
+        <SafeText className="max-w-3xl text-sm text-muted" testId="ticket-description">
+          {String(data.public_description)}
+        </SafeText>
+      ) : null}
       {mergedInto ? (
         <div role="status" className={ui.notice} data-testid="merged-banner">
           <Link href={`/tickets/${mergedInto}`} className="font-medium text-fg hover:underline">
@@ -106,15 +112,21 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           }}
         />
       ) : null}
-      <section className="flex flex-col gap-2">
+      {mergedInto ? null : (
+        <>
+          <TicketReplyPanel ticketId={ticketId} canSend={canReply} />
+          <TicketProposals ticketId={ticketId} />
+        </>
+      )}
+      <section className="flex min-w-0 flex-col gap-2">
         <h2 className={ui.h2}>{t("comments")}</h2>
-        <ul className="flex flex-col gap-2 text-sm">
+        <ul className="flex min-w-0 flex-col gap-2 text-sm">
           {comments.map((c, i) => (
-            <li key={i} className={ui.card}>
+            <li key={i} className={`${ui.card} min-w-0`}>
               <div className="text-xs text-muted">
                 {formatDateTime(c.created_at)} · {c.internal ? t("internal") : t("external")}
               </div>
-              <div className="whitespace-pre-wrap">{c.body}</div>
+              <SafeText>{c.body}</SafeText>
             </li>
           ))}
         </ul>
@@ -123,8 +135,10 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
         <h2 className={ui.h2}>{t("history")}</h2>
         <ul className="text-xs text-muted">
           {events.map((e, i) => (
-            <li key={i}>
-              {formatDateTime(e.at)} · {e.kind}
+            <li key={i} className="min-w-0">
+              <SafeLine>
+                {formatDateTime(e.at)} · {e.kind}
+              </SafeLine>
             </li>
           ))}
         </ul>

@@ -4,7 +4,7 @@ import { DunningApproveButton } from "@/components/accounting/DunningApproveButt
 import { DunningCaseActions } from "@/components/accounting/DunningCaseActions";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
-import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -19,6 +19,10 @@ type Case = {
   fee_amount: string;
   status: string;
   reason: string | null;
+  letter_document_id?: string | null;
+  // Höchste Stufe der Leiter, die für das Objekt dieses Falls gilt (Objektüberschreibung
+  // oder Mandantenvorgabe, M16-10, docs/rules/M16-02.md).
+  highest_level?: number | null;
 };
 
 const CASE_VARIANT: Record<string, StatusPillVariant> = {
@@ -44,13 +48,6 @@ export default async function DunningRunPage({ params }: { params: Promise<{ run
   }
   const cases = (data.cases ?? []) as Case[];
   const proposed = cases.filter((c) => c.status === "proposed").length;
-  // Mandanten-Einstellung als Näherung für die höchste Stufe (Objekt-Override je Fall wäre
-  // ein weiterer Abruf je Buchungskreis; siehe M16-06 in docs/plans/M16.md). Roher
-  // `serverFetch`, weil dieser Endpunkt noch nicht im generierten API-Client steckt.
-  const settingsResponse = await serverFetch("/api/v1/accounting/dunning-settings");
-  const settings = settingsResponse.ok ? await settingsResponse.json() : null;
-  const levels = (settings?.levels ?? []) as { level: number }[];
-  const highestLevel = levels.length ? Math.max(...levels.map((lv) => lv.level)) : null;
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -58,6 +55,7 @@ export default async function DunningRunPage({ params }: { params: Promise<{ run
         title={`${t("run", { date: formatDate(String(data.run_date)) })} · ${t(`runStatus.${String(data.status)}`)}`}
       />
       <p className={ui.notice}>{t("feesLocked")}</p>
+      <p className={ui.notice}>{t("letterNotice")}</p>
       {data.status === "preview" && proposed > 0 ? <DunningApproveButton runId={runId} /> : null}
       <div className="overflow-x-auto">
 <table className="mhvp-table">
@@ -86,7 +84,8 @@ export default async function DunningRunPage({ params }: { params: Promise<{ run
                   <DunningCaseActions
                     caseId={c.id}
                     status={c.status}
-                    isHighestLevel={highestLevel !== null && c.level >= highestLevel}
+                    isHighestLevel={c.highest_level != null && c.level >= c.highest_level}
+                    hasLetter={Boolean(c.letter_document_id)}
                   />
                 ) : null}
               </td>

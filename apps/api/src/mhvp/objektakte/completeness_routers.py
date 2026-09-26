@@ -2,8 +2,9 @@
 and its settings. `/api/v1/objektakte/required-documents` (settings, list/create/delete) and
 `/api/v1/objektakte/properties/{id}/completeness` (+ a "Nachforderungsschreiben" draft text).
 
-Permissions: `documents:read` for the checks and listing required documents, `documents:update`
-for changing the required-document settings (same pair as the review center).
+Permissions (M35 Stufe 4, docs/rules/M35-03.md): `objektakte:read` for the checks and listing
+required documents, `objektakte:approve` for changing the required-document settings
+(configuration, same level as the classification rules), `objektakte:delete` for removing one.
 """
 
 import uuid
@@ -22,8 +23,9 @@ from mhvp.objektakte.models import ObjektakteRequiredDocument
 from mhvp.properties.models import ManagementType, Property
 
 router = APIRouter(prefix="/objektakte", tags=["objektakte-completeness"])
-READ = require_permission("documents:read")
-UPDATE = require_permission("documents:update")
+READ = require_permission("objektakte:read")
+MANAGE = require_permission("objektakte:approve")
+DELETE = require_permission("objektakte:delete")
 
 
 def _row_out(row: ObjektakteRequiredDocument) -> dict[str, Any]:
@@ -57,7 +59,7 @@ class RequiredDocumentIn(BaseModel):
 
 @router.post("/required-documents", status_code=201, summary="Pflichtunterlage anlegen oder ändern")
 async def upsert_required_document(
-    body: RequiredDocumentIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+    body: RequiredDocumentIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         category = await session.get(DocumentCategory, body.document_category_id)
@@ -88,7 +90,7 @@ async def upsert_required_document(
     summary="Pflichtunterlage entfernen",
 )
 async def delete_required_document(
-    required_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+    required_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(DELETE)
 ) -> None:
     async with tenant_tx(request, principal) as session:
         row = await session.get(ObjektakteRequiredDocument, required_id)

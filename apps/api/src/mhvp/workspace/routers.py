@@ -25,6 +25,7 @@ MAX_BULK = 500
 MAX_RANGE_DAYS = 400
 STATS_READ = require_permission("tickets:read")
 STATS_RANGES = ("day", "week", "month", "quarter", "year")
+STATS_RECENT_LIMIT = 10
 
 
 async def member(request: Request) -> TenantPrincipal:
@@ -326,6 +327,25 @@ async def dashboard_stats(
             },
             "buckets": [{"key": k, **buckets[k]} for k in bucket_order],
             "assignees": assignees,
+            # Offene Tickets der Startseite (operator 26.09.2026): jede Zeile verlinkt auf
+            # /tickets/{id}; neueste zuerst, höchstens STATS_RECENT_LIMIT Einträge.
+            "tickets": [
+                {
+                    "id": t.id,
+                    "number": t.number,
+                    "title": t.title,
+                    "status": t.status.value,
+                    "priority": t.priority.value,
+                    "assignee_user_id": t.assignee_user_id,
+                    "created_at": t.created_at,
+                    "sla_due_at": t.sla_due_at,
+                }
+                for t in sorted(
+                    (t for t in tickets if t.status not in resolved_statuses),
+                    key=lambda t: t.created_at,
+                    reverse=True,
+                )[:STATS_RECENT_LIMIT]
+            ],
         }
 
 

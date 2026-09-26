@@ -8,14 +8,15 @@ import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.accounting import dunning, invoices, numbering, receivables, reports
+from mhvp.accounting import dunning, dunning_letters, invoices, numbering, receivables, reports
 from mhvp.accounting import services as svc
 from mhvp.accounting.models import (
     AdminFeeSetting,
@@ -1283,12 +1284,18 @@ async def generate_plan(
 
 
 class DunningSettingsIn(BaseModel):
+    """Tenant default (``property_id`` None): ``levels`` required, an omitted
+    ``threshold_amount`` means 0 and an omitted ``interest_enabled`` means off. Object
+    override: every field may be ``null`` and then inherits the tenant default (M16-11); a
+    level entry may leave out ``text``, ``fee_amount``, ``payment_days`` and ``letter_text``
+    to inherit them from the tenant level of the same number."""
+
     model_config = ConfigDict(extra="forbid")
     property_id: uuid.UUID | None = None
-    levels: list[dict[str, Any]] = Field(min_length=1, max_length=5)
-    threshold_amount: Decimal = Field(default=Decimal("0"), ge=0)
+    levels: list[dict[str, Any]] | None = Field(default=None, min_length=1, max_length=5)
+    threshold_amount: Decimal | None = Field(default=None, ge=0)
     fee_from_level: int | None = Field(default=None, ge=1)
-    interest_enabled: bool = False
+    interest_enabled: bool | None = None
     interest_base_rate: Decimal | None = Field(default=None, ge=0)
     interest_spread: Decimal | None = Field(default=None, ge=0)
 
@@ -1304,13 +1311,18 @@ class DunningRunIn(BaseModel):
     run_date: date
 
 
-def _settings_status(row: DunningSettings | None) -> str:
-    if row is None:
+class DunningLetterIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    letter_date: date | None = None
+
+
+def _settings_status(eff: dunning.EffectiveSettings | None) -> str:
+    if eff is None or not eff.levels:
         return "nicht eingerichtet"
-    fees_configured = row.fee_from_level is not None and any(
-        lv.get("fee_amount") is not None for lv in row.levels
+    fees_configured = eff.fee_from_level is not None and any(
+        lv.get("fee_amount") is not None for lv in eff.levels
     )
-    interest_configured = row.interest_enabled and row.interest_base_rate is not None
+    interest_configured = eff.interest_enabled and eff.interest_base_rate is not None
     if fees_configured and interest_configured:
         return "gebuehr_und_zins_hinterlegt"
     if fees_configured:
@@ -1320,28 +1332,108 @@ def _settings_status(row: DunningSettings | None) -> str:
     return "kein_betrag_hinterlegt"
 
 
-def _dunning_out(run: DunningRun, cases: list[DunningCase]) -> dict[str, Any]:
+async def _dunning_out(
+    session: AsyncSession, run: DunningRun, cases: list[DunningCase]
+) -> dict[str, Any]:
+    """Each case carries ``highest_level`` of the ladder that applies to its ledger's property
+    (object override or tenant default, M16-10), so clients never compare against the wrong
+    ceiling."""
+    ceiling: dict[uuid.UUID, int | None] = {}
+    out = []
+    for case in cases:
+        if case.ledger_id not in ceiling:
+            ledger = await session.get(Ledger, case.ledger_id)
+            eff = await dunning.settings_for(session, ledger.property_id if ledger else None)
+            ceiling[case.ledger_id] = (
+                max((int(lv["level"]) for lv in eff.levels), default=None) if eff else None
+            )
+        out.append({**_case_out(case), "highest_level": ceiling[case.ledger_id]})
     return {
         "id": run.id,
         "run_date": run.run_date,
         "status": run.status,
         "totals": run.totals,
-        "cases": [_case_out(c) for c in cases],
+        "cases": out,
     }
 
 
-def _dunning_settings_out(row: DunningSettings) -> dict[str, Any]:
+def _own_out(row: DunningSettings | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
     return {
         "id": row.id,
-        "property_id": row.property_id,
         "levels": row.levels,
         "threshold_amount": row.threshold_amount,
         "fee_from_level": row.fee_from_level,
         "interest_enabled": row.interest_enabled,
         "interest_base_rate": row.interest_base_rate,
         "interest_spread": row.interest_spread,
-        "status": _settings_status(row),
     }
+
+
+def _dunning_settings_out(
+    eff: dunning.EffectiveSettings | None, property_id: uuid.UUID | None
+) -> dict[str, Any]:
+    """Effective values (after inheritance) plus ``own`` (the stored row of this scope, or
+    ``null``) and ``sources`` per field (``objekt`` or ``mandant``)."""
+    if eff is None:
+        return {
+            "id": None,
+            "property_id": property_id,
+            "levels": [],
+            "threshold_amount": Decimal("0.00"),
+            "fee_from_level": None,
+            "interest_enabled": False,
+            "interest_base_rate": None,
+            "interest_spread": None,
+            "status": "nicht eingerichtet",
+            "sources": {},
+            "own": None,
+            "tenant_default_exists": False,
+        }
+    own = eff.property_row if property_id is not None else eff.tenant_row
+    return {
+        "id": own.id if own is not None else None,
+        "property_id": property_id,
+        "levels": eff.levels,
+        "threshold_amount": eff.threshold_amount,
+        "fee_from_level": eff.fee_from_level,
+        "interest_enabled": eff.interest_enabled,
+        "interest_base_rate": eff.interest_base_rate,
+        "interest_spread": eff.interest_spread,
+        "status": _settings_status(eff),
+        "sources": eff.sources,
+        "own": _own_out(own),
+        "tenant_default_exists": eff.tenant_row is not None,
+    }
+
+
+def _check_levels(levels: list[dict[str, Any]], *, override: bool) -> None:
+    for level in levels:
+        if (
+            set(level) - dunning.LEVEL_KEYS
+            or "level" not in level
+            or "min_days_overdue" not in level
+            or (not override and "text" not in level)
+        ):
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=(
+                    "Stufe: level, min_days_overdue, text, optional fee_amount, payment_days, "
+                    "letter_text."
+                ),
+            )
+        fee = level.get("fee_amount")
+        if fee is not None and Decimal(str(fee)) < 0:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Mahngebühr darf nicht negativ sein.")
+        days = level.get("payment_days")
+        if days is not None and int(days) < 0:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Zahlungsfrist darf nicht negativ sein."
+            )
+    numbers = [int(lv["level"]) for lv in levels]
+    if len(numbers) != len(set(numbers)):
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Jede Mahnstufe nur einmal.")
 
 
 @router.get(
@@ -1353,60 +1445,104 @@ async def get_dunning_settings(
     principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        row = await dunning.settings_for(session, property_id)
-        if row is None:
-            return {
-                "id": None,
-                "property_id": property_id,
-                "levels": [],
-                "threshold_amount": "0.00",
-                "fee_from_level": None,
-                "interest_enabled": False,
-                "interest_base_rate": None,
-                "interest_spread": None,
-                "status": "nicht eingerichtet",
+        eff = await dunning.settings_for(session, property_id)
+        return _dunning_settings_out(eff, property_id)
+
+
+@router.get(
+    "/dunning-settings/overrides",
+    summary="Objekte mit eigener Mahnstufen-Überschreibung",
+)
+async def list_dunning_overrides(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.scalars(
+                select(DunningSettings)
+                .where(DunningSettings.property_id.is_not(None))
+                .order_by(DunningSettings.created_at)
+            )
+        ).all()
+        return [
+            {
+                "id": r.id,
+                "property_id": r.property_id,
+                "overridden_fields": [
+                    name for name in dunning.INHERITABLE_FIELDS if getattr(r, name) is not None
+                ],
             }
-        return _dunning_settings_out(row)
+            for r in rows
+        ]
 
 
 @router.put("/dunning-settings", summary="Mahnstufen, Gebühren (je Stufe, nur mit Betrag) und Zins")
 async def put_dunning_settings(
     body: DunningSettingsIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
-    for level in body.levels:
-        if (
-            set(level) - {"level", "min_days_overdue", "text", "fee_amount"}
-            or "level" not in level
-            or "min_days_overdue" not in level
-        ):
+    override = body.property_id is not None
+    if not override and body.levels is None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Mandantenvorgabe: Mahnstufen (levels) sind Pflicht."
+        )
+    if body.levels is not None:
+        _check_levels(body.levels, override=override)
+    async with tenant_tx(request, principal) as session:
+        tenant_row = await dunning.settings_row(session, None)
+        if override and tenant_row is None:
             raise ProblemError(
                 ErrorCodes.VALIDATION,
-                detail="Stufe: level, min_days_overdue, text, optional fee_amount.",
+                detail="Zuerst die Mandantenvorgabe anlegen, dann Objekte überschreiben.",
             )
-        fee = level.get("fee_amount")
-        if fee is not None and Decimal(str(fee)) < 0:
-            raise ProblemError(ErrorCodes.VALIDATION, detail="Mahngebühr darf nicht negativ sein.")
-    if body.interest_enabled and body.interest_base_rate is None:
-        raise ProblemError(
-            ErrorCodes.VALIDATION,
-            detail=(
-                "Verzugszins kann erst mit hinterlegtem Basiszinssatz aktiviert werden "
-                "(halbjährlich zu pflegen, kein Wert hinterlegt bis Eingabe)."
-            ),
-        )
-    async with tenant_tx(request, principal) as session:
-        row = await dunning.settings_for(session, body.property_id)
-        if row is None or row.property_id != body.property_id:
+        if override and all(getattr(body, name) is None for name in dunning.INHERITABLE_FIELDS):
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Eine Objektüberschreibung braucht mindestens einen eigenen Wert.",
+            )
+        row = await dunning.settings_row(session, body.property_id)
+        if row is None:
             row = DunningSettings(tenant_id=principal.tenant_id, property_id=body.property_id)
             session.add(row)
         row.levels = body.levels
-        row.threshold_amount = body.threshold_amount
         row.fee_from_level = body.fee_from_level
-        row.interest_enabled = body.interest_enabled
         row.interest_base_rate = body.interest_base_rate
         row.interest_spread = body.interest_spread
+        if override:
+            row.threshold_amount = body.threshold_amount
+            row.interest_enabled = body.interest_enabled
+        else:  # the tenant default is always complete; omitted means 0 / off, never inherit
+            row.threshold_amount = body.threshold_amount or Decimal("0")
+            row.interest_enabled = bool(body.interest_enabled)
         await session.flush()
-        return _dunning_settings_out(row)
+        eff = dunning.resolve(
+            row if not override else tenant_row, row if override else None, body.property_id
+        )
+        if eff is not None and eff.interest_enabled and eff.interest_base_rate is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=(
+                    "Verzugszins kann erst mit hinterlegtem Basiszinssatz aktiviert werden "
+                    "(halbjährlich zu pflegen, kein Wert hinterlegt bis Eingabe)."
+                ),
+            )
+        return _dunning_settings_out(eff, body.property_id)
+
+
+@router.delete(
+    "/dunning-settings",
+    status_code=204,
+    summary="Objektüberschreibung entfernen (Objekt erbt wieder die Mandantenvorgabe)",
+)
+async def delete_dunning_override(
+    request: Request, property_id: uuid.UUID, principal: TenantPrincipal = Depends(APPROVE)
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        row = await dunning.settings_row(session, property_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await session.delete(row)
+        await session.flush()
+    return Response(status_code=204)
 
 
 @router.post(
@@ -1418,19 +1554,32 @@ async def post_dunning_settings_presets(
     body: DunningSettingsPresetIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        row = await dunning.settings_for(session, body.property_id)
-        if row is None or row.property_id != body.property_id:
+        tenant_row = await dunning.settings_row(session, None)
+        if body.property_id is not None and tenant_row is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Zuerst die Mandantenvorgabe anlegen, dann Objekte überschreiben.",
+            )
+        row = await dunning.settings_row(session, body.property_id)
+        if row is None:
             row = DunningSettings(tenant_id=principal.tenant_id, property_id=body.property_id)
             session.add(row)
         row.levels = dunning.preset_levels()
         row.fee_from_level = 2  # ab der 1. Mahnung (V7)
-        row.interest_enabled = False
+        row.interest_enabled = False if body.property_id is None else None
         row.interest_base_rate = None
+        if body.property_id is None and row.threshold_amount is None:
+            row.threshold_amount = Decimal("0")
         if body.interest_profile:
             row.interest_spread = Decimal(dunning.interest_spread_presets()[body.interest_profile])
         await session.flush()
+        eff = dunning.resolve(
+            tenant_row if body.property_id is not None else row,
+            row if body.property_id is not None else None,
+            body.property_id,
+        )
         return {
-            **_dunning_settings_out(row),
+            **_dunning_settings_out(eff, body.property_id),
             "note": (
                 "Vorschlagswerte laut Betreiberentscheidung 25.09.2026 (V7, teilweise "
                 "entschieden). Gebührenbeträge und Basiszinssatz bleiben leer, bis der "
@@ -1454,7 +1603,7 @@ async def dunning_preview(
         cases = list(
             (await session.scalars(select(DunningCase).where(DunningCase.run_id == run.id))).all()
         )
-        return _dunning_out(run, cases)
+        return await _dunning_out(session, run, cases)
 
 
 @router.get("/dunning-runs", summary="Mahnläufe (neueste zuerst)")
@@ -1488,7 +1637,7 @@ async def dunning_run(
         cases = list(
             (await session.scalars(select(DunningCase).where(DunningCase.run_id == run.id))).all()
         )
-        return _dunning_out(run, cases)
+        return await _dunning_out(session, run, cases)
 
 
 @router.post(
@@ -1507,7 +1656,7 @@ async def dunning_approve(
         cases = list(
             (await session.scalars(select(DunningCase).where(DunningCase.run_id == run.id))).all()
         )
-        return _dunning_out(run, cases)
+        return await _dunning_out(session, run, cases)
 
 
 class DunningMarkSentIn(BaseModel):
@@ -1531,6 +1680,7 @@ def _case_out(case: DunningCase) -> dict[str, Any]:
         "fee_invoice_draft_id": case.fee_invoice_draft_id,
         "delivery_channel": case.delivery_channel,
         "delivered_at": case.delivered_at,
+        "letter_document_id": case.letter_document_id,
     }
 
 
@@ -1552,6 +1702,102 @@ async def dunning_mark_sent(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         await dunning.mark_sent(session, case, body.channel, principal.user_id)
         return _case_out(case)
+
+
+async def _letter_pdf(
+    session: AsyncSession, request: Request, case_id: uuid.UUID, letter_date: date | None
+) -> tuple[DunningCase, dunning_letters.LetterDraft, bytes]:
+    from mhvp.documents import services as doc_services
+    from mhvp.documents.blobs import BlobStore
+
+    case = await session.get(DunningCase, case_id)
+    if case is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    head = await doc_services.letterhead(session, BlobStore(request.app.state.settings))
+    draft = await dunning_letters.build(session, case, head, letter_date or local_today())
+    return case, draft, dunning_letters.render(head, draft)
+
+
+@router.post(
+    "/dunning-cases/{case_id}/letter-preview",
+    summary="Mahnschreiben als PDF-Entwurf (Vorschau, nicht abgelegt, kein Versand)",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def dunning_letter_preview(
+    case_id: uuid.UUID,
+    request: Request,
+    body: DunningLetterIn | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        _, draft, pdf = await _letter_pdf(
+            session, request, case_id, body.letter_date if body else None
+        )
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'attachment; filename="{quote(draft.filename)}"',
+        },
+    )
+
+
+@router.post(
+    "/dunning-cases/{case_id}/letter",
+    status_code=201,
+    summary="Mahnschreiben als PDF-Entwurf erzeugen und ablegen (kein Versand)",
+)
+async def dunning_letter_create(
+    case_id: uuid.UUID,
+    request: Request,
+    body: DunningLetterIn | None = None,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        case, draft, pdf = await _letter_pdf(
+            session, request, case_id, body.letter_date if body else None
+        )
+        from mhvp.documents.blobs import BlobStore
+
+        document_id = await dunning_letters.store(
+            session,
+            BlobStore(request.app.state.settings),
+            case=case,
+            draft=draft,
+            pdf=pdf,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+        )
+        return {
+            **_case_out(case),
+            "letter_document_id": document_id,
+            "hinweis": dunning_letters.DRAFT_LABEL,
+        }
+
+
+@router.post(
+    "/dunning-cases/{case_id}/letter/send",
+    summary="Mahnschreiben versenden (gesperrt: G1 geschlossen, Versand nicht umgesetzt, M16-02)",
+)
+async def dunning_letter_send(
+    case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    """Locked on purpose (0.1.1, API first 0.1.4): the endpoint exists so that clients and
+    jobs hit the same lock. G1 must be open for the tenant, and even then the dispatch path
+    (postal or e-mail evidence, M16-02) is not released, so the request is always refused."""
+    resolver: ReleaseGateResolver = request.app.state.release_gate_resolver
+    await ensure_release_gate_open(ReleaseGate.G1, principal.tenant_id, resolver)
+    raise ProblemError(
+        ErrorCodes.CONFLICT,
+        detail=(
+            "Der Versand von Mahnschreiben ist nicht freigegeben (M16-02). Das Schreiben "
+            "bleibt Entwurf; der Versand erfolgt außerhalb der Plattform und wird mit "
+            '"Als versendet markieren" dokumentiert.'
+        ),
+        extensions={"locked": "dunning_letter_send", "case_id": str(case_id)},
+    )
 
 
 def _mahnbescheid_out(prep: Any) -> dict[str, Any]:

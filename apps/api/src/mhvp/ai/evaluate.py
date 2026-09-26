@@ -82,11 +82,24 @@ def _summary(output: dict[str, Any], expected: dict[str, Any]) -> list[tuple[Any
     return [(len(output["open_points"]), expected["open_points"])]
 
 
+def _invoice(output: dict[str, Any], expected: dict[str, Any]) -> list[tuple[Any, Any]]:
+    """M14 Belegeingang: the per-field derivation (`mhvp.receipts.extraction.field_confidences`)
+    on a recorded answer, compared with independently expected values and confidences."""
+    from mhvp.receipts.extraction import field_confidences
+
+    fields = field_confidences(output["invoice"])
+    return [(fields[name]["value"], want["value"]) for name, want in expected["fields"].items()] + [
+        (fields[name]["confidence"], want["confidence"])
+        for name, want in expected["fields"].items()
+    ]
+
+
 SCORERS: dict[AiTask, Callable[[dict[str, Any], Any], list[tuple[Any, Any]]]] = {
     AiTask.EXTRACT_CONTACTS: _contacts,
     AiTask.EXTRACT_PROPERTY: _property,
     AiTask.ANSWER_QUESTION: _answer,
     AiTask.SUMMARIZE: _summary,
+    AiTask.EXTRACT_INVOICE: _invoice,
 }
 
 

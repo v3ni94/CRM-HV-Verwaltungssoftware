@@ -74,3 +74,10 @@ automatisch geschrieben oder versendet, das Vier-Augen-Prinzip beim Versand blei
 * Frontend: Karte „KI-Vorschlag“ in `MailDetail` (`SuggestionCard.tsx`), Seite
   `/mail/playbooks` (`PlaybookManager.tsx`) zum Anlegen, Bearbeiten und Freigeben von
   Playbook-Entwürfen.
+
+## Anhänge ausgehender Mails (`attachments.py`, 26.09.2026)
+
+`approve` fügt die `attachment_document_ids` einer ausgehenden Nachricht als MIME-Anhänge bei
+(Dokumentenmodul, lokaler Blob oder Google Drive). Ein fehlendes Dokument bricht den Versand mit
+409 ab, damit keine unvollständige Antwort hinausgeht. Genutzt von den Antwortvorlagen der
+Tickets (`mhvp.tickets`, `POST /tickets/{id}/reply`).

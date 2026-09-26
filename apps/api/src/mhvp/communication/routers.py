@@ -15,7 +15,7 @@ from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.ai import schemas as ai_s
-from mhvp.communication import mail, transport
+from mhvp.communication import attachments, mail, transport
 from mhvp.communication.models import Mailbox, MailboxUser, Message, Playbook
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.db.tenancy import tenant_transaction
@@ -901,6 +901,9 @@ async def approve(
             msg["In-Reply-To"] = row.in_reply_to
             msg["References"] = row.in_reply_to
         msg.set_content(row.body or "")
+        # Standardanhänge aus Antwortvorlagen (operator 26.09.2026): Dokumentverweise der
+        # ausgehenden Nachricht werden beim Versand beigefügt.
+        await attachments.attach_documents(session, request, msg, row.attachment_document_ids)
         domain = box.address.rsplit("@", 1)[-1] or None
         msg["Message-ID"] = make_msgid(domain=domain)
 

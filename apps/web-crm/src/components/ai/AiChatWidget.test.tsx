@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { AiChatWidget, pageContext } from "./AiChatWidget";
+import { AiChatWidget, pageContext, RUN_TIMEOUT_MS } from "./AiChatWidget";
 
 let pathname = "/kontakte";
 vi.mock("next/navigation", () => ({
@@ -200,6 +200,92 @@ describe("AiChatWidget", () => {
         { index: 2, action: "skip" },
       ],
     });
+  });
+
+  it("stops polling after the run timeout and names the provider settings", async () => {
+    pathname = "/start";
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/bff/ai/conversations") && init?.method === "POST")
+        return jsonResponse({ id: CONV, title: "x", context_type: "global", context_id: null, created_at: "2026-09-24T10:00:00Z", messages: [] }, 201);
+      if (url.endsWith(`/api/bff/ai/conversations/${CONV}/messages`))
+        return jsonResponse({ id: RUN, status: "queued", task: "answer_question" }, 202);
+      if (url.endsWith(`/api/bff/ai/runs/${RUN}`)) {
+        polled = true;
+        return jsonResponse({ id: RUN, status: "running", task: "answer_question", proposal_id: null, output: null });
+      }
+      return jsonResponse({}, 404);
+    });
+    // The clock jumps past the limit once the first poll answered; real timers keep the 5 ms poll.
+    let polled = false;
+    const realNow = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => realNow + (polled ? RUN_TIMEOUT_MS : 0));
+
+    renderIntl(<AiChatWidget />);
+    await userEvent.click(screen.getByRole("button", { name: "KI-Assistent öffnen" }));
+    await userEvent.type(screen.getByLabelText("Nachricht"), "Wie hoch ist die Miete?{enter}");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Der Lauf antwortet nicht. Bitte Einstellungen, KI-Anbieter prüfen oder erneut versuchen.",
+    );
+    expect(screen.queryByTestId("ai-chat-progress")).not.toBeInTheDocument();
+  });
+
+  it("imports only the new contacts on request and reports the skipped rows", async () => {
+    pathname = "/kontakte";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/bff/ai/conversations") && method === "POST")
+        return jsonResponse({ id: CONV, title: "x", context_type: "global", context_id: null, created_at: "2026-09-24T10:00:00Z", messages: [] }, 201);
+      if (url.endsWith("/api/bff/documents")) return jsonResponse({ id: DOC }, 201);
+      if (url.endsWith(`/api/bff/ai/conversations/${CONV}/messages`))
+        return jsonResponse({ id: RUN, status: "queued", task: "extract_contacts" }, 202);
+      if (url.endsWith(`/api/bff/ai/runs/${RUN}`))
+        return jsonResponse({ id: RUN, status: "succeeded", task: "extract_contacts", proposal_id: PROPOSAL, output: {} });
+      if (url.endsWith(`/api/bff/ai/proposals/${PROPOSAL}`))
+        return jsonResponse({
+          id: PROPOSAL,
+          task_run_id: RUN,
+          entity_type: "contacts",
+          context_id: null,
+          decision: "pending",
+          decided_by: null,
+          decided_at: null,
+          import_run_id: null,
+          proposed: {
+            questions: [],
+            rows: [row(0, "new"), row(1, "new"), row(2, "new"), row(3, "incomplete"), row(4, "incomplete"), row(5, "existing"), row(6, "invalid")],
+          },
+        });
+      if (url.endsWith(`/api/bff/ai/proposals/${PROPOSAL}/apply`))
+        return jsonResponse({ id: "imp1", source: "ai_contacts", status: "applied", summary: {}, created_at: "2026-09-24T10:00:00Z", undone_at: null, items: [] });
+      return jsonResponse({}, 404);
+    });
+
+    renderIntl(<AiChatWidget />);
+    await userEvent.click(screen.getByRole("button", { name: "KI-Assistent öffnen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Kontakte importieren" }));
+    await userEvent.click(screen.getByRole("button", { name: "Eigentümer" }));
+    await userEvent.upload(screen.getByLabelText("Datei anhängen"), new File(["a;b"], "e.csv", { type: "text/csv" }));
+    await userEvent.click(screen.getByRole("button", { name: "Senden" }));
+    await screen.findByText(/Ich habe 7 Kontakte aus den Daten gelesen/, undefined, { timeout: 3000 });
+
+    await userEvent.click(screen.getByRole("button", { name: "Nein" }));
+    await userEvent.click(screen.getByRole("button", { name: "Nur neue Kontakte importieren" }));
+    await waitFor(() => expect(screen.getByText(/3 Kontakte angelegt\./)).toBeInTheDocument());
+    expect(
+      screen.getByText(/Übersprungen: 2 unvollständige Zeilen \(ohne Adresse\), 1 bereits vorhandene, 1 ungültige\./),
+    ).toBeInTheDocument();
+    const apply = fetchMock.mock.calls.find(([u]) => String(u).endsWith("/apply"));
+    expect(JSON.parse(apply?.[1]?.body as string).contacts).toEqual([
+      { index: 0, action: "create" },
+      { index: 1, action: "create" },
+      { index: 2, action: "create" },
+      { index: 3, action: "skip" },
+      { index: 4, action: "skip" },
+      { index: 5, action: "skip" },
+      { index: 6, action: "skip" },
+    ]);
   });
 
   it("offers a property import on the properties page and asks for a file first", async () => {

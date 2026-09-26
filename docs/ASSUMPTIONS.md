@@ -444,6 +444,50 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | vor einer Erweiterung auf Kontakt-Benachrichtigungen außerhalb der SLA-Eskalation |
 | Datum | 25.09.2026 |
 
+## A-041
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Der Standardtext des Mahnschreibens (`mhvp.accounting.dunning_letters`) ist neutral: er listet die offenen Posten mit Fälligkeit, nennt den Forderungsinhaber ("im Auftrag von"), bittet um Ausgleich und enthält den Hinweis, dass sich das Schreiben bei zwischenzeitlicher Zahlung erledigt. Er behauptet keinen Verzug, nennt keine Rechtsfolgen und keine Bankverbindung. Ein Zahlungsdatum erscheint nur, wenn je Stufe `payment_days` hinterlegt ist (Briefdatum plus Tage, Kalendertage ohne Feiertagsprüfung); ein hinterlegter `letter_text` je Stufe ersetzt nur den Aufforderungsabsatz. Jedes Schreiben trägt "Entwurf, kein Versand". |
+| Begründung | Aufgabe 26.09.2026 (Mahnschreiben als PDF-Entwurf); Textbausteine je Stufe sind nicht freigegeben (M16-02), daher nur ein Text ohne rechtliche Aussagen. Gebühr und Zins erscheinen ausschließlich aus den wirksamen Einstellungen (docs/rules/M16-01.md, M16-02.md). |
+| Kennzeichnung | unkritisch, solange der Versand gesperrt bleibt; vor Freigabe des Versands sind Textbausteine, Zahlungsfrist und Bankverbindung zu entscheiden (M16-02, M16-12, M16-13) |
+| Betroffene Bereiche | Mahnwesen, Mahnschreiben (docs/rules/M16-02.md) |
+| Überprüfung spätestens bei Meilenstein | vor Freigabe G1 und vor dem Versand von Mahnschreiben (M23) |
+| Datum | 26.09.2026 |
+
+## A-042
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Beim KI-Lauf `contact_master_data_change` (docs/rules/M19-05.md) werden vor dem Anbieteraufruf nur IBAN, E-Mail-Adressen und Telefonnummern maskiert (`mask_identifiers`), nicht die Personennamen. Die bestehende Vollmaskierung `mask_text` (M35-02) würde den Namen entfernen, der hier der Gegenstand der Erkennung ist. Die Mail eines Absenders enthält damit denselben Umfang an Namen wie die bereits bestehenden Mail-Läufe `classify_email` und `draft_reply`, die den Mailtext unmaskiert übergeben. |
+| Begründung | Betreiberauftrag 26.09.2026 (lernendes Ticketsystem: Namensänderung nach Hochzeit erkennen); Regel 0.1.13 nennt Kennungen wie IBAN ausdrücklich, die Maskierung deckt diese und die Kontaktkennungen ab |
+| Kennzeichnung | unkritisch, solange der Anbieter mit Auftragsverarbeitung und Trainingsausschluss freigegeben ist (Vier-Augen-Freigabe in `ai_provider_config`); bei einer strengeren Datenschutzvorgabe ist der Lauf auf die deterministische Stufe zu beschränken (Anbieter nicht freigeben) |
+| Betroffene Bereiche | Tickets, Mail-Eingang, KI-Gateway (docs/rules/M19-05.md) |
+| Überprüfung spätestens bei Meilenstein | vor Freigabe G5 (Drittmandanten) und bei der Datenschutzprüfung vor Produktivbetrieb |
+| Datum | 26.09.2026 |
+
+## A-043
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Im Belegeingang (M14, `mhvp.receipts`) sieht der KI-Anbieter keine IBAN. IBAN-Kandidaten werden vor der Maskierung deterministisch im Belegtext erkannt, verschlüsselt am Entwurf gespeichert, nur maskiert angezeigt (erste vier und letzte vier Zeichen, Prüfziffernstatus) und ausschließlich durch Eingabe und ausdrückliche Bestätigung der prüfenden Person (`iban_confirmed=true`) in den Rechnungsentwurf übernommen. Fehlt eine Währung im Beleg, wird EUR mit Konfidenz 0,5 und Hinweis angenommen; eine Fremdwährung sperrt die Anlage wie bisher. |
+| Begründung | Regel 0.1.6 (KI genehmigt nie allein eine IBAN), Regel 0.1.13 (Maskierung vor externem Aufruf); der bestehende Anlagepfad `mhvp.ai.imports.apply_invoice` bleibt unverändert |
+| Kennzeichnung | unkritisch; die Prüfziffer ist nur ein Hinweis für die prüfende Person, kein Nachweis der Richtigkeit |
+| Betroffene Bereiche | Belegeingang, Rechnungseingang, KI-Gateway |
+| Überprüfung spätestens bei Meilenstein | vor Freigabe G1 (produktive Buchhaltung) und G2 (Zahlungsauslösung) |
+| Datum | 26.09.2026 |
+
+## A-044
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Der Differenzimport aus objektakte (Stufe 5, `mhvp.objektakte.objektakte_import.run_differential_import`) liest die Quellspalte `updated_at` als UTC (Django `USE_TZ=True`) und vergleicht mit dem Wasserstand per größer oder gleich; Zeilen genau am Wasserstand werden erneut gelesen, ändern aber nichts. Die Löschung der letzten Zeile einer Tabelle ist in einem mysqldump nicht erkennbar (keine INSERT-Zeilen) und wird erst erkannt, wenn die Tabelle wieder Zeilen enthält. Löschungen werden nie physisch übernommen, sondern nur als Markierung (`objektakte_source_deletion`) geführt. |
+| Begründung | objektakte ist eine Django-Anwendung mit Zeitzonenunterstützung; ein Dump ohne Zeilen unterscheidet nicht zwischen leerer und nicht exportierter Tabelle; Regel 0.1.7 (keine Löschung finanz- oder beweisrelevanter Daten) |
+| Kennzeichnung | unkritisch; im Zweifel bleibt ein Datensatz erhalten und wird nur markiert |
+| Betroffene Bereiche | objektakte-Übernahme, Dokumente, Kontakte, Objekte |
+| Überprüfung spätestens bei Meilenstein | vor Abschaltung von objektakte (Stufe 6) |
+| Datum | 26.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

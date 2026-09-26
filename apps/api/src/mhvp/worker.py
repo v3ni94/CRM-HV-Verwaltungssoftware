@@ -38,6 +38,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.platform.licensing",
             "mhvp.sla.tasks",
             "mhvp.immoware.tasks",
+            "mhvp.objektakte.tasks",
         ],
     )
     app.conf.update(
@@ -126,6 +127,13 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "immoware-sync-caldav": {
                 "task": "mhvp.immoware.sync_caldav",
                 "schedule": 900.0,
+            },
+            # objektakte differential import (M35 Stufe 5): daily 05:15, opt-in per tenant only
+            # (`ObjektakteSyncState.enabled`, default off); the task skips every other tenant.
+            "objektakte-sync-all": {
+                "task": "mhvp.objektakte.sync_all",
+                "schedule": crontab(hour=5, minute=15),
+                "options": {"queue": "io"},
             },
         },
     )

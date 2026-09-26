@@ -58,6 +58,9 @@ class AiTask(StrEnum):
     ANSWER_QUESTION = "answer_question"
     SUMMARIZE = "summarize"
     CLASSIFY_DOCUMENT = "classify_document"
+    # Stammdatenänderung aus einer Ticket-Mail (Betreiberauftrag 26.09.2026): nur Vorschlag,
+    # nie IBAN (rule 0.1.6); Entscheidung in mhvp.tickets.proposals.
+    CONTACT_MASTER_DATA_CHANGE = "contact_master_data_change"
 
 
 class RunStatus(StrEnum):

@@ -242,3 +242,25 @@ class WorkOrderEvent(IdMixin, TenantMixin, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
+
+
+class TicketReplyTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Vorgefertigte Antwort für Tickets (operator 26.09.2026): Betreff und Text mit
+    Platzhaltern (``mhvp.tickets.reply_templates.PLACEHOLDERS``), optionale Standardanhänge
+    als Verweise auf Dokumente des Dokumentenmoduls und ein Thema aus dem Kompetenzkatalog.
+    Der Versand läuft immer über den bestehenden Antwortweg des Tickets (Entwurf, Freigabe,
+    Postfach des Tickets) und nur nach ausdrücklicher Bestätigung, nie automatisch."""
+
+    __tablename__ = "ticket_reply_template"
+    __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_ticket_reply_template_name"),)
+
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    subject: Mapped[str] = mapped_column(String(300), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    topic: Mapped[str | None] = mapped_column(String(32))
+    attachment_document_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(UUID(as_uuid=True)), nullable=False, default=list, server_default=text("'{}'")
+    )
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )

@@ -8,6 +8,7 @@ from io import BytesIO
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from mhvp.ai.models import ImportRun, ImportStatus
@@ -15,10 +16,12 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document, TextStatus
 from mhvp.objektakte import objektakte_import as importer
+from mhvp.objektakte.models import ObjektakteSourceDeletion
 
 router = APIRouter(prefix="/objektakte/imports", tags=["objektakte"])
 READ = require_permission("documents:read")
 WRITE = require_permission("documents:create")
+SETTINGS_WRITE = require_permission("tenant_settings:update")
 MAX_DUMP_BYTES = 200 * 1024 * 1024
 MAX_OCR_ZIP_BYTES = 500 * 1024 * 1024
 MAX_OCR_TEXT_CHARS = 1_000_000
@@ -179,4 +182,123 @@ async def get_import(
             "status": run.status,
             "created_at": run.created_at,
             **run.summary,
+        }
+
+
+# --- Stufe 5: paralleler Betrieb, täglicher Differenzimport --------------------------------
+# `/api/v1/objektakte/sync`: per tenant switch and export path for the daily Celery job
+# (`mhvp.objektakte.tasks`, default off), manual trigger, last report and deletion markers.
+
+sync_router = APIRouter(prefix="/objektakte/sync", tags=["objektakte"])
+
+
+class SyncSettingsIn(BaseModel):
+    enabled: bool | None = None
+    dump_path: str | None = Field(default=None, max_length=500)
+
+
+@sync_router.get("", summary="Stand des objektakte-Differenzimports (Wasserstand, letzter Lauf)")
+async def get_sync_state(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        state = await importer.get_or_create_sync_state(session, principal.tenant_id)
+        return importer.sync_state_as_dict(state)
+
+
+@sync_router.put("", summary="Täglichen objektakte-Differenzimport je Mandant einstellen")
+async def update_sync_settings(
+    request: Request, body: SyncSettingsIn, principal: TenantPrincipal = Depends(SETTINGS_WRITE)
+) -> dict[str, Any]:
+    """`enabled` switches the daily job on for this tenant only (default off, ADR 0003);
+    `dump_path` is the absolute `.sql` export path on the worker (validated again at run time
+    by `mhvp.objektakte.tasks.read_dump_file`)."""
+    async with tenant_tx(request, principal) as session:
+        state = await importer.get_or_create_sync_state(session, principal.tenant_id)
+        if body.dump_path is not None:
+            path = body.dump_path.strip()
+            if path and (not path.startswith("/") or not path.lower().endswith(".sql")):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Der Exportpfad muss absolut sein und auf .sql enden.",
+                )
+            state.dump_path = path or None
+        if body.enabled is not None:
+            if body.enabled and not state.dump_path:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Ohne Exportpfad kann der tägliche Import nicht aktiviert werden.",
+                )
+            state.enabled = body.enabled
+        state.updated_by = principal.user_id
+        await session.flush()
+        return importer.sync_state_as_dict(state)
+
+
+@sync_router.post("/runs", summary="objektakte-Differenzimport manuell auslösen")
+async def trigger_sync_run(
+    request: Request,
+    file: UploadFile | None = File(default=None),
+    principal: TenantPrincipal = Depends(WRITE),
+) -> dict[str, Any]:
+    """With an uploaded complete export the run happens right now in this request and returns
+    its report. Without a file the configured `dump_path` is read by the worker
+    (`mhvp.objektakte.sync_tenant`), and the report appears on `GET /objektakte/sync` once the
+    task has finished. Both paths use the same water mark and the same idempotent apply."""
+    if file is not None:
+        text = await _read_dump(file)
+        async with tenant_tx(request, principal) as session:
+            report = await importer.run_differential_import(
+                session,
+                principal.tenant_id,
+                text,
+                trigger="manual_upload",
+                actor_user_id=principal.user_id,
+            )
+            return {"mode": "inline", **report}
+    async with tenant_tx(request, principal) as session:
+        state = await importer.get_or_create_sync_state(session, principal.tenant_id)
+        if not state.dump_path:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Kein Exportpfad hinterlegt; Export hochladen oder Pfad einstellen.",
+            )
+        tenant_id = principal.tenant_id
+    from mhvp.objektakte.tasks import sync_tenant
+
+    sync_tenant.delay(str(tenant_id))
+    return {"mode": "queued", "tenant_id": tenant_id}
+
+
+@sync_router.get("/deletions", summary="In objektakte gelöschte, im CRM markierte Datensätze")
+async def list_source_deletions(
+    request: Request,
+    include_resolved: bool = Query(default=False),
+    limit: int = Query(default=200, ge=1, le=1000),
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        stmt = select(ObjektakteSourceDeletion).where(
+            ObjektakteSourceDeletion.tenant_id == principal.tenant_id
+        )
+        if not include_resolved:
+            stmt = stmt.where(ObjektakteSourceDeletion.resolved_at.is_(None))
+        rows = (
+            await session.scalars(
+                stmt.order_by(ObjektakteSourceDeletion.detected_at.desc()).limit(limit)
+            )
+        ).all()
+        return {
+            "items": [
+                {
+                    "id": r.id,
+                    "source_table": r.source_table,
+                    "source_id": r.source_id,
+                    "target_table": r.target_table,
+                    "target_id": r.target_id,
+                    "detected_at": r.detected_at,
+                    "resolved_at": r.resolved_at,
+                }
+                for r in rows
+            ]
         }

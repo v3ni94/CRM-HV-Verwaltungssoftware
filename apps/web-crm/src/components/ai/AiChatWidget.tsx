@@ -28,6 +28,8 @@ type Area = "contacts" | "properties" | "hoa" | "letting" | "bank" | "invoices" 
 type PageContext = { area: Area; contextType: "global" | "property" | "contact"; contextId: string | null };
 
 const UUID = /[0-9a-fA-F-]{36}/;
+/** Polling stops after this; a run that stays queued or running longer is reported as unresponsive. */
+export const RUN_TIMEOUT_MS = 10 * 60 * 1000;
 
 /** Error text with the failing step and HTTP status so a report can be diagnosed. */
 function stepError(step: string, status: number, message: string): string {
@@ -133,8 +135,10 @@ export function AiChatWidget() {
 
   const waitForRun = async (run: Run): Promise<Run> => {
     let current = run;
+    const startedAt = Date.now();
     setStage(current.status === "running" ? "processing" : "queued");
     while (isRunPending(current)) {
+      if (Date.now() - startedAt >= RUN_TIMEOUT_MS) throw new Error(t("runTimeout"));
       await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
       const res = await bff<Run>(`/api/bff/ai/runs/${current.id}`);
       if (!res.ok) throw new Error(stepError(t("stepRun"), res.status, res.message));
@@ -311,10 +315,17 @@ export function AiChatWidget() {
           void guarded(async () => {
             const p = contactsPreview(proposal.proposed);
             const contacts: ContactChoice[] = p.rows.map((row) => ({ index: row.index, action: row.status === "new" ? "create" : "skip" }));
+            const count = (s: string) => p.rows.filter((r) => r.status === s).length;
             const res = await bff<ImportRun>(`/api/bff/ai/proposals/${proposal.id}/apply`, { method: "POST", body: JSON.stringify({ contacts }) });
             if (!res.ok) throw new Error(res.message);
             push({ kind: "result", importRun: res.data });
-            say(t("imported"), [{ id: "restart", label: t("chips.restart") }]);
+            // The skipped rows are named so the user knows what was left out and why.
+            const skipped = [
+              count("incomplete") ? t("skippedIncomplete", { count: count("incomplete") }) : null,
+              count("existing") ? t("skippedExisting", { count: count("existing") }) : null,
+              count("invalid") ? t("skippedInvalid", { count: count("invalid") }) : null,
+            ].filter(Boolean);
+            say([t("onlyNewDone", { created: count("new") }), ...(skipped.length ? [t("skippedList", { list: skipped.join(", ") })] : []), t("imported")].join("\n"), [{ id: "restart", label: t("chips.restart") }]);
             setFlow({ step: "idle" });
           });
         }

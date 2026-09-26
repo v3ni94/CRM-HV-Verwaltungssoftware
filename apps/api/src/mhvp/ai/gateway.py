@@ -26,8 +26,11 @@ from mhvp.ai import providers, table_mapper, tasks
 from mhvp.ai.models import AiExample, AiProvider, AiProviderConfig, AiTask, AiTaskRun, RunStatus
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.events import emit
+from mhvp.core.logging import get_logger
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, TextStatus
+
+log = get_logger("mhvp.ai.gateway")
 
 MAX_INPUT_CHARS = 1_500_000  # pre chunking guard; chunking (below) keeps single calls small
 HARD_LIMIT_CHARS = 2_000_000  # a single attached document beyond this always blocks
@@ -632,7 +635,9 @@ async def _process_chunks(
             except asyncio.QueueEmpty:
                 return
             messages = _messages(chunk_text, context, shots)
-            result = await _call_plan(plan, keys, system, messages, schema, task)
+            result = await _call_plan(
+                plan, keys, system, messages, schema, task, tenant_id=tenant_id, run_id=run_id
+            )
             async with lock:
                 tokens_in += result.tokens_in
                 tokens_out += result.tokens_out
@@ -684,7 +689,14 @@ async def _run_fast_contacts(
     map_schema = tasks.json_schema(AiTask.MAP_COLUMNS)
     map_messages = _messages(table_mapper.column_samples(table), {}, [])
     map_result = await _call_plan(
-        map_plan, keys, map_prompt.system, map_messages, map_schema, AiTask.MAP_COLUMNS
+        map_plan,
+        keys,
+        map_prompt.system,
+        map_messages,
+        map_schema,
+        AiTask.MAP_COLUMNS,
+        tenant_id=tenant_id,
+        run_id=run_id,
     )
     tokens_in, tokens_out = map_result.tokens_in, map_result.tokens_out
     mapping_output = map_result.output
@@ -777,6 +789,13 @@ class _PlanResult:
     chosen: Route
 
 
+def _status_of(exc: providers.ProviderError) -> int | None:
+    """HTTP status from the chained SDK exception, if any (for the structured log)."""
+    cause = exc.__cause__
+    status = getattr(cause, "status_code", None)
+    return status if isinstance(status, int) else None
+
+
 async def _call_plan(
     plan: list[tuple[Route, Decimal, Decimal]],
     keys: dict[AiProvider, str],
@@ -784,6 +803,9 @@ async def _call_plan(
     messages: list[dict[str, str]],
     schema: dict[str, Any],
     task: AiTask,
+    *,
+    tenant_id: uuid.UUID | None = None,
+    run_id: uuid.UUID | None = None,
 ) -> _PlanResult:
     """One prompt against the routing plan: retries per provider (schema errors), falls back to
     the next provider of the plan on a provider error (budget exhausted providers are already
@@ -808,6 +830,16 @@ async def _call_plan(
                 except providers.ProviderError as exc:
                     error = f"Anbieterfehler: {exc}"
                     provider_failed = True
+                    log.warning(
+                        "ai_provider_error",
+                        tenant_id=str(tenant_id) if tenant_id else None,
+                        run_id=str(run_id) if run_id else None,
+                        provider=provider.value,
+                        model=chosen.model,
+                        status=_status_of(exc),
+                        reason=str(exc),
+                        retryable=exc.retryable,
+                    )
                     break
                 tokens_in += completion.tokens_in
                 tokens_out += completion.tokens_out
@@ -1042,7 +1074,16 @@ async def execute(
                 error = warnings[-1] if warnings else "Alle Teile fehlgeschlagen."
         else:
             messages = _messages(item.text, item.context, shots)
-            result = await _call_plan(plan, keys, prompt.system, messages, schema, task)
+            result = await _call_plan(
+                plan,
+                keys,
+                prompt.system,
+                messages,
+                schema,
+                task,
+                tenant_id=tenant_id,
+                run_id=run_id,
+            )
             tokens_in, tokens_out = result.tokens_in, result.tokens_out
             output, error, skipped_extra, chosen = (
                 result.output,

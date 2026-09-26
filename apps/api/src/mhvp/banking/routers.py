@@ -12,10 +12,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.accounting.models import EntrySource
-from mhvp.banking import camt, matching, payments
+from mhvp.banking import account_selection, camt, matching, payments
 from mhvp.banking import finapi as finapi_client
 from mhvp.banking import services as svc
 from mhvp.banking.models import (
+    AccountPurpose,
     BankConnection,
     BankRule,
     BankSyncRun,
@@ -1731,3 +1732,179 @@ async def get_invoice_matches(
             )
             for row in rows
         ]
+
+
+# --- Bank account selection (Bankkontenauswahl): list, assign, defaults; no payments (G2) ---
+
+
+class RecentTransactionOut(BaseModel):
+    id: uuid.UUID
+    booking_date: date
+    amount: Decimal
+    counterpart_name: str | None
+    purpose: str | None
+
+
+class AccountAssignmentOut(BaseModel):
+    property_id: uuid.UUID
+    property_number: str | None
+    property_name: str | None
+    purpose: AccountPurpose
+    is_default: bool
+
+
+class BankAccountListOut(BaseModel):
+    id: uuid.UUID
+    property_id: uuid.UUID
+    property_number: str | None
+    property_name: str | None
+    legal_entity_id: uuid.UUID
+    legal_entity_name: str | None
+    legal_entity_kind: str | None
+    kind: str
+    iban_masked: str
+    bic: str | None
+    bank_name: str | None
+    holder: str
+    valid_from: date
+    valid_to: date | None
+    source: str
+    balance: Decimal | None
+    balance_as_of: datetime | None
+    balance_source: str | None
+    default_for_legal_entity: bool
+    assignments: list[AccountAssignmentOut]
+    recent_transactions: list[RecentTransactionOut]
+
+
+def account_list_out(item: account_selection.AccountListItem) -> BankAccountListOut:
+    return BankAccountListOut(
+        id=item.id,
+        property_id=item.property_id,
+        property_number=item.property_number,
+        property_name=item.property_name,
+        legal_entity_id=item.legal_entity_id,
+        legal_entity_name=item.legal_entity_name,
+        legal_entity_kind=item.legal_entity_kind,
+        kind=item.kind,
+        iban_masked=item.iban_masked,
+        bic=item.bic,
+        bank_name=item.bank_name,
+        holder=item.holder,
+        valid_from=item.valid_from,
+        valid_to=item.valid_to,
+        source=item.source,
+        balance=item.balance,
+        balance_as_of=item.balance_as_of,
+        balance_source=item.balance_source,
+        default_for_legal_entity=item.default_for_legal_entity,
+        assignments=[AccountAssignmentOut(**vars(a)) for a in item.assignments],
+        recent_transactions=[RecentTransactionOut(**vars(t)) for t in item.recent_transactions],
+    )
+
+
+class AssignPropertyIn(_In):
+    property_id: uuid.UUID
+    purpose: AccountPurpose = AccountPurpose.GENERAL
+    is_default: bool = False
+
+
+class LegalEntityDefaultIn(_In):
+    is_default: bool
+
+
+@router.get(
+    "/accounts",
+    summary="Bankkonten je Objekt und Rechtsträger (mit Kontostand und letzten Umsätzen)",
+)
+async def list_bank_accounts(
+    request: Request,
+    property_id: uuid.UUID | None = None,
+    legal_entity_id: uuid.UUID | None = None,
+    q: str | None = Query(default=None, max_length=100),
+    limit: int = Query(default=100, ge=1, le=account_selection.MAX_ACCOUNTS),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[BankAccountListOut]:
+    async with tenant_tx(request, principal) as session:
+        items = await account_selection.list_accounts(
+            session, property_id=property_id, legal_entity_id=legal_entity_id, q=q, limit=limit
+        )
+        return [account_list_out(i) for i in items]
+
+
+@router.put(
+    "/accounts/{bank_account_id}/assignments",
+    summary="Konto einem Objekt zuordnen, optional als Standard (Hausgeld/Miete)",
+)
+async def assign_bank_account(
+    bank_account_id: uuid.UUID,
+    body: AssignPropertyIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> BankAccountListOut:
+    async with tenant_tx(request, principal) as session:
+        await account_selection.assign_to_property(
+            session,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            account_id=bank_account_id,
+            property_id=body.property_id,
+            purpose=body.purpose,
+            is_default=body.is_default,
+        )
+        return await _single_account_out(session, bank_account_id)
+
+
+@router.delete(
+    "/accounts/{bank_account_id}/assignments/{property_id}",
+    status_code=204,
+    summary="Zuordnung Konto zu Objekt lösen",
+)
+async def unassign_bank_account(
+    bank_account_id: uuid.UUID,
+    property_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> None:
+    async with tenant_tx(request, principal) as session:
+        await account_selection.unassign_from_property(
+            session,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            account_id=bank_account_id,
+            property_id=property_id,
+        )
+
+
+@router.put(
+    "/accounts/{bank_account_id}/legal-entity-default",
+    summary="Standardkonto des Rechtsträgers markieren oder aufheben",
+)
+async def set_legal_entity_default(
+    bank_account_id: uuid.UUID,
+    body: LegalEntityDefaultIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> BankAccountListOut:
+    async with tenant_tx(request, principal) as session:
+        await account_selection.set_legal_entity_default(
+            session,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            account_id=bank_account_id,
+            is_default=body.is_default,
+        )
+        return await _single_account_out(session, bank_account_id)
+
+
+async def _single_account_out(session: Any, bank_account_id: uuid.UUID) -> BankAccountListOut:
+    from mhvp.properties.models import PropertyBankAccount
+
+    account = await session.get(PropertyBankAccount, bank_account_id)
+    if account is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    items = await account_selection.list_accounts(session, legal_entity_id=account.legal_entity_id)
+    for item in items:
+        if item.id == bank_account_id:
+            return account_list_out(item)
+    raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)  # pragma: no cover

@@ -12,8 +12,10 @@ for "filed" beyond the existing `category_id`, so filing is recorded as
 0.1.7: the classification history in `source_meta["classification"]` is never silently dropped,
 only superseded by the newer, human decided state).
 
-Permissions: `documents:read` for list/get, `documents:update` for decide/bulk decide (existing
-permission names, matches `mhvp.documents.routers`).
+Permissions (M35 Stufe 4, docs/rules/M35-03.md): `objektakte:read` for list/get,
+`objektakte:update` for decide/bulk decide/ask-ai. Until Stufe 4 these endpoints reused the
+generic `documents:read`/`documents:update`; the objektakte keys separate review work from
+plain document editing (mhvp.core.auth.permissions).
 """
 
 import uuid
@@ -38,8 +40,8 @@ from mhvp.objektakte.models import (
 )
 
 router = APIRouter(prefix="/objektakte/review", tags=["objektakte-review"])
-READ = require_permission("documents:read")
-UPDATE = require_permission("documents:update")
+READ = require_permission("objektakte:read")
+UPDATE = require_permission("objektakte:update")
 Page = Annotated[int, Query(ge=1)]
 PageSize = Annotated[int, Query(ge=1, le=200)]
 

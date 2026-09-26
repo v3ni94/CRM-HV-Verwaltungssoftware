@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
+import { SafeText } from "@/components/ui/SafeText";
 import { ui } from "@/lib/ui";
 
 import { DraftEditor } from "./DraftEditor";
@@ -73,8 +74,8 @@ function ThreadEntry({ message }: { message: Message }) {
         <span className={ui.badge}>{message.direction === "in" ? t("directionIn") : t("directionOut")}</span>
         <span>{formatDateTime(message.direction === "in" ? message.received_at : message.sent_at)}</span>
       </div>
-      <p className="break-words text-sm font-medium">{message.subject || t("noSubject")}</p>
-      <p className="whitespace-pre-wrap break-words text-sm">{message.body}</p>
+      <p className="min-w-0 break-words text-sm font-medium [overflow-wrap:anywhere]">{message.subject || t("noSubject")}</p>
+      <SafeText className="text-sm">{message.body}</SafeText>
     </li>
   );
 }
@@ -186,10 +187,10 @@ export function MailDetail({
     <div className={`${ui.card} flex min-w-0 flex-col gap-4`}>
       <div className="flex min-w-0 flex-col gap-1 border-b border-border-soft pb-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h2 className="min-w-0 break-words text-lg font-semibold">{message.subject || t("noSubject")}</h2>
+          <h2 className="min-w-0 break-words text-lg font-semibold [overflow-wrap:anywhere]">{message.subject || t("noSubject")}</h2>
           <span className={`${ui.badge} shrink-0`}>{t(`status.${message.status}`)}</span>
         </div>
-        <p className="break-words text-sm text-muted">
+        <p className="min-w-0 break-words text-sm text-muted [overflow-wrap:anywhere]">
           {message.direction === "in" ? t("from", { address: message.from_address ?? "" }) : t("toField", { address: message.to_addresses.join(", ") })}
         </p>
         <div className="flex flex-wrap gap-3 text-xs text-subtle">
@@ -239,7 +240,7 @@ export function MailDetail({
       ) : message.status === "pending" ? (
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted">{submitterLabel(message, members, t)}</p>
-          <p className="whitespace-pre-wrap break-words rounded-md border border-border bg-surface p-3 text-sm">{message.body}</p>
+          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{message.body}</SafeText>
           {canApprove ? (
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className={ui.primary} disabled={busy} onClick={() => void approve()}>
@@ -267,11 +268,11 @@ export function MailDetail({
       ) : message.status === "sent" ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-muted">{message.sent_at ? t("sentAt", { at: formatDateTime(message.sent_at) }) : ""}</p>
-          <p className="whitespace-pre-wrap break-words rounded-md border border-border bg-surface p-3 text-sm">{message.body}</p>
+          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{message.body}</SafeText>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <p className="whitespace-pre-wrap break-words rounded-md border border-border bg-surface p-3 text-sm">{message.body}</p>
+          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{message.body}</SafeText>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className={ui.button} disabled={busy} onClick={() => void reply()}>
               {t("reply")}

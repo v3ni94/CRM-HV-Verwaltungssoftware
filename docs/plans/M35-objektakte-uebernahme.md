@@ -399,6 +399,48 @@ prüfungsregeln, Textbausteine der Nachforderungsschreiben werden als Spezifikat
   nur Vorhandensein, keine Aktualität; kein Seeding der zwei referenzierten Klassifikations-
   regeln in eine Mandanten-Instanz (nur als Spezifikation dokumentiert).
 
+**Ergebnis Stufe 4, Teil Benutzer/Rollen, Berechtigungsschlüssel und KI-Protokoll (26.09.2026)**
+
+- Berechtigungsschlüssel: Ressource `objektakte` in `mhvp.core.auth.permissions` (`read`,
+  `update` Prüffälle entscheiden/KI fragen, `approve` Regeln und Pflichtunterlagen pflegen,
+  `delete` nur Administrator nach `docs/rules/M2-07.md`); Review-Center, Regel-CRUD und
+  Vollständigkeitsprüfung verlangen diese Schlüssel statt der bisherigen pauschalen
+  `documents:read`/`documents:update`. Rollenvorlagen: `standard` read/update/approve,
+  Sachbearbeiter- und technische Rollen read/update, Lese- und Buchhaltungsrollen read.
+  Bestehende Mandanten erhalten die Schlüssel über `python -m mhvp.platform.sync_roles` (Teil
+  des Migrate-Jobs). CRM-Oberfläche prüft `objektakte:read` (Menü, Review-Center, Regeln).
+- Benutzerabbildung: Import versteht `roles` und `users` und liefert in Vorschau und Ergebnis
+  die Tabelle `user_mapping` (`admin` auf `tenant_admin`, `sachbearbeiter` auf `standard`,
+  sonst `manual`; Abgleich per E-Mail mit vorhandenen CRM-Benutzern und aktiven
+  Mitgliedschaften; gelöschte/gesperrte Konten `skip`). Es wird kein Benutzer, keine
+  Mitgliedschaft und keine Rolle angelegt; Einladung bleibt Administratorhandlung. Keine
+  Passwort-Hashes oder Anmeldedaten im Bericht. `decided_by` übernommener Prüfentscheidungen
+  wird nur für bereits aktive Mitglieder gesetzt, objektakte-ID bleibt in `before_state`.
+- KI-Protokoll: Tabelle `objektakte_ai_call` (Migration `0076_objektakte_ai_call`), Import
+  von `ai_calls` (idempotent, ohne Prompt-/Antworttexte, `requested_at` als UTC), Endpunkt
+  `GET /api/v1/objektakte/documents/{id}/ai-calls` (nur lesend, Summen Kosten/Token). Neue
+  KI-Aufrufe laufen weiterhin ausschließlich über `mhvp.ai`.
+- Regel: `docs/rules/M35-03.md`. Test:
+  `apps/api/tests/integration/test_m35_stufe4_permissions_users_aicalls.py` (Schlüssel je
+  Rolle, 403-Fälle, Mapping-Bericht ohne Benutzeranlage, `decided_by`-Auflösung, KI-Protokoll
+  je Dokument, Mandantentrennung).
+- Offene Punkte: Kostenauswertung des KI-Protokolls je Objekt oder Zeitraum (nur je Dokument
+  sichtbar); eine Oberfläche für die Benutzerabbildung (derzeit nur API-Bericht); die
+  Akzeptanz "alle bisherigen objektakte-Benutzer können sich im CRM anmelden" setzt die
+  manuelle Einladung nach dem Bericht voraus. Migrationskette: parallel entstandene
+  Migrationen (0077 ff.) sind beim Zusammenführen linear auf 0076 zu setzen.
+
+### Ergebnis Stufe 5, Differenzimport (26.09.2026)
+
+- Umgesetzt: Wasserstand je Mandant (`objektakte_sync_state`), Filter auf geänderte Quellzeilen,
+  Aktualisierung nur bei abweichenden Werten, Löschmarkierungen statt Löschung
+  (`objektakte_source_deletion`), täglicher Lauf je Mandant (Standard aus), manueller Lauf mit
+  Datei oder auf den hinterlegten Pfad, Bericht am Synchronisationsstand. Annahme A-044.
+- Offene Punkte: Aktualisierungen aus objektakte überschreiben im Parallelbetrieb die
+  gemappten Stammdatenfelder (Name, Adresse), sobald die Quellzeile neuer ist; Betreiber muss
+  entscheiden, ob objektakte für diese Felder führend bleibt oder nur für Altfälle beschreibbar
+  ist (Abschnitt 7). Oberfläche für Synchronisationsstand und Löschmarkierungen fehlt (nur API).
+
 ## 5. Risiken
 
 - **OCR-Last auf dem CRM-Worker**: objektakte hat dedizierte OCR-Worker (`worker-ocr`).

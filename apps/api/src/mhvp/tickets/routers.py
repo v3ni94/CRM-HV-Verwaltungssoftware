@@ -17,6 +17,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import emit
 from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.tickets import reply_templates
 from mhvp.tickets.competences import is_known_code
 from mhvp.tickets.merge import assert_mergeable, assignees_to_carry, origin_data
 from mhvp.tickets.models import (
@@ -27,6 +28,7 @@ from mhvp.tickets.models import (
     TicketAssignee,
     TicketComment,
     TicketEvent,
+    TicketReplyTemplate,
     TicketSource,
     TicketStatus,
     TicketTemplate,
@@ -507,6 +509,408 @@ async def patch_template(
             setattr(tpl, key, value)
         await session.flush()
         return _template_out(tpl)
+
+
+# Antwortvorlagen (operator 26.09.2026): vorgefertigte Antworten je Mandant. Versand nur über
+# den bestehenden Antwortweg des Tickets (Entwurf, Einreichung, Vier-Augen-Freigabe, Postfach
+# des Tickets) und nur nach ausdrücklicher Bestätigung im Aufruf, nie automatisch.
+
+
+def _can_manage_reply_templates(principal: TenantPrincipal) -> bool:
+    return (
+        principal.has("tickets:update")
+        or principal.has("tenant_settings:update")
+        or bool(_ADMIN_ROLES.intersection(principal.roles))
+    )
+
+
+def _require_reply_template_manage(principal: TenantPrincipal) -> None:
+    if not _can_manage_reply_templates(principal):
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN,
+            developer_message="Missing tickets:update or tenant_settings:update.",
+        )
+
+
+class ReplyTemplateIn(_In):
+    name: str = Field(min_length=1, max_length=150)
+    subject: str = Field(min_length=1, max_length=300)
+    body: str = Field(min_length=1, max_length=20000)
+    topic: str | None = Field(default=None, max_length=32)
+    attachment_document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
+    active: bool = True
+
+
+class ReplyTemplatePatch(_In):
+    name: str | None = Field(default=None, min_length=1, max_length=150)
+    subject: str | None = Field(default=None, min_length=1, max_length=300)
+    body: str | None = Field(default=None, min_length=1, max_length=20000)
+    topic: str | None = Field(default=None, max_length=32)
+    attachment_document_ids: list[uuid.UUID] | None = Field(default=None, max_length=20)
+    active: bool | None = None
+
+
+class TicketReplyIn(_In):
+    """Antwort aus dem Ticket: der Text ist bereits bearbeitet und vollständig ausgefüllt.
+    ``confirm`` ist die ausdrückliche Bestätigung des Versandwunsches (Klick auf "Antwort
+    senden"); ohne sie wird nichts angelegt."""
+
+    template_id: uuid.UUID | None = None
+    subject: str = Field(min_length=1, max_length=998)
+    body: str = Field(min_length=1, max_length=100000)
+    to_addresses: list[str] | None = Field(default=None, max_length=20)
+    attachment_document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
+    confirm: bool = False
+
+
+def _reply_template_out(tpl: TicketReplyTemplate) -> dict[str, Any]:
+    return {
+        k: getattr(tpl, k)
+        for k in (
+            "id",
+            "name",
+            "subject",
+            "body",
+            "topic",
+            "attachment_document_ids",
+            "active",
+            "created_at",
+            "updated_at",
+        )
+    }
+
+
+def _assert_known_placeholders(*texts: str | None) -> None:
+    unknown = [p for text in texts for p in reply_templates.unknown_placeholders(text)]
+    if unknown:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Unbekannte Platzhalter: "
+            + ", ".join(f"{{{p}}}" for p in dict.fromkeys(unknown)),
+        )
+
+
+async def _attachments_out(session: AsyncSession, ids: list[uuid.UUID]) -> list[dict[str, Any]]:
+    """Dokumente des Mandanten zu den Verweisen; fehlende (gelöscht oder fremder Mandant)
+    werden als ``missing`` gekennzeichnet statt stillschweigend übergangen."""
+    from mhvp.documents.models import Document
+
+    out: list[dict[str, Any]] = []
+    for document_id in ids:
+        doc = await session.get(Document, document_id)
+        if doc is None:
+            out.append(
+                {"document_id": document_id, "title": None, "filename": None, "missing": True}
+            )
+        else:
+            out.append(
+                {
+                    "document_id": doc.id,
+                    "title": doc.title,
+                    "filename": doc.filename,
+                    "missing": False,
+                }
+            )
+    return out
+
+
+async def _assert_documents_exist(session: AsyncSession, ids: list[uuid.UUID]) -> None:
+    for entry in await _attachments_out(session, ids):
+        if entry["missing"]:
+            raise ProblemError(
+                ErrorCodes.RESOURCE_NOT_FOUND,
+                detail=f"Anhang nicht gefunden: {entry['document_id']}",
+            )
+
+
+@router.get("/tickets/reply-templates", summary="Antwortvorlagen")
+async def list_reply_templates(
+    request: Request,
+    active: bool | None = None,
+    topic: str | None = Query(default=None, max_length=32),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        query = select(TicketReplyTemplate).order_by(TicketReplyTemplate.name)
+        if active is not None:
+            query = query.where(TicketReplyTemplate.active == active)
+        if topic:
+            query = query.where(TicketReplyTemplate.topic == topic)
+        return [_reply_template_out(t) for t in (await session.scalars(query)).all()]
+
+
+@router.get("/tickets/reply-templates/placeholders", summary="Platzhalter der Antwortvorlagen")
+async def list_reply_placeholders(principal: TenantPrincipal = Depends(READ)) -> list[str]:
+    return list(reply_templates.PLACEHOLDERS)
+
+
+@router.post("/tickets/reply-templates", status_code=201, summary="Antwortvorlage anlegen")
+async def create_reply_template(
+    body: ReplyTemplateIn, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    _require_reply_template_manage(principal)
+    _assert_known_placeholders(body.subject, body.body)
+    async with tenant_tx(request, principal) as session:
+        await _assert_known_topic(session, principal.tenant_id, body.topic)
+        await _assert_documents_exist(session, body.attachment_document_ids)
+        exists = await session.scalar(
+            select(TicketReplyTemplate.id).where(TicketReplyTemplate.name == body.name)
+        )
+        if exists is not None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Eine Antwortvorlage mit diesem Namen besteht bereits."
+            )
+        tpl = TicketReplyTemplate(
+            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
+        )
+        session.add(tpl)
+        await session.flush()
+        return _reply_template_out(tpl)
+
+
+@router.get("/tickets/reply-templates/{template_id}", summary="Antwortvorlage")
+async def get_reply_template(
+    template_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        tpl = await session.get(TicketReplyTemplate, template_id)
+        if tpl is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return _reply_template_out(tpl) | {
+            "attachments": await _attachments_out(session, tpl.attachment_document_ids)
+        }
+
+
+@router.patch("/tickets/reply-templates/{template_id}", summary="Antwortvorlage bearbeiten")
+async def patch_reply_template(
+    template_id: uuid.UUID,
+    body: ReplyTemplatePatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    _require_reply_template_manage(principal)
+    _assert_known_placeholders(body.subject, body.body)
+    async with tenant_tx(request, principal) as session:
+        tpl = await session.get(TicketReplyTemplate, template_id, with_for_update=True)
+        if tpl is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        data = body.model_dump(exclude_unset=True)
+        if "topic" in data:
+            await _assert_known_topic(session, principal.tenant_id, data["topic"])
+        if data.get("attachment_document_ids") is not None:
+            await _assert_documents_exist(session, data["attachment_document_ids"])
+        if data.get("name") and data["name"] != tpl.name:
+            exists = await session.scalar(
+                select(TicketReplyTemplate.id).where(TicketReplyTemplate.name == data["name"])
+            )
+            if exists is not None:
+                raise ProblemError(
+                    ErrorCodes.CONFLICT,
+                    detail="Eine Antwortvorlage mit diesem Namen besteht bereits.",
+                )
+        for key, value in data.items():
+            if value is None and key != "topic":
+                continue
+            setattr(tpl, key, value)
+        tpl.updated_by = principal.user_id
+        await session.flush()
+        await session.refresh(tpl)
+        return _reply_template_out(tpl)
+
+
+@router.delete(
+    "/tickets/reply-templates/{template_id}", status_code=204, summary="Antwortvorlage löschen"
+)
+async def delete_reply_template(
+    template_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> None:
+    _require_reply_template_manage(principal)
+    async with tenant_tx(request, principal) as session:
+        tpl = await session.get(TicketReplyTemplate, template_id, with_for_update=True)
+        if tpl is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await session.delete(tpl)
+        await session.flush()
+
+
+async def _reply_context(session: AsyncSession, ticket: Ticket) -> dict[str, Any]:
+    """Empfänger, Postfach und Platzhalterwerte der Antwort auf ein Ticket: geantwortet wird
+    auf die letzte eingehende Nachricht des Tickets (Absender, Postfach, Thread); ohne Mail
+    gilt die Haupt-E-Mail des Kontakts und das Standardpostfach des Mandanten."""
+    from mhvp.communication.models import Mailbox, Message
+    from mhvp.communication.transport import is_sendable
+    from mhvp.contacts.models import Contact, ContactEmail
+    from mhvp.properties.models import Property, Unit
+    from mhvp.workspace.services import local_today
+
+    inbound = await session.scalar(
+        select(Message)
+        .where(Message.ticket_id == ticket.id, Message.direction == "in")
+        .order_by(Message.received_at.desc().nulls_last(), Message.created_at.desc())
+        .limit(1)
+    )
+    contact_id = (
+        ticket.contact_id
+        or ticket.initiator_contact_id
+        or (inbound.contact_id if inbound else None)
+    )
+    contact = await session.get(Contact, contact_id) if contact_id else None
+    prop = await session.get(Property, ticket.property_id) if ticket.property_id else None
+    unit = await session.get(Unit, ticket.unit_id) if ticket.unit_id else None
+    to_addresses: list[str] = []
+    if inbound is not None and inbound.from_address:
+        to_addresses = [inbound.from_address]
+    elif contact is not None:
+        primary = await session.scalar(
+            select(ContactEmail.email)
+            .where(ContactEmail.contact_id == contact.id)
+            .order_by(ContactEmail.is_primary.desc(), ContactEmail.created_at)
+            .limit(1)
+        )
+        if primary:
+            to_addresses = [primary]
+    mailbox = None
+    if inbound is not None and inbound.mailbox_id:
+        mailbox = await session.get(Mailbox, inbound.mailbox_id)
+    if mailbox is None:
+        mailbox = await session.scalar(select(Mailbox).where(Mailbox.is_default.is_(True)))
+    today = local_today()
+    return {
+        "inbound": inbound,
+        "contact": contact,
+        "mailbox": mailbox,
+        "to_addresses": to_addresses,
+        "values": reply_templates.values_for(
+            ticket=ticket,
+            contact=contact,
+            prop=prop,
+            unit=unit,
+            today=f"{today.day:02d}.{today.month:02d}.{today.year}",
+        ),
+        "can_send": is_sendable(mailbox),
+    }
+
+
+@router.get(
+    "/tickets/{ticket_id}/reply-templates/{template_id}/preview",
+    summary="Antwortvorlage mit ausgefüllten Platzhaltern (Vorschau)",
+)
+async def preview_reply_template(
+    ticket_id: uuid.UUID,
+    template_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        ticket = await session.get(Ticket, ticket_id)
+        if ticket is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        tpl = await session.get(TicketReplyTemplate, template_id)
+        if tpl is None:
+            raise ProblemError(
+                ErrorCodes.RESOURCE_NOT_FOUND, detail="Antwortvorlage nicht gefunden."
+            )
+        ctx = await _reply_context(session, ticket)
+        mailbox = ctx["mailbox"]
+        return {
+            "template_id": tpl.id,
+            "template_name": tpl.name,
+            "subject": reply_templates.render(tpl.subject, ctx["values"]),
+            "body": reply_templates.render(tpl.body, ctx["values"]),
+            "values": ctx["values"],
+            "to_addresses": ctx["to_addresses"],
+            "mailbox_id": mailbox.id if mailbox else None,
+            "mailbox_address": mailbox.address if mailbox else None,
+            "can_send": ctx["can_send"],
+            "attachments": await _attachments_out(session, tpl.attachment_document_ids),
+        }
+
+
+@router.post(
+    "/tickets/{ticket_id}/reply",
+    status_code=201,
+    summary="Antwort aus dem Ticket senden (Entwurf einreichen, Freigabe, Postfach des Tickets)",
+)
+async def reply_to_ticket(
+    ticket_id: uuid.UUID,
+    body: TicketReplyIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Legt die ausgehende Nachricht am Ticket an und reicht sie sofort zur Freigabe ein
+    (Status ``pending``). Der Versand selbst erfolgt wie bei jeder Antwort über
+    ``POST /mail/messages/{id}/approve`` (Vier-Augen-Prinzip, Postfach des Tickets). Ohne
+    ``confirm`` wird nichts angelegt; ein Versand ohne ausdrücklichen Klick ist ausgeschlossen."""
+    from mhvp.communication.models import Message
+    from mhvp.communication.routers import _out as message_out
+
+    if not principal.has("communication:update"):
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Missing communication:update.")
+    if not body.confirm:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Versand nur nach ausdrücklicher Bestätigung (Antwort senden).",
+        )
+    _assert_known_placeholders(body.subject, body.body)
+    async with tenant_tx(request, principal) as session:
+        ticket = await session.get(Ticket, ticket_id, with_for_update=True)
+        if ticket is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        _assert_not_merged(ticket)
+        tpl = None
+        if body.template_id is not None:
+            tpl = await session.get(TicketReplyTemplate, body.template_id)
+            if tpl is None:
+                raise ProblemError(
+                    ErrorCodes.RESOURCE_NOT_FOUND, detail="Antwortvorlage nicht gefunden."
+                )
+        await _assert_documents_exist(session, body.attachment_document_ids)
+        ctx = await _reply_context(session, ticket)
+        mailbox = ctx["mailbox"]
+        if mailbox is None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Kein eingerichtetes Postfach für den Versand (M20-01)."
+            )
+        to_addresses = [a.strip() for a in (body.to_addresses or ctx["to_addresses"]) if a.strip()]
+        if not to_addresses:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Kein Empfänger für die Antwort.")
+        inbound = ctx["inbound"]
+        now = datetime.now(UTC)
+        draft = Message(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            direction="out",
+            status="pending",
+            mailbox_id=mailbox.id,
+            to_addresses=to_addresses,
+            subject=body.subject[:998],
+            body=body.body,
+            in_reply_to=inbound.header_message_id if inbound else None,
+            thread_id=(inbound.thread_id or inbound.id) if inbound else None,
+            contact_id=ctx["contact"].id if ctx["contact"] else None,
+            property_id=ticket.property_id,
+            ticket_id=ticket.id,
+            attachment_document_ids=list(body.attachment_document_ids),
+            submitted_by=principal.user_id,
+            submitted_at=now,
+        )
+        session.add(draft)
+        await session.flush()
+        await _event(
+            session,
+            ticket,
+            "reply_submitted",
+            principal.user_id,
+            {
+                "message_id": str(draft.id),
+                "template_id": str(tpl.id) if tpl else None,
+                "template_name": tpl.name if tpl else None,
+                "to": to_addresses,
+                "attachments": len(body.attachment_document_ids),
+            },
+        )
+        await session.flush()
+        return message_out(draft)
 
 
 @router.post("/tickets", status_code=201, summary="Ticket anlegen (Vorlage, Routing, SLA)")
@@ -1475,3 +1879,8 @@ async def order_step(
         )
         await session.flush()
         return _order_out(order)
+
+
+from mhvp.tickets.proposals import router as proposals_router  # noqa: E402
+
+router.include_router(proposals_router)

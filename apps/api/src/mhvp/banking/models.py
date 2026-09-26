@@ -10,7 +10,20 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Index, Integer, Numeric, String, Text, text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -362,3 +375,87 @@ class FinApiAccountLink(IdMixin, TimestampMixin, TenantMixin, Base):
     balance_as_of: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     balance_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_transactions_fetch_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# --- Bank account selection (Bankkontenauswahl, read only plus assignment; G2 stays closed) ---
+
+
+class AccountPurpose(StrEnum):
+    """Purpose of a bank account within one property: Hausgeld (WEG), Miete (rental) or
+    general. The default account per property is unique per purpose."""
+
+    HAUSGELD = "hausgeld"
+    MIETE = "miete"
+    GENERAL = "general"
+
+
+class BankAccountAssignment(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Selectable link between a bank account and a property or a legal entity.
+
+    Exactly one of ``property_id`` / ``legal_entity_id`` is set:
+    - property rows make the account selectable for that property (the account's home
+      property from ``property_bank_account.property_id`` stays untouched) and may mark the
+      default account per purpose (Hausgeld/Miete);
+    - legal entity rows only mark the default account of that legal entity; the legal entity
+      must be the account's owner (B01, 6.9.1), an account is never re-assigned to another
+      legal entity here.
+    Pure organisation: no money moves, no posting, no payment (G2).
+    """
+
+    __tablename__ = "bank_account_assignment"
+    __table_args__ = (
+        CheckConstraint(
+            "(property_id IS NOT NULL) <> (legal_entity_id IS NOT NULL)",
+            name="exactly_one_scope",
+        ),
+        Index(
+            "uq_bank_account_assignment_property",
+            "tenant_id",
+            "property_bank_account_id",
+            "property_id",
+            unique=True,
+            postgresql_where=text("property_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_bank_account_assignment_legal_entity",
+            "tenant_id",
+            "property_bank_account_id",
+            "legal_entity_id",
+            unique=True,
+            postgresql_where=text("legal_entity_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_bank_account_assignment_property_default",
+            "tenant_id",
+            "property_id",
+            "purpose",
+            unique=True,
+            postgresql_where=text("is_default AND property_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_bank_account_assignment_legal_entity_default",
+            "tenant_id",
+            "legal_entity_id",
+            unique=True,
+            postgresql_where=text("is_default AND legal_entity_id IS NOT NULL"),
+        ),
+    )
+
+    property_bank_account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("property_bank_account.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    property_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("property.id", ondelete="CASCADE"), nullable=True
+    )
+    legal_entity_id: Mapped[uuid.UUID | None] = _fk("legal_entity.id", nullable=True)
+    purpose: Mapped[AccountPurpose] = mapped_column(
+        _enum(AccountPurpose, "bank_account_purpose"),
+        nullable=False,
+        default=AccountPurpose.GENERAL,
+        server_default="general",
+    )
+    is_default: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )

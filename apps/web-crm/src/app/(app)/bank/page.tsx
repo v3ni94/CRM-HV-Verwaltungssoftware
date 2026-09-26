@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { BankAccountOverview } from "@/components/banking/BankAccountOverview";
 import { FinApiConnections } from "@/components/banking/FinApiConnections";
 import { StatementImport } from "@/components/banking/StatementImport";
 import { TransactionMatcher } from "@/components/banking/TransactionMatcher";
@@ -38,6 +39,7 @@ export default async function BankPage() {
       <Link href="/bank/zahlungen" className="text-sm font-medium hover:underline">
         {t("ordersLink")}
       </Link>
+      <BankAccountOverview />
       <FinApiConnections />
       <StatementImport />
       {!data ? (

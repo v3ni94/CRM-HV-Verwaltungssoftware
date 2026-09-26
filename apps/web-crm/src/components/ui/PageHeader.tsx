@@ -18,7 +18,7 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 border-b border-border-soft pb-5">
+    <div className="flex min-w-0 max-w-full flex-col gap-3 border-b border-border-soft pb-5">
       {breadcrumb && breadcrumb.length > 0 ? (
         <nav aria-label="Breadcrumb" className="mhvp-caption flex flex-wrap items-center gap-1 text-subtle">
           {breadcrumb.map((crumb, index) => (
@@ -36,10 +36,10 @@ export function PageHeader({
         </nav>
       ) : null}
       <div className="flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:justify-between">
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 max-w-full flex-col gap-1">
           {eyebrow ? <p className="mhvp-label">{eyebrow}</p> : null}
-          <h1 className="mhvp-title mhvp-display font-semibold text-fg">{title}</h1>
-          {description ? <p className="max-w-2xl text-sm text-muted">{description}</p> : null}
+          <h1 className="mhvp-title mhvp-display min-w-0 break-words font-semibold text-fg [overflow-wrap:anywhere]">{title}</h1>
+          {description ? <p className="max-w-2xl break-words text-sm text-muted [overflow-wrap:anywhere]">{description}</p> : null}
         </div>
         {action ? <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">{action}</div> : null}
       </div>

@@ -49,6 +49,25 @@ def mask_text(text: str | None) -> str:
     return masked
 
 
+def mask_ibans(text: str | None) -> str:
+    """IBAN masking only; everything else (names, e-mail, phone) stays for classification."""
+    if not text:
+        return ""
+    return _IBAN.sub(IBAN_PLACEHOLDER, text)
+
+
+def mask_identifiers(text: str | None) -> str:
+    """IBAN, e-mail and phone masking only, names kept (used by the contact master data change
+    task in ``mhvp.tickets.proposals``, where the name is the very thing to extract; e-mail and
+    phone values are extracted deterministically before masking and never sent to the
+    provider, rule 0.1.13)."""
+    if not text:
+        return ""
+    masked = _IBAN.sub(IBAN_PLACEHOLDER, text)
+    masked = _EMAIL.sub(EMAIL_PLACEHOLDER, masked)
+    return _PHONE.sub(PHONE_PLACEHOLDER, masked)
+
+
 def contains_iban(text: str) -> bool:
     """Used only by tests/assertions that no IBAN reached a provider call."""
     return bool(_IBAN.search(text))

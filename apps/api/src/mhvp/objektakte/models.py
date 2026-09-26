@@ -339,3 +339,112 @@ class ObjektakteRequiredDocument(IdMixin, TimestampMixin, TenantMixin, Base):
     mandatory: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
+
+
+class ObjektakteSyncStatus(StrEnum):
+    NEVER = "never"
+    OK = "ok"
+    FAILED = "failed"
+
+
+class ObjektakteSyncState(IdMixin, TimestampMixin, TenantMixin, Base):
+    """M35 Stufe 5 (docs/plans/M35-objektakte-uebernahme.md section 4, paralleler Betrieb):
+    the per tenant water mark and last report of the daily differential import.
+
+    `enabled` is the tenant flag for the Celery beat job (`mhvp.objektakte.tasks`, default off,
+    never a global override, ADR 0003); `dump_path` is the absolute path of the full mysqldump
+    export that objektakte writes for this tenant (a `.sql` file on the worker file system, no
+    URL: the CRM never connects to the objektakte database itself). `last_source_updated_at`
+    is the largest source `updated_at` seen so far (the water mark): a run only considers rows
+    at or after it, so an unchanged export changes nothing and a corrected row is picked up
+    once. `last_report` is the last run's `ImportResult` plus the run meta data; `last_error`
+    the message of a failed run (never the dump content).
+    """
+
+    __tablename__ = "objektakte_sync_state"
+    __table_args__ = (UniqueConstraint("tenant_id"),)
+
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    dump_path: Mapped[str | None] = mapped_column(String(500))
+    last_source_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_status: Mapped[ObjektakteSyncStatus] = mapped_column(
+        _enum_col(ObjektakteSyncStatus, "objektakte_sync_status"),
+        nullable=False,
+        default=ObjektakteSyncStatus.NEVER,
+        server_default="never",
+    )
+    last_report: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    last_error: Mapped[str | None] = mapped_column(String(1000))
+
+
+class ObjektakteSourceDeletion(IdMixin, TimestampMixin, TenantMixin, Base):
+    """A source row (table + objektakte id) that a complete export no longer contains although
+    the CRM holds its takeover (M35 Stufe 5). The CRM row itself is never deleted (rule 0.1.7,
+    retention): this marker records the deletion, and `resolved_at` is set when the source row
+    reappears in a later export."""
+
+    __tablename__ = "objektakte_source_deletion"
+    __table_args__ = (UniqueConstraint("tenant_id", "source_table", "source_id"),)
+
+    source_table: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_table: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ObjektakteAiCall(IdMixin, TimestampMixin, TenantMixin, Base):
+    """M35 Stufe 4 (docs/plans/M35-objektakte-uebernahme.md section 4, docs/rules/M35-03.md):
+    read-only mirror of one objektakte `ai_calls` row (`apps.ai.models.AiCall`), the protocol
+    of the old application's external AI calls, kept for cost evaluation and as evidence of
+    masking. Only ever written by the importer; new AI calls of the CRM run through `mhvp.ai`
+    (`AiTaskRun`) and are never recorded here.
+
+    As in objektakte, no prompt or answer text is stored: `prompt_hash`, `prompt_chars` and
+    `masked_entities_count` are the masking evidence, `response_summary` the structured
+    (already masked) result summary objektakte kept. `document_id`/`property_id` point at the
+    taken over CRM rows when the importer could resolve them; the objektakte ids stay in
+    `source_document_id`/`source_object_id` so an unresolved reference is not lost.
+    """
+
+    __tablename__ = "objektakte_ai_call"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "source_system", "source_id"),
+        Index("ix_objektakte_ai_call_tenant_requested_at", "tenant_id", "requested_at"),
+    )
+
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True, ondelete="SET NULL")
+    property_id: Mapped[uuid.UUID | None] = _fk("property.id", nullable=True, ondelete="SET NULL")
+    purpose: Mapped[str] = mapped_column(String(24), nullable=False)
+    provider: Mapped[str] = mapped_column(String(24), nullable=False)
+    model: Mapped[str] = mapped_column(String(80), nullable=False)
+    endpoint: Mapped[str | None] = mapped_column(String(255))
+    region: Mapped[str | None] = mapped_column(String(40))
+    page_from: Mapped[int | None] = mapped_column(Integer)
+    page_to: Mapped[int | None] = mapped_column(Integer)
+    prompt_hash: Mapped[str | None] = mapped_column(String(64))
+    prompt_chars: Mapped[int | None] = mapped_column(Integer)
+    masked_entities_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    tokens_in: Mapped[int | None] = mapped_column(Integer)
+    tokens_out: Mapped[int | None] = mapped_column(Integer)
+    cost_eur: Mapped[Any] = mapped_column(Numeric(12, 6), nullable=True)
+    price_list_version: Mapped[str | None] = mapped_column(String(24))
+    duration_ms: Mapped[int | None] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    http_status: Mapped[int | None] = mapped_column(SmallInteger)
+    error_message: Mapped[str | None] = mapped_column(String(1000))
+    fallback_used: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    response_summary: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_system: Mapped[str] = mapped_column(String(32), nullable=False, default="objektakte")
+    source_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_document_id: Mapped[str | None] = mapped_column(String(64))
+    source_object_id: Mapped[str | None] = mapped_column(String(64))

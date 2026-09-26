@@ -616,14 +616,14 @@ class DunningSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     )
 
     property_id: Mapped[uuid.UUID | None] = _fk("property.id", nullable=True)
-    # [{level, min_days_overdue, text, fee_amount|null}]
-    levels: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
-    threshold_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    # [{level, min_days_overdue, text, fee_amount|null, payment_days|null, letter_text|null}].
+    # On an object row (property_id set) every field below may be NULL: NULL means "inherit
+    # from the tenant default" (M16-10, migration 0078). The tenant default row is complete.
+    levels: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
+    threshold_amount: Mapped[Decimal | None] = mapped_column(MONEY, nullable=True)
     # Fees are inactive below this level even with a fee_amount set (V7: "ab der 1. Mahnung").
     fee_from_level: Mapped[int | None] = mapped_column(Integer)
-    interest_enabled: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
+    interest_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     # Gesetzlicher Verzugszins = Basiszinssatz + Aufschlag (§ 288 BGB, Anhang C zu verifizieren).
     # Basiszinssatz has no in-repo source register entry; the operator maintains the current
     # value here. The run stays disabled while this is empty.

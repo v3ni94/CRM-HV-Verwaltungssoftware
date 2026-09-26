@@ -145,6 +145,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^banking\/finapi\/connections$/ },
   { method: "POST", pattern: new RegExp(`^banking/finapi/connections/${ID}/(check|reauthorize|disconnect|fetch)$`) },
   { method: "POST", pattern: new RegExp(`^banking/finapi/accounts/${ID}/(assign|fetch)$`) },
+  // Bankkontenauswahl: Kontenliste je Objekt und Rechtsträger, Zuordnung und Standardkonto.
+  // Nur lesend und organisatorisch, kein Zahlungsverkehr (G2 bleibt geschlossen).
+  { method: "GET", pattern: /^banking\/accounts$/ },
+  { method: "PUT", pattern: new RegExp(`^banking/accounts/${ID}/assignments$`) },
+  { method: "DELETE", pattern: new RegExp(`^banking/accounts/${ID}/assignments/${ID}$`) },
+  { method: "PUT", pattern: new RegExp(`^banking/accounts/${ID}/legal-entity-default$`) },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/bank-account-options$`) },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/legal-entities$`) },
   // Rechnung zu Bankumsatz abgleichen und Zahlungsvorschlag (M11-finapi Stage 3, G2 gesperrt).
   { method: "GET", pattern: new RegExp(`^banking/invoice-matching/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^banking/invoice-matching/${ID}/match$`) },
@@ -193,6 +201,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // OpenImmo-Export (M26-02): read only, no portal upload.
   { method: "GET", pattern: new RegExp(`^letting/listings/${ID}/openimmo-check$`) },
   { method: "GET", pattern: new RegExp(`^letting/listings/${ID}/openimmo\\.xml$`) },
+  { method: "GET", pattern: new RegExp(`^letting/listings/${ID}/openimmo\\.zip$`) },
   { method: "GET", pattern: /^letting\/listings\/openimmo\.zip$/ },
   // Makler (M28-01): property and unit pickers for the listing creation form.
   // Übergabeprotokolle (M30): protocol, sub records, photos, signatures, completion, versions.
@@ -236,11 +245,23 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^tickets\/templates$/ },
   { method: "GET", pattern: new RegExp(`^tickets/templates/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^tickets/templates/${ID}$`) },
+  // Antwortvorlagen (operator 26.09.2026): CRUD, Platzhalter, Vorschau je Ticket und Antwort
+  // aus dem Ticket (nur nach Bestätigung, über den bestehenden Freigabeweg).
+  { method: "GET", pattern: /^tickets\/reply-templates(\/placeholders)?$/ },
+  { method: "POST", pattern: /^tickets\/reply-templates$/ },
+  { method: "GET", pattern: new RegExp(`^tickets/reply-templates/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^tickets/reply-templates/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^tickets/reply-templates/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}/reply-templates/${ID}/preview$`) },
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/reply$`) },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}/checklist/[a-zA-Z0-9_-]{1,64}$`) },
   { method: "POST", pattern: /^tickets\/bulk-status$/ },
   // Tickets zusammenführen (M36): Zielsuche über die Liste (q), Vorschau über das Detail.
   { method: "GET", pattern: /^tickets$/ },
   { method: "GET", pattern: new RegExp(`^tickets/${ID}$`) },
+  // Stammdatenänderung aus der Ticket-Mail (Vorschlag, Entscheidung, Antwortentwurf; 26.09.2026).
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}/proposals$`) },
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/proposals/(contact-change|${ID}/(accept|correct|reject|reply-draft))$`) },
   { method: "POST", pattern: /^tickets\/merge$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}$`) },
   // Zuweiser mit Grund (operator 25.09.2026, mail-optimierung M20).
@@ -269,6 +290,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^objektakte\/required-documents$/ },
   { method: "DELETE", pattern: new RegExp(`^objektakte/required-documents/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^objektakte/properties/${ID}/completeness$`) },
+  // Listengenerierung (M35 Stufe 4): Anforderungslisten und Dokumentenübersicht, JSON und CSV.
+  { method: "GET", pattern: /^objektakte\/lists\/missing-documents(\/export)?$/ },
+  {
+    method: "GET",
+    pattern: new RegExp(`^objektakte/properties/${ID}/lists/(missing-documents|documents)(/export)?$`),
+  },
   {
     method: "POST",
     pattern: new RegExp(`^objektakte/properties/${ID}/completeness/nachforderungsschreiben$`),
@@ -372,7 +399,7 @@ async function proxy(request: Request, context: Context): Promise<Response> {
     );
   }
   const out = new Headers({ "cache-control": "no-store" });
-  for (const name of ["content-type", "etag"]) {
+  for (const name of ["content-type", "etag", "content-disposition"]) {
     const value = upstream.headers.get(name);
     if (value) out.set(name, value);
   }

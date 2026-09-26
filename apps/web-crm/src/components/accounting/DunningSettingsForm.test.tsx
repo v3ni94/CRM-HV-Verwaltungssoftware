@@ -5,6 +5,9 @@ import { jsonResponse, renderIntl } from "@/test/intl";
 
 import { DunningSettingsForm, type DunningSettings } from "./DunningSettingsForm";
 
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
+
 const EMPTY: DunningSettings = {
   levels: [{ level: 1, min_days_overdue: 7, text: "Erinnerung", fee_amount: null }],
   threshold_amount: "0.00",
@@ -60,5 +63,79 @@ describe("DunningSettingsForm", () => {
     renderIntl(<DunningSettingsForm initial={EMPTY} canUpdate={false} />);
     expect(screen.getByText("Vorschlagswerte laden")).toBeDisabled();
     expect(screen.getByText("Speichern")).toBeDisabled();
+  });
+
+  it("sends null for inherited fields of an object override and keeps own values", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ ...EMPTY, own: { id: "o1" } }));
+    renderIntl(
+      <DunningSettingsForm
+        propertyId="p1"
+        canUpdate
+        initial={{
+          ...EMPTY,
+          threshold_amount: "20.00",
+          sources: { levels: "mandant", threshold_amount: "mandant", fee_from_level: "mandant" },
+          own: null,
+          tenant_default_exists: true,
+        }}
+      />,
+    );
+    // Everything inherits by default: the ladder inputs are disabled.
+    expect(screen.getByLabelText(/Mahnstufen vom Mandanten übernehmen/)).toBeChecked();
+    expect(screen.getByDisplayValue("Erinnerung")).toBeDisabled();
+    // Override only the threshold.
+    await userEvent.click(screen.getByLabelText("Mahngrenze vom Mandanten übernehmen"));
+    const threshold = screen.getByLabelText(/Mahngrenze \(EUR\)/) as HTMLInputElement;
+    await userEvent.clear(threshold);
+    await userEvent.type(threshold, "50");
+    await userEvent.click(screen.getByText("Speichern"));
+    expect(await screen.findByText("Gespeichert.")).toBeInTheDocument();
+    const body = JSON.parse(String((fetchSpy.mock.calls[0]?.[1] as RequestInit).body));
+    expect(body).toEqual({
+      property_id: "p1",
+      levels: null,
+      threshold_amount: "50",
+      fee_from_level: null,
+      interest_enabled: null,
+      interest_base_rate: null,
+      interest_spread: null,
+    });
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("blocks an object override while no tenant default exists", () => {
+    renderIntl(
+      <DunningSettingsForm propertyId="p1" canUpdate initial={{ ...EMPTY, tenant_default_exists: false }} />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Zuerst die Mandantenvorgabe speichern");
+    expect(screen.getByText("Speichern")).toBeDisabled();
+  });
+
+  it("removes an object override after confirmation", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 204 }));
+    renderIntl(
+      <DunningSettingsForm
+        propertyId="p1"
+        canUpdate
+        initial={{
+          ...EMPTY,
+          tenant_default_exists: true,
+          own: {
+            id: "o1",
+            levels: null,
+            threshold_amount: "50.00",
+            fee_from_level: null,
+            interest_enabled: null,
+            interest_base_rate: null,
+            interest_spread: null,
+          },
+        }}
+      />,
+    );
+    await userEvent.click(screen.getByText("Überschreibung entfernen"));
+    expect(await screen.findByText("Überschreibung entfernt. Das Objekt erbt wieder die Mandantenvorgabe.")).toBeInTheDocument();
+    expect(String(fetchSpy.mock.calls[0]?.[0])).toBe("/api/bff/accounting/dunning-settings?property_id=p1");
+    expect((fetchSpy.mock.calls[0]?.[1] as RequestInit).method).toBe("DELETE");
   });
 });

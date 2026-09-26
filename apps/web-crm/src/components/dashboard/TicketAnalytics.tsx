@@ -1,6 +1,7 @@
 "use client";
 
 import type { components } from "@mhvp/api-client";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -20,6 +21,16 @@ type AssigneeRow = {
   resolved_in_range: number;
   average_resolution_hours: number | null;
 };
+type TicketRow = {
+  id: string;
+  number: number;
+  title: string | null;
+  status: string;
+  priority: string;
+  assignee_user_id: string | null;
+  created_at: string;
+  sla_due_at: string | null;
+};
 type Stats = {
   range: Range;
   start: string;
@@ -32,6 +43,8 @@ type Stats = {
   };
   buckets: Bucket[];
   assignees: AssigneeRow[];
+  // Offene Tickets (operator 26.09.2026): jede Zeile verlinkt auf /tickets/{id}.
+  tickets?: TicketRow[];
 };
 
 /** Bucket key -> short axis label. Day buckets ("2026-09-23") show as day.month, week buckets
@@ -153,6 +166,7 @@ function BucketChart({
 
 export function TicketAnalytics() {
   const t = useTranslations("Workspace.analytics");
+  const tt = useTranslations("Tickets");
   const [range, setRange] = useState<Range>("week");
   const [userId, setUserId] = useState<string>("");
   const [members, setMembers] = useState<Member[]>([]);
@@ -203,6 +217,7 @@ export function TicketAnalytics() {
   }
 
   const compareRows = stats?.assignees.filter((a) => compare.includes(a.user_id)) ?? [];
+  const openTickets = stats?.tickets ?? [];
 
   return (
     <section className="flex flex-col gap-4">
@@ -307,6 +322,68 @@ export function TicketAnalytics() {
               </div>
             ) : (
               <BucketChart buckets={stats.buckets} range={stats.range} t={t} />
+            )}
+          </div>
+
+          <div className={`${ui.card} min-w-0`} data-testid="analytics-tickets">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-fg">{t("ticketsTitle")}</h3>
+              <Link href="/tickets" className="text-xs text-muted hover:text-fg hover:underline">
+                {t("allTickets")} →
+              </Link>
+            </div>
+            {openTickets.length === 0 ? (
+              <p className="text-sm text-muted">{t("ticketsEmpty")}</p>
+            ) : (
+              <>
+                <ul className="flex flex-col gap-1 sm:hidden">
+                  {openTickets.map((tk) => (
+                    <li key={tk.id} className="min-w-0">
+                      <Link href={`/tickets/${tk.id}`} className="flex min-w-0 flex-col gap-0.5 rounded-md px-2 py-1.5 text-sm hover:bg-surface">
+                        <span className="min-w-0 truncate font-medium">
+                          #{tk.number} {tk.title ?? ""}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {tt(`statuses.${tk.status}`)} · {tt(`priorities.${tk.priority}`)}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <div className="hidden overflow-x-auto sm:block">
+                  <table className={`${ui.table} w-full table-fixed`}>
+                    <thead>
+                      <tr>
+                        <th className="w-16">{t("ticketNumber")}</th>
+                        <th>{t("ticketTitle")}</th>
+                        <th className="w-32">{t("ticketStatus")}</th>
+                        <th className="w-28">{t("ticketPriority")}</th>
+                        <th className="w-40">{t("ticketAssignee")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {openTickets.map((tk) => (
+                        <tr key={tk.id}>
+                          <td className="tabular-nums">
+                            <Link href={`/tickets/${tk.id}`} className="hover:underline">
+                              {tk.number}
+                            </Link>
+                          </td>
+                          <td className="min-w-0">
+                            <Link href={`/tickets/${tk.id}`} className="block max-w-full truncate font-medium hover:underline" title={tk.title ?? ""}>
+                              {tk.title ?? ""}
+                            </Link>
+                          </td>
+                          <td>{tt(`statuses.${tk.status}`)}</td>
+                          <td>{tt(`priorities.${tk.priority}`)}</td>
+                          <td className="truncate">{tk.assignee_user_id ? nameOf(tk.assignee_user_id) : ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-2 text-xs text-subtle">{t("ticketLimitHint", { count: openTickets.length })}</p>
+              </>
             )}
           </div>
 
