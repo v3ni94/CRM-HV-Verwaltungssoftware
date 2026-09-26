@@ -3,7 +3,9 @@
 Vorschlag; Annahme ändert den Kontakt mit Änderungshistorie, Ablehnung ändert nichts, eine
 Bankverbindung wird nie übernommen und erreicht den Anbieter nicht, andere Mandanten und
 Nur-Lese-Rollen kommen nicht an die Entscheidung; der Antwortentwurf wird als Entwurf am
-Ticket angelegt und nicht versendet."""
+Ticket angelegt und nicht versendet. Hallo-Heidi-Anrufe (mhvp.tickets.call_assistant): Protokoll
+rein, Ticket mit Kontakt, Objekt und Einheit, Vorschlag Telefonnummer mit Antwortentwurf,
+"Freigeben und antworten" übernimmt die Nummer und legt den Entwurf an den Anrufer an."""
 
 import asyncio
 import json
@@ -475,3 +477,184 @@ def test_d57_instruction_mail_yields_no_change_and_no_bank_update(
         e["type"] == "contact.updated" and e["entity_id"] == contact["id"] for e in events
     )
     assert not any(e["type"].startswith(("export", "payment")) for e in events)
+
+
+HEIDI = "notiz@hallo-heidi.de"
+
+
+def _weg(
+    c: TestClient, h: dict[str, str], street: str, offset: int = 0
+) -> tuple[dict[str, Any], str]:
+    number = f"{(int(RUN, 16) + offset) % 900 + 100}"
+    prop = c.post(
+        "/api/v1/properties",
+        json={
+            "number": number,
+            "name": f"WEG {street}",
+            "management_type": "hoa",
+            "street": street,
+            "house_number": "12",
+            "postal_code": "40210",
+            "city": "Düsseldorf",
+        },
+        headers=h,
+    )
+    if prop.status_code == 409:  # Objektnummer schon vergeben, neuer Versuch
+        return _weg(c, h, street, offset + 7)
+    prop_data = _ok(prop, 201)
+    building = _ok(
+        c.post(f"/api/v1/properties/{prop_data['id']}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )
+    unit = _ok(
+        c.post(
+            f"/api/v1/properties/{prop_data['id']}/units",
+            json={
+                "building_id": building["id"],
+                "number": "3",
+                "label": "WE 3",
+                "unit_type": "apartment",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    return prop_data, str(unit["id"])
+
+
+def _owner(
+    c: TestClient, h: dict[str, str], unit: str, first: str, last: str, email: str
+) -> dict[str, Any]:
+    contact = _ok(
+        c.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "person",
+                "salutation": "Frau",
+                "first_name": first,
+                "last_name": last,
+                "emails": [{"email": email}],
+                "phones": [{"label": "private", "number": "0211 1234567"}],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    party = _ok(
+        c.post("/api/v1/parties", json={"members": [{"contact_id": contact["id"]}]}, headers=h),
+        201,
+    )
+    _ok(
+        c.post(
+            "/api/v1/contracts",
+            json={
+                "kind": "ownership",
+                "unit_id": unit,
+                "party_id": party["id"],
+                "start_date": "2020-01-01",
+                "title_transfer_date": "2020-01-01",
+                "acquisition_kind": "first_acquisition",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    return dict(contact)
+
+
+def test_heidi_call_assigns_ticket_and_proposes_phone_with_reply(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
+    h = bearer(login(client, world, "tpadmin"))
+    street = f"Heidi{RUN}straße"
+    prop, unit = _weg(client, h, street)
+    email = f"petra.{RUN}@example.org"
+    last = f"Schneider{RUN}"
+    contact = _owner(client, h, unit, "Petra", last, email)
+    # Namensvetterin an einem anderen Objekt: Objekt plus Name trennt die beiden.
+    other_prop, other_unit = _weg(client, h, f"Andere{RUN}straße", 1)
+    _owner(client, h, other_unit, "Petra", last, f"petra2.{RUN}@example.org")
+
+    body = (
+        "Neue Gesprächsnotiz von Hallo Heidi\n\n"
+        f"Anrufer: Frau Petra {last}\n"
+        "Rückrufnummer: 0171 / 234 56 78\n"
+        f"Objekt: Heidi{RUN}str. 12, 40210 Düsseldorf\n"
+        "Einheit: Whg. 3, 2. OG links\n"
+        "Anliegen: Die Heizung in der Wohnung bleibt seit gestern kalt.\n"
+    )
+    msg = _ingest(client, h, HEIDI, "Hallo Heidi: neuer Anruf", f"<heidi1-{RUN}@x>", body)
+    ticket_id = msg["ticket_id"]
+    ticket = _ok(client.get(f"{T}/{ticket_id}", headers=h))
+    assert ticket["contact_id"] == contact["id"]
+    assert ticket["property_id"] == prop["id"]
+    assert ticket["unit_id"] == unit
+    assert "call_summary" in {e["kind"] for e in ticket["events"]}
+
+    rows = _ok(client.get(f"{T}/{ticket_id}/proposals", headers=h))
+    assert len(rows) == 1
+    proposal = rows[0]
+    proposed = proposal["proposed"]
+    assert proposed["kind"] == "call"
+    assert proposed["matched_by"] == "property_name"
+    assert proposed["changes"] == [
+        {
+            "field": "phone",
+            "old": None,
+            "new": "+491712345678",
+            "label": "mobile",
+            "confidence": 0.9,
+        }
+    ]
+    assert proposed["call"]["caller_phone"] == "+491712345678"
+    assert proposed["call"]["property_id"] == prop["id"]
+    assert proposed["call"]["unit_id"] == unit
+    assert proposed["reply_draft"]["body"].startswith(f"Hallo Frau {last},")
+    assert "Wir haben Ihr Anliegen" in proposed["reply_draft"]["body"]
+    assert "Heizung" in proposed["reply_draft"]["body"]
+
+    done = _ok(
+        client.post(f"{T}/{ticket_id}/proposals/{proposal['id']}/accept-and-reply", headers=h),
+        201,
+    )
+    assert done["decision"] == "accepted"
+    assert done["reply_message_status"] == "draft"
+    after = _ok(client.get(f"/api/v1/contacts/{contact['id']}", headers=h))
+    numbers = {p["number"]: p["label"] for p in after["phones"]}
+    assert numbers["+491712345678"] == "mobile"
+    assert "+492111234567" in numbers
+    draft = _ok(client.get(f"/api/v1/mail/messages/{done['reply_message_id']}", headers=h))
+    assert draft["to_addresses"] == [email]
+    assert draft["status"] == "draft"
+    assert draft["ticket_id"] == ticket_id
+    assert (
+        client.post(
+            f"{T}/{ticket_id}/proposals/{proposal['id']}/accept-and-reply", headers=h
+        ).status_code
+        == 409
+    )
+
+    # Zweiter Anruf mit derselben, nun bekannten Nummer: kein neuer Vorschlag.
+    again = _ingest(client, h, HEIDI, "Hallo Heidi: neuer Anruf", f"<heidi2-{RUN}@x>", body)
+    assert _ok(client.get(f"{T}/{again['ticket_id']}/proposals", headers=h)) == []
+    assert other_prop["id"] != prop["id"]
+
+
+def test_call_assistant_settings(client: TestClient, world: World) -> None:
+    h = bearer(login(client, world, "tpadmin"))
+    reader = bearer(login(client, world, "tpreader"))
+    base = f"{M}/call-assistant"
+    default = _ok(client.get(base, headers=h))
+    assert default["enabled"] is True
+    assert "hallo-heidi" in default["sender_patterns"]
+    saved = _ok(
+        client.put(
+            base,
+            json={"enabled": True, "sender_patterns": [" Bot@Telefon.example "], "keywords": []},
+            headers=h,
+        )
+    )
+    assert saved["sender_patterns"] == ["bot@telefon.example"]
+    assert saved["keywords"] == ["hallo heidi"]
+    assert client.put(base, json={"enabled": False}, headers=reader).status_code == 403
+    _ok(client.put(base, json={"enabled": True, "sender_patterns": [], "keywords": []}, headers=h))

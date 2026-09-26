@@ -818,6 +818,80 @@ async def put_invoice_forwarding(
     return await get_invoice_forwarding(request, principal)
 
 
+class CallAssistantSettingsIn(_In):
+    enabled: bool = True
+    sender_patterns: list[str] = Field(default_factory=list, max_length=50)
+    keywords: list[str] = Field(default_factory=list, max_length=50)
+
+
+class CallAssistantSettingsOut(BaseModel):
+    enabled: bool
+    sender_patterns: list[str]
+    keywords: list[str]
+
+
+def _call_assistant_out(raw: dict[str, Any] | None) -> CallAssistantSettingsOut:
+    from mhvp.tickets.call_assistant import config_from
+
+    cfg = config_from(raw)
+    return CallAssistantSettingsOut(
+        enabled=cfg.enabled,
+        sender_patterns=list(cfg.sender_patterns),
+        keywords=list(cfg.keywords),
+    )
+
+
+@router.get(
+    "/call-assistant",
+    summary="Telefonassistenz (Hallo Heidi): Erkennungsmuster der Protokoll-Mails",
+)
+async def get_call_assistant(
+    request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> CallAssistantSettingsOut:
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        raw = await session.scalar(
+            select(TenantSettings.call_assistant).where(
+                TenantSettings.tenant_id == principal.tenant_id
+            )
+        )
+    return _call_assistant_out(raw)
+
+
+@router.put(
+    "/call-assistant",
+    summary="Telefonassistenz (Hallo Heidi): Erkennungsmuster speichern",
+)
+async def put_call_assistant(
+    body: CallAssistantSettingsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(ADMIN),
+) -> CallAssistantSettingsOut:
+    """Absendermuster (Teil der Absenderadresse) und Kennwörter (Betreff, im Text nur mit
+    beschrifteter Rufnummer). Leere Listen nutzen die eingebauten Muster."""
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(TenantSettings).where(TenantSettings.tenant_id == principal.tenant_id)
+        )
+        if row is None:
+            row = TenantSettings(tenant_id=principal.tenant_id, created_by=principal.user_id)
+            session.add(row)
+            await session.flush()
+        row.call_assistant = {
+            "enabled": body.enabled,
+            "sender_patterns": sorted(
+                {s.lower().strip()[:200] for s in body.sender_patterns if s.strip()}
+            ),
+            "keywords": sorted({k.lower().strip()[:200] for k in body.keywords if k.strip()}),
+        }
+        row.updated_by = principal.user_id
+        await session.flush()
+        return _call_assistant_out(row.call_assistant)
+
+
 @router.post(
     "/messages/{message_id}/forward-invoice",
     summary='Rechnung weiterleiten ("Weiterleiten?"-Vorschlag bestätigen)',

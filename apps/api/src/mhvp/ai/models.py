@@ -61,6 +61,9 @@ class AiTask(StrEnum):
     # Stammdatenänderung aus einer Ticket-Mail (Betreiberauftrag 26.09.2026): nur Vorschlag,
     # nie IBAN (rule 0.1.6); Entscheidung in mhvp.tickets.proposals.
     CONTACT_MASTER_DATA_CHANGE = "contact_master_data_change"
+    # Gesprächsprotokoll der KI-Telefonassistenz (Hallo Heidi, 26.09.2026): Anrufer, Objekt,
+    # Einheit, Anliegen; nur Vorschlag, Entscheidung in mhvp.tickets.call_assistant.
+    CALL_SUMMARY = "call_summary"
 
 
 class RunStatus(StrEnum):

@@ -283,6 +283,20 @@ class ContactChangeResult(_Out):
     reason: str | None = Field(description="Anlass laut Mail, z. B. Hochzeit oder Umzug")
 
 
+class CallSummaryResult(_Out):
+    """Gesprächsprotokoll der KI-Telefonassistenz (Hallo Heidi, Betreiberauftrag 26.09.2026).
+    Nur Vorschlag; Telefonnummern sind im Text maskiert und werden vom System ergänzt."""
+
+    caller_name: str | None = Field(description="voller Name des Anrufers laut Protokoll")
+    property_hint: str | None = Field(
+        description="genanntes Objekt: Adresse (Straße Hausnummer, Ort) oder Objektnummer"
+    )
+    unit_hint: str | None = Field(description="genannte Einheit, z. B. Whg. 3, WE 12, 2. OG")
+    concern: str | None = Field(description="Anliegen des Anrufers in ein bis drei Sätzen")
+    callback_requested: bool = Field(description="true, wenn um Rückruf gebeten wird")
+    confidence: float = Confidence
+
+
 Severity = Literal["low", "medium", "high"]
 
 
@@ -363,6 +377,7 @@ SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.MAP_COLUMNS: ColumnMappingResult,
     AiTask.CLASSIFY_DOCUMENT: ClassifyDocumentResult,
     AiTask.CONTACT_MASTER_DATA_CHANGE: ContactChangeResult,
+    AiTask.CALL_SUMMARY: CallSummaryResult,
     AiTask.PROPOSE_POSTING: PostingProposalResult,
 }
 DEFAULT_TIERS: dict[AiTask, str] = {
@@ -377,6 +392,7 @@ DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.MAP_COLUMNS: "small",
     AiTask.CLASSIFY_DOCUMENT: "small",
     AiTask.CONTACT_MASTER_DATA_CHANGE: "small",
+    AiTask.CALL_SUMMARY: "small",
     AiTask.PROPOSE_POSTING: "large",
 }
 
