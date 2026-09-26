@@ -3243,19 +3243,22 @@
       "all": "All",
       "rental": "Rental",
       "hoa": "HOA",
-      "sev": "SEV"
+      "sev": "SEV",
+      "noOwner": "Without owner"
     },
     "scopeTitle": {
       "all": "Properties",
       "rental": "Rental management",
       "hoa": "HOA properties",
-      "sev": "Separate ownership management"
+      "sev": "Separate ownership management",
+      "noOwner": "Rental management without owner"
     },
     "emptyScope": {
       "all": "No properties yet.",
       "rental": "No rental properties.",
       "hoa": "No HOA properties.",
-      "sev": "No HOA properties with SEV and tenancy contracts."
+      "sev": "No HOA properties with SEV and tenancy contracts.",
+      "noOwner": "All rental management properties have an owner."
     },
     "sevHint": "HOA properties with SEV that have at least one tenancy contract.",
     "energyCertificate": {
@@ -3280,6 +3283,35 @@
       },
       "save": "Save energy certificate",
       "saved": "Saved."
+    },
+    "noOwnerHint": "Without a property owner the assignment finds no landlord and tenancies stay open. Set the owner on the property page.",
+    "ownerColumn": "Owner",
+    "ownerMissing": "Owner missing",
+    "owner": {
+      "title": "Owner",
+      "set": "Set owner",
+      "replace": "Replace owner",
+      "perUnit": "Ownership is recorded per unit.",
+      "missing": "Owner missing",
+      "missingHint": "Without an owner tenancies are not assigned.",
+      "since": "since {date}",
+      "share": "share {share}",
+      "contact": "Contact",
+      "searchPlaceholder": "Search name, at least 2 characters",
+      "validFrom": "Owner since",
+      "validFromHelp": "Without a date the management start applies, otherwise 1 January of the current year.",
+      "validFromReplaceHelp": "The previous owner ends the day before.",
+      "sharePercent": "Share in percent (optional)",
+      "chooseContact": "Please choose a contact from the search.",
+      "shareInvalid": "Share must be above 0 and at most 100.",
+      "dateRequired": "Please enter the date to replace the owner.",
+      "confirmSet": "Set {name} as owner from {date}?",
+      "confirmReplace": "Set {name} as owner from {date} and end the previous owner the day before?",
+      "defaultStart": "management start or 1 January",
+      "next": "Next",
+      "confirm": "Confirm",
+      "back": "Back",
+      "cancel": "Cancel"
     }
   },
   "AiChat": {

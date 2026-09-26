@@ -7837,6 +7837,101 @@
         "title": "CreditorIdIn",
         "type": "object"
       },
+      "CurrentOwnerOut": {
+        "properties": {
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "party_name": {
+            "title": "Party Name",
+            "type": "string"
+          },
+          "share_percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Percent"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "id",
+          "party_id",
+          "party_name",
+          "contact_id",
+          "contact_name",
+          "share_percent",
+          "valid_from",
+          "valid_to",
+          "legal_entity_id"
+        ],
+        "title": "CurrentOwnerOut",
+        "type": "object"
+      },
       "CustomFieldIn": {
         "additionalProperties": false,
         "properties": {
@@ -20656,6 +20751,86 @@
         "title": "OwnerOut",
         "type": "object"
       },
+      "OwnerSetIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "replace": {
+            "default": false,
+            "description": "Bestehenden Eigentümer zum Vortag beenden und ersetzen",
+            "title": "Replace",
+            "type": "boolean"
+          },
+          "share_percent": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Percent"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Beginn; ohne Angabe Verwaltungsbeginn oder 1. Januar des Jahres",
+            "title": "Valid From"
+          }
+        },
+        "required": [
+          "contact_id"
+        ],
+        "title": "OwnerSetIn",
+        "type": "object"
+      },
+      "OwnerSetOut": {
+        "properties": {
+          "ended": {
+            "items": {
+              "$ref": "#/components/schemas/CurrentOwnerOut"
+            },
+            "title": "Ended",
+            "type": "array"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/CurrentOwnerOut"
+          },
+          "status": {
+            "enum": [
+              "created",
+              "unchanged",
+              "replaced"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "owner"
+        ],
+        "title": "OwnerSetOut",
+        "type": "object"
+      },
       "OwnerStatementIn": {
         "additionalProperties": false,
         "properties": {
@@ -23318,6 +23493,12 @@
           "number": {
             "title": "Number",
             "type": "string"
+          },
+          "owner_missing": {
+            "default": false,
+            "description": "Mietverwaltung ohne aktiven Objekteigentümer",
+            "title": "Owner Missing",
+            "type": "boolean"
           },
           "status": {
             "$ref": "#/components/schemas/PropertyStatus"
@@ -63628,6 +63809,18 @@
             }
           },
           {
+            "description": "Nur Mietverwaltungsobjekte ohne aktiven Objekteigentümer",
+            "in": "query",
+            "name": "without_owner",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Nur Mietverwaltungsobjekte ohne aktiven Objekteigentümer",
+              "title": "Without Owner",
+              "type": "boolean"
+            }
+          },
+          {
             "in": "query",
             "name": "page",
             "required": false,
@@ -64769,7 +64962,106 @@
         ]
       }
     },
+    "/api/v1/properties/{property_id}/owner": {
+      "post": {
+        "description": "Owner of a rental property from a contact: party (single member, role primary) and\nlegal entity rental_owner are used or created. Idempotent: the same active owner is\nreported unchanged, another active owner is never overwritten unless ``replace`` is set,\nwhich ends the previous entries the day before the new start.",
+        "operationId": "set_owner_api_v1_properties__property_id__owner_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerSetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümer festlegen (Mietverwaltung)",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/properties/{property_id}/owners": {
+      "get": {
+        "operationId": "list_owners_api_v1_properties__property_id__owners_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CurrentOwnerOut"
+                  },
+                  "title": "Response List Owners Api V1 Properties  Property Id  Owners Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Aktuelle Objekteigentümer",
+        "tags": [
+          "Objekte"
+        ]
+      },
       "post": {
         "operationId": "add_owner_api_v1_properties__property_id__owners_post",
         "parameters": [

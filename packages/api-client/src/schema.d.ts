@@ -9667,7 +9667,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/properties/{property_id}/owners": {
+    "/api/v1/properties/{property_id}/owner": {
         parameters: {
             query?: never;
             header?: never;
@@ -9675,6 +9675,30 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
+        /**
+         * Eigentümer festlegen (Mietverwaltung)
+         * @description Owner of a rental property from a contact: party (single member, role primary) and
+         *     legal entity rental_owner are used or created. Idempotent: the same active owner is
+         *     reported unchanged, another active owner is never overwritten unless ``replace`` is set,
+         *     which ends the previous entries the day before the new start.
+         */
+        post: operations["set_owner_api_v1_properties__property_id__owner_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/owners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Aktuelle Objekteigentümer */
+        get: operations["list_owners_api_v1_properties__property_id__owners_get"];
         put?: never;
         /** Objekteigentümer (Mietverwaltung) */
         post: operations["add_owner_api_v1_properties__property_id__owners_post"];
@@ -14606,6 +14630,36 @@ export interface components {
             /** Sepa Creditor Id */
             sepa_creditor_id?: string | null;
         };
+        /** CurrentOwnerOut */
+        CurrentOwnerOut: {
+            /** Contact Id */
+            contact_id: string | null;
+            /** Contact Name */
+            contact_name: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Legal Entity Id */
+            legal_entity_id: string | null;
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Party Name */
+            party_name: string;
+            /** Share Percent */
+            share_percent: string | null;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
+        };
         /** CustomFieldIn */
         CustomFieldIn: {
             /** Entity Type */
@@ -18699,6 +18753,38 @@ export interface components {
             /** Valid To */
             valid_to: string | null;
         };
+        /** OwnerSetIn */
+        OwnerSetIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Replace
+             * @description Bestehenden Eigentümer zum Vortag beenden und ersetzen
+             * @default false
+             */
+            replace: boolean;
+            /** Share Percent */
+            share_percent?: number | string | null;
+            /**
+             * Valid From
+             * @description Beginn; ohne Angabe Verwaltungsbeginn oder 1. Januar des Jahres
+             */
+            valid_from?: string | null;
+        };
+        /** OwnerSetOut */
+        OwnerSetOut: {
+            /** Ended */
+            ended?: components["schemas"]["CurrentOwnerOut"][];
+            owner: components["schemas"]["CurrentOwnerOut"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "created" | "unchanged" | "replaced";
+        };
         /** OwnerStatementIn */
         OwnerStatementIn: {
             /**
@@ -19578,6 +19664,12 @@ export interface components {
             name: string;
             /** Number */
             number: string;
+            /**
+             * Owner Missing
+             * @description Mietverwaltung ohne aktiven Objekteigentümer
+             * @default false
+             */
+            owner_missing: boolean;
             status: components["schemas"]["PropertyStatus"];
             /** Street */
             street: string | null;
@@ -43042,6 +43134,8 @@ export interface operations {
                 management_type?: components["schemas"]["ManagementType"] | null;
                 /** @description Nur WEG-Objekte mit SEV, für die Mietverträge hinterlegt sind */
                 sev_only?: boolean;
+                /** @description Nur Mietverwaltungsobjekte ohne aktiven Objekteigentümer */
+                without_owner?: boolean;
                 page?: number;
                 page_size?: number;
             };
@@ -43757,6 +43851,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OccupancyRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_owner_api_v1_properties__property_id__owner_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OwnerSetIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnerSetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_owners_api_v1_properties__property_id__owners_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentOwnerOut"][];
                 };
             };
             /** @description Validation Error */

@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Sequence
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated, Any
 from zoneinfo import ZoneInfo
@@ -97,14 +97,24 @@ async def list_properties(
         default=False,
         description="Nur WEG-Objekte mit SEV, für die Mietverträge hinterlegt sind",
     ),
+    without_owner: bool = Query(
+        default=False,
+        description="Nur Mietverwaltungsobjekte ohne aktiven Objekteigentümer",
+    ),
     page: Page = 1,
     page_size: PageSize = 50,
     principal: TenantPrincipal = Depends(READ),
 ) -> s.PropertyPage:
     from mhvp.contracts.models import Contract
 
+    today = datetime.now(ZoneInfo("Europe/Berlin")).date()
+    owned = select(PropertyOwner.property_id).where(svc.active_owner_filter(today))
     async with tenant_tx(request, principal) as session:
         query = select(Property)
+        if without_owner:
+            query = query.where(
+                Property.management_type == ManagementType.RENTAL, Property.id.not_in(owned)
+            )
         if status:
             query = query.where(Property.status == status)
         if management_type:
@@ -135,8 +145,27 @@ async def list_properties(
                 query.order_by(Property.number).offset((page - 1) * page_size).limit(page_size)
             )
         ).all()
+        rental = [r.id for r in rows if r.management_type is ManagementType.RENTAL]
+        with_owner = (
+            set(
+                (
+                    await session.scalars(
+                        owned.where(PropertyOwner.property_id.in_(rental)).distinct()
+                    )
+                ).all()
+            )
+            if rental
+            else set()
+        )
+        items = []
+        for r in rows:
+            item = s.PropertySummary.model_validate(r)
+            item.owner_missing = r.management_type is ManagementType.RENTAL and (
+                r.id not in with_owner
+            )
+            items.append(item)
         return s.PropertyPage(
-            items=[s.PropertySummary.model_validate(r) for r in rows],
+            items=items,
             total=total,
             page=page,
             page_size=page_size,
@@ -735,6 +764,112 @@ async def add_owner(
             payload={"party_id": str(body.party_id), "legal_entity_id": str(entity_id)},
         )
         return s.OwnerOut(id=owner.id, legal_entity_id=entity_id, **body.model_dump())
+
+
+def _berlin_today() -> date:
+    return datetime.now(ZoneInfo("Europe/Berlin")).date()
+
+
+@router.get("/properties/{property_id}/owners", summary="Aktuelle Objekteigentümer")
+async def list_owners(
+    property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[s.CurrentOwnerOut]:
+    async with tenant_tx(request, principal) as session:
+        await _get(session, Property, property_id)
+        rows = await svc.owner_rows(session, property_id, _berlin_today())
+        return [s.CurrentOwnerOut(**r) for r in rows]
+
+
+@router.post("/properties/{property_id}/owner", summary="Eigentümer festlegen (Mietverwaltung)")
+async def set_owner(
+    property_id: uuid.UUID,
+    body: s.OwnerSetIn,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.OwnerSetOut:
+    """Owner of a rental property from a contact: party (single member, role primary) and
+    legal entity rental_owner are used or created. Idempotent: the same active owner is
+    reported unchanged, another active owner is never overwritten unless ``replace`` is set,
+    which ends the previous entries the day before the new start."""
+    from mhvp.imports.zuordnung import party_for
+
+    async with tenant_tx(request, principal) as session:
+        prop = await _get(session, Property, property_id)
+        if prop.management_type is not ManagementType.RENTAL:
+            raise svc.invalid(
+                "Eigentümer werden nur bei Mietverwaltung je Objekt geführt; "
+                "bei WEG-Objekten wird das Eigentum je Einheit geführt."
+            )
+        await _get(session, Contact, body.contact_id)
+        today = _berlin_today()
+        start = body.valid_from or svc.default_owner_start(prop, today)
+        party, _ = await party_for(session, principal.tenant_id, principal.user_id, body.contact_id)
+        current = (
+            await session.scalars(
+                select(PropertyOwner)
+                .where(PropertyOwner.property_id == property_id, svc.owner_open_filter(today))
+                .order_by(PropertyOwner.valid_from)
+            )
+        ).all()
+        same = next((o for o in current if o.party_id == party.id), None)
+        if same is not None:
+            view = await svc.owner_view(session, same, party.name)
+            return s.OwnerSetOut(status="unchanged", owner=s.CurrentOwnerOut(**view))
+        others = [o for o in current if o.party_id != party.id]
+        if others and not body.replace:
+            names = ", ".join(
+                [(await svc.owner_view(session, o, ""))["contact_name"] or "" for o in others]
+            )
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=(
+                    f"Das Objekt hat bereits einen aktiven Eigentümer ({names}). "
+                    "Zum Ersetzen replace setzen."
+                ),
+            )
+        ended: list[s.CurrentOwnerOut] = []
+        end = start - timedelta(days=1)
+        for old in current:
+            if old.valid_from > end:
+                raise svc.invalid(
+                    "Der neue Eigentümer muss nach dem Beginn des bisherigen Eigentümers beginnen."
+                )
+            old.valid_to = end
+            old_name = await session.scalar(select(Party.name).where(Party.id == old.party_id))
+            ended.append(s.CurrentOwnerOut(**await svc.owner_view(session, old, old_name or "")))
+        owner = PropertyOwner(
+            tenant_id=principal.tenant_id,
+            property_id=property_id,
+            party_id=party.id,
+            share_percent=body.share_percent,
+            valid_from=start,
+        )
+        session.add(owner)
+        entity_id = await svc.owner_entity(session, prop, party.id)
+        await session.flush()
+        for party_id in {party.id, *(o.party_id for o in current)}:
+            await recompute_for_party(session, party_id)
+        status = "replaced" if current else "created"
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="property.owner_set",
+            entity_type="property",
+            entity_id=property_id,
+            actor_user_id=principal.user_id,
+            payload={
+                "party_id": str(party.id),
+                "contact_id": str(body.contact_id),
+                "legal_entity_id": str(entity_id),
+                "valid_from": start.isoformat(),
+                "status": status,
+                "ended": [str(o.id) for o in current],
+            },
+        )
+        response.status_code = 200 if current else 201
+        view = await svc.owner_view(session, owner, party.name)
+        return s.OwnerSetOut(status=status, owner=s.CurrentOwnerOut(**view), ended=ended)
 
 
 @router.get("/properties/{property_id}/legal-entities", summary="Rechtsträger des Objekts")

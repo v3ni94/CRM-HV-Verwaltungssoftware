@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.contacts.models import Party
+from mhvp.contacts.models import Contact, Party, PartyMember, PartyRole
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties.models import (
     AllocationKey,
@@ -22,6 +22,7 @@ from mhvp.properties.models import (
     ManagementType,
     MeterReading,
     Property,
+    PropertyOwner,
     PropertyStatus,
     UnitAllocationValue,
 )
@@ -238,3 +239,69 @@ async def reading_is_implausible(
         .limit(1)
     )
     return earlier is not None and value < earlier
+
+
+def active_owner_filter(as_of: date) -> Any:
+    """Property owner rows active on ``as_of`` (open ended or ending on or after the day)."""
+    return and_(
+        PropertyOwner.valid_from <= as_of,
+        or_(PropertyOwner.valid_to.is_(None), PropertyOwner.valid_to >= as_of),
+    )
+
+
+def owner_open_filter(as_of: date) -> Any:
+    """Property owner rows not yet ended on ``as_of`` (includes a start in the future)."""
+    return or_(PropertyOwner.valid_to.is_(None), PropertyOwner.valid_to >= as_of)
+
+
+def default_owner_start(prop: Property, today: date) -> date:
+    """Start of an owner entry without date: management start, else 1 January of the year
+    (the default start of the import assignment, so that tenancies find their landlord)."""
+    return prop.managed_from or date(today.year, 1, 1)
+
+
+async def owner_rows(
+    session: AsyncSession, property_id: uuid.UUID, as_of: date
+) -> list[dict[str, Any]]:
+    """Owners of a rental property not ended on ``as_of`` with party, contact and entity."""
+    rows = (
+        await session.execute(
+            select(PropertyOwner, Party.name)
+            .join(Party, Party.id == PropertyOwner.party_id)
+            .where(PropertyOwner.property_id == property_id, owner_open_filter(as_of))
+            .order_by(PropertyOwner.valid_from, PropertyOwner.id)
+        )
+    ).all()
+    return [await owner_view(session, o, name) for o, name in rows]
+
+
+async def owner_view(
+    session: AsyncSession, owner: PropertyOwner, party_name: str
+) -> dict[str, Any]:
+    contact = (
+        await session.execute(
+            select(Contact.id, Contact.display_name)
+            .join(PartyMember, PartyMember.contact_id == Contact.id)
+            .where(PartyMember.party_id == owner.party_id)
+            .order_by(PartyMember.role != PartyRole.PRIMARY, PartyMember.created_at)
+            .limit(1)
+        )
+    ).first()
+    entity = await session.scalar(
+        select(LegalEntity.id).where(
+            LegalEntity.property_id == owner.property_id,
+            LegalEntity.party_id == owner.party_id,
+            LegalEntity.kind == LegalEntityKind.RENTAL_OWNER,
+        )
+    )
+    return {
+        "id": owner.id,
+        "party_id": owner.party_id,
+        "party_name": party_name,
+        "contact_id": contact[0] if contact else None,
+        "contact_name": contact[1] if contact else None,
+        "share_percent": owner.share_percent,
+        "valid_from": owner.valid_from,
+        "valid_to": owner.valid_to,
+        "legal_entity_id": entity,
+    }
