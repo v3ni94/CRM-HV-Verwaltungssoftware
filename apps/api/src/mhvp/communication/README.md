@@ -130,11 +130,48 @@ started by `/mail/ingest`, `/mail/mailboxes/{id}/sync` and the sync job (Celery 
 `gmail_message_id` and `gmail_thread_id` (M15, M7); threading uses `In-Reply-To`, then
 `References`, then the Gmail thread id (`services.find_parent`).
 
+## Gmail push, watch renewal, inbox backfill, done per mail (operator 26.09.2026)
+
+`gmail_push.py` serves `POST /integrations/gmail/push` (Pub/Sub push subscription, no tenant
+login): size limit, shared secret `MHVP_GMAIL_PUSH_TOKEN` (query `token` or header
+`X-MHVP-Push-Token`), optional OIDC check against `MHVP_GMAIL_PUSH_AUDIENCE`, envelope parsing
+(`emailAddress`, `historyId`), a "sync requested" flag per address in Redis and the task
+`mhvp.communication.gmail_push_sync` on the `mail` queue; never inline processing. The task
+maps the address to mailboxes across active tenants (platform listing, then per tenant under
+RLS, `mailboxes_for_address`) and runs `tasks.sync_mailbox_run`, the same per mailbox run as
+the beat job (sync, invoice intake, forwarding). `gmail.ensure_watch` registers or renews the
+`users.watch` on INBOX with `MHVP_GMAIL_PUBSUB_TOPIC` when the watch is missing or expires
+within `WATCH_RENEW_MARGIN` (one day): on connect (`routers._after_connect`), in the beat sync
+and daily in `gmail_watch_renew_all` (04:10). Beat `communication-gmail-sync` runs every 300 s
+as the safety net. Mailbox columns: `gmail_watch_expiration`, `gmail_watch_history_id`,
+`gmail_last_push_at` (migration 0144), shown read only in the CRM settings.
+
+`backfill.py` fetches every message under INBOX page by page (`GmailClient.list_inbox_page`,
+`label_total` for the progress total), history independent, Message-ID dedup through
+`_ingest_one`, one transaction per page, resumable via `backfill_page_token`; progress in
+`backfill_status`, `backfill_total`, `backfill_done`, `backfill_started_at`,
+`backfill_finished_at`. Started on connect, by `POST /mail/mailboxes/{id}/backfill`
+(`tenant_settings:update`, 409 while active) and by the CLI
+`python -m mhvp.communication.backfill --tenant <slug> --all | --mailbox <address|id>
+[--inline]`; task `mhvp.communication.gmail_backfill` (queue `mail`). No AI intake, no
+forwarding, no archiving for backfilled mail.
+
+`services.complete_message` runs when `PATCH /mail/messages/{id}` sets `status=done`: archives
+the mail after the commit (task `mhvp.communication.archive_message`, mailbox switch
+`archive_on_ticket_done`, "Erledigt archiviert") and closes the ticket via
+`tickets.status.transition_status` (resolution `auskunft_erteilt`, note "Per E-Mail erledigt",
+event `data.auto_close`) when no inbound mail and no work order of the ticket is open; a
+disabled resolution kind or a failed completion check leaves the ticket open with an
+`auto_close_skipped` event. Rule `docs/rules/M20-07`, operator docs `docs/integrations/gmail.md`.
+Tests: `tests/unit/test_gmail_push.py`, `tests/integration/test_m20_gmail_push.py`.
+
 ## Further files (addendum 26.09.2026)
 
 Checked against the folder contents on 26.09.2026, the following files were not listed above:
 
 * `assignment.py`: automatic ticket assignment from inbound mails (operator 25.09.2026)
+* `backfill.py`: full inbox backfill of a Gmail mailbox with CLI (operator 26.09.2026)
+* `gmail_push.py`: Pub/Sub push endpoint and address mapping (operator 26.09.2026)
 * `gcal.py`: Google Calendar API client with refresh token (M23-02)
 * `html.py`: sanitised HTML for mail display in the ticket mail thread (M20, M19-06)
 * `invoice_intake.py`: automatic invoice intake from mail attachments behind the tenant switch `invoice_intake_auto` (M14-05, default off)

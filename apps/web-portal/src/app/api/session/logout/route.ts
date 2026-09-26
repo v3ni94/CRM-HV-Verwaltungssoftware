@@ -17,6 +17,6 @@ export async function POST(request: Request): Promise<Response> {
       .catch(() => undefined);
   }
   const result = new NextResponse(null, { status: 204 });
-  clearSession(result.cookies, secureOf(request));
+  clearSession(result.cookies, secureOf(request), { clearDevice: true });
   return result;
 }

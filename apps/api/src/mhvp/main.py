@@ -28,9 +28,11 @@ from mhvp.billing.letter_routers import router as statement_letters_router
 from mhvp.billing.owner_statement_routers import router as owner_statement_router
 from mhvp.billing.routers import router as billing_router
 from mhvp.communication.dispatch import router as dispatch_router
+from mhvp.communication.gmail_push import router as gmail_push_router
 from mhvp.communication.routers import router as mail_router
 from mhvp.communication.telephony import router as telephony_router
 from mhvp.contacts.routers import router as contacts_router
+from mhvp.contracts.deposit_settlement_routers import router as deposit_settlements_router
 from mhvp.contracts.routers import router as contracts_router
 from mhvp.contracts.service_contract_routers import router as service_contracts_router
 from mhvp.core import crypto, health
@@ -69,6 +71,7 @@ from mhvp.imports.routers import router as imports_router
 from mhvp.letting.rentlaw import platform_router as rentlaw_platform_router
 from mhvp.letting.rentlaw import tenant_router as rentlaw_router
 from mhvp.letting.routers import router as letting_router
+from mhvp.metering.routers import router as metering_router
 from mhvp.objektakte.ai_call_routers import router as objektakte_ai_call_router
 from mhvp.objektakte.completeness_routers import router as objektakte_completeness_router
 from mhvp.objektakte.lists_routers import router as objektakte_lists_router
@@ -188,6 +191,7 @@ def create_app(
     app.include_router(notice_portal_router, prefix=API_PREFIX)
     app.include_router(contracts_router, prefix=API_PREFIX)
     app.include_router(service_contracts_router, prefix=API_PREFIX)
+    app.include_router(deposit_settlements_router, prefix=API_PREFIX)
     # Static intake paths must be registered before /documents/{document_id} (A42).
     app.include_router(documents_intake_router, prefix=API_PREFIX)
     app.include_router(documents_router, prefix=API_PREFIX)
@@ -229,8 +233,10 @@ def create_app(
     app.include_router(tickets_router, prefix=API_PREFIX)
     app.include_router(work_order_proposal_router, prefix=API_PREFIX)
     app.include_router(sla_router, prefix=API_PREFIX)
+    app.include_router(metering_router, prefix=API_PREFIX)
     app.include_router(automation_router, prefix=API_PREFIX)
     app.include_router(whatsapp_webhook_router, prefix=API_PREFIX)
+    app.include_router(gmail_push_router, prefix=API_PREFIX)
     app.include_router(immoware_router, prefix=API_PREFIX)
     app.include_router(objektakte_router, prefix=API_PREFIX)
     app.include_router(objektakte_sync_router, prefix=API_PREFIX)

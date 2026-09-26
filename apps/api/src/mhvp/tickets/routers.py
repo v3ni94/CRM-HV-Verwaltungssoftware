@@ -35,6 +35,7 @@ from mhvp.tickets.models import (
     WorkOrder,
     WorkOrderEvent,
 )
+from mhvp.tickets.resolution_kinds import assert_resolution_kind_allowed, load_resolution_kinds
 from mhvp.tickets.status import (
     CLOSING_STATUSES,
     ResolutionIn,
@@ -435,6 +436,17 @@ async def create_template(
         session.add(tpl)
         await session.flush()
         return {"id": tpl.id, "category": tpl.category}
+
+
+@router.get("/tickets/resolution-kinds", summary="Erledigungsarten des Mandanten")
+async def list_resolution_kinds(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """Regel M19-07, M19-04: eingebaute Arten (mit ``active`` nach der Mandantenkonfiguration)
+    und eigene Arten des Mandanten; der Abschlussdialog zeigt die aktiven."""
+    async with tenant_tx(request, principal) as session:
+        kinds = await load_resolution_kinds(session, principal.tenant_id)
+    return {"kinds": [dict(k) for k in kinds]}
 
 
 @router.get("/tickets/templates", summary="Ticketvorlagen")
@@ -1436,6 +1448,8 @@ async def merge_tickets(
         sources = [by_id[i] for i in ids]
         target = by_id[body.target_ticket_id] if body.target_ticket_id else None
         assert_mergeable(sources, target)
+        if body.resolution is not None:
+            await assert_resolution_kind_allowed(session, principal.tenant_id, body.resolution.kind)
 
         if target is None:
             everything = sources
@@ -1548,9 +1562,7 @@ async def merge_tickets(
             # the audit trail of a merged source reads like any other closed ticket.
             previous_status = t.status
             resolution_kind = (
-                body.resolution.kind.value
-                if body.resolution
-                else ResolutionKind.ZUSAMMENGEFUEHRT.value
+                body.resolution.kind if body.resolution else ResolutionKind.ZUSAMMENGEFUEHRT.value
             )
             resolution_note = (
                 body.resolution.note
@@ -1665,6 +1677,14 @@ async def list_tickets(
         ),
     ),
     merged_into: uuid.UUID | None = Query(default=None, description="Quelltickets eines Ziels"),
+    sort: str = Query(
+        default="urgency",
+        pattern="^(urgency|created_desc)$",
+        description=(
+            "urgency (Standard): erledigte zuletzt, davor am längsten ohne Reaktion"
+            " unsererseits zuerst (rot, orange, gelb); created_desc: neuestes Ticket zuerst"
+        ),
+    ),
     limit: int = Query(default=100, ge=1, le=500),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
@@ -1677,19 +1697,36 @@ async def list_tickets(
 ) -> list[dict[str, Any]]:
     """Liste der Tickets, neueste Nummer zuerst. Paginierung (review 26.09.2026, H7): die
     Antwort bleibt eine Liste (bestehende Aufrufer); Gesamtzahl und Seite stehen in den
-    Kopfzeilen ``X-Total-Count``, ``X-Page`` und ``X-Page-Size``."""
+    Kopfzeilen ``X-Total-Count``, ``X-Page`` und ``X-Page-Size``.
+
+    Jede Zeile trägt ``last_staff_activity_at`` (letzte Handlung unsererseits: Statuswechsel,
+    Zuweisung, Kommentar eines Mitarbeiters, ausgehende Mail, Auftrag), ``last_inbound_at``
+    (letzte Nachricht des Kunden), ``last_activity_at`` (Bezugszeit der Ampel, sonst
+    ``created_at``) und ``attention`` (none, new, stale_24h, stale_96h, closed), berechnet in
+    derselben Abfrage (M19-09, kein N+1)."""
     from mhvp.communication.models import Message
     from mhvp.contacts.models import Contact, ContactEmail, PartyMember
     from mhvp.contracts.models import Contract, ContractKind
     from mhvp.properties.models import Property, PropertyOwner, Unit
+    from mhvp.tickets.activity import (
+        activity_out,
+        last_inbound_expression,
+        last_staff_activity_expression,
+        urgency_order,
+    )
 
     async with tenant_tx(request, principal) as session:
-        query = select(Ticket).order_by(Ticket.number.desc())
+        query = select(Ticket, last_staff_activity_expression(), last_inbound_expression())
+        if sort == "created_desc":
+            query = query.order_by(Ticket.created_at.desc(), Ticket.number.desc())
+        else:
+            query = query.order_by(*urgency_order())
         term = (q or "").strip().lstrip("#")
         if term:
             escaped = f"%{_escape_like(term)}%"
             title_match = Ticket.title.ilike(escaped, escape="\\")
             description_match = Ticket.public_description.ilike(escaped, escape="\\")
+            internal_match = Ticket.internal_description.ilike(escaped, escape="\\")
             contact_name_match = Ticket.contact_id.in_(
                 select(Contact.id).where(Contact.display_name.ilike(escaped, escape="\\"))
             )
@@ -1706,7 +1743,8 @@ async def list_tickets(
                 select(Message.ticket_id).where(
                     Message.ticket_id.is_not(None),
                     (Message.subject.ilike(escaped, escape="\\"))
-                    | (Message.from_address.ilike(escaped, escape="\\")),
+                    | (Message.from_address.ilike(escaped, escape="\\"))
+                    | (Message.body.ilike(escaped, escape="\\")),
                 )
             )
             contact_email_match = Ticket.contact_id.in_(
@@ -1717,6 +1755,7 @@ async def list_tickets(
             text_match = (
                 title_match
                 | description_match
+                | internal_match
                 | contact_name_match
                 | contact_email_match
                 | property_match
@@ -1840,11 +1879,15 @@ async def list_tickets(
             await session.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
             or 0
         )
-        rows = (await session.scalars(query.offset((page - 1) * size).limit(size))).all()
+        rows = (await session.execute(query.offset((page - 1) * size).limit(size))).all()
         response.headers["X-Total-Count"] = str(total)
         response.headers["X-Page"] = str(page)
         response.headers["X-Page-Size"] = str(size)
-        return [_ticket_out(t) for t in rows]
+        now = datetime.now(UTC)
+        return [
+            _ticket_out(ticket) | activity_out(ticket, staff_at, inbound_at, now)
+            for ticket, staff_at, inbound_at in rows
+        ]
 
 
 @router.get("/tickets/{ticket_id}/assignees", summary="Zuweiser eines Tickets mit Grund")

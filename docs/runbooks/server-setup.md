@@ -1,8 +1,9 @@
 # Runbook: first setup on the own server
 
 Scope: single own server of the operator (decided 24.09.2026, OPEN_QUESTIONS M27-02; 32 cores,
-2 TB). Replaces the IONOS assumption of `deploy.md` where the server has no Traefik and no
-registry. All secrets live in files under `/opt/mhvp` with mode 600, never in git.
+2 TB). Replaces the IONOS assumption of `deploy.md` where the server has no Traefik. Images come
+from the GitHub Container Registry (M1-03, decided 26.09.2026); building on the server remains
+the fallback. All secrets live in files under `/opt/mhvp` with mode 600, never in git.
 
 ## 1. Server preparation (once)
 
@@ -25,7 +26,11 @@ Certificates come from Let's Encrypt via HTTP challenge; port 80 must be reachab
     cp infra/env.prod.example .env.prod && chmod 600 .env.prod
     cp infra/env.backup.example .env.backup && chmod 600 .env.backup
 
-Fill every `change-me`. `MHVP_FORWARDED_ALLOW_IPS` is the subnet of the `mhvp-edge` network.
+Fill every `change-me` and both placeholders in `[...]`. Object storage: IONOS S3 Object
+Storage (ADR 0005, 26.09.2026); bucket, key pair, endpoint and region come from the IONOS
+console, procedure in `objektspeicher-ionos-s3.md`. Before the first deployment run
+`make check-s3 ENV_FILE=.env.prod` (connectivity, bucket, put/get/delete).
+`MHVP_FORWARDED_ALLOW_IPS` is the subnet of the `mhvp-edge` network.
 `MHVP_OBJEKTAKTE_DUMP_DIR` (default `/data/objektakte-export`) is the directory on the worker
 that holds the objektakte exports for the daily differential import; a tenant's dump path is
 only accepted inside it, so mount that directory read only into the worker container and put
@@ -38,15 +43,37 @@ Backup key pair (on a separate machine, not on the server):
     age-keygen -o mhvp-restore-key.txt     # private key: safe or password manager
     age-keygen -y mhvp-restore-key.txt     # public key -> BACKUP_AGE_RECIPIENT
 
-## 4. First deployment
+## 4. Registry login and first deployment
+
+Images are built by `.github/workflows/images.yml` on every push to `main` and on every version
+tag `v<x.y.z>` and pushed to the private packages `ghcr.io/v3ni94/mhvp-api`,
+`ghcr.io/v3ni94/mhvp-web-crm` and `ghcr.io/v3ni94/mhvp-web-portal`. Tags: the content of the
+`VERSION` file (release tag), `sha-<commit>` (exact commit) and `latest` (main only). The
+version tag must equal `v` plus `VERSION`, otherwise the workflow stops before pushing.
+Deploy only images whose commit has a green CI run.
+
+Login on the server once (fine grained personal access token of the operator account with the
+repository permission "Packages: read" only, expiry at most one year, stored in the password
+manager, never in git):
+
+    read -rs GHCR_TOKEN && echo "$GHCR_TOKEN" | docker login ghcr.io -u <GitHub-Benutzer> --password-stdin
+    unset GHCR_TOKEN
+
+Docker keeps the credential in `/root/.docker/config.json` (mode 600). Renew before the token
+expires; a failed `docker compose pull` with `unauthorized` means the token is expired.
 
 From the workstation (SSH access to the server):
 
-    ENV=prod DEPLOY_BUILD=1 DEPLOY_HOST=<user@server> DEPLOY_PATH=/opt/mhvp \
-      MHVP_IMAGE_TAG=<git tag> DEPLOY_CONFIRM=<git tag> make deploy
+    ENV=prod DEPLOY_HOST=<user@server> DEPLOY_PATH=/opt/mhvp \
+      MHVP_IMAGE_TAG=<VERSION, e.g. 1.26.0> DEPLOY_CONFIRM=<VERSION> make deploy
 
-`DEPLOY_BUILD=1` builds the images on the server from the tag; no registry is needed. The first
-production run also takes a backup (empty database) before the migration.
+`make deploy` runs `docker compose pull` on the server, backs up before the migration (empty
+database on the first run), migrates and restarts the stack.
+
+Fallback without registry (GitHub unreachable, token expired, emergency): `DEPLOY_BUILD=1`
+builds the three images on the server from the checked out tag under
+`MHVP_IMAGE_REGISTRY=local`; set `MHVP_IMAGE_REGISTRY=local` in `.env.prod` for that case and
+back to `ghcr.io/v3ni94` afterwards. The manual block in section 7 shows both paths.
 
 Then on the server, once: tenants and first administrator (TOTP setup at first login):
 
@@ -63,16 +90,22 @@ Check `https://<api host>/api/v1/health/ready`. Release gates G1 to G5 stay clos
     systemctl enable --now mhvp-backup.timer mhvp-health.timer mhvp-backup-verify.timer
     systemctl start mhvp-backup.service && journalctl -u mhvp-backup -n 20
 
-* Daily 02:15: database dump and document store archive, both age encrypted with checksum,
-  30 days local retention, copy to `BACKUP_REMOTE` if set (off-site, M9-02).
+* Daily 02:15: database dump, age encrypted with checksum, 30 days local retention, then the
+  off-site copy by `scripts/backup-offsite.sh` into the operator's Hetzner Object Storage
+  (dump, WAL segments, documents encrypted per object; M9-02, `backup.md`), when
+  `BACKUP_S3_BUCKET` is set. `BACKUP_REMOTE` (rsync) is optional in addition.
 * Monthly: restore test into `mhvp_restore_check`. It needs the private key on the server
   (`BACKUP_AGE_IDENTITY`, mode 600, root only). If the private key must stay off the server,
   disable `mhvp-backup-verify.timer` and run `scripts/backup-verify.sh` on the backup target
   instead. Record each result (M9 acceptance: restore tested).
-* Every 5 minutes: readiness and backup age; alarm to `ALERT_WEBHOOK_URL` (M9-04).
+* Every 5 minutes: readiness and backup age; alarm to `ALERT_WEBHOOK_URL` (M9-04). Backup
+  failures post to the same target. Monitoring with Uptime Kuma (service `uptime-kuma` of the
+  stack, host `MHVP_HOST_MONITORING`) and the e-mail alerting: `monitoring.md`.
 
-Restoring the document store: stop the stack, decrypt `mhvp-objects-*.tar.age`, extract into
-the `objectstore-data` volume, start the stack. After any real restore, re-apply deletion
+Restoring the document store (IONOS S3 since 26.09.2026, ADR 0005): copy the objects back from
+`mhvp-backup` into the primary bucket, see `objektspeicher-ionos-s3.md` section 7. Only a local
+SeaweedFS container is restored from `mhvp-objects-*.tar.age` into the `objectstore-data`
+volume. After any real restore, re-apply deletion
 records before users get access (M9-03).
 
 ## 6. Updates and rollback
@@ -98,11 +131,16 @@ Staging und Produktion, jeweils mit dem passenden `.env.<env>`:
     chmod -R u=rwX,go=rX apps packages infra scripts
 
     TAG=$(cat VERSION)
-    docker build --build-arg MHVP_APP_VERSION=$TAG -t local/mhvp-api:$TAG apps/api
-    docker build --build-arg MHVP_APP_VERSION=$TAG -f apps/web-crm/Dockerfile -t local/mhvp-web-crm:$TAG .
-    docker build --build-arg MHVP_APP_VERSION=$TAG -f apps/web-portal/Dockerfile -t local/mhvp-web-portal:$TAG .
     sed -i "s/^MHVP_IMAGE_TAG=.*/MHVP_IMAGE_TAG=$TAG/; s/^MHVP_APP_VERSION=.*/MHVP_APP_VERSION=$TAG/" .env.prod
     grep -q '^MHVP_APP_VERSION=' .env.prod || echo "MHVP_APP_VERSION=$TAG" >> .env.prod
+
+    # Regelweg: fertige Images aus der Registry (MHVP_IMAGE_REGISTRY=ghcr.io/v3ni94 in .env.prod)
+    ./mhvp.sh pull api web-crm web-portal
+
+    # Ausweichweg ohne Registry (MHVP_IMAGE_REGISTRY=local in .env.prod):
+    # docker build --build-arg MHVP_APP_VERSION=$TAG -t local/mhvp-api:$TAG apps/api
+    # docker build --build-arg MHVP_APP_VERSION=$TAG -f apps/web-crm/Dockerfile -t local/mhvp-web-crm:$TAG .
+    # docker build --build-arg MHVP_APP_VERSION=$TAG -f apps/web-portal/Dockerfile -t local/mhvp-web-portal:$TAG .
 
     ./mhvp.sh run --rm migrate
     ./mhvp.sh up -d --remove-orphans
@@ -116,8 +154,11 @@ sondern verweist auf fertige Images `${MHVP_IMAGE_REGISTRY}/mhvp-*:${MHVP_IMAGE_
 `./mhvp.sh build` meldet deshalb "No services to build" und ändert nichts; die laufenden
 Container behalten die alte Version, obwohl `VERSION` im Arbeitsverzeichnis bereits neu ist.
 Die drei Images (`api`, `web-crm`, `web-portal`; `worker` und `beat` teilen sich das
-`api`-Image) werden daher mit `docker build` unter dem Tag aus `VERSION` gebaut, der Tag in
-`.env.prod` gesetzt und die Container mit `up -d` neu erstellt. Vor der Migration sichert
+`api`-Image) werden daher unter dem Tag aus `VERSION` aus `ghcr.io/v3ni94` gezogen (Regelweg
+seit 26.09.2026, M1-03; Anmeldung nach Abschnitt 4) oder im Ausweichweg mit `docker build`
+gebaut, der Tag in `.env.prod` gesetzt und die Container mit `up -d` neu erstellt. Das Image
+in der Registry existiert erst, wenn der Workflow `Images` für den Commit durchgelaufen ist
+(GitHub, Reiter Actions). Vor der Migration sichert
 `make deploy` automatisch; beim manuellen Block ist vorher gezielt
 `systemctl start mhvp-backup.service` auszuführen, wenn seit dem letzten planmäßigen
 Lauf produktive Daten hinzugekommen sind. Prüfung: `health/ready` zeigt `"version"` gleich

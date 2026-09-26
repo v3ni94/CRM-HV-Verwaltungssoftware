@@ -198,7 +198,9 @@ async def deletion_blocker(session: AsyncSession, document: Document, today: dat
         return "Kein Aufbewahrungsprofil zugeordnet (Aufbewahrungsmatrix V17 offen)."
     profile = await session.get(RetentionProfile, document.retention_profile_id)
     if profile is None or profile.released_at is None:
-        return "Das Aufbewahrungsprofil ist nicht freigegeben."
+        return "Das Aufbewahrungsprofil ist nicht freigegeben (Entwurf, M6-04)."
+    if profile.permanent:
+        return "Dauerhaft aufzubewahren (WEG-Dauerunterlage, S05)."
     if document.retention_until is None or document.retention_until >= today:
         return "Die Aufbewahrungsfrist ist nicht abgelaufen."
     return None
@@ -270,6 +272,14 @@ async def recipient(
         "ort": address.city,
     }
     return contact, lines, data
+
+
+async def recipient_name(session: AsyncSession, contact_id: uuid.UUID) -> str:
+    """Display name of a represented contact for the address block of a representative."""
+    contact = await session.get(Contact, contact_id)
+    if contact is None or contact.deleted_at is not None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Empfänger nicht gefunden.")
+    return str(contact.display_name)
 
 
 async def entity_context(

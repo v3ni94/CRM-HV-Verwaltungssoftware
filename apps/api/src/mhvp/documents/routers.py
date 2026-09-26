@@ -28,9 +28,11 @@ from mhvp.documents.models import (
     DocumentCategory,
     DocumentLink,
     DocumentMirror,
+    DocumentMirrorDeletion,
     DocumentSource,
     DocumentTemplate,
     LinkRole,
+    MirrorDeletionStatus,
     MirrorStatus,
     RetentionProfile,
     StorageKind,
@@ -259,6 +261,83 @@ async def list_documents(
         return s.DocumentPage(items=items, total=total, page=page, page_size=page_size)
 
 
+def _deletions(rows: list[DocumentMirrorDeletion]) -> list[s.DocumentDeletionOut]:
+    by_document: dict[uuid.UUID, list[DocumentMirrorDeletion]] = {}
+    for row in rows:
+        by_document.setdefault(row.document_id, []).append(row)
+    out: list[s.DocumentDeletionOut] = []
+    for document_id, steps in by_document.items():
+        open_steps = [x for x in steps if x.status is MirrorDeletionStatus.OPEN]
+        out.append(
+            s.DocumentDeletionOut(
+                document_id=document_id,
+                status=MirrorDeletionStatus.OPEN if open_steps else MirrorDeletionStatus.DONE,
+                requested_at=min(x.requested_at for x in steps),
+                requested_by=steps[0].requested_by,
+                steps=[s.MirrorDeletionStepOut.model_validate(x) for x in steps],
+            )
+        )
+    return out
+
+
+@router.get("/documents/deletions", summary="Löschungen mit Spiegelschritten")
+async def list_deletions(
+    request: Request,
+    status: MirrorDeletionStatus | None = Query(default=None),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[s.DocumentDeletionOut]:
+    """Platform deletions with their mirror steps (Drive delete, Paperless tag "gelöscht",
+    M6-03). A deletion is ``open`` ("offen") until every step is done."""
+    async with tenant_tx(request, principal) as session:
+        rows = list(
+            await session.scalars(
+                select(DocumentMirrorDeletion).order_by(
+                    DocumentMirrorDeletion.requested_at.desc(), DocumentMirrorDeletion.kind
+                )
+            )
+        )
+    deletions = _deletions(rows)
+    if status is not None:
+        deletions = [d for d in deletions if d.status is status]
+    return deletions
+
+
+@router.post(
+    "/documents/deletions/{document_id}/retry", summary="Offene Spiegelschritte erneut anstoßen"
+)
+async def retry_deletion(
+    document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(DELETE)
+) -> s.DocumentDeletionOut:
+    """Re-queues the open mirror steps of a deletion with the standard retry ladder."""
+    async with tenant_tx(request, principal) as session:
+        rows = list(
+            await session.scalars(
+                select(DocumentMirrorDeletion)
+                .where(DocumentMirrorDeletion.document_id == document_id)
+                .order_by(DocumentMirrorDeletion.kind)
+            )
+        )
+        if not rows:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        jobs = [
+            mirror_deletion.MirrorDeletionJob.from_step(x)
+            for x in rows
+            if x.status is MirrorDeletionStatus.OPEN
+        ]
+        for job in jobs:
+            await _event(
+                session,
+                principal,
+                "document.mirror_delete_requested",
+                document_id,
+                mirror=job.kind,
+                external_ref=job.external_ref,
+                retry=True,
+            )
+    mirror_deletion.enqueue(jobs)
+    return _deletions(rows)[0]
+
+
 @router.get("/documents/{document_id}", summary="Dokument lesen")
 async def get_document(
     document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -462,8 +541,10 @@ async def delete_document(
                 )
             )
         ).all()
-        # A43 (6.9.5, M6-03): copies in Paperless and Drive are removed by a logged job after
-        # this deletion; the request is journaled here, in the same transaction.
+        # A43 (6.9.5, M6-03, operator decision 26.09.2026): the Drive copy is deleted and the
+        # Paperless document tagged "gelöscht" by a logged job after this deletion; the steps
+        # are journaled here, in the same transaction, and the deletion stays "offen" until
+        # every step succeeded (GET /documents/deletions).
         jobs = await mirror_deletion.request(
             session,
             tenant_id=principal.tenant_id,
@@ -571,9 +652,11 @@ async def create_profile(
 
 @router.post("/retention-profiles/{profile_id}/release", summary="Aufbewahrungsprofil freigeben")
 async def release_profile(
-    profile_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+    profile_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
 ) -> s.RetentionProfileOut:
-    """Four eyes: the person who drafted the profile cannot release it (Produktschutz)."""
+    """Releases a draft for the calling tenant only (M6-04): needs ``tenant_settings:update``,
+    four eyes (the person who drafted the profile cannot release it, Produktschutz) and is
+    audited as ``retention_profile.released`` with the released values."""
     async with tenant_tx(request, principal) as session:
         row = await _get(session, RetentionProfile, profile_id)
         if row.released_at is not None:
@@ -581,7 +664,22 @@ async def release_profile(
         if principal.user_id is None or row.created_by == principal.user_id:
             raise ProblemError(ErrorCodes.GATE_FOUR_EYES)
         row.released_at, row.released_by = datetime.now(UTC), principal.user_id
-        await _event(session, principal, "retention_profile.released", row.id)
+        previous_note = row.review_note
+        row.review_note = None
+        await _event(
+            session,
+            principal,
+            "retention_profile.released",
+            row.id,
+            document_class=row.document_class,
+            legal_entity_kind=row.legal_entity_kind,
+            retention_years=row.retention_years,
+            retention_months=row.retention_months,
+            permanent=row.permanent,
+            start_rule=row.start_rule.value,
+            legal_basis=row.legal_basis,
+            previous_review_note=previous_note,
+        )
         return s.RetentionProfileOut.model_validate(row)
 
 
@@ -729,9 +827,19 @@ async def _letter(
     fields: dict[str, str],
     signatory: list[str],
     store: bool,
+    represents: uuid.UUID | None = None,
 ) -> tuple[bytes, Document | None]:
     contact, lines, recipient = await svc.recipient(session, contact_id)
     context, info, links = await svc.entity_context(session, property_id, unit_id, contract_id)
+    if represents is not None:
+        # Authorised representative (delivery rule, mhvp.contacts.recipients): the letter
+        # names the represented contact under the recipient and is linked to both contacts.
+        principal_contact = await svc.recipient_name(session, represents)
+        lines.insert(1, f"für {principal_contact}")
+        recipient["vertreten_fuer"] = principal_contact
+        links.append(("contact", represents))
+    else:
+        recipient["vertreten_fuer"] = ""
     context.update(
         empfaenger=recipient,
         felder=fields,
@@ -850,21 +958,25 @@ async def create_letter(
 async def serial_letter(
     body: s.SerialLetterIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> s.SerialLetterOut:
-    """One document per recipient, all or none (one transaction)."""
+    """One document per recipient, all or none (one transaction). The recipients follow the
+    delivery rule of authorised representatives (``mhvp.contacts.recipients``)."""
+    from mhvp.contacts.recipients import resolve_recipients
+
     if len(set(body.contact_ids)) != len(body.contact_ids):
         raise svc.invalid("Empfänger sind doppelt angegeben.")
     async with tenant_tx(request, principal) as session:
         template = await _template(session, body.template_id)
         head = await svc.letterhead(session, _blobs(request))
         documents = []
-        for contact_id in body.contact_ids:
+        for recipient in await resolve_recipients(session, body.contact_ids):
             _, document = await _letter(
                 session,
                 request,
                 principal,
                 template,
                 head,
-                contact_id=contact_id,
+                contact_id=recipient.contact_id,
+                represents=recipient.represents,
                 property_id=body.property_id,
                 unit_id=None,
                 contract_id=None,

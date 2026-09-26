@@ -5,8 +5,9 @@ nothing. Reading a notice writes no read receipt and is no delivery."""
 
 import asyncio
 from collections.abc import Iterator
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import boto3
 import pytest
@@ -23,7 +24,7 @@ from tests.integration.test_m21_portal import _contact_of, _doc, _ok, _portal_us
 
 pytestmark = pytest.mark.integration
 P = "/api/v1/portal"
-TODAY: date = datetime.now(tz=UTC).date()
+TODAY: date = datetime.now(tz=ZoneInfo("Europe/Berlin")).date()  # local_today() of the API
 
 
 def _d(days: int) -> str:

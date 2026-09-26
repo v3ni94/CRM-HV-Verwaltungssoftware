@@ -1,9 +1,11 @@
 """External DMS mirrors (11.1, 11.2): Paperless-ngx and Google Drive over their REST APIs.
 
 The platform index and the S3 original stay authoritative; mirrors are copies. Deletion in the
-mirrors follows the retention rules of the index (6.9.5): ``delete`` is only ever called by
-``mhvp.documents.mirror_deletion`` after the platform deletion (released profile, expired
-retention, no hold) and every call is logged as a domain event (A43, M6-03).
+mirrors follows the retention rules of the index (6.9.5) and the operator decision of
+26.09.2026 (M6-03): ``GoogleDriveStore.delete`` (fallback ``trash``) and
+``PaperlessStore.add_tag`` (tag ``gelöscht``, the Paperless document is kept) are only ever
+called by ``mhvp.documents.mirror_deletion`` after the platform deletion (released profile,
+expired retention, no hold) and every call is logged as a domain event (A43).
 """
 
 import json
@@ -162,6 +164,29 @@ class PaperlessStore:
         _raise_for(response, "delete")
         return True
 
+    async def add_tag(self, ref: str, name: str) -> bool:
+        """Assign the tag ``name`` (created when missing) to the Paperless document ``ref``.
+
+        Operator decision 26.09.2026 (M6-03): a document deleted in the platform stays in
+        Paperless and is marked with the tag ``gelöscht`` instead. Returns True when the tag is
+        set now or was already set, False when the Paperless document no longer exists."""
+        if ref.startswith("task:") or not ref.isdigit():
+            raise DmsError("tag: reference is not a Paperless document id")
+        url = f"{self._base}/api/documents/{ref}/"
+        current = await self._client.get(url, headers=self._headers)
+        if current.status_code == 404:
+            return False
+        _raise_for(current, "tag lookup")
+        tags = [int(t) for t in current.json().get("tags", [])]
+        tag_id = await self._id_for("tags", name)
+        if tag_id in tags:
+            return True
+        response = await self._client.patch(
+            url, json={"tags": [*tags, tag_id]}, headers=self._headers
+        )
+        _raise_for(response, "tag")
+        return True
+
 
 class GoogleDriveStore:
     """Drive v3 REST API with the technical workspace account (11.2), OAuth refresh token."""
@@ -298,6 +323,20 @@ class GoogleDriveStore:
         if response.status_code == 404:
             return False
         _raise_for(response, "delete")
+        return True
+
+    async def trash(self, ref: str) -> bool:
+        """Move the file to the Drive trash (fallback when the permanent ``delete`` is refused,
+        for example on a shared drive without delete right). False when already gone."""
+        response = await self._client.patch(
+            f"{self.FILES_URL}/{ref}",
+            params={"supportsAllDrives": "true"},
+            json={"trashed": True},
+            headers=await self._auth(),
+        )
+        if response.status_code == 404:
+            return False
+        _raise_for(response, "trash")
         return True
 
     async def list_folder(

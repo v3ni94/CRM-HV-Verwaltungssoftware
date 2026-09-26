@@ -182,6 +182,8 @@ class RunOut(_Out):
     proposal_id: uuid.UUID | None = None
     # Providers skipped before the answering one (budget exhausted or provider error, M7-02).
     fallback: list[str] = Field(default_factory=list)
+    # The provider that answered (M7-02); differs from the preferred one after a fallback.
+    provider_used: str | None = None
     # Character count per document that entered the run (debug: why a run was too large).
     input_stats: dict[str, int] = Field(default_factory=dict)
     # Current worker progress; updated per chunk (stage text plus i/n).
@@ -338,3 +340,29 @@ class PreparationCorrectionIn(_In):
     unit_id: uuid.UUID | None = None
     property_id: uuid.UUID | None = None
     note: str = Field(min_length=1, description="Was war falsch, was ist richtig")
+
+
+class EmbeddingStatusOut(_Out):
+    """Counters of the embedding index (M7-03): sources with text, embedded, pending per kind."""
+
+    enabled: bool
+    reason: str | None
+    model: str | None
+    documents_total: int
+    documents_embedded: int
+    documents_pending: int
+    knowledge_total: int
+    knowledge_embedded: int
+    knowledge_pending: int
+    chunks: int
+    last_run_at: datetime | None
+    last_run_status: str | None
+    last_run_error: str | None
+    last_run_report: dict[str, Any] | None
+    queued: bool = False
+
+
+class EmbeddingReindexIn(_In):
+    # full: drop every stored vector of the tenant first (model change); otherwise only missing
+    # or changed sources are embedded.
+    full: bool = False

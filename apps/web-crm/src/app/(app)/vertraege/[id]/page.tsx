@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { DepositPanel } from "@/components/contracts/DepositPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getMe } from "@/lib/me";
 import { formatDate } from "@/lib/format";
@@ -28,7 +29,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
       </div>
     );
   }
-  const { contract, partyName, propertyLabel, unitLabel } = ctx;
+  const { contract, deposits, settlements, rates, partyName, propertyLabel, unitLabel } = ctx;
   const bool = (v: boolean) => (v ? t("yes") : t("no"));
 
   return (
@@ -131,6 +132,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
           </ul>
         )}
       </section>
+      {contract.kind === "tenancy" ? <DepositPanel deposits={deposits} settlements={settlements} rates={rates} contractEndDate={contract.end_date} canUpdate={canUpdate} /> : null}
     </div>
   );
 }

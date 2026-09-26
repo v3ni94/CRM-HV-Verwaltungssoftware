@@ -94,6 +94,42 @@ describe("NotificationBell", () => {
     await userEvent.click(screen.getByRole("button", { name: "Alle als gelesen markieren" }));
     await waitFor(() => expect(screen.queryByTestId("unread-count")).not.toBeInTheDocument());
   });
+
+  it("links an entry to its subject and marks only that entry as read on click", async () => {
+    const TICKET = "01920000-0000-7000-8000-0000000000cc";
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.endsWith("/read")
+          ? new Response(null, { status: 204 })
+          : jsonResponse([
+              {
+                id: ID,
+                kind: "ticket_assigned",
+                title: "Ticket 12: Heizung",
+                body: null,
+                target_type: "ticket",
+                target_id: TICKET,
+                href: `/tickets/${TICKET}`,
+                read_at: null,
+                created_at: "2026-09-26T08:00:00Z",
+              },
+              { id: "n2", kind: "custom", title: "Ohne Ziel", body: null, target_type: null, target_id: null, href: null, read_at: null, created_at: "2026-09-26T08:00:00Z" },
+            ]),
+      ),
+    );
+    renderIntl(<NotificationBell />);
+    expect(await screen.findByTestId("unread-count")).toHaveTextContent("2");
+    await userEvent.click(screen.getByRole("button", { name: /Benachrichtigungen/ }));
+    const link = screen.getByRole("link", { name: /Ticket 12: Heizung/ });
+    expect(link).toHaveAttribute("href", `/tickets/${TICKET}`);
+    expect(screen.queryByRole("link", { name: /Ohne Ziel/ })).not.toBeInTheDocument();
+    await userEvent.click(link);
+    await waitFor(() => {
+      const read = fetchMock.mock.calls.find(([u, i]) => String(u).endsWith("/notifications/read") && i?.method === "POST");
+      expect(JSON.parse(read![1].body as string)).toEqual([ID]);
+    });
+    expect(screen.getByTestId("unread-count")).toHaveTextContent("1");
+  });
 });
 
 describe("SavedFilters", () => {

@@ -726,3 +726,168 @@ def test_upload_answers_503_when_storage_is_not_configured(
         assert body["code"] == "MHVP-DOC-0007"
         assert "nicht eingerichtet" in body["detail"]
         assert _document_total(c, h) == before
+
+
+# M6-04: standard retention profiles seeded as drafts (operator decision 26.09.2026) ----------
+
+
+def _profiles(c: TestClient, h: dict[str, str]) -> dict[str, Any]:
+    rows = _ok(c.get("/api/v1/retention-profiles", headers=h), 200)
+    return {r["document_class"]: r for r in rows if r["legal_entity_kind"] is None}
+
+
+def test_m6_04_standard_profiles_seeded_as_drafts(client: TestClient, world: World) -> None:
+    from mhvp.documents.defaults import REVIEW_NOTE, STANDARD_RETENTION_PROFILES
+
+    h = bearer(login(client, world, "m6admin"))
+    seeded = _profiles(client, h)
+    for document_class, years, months, permanent, start_rule, _ in STANDARD_RETENTION_PROFILES:
+        row = seeded[document_class]
+        assert row["status"] == "entwurf"
+        assert row["released_at"] is None
+        assert row["review_note"] == REVIEW_NOTE
+        assert (row["retention_years"], row["retention_months"], row["permanent"]) == (
+            years,
+            months,
+            permanent,
+        )
+        assert row["start_rule"] == start_rule.value
+        assert "Steuerberatung offen" in row["legal_basis"]
+    assert seeded["contracts"]["start_rule"] == "contract_end"
+    assert seeded["portal_data"]["retention_months"] == 6
+    assert seeded["hoa_minutes"]["permanent"] is True
+
+
+def test_m6_04_seed_is_idempotent_and_keeps_operator_edits(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    from sqlalchemy import select, update
+
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.documents.defaults import ensure_retention_defaults
+    from mhvp.documents.models import RetentionProfile
+
+    h = bearer(login(client, world, "m6admin"))
+    before = _profiles(client, h)
+
+    async def edit_and_reseed() -> tuple[int, int, int]:
+        engine = create_app_engine(_settings(database, redis_url))
+        factory = create_session_factory(engine)
+        try:
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                await session.execute(
+                    update(RetentionProfile)
+                    .where(
+                        RetentionProfile.document_class == "mails",
+                        RetentionProfile.legal_entity_kind.is_(None),
+                    )
+                    .values(retention_years=8, review_note="vom Betreiber angepasst")
+                )
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                added_again = await ensure_retention_defaults(session, world.tenant_a)
+            # Re-provisioning the tenant (make seed on an existing installation) adds nothing.
+            await services.provision_tenant(factory, slug=f"d-{RUN}", name=f"Dokumente {RUN}")
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                count = len((await session.scalars(select(RetentionProfile.id))).all())
+                years = await session.scalar(
+                    select(RetentionProfile.retention_years).where(
+                        RetentionProfile.document_class == "mails",
+                        RetentionProfile.legal_entity_kind.is_(None),
+                    )
+                )
+            return added_again, count, years or 0
+        finally:
+            await engine.dispose()
+
+    added_again, count, years = asyncio.run(edit_and_reseed())
+    assert added_again == 0
+    assert years == 8  # operator edit kept
+    after = _profiles(client, h)
+    assert set(after) == set(before)
+    assert after["mails"]["review_note"] == "vom Betreiber angepasst"
+    assert count == len(_ok(client.get("/api/v1/retention-profiles", headers=h), 200))
+
+
+def test_m6_04_draft_keeps_deletion_locked_release_unlocks_only_this_tenant(
+    client: TestClient, world: World
+) -> None:
+    h = bearer(login(client, world, "m6admin"))
+    other = bearer(login(client, world, "m6other"))
+    second = bearer(login(client, world, "m6second"))
+    profile = _profiles(client, h)["business_letters"]
+    doc = _ok(_upload(client, h, "brief.txt", b"Brief", "text/plain"))
+    url = f"/api/v1/documents/{doc['id']}"
+    _ok(
+        client.patch(
+            url,
+            json={"retention_profile_id": profile["id"], "retention_until": "2019-12-31"},
+            headers=h,
+        ),
+        200,
+    )
+    locked = client.delete(url, headers=h)
+    assert locked.status_code == 409
+    assert "nicht freigegeben" in locked.json()["detail"]
+    # Tenant separation: the other tenant neither sees nor releases this profile.
+    assert profile["id"] not in {r["id"] for r in _profiles(client, other).values()}
+    assert (
+        client.post(f"/api/v1/retention-profiles/{profile['id']}/release", headers=other)
+    ).status_code == 404
+    # Permission: documents:approve alone is not enough, tenant_settings:update is required.
+    caretaker = bearer(login(client, world, "m6caretaker"))
+    assert (
+        client.post(f"/api/v1/retention-profiles/{profile['id']}/release", headers=caretaker)
+    ).status_code == 403
+    released = _ok(
+        client.post(f"/api/v1/retention-profiles/{profile['id']}/release", headers=second), 200
+    )
+    assert released["status"] == "freigegeben"
+    assert released["review_note"] is None
+    assert released["released_by"] == str(world.users["m6second"])
+    assert client.delete(url, headers=h).status_code == 204
+    # The same class stays a draft in the other tenant.
+    assert _profiles(client, other)["business_letters"]["status"] == "entwurf"
+    # The release is audited with the released values.
+    events = _ok(
+        client.get(
+            "/api/v1/tenant/events", params={"type": "retention_profile.released"}, headers=h
+        ),
+        200,
+    )
+    logged = [e for e in events if e["entity_id"] == profile["id"]]
+    assert logged
+    assert logged[0]["payload"]["retention_years"] == 6
+    assert logged[0]["actor_user_id"] == str(world.users["m6second"])
+
+
+def test_m6_04_permanent_profile_never_unlocks_deletion(client: TestClient, world: World) -> None:
+    h = bearer(login(client, world, "m6admin"))
+    second = bearer(login(client, world, "m6second"))
+    profile = _profiles(client, h)["hoa_minutes"]
+    doc = _ok(_upload(client, h, "protokoll.txt", b"Protokoll", "text/plain"))
+    url = f"/api/v1/documents/{doc['id']}"
+    _ok(
+        client.patch(
+            url,
+            json={"retention_profile_id": profile["id"], "retention_until": "2019-12-31"},
+            headers=h,
+        ),
+        200,
+    )
+    _ok(client.post(f"/api/v1/retention-profiles/{profile['id']}/release", headers=second), 200)
+    refused = client.delete(url, headers=h)
+    assert refused.status_code == 409
+    assert "Dauerhaft" in refused.json()["detail"]
+    # A profile without any period is rejected unless it is permanent.
+    bad = client.post(
+        "/api/v1/retention-profiles",
+        json={
+            "document_class": f"empty_{RUN}",
+            "legal_basis": "Testprofil ohne Frist",
+            "retention_years": 0,
+            "start_rule": "end_of_year_created",
+        },
+        headers=h,
+    )
+    assert bad.status_code == 422

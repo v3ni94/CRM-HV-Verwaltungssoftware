@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed ai-eval deploy backup backup-verify
+.PHONY: help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed ai-eval deploy backup backup-verify check-s3
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -78,3 +78,6 @@ backup: ## Encrypted pg_dump into BACKUP_DIR (needs PG*, BACKUP_AGE_RECIPIENT)
 
 backup-verify: ## Restore newest backup into a throwaway database and check it
 	scripts/backup-verify.sh
+
+check-s3: ## Connectivity, bucket and put/get/delete round trip against MHVP_S3_* (ENV_FILE=.env.prod)
+	scripts/check-s3.sh $(if $(ENV_FILE),--env-file $(ENV_FILE),)

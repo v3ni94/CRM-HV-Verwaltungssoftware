@@ -110,6 +110,18 @@ class Settings(BaseSettings):
     google_client_id: str | None = None
     google_client_secret: SecretStr | None = None
     gmail_sync_batch: int = Field(default=50, ge=1, le=500)
+    # Gmail push notifications (operator decision 26.09.2026: new mails appear immediately).
+    # ``gmail_pubsub_topic`` is the full Pub/Sub topic name ``projects/<id>/topics/<name>``
+    # that the operator creates in the Google Cloud project of the OAuth client and grants
+    # ``roles/pubsub.publisher`` to ``gmail-api-push@system.gserviceaccount.com``; empty
+    # keeps push off (the 5 minute beat sync remains the only fetch). ``gmail_push_token`` is
+    # the shared secret the push subscription sends to ``/integrations/gmail/push`` (query
+    # ``token`` or header ``X-MHVP-Push-Token``); without it the endpoint refuses every
+    # delivery. ``gmail_push_audience`` additionally verifies the Pub/Sub OIDC token
+    # (``Authorization: Bearer``) against this audience (optional, needs Google's JWKS).
+    gmail_pubsub_topic: str | None = None
+    gmail_push_token: SecretStr | None = None
+    gmail_push_audience: str | None = None
     # Public URLs for the OAuth redirect (API callback) and the return to the CRM screen.
     api_public_url: str | None = None
     web_crm_url: str | None = None
@@ -123,6 +135,13 @@ class Settings(BaseSettings):
     whatsapp_verify_token: SecretStr | None = None
     whatsapp_app_secret: SecretStr | None = None
     whatsapp_api_base_url: str = "https://graph.facebook.com/v21.0"
+    # finAPI Access (M11-01, operator decision 26.09.2026: aggregator finAPI first, EBICS
+    # later). Default base URLs by data center, used when a tenant leaves ``base_url`` empty in
+    # ``FinApiTenantConfig``; the official sandbox and live hosts [laut finAPI-Doku,
+    # docs/integrations/finapi.md]. Client credentials are never here: they are stored
+    # encrypted per tenant. Read only: no payment initiation (G2 closed).
+    finapi_base_url_sandbox: str = "https://sandbox.finapi.io"
+    finapi_base_url_live: str = "https://live.finapi.io"
 
     @model_validator(mode="after")
     def _guard_shared_environments(self) -> "Settings":

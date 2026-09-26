@@ -56,16 +56,13 @@ export async function uiLogin(page: Page, target: string) {
   await page.getByLabel("E-Mail").fill(email);
   await page.getByLabel("Passwort").fill(password);
   await page.getByRole("button", { name: "Weiter" }).click();
-  await page.waitForURL(/\/anmelden\/zweiter-faktor/);
-  if (page.url().includes("einrichten=1")) {
-    const secret = (await page.getByTestId("totp-secret").textContent())?.trim() ?? "";
-    rememberSecret(secret);
-    const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30 });
-    await page.getByLabel("Code").fill(totp.generate());
-  } else {
+  // TOTP is optional (operator 26.09.2026, M2-01): the seeded admin normally lands on the
+  // tenant choice directly; the second factor page appears only if it was enabled manually.
+  await page.waitForURL(/\/(mandant|anmelden\/zweiter-faktor)/);
+  if (page.url().includes("/anmelden/zweiter-faktor")) {
     await page.getByLabel("Code").fill(await nextCode());
+    await page.getByRole("button", { name: "Bestätigen" }).click();
   }
-  await page.getByRole("button", { name: "Bestätigen" }).click();
   await expect(page).toHaveURL(/\/mandant/);
   await page.getByRole("button", { name: TENANT }).click();
 }
@@ -77,13 +74,18 @@ export async function apiToken(): Promise<string> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  const { mfa_token } = (await login.json()) as { mfa_token: string };
-  const verify = await fetch(`${apiBase}/api/v1/auth/mfa/verify`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ mfa_token, code: await nextCode() }),
-  });
-  const first = (await verify.json()) as { access_token: string; tenants: { id: string; name: string }[] };
+  type Issued = { access_token: string; tenants: { id: string; name: string }[] };
+  const step = (await login.json()) as Issued & { status: string; mfa_token: string | null };
+  let first: Issued = step;
+  if (step.status !== "ok") {
+    // Only when the admin enabled the optional second factor (operator 26.09.2026, M2-01).
+    const verify = await fetch(`${apiBase}/api/v1/auth/mfa/verify`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mfa_token: step.mfa_token, code: await nextCode() }),
+    });
+    first = (await verify.json()) as Issued;
+  }
   const tenant = first.tenants.find((t) => t.name === TENANT);
   if (!tenant) throw new Error("seed tenant missing");
   const sw = await fetch(`${apiBase}/api/v1/auth/switch-tenant`, {

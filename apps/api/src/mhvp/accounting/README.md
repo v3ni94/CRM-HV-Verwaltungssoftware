@@ -7,6 +7,13 @@ Ledger per legal entity, accounts, journal, open items (MASTER-PROMPT 6.4, 6.9, 
 * `services.py`: drafts, posting (gapless numbers, ADR 0007), reversal, locking, reports,
   consistency checks.
 * `routers.py`: `/api/v1/accounting/...`.
+* `settlement.py`: settlement proposal in the statutory order (M10-03, 7.4 Nr. 5, D39):
+  pure `propose` with `RULE_VERSION`, `items_for` (open receivables of a debtor with claim
+  class and dunning burden), `determination_from_purpose` (reuses the bank purpose parser).
+  `POST /ledgers/{id}/open-items/settlement-proposal` computes only; `.../confirm` recomputes,
+  checks the fingerprint, writes a draft `debtor_payment` with the settlement plan and the
+  audit event `open_item_settlement.proposal_confirmed` (rule version); `post_immediately`
+  needs G1 (`docs/rules/M10-03-tilgungsfolge-vorschlag.md`).
 * `dunning.py`: dunning runs (7.5, M16). Settings per tenant with field level object
   overrides (`settings_for` returns `EffectiveSettings`, NULL on an object row inherits the
   tenant default, migration 0078, `docs/rules/M16-02.md`). Fees and interest only from
@@ -83,7 +90,16 @@ Ledger per legal entity, accounts, journal, open items (MASTER-PROMPT 6.4, 6.9, 
 
 Checked against the folder contents on 26.09.2026, the following files were not listed above:
 
-* `defaults.py`: draft chart of accounts from annex A.1 (HVM convention excerpt), created unreleased (V8)
+* `defaults.py`: draft chart of accounts from annex A.1 (HVM convention excerpt), created unreleased (V8); since 26.09.2026 (M10-01, rule `docs/rules/M10-01-kontenrahmen-vorlage.md`) also the
+  proposed rental revenue accounts 060300 to 060800 with `review_status = "entwurf"` and note
+  "Freigabe durch Steuerberatung offen" (`LedgerAccount.review_status`, migration 0137).
+  `default_template` is idempotent and only appends template rows whose number is missing
+  Since 26.09.2026 (M10-02, rule `docs/rules/M10-02-kostenkonten-vorbelegung.md`) the cost
+  accounts are pre-set as a draft following the BetrKV catalogue (`COSTS`, `BETRKV_TYPES`):
+  allocable with `statement_kind = "operating_costs"` and a proposed key code
+  (`allocation_key_code`, annex A.2) or not allocable; VAT option stays unset; 041805 stays
+  unclassified. `fill_unset` fills only unset fields of existing template rows (never operator
+  edits) and marks filled rows as drafts; existing ledgers are untouched.
 * `numbering.py`: outgoing invoice numbering, gapless `PREFIX-JJJJ-000001` under a locked counter row (M13-04)
 * `schemas.py`: API schemas of the ledger (6.4), money as decimal strings, never float (6.9.8)
 * `tasks.py`: Celery job `accounting.dunning_run` (15.1, monthly on the 5th), preview runs only, never sent

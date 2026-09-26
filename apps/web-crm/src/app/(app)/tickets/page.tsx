@@ -5,6 +5,7 @@ import { TicketCreate } from "@/components/tickets/TicketForms";
 import { TicketFilters } from "@/components/tickets/TicketFilters";
 import { TicketsList } from "@/components/tickets/TicketsList";
 import { TicketsPagination } from "@/components/tickets/TicketsPagination";
+import { asAttention, type Attention } from "@/components/tickets/TicketAttention";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
@@ -32,6 +33,9 @@ const FORWARDED_KEYS = [
   "created_from",
   "created_to",
   "mine",
+  // Sort (operator 26.09.2026): urgency is the server default; created_desc via the filter
+  // toggle "Nach Eingang".
+  "sort",
 ] as const;
 
 // Page size of the list (review 26.09.2026, H7); GET /tickets reports the total in X-Total-Count.
@@ -45,6 +49,9 @@ type Ticket = {
   status: string;
   sla_due_at: string | null;
   sla_breached: boolean;
+  attention: Attention;
+  last_activity_at: string | null;
+  last_inbound_at: string | null;
 };
 
 export default async function TicketsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -137,6 +144,9 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
                 status: String(tk.status),
                 sla_due_at: tk.sla_due_at ? String(tk.sla_due_at) : null,
                 sla_breached: Boolean(tk.sla_breached),
+                attention: asAttention(tk.attention),
+                last_activity_at: tk.last_activity_at ? String(tk.last_activity_at) : null,
+                last_inbound_at: tk.last_inbound_at ? String(tk.last_inbound_at) : null,
               }),
             )}
             canApprove={canApprove}

@@ -842,7 +842,7 @@ def test_a32_manager_entity_setup_and_tenancy_fee(
     rent_account = _ok(
         gated.post(
             f"{A}/ledgers/{ledger}/accounts",
-            json={"number": "060300", "name": "Mieten", "category": "revenue", "type": "income"},
+            json={"number": "060310", "name": "Mieten", "category": "revenue", "type": "income"},
             headers=h,
         ),
         201,

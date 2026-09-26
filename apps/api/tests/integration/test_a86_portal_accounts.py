@@ -106,9 +106,9 @@ def test_a86_contact_portal_accounts(client: TestClient, world: World) -> None:
     row = _ok(client.get(f"{PA}/accounts", params={"contact_id": contact}, headers=h))[0]
     assert row["status"] == "active"
     assert row["activated_at"] is not None
-    # last_login_at is written by the platform only on a TOTP verified login
-    # (mhvp.core.auth.service.verify_totp); a password only login leaves it empty (open point).
-    assert "last_login_at" in row
+    # last_login_at is written on every successful login, also password only
+    # (mhvp.core.auth.service.record_login), so the portal login above sets it.
+    assert row["last_login_at"] is not None
 
     # Permission: a portal user has no CRM right contacts:read.
     assert (

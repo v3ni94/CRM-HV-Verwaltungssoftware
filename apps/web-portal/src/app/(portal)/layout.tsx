@@ -52,6 +52,8 @@ export default async function PortalLayout({ children }: { children: React.React
           : []),
         ...(board ? [{ href: "/pruefung", label: t("nav.audit") }] : []),
       ];
+  // Sicherheit (optional second factor, remembered devices) is available to every account.
+  links.push({ href: "/sicherheit", label: t("nav.security") });
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border bg-surface">

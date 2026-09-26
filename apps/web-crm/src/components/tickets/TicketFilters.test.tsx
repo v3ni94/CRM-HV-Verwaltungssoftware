@@ -73,4 +73,25 @@ describe("TicketFilters", () => {
     await userEvent.click(toggle);
     expect(push).toHaveBeenLastCalledWith("/tickets");
   });
+
+  it("switches the sort to created_desc with the toggle Nach Eingang and back to urgency", async () => {
+    currentParams = new URLSearchParams({ status: "new", page: "2" });
+    renderIntl(<TicketFilters meUserId="u1" />);
+    const toggle = await screen.findByTestId("filter-sort-created");
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(toggle).toHaveTextContent("Nach Eingang");
+    await userEvent.click(toggle);
+    expect(push).toHaveBeenLastCalledWith("/tickets?status=new&sort=created_desc");
+  });
+
+  it("keeps the sort when another filter changes", async () => {
+    currentParams = new URLSearchParams({ sort: "created_desc" });
+    renderIntl(<TicketFilters meUserId="u1" />);
+    const toggle = await screen.findByTestId("filter-sort-created");
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    await userEvent.selectOptions(await screen.findByTestId("filter-status"), "new");
+    expect(push).toHaveBeenLastCalledWith("/tickets?status=new&sort=created_desc");
+    await userEvent.click(toggle);
+    expect(push).toHaveBeenLastCalledWith("/tickets");
+  });
 });

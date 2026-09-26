@@ -462,6 +462,157 @@ async def enqueue_archive_for_ticket(
             log.warning("could not queue archive job", extra={"ticket_id": str(ticket_id)})
 
 
+async def enqueue_archive_for_message(
+    session: AsyncSession, settings: Settings, tenant_id: uuid.UUID, message_id: uuid.UUID
+) -> None:
+    """Erledigt archiviert Mail for a single inbound mail set to ``done`` (operator
+    26.09.2026): same job family as ``enqueue_archive_for_ticket``, queue ``mail`` or inline
+    without a worker; the mailbox switch ``archive_on_ticket_done`` applies in the job."""
+    if settings.ai_inline:
+        from mhvp.communication.tasks import archive_message_once
+
+        try:
+            await archive_message_once(settings, tenant_id, message_id)
+        except Exception:
+            log.warning("archive job failed inline", extra={"message_id": str(message_id)})
+    else:
+        try:
+            from mhvp.worker import get_celery
+
+            get_celery().send_task(
+                "mhvp.communication.archive_message",
+                args=[str(tenant_id), str(message_id)],
+                queue="mail",
+            )
+        except Exception:
+            log.warning("could not queue archive job", extra={"message_id": str(message_id)})
+
+
+# Statuses of a work order that still need attention; anything else counts as closed.
+OPEN_WORK_ORDER_STATUSES = ("draft", "requested", "quoted", "approved", "scheduled", "in_progress")
+AUTO_CLOSE_KIND = "auskunft_erteilt"
+AUTO_CLOSE_NOTE = "Per E-Mail erledigt"
+
+
+async def complete_message(
+    session: AsyncSession, settings: Settings, message: Message, actor_user_id: uuid.UUID | None
+) -> dict[str, Any]:
+    """Side effects of setting an inbound mail to ``done`` (operator 26.09.2026):
+
+    1. the mail is archived at Gmail after the commit (mailbox switch "Erledigt archiviert");
+    2. when the mail belongs to a ticket and afterwards no inbound mail of that ticket is
+       open and no work order of the ticket is open, the ticket is set to ``done`` via
+       ``transition_status`` with the resolution kind ``auskunft_erteilt`` and the note
+       "Per E-Mail erledigt" (author = the user who completed the mail); the status event
+       carries ``data.auto_close = true`` and the closing archives the remaining mails.
+       When the kind is disabled in the tenant's list, or a completion check fails, the
+       ticket stays open and a ``auto_close_skipped`` event names the reason.
+
+    Returns ``{"archive": bool, "ticket_closed": bool, "reason": str | None}``."""
+    from mhvp.core.db.tenancy import after_commit
+    from mhvp.tickets.models import Ticket, TicketEvent, TicketStatus, WorkOrder
+    from mhvp.tickets.resolution_kinds import active_kind_codes, load_resolution_kinds_config
+    from mhvp.tickets.status import CLOSING_STATUSES, ResolutionIn, transition_status
+
+    result: dict[str, Any] = {"archive": False, "ticket_closed": False, "reason": None}
+    tenant_id = message.tenant_id
+    if message.direction == "in" and message.gmail_message_id and message.mailbox_id:
+        message_id = message.id
+
+        async def _archive() -> None:
+            await enqueue_archive_for_message(session, settings, tenant_id, message_id)
+
+        after_commit(session, _archive)
+        result["archive"] = True
+    if message.ticket_id is None or message.direction != "in":
+        return result
+    ticket = await session.get(Ticket, message.ticket_id, with_for_update=True)
+    if ticket is None or ticket.status in CLOSING_STATUSES:
+        return result
+    await session.flush()
+    open_mails = await session.scalar(
+        select(func.count())
+        .select_from(Message)
+        .where(
+            Message.tenant_id == tenant_id,
+            Message.ticket_id == ticket.id,
+            Message.direction == "in",
+            Message.status != "done",
+            Message.id != message.id,
+        )
+    )
+    if open_mails:
+        result["reason"] = "open_mails"
+        return result
+    open_orders = await session.scalar(
+        select(func.count())
+        .select_from(WorkOrder)
+        .where(
+            WorkOrder.tenant_id == tenant_id,
+            WorkOrder.ticket_id == ticket.id,
+            WorkOrder.status.in_(OPEN_WORK_ORDER_STATUSES),
+        )
+    )
+    if open_orders:
+        result["reason"] = "open_work_order"
+        return result
+    config = await load_resolution_kinds_config(session, tenant_id)
+    if AUTO_CLOSE_KIND not in active_kind_codes(config):
+        result["reason"] = "resolution_kind_disabled"
+        session.add(
+            TicketEvent(
+                tenant_id=tenant_id,
+                ticket_id=ticket.id,
+                kind="auto_close_skipped",
+                user_id=actor_user_id,
+                data={
+                    "reason": result["reason"],
+                    "message_id": str(message.id),
+                    "resolution_kind": AUTO_CLOSE_KIND,
+                },
+            )
+        )
+        return result
+    try:
+        changed = await transition_status(
+            session,
+            settings,
+            ticket,
+            TicketStatus.DONE,
+            actor_user_id,
+            resolution=ResolutionIn(kind=AUTO_CLOSE_KIND, note=AUTO_CLOSE_NOTE),
+        )
+    except ProblemError as exc:
+        # Flow or completion checks (checklist, required fields) refuse: ticket stays open.
+        result["reason"] = "transition_refused"
+        session.add(
+            TicketEvent(
+                tenant_id=tenant_id,
+                ticket_id=ticket.id,
+                kind="auto_close_skipped",
+                user_id=actor_user_id,
+                data={
+                    "reason": result["reason"],
+                    "message_id": str(message.id),
+                    "detail": (exc.detail or "")[:500],
+                },
+            )
+        )
+        return result
+    if changed:
+        await session.flush()
+        event = await session.scalar(
+            select(TicketEvent)
+            .where(TicketEvent.ticket_id == ticket.id, TicketEvent.kind == "status")
+            .order_by(TicketEvent.created_at.desc(), TicketEvent.id.desc())
+            .limit(1)
+        )
+        if event is not None and event.data.get("to") == TicketStatus.DONE.value:
+            event.data = {**event.data, "auto_close": True, "message_id": str(message.id)}
+        result["ticket_closed"] = True
+    return result
+
+
 async def ticket_by_tnr(session: AsyncSession, tenant_id: uuid.UUID, subject: str | None) -> Any:
     """Ticket des Mandanten zur Kennung ``TNR#<nummer>`` im Betreff; ``None`` ohne Kennung,
     ohne Treffer oder bei einem zusammengeführten Ticket (dann gilt das Zielticket). Der

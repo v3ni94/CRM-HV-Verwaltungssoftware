@@ -80,6 +80,17 @@ def _jpeg_with_exif() -> bytes:
     return buf.getvalue()
 
 
+def _heic_with_exif() -> bytes:
+    heif = pytest.importorskip("pillow_heif", reason="pillow-heif nicht installiert (A72)")
+    heif.register_heif_opener()
+    img = Image.new("RGB", (2400, 1200), (30, 120, 200))
+    exif = Image.Exif()
+    exif[0x010F] = "TestCam"
+    buf = io.BytesIO()
+    img.save(buf, format="HEIF", exif=exif.tobytes())
+    return buf.getvalue()
+
+
 def _upload(c: TestClient, h: dict[str, str], name: str, data: bytes, mime: str) -> str:
     return str(
         _ok(c.post(f"{P}/uploads", files={"file": (name, data, mime)}, headers=h), 201)["id"]
@@ -148,15 +159,25 @@ def test_a55_photo_is_a_document_link_on_the_ticket(client: TestClient, world: W
         assert max(img.size) <= 2000
         assert len(img.getexif()) == 0
     pdf = _upload(client, ta, "beleg.pdf", b"%PDF-1.4 beleg", "application/pdf")
-    # Unsupported photo types are refused instead of stored with their metadata.
-    assert (
-        client.post(
-            f"{P}/uploads",
-            files={"file": ("x.heic", b"\x00\x00\x00\x18ftypheic", "image/heic")},
-            headers=ta,
-        ).status_code
-        == 422
+    # A72: a broken HEIC is refused with a hint; a real HEIC is stored as JPEG without EXIF.
+    broken = client.post(
+        f"{P}/uploads",
+        files={"file": ("x.heic", b"\x00\x00\x00\x18ftypheic", "image/heic")},
+        headers=ta,
     )
+    assert broken.status_code == 422
+    assert "HEIC" in broken.json()["detail"]
+    heic = _upload(client, ta, "iphone.HEIC", _heic_with_exif(), "image/heic")
+    meta = _ok(client.get(f"/api/v1/documents/{heic}", headers=h), 200)
+    assert meta["mime_type"] == "image/jpeg"
+    assert meta["filename"] == "iphone.jpg"
+    stored = client.get(f"/api/v1/documents/{heic}/content", headers=h)
+    assert stored.status_code == 200
+    assert stored.content.startswith(b"\xff\xd8\xff")
+    assert b"TestCam" not in stored.content
+    with Image.open(io.BytesIO(stored.content)) as img:
+        assert img.format == "JPEG"
+        assert len(img.getexif()) == 0
 
     # A document of another portal user and a CRM document are answered as not found.
     foreign = _upload(client, tb, "fremd.jpg", _jpeg_with_exif(), "image/jpeg")

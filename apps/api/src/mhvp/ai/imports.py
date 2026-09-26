@@ -246,11 +246,20 @@ async def create_contact(
 
 
 async def create_party(
-    session: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID | None, contacts: list[Contact]
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    contacts: list[Contact],
+    *,
+    name: str | None = None,
 ) -> Party:
+    """Party of the given contacts, all in role primary (joint contract parties). ``name``
+    keeps the exported name of a multi person party (M8-04)."""
     members = [(c, cs.PartyMemberIn(contact_id=c.id)) for c in contacts]
     party = Party(
-        tenant_id=tenant_id, name=contact_services.party_name(members), created_by=user_id
+        tenant_id=tenant_id,
+        name=(name or contact_services.party_name(members))[:400],
+        created_by=user_id,
     )
     session.add(party)
     await session.flush()

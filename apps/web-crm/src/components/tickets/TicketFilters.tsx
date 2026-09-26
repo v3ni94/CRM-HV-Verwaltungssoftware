@@ -59,6 +59,8 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
   const [expanded, setExpanded] = useState(false);
   // Operator 26.09.2026: done, closed and rejected tickets are hidden unless erledigt=1.
   const showClosed = searchParams.get("erledigt") === "1";
+  // Operator 26.09.2026: default sort is urgency (server side); the toggle switches to arrival.
+  const sortByCreated = searchParams.get("sort") === "created_desc";
 
   useEffect(() => {
     setValues(readFromParams(searchParams));
@@ -114,7 +116,7 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
       if (next[key]) params.set(key, next[key]);
     }
     // Toggles owned by the page stay as they are when a filter changes.
-    for (const key of ["erledigt", "merged"]) {
+    for (const key of ["erledigt", "merged", "sort"]) {
       const value = searchParams.get(key);
       if (value) params.set(key, value);
     }
@@ -137,6 +139,14 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
     params.delete("page");
     if (showClosed) params.delete("erledigt");
     else params.set("erledigt", "1");
+    router.push(`/tickets${params.toString() ? `?${params.toString()}` : ""}`);
+  }
+
+  function toggleSortCreated() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("page");
+    if (sortByCreated) params.delete("sort");
+    else params.set("sort", "created_desc");
     router.push(`/tickets${params.toString() ? `?${params.toString()}` : ""}`);
   }
 
@@ -194,6 +204,17 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
             data-testid="filter-closed"
           >
             {t("filters.showClosed")}
+          </button>
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={sortByCreated}
+            className={sortByCreated ? ui.primary : ui.button}
+            onClick={toggleSortCreated}
+            title={t("filters.sortHint")}
+            data-testid="filter-sort-created"
+          >
+            {t("filters.sortCreated")}
           </button>
           <select className={ui.input} value={values.assignee_user_id} onChange={(e) => set("assignee_user_id", e.target.value)} data-testid="filter-assignee">
             <option value="">{t("filters.assigneeAll")}</option>

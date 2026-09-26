@@ -771,6 +771,50 @@ def test_helper_access_flow(client: TestClient, world: World) -> None:
     assert _ok(client.get(f"{H}/{pid}/helper-access", headers=h)) == []
 
 
+@pytest.fixture
+def portal_client(database: Database, redis_url: str) -> Iterator[TestClient]:
+    """Client with a public portal URL, so the invitation letter carries link and QR code."""
+    with mock_aws():
+        boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
+        settings = _settings(database, redis_url).model_copy(
+            update={"web_portal_url": "https://portal.example.test/"}
+        )
+        with TestClient(create_app(settings)) as c:
+            yield c
+
+
+def test_helper_invitation_letter_has_qr_code_and_link(
+    portal_client: TestClient, world: World
+) -> None:
+    """A86: the PDF letter on the tenant letterhead carries the invitation link as text and as
+    a QR image; the code is rotated (the letter is a POST) and never part of the JSON."""
+    client = portal_client
+    h = bearer(login(client, world, "m30admin"))
+    _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h))
+    pid = _ok(client.post(H, json={"kind": "general"}, headers=h), 201)["id"]
+    created = _ok(
+        client.post(
+            f"{H}/{pid}/helper-access",
+            json={"name": "Lena Letter", "email": f"lena.letter.{RUN}@example.test"},
+            headers=h,
+        ),
+        201,
+    )
+    assert created["invitation_url"].startswith("https://portal.example.test/einladung?code=")
+    grant_id = _ok(client.get(f"{H}/{pid}/helper-access", headers=h))[0]["grant_id"]
+    response = client.post(f"{H}/{pid}/helper-access/{grant_id}/invitation-letter", headers=h)
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"] == "application/pdf"
+    page = PdfReader(io.BytesIO(response.content)).pages[0]
+    xobjects = page["/Resources"]["/XObject"]  # type: ignore[index]
+    assert any(x.get_object()["/Subtype"] == "/Image" for x in xobjects.values())
+    text = page.extract_text().replace("\n", "").replace(" ", "")
+    assert "https://portal.example.test/einladung?code=" in text
+    assert "Einladungslink" in text
+    # The letter rotated the code: the link handed out at creation is no longer in the PDF.
+    assert created["invitation_url"].replace(" ", "") not in text
+
+
 UPROTOKOLL_DUMP = """
 INSERT INTO `properties` (`id`, `street`, `house_number`, `postal_code`, `city`, `label`)
 VALUES (1,'Musterweg','12','40789','Monheim am Rhein','Haus Muster');

@@ -2,7 +2,9 @@
 
 The initial administrator comes from ``MHVP_SEED_ADMIN_EMAIL`` / ``MHVP_SEED_ADMIN_PASSWORD``
 (never from the repository); the account becomes tenant administrator of both tenants and
-must set up TOTP at first login. No release gate is opened.
+must set up TOTP at first login. With ``MHVP_SEED_ADMIN_SUPERADMIN=true`` that account (also
+when it already exists) receives the single superadmin marker (ADR 0011); the address itself
+is never part of the code. No release gate is opened and no platform flag is switched on.
 """
 
 import asyncio
@@ -13,7 +15,15 @@ import mhvp.models  # noqa: F401  (registers every mapped table so cross-module 
 from mhvp.core.config import get_settings
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.logging import configure_logging, get_logger
-from mhvp.platform.services import add_member, create_user, seed_tenants
+from mhvp.platform.services import (
+    add_member,
+    create_user,
+    seed_tenants,
+    set_superadmin,
+    user_id_by_email,
+)
+
+TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
 
 
 async def run() -> int:
@@ -49,6 +59,18 @@ async def run() -> int:
                 log.info("seed_admin_created")
             except ProblemError as exc:
                 log.warning("seed_admin_skipped", code=exc.error.code)
+            if os.environ.get("MHVP_SEED_ADMIN_SUPERADMIN", "").strip().lower() in TRUE_VALUES:
+                admin_id = await user_id_by_email(factory, email)
+                if admin_id is None:
+                    log.warning("seed_superadmin_skipped", reason="admin_missing")
+                else:
+                    try:
+                        await set_superadmin(
+                            factory, user_id=admin_id, granted=True, actor_user_id=None
+                        )
+                        log.info("seed_superadmin_set")
+                    except ProblemError as exc:
+                        log.warning("seed_superadmin_skipped", code=exc.error.code)
         return 0
     finally:
         await engine.dispose()

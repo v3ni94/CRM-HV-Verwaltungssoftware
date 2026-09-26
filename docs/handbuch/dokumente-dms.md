@@ -22,6 +22,29 @@ mit freigegebenem Aufbewahrungsprofil möglich; eine Löschungssperre (zum Beisp
 Rechtsstreit) verhindert das Löschen, bis sie aufgehoben wird. Löschungen werden im
 Löschjournal festgehalten.
 
+Gespiegelte Dokumente (Betreiberentscheidung vom 26.09.2026): Wird ein Dokument rechtmäßig
+gelöscht, entfernt die Plattform anschließend die Kopie in Google Drive (endgültig; lehnt
+Drive das ab, wandert die Datei in den Papierkorb, das Journal vermerkt, welcher Fall
+eingetreten ist). Das Dokument in Paperless bleibt erhalten und erhält das Schlagwort
+"gelöscht", damit im DMS sichtbar ist, dass es im CRM gelöscht wurde; fehlt das Schlagwort
+in Paperless, wird es angelegt. Beide Schritte werden mit Erfolg oder Fehler im Löschjournal
+protokolliert. Die Löschung gilt als "offen", bis beide Schritte gelungen sind; fehlgeschlagene
+Schritte wiederholt der Auftrag selbsttätig (nach 1, 5, 30 Minuten, 2, 6 und 24 Stunden).
+Über die Schnittstelle (`GET /documents/deletions?status=open`) sind offene Löschungen
+einsehbar, `POST /documents/deletions/{id}/retry` stößt die offenen Schritte erneut an.
+Eine Oberfläche dafür gibt es noch nicht.
+
+Seit dem 26.09.2026 sind je Mandant Standardprofile als Entwurf hinterlegt (Status
+"entwurf", Prüfnotiz "Entwurf, Prüfung Steuerberatung offen"): Buchungsbelege, Journale und
+Abrechnungen 10 Jahre; Geschäftsbriefe, Vorgänge und E-Mails 6 Jahre; Verträge 10 Jahre nach
+Vertragsende; Portal- und Bewerberdaten 6 Monate nach Zweckende; WEG-Protokolle und
+Beschlüsse dauerhaft ohne Löschung. Ein Entwurf gibt keine Löschung frei. Die Freigabe je
+Profil und Mandant erfolgt nach Prüfung durch die Steuerberatung über die API
+(`POST /api/v1/retention-profiles/{id}/release`, Recht Mandanteneinstellungen ändern, eine
+andere Person als die Verfasserin des Entwurfs) und wird protokolliert. Eigene Änderungen an
+den Profilen bleiben bei erneutem Seed erhalten. Eine Seite in den Einstellungen gibt es dafür
+noch nicht; Status und Werte sind über `GET /api/v1/retention-profiles` einsehbar.
+
 ## Paperless
 
 Die Anbindung wird unter Einstellungen, DMS-Anbindung eingerichtet (Kapitel
@@ -98,3 +121,6 @@ versendet).
   Feld gepflegt.
 - Dokument lässt sich nicht löschen: Aufbewahrungsprofil nicht freigegeben oder
   Löschungssperre gesetzt.
+- Löschung bleibt "offen": Die Kopie in Drive oder das Schlagwort in Paperless konnte noch
+  nicht gesetzt werden (Anbindung deaktiviert, DMS nicht erreichbar, fehlendes Recht). Den
+  Fehlertext des Schritts prüfen, Anbindung beheben, dann erneut anstoßen.

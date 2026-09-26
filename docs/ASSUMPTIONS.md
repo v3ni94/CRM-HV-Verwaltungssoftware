@@ -1,6 +1,6 @@
 # Annahmen
 
-Stand: 26.09.2026 (A-048 und A-049 ergänzt). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
+Stand: 26.09.2026 (A-048, A-049 und A-052 ergänzt). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
 
 Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Keine dieser Annahmen berührt Geld, Forderungsbestand, Datenschutz, gesetzliche Fristen oder Beweiserhalt. Solche Punkte wären nach Regel 3 offene Fragen und stehen in `docs/OPEN_QUESTIONS.md`. Jede Annahme wird spätestens beim genannten Meilenstein überprüft und bei Bestätigung oder Widerlegung hier fortgeschrieben.
 
@@ -21,10 +21,10 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | --- | --- |
 | Annahme | CI läuft auf GitHub Actions. |
 | Begründung | Abschnitt 4.3 nennt GitHub Actions und Gitea Actions nur für den Fall, dass das Repository dort liegt; das Repository liegt auf GitHub (M1-04). |
-| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
-| Betroffene Bereiche | `.github/workflows`, Pinning nach ADR 0001 |
-| Überprüfung spätestens bei Meilenstein | M9 |
-| Datum | 23.09.2026 |
+| Kennzeichnung | bestätigt durch Betreiberentscheidung 26.09.2026 (M1-04); Images werden ebenfalls dort gebaut und in die GitHub Container Registry `ghcr.io/v3ni94` geschoben (M1-03) |
+| Betroffene Bereiche | `.github/workflows` (`ci.yml`, `images.yml`), Pinning nach ADR 0001 |
+| Überprüfung spätestens bei Meilenstein | erledigt (M9, 26.09.2026); erneut nur bei Wechsel der Repository-Plattform |
+| Datum | 23.09.2026, bestätigt 26.09.2026 |
 
 ## A-003
 
@@ -85,12 +85,12 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 
 | Feld | Inhalt |
 | --- | --- |
-| Annahme | Zeitstempel werden in UTC gespeichert (`TIMESTAMPTZ`); die Oberfläche zeigt Zeitstempel in der Zeitzone Europe/Berlin an. Die Zeitzone für fachliche Fristberechnung ist nicht angenommen, sondern offen (M1-09). |
-| Begründung | Abschnitt 4.1 legt UTC fest; die Anzeige betrifft nur die Darstellung. Fristberechnungen folgen erst mit freigegebenen Regeln. |
-| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
-| Betroffene Bereiche | api, worker (Celery in UTC), Oberfläche |
-| Überprüfung spätestens bei Meilenstein | M2 |
-| Datum | 23.09.2026 |
+| Annahme | Zeitstempel werden in UTC gespeichert (`TIMESTAMPTZ`); die Oberfläche zeigt Zeitstempel in der Zeitzone Europe/Berlin an. Fachliche Fristen (Fälligkeiten, Fristende, Zugang) werden in Europe/Berlin berechnet (Betreiberentscheidung 26.09.2026, M1-09). |
+| Begründung | Abschnitt 4.1 legt UTC fest; die Anzeige betrifft nur die Darstellung. Der Kalendertag einer Frist ist der Tag in Europe/Berlin; welche Frist gilt, folgt weiterhin nur aus freigegebenen Regeln. |
+| Kennzeichnung | bestätigt 26.09.2026; die Zeitzone ist je Modul fest hinterlegt (Celery `Europe/Berlin`, `workspace.services.local_today`, `automation.schedule.SCHEDULE_TZ`, SLA-Kalender), eine zentrale Einstellung gibt es nicht. Stellen, die noch den UTC-Kalendertag nutzen, sind in M1-09 aufgelistet und in einem eigenen Schritt umzustellen |
+| Betroffene Bereiche | api, worker (Celery in Europe/Berlin, Speicherung UTC), Oberfläche |
+| Überprüfung spätestens bei Meilenstein | bei der Umstellung der in M1-09 gelisteten Stellen |
+| Datum | 23.09.2026, bestätigt 26.09.2026 |
 
 ## A-009
 
@@ -107,12 +107,12 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 
 | Feld | Inhalt |
 | --- | --- |
-| Annahme | SeaweedFS 4.47 dient nur als S3-kompatibler Objektspeicher für Entwicklung und CI, bis M1-01 entschieden ist. |
-| Begründung | MinIO-Images sind auf Docker Hub nicht mehr verfügbar (laut ADR 0005, Prüfstand 23.09.2026). Die Anwendung nutzt nur die S3-API. |
-| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
-| Betroffene Bereiche | `infra/compose*.yaml`, `MHVP_S3_*` |
-| Überprüfung spätestens bei Meilenstein | M6 |
-| Datum | 23.09.2026 |
+| Annahme | SeaweedFS 4.47 dient nur als S3-kompatibler Objektspeicher für Entwicklung, CI und e2e. Produktion und Staging nutzen seit der Entscheidung M1-01 (26.09.2026) IONOS S3 Object Storage, ohne Objektspeicher-Container im Stack. |
+| Begründung | MinIO-Images sind auf Docker Hub nicht mehr verfügbar (laut ADR 0005, Prüfstand 23.09.2026). Die Anwendung nutzt nur die S3-API, deshalb ist der Wechsel zwischen SeaweedFS (dev) und IONOS S3 (prod) reine Konfiguration (`MHVP_S3_*`). |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb; für Produktion durch Betreiberentscheidung ersetzt (ADR 0005 Nachtrag 26.09.2026) |
+| Betroffene Bereiche | `infra/compose*.yaml`, `MHVP_S3_*`, `docs/runbooks/objektspeicher-ionos-s3.md` |
+| Überprüfung spätestens bei Meilenstein | M6 (Object Lock je Aufbewahrungsprofil) |
+| Datum | 26.09.2026 (zuvor 23.09.2026) |
 
 ## A-011
 
@@ -129,9 +129,9 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 
 | Feld | Inhalt |
 | --- | --- |
-| Annahme | Passwortregel: Länge 12 bis 128 Zeichen, keine Zusammensetzungsregeln, keine Leerzeichen am Anfang oder Ende; Kontosperre nach 10 Fehlversuchen für 15 Minuten. |
-| Begründung | Abschnitt 3.4 verlangt Passwortregeln nach BSI-Empfehlung und eine Kontosperre, nennt aber keine Werte. Konkrete Zahlen sind hier nicht aus einer geprüften Quelle übernommen. |
-| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb; Bestätigung offen (M2-01) |
+| Annahme | Passwortregel: Länge 6 bis 128 Zeichen, keine Zusammensetzungsregeln, keine Leerzeichen am Anfang oder Ende; Kontosperre nach 10 Fehlversuchen für 15 Minuten. Zweiter Faktor (TOTP) freiwillig je Benutzer, gemerkte Geräte 90 Tage. |
+| Begründung | Abschnitt 3.4 verlangt Passwortregeln nach BSI-Empfehlung und eine Kontosperre, nennt aber keine Werte. Ursprüngliche Annahme (23.09.2026): 12 Zeichen. Betreiberentscheidung 26.09.2026 (M2-01): Mindestlänge 6 Zeichen. Hinweis: 6 Zeichen liegen unter den üblichen Empfehlungen, das BSI empfiehlt längere Passwörter; die Entscheidung liegt beim Betreiber und wird in der Oberfläche nicht kommentiert. |
+| Kennzeichnung | Betreiberentscheidung, keine Annahme mehr (M2-01 entschieden 26.09.2026); Prüfung gegen kompromittierte Passwörter offen (M2-09) |
 | Betroffene Bereiche | Anmeldung |
 | Überprüfung spätestens bei Meilenstein | M9 (vor Produktivbetrieb) |
 | Datum | 23.09.2026 |
@@ -162,7 +162,7 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 
 | Feld | Inhalt |
 | --- | --- |
-| Annahme | Gläubiger eines Mietverhältnisses ist im Mietobjekt der zum Mietbeginn eingetragene Eigentümer, bei WEG mit SEV der Eigentümer der Einheit mit aktivem SEV-Eigentumsverhältnis; Gläubiger des Eigentumsverhältnisses ist die GdWE. Reine WEG-Objekte führen keine Mietverhältnisse (M5-03). |
+| Annahme | Gläubiger eines Mietverhältnisses ist im Mietobjekt der zum Mietbeginn eingetragene Eigentümer, bei WEG mit SEV der Eigentümer der Einheit mit aktivem SEV-Eigentumsverhältnis; Gläubiger des Eigentumsverhältnisses ist die GdWE. Reine WEG-Objekte führen keine Mietverhältnisse (M5-03; Betreiberentscheidung 26.09.2026: Ablehnung bestätigt). |
 | Begründung | Abschnitt 6.9.1 und 6.9.11: Forderungen gehören dem richtigen Rechtsträger, die Verwaltung ist nicht automatisch Gläubiger. |
 | Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb |
 | Betroffene Bereiche | Verträge, Debitoren |
@@ -555,3 +555,36 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Aufbewahrungsfristen und Löschregeln | V17 offen, E05 | M6, M18 |
 | Fachliche Fristberechnung (Zeitzone, Feiertage, Zugang) | betrifft gesetzliche Fristen; offen als M1-09 | jeweiliger Fachmeilenstein |
 | Kontenrahmen | V8 offen | M10 |
+
+## A-050
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Für plattformweite Schalter gab es bis zum 26.09.2026 keinen persistenten Mechanismus (nur Umgebungsvariablen in `mhvp.core.config.Settings` und Mandanteneinstellungen je Mandant). Für den Schalter `gate_superadmin_bypass` (ADR 0011) wurde deshalb die einzeilige Plattformtabelle `platform_settings` (Migration 0135, ohne Mandantenbezug, ohne RLS, Pflege nur durch Plattformadministratoren über `GET`/`PATCH /api/v1/platform/settings`) angelegt. Änderungen werden im Anwendungsprotokoll mit Akteur, altem und neuem Wert und Version festgehalten; ein eigenes plattformweites Änderungsprotokoll (Tabelle) existiert nicht, da das Änderungsprotokoll (`audit_log`) mandantenbezogen ist. |
+| Begründung | ADR 0003 Nr. 2 verbietet Umgebungsvariablen als Gate-Schalter; eine Mandanteneinstellung wäre je Mandant und nicht durch Plattformadministratoren allein kontrolliert. |
+| Kennzeichnung | unkritisch, ermöglicht die Umsetzung von ADR 0011; Standard des Schalters ist aus |
+| Betroffene Bereiche | Plattformverwaltung, Freigabestufen G1 bis G5 |
+| Überprüfung spätestens bei Meilenstein | M9 (Betrieb), spätestens vor G1 |
+| Datum | 26.09.2026 |
+
+## A-051
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Die Ähnlichkeitssuche über Einbettungen (`mhvp.ai.embeddings`, M7-03) bietet nur Treffer mit Kosinusdistanz bis 0,8 an (`MAX_COSINE_DISTANCE`); darüber gilt ein Dokument als nicht einschlägig und der Aufrufer fällt auf die Schlüsselwortsuche zurück. Texte werden in Fenster von 1500 Zeichen mit 200 Zeichen Überlappung zerlegt, höchstens 200 Fenster je Quelle; ein Aufruf beim Anbieter umfasst bis zu 64 Fenster. Die Werte sind technische Vorgaben ohne Rechtsbezug. |
+| Begründung | Der Master-Prompt nennt keine Schwelle und keine Fenstergröße (Abschnitt 9.1 verlangt nur Zerlegung, Einbettung je Mandant und Berechtigungsfilter vor der Suche). Ein Grenzwert verhindert, dass bei kleinen Beständen beliebig unpassende Dokumente in den Kontext gelangen. |
+| Kennzeichnung | unkritisch, Konstanten in `mhvp.ai.embeddings`; Änderung ohne Migration möglich, gespeicherte Vektoren bleiben gültig |
+| Betroffene Bereiche | Kontext-Chat (answer_question), Wissensbasis in der Mail-Vorbereitung |
+| Überprüfung spätestens bei Meilenstein | M20 (Portal-Chat), nach den ersten Auswertungen mit echten Dokumenten |
+| Datum | 26.09.2026 |
+
+## A-052
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Der Vollabruf des Gmail-Posteingangs (`mhvp.communication.backfill`, Betreiberauftrag 26.09.2026) nimmt Altbestand nur mit Ticketzuordnung, Thread- und TNR-Erkennung auf; die KI-Rechnungserfassung (M14-05), die Rechnungsweiterleitung und die Archivierung werden für rückwirkend geholte Mails nicht ausgelöst. Der Ticketabschluss per letzter erledigter Mail nutzt die Erledigungsart `auskunft_erteilt`; ist sie deaktiviert, bleibt das Ticket offen. |
+| Begründung | Der Betreiber hat Ticketzuordnung und TNR-Erkennung ausdrücklich verlangt und die rückwirkende Archivierung ausgeschlossen; KI-Läufe für hunderte alte Mails verursachten Kosten ohne Auftrag (Regel 0.1.6, Vorschläge nur auf Anforderung). Die Erledigungsart ist die vom Betreiber genannte. |
+| Kennzeichnung | unkritisch, kein Geldfluss; jederzeit über einen erneuten Vollabruf mit erweitertem Umfang änderbar |
+| Betroffene Bereiche | `POST /mail/mailboxes/{id}/backfill`, CLI `python -m mhvp.communication.backfill`, `services.complete_message`, Regel M20-07 |
+| Überprüfung spätestens bei Meilenstein | Abnahme M20 (info@ läuft über die Plattform) |
+| Datum | 26.09.2026 |

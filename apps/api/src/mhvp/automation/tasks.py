@@ -1,6 +1,7 @@
 """Celery beat job ``mhvp.automation.process_events``: every minute, per active tenant, new
 domain events since the watermark are matched against the active rules (section 15.2, A38)
-and due schedule rules are run once per due moment (A39, ``process_schedules``).
+and due schedule rules are run once per due moment (A39, ``process_schedules``); afterwards
+the due webhook deliveries of the tenant are sent (A82, ``deliver_due_webhooks``).
 The event system itself is untouched (no hook in ``emit``)."""
 
 import asyncio
@@ -30,7 +31,14 @@ async def process_events_once(settings: Settings, *, now: datetime | None = None
     engine = create_async_engine(
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
     )
-    totals = {"tenants": 0, "events": 0, "runs": 0, "failed": 0}
+    totals = {
+        "tenants": 0,
+        "events": 0,
+        "runs": 0,
+        "failed": 0,
+        "webhooks": 0,
+        "webhooks_failed": 0,
+    }
     try:
         factory = create_session_factory(engine)
         async with platform_transaction(factory) as session:
@@ -42,7 +50,7 @@ async def process_events_once(settings: Settings, *, now: datetime | None = None
             try:
                 async with tenant_transaction(factory, tenant_id) as session:
                     result = await process_tenant(session, tenant_id, now=now, settings=settings)
-                for key in ("events", "runs", "failed"):
+                for key in ("events", "runs", "failed", "webhooks", "webhooks_failed"):
                     totals[key] += result[key]
             except Exception:
                 log.warning("automation process_events failed", extra={"tenant_id": str(tenant_id)})

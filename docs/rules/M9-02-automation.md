@@ -4,11 +4,11 @@
 | --- | --- |
 | ID | `M9-02` |
 | Title | Regel-Engine Stufe 1 (Auslöser Ereignistyp, Bedingungen als JSON-Logik, Aktionen Ticket aus Vorlage, interne Benachrichtigung, Ticketfeld setzen) und Stufe 2 (Auslöser Zeitplan, Aktionen Webhook, E-Mail-Entwurf, Brief-Entwurf, KI-Aufgabe), Ausführungsprotokoll, Testlauf |
-| Scope | Domäne `automation`, Tabellen `automation_rule`, `automation_run`, `automation_watermark`; alle Mandanten; Ereignisse aus `domain_event` und Zeitplanfenster; Aktionen auf `ticket`, `notification`, `message` (nur Entwurf), `document` (Brief), `ai_task_run` (nur Vorschlag) und ausgehende signierte Webhooks |
+| Scope | Domäne `automation`, Tabellen `automation_rule`, `automation_run`, `automation_watermark`, `automation_webhook_delivery`; alle Mandanten; Ereignisse aus `domain_event` und Zeitplanfenster; Aktionen auf `ticket`, `notification`, `message` (nur Entwurf), `document` (Brief), `ai_task_run` (nur Vorschlag) und ausgehende signierte Webhooks |
 | Source status | Keine Rechtsnorm im Quellenregister (annex C) einschlägig; Produktschutz nach Regel 0.1.6 und 0.1.7 (keine Buchung, Zahlung, Freigabe oder Versand durch Regeln, keine autonomen Wirkungen mit Geldbezug; Webhook-Zielprüfung nach Abschnitt 12) |
 | Acceptance case | keine in annex D; Tests `apps/api/tests/unit/test_automation_rules.py`, `apps/api/tests/unit/test_automation_schedule.py`, `apps/api/tests/unit/test_automation_letter_draft.py`, `apps/api/tests/integration/test_m9_automation.py`, `apps/api/tests/integration/test_m9_automation_stage2.py`, `apps/api/tests/integration/test_m9_automation_related.py`, `apps/web-crm/src/components/settings/AutomationAdmin.test.tsx` |
 | Implementation | `mhvp.automation` (`models`, `rules`, `schedule`, `schemas`, `services`, `tasks`, `routers`), Migrationen 0100 und 0110, Beat `automation-process-events` in `mhvp/worker.py`, CRM `einstellungen/automatisierung` |
-| Change reason | Aufgabe A38 der Lückenliste vom 26.09.2026 (Paket `mhvp.automation` war laut README nicht umgesetzt; Voraussetzung für die Ablösung von Müller FLOW, 13.4); Stufe 2 nach Aufgabe A39 (Webhook, Entwürfe, KI-Aufgabe, Zeitplan, Regelformular) am 26.09.2026; A81 (Bedingungen auf verknüpfte Stammdaten) und A83 (Kennzeichnung automatisch erzeugter Briefe) am 26.09.2026 |
+| Change reason | Aufgabe A38 der Lückenliste vom 26.09.2026 (Paket `mhvp.automation` war laut README nicht umgesetzt; Voraussetzung für die Ablösung von Müller FLOW, 13.4); Stufe 2 nach Aufgabe A39 (Webhook, Entwürfe, KI-Aufgabe, Zeitplan, Regelformular) am 26.09.2026; A81 (Bedingungen auf verknüpfte Stammdaten) und A83 (Kennzeichnung automatisch erzeugter Briefe) am 26.09.2026; A82 (Wiederholung fehlgeschlagener Regel-Webhooks nach dem Stufenplan von Abschnitt 12, Zustellprotokoll am Lauf, manuelle erneute Zustellung; Migration 0133, Tabelle `automation_webhook_delivery`) am 26.09.2026 |
 
 ## Regeln
 
@@ -35,9 +35,23 @@
     dem Mandantenschlüssel verschlüsselt abgelegt (`secret_enc`) und von der API nie
     zurückgegeben (`has_secret`); ein Wechsel der URL ohne neues Geheimnis wird abgelehnt.
     Ziele nur `https`; private oder nicht auflösbare Ziele nur mit der Einstellung
-    `webhook_allow_private_targets` (in Staging und Produktion erzwungen aus). Ein
-    Aufruf je Lauf, Zeitlimit 10 Sekunden, keine Wiederholung; ein Fehlschlag wird als
-    fehlgeschlagener Lauf protokolliert.
+    `webhook_allow_private_targets` (in Staging und Produktion erzwungen aus). Zeitlimit je
+    Versuch 10 Sekunden. Zustellung und Wiederholung (A82): der Lauf prüft Ziel und
+    Geheimnis, baut die Nutzlast und stellt sie in die Ausgangstabelle
+    `automation_webhook_delivery` (eine Zeile je Lauf und Aktionsposition); der Beat-Job
+    sendet fällige Zustellungen nach dem Lauf und wiederholt Fehlschläge (Transportfehler
+    oder Antwort außerhalb 2xx) nach demselben Stufenplan wie `mhvp.core.webhooks`
+    (1 min, 5 min, 30 min, 2 h, 6 h, 24 h, danach Status `failed`). Jeder Versuch sendet die
+    unveränderte Nutzlast, neu signiert, mit `X-MHVP-Delivery`, und prüft und bindet das
+    Ziel erneut an die geprüfte Adresse (SSRF-Schutz wie bei Abonnements). Ein unzulässiges
+    Ziel oder ein fehlendes Geheimnis ist ein Konfigurationsfehler der Regel: der Lauf
+    schlägt fehl, ohne Wiederholung. Das Zustellprotokoll hängt am Lauf
+    (`webhook_deliveries` in `GET /automation/runs`: Status, Versuche, nächster Versuch,
+    letzter HTTP-Status, letzter Fehler, Zustellzeitpunkt); manuelle erneute Zustellung über
+    `POST /automation/webhook-deliveries/{id}/redeliver` (Recht `tenant_settings:update`,
+    Zustellung geht auf `pending`, Versuchszähler bleibt). Zwei Beat-Läufe senden dieselbe
+    Zustellung nie doppelt (`SELECT ... FOR UPDATE SKIP LOCKED`, Eindeutigkeit je Lauf und
+    Aktion). Empfänger sollten je `X-MHVP-Delivery` idempotent verarbeiten.
   - `mail_draft`: E-Mail-Entwurf aus einer Antwortvorlage der Tickets (M20) im Postfach des
     Tickets (`message.status = draft`, Empfänger aus letzter eingehender Mail oder
     Hauptadresse des Kontakts). Kein Versand, keine Einreichung; Freigabe und Versand bleiben
@@ -136,9 +150,13 @@
 - Erledigt 26.09.2026: `GET /api/v1/documents?is_draft=true|false` filtert auf
   `source_meta["is_draft"]` (Dokumentdomäne), das CRM bietet unter Dokumente die Auswahl
   "Alle, nur Entwürfe, ohne Entwürfe".
-- Regel-Webhooks kennen keine Wiederholung (anders als Abonnements nach Abschnitt 12); ob
-  ein Wiederholungsplan gewünscht ist, entscheidet der Betreiber (`docs/OPEN_QUESTIONS.md`
-  M9-08).
+- Erledigt 26.09.2026 (A82): Regel-Webhooks werden nach dem Stufenplan von Abschnitt 12
+  wiederholt (siehe Aktion `webhook`); die Betreiberentscheidung M9-08 in
+  `docs/OPEN_QUESTIONS.md` ist damit technisch vorbereitet, die fachliche Bestätigung des
+  Stufenplans (gleiche Stufen wie Abonnements) steht beim Betreiber aus. Das CRM zeigt im
+  Ausführungsprotokoll bisher nur die Aktionen des Laufs; das Zustellprotokoll
+  (`webhook_deliveries`) und die erneute Zustellung sind über die API verfügbar, eine
+  Anzeige im Formular `AutomationAdmin` ist offen.
 - Ein Ereignis `ticket.updated` existiert im Ticketrouter nicht; Regeln auf Feldänderungen
   eines Tickets sind daher erst mit einem solchen Ereignis möglich (Erweiterung der
   Ticketdomäne, nicht der Regel-Engine).

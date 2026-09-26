@@ -8,7 +8,7 @@ from celery import shared_task
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from mhvp.ai import gateway, imports
+from mhvp.ai import embeddings, gateway, imports
 from mhvp.ai.models import AiMessage, AiProposal, AiTask, AiTaskRun, RunStatus
 from mhvp.core import crypto
 from mhvp.core.config import Settings, get_settings
@@ -117,6 +117,9 @@ async def run_and_propose(
         contacts_preview: dict[str, Any] | None = None
         assert run is not None  # noqa: S101
         proposal_id = None
+        # The answering provider is part of every proposal (M7-02): after a fallback the
+        # reviewer sees which provider produced it. Proposal only, never a decision.
+        provider_used = run.provider.value if run.provider is not None else None
         if run.status is RunStatus.SUCCEEDED and run.task is AiTask.CHECK_STATEMENT:
             # A35 KI-Plausibilität: findings only, stored as a proposal at the statement;
             # nothing is written to the statement or its snapshot (rule 0.1.6).
@@ -127,7 +130,7 @@ async def run_and_propose(
                 task_run_id=run.id,
                 entity_type=ai_check.ENTITY_TYPE,
                 context_id=_uuid(run.input_ref.get("context", {}).get("context_id")),
-                proposed=ai_check.proposal_payload(run),
+                proposed={**ai_check.proposal_payload(run), "provider_used": provider_used},
             )
             session.add(check)
             await session.flush()
@@ -142,7 +145,7 @@ async def run_and_propose(
                 task_run_id=run.id,
                 entity_type=ai_posting.ENTITY_TYPE,
                 context_id=_uuid(run.input_ref.get("context", {}).get("context_id")),
-                proposed=ai_posting.proposal_payload(run),
+                proposed={**ai_posting.proposal_payload(run), "provider_used": provider_used},
             )
             session.add(posting)
             await session.flush()
@@ -170,7 +173,7 @@ async def run_and_propose(
                 task_run_id=run.id,
                 entity_type=entity_type,
                 context_id=_uuid(run.input_ref.get("context", {}).get("context_id")),
-                proposed=preview,
+                proposed={**preview, "provider_used": provider_used},
             )
             session.add(proposal)
             await session.flush()
@@ -219,6 +222,36 @@ def run(tenant_id: str, run_id: str, actor_user_id: str | None) -> str:
             get_settings(),
             uuid.UUID(tenant_id),
             uuid.UUID(run_id),
+            uuid.UUID(actor_user_id) if actor_user_id else None,
+        )
+    )
+
+
+async def index_embeddings_once(
+    settings: Settings, tenant_id: uuid.UUID, actor_user_id: uuid.UUID | None
+) -> dict[str, Any]:
+    if settings.master_key is not None and not crypto.is_configured():
+        crypto.set_master_key(crypto.decode_master_key(settings.master_key.get_secret_value()))
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    try:
+        report = await embeddings.index_tenant(
+            create_session_factory(engine), tenant_id, actor_user_id
+        )
+        return report.as_dict()
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.ai.embed_index", acks_late=True)
+def embed_index(tenant_id: str, actor_user_id: str | None) -> dict[str, Any]:
+    """Embedding index job per tenant (M7-03): batches with budget accounting, see
+    ``mhvp.ai.embeddings.index_tenant``."""
+    return asyncio.run(
+        index_embeddings_once(
+            get_settings(),
+            uuid.UUID(tenant_id),
             uuid.UUID(actor_user_id) if actor_user_id else None,
         )
     )

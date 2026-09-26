@@ -4,7 +4,6 @@ reminder 10 days before expiry."""
 import asyncio
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
 
 from celery import shared_task
 from sqlalchemy import select
@@ -16,8 +15,13 @@ from mhvp.banking.models import BankConnection, BankSyncRun, ConnectionStatus, C
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
+from mhvp.core.problems import ProblemError
 from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.workspace.services import local_today, notify
+
+# Incremental finAPI sync: overlap in days before the cursor (banks may book a transaction
+# with an earlier booking date after the previous run); dedup by provider id makes it idempotent.
+SYNC_OVERLAP_DAYS = 3
 
 CONSENT_WARN_DAYS = 10
 # Task A29 (8.2): one in-app notification per bank connection and expiry date to everyone
@@ -298,21 +302,20 @@ async def _finapi_fetch_once(
     until: str | None = None,
 ) -> dict[str, int]:
     """Runs the update that a user click (or, Stage 2, the tenant's own opt-in scheduled
-    fetch) queued (M11-finapi, master prompt sections 7 to 9).
+    fetch) queued (M11-finapi, master prompt sections 7 to 9). Incremental by cursor
+    (`FinApiAccountLink.last_synced_booking_date`, see below) when no range is given.
 
     Callers: `create_finapi_connection`/`fetch_finapi_transactions`/
     `fetch_finapi_connection_transactions` in `mhvp.banking.routers` (manual), and
     `finapi_scheduled_fetch` below (only when `FinApiTenantConfig.auto_fetch_enabled` is set).
-    `since`/`until` only bound what is *kept* from what finAPI returned; the provider's
-    `/transactions` endpoint documents no confirmed date filter (docs/integrations/finapi.md,
-    "zu prüfen"), so nothing is asked of the provider that is not verified, and nothing is
-    synthesized to fill a gap it does not cover (rule 0.1.3).
+    `since`/`until` are sent to finAPI as booking date bounds [laut finAPI-Doku, M11-41] and
+    applied again on the returned rows, so a provider ignoring the bound only returns more
+    rows; nothing is synthesized to fill a gap it does not cover (rule 0.1.3).
     """
     from datetime import date as _date
 
     from mhvp.banking import finapi as finapi_client
     from mhvp.banking import services as svc
-    from mhvp.banking.camt import RawTransaction
     from mhvp.banking.models import (
         BankSyncRun,
         FinApiAccountLink,
@@ -355,38 +358,33 @@ async def _finapi_fetch_once(
                     client_secret=cfg.client_secret,
                     base_url=cfg.base_url,
                     mandator_id=cfg.mandator_id,
+                    user_id=fa.finapi_user_id,
+                    user_password=fa.finapi_user_password,
+                    sandbox=cfg.sandbox,
                 )
             )
+            # Incremental sync: without an explicit `since` the fetch starts at the cursor
+            # (newest booking date imported so far) minus an overlap of a few days, because a
+            # bank may book a transaction with an earlier booking date after the last run.
+            # The overlap is idempotent through dedup by `bank_reference` (D05).
+            incremental = since_date is None and link.last_synced_booking_date is not None
+            if incremental and link.last_synced_booking_date is not None:
+                since_date = link.last_synced_booking_date - timedelta(days=SYNC_OVERLAP_DAYS)
             try:
                 page, counts = (
                     1,
                     {"new": 0, "duplicates": 0, "possible_duplicates": 0, "transfers": 0},
                 )
+                newest: tuple[_date, str] | None = None
                 while True:
                     items, has_more = client.list_transactions(
-                        account_ids=[link.finapi_account_id], page=page
+                        account_ids=[link.finapi_account_id],
+                        page=page,
+                        min_booking_date=since_date,
+                        max_booking_date=until_date,
                     )
                     raw = [
-                        RawTransaction(
-                            bank_reference=f"finapi:{t.transaction_id}",
-                            booking_date=datetime.fromisoformat(t.booking_date).date(),
-                            value_date=(
-                                datetime.fromisoformat(t.value_date).date()
-                                if t.value_date
-                                else None
-                            ),
-                            amount=Decimal(t.amount),
-                            currency=t.currency,
-                            counterpart_name=t.counterpart_name,
-                            counterpart_iban=t.counterpart_iban,
-                            counterpart_bic=t.counterpart_bic,
-                            purpose=t.purpose,
-                            end_to_end_id=t.end_to_end_id,
-                            mandate_reference=t.mandate_reference,
-                            creditor_id=t.creditor_id,
-                            transaction_code=None,
-                            raw={"finapi_transaction_id": t.transaction_id},
-                        )
+                        finapi_client._finapi_transaction_to_raw(t)
                         for t in items
                         if not t.is_removed
                     ]
@@ -394,6 +392,10 @@ async def _finapi_fetch_once(
                         raw = [r for r in raw if r.booking_date >= since_date]
                     if until_date is not None:
                         raw = [r for r in raw if r.booking_date <= until_date]
+                    for r in raw:
+                        key = (r.booking_date, r.bank_reference or "")
+                        if newest is None or key > newest:
+                            newest = key
                     page_counts = await svc.import_finapi_transactions(
                         session,
                         tenant_id=tenant_id,
@@ -409,7 +411,21 @@ async def _finapi_fetch_once(
                         break
                     page += 1
                 link.last_transactions_fetch_at = datetime.now(UTC)
+                if newest is not None and (
+                    link.last_synced_booking_date is None
+                    or newest[0] >= link.last_synced_booking_date
+                ):
+                    link.last_synced_booking_date = newest[0]
+                    link.last_synced_transaction_id = newest[1].removeprefix("finapi:")[:64]
                 run.status, run.counts = "done", counts
+                fa.last_error = None
+            except ProblemError as exc:
+                # Registered code first (ADR 0004): 0005 credentials, 0006 rate limit, 0002
+                # unavailable. The cursor stays where it was; the next run repeats the range.
+                message = f"{exc.error.code}: {exc.detail or exc.error.title}"
+                run.status, run.errors = "failed", [message]
+                fa.last_error = message
+                counts = {"new": 0}
             except Exception as exc:
                 run.status, run.errors = "failed", [str(exc)]
                 counts = {"new": 0}

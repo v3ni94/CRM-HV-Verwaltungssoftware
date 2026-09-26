@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { CompanySettings } from "@/components/settings/CompanySettings";
 import { BillingSettingsForm, type BillingSettings } from "@/components/settings/BillingSettings";
 import { ManagerEntitySetup, type ManagerEntityStatus } from "@/components/settings/ManagerEntitySetup";
+import { AiLearningExamples } from "@/components/settings/AiLearningExamples";
+import { ResolutionKindsSettings } from "@/components/settings/ResolutionKindsSettings";
 import { TicketReplyApprovalAll } from "@/components/settings/TicketReplyApprovalAll";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -32,6 +34,14 @@ export default async function CompanySettingsPage() {
       <CompanySettings initial={settings.data.company} branding={settings.data.branding} canUpdate={can("tenant_settings:update")} />
       <ManagerEntitySetup initial={managerData} canUpdate={can("tenant_settings:update")} />
       <TicketReplyApprovalAll initial={settings.data.ticket_reply_approval_all} canUpdate={can("tenant_settings:update")} />
+      <AiLearningExamples initial={settings.data.ai_learning_examples_enabled ?? false} canUpdate={can("tenant_settings:update")} />
+      <ResolutionKindsSettings
+        initial={{
+          disabled: settings.data.resolution_kinds?.disabled ?? [],
+          custom: settings.data.resolution_kinds?.custom ?? [],
+        }}
+        canUpdate={can("tenant_settings:update")}
+      />
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">{tb("title")}</h2>
         {billingData ? (

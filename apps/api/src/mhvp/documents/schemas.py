@@ -3,11 +3,13 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from mhvp.documents.models import (
     DocumentSource,
     LinkRole,
+    MirrorDeletionAction,
+    MirrorDeletionStatus,
     MirrorStatus,
     RetentionStart,
     StorageKind,
@@ -42,6 +44,31 @@ class MirrorOut(_Out):
     external_ref: str | None
     attempts: int
     last_error: str | None
+
+
+class MirrorDeletionStepOut(_Out):
+    """One mirror step of a platform deletion (M6-03, operator decision 26.09.2026)."""
+
+    kind: StorageKind
+    action: MirrorDeletionAction
+    external_ref: str
+    status: MirrorDeletionStatus
+    result: str | None
+    attempts: int
+    last_error: str | None
+    requested_at: datetime
+    completed_at: datetime | None
+
+
+class DocumentDeletionOut(BaseModel):
+    """Deletion of one document with its mirror steps; ``open`` ("offen") until every step
+    is done."""
+
+    document_id: uuid.UUID
+    status: MirrorDeletionStatus
+    requested_at: datetime
+    requested_by: uuid.UUID | None
+    steps: list[MirrorDeletionStepOut]
 
 
 class DocumentOut(_Out):
@@ -121,8 +148,17 @@ class RetentionProfileIn(_In):
     document_class: str = Field(min_length=2, max_length=63)
     legal_entity_kind: str | None = Field(default=None, max_length=32)
     legal_basis: str = Field(min_length=5, description="Quelle aus Anhang C, z. B. R17 oder R18")
-    retention_years: int = Field(gt=0, le=100)
+    retention_years: int = Field(ge=0, le=100)
+    retention_months: int = Field(default=0, ge=0, le=11, description="zusätzlich zu Jahren")
+    permanent: bool = Field(default=False, description="dauerhaft aufbewahren, nie löschen")
     start_rule: RetentionStart
+    review_note: str | None = Field(default=None, max_length=200)
+
+    @model_validator(mode="after")
+    def _period_defined(self) -> "RetentionProfileIn":
+        if not self.permanent and self.retention_years == 0 and self.retention_months == 0:
+            raise ValueError("Frist fehlt: Jahre oder Monate angeben oder dauerhaft wählen.")
+        return self
 
 
 class RetentionProfileOut(RetentionProfileIn):
@@ -131,6 +167,11 @@ class RetentionProfileOut(RetentionProfileIn):
     released_at: datetime | None
     released_by: uuid.UUID | None
     created_by: uuid.UUID | None = None
+
+    @computed_field(description="entwurf oder freigegeben")  # type: ignore[prop-decorator]
+    @property
+    def status(self) -> str:
+        return "freigegeben" if self.released_at is not None else "entwurf"
 
 
 class DmsConnectionIn(_In):

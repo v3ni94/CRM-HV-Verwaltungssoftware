@@ -12,7 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.core.auth import tokens
 from mhvp.core.auth.permission_cache import permission_cache
-from mhvp.core.auth.permissions import PLATFORM_SWITCH_PERMISSIONS, effective_permissions
+from mhvp.core.auth.permissions import (
+    PLATFORM_METRICS_READ,
+    PLATFORM_SWITCH_PERMISSIONS,
+    effective_permissions,
+)
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -31,6 +35,9 @@ class Principal:
     api_key_id: uuid.UUID | None = None
     is_platform_admin: bool = False
     platform_access_reason: str | None = None
+    # The single superadmin (ADR 0011, ``User.is_superadmin``); only meaningful together with
+    # ``is_platform_admin`` and the platform flag ``gate_superadmin_bypass``.
+    is_superadmin: bool = False
     # Legal entity scope of the membership (A37, ``mhvp.core.auth.scope``): raw list from
     # ``Membership.legal_entity_ids``; only effective for scoped roles (tax_advisor).
     legal_entity_ids: tuple[uuid.UUID, ...] = ()
@@ -118,6 +125,7 @@ async def _from_bearer(request: Request, settings: Settings, raw: str) -> Princi
         if user is None or not user.active:
             raise ProblemError(ErrorCodes.NOT_AUTHENTICATED)
         is_admin = user.is_platform_admin
+        is_superadmin = user.is_platform_admin and user.is_superadmin
         membership = None
         if claims.tenant_id is not None:
             membership = await session.scalar(
@@ -128,7 +136,12 @@ async def _from_bearer(request: Request, settings: Settings, raw: str) -> Princi
                 )
             )
     if claims.tenant_id is None:
-        return Principal(user_id=claims.user_id, tenant_id=None, is_platform_admin=is_admin)
+        return Principal(
+            user_id=claims.user_id,
+            tenant_id=None,
+            is_platform_admin=is_admin,
+            is_superadmin=is_superadmin,
+        )
     if membership is None:
         # Only a platform administrator after an explicit, recorded switch (5.1).
         if not (is_admin and claims.platform and claims.platform_access_reason):
@@ -139,6 +152,7 @@ async def _from_bearer(request: Request, settings: Settings, raw: str) -> Princi
             permissions=PLATFORM_SWITCH_PERMISSIONS,
             is_platform_admin=True,
             platform_access_reason=claims.platform_access_reason,
+            is_superadmin=is_superadmin,
         )
     permissions, roles = await _membership_permissions(
         request, claims.tenant_id, claims.user_id, membership.id
@@ -149,6 +163,7 @@ async def _from_bearer(request: Request, settings: Settings, raw: str) -> Princi
         permissions=permissions,
         roles=roles,
         is_platform_admin=is_admin,
+        is_superadmin=is_superadmin,
         legal_entity_ids=_scope_ids(membership.legal_entity_ids),
     )
 
@@ -217,6 +232,7 @@ def require_permission(permission: str) -> Callable[[Request], Awaitable[TenantP
             api_key_id=principal.api_key_id,
             is_platform_admin=principal.is_platform_admin,
             platform_access_reason=principal.platform_access_reason,
+            is_superadmin=principal.is_superadmin,
             legal_entity_ids=principal.legal_entity_ids,
         )
 
@@ -226,5 +242,21 @@ def require_permission(permission: str) -> Callable[[Request], Awaitable[TenantP
 async def require_platform_admin(request: Request) -> Principal:
     principal = await get_principal(request)
     if not principal.is_platform_admin or principal.api_key_id is not None:
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Platform administrator only.")
+    return principal
+
+
+async def require_platform_metrics_read(request: Request) -> Principal:
+    """Read access to the operating metrics (M9-04a): a platform administrator session, or an
+    API key whose permission set is exactly ``{platform:metrics:read}`` (issued via
+    ``POST /platform/ops/metrics-keys``). Tenant API keys and tenant users are rejected."""
+    principal = await get_principal(request)
+    if principal.api_key_id is not None:
+        if principal.permissions == frozenset({PLATFORM_METRICS_READ}):
+            return principal
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN, developer_message="API key without platform:metrics:read."
+        )
+    if not principal.is_platform_admin:
         raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Platform administrator only.")
     return principal

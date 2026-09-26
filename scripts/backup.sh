@@ -9,7 +9,30 @@
 # Optional:
 #   BACKUP_OBJECTSTORE_VOLUME=mhvp_objectstore-data  also archives the document store volume
 #   BACKUP_REMOTE=user@host:/path                    copies the new files off the server (rsync)
+#   ALERT_WEBHOOK_URL=https://...                    on any failure a short JSON message is posted
+#                                                    there (same target as healthcheck.sh, M9-04;
+#                                                    e.g. an Uptime Kuma push URL with status=down,
+#                                                    see docs/runbooks/monitoring.md). The platform
+#                                                    has no system mail sender of its own; e-mail
+#                                                    goes out through the Uptime Kuma notification.
 set -euo pipefail
+
+# Failure alarm (M9-04) on any non-zero exit, also from pipelines and the refusal paths:
+# journal line plus optional webhook; no personal data, no secrets.
+alert_failure() {
+  local status=$?
+  (( status == 0 )) && return 0
+  # No half written files of this run: the health check must not count them as a backup.
+  [[ -n "${STAMP:-}" ]] && rm -f "$BACKUP_DIR"/mhvp-*"$STAMP"*
+  local text="MHVP $(hostname): Backup fehlgeschlagen (Exit $status)"
+  echo "backup: $text" >&2
+  if [[ -n "${ALERT_WEBHOOK_URL:-}" ]]; then
+    local body
+    body="$(printf '{"text":"%s"}' "${text//\"/\'}")"
+    curl -fsS --max-time 10 -H 'content-type: application/json' -d "$body" "$ALERT_WEBHOOK_URL" >/dev/null || true
+  fi
+}
+trap alert_failure EXIT
 
 : "${PGDATABASE:?PGDATABASE must be set}"
 : "${BACKUP_DIR:?BACKUP_DIR must be set}"
@@ -56,5 +79,10 @@ find "$BACKUP_DIR" -name 'mhvp-*' -type f -mtime "+$RETENTION_DAYS" -delete
 if [[ -n "${BACKUP_REMOTE:-}" ]]; then
   # Off-site copy; retention on the target is managed there (never --delete from here).
   rsync -a --partial "$BACKUP_DIR"/mhvp-*"$STAMP"* "$BACKUP_REMOTE/"
+fi
+if [[ -n "${BACKUP_S3_BUCKET:-}" ]]; then
+  # Off-site copy to the operator's S3 compatible object storage (M9-02, 26.09.2026);
+  # a failure there exits non zero and fires the alarm above.
+  "$(dirname "${BASH_SOURCE[0]}")/backup-offsite.sh" --stamp "$STAMP"
 fi
 echo "backup: done $STAMP"

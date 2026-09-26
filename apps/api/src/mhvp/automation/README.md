@@ -14,13 +14,13 @@ run, proposal only), plus the trigger kind `schedule` (daily, weekly, monthly).
 
 | File | Content |
 | --- | --- |
-| `models.py` | `automation_rule` (tenant, name, active, trigger kind, trigger event type, schedule, schedule watermark, condition tree, action list), `automation_run` (rule, event or schedule window, time, status, error, executed actions; unique per rule and event), `automation_watermark` (position of the beat job per tenant). Migrations 0100 and 0110, tenant RLS on all tables. |
+| `models.py` | `automation_rule` (tenant, name, active, trigger kind, trigger event type, schedule, schedule watermark, condition tree, action list), `automation_run` (rule, event or schedule window, time, status, error, executed actions; unique per rule and event), `automation_watermark` (position of the beat job per tenant), `automation_webhook_delivery` (outbox and delivery log of the `webhook` action: run, action position, URL, payload, status, attempts, next attempt, last result; A82). Migrations 0100, 0110 and 0133, tenant RLS on all tables. |
 | `rules.py` | Pure logic: condition evaluation (`eq`, `ne`, `contains`, `gt`, `lt`, groups `and`/`or`, depth limit), field paths (`entity.category`, `payload.number`), `{placeholder}` rendering, loop guard marker. |
 | `schedule.py` | Pure logic of the schedule trigger: validation, `previous_due` (latest due moment in Europe/Berlin, returned in UTC), deterministic window id per rule and due moment. |
 | `schemas.py` | Pydantic validation of rules and actions; unknown action types, non-listed ticket fields, AI tasks outside the allow list, webhooks without secret and ticket actions on a schedule are rejected with 422. |
-| `services.py` | Evaluation context per event (event fields plus the current ticket fields), action execution (stage 1 and 2), webhook secret sealing (`seal_actions`, `carry_secrets`, `public_actions`), dry run, `process_schedules` and `process_tenant` (beat loop). |
+| `services.py` | Evaluation context per event (event fields plus the current ticket fields), action execution (stage 1 and 2), webhook secret sealing (`seal_actions`, `carry_secrets`, `public_actions`), dry run, `process_schedules` and `process_tenant` (beat loop), webhook outbox (`deliver_due_webhooks`, `attempt_webhook_delivery`, `schedule_after_attempt`, `redeliver_webhook`; A82). |
 | `tasks.py` | Celery task `mhvp.automation.process_events` (beat every 60 seconds, queue `default`). |
-| `routers.py` | `/api/v1/automation/meta`, `/rules` (CRUD, `/activate`, `/test`), `/runs`. |
+| `routers.py` | `/api/v1/automation/meta`, `/rules` (CRUD, `/activate`, `/test`), `/runs` (with `webhook_deliveries` per run), `/webhook-deliveries/{id}/redeliver`. |
 
 ## Processing
 
@@ -44,8 +44,20 @@ are history, not triggers.
   from rule and due moment); the first pass after activation only positions the watermark.
 * Webhook secrets are encrypted with the tenant scope (`mhvp.core.crypto`) in the stored
   action JSON and are never returned by the API. Targets are checked with
-  `mhvp.core.webhooks.check_target` at delivery (https only, no private addresses unless
-  `webhook_allow_private_targets`). One attempt per run, no retry.
+  `mhvp.core.webhooks.pin_target` when the run enqueues the payload and again on every
+  attempt (https only, no private addresses unless `webhook_allow_private_targets`, call
+  pinned to the checked address).
+* Webhook retries (A82): the run does not call the target itself. It checks target and
+  secret, builds the payload and writes one `automation_webhook_delivery` row per webhook
+  action (due at the beat moment). `process_tenant` then sends the due deliveries of the
+  tenant (`deliver_due_webhooks`, rows locked with `SKIP LOCKED`, one httpx client per
+  pass); every attempt signs the stored body afresh (`X-MHVP-Signature`, `X-MHVP-Rule`,
+  `X-MHVP-Delivery`) with the secret of the rule action as stored now. Failures follow
+  `mhvp.core.webhooks.RETRY_SCHEDULE_SECONDS` (1 min, 5 min, 30 min, 2 h, 6 h, 24 h), then
+  the delivery is `failed`. Unsafe target or missing secret fail the run without a delivery.
+  `POST /automation/webhook-deliveries/{id}/redeliver` (`tenant_settings:update`) resets a
+  delivery to pending; the attempt count is kept. The run log returns the deliveries as
+  `webhook_deliveries`. The CRM run log does not render them yet (API only).
 
 ## Permissions
 
@@ -64,6 +76,10 @@ are history, not triggers.
   (signature verified, private target refused without the setting), mail draft, letter
   document with links, queued AI run, secret never exposed, patch keeps the secret, schedule
   rule fires once per window, changed schedule resets the watermark, tenant separation.
+* `tests/integration/test_m9_automation_webhook_retry.py` and
+  `tests/unit/test_automation_webhook_retry.py` (A82): staged retry schedule, signed
+  attempts with delivery id, no double delivery per pass, exhausted schedule, manual
+  redelivery (permission, tenant separation), delivery log on the run.
 
 ## CRM
 

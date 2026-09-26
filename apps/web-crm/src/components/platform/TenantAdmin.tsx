@@ -121,7 +121,7 @@ function AssignAdminForm({ tenants }: { tenants: Tenant[] }) {
       </label>
       <label className="flex flex-col gap-1">
         <span className={ui.label}>{t("startPassword")}</span>
-        <input type="password" required minLength={12} className={ui.input} value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input type="password" required minLength={6} className={ui.input} value={password} onChange={(e) => setPassword(e.target.value)} />
       </label>
       {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
       {message ? <p className="text-xs text-success-fg">{message}</p> : null}

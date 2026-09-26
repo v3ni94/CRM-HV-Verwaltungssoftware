@@ -1108,6 +1108,68 @@ async def meeting_members(
         return out
 
 
+@router.get(
+    "/meetings/{meeting_id}/invitation-recipients",
+    summary="Empfänger der Einladung (Parteimitglieder und Bevollmächtigte nach Zustellregel)",
+)
+async def invitation_recipients(
+    meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    """Per ownership contract on the meeting day: the party members and, following the
+    delivery rule of authorised representatives (``mhvp.contacts.recipients``), who receives
+    the invitation. A contact that owns several units or represents several owners appears
+    once per contract; the caller deduplicates for the actual dispatch."""
+    from mhvp.contacts.models import Contact, Party, PartyMember
+    from mhvp.contacts.recipients import resolve_recipients
+    from mhvp.properties.models import Unit
+
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        prop = await _hoa_property(session, meeting.legal_entity_id)
+        members = await _members(session, prop, meeting.scheduled_at.date())
+        out = []
+        for c in members:
+            unit = await session.get(Unit, c.unit_id)
+            party = await session.get(Party, c.party_id)
+            member_ids = list(
+                (
+                    await session.scalars(
+                        select(PartyMember.contact_id)
+                        .where(PartyMember.party_id == c.party_id)
+                        .order_by(PartyMember.created_at, PartyMember.id)
+                    )
+                ).all()
+            )
+            recipients = []
+            for r in await resolve_recipients(session, member_ids):
+                contact = await session.get(Contact, r.contact_id)
+                represented = await session.get(Contact, r.represents) if r.represents else None
+                recipients.append(
+                    {
+                        "contact_id": r.contact_id,
+                        "display_name": contact.display_name if contact else None,
+                        "channel": (
+                            contact.preferred_channel.value
+                            if contact and contact.preferred_channel
+                            else "post"
+                        ),
+                        "represents_contact_id": r.represents,
+                        "represents_name": represented.display_name if represented else None,
+                    }
+                )
+            out.append(
+                {
+                    "contract_id": c.id,
+                    "unit_number": unit.number if unit else None,
+                    "party_id": c.party_id,
+                    "party_name": party.name if party else None,
+                    "member_contact_ids": member_ids,
+                    "recipients": recipients,
+                }
+            )
+        return out
+
+
 @router.post(
     "/meetings/{meeting_id}/protocol-draft",
     status_code=201,

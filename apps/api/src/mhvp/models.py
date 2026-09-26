@@ -11,6 +11,7 @@ from mhvp.communication import models as communication_models
 from mhvp.communication import sync_retry as communication_sync_retry
 from mhvp.communication import telephony as communication_telephony
 from mhvp.contacts import models as contact_models
+from mhvp.contracts import deposit_settlement as deposit_settlement_models
 from mhvp.contracts import models as contract_models
 from mhvp.contracts import service_contracts as service_contract_models
 from mhvp.core import events, numbering, webhooks
@@ -22,6 +23,7 @@ from mhvp.immoware import models as immoware_models
 from mhvp.imports import models as import_models
 from mhvp.letting import models as letting_models
 from mhvp.letting import rentlaw as rentlaw_models
+from mhvp.metering import models as metering_models
 from mhvp.objektakte import models as objektakte_models
 from mhvp.platform import licensing as licensing_models
 from mhvp.platform import models as platform_models
@@ -47,6 +49,7 @@ __all__ = [
     "communication_telephony",
     "contact_models",
     "contract_models",
+    "deposit_settlement_models",
     "direct_debit_models",
     "document_models",
     "events",
@@ -57,6 +60,7 @@ __all__ = [
     "import_models",
     "letting_models",
     "licensing_models",
+    "metering_models",
     "numbering",
     "objektakte_models",
     "platform_models",

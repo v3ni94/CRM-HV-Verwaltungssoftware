@@ -1,7 +1,22 @@
-"""Provider clients behind one protocol (9.1): Anthropic and OpenAI (M7-02)."""
+"""Provider clients behind one protocol (9.1): Anthropic and OpenAI (M7-02).
 
+Endpoint region (M7-07): ``AiProviderConfig.endpoint_region`` is resolved here, per provider,
+into what the SDK documents:
+
+* OpenAI: a region specific base URL (``REGION_BASE_URLS``). Only the listed regions are
+  accepted; an unknown value is rejected at configuration time (``validate_region``).
+* Anthropic: no region specific base URL exists for the first party API; data residency is
+  the documented request parameter ``inference_geo`` of the Messages API, which is sent with
+  every call. The SDK does not enumerate the accepted values, so only the format is checked
+  here and the provider validates the value itself (a wrong value fails the connection test
+  with the provider's own error text). Whether the DPA covers the chosen region stays an
+  operator decision (docs/OPEN_QUESTIONS.md M7-07).
+"""
+
+import inspect
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -74,6 +89,24 @@ class ProviderClient(Protocol):
     ) -> Completion: ...
 
 
+@dataclass
+class Embeddings:
+    """Result of one embedding call (M7-03): one vector per input, in input order."""
+
+    vectors: list[list[float]]
+    tokens_in: int
+    model: str
+
+
+class EmbeddingClient(Protocol):
+    async def embed(self, *, model: str, inputs: list[str]) -> Embeddings: ...
+
+
+def supports_embeddings(client: object) -> bool:
+    """Only the OpenAI adapter embeds (Anthropic offers no embeddings, M7-03)."""
+    return callable(getattr(client, "embed", None))
+
+
 async def close_client(client: object) -> None:
     """Closes a provider client at the end of a job. The SDK clients would otherwise schedule
     their HTTP shutdown from ``__del__`` after ``asyncio.run`` has already closed the loop
@@ -87,11 +120,71 @@ async def close_client(client: object) -> None:
         return
 
 
-class AnthropicClient:
-    """Messages API with structured output (``output_config.format`` json_schema)."""
+# Region handling per provider (M7-07). Values are stored lower case without surrounding blanks.
+REGION_BASE_URLS: dict[AiProvider, dict[str, str | None]] = {
+    # OpenAI data residency: the EU endpoint is a separate base URL; "us" and "global" use the
+    # SDK default (api.openai.com).
+    AiProvider.OPENAI: {
+        "eu": "https://eu.api.openai.com/v1",
+        "us": None,
+        "global": None,
+    },
+}
+_REGION_FORMAT = re.compile(r"^[a-z]{2,16}(-[a-z0-9]{1,16})?$")
 
-    def __init__(self, api_key: str, *, client: anthropic.AsyncAnthropic | None = None) -> None:
+
+def normalize_region(value: str | None) -> str | None:
+    """Empty stays empty; otherwise trimmed and lower case."""
+    if value is None:
+        return None
+    text = value.strip().lower()
+    return text or None
+
+
+def validate_region(provider: AiProvider, value: str | None) -> str | None:
+    """Normalized region, or ``ValueError`` (German text for the API problem) when the provider
+    does not support it. ``None`` always means the provider's default endpoint."""
+    region = normalize_region(value)
+    if region is None:
+        return None
+    supported = REGION_BASE_URLS.get(provider)
+    if supported is not None:
+        if region not in supported:
+            raise ValueError(
+                f"Endpunktregion '{region}' wird für {provider.value} nicht unterstützt. "
+                f"Zulässig: {', '.join(sorted(supported))} oder leer (Standardendpunkt)."
+            )
+        return region
+    if not _REGION_FORMAT.match(region):
+        raise ValueError(
+            f"Endpunktregion '{region}' hat kein gültiges Format für {provider.value} "
+            "(Kleinbuchstaben, z. B. 'us')."
+        )
+    return region
+
+
+def base_url_for(provider: AiProvider, region: str | None) -> str | None:
+    """Region specific base URL of the provider, ``None`` for the SDK default."""
+    normalized = normalize_region(region)
+    if normalized is None:
+        return None
+    return REGION_BASE_URLS.get(provider, {}).get(normalized)
+
+
+class AnthropicClient:
+    """Messages API with structured output (``output_config.format`` json_schema).
+    ``inference_geo`` is the region of the tenant configuration (M7-07); ``None`` leaves the
+    workspace default of the provider."""
+
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        inference_geo: str | None = None,
+        client: anthropic.AsyncAnthropic | None = None,
+    ) -> None:
         self._client = client or anthropic.AsyncAnthropic(api_key=api_key, max_retries=1)
+        self._inference_geo = normalize_region(inference_geo)
 
     async def aclose(self) -> None:
         await self._client.close()
@@ -116,6 +209,8 @@ class AnthropicClient:
                 "messages": messages,
                 "output_config": {"format": {"type": "json_schema", "schema": schema}},
             }
+            if self._inference_geo is not None:
+                request["inference_geo"] = self._inference_geo
             response = await self._client.messages.create(**request)
         except anthropic.RateLimitError as exc:
             raise ProviderError("rate limited", retryable=True) from exc
@@ -212,24 +307,82 @@ class OpenAIClient:
             model=response.model,
         )
 
+    async def embed(self, *, model: str, inputs: list[str]) -> Embeddings:
+        """Embeddings API (M7-03): ``text-embedding-3-small`` by default (operator entered in
+        ``models["embedding"]``). Same error mapping as ``complete``; the base URL (EU region)
+        applies unchanged."""
+        try:
+            response = await self._client.embeddings.create(
+                model=model, input=inputs, encoding_format="float"
+            )
+        except openai.RateLimitError as exc:
+            raise ProviderError("rate limited", retryable=True) from exc
+        except openai.APIStatusError as exc:
+            raise ProviderError(
+                status_detail(exc, exc.status_code), retryable=exc.status_code >= 500
+            ) from exc
+        except openai.APIConnectionError as exc:
+            raise ProviderError("connection failed", retryable=True) from exc
+        rows = sorted(response.data, key=lambda item: item.index)
+        if len(rows) != len(inputs):
+            raise ProviderError(f"embedding count mismatch ({len(rows)} of {len(inputs)})")
+        usage = response.usage
+        return Embeddings(
+            vectors=[[float(v) for v in row.embedding] for row in rows],
+            tokens_in=usage.prompt_tokens if usage else 0,
+            model=response.model,
+        )
+
+
+ClientFactory = Callable[[AiProvider, str, str | None], ProviderClient]
+
 
 # Tests and the evaluation replace this factory with recorded responses.
-def default_factory(provider: AiProvider, api_key: str) -> ProviderClient:
+def default_factory(
+    provider: AiProvider, api_key: str, endpoint_region: str | None = None
+) -> ProviderClient:
     if provider is AiProvider.ANTHROPIC:
-        return AnthropicClient(api_key)
+        return AnthropicClient(api_key, inference_geo=endpoint_region)
     if provider is AiProvider.OPENAI:
-        return OpenAIClient(api_key)
+        return OpenAIClient(api_key, base_url=base_url_for(provider, endpoint_region))
     raise ProviderError(f"provider {provider.value} is not implemented")
 
 
-_factory = default_factory
+_factory: ClientFactory = default_factory
 
 
-def set_factory(factory: Any) -> None:
+def _accepts_region(factory: Callable[..., ProviderClient]) -> bool:
+    try:
+        params = list(inspect.signature(factory).parameters.values())
+    except (TypeError, ValueError):
+        return True
+    if any(p.kind is inspect.Parameter.VAR_POSITIONAL for p in params):
+        return True
+    positional = [
+        p
+        for p in params
+        if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    ]
+    return len(positional) >= 3
+
+
+def set_factory(factory: Callable[..., ProviderClient]) -> None:
+    """Installs a client factory ``(provider, api_key, endpoint_region)``. A two argument
+    factory (recorded test clients) is still accepted; it never sees the region."""
     global _factory
-    _factory = factory
+    if _accepts_region(factory):
+        _factory = factory
+    else:
+        two_arg = factory
+
+        def _wrapped(provider: AiProvider, api_key: str, _region: str | None) -> ProviderClient:
+            return two_arg(provider, api_key)
+
+        _factory = _wrapped
 
 
-def client_for(provider: AiProvider, api_key: str) -> ProviderClient:
-    client: ProviderClient = _factory(provider, api_key)
+def client_for(
+    provider: AiProvider, api_key: str, endpoint_region: str | None = None
+) -> ProviderClient:
+    client: ProviderClient = _factory(provider, api_key, normalize_region(endpoint_region))
     return client

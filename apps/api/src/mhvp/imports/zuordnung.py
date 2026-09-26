@@ -207,6 +207,10 @@ async def load_contact_index(session: Any) -> ContactIndex:
     )
     result = await session.stream(stmt)
     async for cid, ext, display, first, last, company in result:
+        # Multi person party of the contact import (M8-04): the exported name leads to the
+        # first member; party_for then finds the joint party of all members.
+        if str(ext.get("immoware24_member") or "1") != "1":
+            continue
         index.add(
             ContactEntry(cid, str(ext.get(SOURCE_SYSTEM)), display or ""),
             source_name=ext.get("immoware24_name"),
@@ -227,10 +231,45 @@ async def load_units(session: Any) -> dict[str, tuple[uuid.UUID, uuid.UUID]]:
     return {sid: (uid, pid) for sid, uid, pid in rows}
 
 
+async def import_party(session: Any, contact: Contact) -> Party | None:
+    """Party the contact import created for a multi person name (M8-04): the contact carries
+    ``immoware24_member`` and every member of the party carries the same Immoware24 id."""
+    ext = contact.external_ids or {}
+    if not ext.get("immoware24_member"):
+        return None
+    source_id = str(ext.get(SOURCE_SYSTEM))
+    parties: list[Party] = list(
+        (
+            await session.scalars(
+                select(Party)
+                .join(PartyMember, PartyMember.party_id == Party.id)
+                .where(PartyMember.contact_id == contact.id)
+                .order_by(Party.created_at, Party.id)
+            )
+        ).all()
+    )
+    for party in parties:
+        ids = (
+            await session.scalars(
+                select(Contact.external_ids[SOURCE_SYSTEM].astext)
+                .join(PartyMember, PartyMember.contact_id == Contact.id)
+                .where(PartyMember.party_id == party.id)
+            )
+        ).all()
+        if len(ids) > 1 and all(i == source_id for i in ids):
+            return party
+    return None
+
+
 async def party_for(
     session: Any, tenant_id: uuid.UUID, user_id: uuid.UUID | None, contact_id: uuid.UUID
 ) -> tuple[Party, bool]:
-    """The party whose only member is the contact in role primary; created if missing."""
+    """The party whose only member is the contact in role primary, or the joint party of a
+    multi person import (all members carry the same Immoware24 id); created if missing."""
+    contact = await session.get(Contact, contact_id)
+    joint = await import_party(session, contact)
+    if joint is not None:
+        return joint, False
     single = (
         select(PartyMember.party_id)
         .group_by(PartyMember.party_id)
@@ -249,7 +288,6 @@ async def party_for(
     )
     if party is not None:
         return party, False
-    contact = await session.get(Contact, contact_id)
     party = Party(tenant_id=tenant_id, name=contact.display_name[:400], created_by=user_id)
     session.add(party)
     await session.flush()

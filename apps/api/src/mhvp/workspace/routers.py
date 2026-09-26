@@ -9,13 +9,15 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication import gcal, gmail
 from mhvp.communication.models import Mailbox, MailboxUser
 from mhvp.core.auth.principal import TenantPrincipal, get_principal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.workspace import jobs, services
+from mhvp.workspace import jobs, links, services
+from mhvp.workspace import ticket_analytics as ticket_analytics_module
 from mhvp.workspace.models import CalendarEntry, CalendarEvent, Notification, SavedFilter
 
 router = APIRouter(prefix="/workspace", tags=["Arbeitsplatz"])
@@ -53,6 +55,10 @@ class Hit(BaseModel):
 
 
 class NotificationOut(BaseModel):
+    """``target_type``/``target_id`` name the subject of the notification; ``href`` is the
+    route to it in the CRM, derived on read (``workspace.links``). ``entity_type`` and
+    ``entity_id`` carry the same values for existing clients."""
+
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     kind: str
@@ -60,8 +66,32 @@ class NotificationOut(BaseModel):
     body: str | None
     entity_type: str | None
     entity_id: uuid.UUID | None
+    target_type: str | None = None
+    target_id: uuid.UUID | None = None
+    href: str | None = None
     read_at: datetime | None
     created_at: datetime
+
+
+async def notification_out(
+    session: AsyncSession, rows: list[Notification], *, portal: bool = False
+) -> list[NotificationOut]:
+    """Serialise notifications with their derived deep link (CRM or portal routes)."""
+    dates, properties = await links.resolve_hints(session, rows)
+    out: list[NotificationOut] = []
+    for n in rows:
+        item = NotificationOut.model_validate(n)
+        item.target_type = n.entity_type
+        item.target_id = n.entity_id
+        item.href = links.target_href(
+            n.entity_type,
+            n.entity_id,
+            portal=portal,
+            appointment_date=dates.get(n.entity_id) if n.entity_id else None,
+            property_id=properties.get(n.entity_id) if n.entity_id else None,
+        )
+        out.append(item)
+    return out
 
 
 class CalendarEntryIn(_In):
@@ -255,6 +285,11 @@ async def dashboard_stats(
     user_id: uuid.UUID | None = None,
     principal: TenantPrincipal = Depends(STATS_READ),
 ) -> dict[str, Any]:
+    from mhvp.tickets.activity import (
+        activity_out,
+        last_inbound_expression,
+        last_staff_activity_expression,
+    )
     from mhvp.tickets.models import Ticket, TicketStatus
 
     today = services.local_today()
@@ -262,10 +297,15 @@ async def dashboard_stats(
     start_dt = datetime.combine(start, dt.time.min, tzinfo=UTC)
     end_dt = datetime.combine(end + timedelta(days=1), dt.time.min, tzinfo=UTC)
     async with tenant_tx(request, principal) as session:
-        base = select(Ticket)
+        # Letzte Aktivität je Ticket in derselben Abfrage (M19-09, Farbcodierung der
+        # Startseite, kein N+1).
+        base = select(Ticket, last_staff_activity_expression(), last_inbound_expression())
         if user_id is not None:
             base = base.where(Ticket.assignee_user_id == user_id)
-        tickets = (await session.scalars(base)).all()
+        rows = (await session.execute(base)).all()
+        tickets = [t for t, _, _ in rows]
+        activity = {t.id: (staff_at, inbound_at) for t, staff_at, inbound_at in rows}
+        now = datetime.now(UTC)
 
         resolved_statuses = {TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED}
         open_count = sum(1 for t in tickets if t.status not in resolved_statuses)
@@ -339,6 +379,7 @@ async def dashboard_stats(
                     "assignee_user_id": t.assignee_user_id,
                     "created_at": t.created_at,
                     "sla_due_at": t.sla_due_at,
+                    **activity_out(t, *activity[t.id], now),
                 }
                 for t in sorted(
                     (t for t in tickets if t.status not in resolved_statuses),
@@ -578,7 +619,7 @@ async def notifications(
         if unread:
             query = query.where(Notification.read_at.is_(None))
         rows = await session.scalars(query.order_by(Notification.created_at.desc()).limit(limit))
-        return [NotificationOut.model_validate(n) for n in rows.all()]
+        return await notification_out(session, list(rows.all()))
 
 
 @router.post("/notifications/read", status_code=204, summary="Als gelesen markieren")
@@ -1223,3 +1264,46 @@ async def bulk(
         )
         await session.flush()
         return {"action": body.action, "requested": len(ids), "changed": changed}
+
+
+# Ticket analytics (operator 26.09.2026) -----------------------------------------------------
+
+_TA_RANGE_PATTERN = "^(" + "|".join(ticket_analytics_module.RANGES) + ")$"
+_TA_BUCKET_PATTERN = "^(" + "|".join(ticket_analytics_module.BUCKETS) + ")$"
+_TA_KIND_PATTERN = "^(" + "|".join(ticket_analytics_module.MAILBOX_KINDS) + ")$"
+
+
+@router.get(
+    "/ticket-analytics",
+    summary="Auswertung Tickets und Mails: Durchsatz, Rückstand, Reaktionszeiten",
+)
+async def ticket_analytics(
+    request: Request,
+    range: str = Query(default="week", pattern=_TA_RANGE_PATTERN),
+    bucket: str = Query(default="auto", pattern=_TA_BUCKET_PATTERN),
+    date_from: date | None = Query(default=None, alias="from"),
+    date_to: date | None = Query(default=None, alias="to"),
+    user_id: uuid.UUID | None = None,
+    mailbox_id: uuid.UUID | None = None,
+    mailbox_kind: str = Query(default="all", pattern=_TA_KIND_PATTERN),
+    principal: TenantPrincipal = Depends(STATS_READ),
+) -> dict[str, Any]:
+    """Orientierungswerte je Zeitscheibe (Europe/Berlin) und in Summe; Definitionen im
+    Modul ``mhvp.workspace.ticket_analytics`` und im Handbuchkapitel Auswertung Tickets.
+    ``from``/``to`` nur bei ``range=custom`` (höchstens 400 Tage). Der Bearbeiterfilter
+    braucht dasselbe Recht wie die Startseitenauswertung (``tickets:read``)."""
+    try:
+        window = ticket_analytics_module.build_window(
+            range, services.local_today(), unit=bucket, date_from=date_from, date_to=date_to
+        )
+    except ValueError as exc:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from exc
+    async with tenant_tx(request, principal) as session:
+        mailboxes = await ticket_analytics_module.resolve_mailboxes(session)
+        mailbox_ids: set[uuid.UUID] | None = None
+        if mailbox_kind != "all":
+            mailbox_ids = {m["mailbox_id"] for m in mailboxes if m["kind"] == mailbox_kind}
+        if mailbox_id is not None:
+            mailbox_ids = {mailbox_id} & (mailbox_ids if mailbox_ids is not None else {mailbox_id})
+        filters = ticket_analytics_module.Filters(user_id=user_id, mailbox_ids=mailbox_ids)
+        return await ticket_analytics_module.compute(session, window, filters, mailboxes)

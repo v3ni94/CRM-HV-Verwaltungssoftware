@@ -74,7 +74,7 @@ def test_broken_image_rejected() -> None:
 
 
 def test_tiff_reencoded_without_metadata_and_supports_reports_types() -> None:
-    """A55/A58: portal photos use the same sanitizer; TIFF is re-encoded, HEIC is unsupported."""
+    """A55/A58: portal photos use the same sanitizer; TIFF is re-encoded, HEIC needs pillow-heif."""
     from PIL.TiffImagePlugin import ImageFileDirectory_v2
 
     from mhvp.handover.images import supports
@@ -92,5 +92,56 @@ def test_tiff_reencoded_without_metadata_and_supports_reports_types() -> None:
         assert img.size == (60, 40)
     assert supports("image/jpeg; charset=binary")
     assert supports("image/png")
-    assert not supports("image/heic")
+    from mhvp.handover.images import HEIF_AVAILABLE
+
+    assert supports("image/heic") is HEIF_AVAILABLE
+    assert not supports("image/bmp")
     assert not supports("application/pdf")
+
+
+# A72: HEIC photos from iPhones are decoded with pillow-heif and stored as JPEG.
+heif = pytest.importorskip("pillow_heif", reason="pillow-heif nicht installiert (A72)")
+
+
+def _heic_with_exif(size: tuple[int, int] = (400, 200), orientation: int = 1) -> bytes:
+    img = Image.new("RGB", size, (30, 120, 200))
+    exif = Image.Exif()
+    exif[0x010F] = "TestCam"
+    exif[0x0112] = orientation
+    gps = exif.get_ifd(0x8825)
+    gps[1] = "N"
+    gps[2] = (51.0, 10.0, 0.0)
+    buf = io.BytesIO()
+    img.save(buf, format="HEIF", exif=exif.tobytes())
+    return buf.getvalue()
+
+
+def test_heic_is_reencoded_as_jpeg_without_metadata() -> None:
+    from mhvp.handover.images import output_mime_type
+
+    raw = _heic_with_exif((3000, 1500))
+    assert raw[4:12] in (b"ftypheic", b"ftypmif1", b"ftypheix")
+    assert b"TestCam" in raw
+    out = sanitize_image(raw, "image/heic; x=1", max_edge=2000)
+    assert out.startswith(b"\xff\xd8\xff")
+    assert b"TestCam" not in out
+    assert b"Exif" not in out
+    with Image.open(io.BytesIO(out)) as img:
+        assert img.format == "JPEG"
+        assert img.size == (2000, 1000)
+        assert len(img.getexif()) == 0
+    assert output_mime_type("image/heic") == "image/jpeg"
+    assert output_mime_type("image/HEIF; q=1") == "image/jpeg"
+    assert output_mime_type("image/png") == "image/png"
+
+
+def test_heic_orientation_applied_before_stripping() -> None:
+    out = sanitize_image(_heic_with_exif((400, 200), orientation=6), "image/heic")
+    with Image.open(io.BytesIO(out)) as img:
+        assert img.size == (200, 400)
+        assert img.getexif().get(0x0112) is None
+
+
+def test_heic_garbage_is_rejected() -> None:
+    with pytest.raises(ImageSanitizeError):
+        sanitize_image(b"\x00\x00\x00\x18ftypheic kaputt", "image/heic")

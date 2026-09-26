@@ -14,9 +14,56 @@ eine Vorschau statt des Volltexts. Mails, deren Ticket erledigt, abgeschlossen o
 ist, sind standardmäßig ausgeblendet; der Umschalter Erledigte anzeigen blendet sie ein
 (seit 1.23.0). Ein gesetzter Statusfilter zeigt immer genau die gewählten Mails.
 
+## Abruf sofort, Sicherheitsnetz fünf Minuten
+
+Seit dem 26.09.2026 melden Gmail-Postfächer neue Mails per Push (Google Cloud Pub/Sub) an die
+Plattform; eine neue Mail erscheint damit innerhalb weniger Sekunden im Posteingang und als
+Ticket. Voraussetzung ist das vom Betreiber eingerichtete Pub/Sub-Thema (siehe
+`docs/integrations/gmail.md`). Unabhängig davon ruft die Plattform jedes aktive Postfach alle
+fünf Minuten ab (Sicherheitsnetz, bisher alle zwei Minuten). In den Einstellungen unter
+Postfächer steht je Postfach, ob Push aktiv ist (Push aktiv bis) und wann der letzte Push
+eingegangen ist; ist Push nicht aktiv, gilt allein der Abruf alle fünf Minuten. Jetzt abrufen
+löst den Abruf sofort aus.
+
+## Posteingang vollständig abrufen
+
+Beim Verbinden eines Postfachs holt die Plattform seit dem 26.09.2026 alle Nachrichten, die
+im Posteingang liegen, nicht nur die neuesten. Für bereits verbundene Postfächer startet die
+Schaltfläche Posteingang vollständig abrufen (Einstellungen, Postfächer) den Vollabruf; die
+Postfachzeile zeigt den Fortschritt (geprüft von gesamt) und das Ende. Bereits bekannte Mails
+werden erkannt und nicht doppelt aufgenommen; jede neue Mail erhält wie beim normalen Abruf
+ihr Ticket, Antworten landen im Thread des bestehenden Tickets. Ein abgebrochener Vollabruf
+setzt beim nächsten Start an derselben Stelle fort. Nicht ausgelöst werden für Altbestand die
+KI-Rechnungserfassung, die Rechnungsweiterleitung und die Archivierung.
+
+Ohne Oberfläche startet der Betreiber den Vollabruf auf dem Server im Worker-Container:
+
+```
+docker compose exec worker python -m mhvp.communication.backfill --tenant hvm --all
+docker compose exec worker python -m mhvp.communication.backfill --tenant hvm --mailbox info@muellerhv.de
+```
+
+`--tenant` ist der Mandanten-Slug, `--all` alle aktiven Gmail-Postfächer, `--mailbox` eine
+Adresse oder Postfach-ID; `--inline` führt den Abruf im aufrufenden Prozess statt über die
+Warteschlange aus.
+
+## Erledigt archiviert
+
+Die Postfacheinstellung Erledigt archiviert gilt seit dem 26.09.2026 in zwei Fällen:
+
+- Wird eine eingegangene Mail im Posteingang auf erledigt gesetzt, wird sie sofort im
+  Gmail-Postfach archiviert (aus dem Posteingang entfernt, nicht gelöscht).
+- Hängt die Mail an einem Ticket und ist danach keine eingegangene Mail des Tickets mehr offen
+  und kein Arbeitsauftrag des Tickets offen, setzt die Plattform das Ticket automatisch auf
+  erledigt (Erledigungsart Auskunft erteilt, Notiz Per E-Mail erledigt, Verfasser ist der
+  Bearbeiter der Mail). Das Ticketereignis trägt den Vermerk automatisch. Ist die
+  Erledigungsart Auskunft erteilt unter Einstellungen, Erledigungsarten deaktiviert oder
+  verhindert eine Abschlussprüfung (Checkliste, Pflichtfelder) den Wechsel, bleibt das Ticket
+  offen und der Verlauf zeigt ein Hinweis-Ereignis mit Grund.
+
 ## Archivierung bei Ticketabschluss
 
-Ist am Postfach die Einstellung Erledigt archiviert Mail aktiv, archiviert die Plattform die
+Ist am Postfach die Einstellung Erledigt archiviert aktiv, archiviert die Plattform die
 zum Ticket gehörenden Mails im Gmail-Postfach, sobald das Ticket erledigt, abgeschlossen oder
 abgelehnt ist. Dazu speichert der Abruf seit 1.23.0 die Gmail-Kennung jeder Nachricht;
 fehlende Kennungen der Eingangsmails der letzten 90 Tage werden beim nächsten Abruf
@@ -100,5 +147,9 @@ sind vor der Freigabe der Geschäftsführung vorzulegen.
   Recht zur Freigabe fehlt; Zuständigkeit unter Einstellungen, Benutzer und Kompetenzen
   prüfen.
 - **Keine neuen Mails im Posteingang**: Das Postfach ist inaktiv oder zeigt Fehler
-  (Einstellungen, Postfächer); Abruf erfolgt alle zwei Minuten automatisch, Jetzt abrufen
-  löst ihn sofort aus.
+  (Einstellungen, Postfächer); neue Mails kommen per Push, der Abruf erfolgt zusätzlich alle
+  fünf Minuten automatisch, Jetzt abrufen löst ihn sofort aus. Zeigt die Postfachzeile Push
+  nicht aktiv oder den Fehler Push-Registrierung, fehlt das Pub/Sub-Thema oder dessen
+  Berechtigung (Betreiber, `docs/integrations/gmail.md`).
+- **Ältere Mails fehlen nach dem Verbinden**: Posteingang vollständig abrufen starten; der
+  Fortschritt steht in der Postfachzeile.

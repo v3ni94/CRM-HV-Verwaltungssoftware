@@ -26,7 +26,7 @@ export function InvitationForm({ code }: { code?: string }) {
       setError(t("codeRequired"));
       return;
     }
-    if (password.length < 12) {
+    if (password.length < 6) {
       setError(t("passwordTooShort"));
       return;
     }

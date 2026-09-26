@@ -19,6 +19,14 @@ The files are read with ``mhvp.imports.csvtext`` (encoding, delimiter, quoting, 
 and repeated header rows, column order and extra columns are tolerated and reported). Rows
 without id or name and repeated ids within one file are reported and skipped, not created twice.
 
+Multi person names (operator decision 26.09.2026, M8-04): "Max und Erika Mustermann",
+"Goritzka, Janina & Jacek", "Eheleute Anna und Karl Weber", "Herr und Frau Peter und Ute Klein"
+become ONE party (named as exported) with one person contact per member; every member carries
+the Immoware24 id plus ``external_ids["immoware24_member"]`` ("1", "2", ...). Whatever cannot be
+derived without guessing (Erbengemeinschaft, missing first names, two full names with different
+family names, unclear splits) is created as one contact as before and listed under ``pruefung``
+in the report for manual completion.
+
 Default is a test run without database changes; ``--apply`` writes.
 """
 
@@ -38,14 +46,13 @@ from sqlalchemy import select
 
 from mhvp.ai.imports import create_contact, create_party
 from mhvp.contacts import schemas as cs
-from mhvp.contacts.models import Completeness, ContactKind, ContactRoleCode
+from mhvp.contacts.models import Completeness, Contact, ContactKind, ContactRoleCode
 from mhvp.contacts.validation import InvalidValueError, mask_iban, normalise_iban
 from mhvp.core.config import get_settings
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.logging import configure_logging, get_logger
-from mhvp.imports import services as import_services
 from mhvp.imports.csvtext import Row, Table, decode_csv, read_table
 from mhvp.platform.models import Tenant, User
 
@@ -166,6 +173,28 @@ class Prepared:
     notes: list[str] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
     duplicate_of: int | None = None
+    # Multi person name (M8-04): one contact per member, one party named ``party_name``.
+    members: list[cs.ContactIn] = field(default_factory=list)
+    party_name: str | None = None
+    # Reason for a manual check (multi person name that could not be split safely).
+    review: str | None = None
+
+
+@dataclass(frozen=True)
+class PersonName:
+    title: str | None
+    first_name: str | None
+    last_name: str
+
+
+@dataclass
+class MultiPerson:
+    """Result of :func:`detect_multi_person`: ``persons`` when the members could be derived
+    without guessing, otherwise empty with ``review`` naming what is unclear."""
+
+    kind: str  # eheleute, erbengemeinschaft, gemeinschaft
+    persons: list[PersonName] = field(default_factory=list)
+    review: str | None = None
 
 
 def role_from_filename(path: str) -> ContactRoleCode | None:
@@ -282,6 +311,120 @@ def split_person_name(
     return " ".join(parts[:-1]), parts[-1], "Reihenfolge Vorname Nachname angenommen"
 
 
+_CONNECTOR = re.compile(r"\s+(?:und|u\.)\s+|\s*(?:&|\+)\s*", re.IGNORECASE)
+_MULTI_PREFIX = re.compile(
+    r"^(?:eheleute|ehepaar|eheleuten|herrn?\s+und\s+frau|frau\s+und\s+herrn?|familie|fam\.)\s+",
+    re.IGNORECASE,
+)
+_HEIRS = re.compile(r"^erben(?:gemeinschaft|gem\.)?\b", re.IGNORECASE)
+# A connector between these words is a firm, not two persons ("Schmidt und Partner").
+_FIRM_WORDS = frozenset(
+    {"partner", "partnerin", "söhne", "sohn", "co", "co.", "cie", "kollegen", "kolleginnen", "team"}
+)
+_SALUTATION_NAMES = re.compile(
+    r"\b(?:herrn?|frau|eheleute|eheleuten|familie|fam\.)\s+(?:(?:prof\.?|dr\.?|med\.?)\s+)*"
+    r"([A-ZÄÖÜ][\w\-]+)",
+    re.IGNORECASE,
+)
+
+
+def family_name_from_salutation(line: str | None) -> str | None:
+    """The one family name a letter salutation names ("Sehr geehrte Eheleute Weber",
+    "Sehr geehrte Frau Weber, sehr geehrter Herr Weber" -> "Weber"); None if none or
+    several different names are named."""
+    if not line:
+        return None
+    names = {m.group(1) for m in _SALUTATION_NAMES.finditer(line)}
+    names = {n for n in names if n.lower() not in ("und", "u")}
+    if len({n.casefold() for n in names}) != 1:
+        return None
+    return names.pop()
+
+
+def _person(first: str, last: str) -> PersonName:
+    title, rest = split_title(first)
+    return PersonName(title, rest or None, last)
+
+
+def detect_multi_person(name: str, salutation_line: str | None = None) -> MultiPerson | None:
+    """Multi person name (M8-04) or None for a single person. Derives the persons only where
+    the name form is unambiguous; everything else comes back with ``review`` and is created as
+    one contact for manual completion (never guessed):
+
+    * "Nachname, V1 & V2" / "Nachname, V1 und V2": shared family name,
+    * "V1 und V2 Nachname" (each first name one word, the last part carries the family name),
+    * "Eheleute ...", "Herr und Frau ...", "Familie ..." followed by one of those forms,
+    * multi word first names only when the salutation line confirms the family name,
+    * "A B und A C" with the same family name on both sides.
+    """
+    clean = " ".join(name.strip().strip(",").split())
+    if _HEIRS.match(clean):
+        return MultiPerson(
+            "erbengemeinschaft",
+            review="Erbengemeinschaft: Mitglieder aus dem Namen nicht ableitbar, "
+            "Erben manuell als Mitglieder erfassen",
+        )
+    kind = "gemeinschaft"
+    rest = clean
+    prefix = _MULTI_PREFIX.match(clean)
+    if prefix:
+        kind = "eheleute"
+        rest = clean[prefix.end() :]
+    if not _CONNECTOR.search(rest):
+        if prefix:
+            return MultiPerson(
+                kind, review="Vornamen der Personen fehlen, Mitglieder manuell erfassen"
+            )
+        return None
+    tokens_lower = {t.lower().strip(",") for t in rest.split()}
+    if tokens_lower & _FIRM_WORDS:
+        return None
+    family = family_name_from_salutation(salutation_line)
+    if "," in rest:
+        if rest.count(",") > 1:
+            return MultiPerson(kind, review="Mehrere Kommas im Namen, Aufteilung unklar")
+        last, firsts = (p.strip() for p in rest.split(",", 1))
+        if not last or _CONNECTOR.search(last) or len(last.split()) > 2:
+            return MultiPerson(kind, review="Nachname vor dem Komma unklar")
+        persons: list[PersonName] = []
+        for part in (p.strip() for p in _CONNECTOR.split(firsts)):
+            if not part:
+                return MultiPerson(kind, review="Leerer Vorname, Aufteilung unklar")
+            _, bare = split_title(part)
+            if len(bare.split()) > 1 and not (family and family.casefold() == last.casefold()):
+                return MultiPerson(
+                    kind,
+                    review="Vorname mit mehreren Teilen, Zuordnung zum Nachnamen unklar "
+                    "(Briefanrede nennt keinen Familiennamen)",
+                )
+            persons.append(_person(part, last))
+        return MultiPerson(kind, persons) if len(persons) >= 2 else None
+    parts = [p.strip() for p in _CONNECTOR.split(rest) if p.strip()]
+    if len(parts) < 2:
+        return None
+    right = parts[-1].split()
+    if len(right) < 2:
+        return MultiPerson(kind, review="Nachname fehlt, Mitglieder manuell erfassen")
+    last = right[-1]
+    lefts = parts[:-1]
+    bare_lefts = [split_title(p)[1] for p in lefts]
+    if all(len(b.split()) == 1 for b in bare_lefts) or (
+        family and family.casefold() == last.casefold()
+    ):
+        persons = [_person(p, last) for p in lefts]
+        persons.append(_person(" ".join(right[:-1]), last))
+        return MultiPerson(kind, persons)
+    if all(len(b.split()) >= 2 and b.split()[-1].casefold() == last.casefold() for b in bare_lefts):
+        persons = [_person(" ".join(b.split()[:-1]), b.split()[-1]) for b in bare_lefts]
+        persons.append(_person(" ".join(right[:-1]), last))
+        return MultiPerson(kind, persons)
+    return MultiPerson(
+        kind,
+        review="Zwei vollständige Namen oder Doppelvorname, Aufteilung unklar "
+        "(Briefanrede nennt keinen gemeinsamen Familiennamen)",
+    )
+
+
 def salutation(line: str | None) -> str | None:
     if not line:
         return None
@@ -387,10 +530,17 @@ def prepare_row(row: ContactRow) -> Prepared:
         "external_ids": {"immoware24": row.external_id},
         "roles": [row.role.value],
     }
+    multi = None if company else detect_multi_person(row.name, row.salutation_line)
+    review = multi.review if multi is not None else None
+    if review:
+        notes.append(f"Prüfung: {review}")
     if company:
         company_name = " ".join(row.name.strip().strip(",").split())[:200]
         data["company_name"] = company_name
         data["legal_form"] = legal_form(company_name)
+    elif multi is not None and multi.persons:
+        # Placeholder name fields; the members below carry the real person names.
+        data["last_name"] = row.name.strip()[:100]
     else:
         title, rest = split_title(row.name)
         first, last, note = split_person_name(rest, row.salutation_line)
@@ -472,12 +622,49 @@ def prepare_row(row: ContactRow) -> Prepared:
         source_notes.append(note)
     if source_notes:
         data["notes"] = "\n".join(source_notes)
+    if multi is not None and multi.persons:
+        return _prepare_members(row, data, multi, notes, problems)
     try:
         contact_in = cs.ContactIn.model_validate(data)
     except ValueError as exc:
         problems.append(f"Kontakt ungültig: {exc}")
-        return Prepared(row, None, notes, problems)
-    return Prepared(row, contact_in, notes, problems)
+        return Prepared(row, None, notes, problems, review=review)
+    return Prepared(row, contact_in, notes, problems, review=review)
+
+
+def _prepare_members(
+    row: ContactRow,
+    data: dict[str, Any],
+    multi: MultiPerson,
+    notes: list[str],
+    problems: list[str],
+) -> Prepared:
+    """One ``ContactIn`` per member of a multi person name (M8-04). The postal address is the
+    joint address and goes to every member; phone and e-mail of the export are recorded on the
+    first member only (they are not known to belong to a certain person)."""
+    members: list[cs.ContactIn] = []
+    for index, person in enumerate(multi.persons, start=1):
+        member = {k: v for k, v in data.items() if k not in ("phones", "emails", "external_ids")}
+        member["external_ids"] = {**data["external_ids"], "immoware24_member": str(index)}
+        member["title"] = person.title
+        member["first_name"] = person.first_name[:100] if person.first_name else None
+        member["last_name"] = person.last_name[:100]
+        member["salutation"] = None
+        if index == 1:
+            for key in ("phones", "emails"):
+                if key in data:
+                    member[key] = data[key]
+        try:
+            members.append(cs.ContactIn.model_validate(member))
+        except ValueError as exc:
+            problems.append(f"Mitglied {index} ungültig: {exc}")
+            return Prepared(row, None, notes, problems)
+    label = {"eheleute": "Eheleute", "gemeinschaft": "Gemeinschaft"}.get(multi.kind, multi.kind)
+    names = ", ".join(" ".join(p for p in (m.first_name, m.last_name) if p) for m in members)
+    notes.append(f"{label} mit {len(members)} Personen als eine Partei angelegt: {names}")
+    if "phones" in data or "emails" in data:
+        notes.append("Telefon und E-Mail beim ersten Mitglied erfasst")
+    return Prepared(row, None, notes, problems, members=members, party_name=row.name.strip()[:400])
 
 
 def prepare(rows: list[ContactRow] | ParsedKontakte) -> list[Prepared]:
@@ -507,6 +694,22 @@ def prepare(rows: list[ContactRow] | ParsedKontakte) -> list[Prepared]:
 
 class _DryRunError(Exception):
     pass
+
+
+async def _contacts(session: Any, external_id: str) -> list[Any]:
+    """All live contacts carrying the Immoware24 id (several for a multi person party)."""
+    return list(
+        (
+            await session.scalars(
+                select(Contact)
+                .where(
+                    Contact.external_ids["immoware24"].astext == external_id,
+                    Contact.deleted_at.is_(None),
+                )
+                .order_by(Contact.created_at, Contact.id)
+            )
+        ).all()
+    )
 
 
 async def emit_contact_created(
@@ -586,31 +789,51 @@ async def apply_prepared(
             entry["status"] = "duplicate"
             counts["duplicate"] += 1
             continue
-        if item.data is None:
+        if item.review:
+            entry["pruefung"] = item.review
+            counts["review"] += 1
+        if item.data is None and not item.members:
             entry["status"] = "invalid"
             entry["probleme"] = item.problems
             counts["invalid"] += 1
             continue
-        existing = await import_services._contact(session, item.row.external_id)
-        if existing is not None:
-            roles = set(existing.roles or [])
-            if item.row.role.value in roles:
-                entry["status"] = "unchanged"
-                counts["unchanged"] += 1
-            else:
+        existing_rows = await _contacts(session, item.row.external_id)
+        if existing_rows:
+            changed = False
+            for existing in existing_rows:
+                roles = set(existing.roles or [])
+                if item.row.role.value in roles:
+                    continue
                 old_roles = sorted(roles)
                 existing.roles = sorted(roles | {item.row.role.value})
                 await emit_roles_updated(
                     session, tenant_id, user_id, existing, old_roles, source=EVENT_SOURCE
                 )
-                entry["status"] = "role_added"
-                counts["role_added"] += 1
+                changed = True
+            entry["status"] = "role_added" if changed else "unchanged"
+            counts[entry["status"]] += 1
             continue
-        contact = await create_contact(session, tenant_id, user_id, item.data)
-        party = await create_party(session, tenant_id, user_id, [contact])
-        await emit_contact_created(session, tenant_id, user_id, contact, source=EVENT_SOURCE)
+        if item.members:
+            contacts = [
+                await create_contact(session, tenant_id, user_id, member) for member in item.members
+            ]
+            party = await create_party(session, tenant_id, user_id, contacts, name=item.party_name)
+            for contact in contacts:
+                await emit_contact_created(
+                    session, tenant_id, user_id, contact, source=EVENT_SOURCE
+                )
+                if recorder is not None:
+                    recorder.add("contact", contact.id)
+            entry["mitglieder"] = [c.display_name for c in contacts]
+            entry["partei"] = party.name
+        else:
+            assert item.data is not None  # noqa: S101 - checked above
+            contact = await create_contact(session, tenant_id, user_id, item.data)
+            party = await create_party(session, tenant_id, user_id, [contact])
+            await emit_contact_created(session, tenant_id, user_id, contact, source=EVENT_SOURCE)
+            if recorder is not None:
+                recorder.add("contact", contact.id)
         if recorder is not None:
-            recorder.add("contact", contact.id)
             recorder.add("party", party.id)
         entry["status"] = "created"
         counts["created"] += 1
@@ -691,6 +914,8 @@ def _print_report(report: dict[str, Any], verbose: bool) -> None:
             print(f"    Hinweis: {note}")
         for problem in entry.get("probleme", []):
             print(f"    Problem: {problem}")
+        if entry.get("pruefung"):
+            print(f"    Prüfung: {entry['pruefung']}")
 
 
 async def run(argv: list[str] | None = None) -> int:

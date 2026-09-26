@@ -126,3 +126,86 @@ These scorers take the case input as well (`INPUT_SCORERS`). `propose_posting` (
 (`banking.ai_posting.normalize_result`); the minimum for this task is 10 until release
 (`evaluate.MIN_CASES_BY_TASK`). The task is disabled until M12-01 (tenant switch
 `ai_posting_enabled` plus released provider). Test: `tests/unit/test_a46_ai_eval.py`.
+
+
+## Learning examples: tenant switch and deletion (26.09.2026, ADR 0010)
+
+`examples.py`: `learning_examples_enabled` reads `tenant_settings.ai_learning_examples_enabled`
+(migration 0134, default false); `mhvp.tickets.status.record_resolution_example` stores no
+`ticket_resolution` example while it is off. `delete_examples_for_ticket` and
+`delete_examples_for_contact` remove the examples of a deleted ticket or contact in the caller's
+transaction (`DELETE /contacts/{id}` calls the latter); the rows are derived data, so this is a
+hard delete. Open: retention rule and masking of the note (M7-04, docs/rules/M19-07).
+
+## Endpunktregion und Anbieterwechsel (M7-07, M7-02, 26.09.2026)
+
+- `AiProviderConfig.endpoint_region` reaches the client now (`providers.client_for(provider,
+  api_key, endpoint_region)`, also in the connection test). Resolution per provider in
+  `providers.py`: OpenAI gets a region specific `base_url` (`REGION_BASE_URLS`: `eu` is
+  `https://eu.api.openai.com/v1`, `us` and `global` are the SDK default); any other value is
+  rejected with 422 on `PUT /ai/providers/openai` (`validate_region`). Anthropic has no
+  regional base URL for the first party API; the value is sent as the Messages API parameter
+  `inference_geo` on every call. The Anthropic SDK does not enumerate the accepted values, so
+  only the format is checked and a wrong value surfaces in the connection test with the
+  provider's own error text. Whether the DPA covers the chosen region remains an operator
+  decision (OPEN_QUESTIONS M7-07). Test factories with two arguments keep working
+  (`set_factory` wraps them); the region is passed to three argument factories.
+- Fallback (M7-02): the routing plan already skips providers with an exhausted budget and hands
+  a provider error (network, 5xx, timeout, rate limit after the retries) to the next provider
+  of the plan. New: the answering provider is stored as `AiTaskRun.input_ref.provider_used`
+  (`RunOut.provider_used`), every proposal created in `jobs.run_and_propose` carries
+  `proposed.provider_used`, and a real switch (answering provider differs from the preferred
+  one) emits the event `ai.provider_fallback` (payload: task, preferred, provider_used,
+  reasons) plus a structured log line without key material. Without a second released
+  provider, or with an `_only` strategy, there is no fallback: the run fails or is blocked
+  with the reason. AI output stays a proposal (rule 0.1.6).
+- SDK choice: the `openai` package (Chat Completions, `response_format` json_schema) is used,
+  see ADR 0001 (Nachtrag 26.09.2026). Tests: `tests/unit/test_ai_provider_region_fallback.py`,
+  `tests/unit/test_ai_openai_client.py`, integration `test_m7_ai.py::test_routing_strategy_and_fallback`.
+
+## Einbettungen und Ähnlichkeitssuche (M7-03, Betreiberentscheidung 26.09.2026)
+
+`embeddings.py`, table `ai_embedding` (migration 0142, pgvector `vector(1536)`, RLS per tenant),
+task value `embed`. Decision: OpenAI `text-embedding-3-small` through the existing adapter
+(`OpenAIClient.embed`, Embeddings API; the EU base URL of `endpoint_region = eu` applies), model
+and price entered by the operator in `AiProviderConfig.models["embedding"]` (`input_eur_per_mtok`,
+output price 0). Anthropic offers no embeddings; the route needs the same release conditions as
+every other call (four eyes release, DPA evidence, opt-out, key), otherwise nothing is embedded.
+
+* Sources: extracted document texts (`Document.text_status = extracted`) and knowledge entries
+  (`ai_knowledge_entry`, not deleted). The text (title plus body) is masked with
+  `mhvp.objektakte.masking.mask_identifiers` (IBAN, e-mail, phone) before it leaves the platform,
+  split into chunks (`CHUNK_CHARS` 1500, overlap 200, at most `MAX_CHUNKS_PER_SOURCE` 200), and
+  only the vectors are stored; the chunk text is not. A source is pending when it has no chunk 0
+  row or its `updated_at` is newer than the row; an unchanged text (same `content_hash`, e.g. a
+  title edit) is marked current without a provider call. Orphans (deleted documents or knowledge
+  entries) are removed at the start of every job.
+* Job: Celery task `mhvp.ai.embed_index` (`jobs.embed_index`, queue `io`; inline with
+  `ai_inline`), `index_tenant` runs batches of up to `SOURCES_PER_BATCH` sources and
+  `BATCH_CHUNKS` (64) chunks per provider call, each batch in its own transaction. Every call is an
+  `AiTaskRun` of task `embed` with tokens and cost, so the monthly budget per provider applies
+  unchanged (hard stop before the call, `budget_block`). A stop (budget, route missing, provider
+  error) ends the job and is recorded in a summary run (`input_ref.job_summary`, status `failed`
+  with the reason, or `succeeded`); the failed call keeps its own run row with the error.
+* Endpoints: `GET /ai/embeddings/status` (`tenant_settings:read`): route state and reason,
+  model, documents and knowledge entries total, embedded, pending, chunk rows, last job (time,
+  status, error, report). `POST /ai/embeddings/reindex` (`tenant_settings:update`, 202): embeds
+  missing and changed sources; `full: true` drops all vectors of the tenant first (model change);
+  422 without a usable route; event `ai_embeddings.reindex`.
+* Search: `gateway.retrieve` (answer_question) uses `embeddings.retrieve_documents` (cosine
+  distance `<=>`, best chunk per source, cut-off `MAX_COSINE_DISTANCE` 0.8, docs/ASSUMPTIONS.md
+  A-051) and falls back to `retrieve_keyword` (the previous full text search) when the tenant has
+  no embeddings, no route, the budget is reached, the provider fails or nothing is under the
+  cut-off. The portal scope (`document_scope_for_user`) is applied as `only_ids` before the
+  ranking (9.1). The knowledge context of the mail preparation
+  (`communication.preparation._knowledge_context`) ranks the permission scoped entries by
+  similarity to subject and excerpt (`rank_knowledge`), recency order stays the fallback.
+  Playbook matching (`communication.suggest.best_playbook`) is still keyword based.
+* No new dependency: `mhvp.ai.vector.Vector` is a small SQLAlchemy `UserDefinedType` for the
+  text form `[..]` of pgvector, so the `pgvector` Python package is not needed (ADR 0001
+  unchanged). No ANN index yet (exact scan; an HNSW index is a follow-up when a tenant exceeds
+  some ten thousand chunks).
+* Tests: `tests/unit/test_ai_embeddings.py` (chunking, text form, adapter with injected SDK
+  client, cost), `tests/integration/test_m7_ai_embeddings.py` (fake embedding client without
+  network, index job and counters, masking, budget accounting, permission, ranking with hand made
+  vectors, tenant separation, keyword fallback, budget stop and provider error).

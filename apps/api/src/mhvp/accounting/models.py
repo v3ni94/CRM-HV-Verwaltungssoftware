@@ -231,6 +231,11 @@ class LedgerAccount(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(StatementKind, "statement_kind"), nullable=False, default=StatementKind.NONE
     )
     section_35a_eligible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Template review marker (M10-01): "none" or "entwurf" (proposal, tax adviser release open).
+    review_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="none", server_default="none"
+    )
+    review_note: Mapped[str | None] = mapped_column(String(200))
     contact_id: Mapped[uuid.UUID | None] = _fk("contact.id", nullable=True)
     contract_id: Mapped[uuid.UUID | None] = _fk("contract.id", nullable=True)
     party_id: Mapped[uuid.UUID | None] = _fk("party.id", nullable=True)

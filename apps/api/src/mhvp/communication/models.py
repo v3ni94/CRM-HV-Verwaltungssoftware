@@ -73,6 +73,27 @@ class Mailbox(IdMixin, TimestampMixin, TenantMixin, Base):
     # bisherige Sichtbarkeitsregel (Freigabe je Benutzer oder Administrator). Ein erneutes
     # Verbinden derselben Adresse belebt den Datensatz wieder.
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Gmail push (operator 26.09.2026): ``users.watch`` on the label INBOX with the platform's
+    # Pub/Sub topic. ``gmail_watch_expiration`` is Google's expiry (at most seven days); the
+    # daily job and the beat sync renew the watch a day before. ``gmail_watch_history_id`` is
+    # the history id Google returned with the watch, ``gmail_last_push_at`` the last accepted
+    # push notification for this address. The incremental cursor stays ``gmail_history_id``.
+    gmail_watch_expiration: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    gmail_watch_history_id: Mapped[str | None] = mapped_column(String(32))
+    gmail_last_push_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Full inbox backfill (operator 26.09.2026): paginated ``messages.list`` of the label INBOX,
+    # independent of the history cursor, resumable via ``backfill_page_token``. Status values:
+    # idle, queued, running, done, failed (``mhvp.communication.backfill``).
+    backfill_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="idle", server_default="idle"
+    )
+    backfill_total: Mapped[int | None] = mapped_column(Integer)
+    backfill_done: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    backfill_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    backfill_finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    backfill_page_token: Mapped[str | None] = mapped_column(Text)
 
 
 class MailboxUser(IdMixin, TenantMixin, Base):

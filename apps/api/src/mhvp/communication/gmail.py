@@ -76,6 +76,64 @@ class GmailClient:
             )
         return r
 
+    async def _post(self, path: str, payload: dict[str, Any]) -> httpx.Response:
+        token = await self._access_token()
+        r = await self._http.post(
+            f"{API}/{path}", json=payload, headers={"Authorization": f"Bearer {token}"}
+        )
+        if r.status_code == 401:
+            self._token = None
+            token = await self._access_token()
+            r = await self._http.post(
+                f"{API}/{path}", json=payload, headers={"Authorization": f"Bearer {token}"}
+            )
+        return r
+
+    async def watch(self, topic: str) -> tuple[str, datetime]:
+        """Registers (or renews) push notifications for the label INBOX on the Pub/Sub
+        ``topic`` (``users.watch``). Returns the history id Google reports for the watch and
+        its expiration (at most seven days ahead). Renewing simply calls watch again."""
+        r = await self._post(
+            "watch",
+            {"topicName": topic, "labelIds": ["INBOX"], "labelFilterBehavior": "INCLUDE"},
+        )
+        if r.status_code != 200:
+            raise GmailError(f"Push-Registrierung fehlgeschlagen (HTTP {r.status_code}).")
+        data = r.json()
+        expiration = datetime.fromtimestamp(int(data["expiration"]) / 1000, tz=UTC)
+        return str(data["historyId"]), expiration
+
+    async def stop(self) -> None:
+        """Ends push notifications (``users.stop``); a missing watch is no error."""
+        r = await self._post("stop", {})
+        if r.status_code not in (200, 204, 404):
+            raise GmailError(f"Push-Abmeldung fehlgeschlagen (HTTP {r.status_code}).")
+
+    async def label_total(self, label_id: str = "INBOX") -> int | None:
+        """Number of messages under ``label_id`` (``labels.get``, ``messagesTotal``); None when
+        Google does not report it. Used as the progress total of the inbox backfill."""
+        r = await self._get(f"labels/{label_id}")
+        if r.status_code != 200:
+            raise GmailError(f"Label nicht lesbar (HTTP {r.status_code}).")
+        total = r.json().get("messagesTotal")
+        return int(total) if total is not None else None
+
+    async def list_inbox_page(
+        self, page_token: str | None, limit: int
+    ) -> tuple[list[str], str | None]:
+        """One page of ``messages.list`` for the label INBOX (newest first): message ids and
+        the token of the next page (None on the last page). History independent."""
+        params: dict[str, Any] = {"labelIds": "INBOX", "maxResults": limit}
+        if page_token:
+            params["pageToken"] = page_token
+        r = await self._get("messages", **params)
+        if r.status_code != 200:
+            raise GmailError(f"Posteingang nicht lesbar (HTTP {r.status_code}).")
+        data = r.json()
+        ids = [str(m["id"]) for m in data.get("messages", [])]
+        next_token = data.get("nextPageToken")
+        return ids, (str(next_token) if next_token else None)
+
     async def profile_history_id(self) -> str:
         r = await self._get("profile")
         if r.status_code != 200:
@@ -551,6 +609,55 @@ async def backfill_gmail_ids(
         counts["filled"] += 1
     await session.flush()
     return counts
+
+
+# Push watch (operator 26.09.2026) ----------------------------------------------------------
+
+# Google ends a watch after seven days at the latest; renew a day before so a missed daily run
+# still leaves a margin.
+WATCH_RENEW_MARGIN = timedelta(days=1)
+
+
+def push_configured(settings: Settings) -> bool:
+    return bool(settings.gmail_pubsub_topic and settings.gmail_push_token)
+
+
+def watch_due(mailbox: Mailbox, now: datetime | None = None) -> bool:
+    """True when the mailbox has no watch or it expires within ``WATCH_RENEW_MARGIN``."""
+    now = now or datetime.now(UTC)
+    expiration = mailbox.gmail_watch_expiration
+    return expiration is None or expiration - now <= WATCH_RENEW_MARGIN
+
+
+async def register_watch(settings: Settings, mailbox: Mailbox, client: GmailClient) -> datetime:
+    """Calls ``users.watch`` with the configured topic and stores expiration and watch history
+    id on the mailbox. The incremental cursor ``gmail_history_id`` is left untouched: a first
+    sync still lists the inbox, a later sync walks the history from its own cursor."""
+    topic = settings.gmail_pubsub_topic
+    if not topic:
+        raise GmailError("Pub/Sub-Thema (MHVP_GMAIL_PUBSUB_TOPIC) ist nicht konfiguriert.")
+    history_id, expiration = await client.watch(topic)
+    mailbox.gmail_watch_history_id = history_id
+    mailbox.gmail_watch_expiration = expiration
+    return expiration
+
+
+async def ensure_watch(
+    settings: Settings, mailbox: Mailbox, client: GmailClient, now: datetime | None = None
+) -> bool:
+    """Registers or renews the push watch when push is configured and the watch is due.
+    Returns True when a watch call was made. Errors are recorded on ``last_error`` and
+    re-raised as ``GmailError`` so the caller decides whether the run continues."""
+    if not push_configured(settings) or mailbox.kind != "gmail" or not mailbox.enabled:
+        return False
+    if not watch_due(mailbox, now):
+        return False
+    try:
+        await register_watch(settings, mailbox, client)
+    except (GmailError, httpx.HTTPError) as exc:
+        mailbox.last_error = f"Push-Registrierung: {exc}"[:1000]
+        raise GmailError(str(exc)) from exc
+    return True
 
 
 async def enabled_gmail_mailboxes(session: AsyncSession) -> list[Mailbox]:

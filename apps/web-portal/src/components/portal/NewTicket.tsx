@@ -104,7 +104,7 @@ export function NewTicket() {
           id="ticket-photo"
           type="file"
           aria-describedby="ticket-photo-hint"
-          accept="image/jpeg,image/png"
+          accept="image/jpeg,image/png,image/heic,image/heif"
           multiple
           className={ui.input}
           onChange={(e) => setPhotos(Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS))}

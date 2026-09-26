@@ -134,6 +134,16 @@ class RelationKind(StrEnum):
     AUTHORIZED_PERSON = "authorized_person"
 
 
+class DeliveryMode(StrEnum):
+    """Delivery rule of an authorised representative (relation kind ``representative``,
+    operator decision 26.09.2026): who receives mails, letters and WEG invitations addressed
+    to the represented contact."""
+
+    BOTH = "both"
+    REPRESENTATIVE_ONLY = "representative_only"
+    OWNER_ONLY = "owner_only"
+
+
 class PartyRole(StrEnum):
     PRIMARY = "primary"
     CO_PARTY = "co_party"
@@ -375,7 +385,16 @@ class ContactNote(IdMixin, TimestampMixin, TenantMixin, Base):
 
 
 class ContactRelation(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Directed relation ``contact_id`` -> ``related_contact_id`` (for ``representative``:
+    the represented contact -> its authorised representative)."""
+
     __tablename__ = "contact_relation"
+    __table_args__ = (
+        CheckConstraint(
+            "delivery_mode IN ('both', 'representative_only', 'owner_only')",
+            name="ck_contact_relation_delivery_mode",
+        ),
+    )
 
     contact_id: Mapped[uuid.UUID] = _contact_fk()
     related_contact_id: Mapped[uuid.UUID] = mapped_column(
@@ -384,6 +403,11 @@ class ContactRelation(IdMixin, TimestampMixin, TenantMixin, Base):
     kind: Mapped[RelationKind] = mapped_column(_enum(RelationKind, "relation_kind"), nullable=False)
     valid_from: Mapped[date | None] = mapped_column(Date)
     valid_to: Mapped[date | None] = mapped_column(Date)
+    # Only meaningful for kind ``representative``; other kinds keep the default ``both``
+    # (migration 0140). Read by ``mhvp.contacts.recipients``.
+    delivery_mode: Mapped[DeliveryMode] = mapped_column(
+        String(20), nullable=False, default=DeliveryMode.BOTH, server_default="both"
+    )
 
 
 class Party(IdMixin, TimestampMixin, TenantMixin, Base):

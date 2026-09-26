@@ -12,7 +12,13 @@ from sqlalchemy import delete, func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.accounting.defaults import A1_ACCOUNTS, DEFAULT_CODE, DEFAULT_NAME
+from mhvp.accounting.defaults import (
+    DEFAULT_CODE,
+    DEFAULT_NAME,
+    TEMPLATE_ACCOUNTS,
+    fill_unset,
+    merge_missing,
+)
 from mhvp.accounting.models import (
     AccountCategory,
     AccountType,
@@ -75,6 +81,14 @@ def _money(value: Decimal, label: str) -> Decimal:
 
 
 async def default_template(session: AsyncSession, tenant_id: uuid.UUID) -> ChartTemplate:
+    """Create the A.1 draft template or add template rows that are still missing.
+
+    Idempotent: existing rows (including tenant edits) are never overwritten, only rows whose
+    number is absent are appended (M10-01 proposal of 26.09.2026) and preset fields that are
+    still unset ("none") are filled as a draft (M10-02 presets of 26.09.2026, ``fill_unset``).
+    Ledgers already created from the template are not touched; their accounts are added per
+    ledger (7.2).
+    """
     row = await session.scalar(
         select(ChartTemplate).where(ChartTemplate.code == DEFAULT_CODE, ChartTemplate.version == 1)
     )
@@ -84,9 +98,15 @@ async def default_template(session: AsyncSession, tenant_id: uuid.UUID) -> Chart
             code=DEFAULT_CODE,
             name=DEFAULT_NAME,
             version=1,
-            accounts=A1_ACCOUNTS,
+            accounts=list(TEMPLATE_ACCOUNTS),
         )
         session.add(row)
+        await session.flush()
+        return row
+    filled, changed = fill_unset(row.accounts, TEMPLATE_ACCOUNTS)
+    merged = merge_missing(filled, TEMPLATE_ACCOUNTS)
+    if changed or len(merged) != len(row.accounts):
+        row.accounts = merged
         await session.flush()
     return row
 
@@ -179,6 +199,8 @@ async def create_ledger(
                 allocation_category=spec.get("allocation_category", "none"),
                 vat_option=spec.get("vat_option", "none"),
                 relevant_for_cash_report=bool(spec.get("relevant_for_cash_report")),
+                review_status=spec.get("review_status") or "none",
+                review_note=spec.get("review_note"),
                 is_system=True,
             )
         )

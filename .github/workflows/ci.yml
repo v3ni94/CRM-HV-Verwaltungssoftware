@@ -245,6 +245,7 @@ jobs:
           MHVP_S3_SECRET_ACCESS_KEY: dummy
           MHVP_IMAGE_REGISTRY: ghcr.io/example
           MHVP_IMAGE_TAG: ci
+          MHVP_HOST_MONITORING: status.example.invalid
           TRAEFIK_NETWORK: proxy
           TRAEFIK_CERTRESOLVER: letsencrypt
           MHVP_JWT_PRIVATE_KEY: dummy

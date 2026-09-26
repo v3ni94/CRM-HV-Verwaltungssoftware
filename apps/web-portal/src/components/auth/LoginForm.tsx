@@ -38,15 +38,14 @@ export function LoginForm({ next }: { next?: string }) {
       return;
     }
     if (result.data.status === "ok") {
-      // Password alone was enough (portal user without mandatory TOTP): the session cookies
-      // are already set, no second factor step needed.
+      // Password alone was enough (no second factor enabled, or a remembered device): the
+      // session cookies are already set, no second factor step needed.
       const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/start";
       router.push(target);
       router.refresh();
       return;
     }
     const params = new URLSearchParams();
-    if (result.data.status === "mfa_setup_required") params.set("einrichten", "1");
     if (next) params.set("next", next);
     const query = params.toString();
     router.push(`/anmelden/zweiter-faktor${query ? `?${query}` : ""}`);

@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { ResolutionDialog, isClosingStatus, type Resolution } from "@/components/tickets/ResolutionDialog";
+import { ATTENTION_BORDER, AttentionBadge, AttentionLegend, type Attention } from "@/components/tickets/TicketAttention";
 import { STATUSES } from "@/components/tickets/TicketForms";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
@@ -37,6 +38,10 @@ type Ticket = {
   status: string;
   sla_due_at: string | null;
   sla_breached: boolean;
+  // Traffic light (M19-09), derived on the server; the list only maps it to colours.
+  attention: Attention;
+  last_activity_at: string | null;
+  last_inbound_at: string | null;
 };
 
 const BULK_LIMIT_STANDARD = 10;
@@ -93,9 +98,10 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
 
   return (
     <div className="flex flex-col gap-4 pb-20">
+      <AttentionLegend />
       <ul className="flex flex-col gap-2 sm:hidden" data-testid="tickets-cards">
         {tickets.map((tk) => (
-          <li key={tk.id} className={ui.cardLink} data-testid="ticket-card">
+          <li key={tk.id} className={`${ui.cardLink} ${ATTENTION_BORDER[tk.attention]}`} data-testid="ticket-card" data-attention={tk.attention}>
             <div className="flex items-start gap-2">
               <input
                 type="checkbox"
@@ -114,6 +120,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
                   <StatusPill variant={PRIORITY_VARIANT[tk.priority] ?? "neutral"} label={t(`priorities.${tk.priority}`)} />
                   <StatusPill variant={STATUS_VARIANT[tk.status] ?? "neutral"} label={t(`statuses.${tk.status}`)} />
                 </span>
+                <AttentionBadge attention={tk.attention} lastActivityAt={tk.last_activity_at} />
                 {tk.sla_due_at ? (
                   <span className="text-sm text-muted">
                     {formatDateTime(tk.sla_due_at)}
@@ -136,13 +143,14 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
               <th>{t("titleField")}</th>
               <th>{t("priority")}</th>
               <th>{t("status")}</th>
+              <th>{t("attention.column")}</th>
               <th>{t("sla")}</th>
             </tr>
           </thead>
           <tbody>
             {tickets.map((tk) => (
-              <tr key={tk.id}>
-                <td>
+              <tr key={tk.id} data-testid="ticket-row" data-attention={tk.attention}>
+                <td className={ATTENTION_BORDER[tk.attention]}>
                   <input type="checkbox" aria-label={t("selectRow")} checked={selected.has(tk.id)} onChange={() => toggle(tk.id)} />
                 </td>
                 <td className="tabular-nums">
@@ -160,6 +168,9 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
                 </td>
                 <td>
                   <StatusPill variant={STATUS_VARIANT[tk.status] ?? "neutral"} label={t(`statuses.${tk.status}`)} />
+                </td>
+                <td>
+                  <AttentionBadge attention={tk.attention} lastActivityAt={tk.last_activity_at} />
                 </td>
                 <td>
                   {tk.sla_due_at ? formatDateTime(tk.sla_due_at) : ""}

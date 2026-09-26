@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { PortalNotifications } from "@/components/portal/PortalNotifications";
 import { StartTiles } from "@/components/portal/StartTiles";
 import type { Me } from "@/components/portal/types";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
@@ -24,6 +25,7 @@ export default async function StartPage() {
   return (
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("start.title")}</h1>
+      <PortalNotifications />
       <StartTiles me={me} newNotices={newNotices} />
     </div>
   );

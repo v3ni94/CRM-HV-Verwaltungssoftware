@@ -236,8 +236,14 @@ async def _dms_documents(
 
 
 async def _knowledge_context(
-    session: AsyncSession, tenant_id: uuid.UUID, property_id: uuid.UUID | None
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    property_id: uuid.UUID | None,
+    question: str | None = None,
 ) -> str:
+    """Knowledge entries of the tenant and the property, newest first; with a ``question`` and
+    stored embeddings the entries are ranked by similarity instead (M7-03, keyword and recency
+    order stay the fallback)."""
     query = select(AiKnowledgeEntry).where(AiKnowledgeEntry.deleted_at.is_(None))
     if property_id is not None:
         query = query.where(
@@ -248,6 +254,14 @@ async def _knowledge_context(
     rows = list(await session.scalars(query.order_by(AiKnowledgeEntry.created_at.desc())))
     if not rows:
         return "-"
+    if question:
+        from mhvp.ai import embeddings
+
+        ranked = await embeddings.rank_knowledge(
+            session, question, rows, tenant_id=tenant_id, actor=None, limit=30
+        )
+        if ranked:
+            rows = ranked
     return "\n".join(f"- ({r.kind.value}) {r.title}: {r.content}" for r in rows[:30])
 
 
@@ -298,7 +312,12 @@ async def prepare_for_message(
         documents += await _dms_documents(session, resolution.property_id, terms)
 
     body_excerpt = (message.body or "")[:MAX_EXCERPT]
-    knowledge = await _knowledge_context(session, message.tenant_id, resolution.property_id)
+    knowledge = await _knowledge_context(
+        session,
+        message.tenant_id,
+        resolution.property_id,
+        question=f"{message.subject or ''}\n{body_excerpt}",
+    )
     prompt_text = (
         f"Betreff: {message.subject or ''}\n"
         f"Absender: {message.from_address or ''}\n"

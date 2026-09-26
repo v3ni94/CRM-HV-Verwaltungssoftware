@@ -14,9 +14,11 @@ export type FinApiConfig = {
   auto_fetch_enabled: boolean;
 };
 
-/** finAPI-Zugangsdaten (Einstellungen, /einstellungen/bank, M11-finapi). Client-ID und
- *  -Secret werden nie zurückgeliefert (nur `configured`); ein erneutes Speichern ersetzt
- *  beide vollständig. Read only Anbindung, keine Zahlungen. */
+/** finAPI-Zugangsdaten (Einstellungen, /einstellungen/bank, M11-01, Betreiberentscheidung
+ *  26.09.2026: finAPI zuerst, EBICS später). Client-ID und -Secret werden nie zurückgeliefert
+ *  (nur `configured`); ein erneutes Speichern ersetzt beide vollständig. Leere Basis-URL:
+ *  Standard je Rechenzentrum (Sandbox oder Live). Read only Anbindung, keine Zahlungen; der
+ *  Knopf „Bank verbinden“ (WebForm) liegt in `FinApiConnections`. */
 export function FinApiSettingsCard({ initial }: { initial: FinApiConfig }) {
   const t = useTranslations("BankSettings");
   const [config, setConfig] = useState(initial);
@@ -40,7 +42,7 @@ export function FinApiSettingsCard({ initial }: { initial: FinApiConfig }) {
         client_id: clientId,
         client_secret: clientSecret,
         mandator_id: mandatorId || null,
-        base_url: baseUrl,
+        base_url: baseUrl.trim() || null,
         sandbox,
         auto_fetch_enabled: autoFetch,
       }),
@@ -61,22 +63,45 @@ export function FinApiSettingsCard({ initial }: { initial: FinApiConfig }) {
       <h2 className={ui.h2}>{t("title")}</h2>
       <p className="mt-1 text-sm text-muted">{t("description")}</p>
       <p className="mt-2 text-sm">
-        {config.configured ? t("statusConfigured", { url: config.base_url ?? "" }) : t("statusMissing")}
+        {config.configured
+          ? t("statusConfigured", { url: config.base_url ?? "" })
+          : t("statusMissing")}
       </p>
-      {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
+      {error ? (
+        <p role="alert" className={ui.alert}>
+          {error}
+        </p>
+      ) : null}
       {message ? <p className={ui.notice}>{message}</p> : null}
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           {t("baseUrl")}
-          <input className={ui.input} value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://sandbox.finapi.io" />
+          <input
+            className={ui.input}
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder={
+              sandbox ? "https://sandbox.finapi.io" : "https://live.finapi.io"
+            }
+          />
+          <span className="text-xs text-muted">{t("baseUrlHint")}</span>
         </label>
         <label className="flex flex-col gap-1 text-sm">
           {t("mandatorId")}
-          <input className={ui.input} value={mandatorId} onChange={(e) => setMandatorId(e.target.value)} />
+          <input
+            className={ui.input}
+            value={mandatorId}
+            onChange={(e) => setMandatorId(e.target.value)}
+          />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           {t("clientId")}
-          <input className={ui.input} value={clientId} onChange={(e) => setClientId(e.target.value)} autoComplete="off" />
+          <input
+            className={ui.input}
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            autoComplete="off"
+          />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           {t("clientSecret")}
@@ -89,7 +114,11 @@ export function FinApiSettingsCard({ initial }: { initial: FinApiConfig }) {
           />
         </label>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={sandbox} onChange={(e) => setSandbox(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={sandbox}
+            onChange={(e) => setSandbox(e.target.checked)}
+          />
           {t("sandbox")}
         </label>
         <label className="flex items-center gap-2 text-sm">
@@ -107,7 +136,7 @@ export function FinApiSettingsCard({ initial }: { initial: FinApiConfig }) {
         type="button"
         className={`${ui.primary} mt-3`}
         onClick={save}
-        disabled={busy || !baseUrl || !clientId || !clientSecret}
+        disabled={busy || !clientId || !clientSecret}
       >
         {t("save")}
       </button>

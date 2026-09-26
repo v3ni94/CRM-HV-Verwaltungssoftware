@@ -7,6 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
+from mhvp.tickets.resolution_kinds import ResolutionKindsConfig
+
 _HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
@@ -78,6 +80,12 @@ class TenantSettingsOut(BaseModel):
     auto_posting_enabled: bool
     # M20-03 Notbremse: alle Ticketantworten mit Freigabe durch eine zweite Person (Standard aus).
     ticket_reply_approval_all: bool = False
+    # ADR 0010, M7-04: Lernbeispiele aus Ticketabschlüssen speichern (Standard aus).
+    ai_learning_examples_enabled: bool = False
+    # Messdienstleister module switch (default off).
+    metering_module_enabled: bool = False
+    # Regel M19-07, M19-04: deaktivierte eingebaute und eigene Erledigungsarten.
+    resolution_kinds: ResolutionKindsConfig = Field(default_factory=ResolutionKindsConfig)
     version: int
 
 
@@ -87,6 +95,9 @@ class TenantSettingsPatch(BaseModel):
     company: CompanyData | None = None
     branding: Branding | None = None
     ticket_reply_approval_all: bool | None = None
+    ai_learning_examples_enabled: bool | None = None
+    metering_module_enabled: bool | None = None
+    resolution_kinds: ResolutionKindsConfig | None = None
 
 
 def _mask(value: str | None) -> str | None:
@@ -181,6 +192,7 @@ class UserOut(BaseModel):
     email: str
     display_name: str
     is_platform_admin: bool
+    is_superadmin: bool = False
     totp_enabled: bool
 
 
@@ -414,6 +426,27 @@ class GateRequestOut(BaseModel):
     decided_by: uuid.UUID | None
     decided_at: datetime | None
     decision_comment: str | None
+    # False only for an approval by the superadmin without a second person (ADR 0011).
+    four_eyes: bool = True
+
+
+class PlatformSettingsOut(BaseModel):
+    """Platform wide switches (ADR 0011); ``gate_superadmin_bypass`` weakens the four eyes
+    control of ADR 0003 and stays off until the operator switches it on."""
+
+    gate_superadmin_bypass: bool
+    version: int
+    updated_by: uuid.UUID | None
+    updated_at: datetime
+
+
+class PlatformSettingsPatch(BaseModel):
+    gate_superadmin_bypass: bool | None = None
+
+
+class SuperadminOut(BaseModel):
+    user_id: uuid.UUID | None
+    email: str | None
 
 
 class GateStateOut(BaseModel):

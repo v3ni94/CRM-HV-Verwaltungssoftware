@@ -3,7 +3,9 @@
 Source: MASTER-PROMPT 3.1, 17. The IONOS server already runs Traefik; the stack joins its
 network (`infra/compose.prod.yaml`).
 
-1. CI green on the commit; images built and pushed with tag `MHVP_IMAGE_TAG` (registry M1-03).
+1. CI green on the commit; the workflow `Images` (`.github/workflows/images.yml`) has pushed
+   `ghcr.io/v3ni94/mhvp-{api,web-crm,web-portal}:<VERSION>` (M1-03, decided 26.09.2026). The
+   server is logged in to ghcr.io with a read:packages token (`server-setup.md` section 4).
 2. On the server: `.env.staging` / `.env.prod` in `DEPLOY_PATH` (secrets never in git).
 3. `ENV=staging DEPLOY_HOST=... DEPLOY_PATH=... MHVP_IMAGE_REGISTRY=... MHVP_IMAGE_TAG=... make deploy`
 4. Check `/api/v1/health/ready` and `/api/v1/platform/ops/metrics`.
@@ -11,5 +13,6 @@ network (`infra/compose.prod.yaml`).
    migrations. Rollback: previous tag, and for a failed migration restore the backup taken in
    step 5.
 
-Own server without Traefik or registry: see `server-setup.md` (`DEPLOY_BUILD=1`,
-`infra/compose.edge.yaml`). Missing server data: M9-01.
+Own server without Traefik: see `server-setup.md` (`infra/compose.edge.yaml`). Without registry
+access (fallback): `DEPLOY_BUILD=1` builds on the server. Missing server data: M9-01.
+Monitoring and alerts after the deployment: `monitoring.md`.

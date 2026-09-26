@@ -126,13 +126,23 @@ proposing and accepting stay in `mhvp.portal.routers`. CRM page `/auftraege/{id}
 ## Erledigungsnotiz und Lernen aus Erledigungen (Betreiberauftrag 26.09.2026)
 
 Beim Setzen auf `done`, `closed` oder `rejected` verlangt `transition_status` ein Feld
-`resolution` (`ResolutionIn`): `kind` aus `ResolutionKind` (`stammdaten_ergaenzt`,
-`handwerker_beauftragt`, `auskunft_erteilt`, `weitergeleitet`, `kein_handlungsbedarf`,
-`abgelehnt`, `sonstiges`; `zusammengefuehrt` nur für Quelltickets einer Zusammenführung) und
-`note` (Freitext, Pflicht bei `sonstiges`). Ohne `resolution` antwortet die API mit 422, auch
-beim Admin-Bypass (`skip_flow`); die Flussprüfung (409) kommt zuerst. Gespeichert werden
+`resolution` (`ResolutionIn`): `kind` (Slug-Code) und `note` (Freitext, Pflicht bei
+`sonstiges`). Eingebaute Arten (`ResolutionKind`, `resolution_kinds.BUILTIN_RESOLUTION_KINDS`):
+`stammdaten_ergaenzt`, `handwerker_beauftragt`, `auskunft_erteilt`, `weitergeleitet`,
+`kein_handlungsbedarf`, `abgelehnt`, `zahlung_geklaert`, `termin_vereinbart`,
+`mangel_behoben`, `vertrag_geaendert`, `sonstiges`; `zusammengefuehrt` nur für Quelltickets
+einer Zusammenführung. Je Mandant (Entscheidung M19-04, 26.09.2026) legt
+`TenantSettings.resolution_kinds` (Migration 0136, Shape `{"disabled": [...], "custom":
+[{"code", "label"}]}`, `ResolutionKindsConfig`) fest, welche eingebauten Arten abgeschaltet
+sind (`sonstiges` und `zusammengefuehrt` nie) und welche eigenen Arten (höchstens 30) es gibt;
+`GET /tickets/resolution-kinds` (`tickets:read`) liefert die Liste mit `active`, der
+Abschlussdialog lädt sie. `assert_resolution_kind_allowed` weist eine nicht wirksame Art mit
+422 ab (auch Bulk, dort je Zeile, und Merge). Ohne `resolution` antwortet die API mit 422,
+auch beim Admin-Bypass (`skip_flow`); die Flussprüfung (409) kommt zuerst. Gespeichert werden
 `ticket.resolution_kind`, `resolution_note`, `resolved_by` (Migration 0130) und die Notiz im
-`TicketEvent` `status` (`data.resolution`); Wiedereröffnen leert die Felder.
+`TicketEvent` `status` (`data.resolution`); Wiedereröffnen leert die Felder. Abgeschlossene
+Tickets behalten ihre Art nach dem Abschalten oder Entfernen; `resolution_text` zeigt eine
+unbekannte Art mit ihrem Code.
 
 * `PATCH /tickets/{id}` und `POST /tickets/bulk-status` nehmen `resolution` an, Bulk als
   gemeinsame Notiz aller Tickets. `POST /tickets/merge` nimmt eine optionale gemeinsame

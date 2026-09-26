@@ -231,9 +231,33 @@ async def document_chunks(
 
 
 async def retrieve(
+    session: AsyncSession,
+    question: str,
+    limit: int = RETRIEVE_LIMIT,
+    *,
+    tenant_id: uuid.UUID | None = None,
+    actor: uuid.UUID | None = None,
+    only_ids: list[uuid.UUID] | None = None,
+) -> list[Document]:
+    """Documents of the tenant (RLS) for a question: similarity search over the embeddings
+    (M7-03) when the tenant has any and the route is usable, otherwise the keyword search.
+    ``only_ids`` (portal scope) filters before the ranking; the keyword path is filtered by the
+    caller as before."""
+    if tenant_id is not None:
+        from mhvp.ai import embeddings
+
+        found = await embeddings.retrieve_documents(
+            session, question, tenant_id=tenant_id, actor=actor, limit=limit, only_ids=only_ids
+        )
+        if found is not None:
+            return found
+    return await retrieve_keyword(session, question, limit)
+
+
+async def retrieve_keyword(
     session: AsyncSession, question: str, limit: int = RETRIEVE_LIMIT
 ) -> list[Document]:
-    """Full text retrieval over documents the tenant holds (RLS). Embeddings follow (M7-03)."""
+    """Full text retrieval over documents the tenant holds (RLS); the fallback of ``retrieve``."""
     words = set(re.findall(r"[\wÄÖÜäöüß]{3,}", question))
     if not words:
         return []
@@ -296,7 +320,13 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
         )
 
     if run.task is AiTask.ANSWER_QUESTION:
-        found = await retrieve(session, str(ref.get("instruction", "")))
+        found = await retrieve(
+            session,
+            str(ref.get("instruction", "")),
+            tenant_id=run.tenant_id,
+            actor=run.created_by,
+            only_ids=sorted(scope) if scope is not None else None,
+        )
         if scope is not None:
             found = [d for d in found if d.id in scope]
         document_ids = [*document_ids, *[d.id for d in found if d.id not in document_ids]]
@@ -1012,7 +1042,7 @@ async def _call_plan(
     for step in plan:
         chosen, _spent, _budget = step
         provider = chosen.config.provider
-        client = providers.client_for(provider, keys[provider])
+        client = providers.client_for(provider, keys[provider], chosen.config.endpoint_region)
         current_messages = messages
         provider_failed = False
         try:
@@ -1132,6 +1162,7 @@ async def execute(
             if not plan:
                 raise GatewayBlockedError("; ".join(reasons))
             skipped = list(reasons)
+            preferred = usable[0].config.provider
             # Fast table import (M7-06): a table document eligible for the deterministic path
             # also needs its own (small) route for the map_columns call; without one, or with
             # the flag off, the run falls back to the normal chunked extraction below unchanged.
@@ -1299,8 +1330,34 @@ async def execute(
         run = await session.get(AiTaskRun, run_id)
         assert run is not None  # noqa: S101 - locked above
         run.provider, run.model = chosen.config.provider, chosen.model
+        # The answering provider (M7-02): differs from the preferred one after a fallback.
+        run.input_ref = {**run.input_ref, "provider_used": chosen.config.provider.value}
         if skipped:
             run.input_ref = {**run.input_ref, "fallback": skipped}
+        if skipped and chosen.config.provider is not preferred:
+            # The switch itself is an event (M7-02): preferred provider, answering provider and
+            # the reasons; ``skipped`` carries no key material (providers.status_detail).
+            log.info(
+                "ai_provider_fallback",
+                tenant_id=str(tenant_id),
+                run_id=str(run_id),
+                preferred=preferred.value,
+                provider_used=chosen.config.provider.value,
+            )
+            await emit(
+                session,
+                tenant_id=tenant_id,
+                type="ai.provider_fallback",
+                entity_type="ai_task_run",
+                entity_id=run.id,
+                actor_user_id=actor_user_id,
+                payload={
+                    "task": task.value,
+                    "preferred": preferred.value,
+                    "provider_used": chosen.config.provider.value,
+                    "reasons": skipped,
+                },
+            )
         if not fast_used and item.chunks and task in CHUNKED_TASKS:
             row_count = sum(text.count("Zeile ") for text in item.chunks)
             extracted = len(output.get("contacts") or output.get("units") or []) if output else 0

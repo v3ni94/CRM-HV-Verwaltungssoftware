@@ -273,6 +273,24 @@ class ErrorCodes:
         "Bankverbindung ist im falschen Zustand",
         "The requested action does not match the connection's current finAPI state.",
     )
+    FINAPI_AUTH = ErrorCode(
+        "MHVP-BANK-0005",
+        502,
+        "finAPI-Zugangsdaten abgelehnt",
+        (
+            "finAPI answered 401/403: client id/secret or the finAPI user token of this "
+            "connection were rejected. Check the credentials in the bank settings."
+        ),
+    )
+    FINAPI_RATE_LIMITED = ErrorCode(
+        "MHVP-BANK-0006",
+        503,
+        "finAPI-Anfragelimit erreicht",
+        (
+            "finAPI answered 429 (rate limit). The request was not retried automatically; the "
+            "next scheduled or manual fetch picks up where the cursor stopped."
+        ),
+    )
     BILLING_PREFIX_MISSING = ErrorCode(
         "MHVP-BILL-0001",
         409,
@@ -321,6 +339,67 @@ class ErrorCodes:
         409,
         "XRechnung nur für ausgestellte Rechnungen",
         "XRechnung XML is generated only for issued or released outgoing invoices (A12).",
+    )
+    # Messdienstleister module (stage 1).
+    METERING_MODULE_DISABLED = ErrorCode(
+        "MHVP-METR-0001",
+        403,
+        "Messdienstleister-Modul nicht freigeschaltet",
+        "tenant_settings.metering_module_enabled is false; write endpoints are locked.",
+    )
+    METERING_ASSIGNMENT_CONFLICT = ErrorCode(
+        "MHVP-METR-0002",
+        409,
+        "Widersprüchliche Zuordnung",
+        "Another assignment covers the same units, service scope and period.",
+    )
+    METERING_VERSION_CONFLICT = ErrorCode(
+        "MHVP-METR-0003",
+        409,
+        "Datensatz wurde zwischenzeitlich geändert",
+        "Optimistic lock: the given version is not the current version.",
+    )
+    METERING_CAPABILITY_MISSING = ErrorCode(
+        "MHVP-METR-0004",
+        409,
+        "Funktion beim Anbieter nicht freigegeben oder nicht implementiert",
+        "documented_support, adapter_implemented and account_release must all be true.",
+    )
+    METERING_CREDENTIALS_MISSING = ErrorCode(
+        "MHVP-METR-0005",
+        422,
+        "Zugangsdaten fehlen",
+        "The adapter requires secrets that are not set on the connection.",
+    )
+    METERING_CONFLICT_BLOCKS_WRITE = ErrorCode(
+        "MHVP-METR-0006",
+        409,
+        "Zuordnung im Konflikt, schreibender Vorgang gesperrt",
+        "Assignments in status conflict block sync and submission until resolved.",
+    )
+    METERING_IMPORT_INVALID = ErrorCode(
+        "MHVP-METR-0007",
+        422,
+        "Import enthält Fehler",
+        "CSV import preview reported row errors; apply is refused.",
+    )
+    METERING_SYNC_ALREADY_RUNNING = ErrorCode(
+        "MHVP-METR-0008",
+        409,
+        "Abruf läuft bereits",
+        "A queued or running sync job with the same connection, data kind and scope exists.",
+    )
+    METERING_PROVIDER_UNKNOWN = ErrorCode(
+        "MHVP-METR-0009",
+        422,
+        "Unbekannter Anbieter",
+        "provider_code is not in the provider catalogue.",
+    )
+    METERING_CONNECTION_PAUSED = ErrorCode(
+        "MHVP-METR-0010",
+        409,
+        "Verbindung pausiert",
+        "The connection is paused; no test and no sync until it is active again.",
     )
 
 

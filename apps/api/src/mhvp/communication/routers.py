@@ -124,6 +124,15 @@ def _mailbox_out(m: Mailbox, user_ids: list[uuid.UUID] | None = None) -> dict[st
         "archive_on_ticket_done": m.archive_on_ticket_done,
         "archive_scope_missing": m.archive_scope_missing,
         "user_ids": user_ids or [],
+        # Push status (read only): watch expiry and last accepted notification.
+        "push_watch_expires_at": m.gmail_watch_expiration,
+        "last_push_at": m.gmail_last_push_at,
+        # Full inbox backfill progress (read only, POST .../backfill starts it).
+        "backfill_status": m.backfill_status,
+        "backfill_total": m.backfill_total,
+        "backfill_done": m.backfill_done,
+        "backfill_started_at": m.backfill_started_at,
+        "backfill_finished_at": m.backfill_finished_at,
     }
 
 
@@ -515,10 +524,39 @@ async def oauth_callback(
                 box.kind, box.secret, box.enabled, box.last_error = "gmail", refresh, True, None
                 box.gmail_history_id = None
                 box.deleted_at = None  # reconnecting a removed address revives it (M12)
+                await session.flush()
+                await _after_connect(session, settings, box)
             await session.flush()
     except gmail.GmailError as exc:
         return _oauth_result(settings, error=str(exc), purpose=purpose)
     return _oauth_result(settings, address=address, purpose=purpose)
+
+
+async def _after_connect(session: AsyncSession, settings: Any, box: Mailbox) -> None:
+    """Connecting a mailbox (operator 26.09.2026): registers the push watch when Pub/Sub is
+    configured and queues the full inbox backfill after the commit. Both are best effort; a
+    failure is recorded on the mailbox and never blocks the connection."""
+    from mhvp.communication import gmail
+    from mhvp.communication.backfill import dispatch_backfill, request_backfill
+    from mhvp.core.db.tenancy import after_commit
+
+    if gmail.push_configured(settings):
+        client_id, client_secret = await gmail.oauth_client(session, settings)
+        client = gmail.make_client(client_id, client_secret, box)
+        try:
+            box.gmail_watch_expiration = None  # a new consent needs a fresh watch
+            await gmail.ensure_watch(settings, box, client)
+        except gmail.GmailError:
+            log.warning("gmail watch after connect failed", extra={"mailbox_id": str(box.id)})
+        finally:
+            await client.aclose()
+    if request_backfill(box):
+        tenant_id, mailbox_id = box.tenant_id, box.id
+
+        async def _start() -> None:
+            await dispatch_backfill(settings, tenant_id, mailbox_id)
+
+        after_commit(session, _start)
 
 
 async def _store_drive_connection(
@@ -607,6 +645,42 @@ async def sync_mailbox_now(
         # Rechnungs-Weiterleitung erst nach dem Commit des Abrufs (M13).
         await dispatch_forward_queue(request.app.state.settings, principal.tenant_id)
     return result
+
+
+@router.post(
+    "/mailboxes/{mailbox_id}/backfill",
+    status_code=202,
+    summary="Posteingang vollständig abrufen (alle Nachrichten unter INBOX)",
+)
+async def backfill_mailbox(
+    mailbox_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> dict[str, Any]:
+    """Queues the paginated full inbox backfill (operator 26.09.2026); progress is shown in
+    the mailbox list (``backfill_status``, ``backfill_done``, ``backfill_total``). A failed run
+    resumes from its stored page; a running one is not started twice (409)."""
+    from mhvp.communication.backfill import dispatch_backfill, request_backfill
+    from mhvp.core.db.tenancy import after_commit
+
+    settings = request.app.state.settings
+    async with tenant_tx(request, principal) as session:
+        box = await _live_mailbox(session, mailbox_id, lock=True)
+        if box.kind != "gmail":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Nur Gmail-Postfächer werden abgerufen.")
+        if not box.enabled or not box.secret:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Postfach ist inaktiv oder nicht verbunden."
+            )
+        if not request_backfill(box):
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Ein Vollabruf läuft bereits.")
+        tenant_id = box.tenant_id
+
+        async def _start() -> None:
+            await dispatch_backfill(settings, tenant_id, mailbox_id)
+
+        after_commit(session, _start)
+        await session.flush()
+        out = _mailbox_out(box, (await _mailbox_users(session)).get(box.id))
+    return out
 
 
 @router.post("/ingest", status_code=201, summary="E-Mail (.eml) aufnehmen und zuordnen")
@@ -804,13 +878,19 @@ async def assign(
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
+    from mhvp.communication.services import complete_message
+
     async with tenant_tx(request, principal) as session:
         row = await _message(session, message_id, principal)
+        was_done = row.status == "done"
         for key, value in body.model_dump(exclude_none=True).items():
             setattr(row, key, value)
         if body.status is None and (body.contact_id or body.property_id) and row.status == "new":
             row.status = "assigned"
         await session.flush()
+        if body.status == "done" and not was_done:
+            # Erledigt archiviert die Mail und schließt ggf. das Ticket (Betreiber 26.09.2026).
+            await complete_message(session, request.app.state.settings, row, principal.user_id)
         return _out(row)
 
 

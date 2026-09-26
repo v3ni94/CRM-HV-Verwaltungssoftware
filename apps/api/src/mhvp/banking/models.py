@@ -304,6 +304,11 @@ class FinApiConnection(IdMixin, TimestampMixin, TenantMixin, Base):
     bank_connection_id: Mapped[uuid.UUID] = _fk("bank_connection.id")
     responsible_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     finapi_user_id: Mapped[str | None] = mapped_column(EncryptedText())
+    # finAPI user identity of this connection (technical user created via ``POST /users``,
+    # auto update off). The password is a provider generated secret for the OAuth2 password
+    # grant (user token), never a bank credential (rule M11-04). Encrypted like the client
+    # credentials (migration 0141).
+    finapi_user_password: Mapped[str | None] = mapped_column(EncryptedText())
     finapi_bank_connection_id: Mapped[str | None] = mapped_column(String(64))
     web_form_id: Mapped[str | None] = mapped_column(String(64))
     web_form_url: Mapped[str | None] = mapped_column(Text)
@@ -375,6 +380,12 @@ class FinApiAccountLink(IdMixin, TimestampMixin, TenantMixin, Base):
     balance_as_of: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     balance_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_transactions_fetch_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Incremental sync cursor (migration 0141): booking date and provider transaction id of
+    # the newest transaction imported so far. The next fetch asks from this date on (with an
+    # overlap, see ``tasks._finapi_fetch_once``); dedup by ``bank_reference`` (D05) keeps the
+    # overlap idempotent.
+    last_synced_booking_date: Mapped[date | None] = mapped_column(Date)
+    last_synced_transaction_id: Mapped[str | None] = mapped_column(String(64))
 
 
 # --- Bank account selection (Bankkontenauswahl, read only plus assignment; G2 stays closed) ---

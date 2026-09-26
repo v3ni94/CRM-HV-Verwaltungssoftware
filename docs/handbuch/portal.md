@@ -19,8 +19,9 @@ von der Verwaltung geprüft). Interne Vermerke der Verwaltung sind im Portal nie
   Der Einladungscode wird nur einmal angezeigt und gilt 14 Tage; er ist zusammen mit der
   Portaladresse zu übermitteln. Im CRM steht der Einladungslink als Text und als QR-Code
   (auf der Kontaktakte im Reiter Kommunikation, Abschnitt Portalzugang, sowie beim
-  Portalzugang zum Übergabeprotokoll; ein QR-Code im PDF-Anschreiben ist
-  Betreiberentscheidung M21-08).
+  Portalzugang zum Übergabeprotokoll). Das PDF-Anschreiben zum Portalzugang (Übergabeprotokoll,
+  Einladung als Anschreiben) enthält den Einladungslink zusätzlich als QR-Code neben dem
+  gedruckten Link und Code, sofern eine öffentliche Portaladresse konfiguriert ist.
 - Einladen von der Kontaktakte: Der Abschnitt Portalzugang liest beim Öffnen den Stand des
   Portalkontos des Kontakts (Kein Portalzugang, Eingeladen mit Ablauf des Codes, Zugang aktiv
   mit Aktivierungsdatum und letzter Anmeldung, Hinweis gesperrt bei einer Anmeldesperre) und
@@ -28,9 +29,12 @@ von der Verwaltung geprüft). Interne Vermerke der Verwaltung sind im Portal nie
   Recht contacts:update; lesen genügt das Recht contacts:read). Einladungscode, Hash oder
   Passwort werden dabei nie ausgegeben. Ohne konfigurierte öffentliche Portaladresse
   erscheint nur der Einladungscode.
-- Einladung annehmen: Code eingeben, Passwort setzen. Danach Anmeldung mit E-Mail,
-  Passwort und zweitem Faktor bei jeder Anmeldung; vertrauenswürdige Geräte gibt es im
-  Portal bewusst nicht.
+- Einladung annehmen: Code eingeben, Passwort setzen (6 bis 128 Zeichen). Danach Anmeldung
+  mit E-Mail und Passwort. Der zweite Faktor (Code aus einer Authenticator-App) ist
+  freiwillig und wird unter Sicherheit eingeschaltet oder ausgeschaltet (Betreiberentscheidung
+  M2-01 vom 26.09.2026). Ist er eingeschaltet, kann beim Code-Schritt Dieses Gerät 90 Tage
+  merken gewählt werden; gemerkte Geräte stehen unter Sicherheit und lassen sich dort
+  abmelden.
 - Installation als App (PWA): Das Portal bietet auf unterstützten Geräten Installieren an
   (unter iOS in Safari über Teilen und Zum Home-Bildschirm hinzufügen). Es werden keine
   Daten auf dem Gerät gespeichert; ohne Verbindung zeigt die App nur die Startseite mit dem
@@ -57,6 +61,13 @@ von der Verwaltung geprüft). Interne Vermerke der Verwaltung sind im Portal nie
 
 Ein Kontakt kann mehrere Rollen tragen (zum Beispiel Eigentümer und Beirat); die Seiten
 addieren sich.
+
+## Benachrichtigungen
+
+Die Übersicht zeigt ungelesene Benachrichtigungen der Verwaltung an den eigenen Zugang. Ein
+Klick öffnet den Betreff im Portal, zum Beispiel die Meldung, den Auftrag oder das
+Übergabeprotokoll, und markiert nur diesen Eintrag als gelesen. Einträge ohne Portalseite
+lassen sich mit einem Klick als gelesen markieren. Verweise führen nie in das CRM.
 
 ## Dokumente und Lesebestätigungen
 
@@ -188,5 +199,6 @@ Auftrag.
 - **Aushang im Portal nicht sichtbar**: Gültigkeit liegt nicht im heutigen Tag, Zielgruppe
   passt nicht oder der Aushang wurde beendet.
 - **Foto wird abgelehnt**: Nur JPEG und PNG; nicht lesbare Bilder werden abgewiesen.
-- **Zweiter Faktor bei jeder Anmeldung**: Gewollt, das Portal kennt keine
-  vertrauenswürdigen Geräte.
+- **Zweiter Faktor wird abgefragt**: Der Nutzer hat ihn unter Sicherheit eingeschaltet;
+  auf einem gemerkten Gerät entfällt die Abfrage 90 Tage lang. Ausschalten unter Sicherheit
+  mit dem aktuellen Passwort.

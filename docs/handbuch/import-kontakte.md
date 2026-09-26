@@ -20,6 +20,21 @@ Importassistent, Abschnitt "Immoware24-Listen" ohne Serverzugang zur Verfügung.
   direkt übernommen. Bei "Vorname Nachname" entscheidet der Nachname aus der Briefanrede
   ("Sehr geehrte Frau Joachims"); fehlt er, gilt das letzte Wort als Nachname und der Bericht
   weist die Zeile aus. Anrede Herr oder Frau kommt aus der Briefanrede.
+* Mehrpersonen-Namen (Betreiberentscheidung 26.09.2026) werden als eine Partei mit den
+  einzelnen Personen als Mitgliedern angelegt: "Goritzka, Janina & Jacek", "Max und Erika
+  Mustermann", "Eheleute Anna und Karl Weber", "Herr und Frau Peter und Ute Klein", "Hans
+  Müller und Erika Müller". Die Partei heißt wie der exportierte Name, jede Person wird ein
+  eigener Kontakt mit derselben Immoware24-Nummer und einer laufenden Mitgliedsnummer. Die
+  Anschrift gilt für alle Mitglieder, Telefon und E-Mail stehen beim ersten Mitglied. Ein
+  mehrteiliger Vorname ("Hans Peter und Erika Müller") wird nur aufgeteilt, wenn die
+  Briefanrede den Familiennamen bestätigt ("Sehr geehrte Eheleute Müller").
+* Was sich nicht ohne Raten aufteilen lässt, bleibt ein Kontakt mit dem Namen wie exportiert
+  und steht im Bericht unter Prüfung (Zähler review): Erbengemeinschaften (die Erben stehen
+  nicht im Namen), "Eheleute Müller" oder "Herr und Frau Mustermann" ohne Vornamen, "Max und
+  Erika" ohne Nachnamen, "Jana Klauenberg & Jens Franken" (zwei Nachnamen), mehrere Kommas.
+  Diese Kontakte werden nach dem Import von Hand ergänzt: die weiteren Personen als Kontakte
+  anlegen und über Vertragsparteien zu einer Partei zusammenführen. Firmen mit "und" oder "&"
+  im Namen ("Schmidt und Partner") sind keine Mehrpersonen-Namen.
 * Kontakte ohne Anschrift werden als unvollständig gekennzeichnet.
 * Ungültige Telefonnummern oder E-Mail-Adressen werden nicht als Kontaktdaten gespeichert,
   sondern nur als Notiz "laut Altsystem" am Kontakt; der Bericht listet sie auf.

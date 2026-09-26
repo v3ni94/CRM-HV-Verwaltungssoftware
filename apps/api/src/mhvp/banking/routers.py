@@ -1155,7 +1155,9 @@ class FinApiConfigIn(_In):
     client_id: str = Field(min_length=1, max_length=200)
     client_secret: str = Field(min_length=1, max_length=200)
     mandator_id: str | None = Field(default=None, max_length=64)
-    base_url: str = Field(min_length=8, max_length=300)
+    # Empty: the default host of the chosen data center from the settings
+    # (``MHVP_FINAPI_BASE_URL_SANDBOX``/``_LIVE``, [laut finAPI-Doku]).
+    base_url: str | None = Field(default=None, max_length=300)
     sandbox: bool = True
     # M11-finapi Stage 2: scheduled daily fetch, default off; omitted keeps the current value.
     auto_fetch_enabled: bool | None = None
@@ -1213,15 +1215,34 @@ async def _finapi_credentials(session: Any, tenant_id: uuid.UUID) -> FinApiTenan
     return cfg
 
 
-def _finapi_client(cfg: FinApiTenantConfig) -> finapi_client.FinApiClient:
+def _finapi_client(
+    cfg: FinApiTenantConfig, fa: FinApiConnection | None = None
+) -> finapi_client.FinApiClient:
+    """Client with the tenant's application credentials and, when `fa` carries a finAPI user
+    identity, that connection's user token (OAuth2 password grant). Shared with
+    `mhvp.banking.tasks` so the job and the click use the same credentials path."""
     return finapi_client.FinApiClient(
         finapi_client.FinApiCredentials(
             client_id=cfg.client_id,
             client_secret=cfg.client_secret,
             base_url=cfg.base_url,
             mandator_id=cfg.mandator_id,
+            user_id=fa.finapi_user_id if fa else None,
+            user_password=fa.finapi_user_password if fa else None,
+            sandbox=cfg.sandbox,
         )
     )
+
+
+def _ensure_finapi_user(cfg: FinApiTenantConfig, fa: FinApiConnection) -> None:
+    """Creates the technical finAPI user of this connection once (`POST /users`, auto update
+    off) and stores id and generated password encrypted on the connection. Never a bank
+    credential (rule M11-04); the WebForm afterwards runs under this user's token."""
+    if fa.finapi_user_id:
+        return
+    user = _finapi_client(cfg).create_user()
+    fa.finapi_user_id = user.user_id
+    fa.finapi_user_password = user.password
 
 
 def _can_see_unassigned(principal: TenantPrincipal) -> bool:
@@ -1266,7 +1287,17 @@ async def set_finapi_config(
         cfg.client_id = body.client_id
         cfg.client_secret = body.client_secret
         cfg.mandator_id = body.mandator_id
-        cfg.base_url = body.base_url.rstrip("/")
+        settings = request.app.state.settings
+        base_url = (body.base_url or "").strip()
+        if base_url and not base_url.startswith("https://"):
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Die finAPI-Basis-URL muss mit https:// beginnen."
+            )
+        cfg.base_url = base_url.rstrip("/") or finapi_client.default_base_url(
+            body.sandbox,
+            sandbox_url=settings.finapi_base_url_sandbox,
+            live_url=settings.finapi_base_url_live,
+        )
         cfg.sandbox = body.sandbox
         if body.auto_fetch_enabled is not None:
             cfg.auto_fetch_enabled = body.auto_fetch_enabled
@@ -1338,10 +1369,8 @@ async def create_finapi_connection(
             auto_update_enabled=False,  # provider auto update stays off (master prompt section 2)
         )
         session.add(fa)
-        try:
-            web_form = _finapi_client(cfg).create_bank_connection_import_web_form()
-        except finapi_client.FinApiNotVerifiedError:
-            raise
+        _ensure_finapi_user(cfg, fa)
+        web_form = _finapi_client(cfg, fa).create_bank_connection_import_web_form()
         conn.status = ConnectionStatus.WEB_FORM_PENDING
         fa.web_form_id = web_form.web_form_id
         fa.web_form_url = web_form.url
@@ -1433,7 +1462,7 @@ async def check_finapi_connection(
         if conn is None:  # pragma: no cover
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         cfg = await _finapi_credentials(session, principal.tenant_id)
-        client = _finapi_client(cfg)
+        client = _finapi_client(cfg, fa)
         if fa.web_form_id and conn.status in (
             ConnectionStatus.WEB_FORM_PENDING,
             ConnectionStatus.UPDATE_REQUIRED,
@@ -1534,7 +1563,8 @@ async def reauthorize_finapi_connection(
         if conn is None:  # pragma: no cover
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         cfg = await _finapi_credentials(session, principal.tenant_id)
-        web_form = _finapi_client(cfg).create_bank_connection_import_web_form()
+        _ensure_finapi_user(cfg, fa)
+        web_form = _finapi_client(cfg, fa).create_bank_connection_import_web_form()
         fa.web_form_id = web_form.web_form_id
         fa.web_form_url = web_form.url
         fa.web_form_status = web_form.status

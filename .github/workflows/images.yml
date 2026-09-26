@@ -1,0 +1,102 @@
+name: Images
+
+# Builds the three application images (api, web-crm, web-portal) and pushes them to the GitHub
+# Container Registry (OPEN_QUESTIONS M1-03, decided 26.09.2026: ghcr.io/v3ni94, private).
+#
+# Tags per image:
+#   <VERSION>        content of the VERSION file (the release tag used by deploy.sh)
+#   sha-<short sha>  exact commit, for rollbacks and staging
+#   latest           only on main
+# A version tag v<x.y.z> must match the VERSION file, otherwise the run fails before pushing.
+# Deploy only images whose commit has a green CI run (docs/runbooks/deploy.md).
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  NAMESPACE: ghcr.io/v3ni94
+
+jobs:
+  build-push:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve tags
+        id: tags
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]] || { echo "VERSION '$version' is not a semantic version" >&2; exit 1; }
+          if [[ "$REF_TYPE" == "tag" && "$REF_NAME" != "v$version" ]]; then
+            echo "git tag $REF_NAME does not match VERSION $version" >&2
+            exit 1
+          fi
+          short="$(git rev-parse --short=12 HEAD)"
+          tags="$version sha-$short"
+          if [[ "$REF_TYPE" == "branch" && "$REF_NAME" == "main" ]]; then
+            tags="$tags latest"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "Image tags: $tags"
+
+      - name: Login to GitHub Container Registry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login "$REGISTRY" -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Build images
+        env:
+          VERSION: ${{ steps.tags.outputs.version }}
+        run: |
+          set -euo pipefail
+          build="$(git rev-parse --short=12 HEAD)"
+          docker build --build-arg MHVP_APP_VERSION="$VERSION" \
+            -t "$NAMESPACE/mhvp-api:$VERSION" apps/api
+          docker build --build-arg MHVP_APP_VERSION="$VERSION" --build-arg MHVP_BUILD="$build" \
+            -f apps/web-crm/Dockerfile -t "$NAMESPACE/mhvp-web-crm:$VERSION" .
+          docker build --build-arg MHVP_APP_VERSION="$VERSION" \
+            -f apps/web-portal/Dockerfile -t "$NAMESPACE/mhvp-web-portal:$VERSION" .
+
+      - name: Tag and push
+        env:
+          VERSION: ${{ steps.tags.outputs.version }}
+          TAGS: ${{ steps.tags.outputs.tags }}
+        run: |
+          set -euo pipefail
+          for image in mhvp-api mhvp-web-crm mhvp-web-portal; do
+            for tag in $TAGS; do
+              docker tag "$NAMESPACE/$image:$VERSION" "$NAMESPACE/$image:$tag"
+              docker push "$NAMESPACE/$image:$tag"
+            done
+          done
+
+      - name: Summary
+        env:
+          TAGS: ${{ steps.tags.outputs.tags }}
+        run: |
+          {
+            echo "## Images pushed"
+            for image in mhvp-api mhvp-web-crm mhvp-web-portal; do
+              for tag in $TAGS; do echo "- \`$NAMESPACE/$image:$tag\`"; done
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

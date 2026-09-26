@@ -13,10 +13,12 @@ from mhvp.core.auth.permission_cache import invalidate_permissions
 from mhvp.core.auth.permissions import SYSTEM_ROLES
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
+from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import (
     Membership,
     MembershipRole,
+    PlatformSettings,
     Role,
     RolePermission,
     Tenant,
@@ -28,6 +30,8 @@ from mhvp.platform.schemas import Branding, CompanyData
 from mhvp.properties.defaults import ensure_tenant_defaults
 
 SEED_FILES = ("hausverwaltung-mueller.json", "timo-mueller.json")
+
+log = get_logger("mhvp.platform")
 
 
 def load_seed(name: str) -> dict[str, Any]:
@@ -164,6 +168,77 @@ async def create_user(
         session.add(user)
         await session.flush()
         return user.id
+
+
+async def user_id_by_email(
+    factory: async_sessionmaker[AsyncSession], email: str
+) -> uuid.UUID | None:
+    async with platform_transaction(factory) as session:
+        user_id: uuid.UUID | None = await session.scalar(
+            select(User.id).where(User.email == email.strip().lower())
+        )
+        return user_id
+
+
+async def set_superadmin(
+    factory: async_sessionmaker[AsyncSession],
+    *,
+    user_id: uuid.UUID,
+    granted: bool,
+    actor_user_id: uuid.UUID | None,
+) -> None:
+    """Grant or revoke the single superadmin marker (ADR 0011).
+
+    Only an active platform administrator can hold it, and only one user at a time (partial
+    unique index ``uq_app_user_superadmin``): granting while another user holds it fails with
+    ``CONFLICT``; revoke that user first. The change is written to the application log with
+    actor and target; the seed passes ``actor_user_id=None``.
+    """
+    async with platform_transaction(factory) as session:
+        user = await session.get(User, user_id)
+        if user is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if granted:
+            if not user.is_platform_admin or not user.active:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Superadmin kann nur ein aktiver Plattformadministrator sein.",
+                )
+            holder = await session.scalar(
+                select(User.id).where(User.is_superadmin.is_(True), User.id != user_id)
+            )
+            if holder is not None:
+                raise ProblemError(
+                    ErrorCodes.CONFLICT,
+                    developer_message="Another user already holds the superadmin marker.",
+                )
+        if user.is_superadmin == granted:
+            return
+        user.is_superadmin = granted
+        user.updated_by = actor_user_id
+        log.info(
+            "superadmin_changed",
+            user_id=str(user_id),
+            granted=granted,
+            actor_user_id=str(actor_user_id) if actor_user_id else None,
+        )
+
+
+async def platform_settings(session: AsyncSession) -> PlatformSettings:
+    """The single ``platform_settings`` row, created with all flags off on first use."""
+    row = await session.scalar(select(PlatformSettings).limit(1))
+    if row is None:
+        row = PlatformSettings()
+        session.add(row)
+        await session.flush()
+        await session.refresh(row)
+    return row
+
+
+async def gate_superadmin_bypass_enabled(session: AsyncSession) -> bool:
+    """Read only check used by the gate decision; a missing row means off (default closed)."""
+    value = await session.scalar(select(PlatformSettings.gate_superadmin_bypass).limit(1))
+    return bool(value)
 
 
 async def _role_ids(

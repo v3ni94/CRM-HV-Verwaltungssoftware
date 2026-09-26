@@ -26,3 +26,13 @@ pattern of `GET /tickets` (`page`, `page_size`, headers `X-Total-Count`, `X-Page
 `X-Page-Size`; default `limit=200`). Indexes on `contract(tenant_id, end_date |
 termination_date | kind)` and `sepa_mandate(tenant_id, status)` (migration 0127). See
 `docs/reviews/2026-09-26-performance.md`.
+
+## Kautionsabrechnung (M5-02, operator decision 26.09.2026)
+
+`deposit_settlement.py` (models `DepositInterestReferenceRate`, `DepositSettlement`, pure
+`Decimal` computation: day exact interest per calendar year on the balance basis, rounded once
+per year), `deposit_settlement_routers.py` (`/deposit-interest-rates`, `/deposits/{id}/settlements`,
+`/deposit-settlements/{id}/release` behind G3). Migration 0138. Rule and hand computed example:
+`docs/rules/M5-02-kautionsabrechnung.md`. Tests: `tests/unit/test_m5_deposit_settlement.py`,
+`tests/integration/test_m5_deposit_settlement.py`. The settlement is a record only; no
+posting, no payment, no receivable.

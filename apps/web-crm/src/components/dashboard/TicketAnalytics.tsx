@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { ATTENTION_BORDER, AttentionBadge, asAttention } from "@/components/tickets/TicketAttention";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -30,6 +31,9 @@ type TicketRow = {
   assignee_user_id: string | null;
   created_at: string;
   sla_due_at: string | null;
+  // Traffic light (M19-09), derived on the server.
+  attention?: string;
+  last_activity_at?: string | null;
 };
 type Stats = {
   range: Range;
@@ -338,7 +342,7 @@ export function TicketAnalytics() {
               <>
                 <ul className="flex flex-col gap-1 sm:hidden">
                   {openTickets.map((tk) => (
-                    <li key={tk.id} className="min-w-0">
+                    <li key={tk.id} className={`min-w-0 ${ATTENTION_BORDER[asAttention(tk.attention)]}`} data-attention={asAttention(tk.attention)}>
                       <Link href={`/tickets/${tk.id}`} className="flex min-w-0 flex-col gap-0.5 rounded-md px-2 py-1.5 text-sm hover:bg-surface">
                         <span className="min-w-0 truncate font-medium">
                           #{tk.number} {tk.title ?? ""}
@@ -346,6 +350,7 @@ export function TicketAnalytics() {
                         <span className="text-xs text-muted">
                           {tt(`statuses.${tk.status}`)} · {tt(`priorities.${tk.priority}`)}
                         </span>
+                        <AttentionBadge attention={asAttention(tk.attention)} lastActivityAt={tk.last_activity_at} />
                       </Link>
                     </li>
                   ))}
@@ -359,12 +364,13 @@ export function TicketAnalytics() {
                         <th className="w-32">{t("ticketStatus")}</th>
                         <th className="w-28">{t("ticketPriority")}</th>
                         <th className="w-40">{t("ticketAssignee")}</th>
+                        <th className="w-44">{tt("attention.column")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {openTickets.map((tk) => (
-                        <tr key={tk.id}>
-                          <td className="tabular-nums">
+                        <tr key={tk.id} data-attention={asAttention(tk.attention)}>
+                          <td className={`tabular-nums ${ATTENTION_BORDER[asAttention(tk.attention)]}`}>
                             <Link href={`/tickets/${tk.id}`} className="hover:underline">
                               {tk.number}
                             </Link>
@@ -377,6 +383,9 @@ export function TicketAnalytics() {
                           <td>{tt(`statuses.${tk.status}`)}</td>
                           <td>{tt(`priorities.${tk.priority}`)}</td>
                           <td className="truncate">{tk.assignee_user_id ? nameOf(tk.assignee_user_id) : ""}</td>
+                          <td>
+                            <AttentionBadge attention={asAttention(tk.attention)} lastActivityAt={tk.last_activity_at} />
+                          </td>
                         </tr>
                       ))}
                     </tbody>

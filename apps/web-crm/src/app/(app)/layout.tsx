@@ -36,6 +36,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/fristen", label: t("deadlines"), icon: "calendar" },
         ...(can("communication:read") ? [{ href: "/mail", label: t("mail"), icon: "mail" }] : []),
         ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets"), icon: "tickets" }] : []),
+        ...(can("tickets:read")
+          ? [{ href: "/auswertung/tickets", label: t("ticketAnalytics"), icon: "tickets" }]
+          : []),
       ],
     },
     {
@@ -53,10 +56,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can("documents:read") ? [{ href: "/dms", label: t("dms"), icon: "dms" }] : []),
         ...(can("objektakte:read")
           ? [{ href: "/objektakte", label: t("objektakte"), icon: "dms" }]
-          : []),
-        ...(can("immoware:read") ? [{ href: "/immoware", label: t("immoware"), icon: "dms" }] : []),
-        ...(can("immoware:read")
-          ? [{ href: "/immoware/lernphase", label: t("immowareLearning"), icon: "dms" }]
           : []),
       ],
     },

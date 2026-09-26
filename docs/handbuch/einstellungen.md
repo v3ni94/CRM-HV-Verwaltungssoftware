@@ -40,6 +40,38 @@ festgehalten. Unter Mandant und Briefbogen steht zusätzlich die Notbremse Ticke
 Freigabe für alle (Standard aus): Ist sie an, brauchen alle Ticketantworten des Mandanten die
 Freigabe einer zweiten Person, unabhängig vom Kennzeichen.
 
+## Erledigungsarten beim Ticketabschluss
+
+Unter Mandant und Briefbogen, Abschnitt Erledigungsarten, legt der Mandant fest, welche Arten
+der Abschlussdialog der Tickets anbietet (Betreiberentscheidung vom 26.09.2026, Kapitel
+Tickets, Erledigungsnotiz beim Abschluss). Eingebaute Arten: Stammdaten ergänzt, Handwerker
+beauftragt, Auskunft erteilt, Weitergeleitet, Kein Handlungsbedarf, Abgelehnt, Zahlung
+geklärt, Termin vereinbart, Mangel behoben, Vertrag geändert, Zusammengeführt, Sonstiges.
+Jede eingebaute Art lässt sich per Haken abschalten, außer Sonstiges (Auffang mit
+Freitextpflicht) und Zusammengeführt (Standard beim Zusammenführen). Eigene Arten, höchstens
+30, bestehen aus einem Code (Kleinbuchstaben, Ziffern, Unterstrich, 2 bis 32 Zeichen, zum
+Beispiel schluessel_uebergeben) und einer Bezeichnung; der Code ist die technische Kennung im
+Verlauf, in Lernbeispielen und in der API und lässt sich nachträglich nicht ändern. Das
+Entfernen einer Art ändert bereits abgeschlossene Tickets nicht; ihre Art bleibt im Verlauf
+lesbar. Die Pflege erfordert das Recht Mandanteneinstellungen ändern; jede Änderung steht im
+Ereignisprotokoll (Mandanteneinstellungen geändert, Feld resolution_kinds).
+
+## Meine Daten: Passwort, zweiter Faktor, Geräte
+
+Unter Meine Daten (Benutzermenü oben rechts) ändert jeder Benutzer sein Passwort (6 bis 128
+Zeichen, aktuelles Passwort erforderlich, Betreiberentscheidung M2-01 vom 26.09.2026) und
+verwaltet den zweiten Faktor: Zweiten Faktor einrichten zeigt einen QR-Code und den Schlüssel
+für die Authenticator-App; erst nach Bestätigen mit einem gültigen Code ist der zweite Faktor
+aktiv, danach fragt die Anmeldung nach dem Passwort zusätzlich den Code ab. Zweiten Faktor
+ausschalten verlangt das aktuelle Passwort und entfernt alle gemerkten Geräte. Der zweite
+Faktor ist für niemanden Pflicht, auch nicht für Administratoren.
+
+Gemerkte Geräte: Wer beim Code-Schritt Dieses Gerät 90 Tage merken wählt, wird auf diesem
+Gerät 90 Tage lang ohne Code angemeldet. Die Liste zeigt Gerät (Browserkennung) und Ablauf;
+Abmelden entfernt das Gerät sofort, ebenso das Ausschalten des zweiten Faktors und ein
+Passwort zurücksetzen durch die Administratorin oder den Administrator. Aktive Sitzungen
+lassen sich daneben einzeln beenden.
+
 ## Rollen und Portalrechte
 
 Unter Rollen und Rechte werden Rechte je Rolle vergeben; Systemrollen lassen sich nicht
@@ -176,6 +208,18 @@ Zahlungen, Freigaben oder Mailversand aus. Einzelheiten im Kapitel Automatisieru
 Unter WEG stehen die Mehrheitsregeln je Beschlussgegenstand mit Fundstelle, Geltung (alle
 Gemeinschaften oder eine Gemeinschaft) und Freigabe durch eine zweite Person (Recht
 Buchhaltung freigeben). Einzelheiten im Kapitel WEG.
+
+## Kautionszinsen (Referenzzinssatz je Jahr)
+
+Einstellungen, Kautionszinsen: Zinssatz je Kalenderjahr in Prozent (bis fünf
+Nachkommastellen, Komma oder Punkt) mit Vermerk für Quelle und Datum. Lesen mit dem Recht
+Verträge lesen, Pflege mit dem Recht Mandanteneinstellungen ändern. Ein bestehendes Jahr wird
+beim Speichern überschrieben; Entfernen löscht den Satz für das Jahr.
+
+Die Tabelle ist die einzige Grundlage der Kautionsabrechnung mit Zinsart Referenzzinssatz je
+Jahr (Kapitel Verträge). Die Plattform bezieht keinen Zinssatz automatisch und belegt keinen
+Wert vor. Welcher Satz für Mietkautionen rechtlich maßgeblich ist, ist durch Rechtsberatung
+zu bestätigen; die Fundstelle gehört in den Vermerk.
 
 ## Buchhaltung, DATEV
 

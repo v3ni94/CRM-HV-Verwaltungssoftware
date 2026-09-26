@@ -43,8 +43,39 @@ RESOURCES: tuple[str, ...] = (
     # downloads the package (logged), `update` records, releases, delivers and builds packages.
     "hoa",
 )
-ALL_PERMISSIONS: frozenset[str] = frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS)
-READ_ALL: frozenset[str] = frozenset(f"{r}:read" for r in RESOURCES)
+# Messdienstleister module (stage 1, master prompt Messdienstleister section 9): six separate
+# rights for credential maintenance, assignment changes, sync runs, data reading, user
+# submission and binding billing orders. Stored as resource/action pairs like every other
+# permission (``RolePermission.action`` is 16 characters), hence the resource prefix
+# ``metering_<area>`` instead of a three part name.
+METERING_CONNECTIONS_MANAGE = "metering_connections:manage"
+METERING_ASSIGNMENTS_UPDATE = "metering_assignments:update"
+METERING_SYNC_RUN = "metering_sync:run"
+METERING_DATA_READ = "metering_data:read"
+METERING_USERS_SUBMIT = "metering_users:submit"
+METERING_BILLING_ORDER = "metering_billing:order"
+METERING_PERMISSIONS: frozenset[str] = frozenset(
+    {
+        METERING_CONNECTIONS_MANAGE,
+        METERING_ASSIGNMENTS_UPDATE,
+        METERING_SYNC_RUN,
+        METERING_DATA_READ,
+        METERING_USERS_SUBMIT,
+        METERING_BILLING_ORDER,
+    }
+)
+ALL_PERMISSIONS: frozenset[str] = (
+    frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS) | METERING_PERMISSIONS
+)
+
+# Platform level permissions (M9-04a, operator decision 26.09.2026): held only by API keys
+# issued by a platform administrator via ``POST /platform/ops/metrics-keys``. They are not
+# part of ``ALL_PERMISSIONS`` on purpose, so no tenant role and no tenant issued API key can
+# carry them (``validate_permission`` rejects them). A key with ``platform:metrics:read`` may
+# read ``GET /platform/ops/metrics`` and nothing else.
+PLATFORM_METRICS_READ = "platform:metrics:read"
+PLATFORM_PERMISSIONS: frozenset[str] = frozenset({PLATFORM_METRICS_READ})
+READ_ALL: frozenset[str] = frozenset(f"{r}:read" for r in RESOURCES) | {METERING_DATA_READ}
 
 
 @dataclass(frozen=True)
@@ -94,6 +125,10 @@ _ACC_APPROVE = _ACC_RW | {"accounting:approve", "accounting:export"}
 # and seeing unassigned accounts, needs banking:approve in addition to accounting rights.
 _BANKING_APPROVE = _rw("banking") | {"banking:approve"}
 
+# Messdienstleister (stage 1): clerks maintain assignments, start manual retrievals and read
+# data; credentials, user submission and billing orders stay with the administrator roles.
+_METERING_CLERK = frozenset({METERING_ASSIGNMENTS_UPDATE, METERING_SYNC_RUN, METERING_DATA_READ})
+
 SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole("tenant_admin", "Mandantenadministrator", _ADMIN),
     SystemRole("administrator", "Administrator", _ADMIN),
@@ -106,7 +141,8 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
         | _TICKETS
         | _SLA_MANAGE
         | _OBJEKTAKTE_MANAGE
-        | _rw("hoa"),
+        | _rw("hoa")
+        | _METERING_CLERK,
     ),
     SystemRole("read_only", "Nur Lesezugriff", READ_ALL),
     SystemRole(

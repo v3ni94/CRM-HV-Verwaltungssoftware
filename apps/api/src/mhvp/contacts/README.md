@@ -30,3 +30,13 @@ UNION ALL statement; `GET /parties` loads the members of all parties in one quer
 `summaries` marks contacts with at least one pending bank account (`iban_pending`) inside the
 existing UNION ALL statement, so the contacts list shows "IBAN wartet auf Freigabe" without a
 query per contact. Rule addendum in `docs/rules/M19-05.md`.
+
+## Authorised representatives and delivery rule (addendum 26.09.2026)
+
+`ContactRelation` of kind `representative` carries `delivery_mode` (`both`, default;
+`representative_only`; `owner_only`, migration 0140). `recipients.resolve_recipients` is the
+single place that applies the rule; `mhvp.communication.dispatch` (serial dispatch),
+`mhvp.documents.routers.serial_letter` and `mhvp.hoa.meetings.invitation_recipients` call it.
+Endpoints `GET/PATCH/DELETE /contacts/{id}/contact-relations` (`contacts:read` /
+`contacts:update`, audited with old and new values). Rule entry
+`docs/rules/M8-04-mehrpersonen-bevollmaechtigte.md`.

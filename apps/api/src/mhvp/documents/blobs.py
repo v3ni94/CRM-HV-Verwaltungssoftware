@@ -3,7 +3,8 @@
 A missing configuration or an unreachable store answers with the registered problem
 ``MHVP-DOC-0007`` (503, ADR 0004) instead of an unhandled exception; the underlying error is
 logged without credentials. The upload happens before any index row is written, so a failed
-put leaves no half written document (rule 0.1.7).
+put leaves no half written document (rule 0.1.7). ``get`` and ``delete`` map storage errors the
+same way; a document row is never left pointing at a half deleted original.
 """
 
 import logging
@@ -56,7 +57,15 @@ class BlobStore:
             raise ProblemError(ErrorCodes.STORAGE_UNAVAILABLE, detail=_UNREACHABLE) from exc
 
     def get(self, key: str) -> bytes:
-        return self._client.get_object(Bucket=self._bucket, Key=key)["Body"].read()
+        try:
+            return self._client.get_object(Bucket=self._bucket, Key=key)["Body"].read()
+        except (BotoCoreError, ClientError) as exc:
+            log.error("object storage get failed for %s: %s", key, type(exc).__name__)
+            raise ProblemError(ErrorCodes.STORAGE_UNAVAILABLE, detail=_UNREACHABLE) from exc
 
     def delete(self, key: str) -> None:
-        self._client.delete_object(Bucket=self._bucket, Key=key)
+        try:
+            self._client.delete_object(Bucket=self._bucket, Key=key)
+        except (BotoCoreError, ClientError) as exc:
+            log.error("object storage delete failed for %s: %s", key, type(exc).__name__)
+            raise ProblemError(ErrorCodes.STORAGE_UNAVAILABLE, detail=_UNREACHABLE) from exc

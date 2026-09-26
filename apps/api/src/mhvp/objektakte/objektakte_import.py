@@ -39,6 +39,7 @@ import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Any
 
 from sqlalchemy import select
@@ -48,6 +49,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.contacts.models import Contact, ContactKind
 from mhvp.contacts.services import recompute_for_contacts
 from mhvp.core.auth.principal import TenantPrincipal
+from mhvp.core.events import emit
 from mhvp.core.sqldump import field_str as _s
 from mhvp.core.sqldump import parse_dump as parse_dump  # re-exported for the router/tests
 from mhvp.core.sqldump import to_bool as _to_bool
@@ -160,15 +162,25 @@ def _source_updated_at(row: dict[str, Any]) -> datetime | None:
     return value.replace(tzinfo=UTC) if value is not None else None
 
 
-def _assign_changed(obj: Any, fields: dict[str, Any]) -> bool:
-    """Sets the mapped fields on an existing row and reports whether any value differed, so an
-    unchanged source row (or a re-run over the same export) never counts as an update."""
-    changed = False
+def _assign_changed_fields(obj: Any, fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Sets the mapped fields on an existing row and returns ``{field: {"old", "new"}}`` for
+    every value that differed, so an unchanged source row (or a re-run over the same export)
+    never counts as an update. The diff feeds the audit log of ``contact.updated`` (A87)."""
+    changes: dict[str, dict[str, Any]] = {}
     for key, value in fields.items():
-        if getattr(obj, key) != value:
+        old = getattr(obj, key)
+        if old != value:
             setattr(obj, key, value)
-            changed = True
-    return changed
+            changes[key] = {"old": _jsonable(old), "new": _jsonable(value)}
+    return changes
+
+
+def _jsonable(value: Any) -> Any:
+    return value.value if isinstance(value, Enum) else value
+
+
+def _assign_changed(obj: Any, fields: dict[str, Any]) -> bool:
+    return bool(_assign_changed_fields(obj, fields))
 
 
 def filter_since(
@@ -566,6 +578,10 @@ class ImportResult:
         }
 
 
+# A87: ``source`` of the contact events the objektakte import emits (upload and differential run).
+EVENT_SOURCE = "import.objektakte"
+
+
 async def apply_import(
     session: AsyncSession,
     principal: TenantPrincipal,
@@ -576,7 +592,13 @@ async def apply_import(
     or, when its mapped values differ from the export, updated in place; a repeated apply of
     the same dump therefore changes nothing. No deletion marking here (the manual upload may
     be a partial export); that is the differential run's job (`run_differential_import`)."""
-    return await apply_tables(session, principal.tenant_id, tables, mark_deleted=False)
+    return await apply_tables(
+        session,
+        principal.tenant_id,
+        tables,
+        mark_deleted=False,
+        actor_user_id=principal.user_id,
+    )
 
 
 async def apply_tables(
@@ -586,10 +608,12 @@ async def apply_tables(
     *,
     mark_deleted: bool,
     full_tables: dict[str, list[dict[str, Any]]] | None = None,
+    actor_user_id: uuid.UUID | None = None,
 ) -> ImportResult:
     """Core apply. `tables` are the rows to create/update (already narrowed to the water mark by
     a differential run); `full_tables` is the complete export the deletion check compares the
-    CRM against, since a row older than the water mark is filtered out but not deleted."""
+    CRM against, since a row older than the water mark is filtered out but not deleted.
+    `actor_user_id` (None for the beat job) is the actor of the contact events (A87)."""
     result = ImportResult()
     result.considered = {t: len(rows) for t, rows in tables.items() if t in KNOWN_TABLES}
     property_map: dict[str, uuid.UUID] = {}
@@ -758,8 +782,9 @@ async def apply_tables(
             source_id = _source_id(row)
             if source_id in existing_contacts:
                 contact_map[source_id] = existing_contacts[source_id]
-                if _assign_changed(
-                    existing_contact_rows[source_id],
+                existing_contact = existing_contact_rows[source_id]
+                changes = _assign_changed_fields(
+                    existing_contact,
                     {
                         "kind": _contact_kind(row),
                         "salutation": _s(row, "salutation", 50),
@@ -768,7 +793,23 @@ async def apply_tables(
                         "company_name": _s(row, "company_name", 200),
                         "display_name": _display_name(row),
                     },
-                ):
+                )
+                if changes:
+                    # A87: same event as ``PUT /contacts/{id}`` (field names only in the
+                    # payload, old and new in the audit log, version bump). Outbox row of the
+                    # run's transaction: a failed run rolls it back with the data.
+                    existing_contact.version += 1
+                    existing_contact.updated_by = actor_user_id
+                    await emit(
+                        session,
+                        tenant_id=tenant_id,
+                        type="contact.updated",
+                        entity_type="contact",
+                        entity_id=existing_contact.id,
+                        actor_user_id=actor_user_id,
+                        payload={"fields": sorted(changes), "source": EVENT_SOURCE},
+                        changes=changes,
+                    )
                     _updated(table)
                 else:
                     _skipped(table)
@@ -792,6 +833,15 @@ async def apply_tables(
             # ContactBankAccount requires a full encrypted IBAN, which is never available here,
             # so no bank account is created in Stufe 1.
             contact_map[source_id] = contact.id
+            await emit(
+                session,
+                tenant_id=tenant_id,
+                type="contact.created",
+                entity_type="contact",
+                entity_id=contact.id,
+                actor_user_id=actor_user_id,
+                payload={"kind": contact.kind.value, "source": EVENT_SOURCE},
+            )
             _created("contact")
 
     existing_assignment_rows: dict[str, ObjektakteAssignment] = {
@@ -1578,7 +1628,14 @@ async def run_differential_import(
     started = datetime.now(UTC)
     tables = parse_dump(sql_text)
     filtered, newest = filter_since(tables, state.last_source_updated_at)
-    result = await apply_tables(session, tenant_id, filtered, mark_deleted=True, full_tables=tables)
+    result = await apply_tables(
+        session,
+        tenant_id,
+        filtered,
+        mark_deleted=True,
+        full_tables=tables,
+        actor_user_id=actor_user_id,
+    )
     report: dict[str, Any] = {
         "trigger": trigger,
         "actor_user_id": str(actor_user_id) if actor_user_id else None,

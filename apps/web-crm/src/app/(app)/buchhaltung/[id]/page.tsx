@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
+import { SettlementProposalPanel } from "@/components/accounting/SettlementProposalPanel";
 import { TicketsPagination } from "@/components/tickets/TicketsPagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -33,11 +34,12 @@ export default async function LedgerPage({
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
   const today = new Date().toISOString().slice(0, 10);
   const api = serverApi();
-  const [ledger, journal, trial, open] = await Promise.all([
+  const [ledger, journal, trial, open, accounts] = await Promise.all([
     api.GET("/api/v1/accounting/ledgers/{ledger_id}", { params: { path: { ledger_id: id } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/entries", { params: { path: { ledger_id: id }, query: { limit: 100 } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/trial-balance", { params: { path: { ledger_id: id }, query: { as_of: today } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/open-items", { params: { path: { ledger_id: id }, query: { as_of: today } } }),
+    api.GET("/api/v1/accounting/ledgers/{ledger_id}/accounts", { params: { path: { ledger_id: id } } }),
   ]);
   redirectIfUnauthenticated(ledger.response);
   if (!ledger.data) {
@@ -51,6 +53,14 @@ export default async function LedgerPage({
   const journalRows = journal.data ?? [];
   const journalTotal = Number.parseInt(journal.response.headers.get("x-total-count") ?? "", 10);
   const journalCount = Number.isFinite(journalTotal) ? journalTotal : journalRows.length;
+  const openRows = (open.data ?? []) as OpenItem[];
+  const accountRows = accounts.data ?? [];
+  // Debtors with open receivables and the bank or cash accounts of the ledger (M10-03 panel).
+  const debtorIds = new Set(openRows.filter((r) => r.kind === "receivable").map((r) => r.account_id));
+  const debtors = accountRows.filter((a) => debtorIds.has(a.id)).map((a) => ({ id: a.id, number: a.number, name: a.name }));
+  const bankAccounts = accountRows
+    .filter((a) => a.category === "bank" || a.category === "cash")
+    .map((a) => ({ id: a.id, number: a.number, name: a.name }));
   const pageHref = (target: number) => `/buchhaltung/${id}${target > 1 ? `?page=${String(target)}` : ""}`;
   return (
     <div className="flex flex-col gap-6">
@@ -94,7 +104,8 @@ export default async function LedgerPage({
       </section>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{tr("openItems", { date: formatDate(today) })}</h2>
-        <OpenItemsTable rows={(open.data ?? []) as OpenItem[]} />
+        <OpenItemsTable rows={openRows} />
+        <SettlementProposalPanel ledgerId={id} debtors={debtors} bankAccounts={bankAccounts} today={today} />
       </section>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("journal")}</h2>

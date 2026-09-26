@@ -3,7 +3,7 @@
 from datetime import UTC, date, datetime
 
 from mhvp.documents import letters
-from mhvp.handover.routers import HelperAccessIn, invitation_text, router
+from mhvp.handover.routers import HelperAccessIn, invitation_qr, invitation_text, router
 
 TOKEN = "0123abcd.secret-code"
 
@@ -77,3 +77,53 @@ def test_letter_renders_as_pdf() -> None:
         ),
     )
     assert pdf.startswith(b"%PDF")
+
+
+def test_invitation_qr_payload_equals_invitation_url() -> None:
+    """A86: the QR code encodes exactly the invitation link, nothing else; without a public
+    portal URL there is no QR block."""
+    import segno
+
+    url = "https://portal.example.test/einladung?code=0123abcd.secret-code"
+    qr = invitation_qr(url)
+    assert qr is not None
+    assert qr.payload == url
+    assert segno.make(url, error="m").matrix == segno.make(qr.payload, error="m").matrix
+    assert invitation_qr(None) is None
+
+
+def test_letter_with_qr_contains_image_and_link_text() -> None:
+    import io
+
+    from pypdf import PdfReader
+
+    url = "https://portal.example.test/einladung?code=0123abcd.secret-code"
+    subject, body = invitation_text(
+        number="UP-1",
+        name="Erika Muster",
+        token=TOKEN,
+        expires_at=None,
+        portal_url="https://portal.example.test",
+    )
+    head = letters.Letterhead(
+        company={"name": "Test GmbH", "street": "Weg 1", "postal_code": "40000", "city": "Ort"},
+        branding={},
+    )
+    pdf = letters.render_pdf(
+        head,
+        letters.Letter(
+            recipient_lines=["Erika Muster"],
+            subject=letters.render_text("{{ s }}", {"s": subject}),
+            body=letters.render_text("{{ b }}", {"b": body}),
+            letter_date=date(2026, 9, 26),
+            qr=invitation_qr(url),
+        ),
+    )
+    reader = PdfReader(io.BytesIO(pdf))
+    page = reader.pages[0]
+    xobjects = page["/Resources"]["/XObject"]  # type: ignore[index]
+    assert any(x.get_object()["/Subtype"] == "/Image" for x in xobjects.values())
+    text = page.extract_text()
+    assert "Einladungslink" in text
+    assert url.replace(" ", "") in text.replace("\n", "").replace(" ", "")
+    assert TOKEN in text

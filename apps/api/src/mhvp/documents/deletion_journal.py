@@ -15,8 +15,10 @@ Replay rules (conservative by design, rule 0.1.3):
   other reason (profile not released, retention not expired).
 * The stored hash must equal the hash recorded at the original deletion; otherwise the row is
   not the document that was deleted and stays for manual review.
-* Documents with a non pending DMS mirror stay until the mirror deletion is confirmed
-  (A42/A43 in ``mhvp.documents``); replay only reports them.
+* Documents with a non pending DMS mirror are deleted like any other; their mirror steps
+  (Drive delete, Paperless tag ``gelöscht``, operator decision 26.09.2026, M6-03) are
+  journaled in the same transaction and queued after it, exactly as in the API deletion
+  (``mhvp.documents.mirror_deletion``).
 * Every applied deletion and every refusal is recorded as a domain event again, so the
   restored event log is complete.
 
@@ -38,6 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import DomainEvent, emit
+from mhvp.documents import mirror_deletion
 from mhvp.documents import services as svc
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentMirror, MirrorStatus
@@ -60,7 +63,6 @@ OUTCOME_ABSENT = "absent"  # document not in the restored database
 OUTCOME_KEPT_HOLD = "kept_hold"  # deletion hold: evidence is never deleted
 OUTCOME_KEPT_BLOCKED = "kept_blocked"  # profile or retention period block the deletion
 OUTCOME_KEPT_HASH = "kept_hash_mismatch"  # not the document that was deleted
-OUTCOME_KEPT_MIRROR = "kept_mirrored"  # external mirror open (A42/A43)
 OUTCOME_SKIPPED = "skipped"  # entry type that is not applied (refusal, hold)
 OUTCOME_INVALID = "invalid"  # malformed entry
 
@@ -185,7 +187,13 @@ def _entry(raw: dict[str, Any]) -> JournalEntry | None:
 
 
 async def _replay_one(
-    session: AsyncSession, entry: JournalEntry, blobs: BlobStore, *, apply: bool, today: date
+    session: AsyncSession,
+    entry: JournalEntry,
+    blobs: BlobStore,
+    *,
+    apply: bool,
+    today: date,
+    pending_jobs: list[mirror_deletion.MirrorDeletionJob],
 ) -> ReplayResult:
     assert entry.document_id is not None  # noqa: S101 - checked by caller
     tenant_id = uuid.UUID(entry.tenant_id)
@@ -218,21 +226,26 @@ async def _replay_one(
             OUTCOME_KEPT_HASH,
             "Der gespeicherte Inhalt weicht vom protokollierten Löschvorgang ab.",
         )
-    mirrored = await session.scalar(
-        select(DocumentMirror.id).where(
-            DocumentMirror.document_id == document.id,
-            DocumentMirror.status != MirrorStatus.PENDING,
-        )
-    )
-    if mirrored is not None:
-        return await refuse(
-            OUTCOME_KEPT_MIRROR,
-            "Das Dokument ist in einem externen DMS gespiegelt; die Löschung dort ist offen.",
-        )
     if not apply:
         return ReplayResult(
             entry.tenant_id, entry.event_id, entry.document_id, OUTCOME_WOULD_DELETE
         )
+    mirrors = (
+        await session.scalars(
+            select(DocumentMirror).where(
+                DocumentMirror.document_id == document.id,
+                DocumentMirror.status != MirrorStatus.PENDING,
+            )
+        )
+    ).all()
+    jobs = await mirror_deletion.request(
+        session,
+        tenant_id=tenant_id,
+        document_id=document_id,
+        mirrors=list(mirrors),
+        actor_user_id=None,
+    )
+    pending_jobs.extend(jobs)
     blobs.delete(document.storage_ref)
     await emit(
         session,
@@ -249,6 +262,7 @@ async def _replay_one(
             "replay": True,
             "journal_event_id": entry.event_id,
             "original_occurred_at": entry.occurred_at,
+            "mirror_deletions": len(jobs),
         },
     )
     await session.delete(document)
@@ -267,7 +281,8 @@ async def replay_journal(
     """Apply (or, without ``apply``, only report) the journal against the current database.
 
     Each deletion runs in its own tenant transaction, so one refusal or error never rolls back
-    the others (6.9.13)."""
+    the others (6.9.13). Mirror steps of deleted documents are queued after each commit
+    (``mhvp.documents.mirror_deletion.enqueue``)."""
     today = today or datetime.now(UTC).date()
     report = ReplayReport(apply=apply)
     seen: set[tuple[str, str]] = set()
@@ -296,8 +311,13 @@ async def replay_journal(
             )
             continue
         seen.add(key)
+        jobs: list[mirror_deletion.MirrorDeletionJob] = []
         async with tenant_transaction(factory, uuid.UUID(entry.tenant_id)) as session:
             report.results.append(
-                await _replay_one(session, entry, blobs, apply=apply, today=today)
+                await _replay_one(
+                    session, entry, blobs, apply=apply, today=today, pending_jobs=jobs
+                )
             )
+        # Mirror steps (M6-03) only after the commit, like the API deletion.
+        mirror_deletion.enqueue(jobs)
     return report

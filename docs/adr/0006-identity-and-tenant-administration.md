@@ -88,6 +88,36 @@ requirement.
    tokens are unchanged.
 4. **Platform tables** (decision 1 above) now also list `trusted_device`.
 
+## Second addendum (26.09.2026): operator decision M2-01, TOTP optional for everyone
+
+Requirement type: Produktschutz by operator decision (no Rechtsgrundlage claimed). This
+replaces the first addendum where the two differ; the first addendum's mechanics (device
+token, hashing, revocation, platform table) stay.
+
+1. **Password policy**: minimum length 6 characters (`passwords.MIN_LENGTH`), maximum 128,
+   no leading or trailing whitespace, lockout after 10 failed attempts for 15 minutes. The
+   minimum is below common recommendations (the BSI recommends longer passwords); the operator
+   decided it knowingly, it is documented in `docs/OPEN_QUESTIONS.md` (M2-01) and
+   `docs/ASSUMPTIONS.md` (A-012) and is not commented on in the user interface. A check
+   against known compromised passwords does not exist (open question M2-09).
+2. **TOTP is optional for every user**, administrators included, in the CRM and in the
+   portal. `POST /auth/login` answers `status: "ok"` with the session unless
+   `user.totp_enabled` is set; then `mfa_required` follows as before. The status
+   `mfa_setup_required` and `POST /auth/mfa/setup` are gone: the setup is self service for the
+   signed in user under Einstellungen, Meine Daten (CRM) or Sicherheit (portal):
+   `POST /auth/totp/setup` (pending secret and otpauth URI), `POST /auth/totp/confirm`
+   (code must match, only then `totp_enabled`; wrong codes count towards the lockout),
+   `POST /auth/totp/disable` (current password required; clears the secret and revokes every
+   trusted device). `GET /auth/me` reports `totp_enabled`. `service.totp_mandatory` and
+   `ADMIN_ROLE_CODES` were removed.
+3. **Trusted device for 90 days**: "Dieses Gerät 90 Tage merken" at the code step
+   (`remember_device`), `TRUSTED_DEVICE_TTL_DAYS = 90`, cookie lifetime 90 days in both web
+   apps. The portal now keeps trusted devices as well (the first addendum's portal exclusion
+   is lifted by the operator decision); the device cookie is cleared only by an explicit
+   logout. Devices are listed and revocable under the same settings pages. Everything else
+   of the first addendum (random token, SHA-256 hash server side, bound to exactly one user,
+   expiry, revocation by password reset) is unchanged.
+
 ## References
 
 MASTER-PROMPT 3.3, 3.4, 3.5, 5, 6.8, 6.9.4, 12, 18.0; ADR 0002, 0003.

@@ -16,6 +16,7 @@ from mhvp.contacts.models import (
     ContactMandateStatus,
     ContactRoleCode,
     ContactTypeCode,
+    DeliveryMode,
     IdentifierKind,
     MandateGrantedVia,
     MandateScheme,
@@ -331,10 +332,36 @@ class RelationIn(_Strict):
     kind: RelationKind
     valid_from: date | None = None
     valid_to: date | None = None
+    # Delivery rule of an authorised representative (kind ``representative``); other kinds
+    # accept only the default ``both`` (operator decision 26.09.2026).
+    delivery_mode: DeliveryMode = DeliveryMode.BOTH
+
+    @model_validator(mode="after")
+    def _delivery_mode_only_for_representatives(self) -> Self:
+        if self.kind is not RelationKind.REPRESENTATIVE and self.delivery_mode is not (
+            DeliveryMode.BOTH
+        ):
+            raise ValueError("Eine Zustellregel gibt es nur für Bevollmächtigte.")
+        if self.valid_from and self.valid_to and self.valid_to < self.valid_from:
+            raise ValueError("Das Ende der Gültigkeit liegt vor dem Beginn.")
+        return self
 
 
 class RelationOut(RelationIn):
     id: uuid.UUID
+    related_display_name: str | None = None
+    # ``outgoing``: this contact names the related contact (for ``representative``: the related
+    # contact is the authorised representative). ``incoming``: this contact is named by the
+    # related contact (it represents that contact).
+    direction: Literal["outgoing", "incoming"] = "outgoing"
+
+
+class RelationPatch(_Strict):
+    delivery_mode: DeliveryMode | None = None
+    valid_from: date | None = None
+    valid_to: date | None = None
+    # Explicit field list so that a ``null`` clears a date (PATCH semantics).
+    fields: list[Literal["delivery_mode", "valid_from", "valid_to"]] = Field(min_length=1)
 
 
 class ConsentIn(_Strict):

@@ -18,6 +18,7 @@ from mhvp.core import crypto
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
+from mhvp.core.problems import ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.dms import (
     DmsError,
@@ -137,7 +138,9 @@ async def mirror_tenant(
                     mirror.external_ref, mirror.status = resolved, MirrorStatus.DONE
             mirror.last_error = None
             mirror.next_attempt_at = now + timedelta(seconds=60)
-        except (DmsError, httpx.HTTPError, ClientError, ValueError, KeyError) as exc:
+        except (DmsError, httpx.HTTPError, ClientError, ProblemError, ValueError, KeyError) as exc:
+            # ProblemError: the original is not readable from object storage (blobs.py wraps
+            # S3 errors); one unreadable document must not abort the run for the others.
             message = str(exc) if isinstance(exc, DmsError) else type(exc).__name__
             mirror.last_error = message[:500]
             index = min(mirror.attempts - 1, len(BACKOFF_SECONDS) - 1)

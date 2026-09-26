@@ -10,7 +10,17 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,6 +52,10 @@ SETTABLE_TICKET_FIELDS: tuple[str, ...] = ("priority", "team_id", "category", "a
 RUN_STATUS_EXECUTED = "executed"
 RUN_STATUS_FAILED = "failed"
 RUN_STATUS_DRY_RUN = "dry_run"
+# Rule webhook deliveries (A82): same states as ``mhvp.core.webhooks.DeliveryStatus``.
+DELIVERY_PENDING = "pending"
+DELIVERY_SUCCEEDED = "succeeded"
+DELIVERY_FAILED = "failed"
 
 
 class AutomationRule(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -116,3 +130,39 @@ class AutomationWatermark(IdMixin, TenantMixin, Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
+
+
+class AutomationWebhookDelivery(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Outbox of the ``webhook`` action (A82): one row per run and action position. The run
+    enqueues the signed-at-send payload; the beat job delivers due rows after the retry
+    schedule of ``mhvp.core.webhooks`` (1 min, 5 min, 30 min, 2 h, 6 h, 24 h, then failed).
+    Manual redelivery resets a row to pending and keeps the attempt count."""
+
+    __tablename__ = "automation_webhook_delivery"
+    __table_args__ = (
+        UniqueConstraint("run_id", "action_index", name="uq_automation_webhook_delivery_run"),
+        Index("ix_automation_webhook_delivery_due", "tenant_id", "status", "next_attempt_at"),
+    )
+
+    run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("automation_run.id", ondelete="CASCADE"), nullable=False
+    )
+    rule_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("automation_rule.id", ondelete="CASCADE"), nullable=False
+    )
+    # Position of the webhook action in the rule's action list (secret lookup at delivery).
+    action_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Payload built at run time; every attempt sends the identical body, freshly signed.
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default=DELIVERY_PENDING, server_default=text("'pending'")
+    )
+    attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_status_code: Mapped[int | None] = mapped_column(Integer)
+    last_error: Mapped[str | None] = mapped_column(String(200))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

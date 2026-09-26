@@ -23,7 +23,7 @@ describe("MfaForm", () => {
     fetchMock.mockImplementation(async () =>
       jsonResponse({ tenant_id: "t-1", tenants: [{ id: "t-1", name: "Mandant A" }] }),
     );
-    renderIntl(<MfaForm setup={false} />);
+    renderIntl(<MfaForm />);
     await userEvent.type(screen.getByLabelText("Code"), "123456");
     await userEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
     await waitFor(() => expect(push).toHaveBeenCalled());
@@ -36,8 +36,8 @@ describe("MfaForm", () => {
     fetchMock.mockImplementation(async () =>
       jsonResponse({ tenant_id: "t-1", tenants: [{ id: "t-1", name: "Mandant A" }] }),
     );
-    renderIntl(<MfaForm setup={false} />);
-    await userEvent.click(screen.getByText("Auf diesem Gerät 180 Tage merken"));
+    renderIntl(<MfaForm />);
+    await userEvent.click(screen.getByText("Dieses Gerät 90 Tage merken"));
     await userEvent.type(screen.getByLabelText("Code"), "654321");
     await userEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
     await waitFor(() => expect(push).toHaveBeenCalled());
@@ -46,7 +46,7 @@ describe("MfaForm", () => {
   });
 
   it("shows an error for an invalid code and never calls the API", async () => {
-    renderIntl(<MfaForm setup={false} />);
+    renderIntl(<MfaForm />);
     await userEvent.type(screen.getByLabelText("Code"), "12");
     await userEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Der Code besteht aus 6 bis 8 Ziffern.");

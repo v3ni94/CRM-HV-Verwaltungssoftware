@@ -22,20 +22,15 @@
     "emailInvalid": "Please enter a valid e-mail address.",
     "passwordRequired": "Please enter the password.",
     "mfaTitle": "Second factor",
-    "mfaSetupTitle": "Set up the second factor",
-    "mfaSetupHint": "Scan the QR code with an authenticator app or enter the key manually. Then enter the six digit code shown.",
     "mfaHint": "Please enter the six digit code from the authenticator app.",
-    "secretLabel": "Key for manual entry",
-    "qrAlt": "QR code for the authenticator app",
     "code": "Code",
     "codeInvalid": "The code has 6 to 8 digits.",
     "verify": "Confirm",
-    "setupLoading": "Preparing the setup",
     "backToLogin": "Back to sign in",
     "tenantTitle": "Select tenant",
     "tenantHint": "Your access is enabled for several tenants. Please choose the tenant for this session.",
     "noTenants": "No tenant is enabled for your access.",
-    "rememberDevice": "Remember this device for 180 days"
+    "rememberDevice": "Remember this device for 90 days"
   },
   "Shell": {
     "skip": "Skip to content",
@@ -102,7 +97,8 @@
     "immoware24:reconciliation": "Immoware24: parallel operation reconciliation",
     "serviceContracts": "Service contracts",
     "loading": "Loading page.",
-    "contracts": "Contracts"
+    "contracts": "Contracts",
+    "ticketAnalytics": "Ticket analytics"
   },
   "Contacts": {
     "title": "Contacts",
@@ -247,6 +243,29 @@
       "invitedAt": "Invited on {date}, code valid until {until}",
       "activatedAt": "Activated on {date}",
       "lastLogin": "Last login {date}"
+    },
+    "representatives": {
+      "title": "Authorised representatives and delivery rule",
+      "hint": "Following the delivery rule, an authorised representative receives e-mails, letters and HOA invitations addressed to this contact. Every change is logged.",
+      "empty": "No authorised representatives recorded.",
+      "mode": "Delivery rule",
+      "modeFor": "Delivery rule for {name}",
+      "modes": {
+        "both": "both (principal and representative)",
+        "representative_only": "representative only",
+        "owner_only": "principal only"
+      },
+      "since": "since {date}",
+      "until": "until {date}",
+      "unlimited": "open ended",
+      "end": "End authorisation",
+      "endConfirm": "Really end the authorisation of {name}? Deliveries then go to the contact only.",
+      "represents": "Authorised for:",
+      "add": "Add authorised representative",
+      "pick": "Search representative (name)",
+      "picked": "Selected",
+      "save": "Save representative",
+      "error": "The change could not be saved."
     }
   },
   "ContactForm": {
@@ -987,6 +1006,7 @@
     "notifications": "Notifications",
     "noNotifications": "No new notifications.",
     "markAllRead": "Mark all as read",
+    "markRead": "Mark as read",
     "themeLabel": "Appearance: {theme}",
     "theme": {
       "system": "System",
@@ -1483,6 +1503,39 @@
     "total": "Total open",
     "noOpenItems": "No open items.",
     "openItems": "Open items at {date}",
+    "settlement": {
+      "title": "Settlement in the statutory order",
+      "intro": "Without a determination by the payer the platform only proposes the settlement in the statutory order: due before not yet due items, then less security, more burdensome, older first, costs before interest before principal. A determination of the payer in the purpose wins. Confirmation creates a draft entry; posting happens only in the journal.",
+      "debtor": "Personal account",
+      "bank": "Bank account",
+      "amount": "Payment amount",
+      "purpose": "Purpose (payer's determination)",
+      "propose": "Compute proposal",
+      "confirm": "Confirm proposal (create draft)",
+      "confirmQuestion": "Confirm the proposal of {amount}? A draft entry with a settlement plan is created; the confirmation is logged with the rule version.",
+      "created": "Draft created. Post it in the journal; postings are subject to release gate G1.",
+      "empty": "No open items for this amount.",
+      "basis": "Basis: {basis}",
+      "rule": "Rule {rule}, version {version}",
+      "bases": {
+        "statutory_order": "statutory order",
+        "determination": "payer's determination",
+        "mixed": "payer's determination, rest in statutory order",
+        "none": "no settlement"
+      },
+      "classes": {
+        "costs": "Costs",
+        "interest": "Interest",
+        "principal": "Principal"
+      },
+      "rank": "Rank",
+      "due": "Due",
+      "claimClass": "Kind",
+      "open": "Open",
+      "allocated": "Allocated",
+      "reason": "Reason",
+      "unallocated": "Unallocated: {amount} stays as credit on the personal account, never income."
+    },
     "itemStatus": {
       "ready": "ready",
       "manual": "manual",
@@ -2240,23 +2293,6 @@
         "city": "City",
         "phone": "Phone",
         "email": "E-mail"
-      },
-      "acceptAndReply": "Approve and reply",
-      "acceptAndReplyHint": "Applies the master data and creates the reply draft on the ticket. Sending happens only after approval in the mail module.",
-      "call": {
-        "phone": "Caller number",
-        "name": "Caller",
-        "property": "Property",
-        "unit": "Unit",
-        "concern": "Concern",
-        "unknown": "not recognised",
-        "label": {
-          "mobile": "Mobile",
-          "other": "Landline or unknown",
-          "work": "Work",
-          "private": "Private",
-          "fax": "Fax"
-        }
       }
     },
     "title": "Tickets",
@@ -2351,7 +2387,9 @@
       "createdFrom": "Created from",
       "createdTo": "Created to",
       "reset": "Reset",
-      "showClosed": "Show completed"
+      "showClosed": "Show completed",
+      "sortCreated": "By arrival",
+      "sortHint": "Default: longest without reaction first, completed last"
     },
     "reply": {
       "title": "Reply",
@@ -2501,10 +2539,30 @@
         "kein_handlungsbedarf": "No action required",
         "abgelehnt": "Rejected",
         "zusammengefuehrt": "Merged",
-        "sonstiges": "Other"
-      }
+        "sonstiges": "Other",
+        "zahlung_geklaert": "Payment clarified",
+        "termin_vereinbart": "Appointment arranged",
+        "mangel_behoben": "Defect fixed",
+        "vertrag_geaendert": "Contract changed"
+      },
+      "loading": "Loading resolution kinds",
+      "loadError": "The resolution kinds could not be loaded."
     },
-    "resolutionLabel": "Resolution"
+    "resolutionLabel": "Resolution",
+    "attention": {
+      "legend": "Colour legend",
+      "legend_stale_96h": "Red: no reaction from us for 96 hours",
+      "legend_stale_24h": "Orange: no reaction from us for 24 hours",
+      "legend_new": "Yellow: new",
+      "legend_closed": "Green: completed",
+      "closed": "Completed",
+      "new": "New, no reaction yet",
+      "staleHours": "No reaction for {hours} hours",
+      "staleDays": "No reaction for {days} days",
+      "lastInbound": "Last message from the customer: {at}",
+      "column": "Reaction"
+    },
+    "linkedAllClosed": "All linked tickets are completed."
   },
   "Automation": {
     "title": "Automation",
@@ -3447,6 +3505,10 @@
     "knowledge": {
       "title": "Knowledge base",
       "description": "View learned playbooks and learning examples from resolutions."
+    },
+    "depositRates": {
+      "title": "Deposit interest",
+      "description": "Reference interest rate per year for the deposit settlement."
     }
   },
   "Members": {
@@ -3476,7 +3538,7 @@
     "addTitle": "Add user",
     "addContactHint": "The user is also created as a contact of the tenant.",
     "displayName": "Display name",
-    "passwordHint": "At least 12 characters.",
+    "passwordHint": "At least 6 characters.",
     "addSubmit": "Create user",
     "editCompetences": "Edit competences",
     "mobilePhone": "Mobile phone",
@@ -3562,6 +3624,18 @@
     "members": "The per member flag is maintained under Settings, Users (permission to change tenant settings). All other mail drafts (mailbox without ticket, playbook, forwarding) keep the four-eyes principle.",
     "risk": "Emergency brake: when on, every ticket reply of the tenant needs approval by a second person regardless of the flag. Default off. Every change is logged (event tenant settings changed with user).",
     "label": "Send all ticket replies only after approval by a second person",
+    "saved": "Saved.",
+    "readOnly": "Changing this requires the permission to change tenant settings."
+  },
+  "AiLearningExamples": {
+    "title": "Learning examples from ticket resolutions",
+    "status": {
+      "on": "on",
+      "off": "off"
+    },
+    "description": "When on, the platform stores one learning example per ticket closure (subject, request, category, topic, resolution kind, note and an excerpt of the last reply). They feed the hint For similar cases for new requests. The examples stay in the platform and are not sent to the AI provider. Deleting a contact deletes the examples of its tickets.",
+    "risk": "Default off: the examples usually contain personal data. Retention period and deletion run are not yet decided (ADR 0010, open question M7-04). Switching off stops new examples; existing ones stay. Every change is logged.",
+    "label": "Store learning examples from ticket resolutions",
     "saved": "Saved.",
     "readOnly": "Changing this requires the permission to change tenant settings."
   },
@@ -3685,7 +3759,23 @@
     "revoke": "Sign out",
     "devicesTitle": "Remembered devices",
     "noDevices": "No remembered devices.",
-    "deviceExpires": "Expires on"
+    "deviceExpires": "Expires on",
+    "totpTitle": "Security: second factor (authenticator app)",
+    "totpStatusOn": "The second factor is on. A code from the authenticator app is requested at login unless the device was remembered.",
+    "totpStatusOff": "The second factor is off. You sign in with e-mail and password.",
+    "totpEnableHint": "With an authenticator app (for example on your smartphone) a six digit code is requested at login in addition to the password.",
+    "totpEnable": "Set up second factor",
+    "totpSetupHint": "Scan the QR code with the authenticator app or enter the key manually. Then enter the six digit code shown; only then is the second factor active.",
+    "totpQrAlt": "QR code for the authenticator app",
+    "totpSecretLabel": "Key for manual entry",
+    "totpCode": "Code from the app",
+    "totpCodeInvalid": "The code consists of 6 to 8 digits.",
+    "totpConfirm": "Confirm and switch on",
+    "totpEnabled": "The second factor is now on.",
+    "totpDisableHint": "Enter your current password to switch it off. Remembered devices are removed as well.",
+    "totpDisable": "Switch off second factor",
+    "totpDisabled": "The second factor is off.",
+    "devicesHint": "On remembered devices no second factor is requested for 90 days. Sign out removes the device immediately."
   },
   "TenantAdmin": {
     "createTenantTitle": "Create tenant",
@@ -3723,7 +3813,7 @@
       "environment": "configured (server)"
     },
     "mailboxesTitle": "Connected mailboxes",
-    "mailboxesHint": "Connect with Google opens the Google sign in. After consent the mailbox appears here and is fetched every two minutes.",
+    "mailboxesHint": "Connect with Google opens the Google sign in. After consent the mailbox appears here, the whole inbox is fetched and new mail arrives immediately via push (safety net: fetch every five minutes).",
     "connectGoogle": "Connect with Google",
     "empty": "No mailbox connected yet.",
     "defaultBadge": "Default",
@@ -3756,7 +3846,17 @@
     "callAssistantEnabled": "Evaluate protocol mails",
     "callAssistantSenders": "Sender patterns (part of the sender address, comma separated)",
     "callAssistantKeywords": "Keywords in the subject (comma separated)",
-    "callAssistantDefaultsHint": "Empty fields use the built in patterns."
+    "callAssistantDefaultsHint": "Empty fields use the built in patterns.",
+    "pushActiveUntil": "Push active until {at}",
+    "pushInactive": "Push not active (fetch every five minutes)",
+    "lastPush": "last push {at}",
+    "backfillNow": "Fetch entire inbox",
+    "backfill": {
+      "queued": "Full fetch waiting to start",
+      "running": "Full fetch running: {done} of {total} messages checked",
+      "done": "Full fetch finished on {at}: {done} messages checked",
+      "failed": "Full fetch aborted at {done} of {total} messages, start again to resume"
+    }
   },
   "Dms": {
     "area": "Administration",
@@ -4022,7 +4122,8 @@
     "description": "Client ID, client secret and optional mandator ID of this tenant's finAPI access.",
     "statusConfigured": "Configured ({url}).",
     "statusMissing": "Bank connection not yet configured.",
-    "baseUrl": "Base URL",
+    "baseUrl": "Base URL (empty: data center default)",
+    "baseUrlHint": "Leave empty to use the default host of the chosen data center (sandbox or live, per finAPI docs). https only.",
     "mandatorId": "Mandator ID (optional)",
     "clientId": "Client ID",
     "clientSecret": "Client secret",
@@ -4641,7 +4742,9 @@
         "webdav": "WebDAV root found: {url}",
         "apply": "Apply"
       }
-    }
+    },
+    "openWorkspace": "Open Immoware24 workspace",
+    "openLearning": "Open learning phase"
   },
   "Immoware": {
     "title": "Immoware24",
@@ -6216,5 +6319,198 @@
       "tenancy": "Tenancy"
     },
     "toProperty": "Properties"
+  },
+  "ResolutionKindsSettings": {
+    "title": "Resolution kinds at ticket closure",
+    "description": "Operator decision of 26.09.2026: when closing a ticket the employee picks what was done. Built in kinds can be switched off here and own kinds added. Other and Merged always stay available. Every change is logged.",
+    "builtinTitle": "Built in kinds",
+    "loading": "Loading kinds",
+    "protected": "(always active)",
+    "customTitle": "Own kinds ({count} of {max})",
+    "customEmpty": "No own kinds yet.",
+    "code": "Code",
+    "label": "Label",
+    "add": "Add",
+    "remove": "Remove",
+    "codeHint": "The code is the technical key in history, learning examples and API: lowercase letters, digits and underscore, 2 to 32 characters, for example schluessel_uebergeben. It cannot be changed later; closed tickets keep their kind after removal.",
+    "codeInvalid": "The code may only contain lowercase letters, digits and underscore (2 to 32 characters).",
+    "codeTaken": "This code is already taken.",
+    "labelRequired": "Please enter a label.",
+    "limit": "At most {max} own kinds.",
+    "saved": "Saved.",
+    "readOnly": "Changing this requires the permission to change tenant settings."
+  },
+  "Deposits": {
+    "title": "Deposits",
+    "none": "No deposit recorded.",
+    "amountDue": "Due",
+    "received": "Paid in",
+    "balance": "Balance",
+    "reviewRequired": "review required",
+    "kinds": {
+      "cash": "Cash deposit",
+      "savings_book": "Savings book",
+      "insurance": "Deposit insurance",
+      "guarantee": "Guarantee",
+      "fixed_deposit": "Fixed deposit",
+      "letter_of_comfort": "Letter of comfort",
+      "other": "Other"
+    },
+    "movementKinds": {
+      "payment": "Payment",
+      "interest": "Interest",
+      "payout": "Payout",
+      "offset": "Offset"
+    },
+    "modes": {
+      "individual": "Enter interest per year",
+      "reference_rate": "Reference interest rate per year (settings)",
+      "none": "no interest"
+    },
+    "errors": {
+      "deductionInvalid": "Every deduction needs a label and an amount in the format 1,234.56."
+    },
+    "settlement": {
+      "title": "Deposit settlement (draft)",
+      "start": "Create deposit settlement",
+      "notice": "The draft computes deposit, interest per year, deductions and payout amount. It posts nothing and pays nothing. The release for payout stays locked until release gate G3. Which interest rate applies legally must be confirmed by legal advice.",
+      "date": "Settlement date",
+      "mode": "Interest mode",
+      "interestFor": "Interest {year}",
+      "individualHelp": "Amounts per year, for example from the bank statement of the deposit account. Recorded interest movements are prefilled.",
+      "referenceHelp": "Day exact per calendar year on the deposit balance with the reference rate from the settings, rounded commercially per year.",
+      "rateMissing": "no rate maintained",
+      "rateMissingHint": "No reference rate is maintained for {years}. Please maintain it under settings, deposit interest.",
+      "deductions": "Deductions",
+      "deductionLabel": "Deduction label",
+      "deductionAmount": "Deduction amount",
+      "addDeduction": "Add deduction",
+      "removeDeduction": "Remove",
+      "note": "Note",
+      "compute": "Compute",
+      "save": "Save as draft",
+      "cancel": "Cancel",
+      "saved": "The draft was saved.",
+      "savedDraft": "Settlement draft of",
+      "draft": "draft",
+      "preview": "Computation",
+      "principalPaid": "Deposit paid in",
+      "offsetsRecorded": "Recorded offsets",
+      "payoutsRecorded": "Recorded payouts",
+      "balanceBeforeInterest": "Balance before interest",
+      "interestRecorded": "Interest movements already recorded (reconciliation only)",
+      "year": "Year",
+      "rate": "Rate",
+      "days": "Days",
+      "interest": "Interest",
+      "entered": "entered",
+      "interestTotal": "Interest total",
+      "deductionsTotal": "Deductions total",
+      "payoutAmount": "Payout amount"
+    }
+  },
+  "DepositInterestRates": {
+    "title": "Deposit interest: reference rate per year",
+    "settings": "Settings",
+    "intro": "Interest rate per calendar year in percent, maintained by the operator. The deposit settlement with the reference rate mode uses these values only.",
+    "notice": "No rate is fetched or prefilled automatically. Which rate applies legally to rental deposits must be confirmed by legal advice; the source belongs in the note.",
+    "empty": "No reference rate maintained yet.",
+    "year": "Year",
+    "rate": "Rate",
+    "note": "Note",
+    "remove": "Remove",
+    "saved": "The rate was saved.",
+    "form": {
+      "title": "Set rate",
+      "ratePercent": "Rate in percent",
+      "notePlaceholder": "Source and date, to be checked",
+      "help": "Up to five decimals, comma or point. An existing year is overwritten.",
+      "save": "Save"
+    }
+  },
+  "TicketThroughput": {
+    "eyebrow": "Analytics",
+    "title": "Ticket analytics",
+    "description": "Throughput and effectiveness of tickets and mails per period, assignee and mailbox. Orientation figures, buckets in Europe/Berlin.",
+    "filters": "Filters",
+    "range": {
+      "label": "Period",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "quarter": "Quarter",
+      "year": "Year",
+      "custom": "Custom"
+    },
+    "from": "From",
+    "to": "To",
+    "user": {
+      "label": "Assignee",
+      "all": "All assignees"
+    },
+    "mailboxKind": {
+      "label": "Mailbox kind",
+      "all": "All mailboxes",
+      "personal": "Personal mailboxes",
+      "default": "Default mailbox",
+      "other": "Other"
+    },
+    "mailbox": {
+      "label": "Mailbox",
+      "all": "Any mailbox",
+      "address": "Mailbox",
+      "kind": "Kind",
+      "tickets_created": "Tickets from it",
+      "share": "Share of inbound"
+    },
+    "exportCsv": "Export CSV",
+    "loadError": "Analytics are currently unavailable.",
+    "window": "Period {start} to {end}, bucket: {bucket}",
+    "bucket": {
+      "hour": "Hour",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
+    "bucketColumn": "Bucket",
+    "kpi": {
+      "tickets_created": "Tickets created",
+      "tickets_closed": "Tickets closed",
+      "tickets_reopened": "Reopened",
+      "backlog_end": "Open at end",
+      "inbound": "Mails received",
+      "outbound": "Mails sent",
+      "replies_per_ticket": "Replies per ticket",
+      "first_response_median_minutes": "First response median",
+      "first_response_p90_minutes": "First response 90th percentile",
+      "time_to_close_median_minutes": "Time to close median",
+      "throughput_per_hour": "Closed per hour",
+      "throughput_per_minute": "Closed per minute"
+    },
+    "throughputHint": "Throughput: tickets closed divided by the minutes of the bucket (two decimals). First response: first sent mail or first staff comment after creation.",
+    "chartThroughput": "Created and closed per bucket",
+    "chartBacklog": "Open tickets at the end of each bucket",
+    "created": "Created",
+    "closed": "Closed",
+    "tableView": "Show as table",
+    "chartView": "Show as chart",
+    "empty": "No data in the selected period.",
+    "emptyMailboxes": "No mailboxes configured.",
+    "staffTitle": "Per staff member",
+    "staff": {
+      "name": "Staff",
+      "closed": "Closed",
+      "created": "Created",
+      "replies_sent": "Replies sent",
+      "first_response": "First response median",
+      "open_assigned": "Currently open"
+    },
+    "mailboxTitle": "Per mailbox",
+    "kindShare": "Share of inbound: personal mailboxes {personal} %, default mailbox {default} %.",
+    "unknownUser": "Unknown",
+    "none": "n/a",
+    "minutes": "{value} min",
+    "hours": "{value} h",
+    "days": "{value} days"
   }
 }

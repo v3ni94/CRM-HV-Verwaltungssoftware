@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -19,6 +19,13 @@ export type Mailbox = {
   user_ids: string[];
   last_synced_at: string | null;
   last_error: string | null;
+  push_watch_expires_at?: string | null;
+  last_push_at?: string | null;
+  backfill_status?: string;
+  backfill_total?: number | null;
+  backfill_done?: number;
+  backfill_started_at?: string | null;
+  backfill_finished_at?: string | null;
 };
 export type Member = { user_id: string; email: string; display_name: string; status: string };
 
@@ -111,10 +118,25 @@ function MailboxRow({ box, members, onChange }: { box: Mailbox; members: Member[
       () => bff(`/api/bff/mail/mailboxes/${box.id}/sync`, { method: "POST" }),
       (r) => setSyncInfo(t("syncResult", r)),
     );
+  const backfill = () => run<Mailbox>(() => bff(`/api/bff/mail/mailboxes/${box.id}/backfill`, { method: "POST" }), onChange);
+  const backfillActive = box.backfill_status === "queued" || box.backfill_status === "running";
+  // Fortschritt des Vollabrufs: solange er läuft, alle fünf Sekunden die Postfachliste lesen.
+  useEffect(() => {
+    if (!backfillActive) return;
+    const timer = window.setInterval(async () => {
+      const res = await bff<Mailbox[]>("/api/bff/mail/mailboxes");
+      if (res.ok) {
+        const next = res.data.find((b) => b.id === box.id);
+        if (next) onChange(next);
+      }
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [backfillActive, box.id, onChange]);
   const remove = () => {
     if (!window.confirm(t("removeConfirm", { address: box.address }))) return;
     return run<null>(() => bff(`/api/bff/mail/mailboxes/${box.id}`, { method: "DELETE" }), () => onChange(null));
   };
+  const fmt = (iso: string) => new Date(iso).toLocaleString("de-DE");
   return (
     <li className="flex flex-col gap-2 border-t border-border py-3 first:border-t-0">
       <div className="flex flex-wrap items-center gap-2">
@@ -125,9 +147,24 @@ function MailboxRow({ box, members, onChange }: { box: Mailbox; members: Member[
         {box.last_error ? <span className={ui.badgeDanger}>{t("errorBadge")}</span> : null}
       </div>
       <p className="text-xs text-muted">
-        {box.last_synced_at ? t("lastSynced", { at: new Date(box.last_synced_at).toLocaleString("de-DE") }) : t("neverSynced")}
+        {box.last_synced_at ? t("lastSynced", { at: fmt(box.last_synced_at) }) : t("neverSynced")}
         {box.last_error ? ` · ${box.last_error}` : ""}
       </p>
+      {box.kind === "gmail" ? (
+        <p className="text-xs text-muted" data-testid="push-status">
+          {box.push_watch_expires_at ? t("pushActiveUntil", { at: fmt(box.push_watch_expires_at) }) : t("pushInactive")}
+          {box.last_push_at ? ` · ${t("lastPush", { at: fmt(box.last_push_at) })}` : ""}
+        </p>
+      ) : null}
+      {box.kind === "gmail" && box.backfill_status && box.backfill_status !== "idle" ? (
+        <p className="text-xs text-muted" data-testid="backfill-status">
+          {t(`backfill.${box.backfill_status}`, {
+            done: box.backfill_done ?? 0,
+            total: box.backfill_total ?? 0,
+            at: box.backfill_finished_at ? fmt(box.backfill_finished_at) : "",
+          })}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <label className="flex items-center gap-1.5">
           <input type="checkbox" checked={box.is_default} disabled={busy} onChange={(e) => void patch({ is_default: e.target.checked })} />
@@ -151,6 +188,11 @@ function MailboxRow({ box, members, onChange }: { box: Mailbox; members: Member[
         {box.kind === "gmail" ? (
           <button type="button" className={ui.button} disabled={busy} onClick={() => void sync()}>
             {t("syncNow")}
+          </button>
+        ) : null}
+        {box.kind === "gmail" ? (
+          <button type="button" className={ui.button} disabled={busy || backfillActive} onClick={() => void backfill()}>
+            {t("backfillNow")}
           </button>
         ) : null}
         <button type="button" className={ui.danger} disabled={busy} onClick={() => void remove()}>
