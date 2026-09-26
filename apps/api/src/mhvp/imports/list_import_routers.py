@@ -9,10 +9,12 @@ Kontakte register their items for the usual undo (/imports/{id}/undo).
 """
 
 import argparse
+import uuid
 from datetime import date
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from pydantic import BaseModel, Field
 
 from mhvp.ai.imports import Recorder
 from mhvp.ai.models import ImportRun, ImportStatus
@@ -214,6 +216,57 @@ async def import_zuordnung(
 
     async with tenant_tx(request, principal) as session:
         return await _run(session, principal, mode=mode, source="immoware24:zuordnung", work=work)
+
+
+class ManualAssignmentIn(BaseModel):
+    """One open item of the Zuordnung report finished with a chosen contact."""
+
+    unit_id: uuid.UUID
+    role: Literal["eigentuemer", "mieter"]
+    contact_id: uuid.UUID
+    amount_cents: int | None = Field(default=None, ge=0, description="Monatlicher Zahlbetrag")
+    start_date: date | None = Field(
+        default=None, description="Vertragsbeginn, Standard 01.01. des laufenden Jahres"
+    )
+    landlord_contact_id: uuid.UUID | None = Field(
+        default=None,
+        description="Objekteigentümer bei Mietverwaltung, wenn der Vermieter nicht eindeutig ist",
+    )
+
+
+@router.post(
+    "/zuordnung/manuell",
+    summary="Offenen Eintrag der Zuordnung mit gewähltem Kontakt als Vertrag anlegen",
+)
+async def assign_zuordnung_manual(
+    body: ManualAssignmentIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(WRITE),
+) -> dict[str, Any]:
+    """Same party, contract, payment and schedule as the import, idempotent (an existing active
+    contract with the same party is reported as present). Records an import run
+    ``immoware24:zuordnung-manuell``; nothing is written when the assignment fails (422)."""
+    _need_domain(principal)
+    start = body.start_date or zuordnung.default_start_date()
+
+    async def work(session: Any, recorder: Recorder | None) -> dict[str, Any]:
+        report = await zuordnung.assign_manual(
+            session,
+            principal.tenant_id,
+            principal.user_id,
+            unit_id=body.unit_id,
+            role=body.role,
+            contact_id=body.contact_id,
+            start=start,
+            amount_cents=body.amount_cents,
+            landlord_contact_id=body.landlord_contact_id,
+        )
+        return report.as_dict()
+
+    async with tenant_tx(request, principal) as session:
+        return await _run(
+            session, principal, mode="apply", source="immoware24:zuordnung-manuell", work=work
+        )
 
 
 @router.post(

@@ -31,8 +31,15 @@ from typing import Any
 
 from sqlalchemy import func, or_, select
 
-from mhvp.contacts.models import Contact, ContactRoleCode, Party, PartyMember, PartyRole
-from mhvp.contacts.services import recompute_derived_roles
+from mhvp.contacts.models import (
+    Contact,
+    ContactAddress,
+    ContactRoleCode,
+    Party,
+    PartyMember,
+    PartyRole,
+)
+from mhvp.contacts.services import recompute_derived_roles, recompute_for_party
 from mhvp.contracts import services as contract_services
 from mhvp.contracts.models import (
     Contract,
@@ -48,7 +55,7 @@ from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.logging import configure_logging, get_logger
-from mhvp.core.problems import ProblemError
+from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports.kontakte import emit_roles_updated
 from mhvp.imports.objektdaten import (
     SOURCE_SYSTEM,
@@ -58,7 +65,14 @@ from mhvp.imports.objektdaten import (
     parse_objektdaten,
 )
 from mhvp.platform.models import Tenant, User
-from mhvp.properties.models import Property, PropertyStatus, Unit
+from mhvp.properties import services as property_services
+from mhvp.properties.models import (
+    ManagementType,
+    Property,
+    PropertyOwner,
+    PropertyStatus,
+    Unit,
+)
 
 OWNERSHIP_MANAGEMENT = frozenset({"WEG-Verwaltung", "WEG mit SE-Verwaltung"})
 TENANCY_MANAGEMENT = frozenset({"Mietverwaltung", "WEG mit SE-Verwaltung"})
@@ -73,6 +87,10 @@ ROLE = {
     ContractKind.TENANCY: ContactRoleCode.MIETER,
 }
 LABEL = {ContractKind.OWNERSHIP: "Eigentümer", ContractKind.TENANCY: "Mieter"}
+ROLE_CODE = {ContractKind.OWNERSHIP: "eigentuemer", ContractKind.TENANCY: "mieter"}
+KIND_FOR_ROLE = {code: kind for kind, code in ROLE_CODE.items()}
+LANDLORD_UNCLEAR = "Der Vermieter ist nicht eindeutig"
+MANUAL_NOTE = "Im Zuordnungsbericht manuell zugeordnet."
 
 _AND = re.compile(r"(?<!\w)u\.(?=\s|$)|(?<!\w)u\.(?=\w)")
 _SPACE = re.compile(r"\s+")
@@ -174,6 +192,7 @@ class Report:
     ambiguous: list[dict[str, Any]] = field(default_factory=list)
     conflicts: list[dict[str, Any]] = field(default_factory=list)
     notes: list[dict[str, Any]] = field(default_factory=list)
+    open: list[dict[str, Any]] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -189,6 +208,7 @@ class Report:
             "mehrdeutig": self.ambiguous,
             "konflikte": self.conflicts,
             "hinweise": self.notes,
+            "offen": self.open,
         }
 
 
@@ -295,27 +315,83 @@ def _where(prop: PropertyRow, unit: UnitRow) -> dict[str, Any]:
     return {"objekt": prop.source_number, "ve": unit.number, "zeile": unit.line}
 
 
+def _open_entry(
+    where: dict[str, Any],
+    unit_id: uuid.UUID,
+    kind: ContractKind,
+    raw_amount: str | None,
+    grund: str,
+) -> dict[str, Any]:
+    """Open item of the report that the operator can finish by choosing a contact
+    (POST /imports/immoware24/lists/zuordnung/manuell)."""
+    amount = parse_amount(raw_amount)
+    return {
+        **where,
+        "unit_id": str(unit_id),
+        "role": ROLE_CODE[kind],
+        "grund": grund,
+        "zahlbetrag": raw_amount or None,
+        "amount_cents": amount_cents(amount) if amount is not None else None,
+        "kandidaten": [],
+    }
+
+
 def resolve(
-    ctx: _Ctx, prop: PropertyRow, unit: UnitRow, kind: ContractKind, name: str
+    ctx: _Ctx,
+    prop: PropertyRow,
+    unit: UnitRow,
+    kind: ContractKind,
+    name: str,
+    unit_id: uuid.UUID,
+    raw_amount: str | None,
 ) -> ContactEntry | None:
     """Single contact for a name or None (reported as not found or ambiguous)."""
     found = ctx.index.lookup(name)
     where = {**_where(prop, unit), "rolle": LABEL[kind], "name": name}
     if not found:
         ctx.report.not_found.append(where)
+        ctx.report.open.append(_open_entry(where, unit_id, kind, raw_amount, "nicht_gefunden"))
         return None
     if len(found) > 1:
         ctx.report.ambiguous.append(
             {**where, "kandidaten": [f"{e.external_id} {e.display_name}" for e in found]}
         )
+        item = _open_entry(where, unit_id, kind, raw_amount, "mehrdeutig")
+        item["kandidaten"] = [
+            {"contact_id": str(e.contact_id), "display_name": e.display_name, "address": None}
+            for e in found
+        ]
+        ctx.report.open.append(item)
         return None
     return found[0]
 
 
+async def _fill_candidate_addresses(session: Any, report: Report) -> None:
+    """Primary (or first) postal address of every candidate, for the choice in the CRM."""
+    ids = {uuid.UUID(c["contact_id"]) for item in report.open for c in item["kandidaten"]}
+    if not ids:
+        return
+    rows = await session.scalars(
+        select(ContactAddress)
+        .where(ContactAddress.contact_id.in_(ids))
+        .order_by(ContactAddress.contact_id, ContactAddress.is_primary.desc(), ContactAddress.id)
+    )
+    text: dict[str, str] = {}
+    for addr in rows:
+        key = str(addr.contact_id)
+        if key in text:
+            continue
+        street = " ".join(p for p in (addr.street, addr.house_number) if p)
+        town = " ".join(p for p in (addr.postal_code, addr.city) if p)
+        text[key] = ", ".join(p for p in (street, town) if p)
+    for item in report.open:
+        for candidate in item["kandidaten"]:
+            candidate["address"] = text.get(candidate["contact_id"]) or None
+
+
 async def assign(
     ctx: _Ctx,
-    prop: PropertyRow,
-    unit: UnitRow,
+    base: dict[str, Any],
     unit_id: uuid.UUID,
     property_id: uuid.UUID,
     kind: ContractKind,
@@ -323,10 +399,12 @@ async def assign(
     raw_amount: str | None,
     *,
     sev: bool = False,
+    origin: str,
 ) -> bool:
-    """Contract, payment and schedule for one match. True if the unit counts as assigned."""
+    """Contract, payment and schedule for one match. True if the unit counts as assigned.
+    ``base`` locates the unit in the report (objekt, ve, zeile), ``origin`` starts the notes."""
     session, report = ctx.session, ctx.report
-    where = {**_where(prop, unit), "rolle": LABEL[kind], "name": entry.display_name}
+    where = {**base, "rolle": LABEL[kind], "name": entry.display_name}
     party, party_created = await party_for(session, ctx.tenant_id, ctx.user_id, entry.contact_id)
     if party_created:
         report.counts["parties_angelegt"] += 1
@@ -371,10 +449,7 @@ async def assign(
                 sev_fee_debtor_party_id=party.id if ownership and sev else None,
                 source=CONTRACT_SOURCE,
                 approval_status="pending",
-                notes=(
-                    f"Aus Immoware24 Objektdaten übernommen (Zeile {unit.line}). "
-                    f"Beginn {ctx.start:%d.%m.%Y} ist eine Annahme des Imports."
-                ),
+                notes=(f"{origin} Beginn {ctx.start:%d.%m.%Y} ist eine Annahme des Imports."),
             )
             session.add(contract)
             await session.flush()
@@ -427,7 +502,12 @@ async def assign(
                 payload={"kind": kind.value, "source": "import.zuordnung"},
             )
     except ProblemError as exc:
-        report.conflicts.append({**where, "grund": exc.detail or str(exc)})
+        reason = exc.detail or str(exc)
+        report.conflicts.append({**where, "grund": reason})
+        if reason.startswith(LANDLORD_UNCLEAR):
+            item = _open_entry(where, unit_id, kind, raw_amount, "vermieter_fehlt")
+            item["contact_id"] = str(entry.contact_id)
+            report.open.append(item)
         return False
     report.counts["vertraege_angelegt"] += 1
     if payment_created and amount is not None:
@@ -480,32 +560,43 @@ async def apply_rows(
                 prop.management in TENANCY_MANAGEMENT and bool(unit.tenant) and not tenant_vacant
             )
             if prop.management in OWNERSHIP_MANAGEMENT and unit.owner:
-                owner = resolve(ctx, prop, unit, ContractKind.OWNERSHIP, unit.owner)
+                owner = resolve(
+                    ctx, prop, unit, ContractKind.OWNERSHIP, unit.owner, unit_id, unit.owner_amount
+                )
                 if owner is not None and await assign(
                     ctx,
-                    prop,
-                    unit,
+                    _where(prop, unit),
                     unit_id,
                     property_id,
                     ContractKind.OWNERSHIP,
                     owner,
                     unit.owner_amount,
                     sev=prop.management == SEV_MANAGEMENT and wants_tenant,
+                    origin=f"Aus Immoware24 Objektdaten übernommen (Zeile {unit.line}).",
                 ):
                     report.owners_assigned += 1
             if wants_tenant and unit.tenant:
-                tenant = resolve(ctx, prop, unit, ContractKind.TENANCY, unit.tenant)
+                tenant = resolve(
+                    ctx, prop, unit, ContractKind.TENANCY, unit.tenant, unit_id, unit.tenant_amount
+                )
                 if tenant is not None and await assign(
                     ctx,
-                    prop,
-                    unit,
+                    _where(prop, unit),
                     unit_id,
                     property_id,
                     ContractKind.TENANCY,
                     tenant,
                     unit.tenant_amount,
+                    origin=f"Aus Immoware24 Objektdaten übernommen (Zeile {unit.line}).",
                 ):
                     report.tenants_assigned += 1
+    await _finish(ctx)
+    await _fill_candidate_addresses(session, report)
+    return report
+
+
+async def _finish(ctx: _Ctx) -> None:
+    session, report = ctx.session, ctx.report
     for contact_id in sorted(ctx.touched_contacts):
         contact = await session.get(Contact, contact_id)
         await recompute_derived_roles(session, contact)
@@ -513,14 +604,125 @@ async def apply_rows(
         # as the manual path); the outbox row is rolled back with a test run.
         if await emit_roles_updated(
             session,
-            tenant_id,
-            user_id,
+            ctx.tenant_id,
+            ctx.user_id,
             contact,
             ctx.roles_before.get(contact_id, []),
             source=EVENT_SOURCE,
         ):
             report.counts["kontakte_aktualisiert"] += 1
     await session.flush()
+
+
+def _cents_text(cents: int) -> str:
+    """Cents as the German amount ``parse_amount`` reads ("1234,56")."""
+    return f"{cents // 100},{cents % 100:02d}"
+
+
+async def _landlord(ctx: _Ctx, prop: Property, contact_id: uuid.UUID) -> None:
+    """Records the contact's party as owner of a rental property from the start date on, the
+    landlord that ``contract_services.creditor_entity`` expects (PropertyOwner plus legal entity
+    of kind rental_owner). An owner period covering the start date is kept."""
+    party, created = await party_for(ctx.session, ctx.tenant_id, ctx.user_id, contact_id)
+    if created:
+        ctx.report.counts["parties_angelegt"] += 1
+    existing = await ctx.session.scalar(
+        select(PropertyOwner).where(
+            PropertyOwner.property_id == prop.id,
+            PropertyOwner.party_id == party.id,
+            PropertyOwner.valid_from <= ctx.start,
+            or_(PropertyOwner.valid_to.is_(None), PropertyOwner.valid_to >= ctx.start),
+        )
+    )
+    if existing is None:
+        owner = PropertyOwner(
+            tenant_id=ctx.tenant_id, property_id=prop.id, party_id=party.id, valid_from=ctx.start
+        )
+        ctx.session.add(owner)
+        await ctx.session.flush()
+        ctx.report.counts["vermieter_angelegt"] += 1
+    entity_id = await property_services.owner_entity(ctx.session, prop, party.id)
+    await recompute_for_party(ctx.session, party.id)
+    if existing is None:
+        await emit(
+            ctx.session,
+            tenant_id=ctx.tenant_id,
+            type="property.owner_added",
+            entity_type="property",
+            entity_id=prop.id,
+            actor_user_id=ctx.user_id,
+            payload={
+                "party_id": str(party.id),
+                "legal_entity_id": str(entity_id),
+                "source": EVENT_SOURCE,
+            },
+        )
+
+
+async def assign_manual(
+    session: Any,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    *,
+    unit_id: uuid.UUID,
+    role: str,
+    contact_id: uuid.UUID,
+    start: date,
+    amount_cents: int | None = None,
+    landlord_contact_id: uuid.UUID | None = None,
+) -> Report:
+    """Finishes one open item of the report with the chosen contact: the same party, contract,
+    payment and schedule as the import (``assign``), idempotent (an active contract with the same
+    party counts as present). ``landlord_contact_id`` records the owner of a rental property first.
+    Raises ProblemError when nothing could be assigned; the caller commits."""
+    kind = KIND_FOR_ROLE.get(role)
+    if kind is None:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Rolle muss eigentuemer oder mieter sein.")
+    unit_row = await session.get(Unit, unit_id)
+    if unit_row is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Einheit nicht gefunden.")
+    prop = await session.get(Property, unit_row.property_id)
+    contact = await session.get(Contact, contact_id)
+    if contact is None or contact.deleted_at is not None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Kontakt nicht gefunden.")
+    report = Report(apply=True, start_date=start, start_date_assumed=False)
+    ctx = _Ctx(session, tenant_id, user_id, start, ContactIndex(), report)
+    if landlord_contact_id is not None:
+        if kind is not ContractKind.TENANCY or prop.management_type is not ManagementType.RENTAL:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Ein Vermieter wird nur für Mieter in Mietverwaltung angegeben.",
+            )
+        landlord = await session.get(Contact, landlord_contact_id)
+        if landlord is None or landlord.deleted_at is not None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Vermieter nicht gefunden.")
+        await _landlord(ctx, prop, landlord_contact_id)
+    base = {"objekt": prop.number, "ve": unit_row.number, "zeile": None}
+    sev = kind is ContractKind.OWNERSHIP and prop.management_type is ManagementType.HOA_WITH_SEV
+    ok = await assign(
+        ctx,
+        base,
+        unit_id,
+        prop.id,
+        kind,
+        ContactEntry(
+            contact_id,
+            str((contact.external_ids or {}).get(SOURCE_SYSTEM, "")),
+            contact.display_name or "",
+        ),
+        _cents_text(amount_cents) if amount_cents is not None else None,
+        sev=sev,
+        origin=MANUAL_NOTE,
+    )
+    if not ok:
+        reason = report.conflicts[-1]["grund"] if report.conflicts else "nicht zugeordnet"
+        raise ProblemError(ErrorCodes.VALIDATION, detail=reason)
+    if kind is ContractKind.OWNERSHIP:
+        report.owners_assigned += 1
+    else:
+        report.tenants_assigned += 1
+    report.units_total = 1
+    await _finish(ctx)
     return report
 
 
