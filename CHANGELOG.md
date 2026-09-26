@@ -5,6 +5,12 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.27.0 (26.09.2026) Zuordnung im Bericht, Objekteigentümer, Freigabe der Importverträge
+
+- Import: Offene Zuordnungen (nicht gefunden, mehrdeutig, Vermieter fehlt) stehen im Bericht als Tabelle und werden per Kontaktauswahl direkt zugeordnet (POST /imports/immoware24/lists/zuordnung/manuell), bei fehlendem Vermieter mit Auswahl des Objekteigentümers. Der letzte Bericht bleibt im Browser erhalten.
+- Objekte: "Eigentümer festlegen" auf der Objektseite für Mietverwaltungsobjekte (Kontakt, seit, Anteil, Ersetzen mit Datum), Reiter "Ohne Eigentümer" und Kennzeichen "Eigentümer fehlt" in der Objektliste (POST /properties/{id}/owner, GET /properties?without_owner=true). WEG-Objekte führen Eigentum je Einheit.
+- Verträge: Importverträge tragen Herkunft und Freigabestatus (Migration 0133). Die Sollstellung überspringt nicht freigegebene Verträge und weist das aus. Neue Seite Verträge, Freigabe mit Filter, Summen, Mehrfachauswahl, "Alle freigeben" mit Bestätigung und "Ablehnen" je Vertrag (beendet ihn zum Beginn). Berechtigung contracts:approve (Administratoren). Kennzeichen "Freigabe ausstehend" in Liste und Detail.
+
 ## 1.26.1 (26.09.2026) Mail: Aktionen oben, Mehrfachauswahl, Erledigt archiviert
 
 - Mail: Die Aktionen Antworten, Ticket anlegen und Erledigt stehen zusätzlich als feste Leiste oberhalb der Nachricht.

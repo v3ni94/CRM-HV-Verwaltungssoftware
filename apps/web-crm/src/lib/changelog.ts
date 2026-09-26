@@ -17,6 +17,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.27.0",
+    date: "26.09.2026",
+    title: "Zuordnung im Bericht, Objekteigentümer, Freigabe der Importverträge",
+    changes: [
+      "Import: offene Zuordnungen direkt im Bericht per Kontaktauswahl abschließen, Vermieter dabei festlegen",
+      "Objekte: Eigentümer festlegen auf der Objektseite, Reiter Ohne Eigentümer",
+      "Verträge: Freigabe der Importverträge vor der Sollstellung, Seite Verträge, Freigabe mit Sammelfreigabe und Ablehnen",
+    ],
+  },
+  {
     version: "1.26.1",
     date: "26.09.2026",
     title: "Mail: Aktionen oben, Mehrfachauswahl, Erledigt archiviert",
