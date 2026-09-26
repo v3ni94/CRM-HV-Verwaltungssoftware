@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { bff } from "@/lib/bff";
+import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 const API = "/api/bff/imports/immoware24/lists";
-const ROLES = ["eigentuemer", "mieter", "bank", "sonstige"] as const;
+const ROLES = ["eigentuemer", "mieter", "dienstleister", "bank", "sonstige"] as const;
 type Role = (typeof ROLES)[number];
 
 type PropertyEntry = {
@@ -31,6 +32,7 @@ type ContactEntry = {
   hinweise: string[];
   probleme?: string[];
 };
+type AssignmentEntry = { objekt: string; ve: string; zeile: number; rolle?: string; name?: string; grund?: string; hinweis?: string; kandidaten?: string[] };
 type Report = {
   mode: "preview" | "apply";
   apply: boolean;
@@ -38,24 +40,58 @@ type Report = {
   counts: Record<string, number>;
   objekte?: PropertyEntry[];
   kontakte?: ContactEntry[];
+  start_date?: string;
+  start_date_assumed?: boolean;
+  einheiten_gesamt?: number;
+  eigentuemer_zugeordnet?: number;
+  mieter_zugeordnet?: number;
+  leerstand?: number;
+  nicht_gefunden?: AssignmentEntry[];
+  mehrdeutig?: AssignmentEntry[];
+  konflikte?: AssignmentEntry[];
+  hinweise?: AssignmentEntry[];
 };
+type Prefix = "objektdaten" | "kontakte" | "zuordnung";
+
+/** Collapsible list of the report (closed by default, count in the summary). */
+function Collapsible({ title, count, testId, children }: { title: string; count: number; testId: string; children: ReactNode }) {
+  const t = useTranslations("ImmowareLists");
+  return (
+    <details className="flex flex-col gap-1" data-testid={`${testId}-details`}>
+      <summary className="cursor-pointer text-sm font-semibold">
+        {title} ({count})
+      </summary>
+      {count === 0 ? <p className="text-sm text-muted">{t("noEntries")}</p> : children}
+    </details>
+  );
+}
 
 /** Result banner, counts and the link to the import run shared by both cards. */
-function ReportHead({ report, prefix, testId }: { report: Report; prefix: "objektdaten" | "kontakte"; testId: string }) {
+function ReportHead({ report, prefix, testId, extra = [] }: { report: Report; prefix: Prefix; testId: string; extra?: [string, number][] }) {
   const t = useTranslations("ImmowareLists");
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
       <p className={report.apply ? ui.success : ui.notice} data-testid={`${testId}-mode`}>
         {report.apply ? t("resultApplied") : t("resultTest")}
       </p>
-      <dl className="flex flex-wrap gap-4 text-sm">
-        {Object.entries(report.counts).map(([key, value]) => (
-          <div key={key} className="flex flex-col">
-            <dt className="text-xs text-muted">{t.has(`${prefix}.count.${key}`) ? t(`${prefix}.count.${key}`) : key}</dt>
-            <dd className="font-semibold">{value}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className="overflow-x-auto">
+        <table className={ui.table} data-testid={`${testId}-counts`}>
+          <thead>
+            <tr>
+              <th>{t("colCount")}</th>
+              <th>{t("colValue")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...extra, ...Object.entries(report.counts)].map(([key, value]) => (
+              <tr key={key}>
+                <td>{t.has(`${prefix}.count.${key}`) ? t(`${prefix}.count.${key}`) : key}</td>
+                <td>{key.startsWith("zahlungen_cent_") ? formatCents(value) : value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {report.import_run_id ? (
         <Link href={`/importe/${report.import_run_id}`} className="text-sm font-medium hover:underline">
           {t("runLink")}
@@ -63,6 +99,10 @@ function ReportHead({ report, prefix, testId }: { report: Report; prefix: "objek
       ) : null}
     </div>
   );
+}
+
+function formatCents(cents: number) {
+  return `${(cents / 100).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`;
 }
 
 function status(t: ReturnType<typeof useTranslations<"ImmowareLists">>, value: string) {
@@ -76,11 +116,8 @@ function ObjektdatenReport({ report }: { report: Report }) {
   const conflicts = rows.filter((r) => r.status !== "übersprungen" && (r.probleme?.length || r.einheiten_probleme?.length || r.status === "conflict"));
   const notes = rows.filter((r) => r.hinweise.length > 0);
   const table = (title: string, items: PropertyEntry[], testId: string, messages: (r: PropertyEntry) => string[]) => (
-    <section className="flex flex-col gap-1" aria-label={title}>
-      <h4 className="text-sm font-semibold">{title}</h4>
-      {items.length === 0 ? (
-        <p className="text-sm text-muted">{t("noEntries")}</p>
-      ) : (
+    <Collapsible title={title} count={items.length} testId={testId}>
+      {(
         <div className="overflow-x-auto">
           <table className={ui.table} data-testid={testId}>
             <thead>
@@ -118,7 +155,7 @@ function ObjektdatenReport({ report }: { report: Report }) {
           </table>
         </div>
       )}
-    </section>
+    </Collapsible>
   );
   return (
     <div className="flex flex-col gap-4">
@@ -139,11 +176,8 @@ function KontakteReport({ report }: { report: Report }) {
   return (
     <div className="flex flex-col gap-4">
       <ReportHead report={report} prefix="kontakte" testId="kontakte-report" />
-      <section className="flex flex-col gap-1" aria-label={t("kontakte.notesTitle")}>
-        <h4 className="text-sm font-semibold">{t("kontakte.notesTitle")}</h4>
-        {rows.length === 0 ? (
-          <p className="text-sm text-muted">{t("noEntries")}</p>
-        ) : (
+      <Collapsible title={t("kontakte.notesTitle")} count={rows.length} testId="kontakte-notes">
+        {(
           <div className="overflow-x-auto">
             <table className={ui.table} data-testid="kontakte-notes">
               <thead>
@@ -179,7 +213,66 @@ function KontakteReport({ report }: { report: Report }) {
             </table>
           </div>
         )}
-      </section>
+      </Collapsible>
+    </div>
+  );
+}
+
+function AssignmentList({ title, items, testId }: { title: string; items: AssignmentEntry[]; testId: string }) {
+  const t = useTranslations("ImmowareLists");
+  return (
+    <Collapsible title={title} count={items.length} testId={testId}>
+      <div className="overflow-x-auto">
+        <table className={ui.table} data-testid={testId}>
+          <thead>
+            <tr>
+              <th>{t("objektdaten.colObject")}</th>
+              <th>{t("zuordnung.colUnit")}</th>
+              <th>{t("kontakte.colLine")}</th>
+              <th>{t("kontakte.colRole")}</th>
+              <th>{t("kontakte.colName")}</th>
+              <th>{t("colMessages")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((r, i) => (
+              <tr key={`${r.zeile}:${r.rolle ?? ""}:${i}`}>
+                <td>{r.objekt}</td>
+                <td>{r.ve}</td>
+                <td>{r.zeile}</td>
+                <td>{r.rolle ?? ""}</td>
+                <td>{r.name ?? ""}</td>
+                <td>{r.grund ?? r.hinweis ?? (r.kandidaten ?? []).join(", ")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Collapsible>
+  );
+}
+
+function ZuordnungReport({ report }: { report: Report }) {
+  const t = useTranslations("ImmowareLists");
+  const extra: [string, number][] = [
+    ["einheiten_gesamt", report.einheiten_gesamt ?? 0],
+    ["eigentuemer_zugeordnet", report.eigentuemer_zugeordnet ?? 0],
+    ["mieter_zugeordnet", report.mieter_zugeordnet ?? 0],
+    ["leerstand", report.leerstand ?? 0],
+  ];
+  return (
+    <div className="flex flex-col gap-4">
+      <ReportHead report={report} prefix="zuordnung" testId="zuordnung-report" extra={extra} />
+      {report.start_date ? (
+        <p className="text-sm" data-testid="zuordnung-start">
+          {t("zuordnung.startUsed", { date: formatDate(report.start_date) })}
+          {report.start_date_assumed ? ` ${t("zuordnung.startAssumed")}` : ""}
+        </p>
+      ) : null}
+      <AssignmentList title={t("zuordnung.notFoundTitle")} items={report.nicht_gefunden ?? []} testId="zuordnung-not-found" />
+      <AssignmentList title={t("zuordnung.ambiguousTitle")} items={report.mehrdeutig ?? []} testId="zuordnung-ambiguous" />
+      <AssignmentList title={t("zuordnung.conflictsTitle")} items={report.konflikte ?? []} testId="zuordnung-conflicts" />
+      <AssignmentList title={t("zuordnung.notesTitle")} items={report.hinweise ?? []} testId="zuordnung-notes" />
     </div>
   );
 }
@@ -289,12 +382,20 @@ export function ObjektdatenCard() {
   );
 }
 
+/** Role from the file name (eigentuemer.csv, Mieter.csv, ...), otherwise "sonstige". */
+export function roleFromFileName(name: string): Role {
+  const lower = name.toLowerCase().replace("ü", "ue").replace("ä", "ae");
+  if (lower.includes("eigentuemer") || lower.includes("eigentümer")) return "eigentuemer";
+  if (lower.includes("mieter")) return "mieter";
+  if (lower.includes("dienstleister")) return "dienstleister";
+  if (lower.includes("bank")) return "bank";
+  return "sonstige";
+}
+
 export function KontakteCard() {
   const t = useTranslations("ImmowareLists");
-  const [files, setFiles] = useState<(File | null)[]>([null, null, null, null]);
-  const [roles, setRoles] = useState<Role[]>(["eigentuemer", "mieter", "bank", "sonstige"]);
+  const [chosen, setChosen] = useState<{ file: File; role: Role }[]>([]);
   const { report, testedFor, busy, error, run } = useListRun("kontakte");
-  const chosen = files.map((f, i) => ({ file: f, role: roles[i]! })).filter((x): x is { file: File; role: Role } => x.file !== null);
   const signature = chosen.map((x) => `${fileKey(x.file)}=${x.role}`).join("|");
   const canApply = chosen.length > 0 && testedFor !== null && testedFor === signature;
 
@@ -315,27 +416,26 @@ export function KontakteCard() {
         {t("kontakte.title")}
       </h3>
       <p className={ui.help}>{t("kontakte.help")}</p>
-      {files.map((_, i) => (
-        <div key={i} className="grid gap-2 sm:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className={ui.label}>{t("kontakte.file", { index: i + 1 })}</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(e) => setFiles((list) => list.map((f, j) => (j === i ? (e.target.files?.[0] ?? null) : f)))}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={ui.label}>{t("kontakte.role", { index: i + 1 })}</span>
-            <select className={ui.input} value={roles[i]} onChange={(e) => setRoles((list) => list.map((r, j) => (j === i ? (e.target.value as Role) : r)))}>
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {t(`kontakte.roleOption.${r}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+      <label className="flex flex-col gap-1">
+        <span className={ui.label}>{t("kontakte.files")}</span>
+        <input
+          type="file"
+          multiple
+          accept=".csv,text/csv"
+          onChange={(e) => setChosen(Array.from(e.target.files ?? []).map((file) => ({ file, role: roleFromFileName(file.name) })))}
+        />
+      </label>
+      {chosen.map((x, i) => (
+        <label key={`${x.file.name}:${i}`} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+          <span className={ui.label}>{t("kontakte.role", { name: x.file.name })}</span>
+          <select className={ui.input} value={x.role} onChange={(e) => setChosen((list) => list.map((c, j) => (j === i ? { ...c, role: e.target.value as Role } : c)))}>
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {t(`kontakte.roleOption.${r}`)}
+              </option>
+            ))}
+          </select>
+        </label>
       ))}
       <ActionRow t={t} busy={busy} canApply={canApply} onTest={() => start("preview")} onApply={() => start("apply")} testId="kontakte" />
       {chosen.length === 0 ? <p className={ui.help}>{t("fileRequired")}</p> : null}
@@ -349,20 +449,72 @@ export function KontakteCard() {
   );
 }
 
-/** Section "Immoware24-Listen" of the import assistant: the two list imports of the operator
- *  commands (objektdaten, kontakte) without server access. */
+function defaultStart(today = new Date()) {
+  return `${today.getFullYear()}-01-01`;
+}
+
+export function ZuordnungCard() {
+  const t = useTranslations("ImmowareLists");
+  const [file, setFile] = useState<File | null>(null);
+  const [startDate, setStartDate] = useState(defaultStart());
+  const [skipHandedOver, setSkipHandedOver] = useState(false);
+  const { report, testedFor, busy, error, run } = useListRun("zuordnung");
+  const signature = `${fileKey(file)}|${startDate}|${skipHandedOver}`;
+  const canApply = testedFor !== null && testedFor === signature;
+
+  const start = (mode: "preview" | "apply") => {
+    if (!file) return;
+    if (mode === "apply" && !window.confirm(t("applyConfirm"))) return;
+    const form = new FormData();
+    form.set("file", file);
+    if (startDate) form.set("start_date", startDate);
+    form.set("skip_handed_over", skipHandedOver ? "true" : "false");
+    void run(mode, form, signature);
+  };
+
+  return (
+    <section className={`${ui.card} flex flex-col gap-3`} aria-labelledby="zuordnung-title" data-testid="zuordnung-card">
+      <h3 id="zuordnung-title" className="text-base font-semibold">
+        {t("zuordnung.title")}
+      </h3>
+      <p className={ui.help}>{t("zuordnung.help")}</p>
+      <label className="flex flex-col gap-1">
+        <span className={ui.label}>{t("zuordnung.file")}</span>
+        <input type="file" accept=".csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className={ui.label}>{t("zuordnung.startDate")}</span>
+        <input type="date" className={ui.input} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        <span className={ui.help}>{t("zuordnung.startDateHelp")}</span>
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={skipHandedOver} onChange={(e) => setSkipHandedOver(e.target.checked)} />
+        {t("objektdaten.skipHandedOver")}
+      </label>
+      <ActionRow t={t} busy={busy} canApply={canApply && !!file} onTest={() => start("preview")} onApply={() => start("apply")} testId="zuordnung" />
+      {!file ? <p className={ui.help}>{t("fileRequired")}</p> : null}
+      {error ? (
+        <p role="alert" className={ui.alert}>
+          {error}
+        </p>
+      ) : null}
+      {report ? <ZuordnungReport report={report} /> : null}
+    </section>
+  );
+}
+
+/** Page body "Immoware24 Listenimport": the three operator commands (objektdaten, kontakte,
+ *  zuordnung) in their required order, without server access. */
 export function ListImports() {
   const t = useTranslations("ImmowareLists");
   return (
-    <section className="flex flex-col gap-4" aria-labelledby="immoware-lists-title">
-      <h2 id="immoware-lists-title" className={ui.h2}>
-        {t("title")}
-      </h2>
-      <p className="text-sm text-muted">{t("intro")}</p>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ObjektdatenCard />
-        <KontakteCard />
-      </div>
-    </section>
+    <div className="flex flex-col gap-4">
+      <p className={ui.notice} data-testid="immoware-lists-order">
+        {t("intro")}
+      </p>
+      <ObjektdatenCard />
+      <KontakteCard />
+      <ZuordnungCard />
+    </div>
   );
 }

@@ -2443,6 +2443,37 @@
         "title": "Body_import_objektdaten_api_v1_imports_immoware24_lists_objektdaten_post",
         "type": "object"
       },
+      "Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "skip_handed_over": {
+            "default": false,
+            "title": "Skip Handed Over",
+            "type": "boolean"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post",
+        "type": "object"
+      },
       "Body_match_files_api_v1_handover_imports_uprotokoll_files_post": {
         "properties": {
           "file": {
@@ -52105,6 +52136,63 @@
           }
         },
         "summary": "Objekte und Einheiten aus der Objektliste (Testlauf oder Übernahme)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/lists/zuordnung": {
+      "post": {
+        "description": "Third step after objektdaten and kontakte (handbuch/import-zuordnung.md). ``start_date``\ndefaults to 1 January of the current year (reported as assumed). The contracts are not\nregistered as undo items; the report lists every conflict, ambiguous and unknown name.",
+        "operationId": "import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "preview",
+              "pattern": "^(preview|apply)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Zuordnung Api V1 Imports Immoware24 Lists Zuordnung Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümer und Mieter der Objektliste als Verträge (Testlauf oder Übernahme)",
         "tags": [
           "Import Immoware24"
         ]

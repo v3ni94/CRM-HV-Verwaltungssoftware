@@ -531,7 +531,8 @@
       "ai:extract_property": "KI: Objekt aus Unterlagen",
       "immoware24:objektdaten": "Immoware24-Liste: Objektdaten",
       "immoware24:kontakte": "Immoware24-Liste: Kontakte",
-      "objektakte": "objektakte-Export (Übernahme)"
+      "objektakte": "objektakte-Export (Übernahme)",
+      "immoware24:zuordnung": "Immoware24-Liste: Zuordnung"
     },
     "status": {
       "applied": "übernommen",
@@ -556,7 +557,8 @@
     "undoConfirm": "Import wirklich zurücknehmen? Datensätze, auf die spätere Daten aufbauen, bleiben erhalten.",
     "undoneAt": "Zurückgenommen am {at}",
     "immoware24Link": "Importassistent öffnen",
-    "reconciliationLink": "Abgleichbericht Parallelbetrieb"
+    "reconciliationLink": "Abgleichbericht Parallelbetrieb",
+    "listImportLink": "Immoware24 Listenimport"
   },
   "AiSettings": {
     "title": "KI-Einstellungen",
@@ -664,10 +666,10 @@
     }
   },
   "ImmowareLists": {
-    "title": "Immoware24-Listen",
-    "intro": "Objektliste und Kontaktlisten aus Immoware24 als CSV (UTF-8, Semikolon) direkt anlegen. Erst Testlauf, dann Übernahme. Es entstehen keine Verträge, Sollstellungen oder Buchungen.",
+    "title": "Immoware24 Listenimport",
+    "intro": "Reihenfolge einhalten: 1. Objekte und Einheiten, 2. Kontakte, 3. Zuordnung Eigentümer und Mieter. Je Abschnitt erst Testlauf, dann Übernehmen. Dateien als CSV (UTF-8, Semikolon) aus Immoware24.",
     "objektdaten": {
-      "title": "Objektdaten",
+      "title": "1. Objekte und Einheiten",
       "help": "Export Objektdaten mit den Spalten Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer. Eigentümer, Mieter und Beträge werden nur als Herkunftsnotiz an der Einheit gespeichert.",
       "file": "Objektliste (csv)",
       "numberMap": "Nummernzuordnung (ALT=NEU, je Zeile oder durch Komma getrennt)",
@@ -692,15 +694,15 @@
       }
     },
     "kontakte": {
-      "title": "Kontakte",
-      "help": "Je Kontaktgruppe eine Liste (Spalten id und Name erforderlich). Derselbe Kontakt in mehreren Listen erhält alle Rollen.",
-      "file": "Datei {index} (csv)",
-      "role": "Rolle für Datei {index}",
+      "title": "2. Kontakte",
+      "help": "Je Kontaktgruppe eine Liste (Spalten id und Name erforderlich). Die Rolle wird aus dem Dateinamen vorbelegt und kann geändert werden. Derselbe Kontakt in mehreren Listen erhält alle Rollen.",
+      "role": "Rolle für {name}",
       "roleOption": {
         "eigentuemer": "Eigentümer",
         "mieter": "Mieter",
         "bank": "Bank",
-        "sonstige": "Sonstige"
+        "sonstige": "Sonstige",
+        "dienstleister": "Dienstleister"
       },
       "colFile": "Datei",
       "colLine": "Zeile",
@@ -713,7 +715,8 @@
         "unchanged": "Kontakte unverändert",
         "role_added": "Rolle ergänzt",
         "invalid": "Zeilen ungültig"
-      }
+      },
+      "files": "Kontaktlisten (csv, mehrere Dateien möglich)"
     },
     "colStatus": "Status",
     "colMessages": "Meldungen",
@@ -728,13 +731,45 @@
     "testRun": "Testlauf",
     "apply": "Übernehmen",
     "applyHint": "Übernehmen wird nach einem Testlauf mit denselben Dateien und Einstellungen freigeschaltet.",
-    "applyConfirm": "Die Daten aus dem Testlauf jetzt übernehmen? Vorhandene Datensätze werden nicht überschrieben.",
+    "applyConfirm": "Daten werden geschrieben. Fortfahren?",
     "fileRequired": "Bitte eine Datei auswählen.",
     "resultTest": "Testlauf, es wurde nichts gespeichert.",
     "resultApplied": "Übernommen. Der Lauf ist unter Importe aufgeführt.",
     "runLink": "Importlauf öffnen",
     "noEntries": "Keine Einträge.",
-    "busy": "Wird verarbeitet"
+    "busy": "Wird verarbeitet",
+    "colCount": "Zähler",
+    "colValue": "Anzahl",
+    "zuordnung": {
+      "title": "3. Zuordnung Eigentümer und Mieter",
+      "help": "Objektliste wie in Schritt 1. Eigentümer und Mieter werden über den Namen den importierten Kontakten zugeordnet und als Verträge mit monatlicher Zahlung angelegt. Vorhandene Verträge werden nicht überschrieben, mehrdeutige Namen werden nur gemeldet.",
+      "file": "Objektliste (csv) für die Zuordnung",
+      "startDate": "Vertragsbeginn",
+      "startDateHelp": "Standard ist der 01.01. des laufenden Jahres.",
+      "startUsed": "Vertragsbeginn {date}.",
+      "startAssumed": "Angenommen, bitte prüfen.",
+      "colUnit": "VE",
+      "notFoundTitle": "Nicht gefunden",
+      "ambiguousTitle": "Mehrdeutig",
+      "conflictsTitle": "Konflikte",
+      "notesTitle": "Hinweise",
+      "count": {
+        "einheiten_gesamt": "Einheiten gesamt",
+        "eigentuemer_zugeordnet": "Eigentümer zugeordnet",
+        "mieter_zugeordnet": "Mieter zugeordnet",
+        "leerstand": "Leerstand",
+        "parties_angelegt": "Parteien angelegt",
+        "vertraege_angelegt": "Verträge angelegt",
+        "vertraege_vorhanden": "Verträge bereits vorhanden",
+        "zahlungen_angelegt": "Zahlungen angelegt",
+        "einheit_fehlt": "Einheiten nicht importiert",
+        "uebersprungen_abgegeben": "Abgegeben übersprungen",
+        "zahlungen_cent_hoa_fee": "Summe Hausgeld monatlich",
+        "zahlungen_cent_rent": "Summe Miete monatlich"
+      }
+    },
+    "backToImports": "Zurück zu Importe",
+    "noPermission": "Für den Listenimport fehlt die Berechtigung (Importe anlegen sowie Objekte, Kontakte und Verträge anlegen)."
   },
   "Immoware24": {
     "title": "Importassistent",
@@ -831,7 +866,8 @@
     "colFile": "Einheiten laut Datei",
     "colPlatform": "Einheiten in der Plattform",
     "colDifference": "Differenz",
-    "restart": "Weiteren Bericht importieren"
+    "restart": "Weiteren Bericht importieren",
+    "listImportLink": "Listenimport (Objektdaten, Kontakte, Zuordnung) öffnen"
   },
   "Workspace": {
     "dashboard": "Start",

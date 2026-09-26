@@ -6068,6 +6068,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/imports/immoware24/lists/zuordnung": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eigentümer und Mieter der Objektliste als Verträge (Testlauf oder Übernahme)
+         * @description Third step after objektdaten and kontakte (handbuch/import-zuordnung.md). ``start_date``
+         *     defaults to 1 January of the current year (reported as assumed). The contracts are not
+         *     registered as undo items; the report lists every conflict, ambiguous and unknown name.
+         */
+        post: operations["import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/imports/immoware24/mappings": {
         parameters: {
             query?: never;
@@ -12466,6 +12488,18 @@ export interface components {
              * @default false
              */
             skip_handed_over: boolean;
+        };
+        /** Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post */
+        Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post: {
+            /** File */
+            file: string;
+            /**
+             * Skip Handed Over
+             * @default false
+             */
+            skip_handed_over: boolean;
+            /** Start Date */
+            start_date?: string | null;
         };
         /** Body_match_files_api_v1_handover_imports_uprotokoll_files_post */
         Body_match_files_api_v1_handover_imports_uprotokoll_files_post: {
@@ -35201,6 +35235,43 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": components["schemas"]["Body_import_objektdaten_api_v1_imports_immoware24_lists_objektdaten_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post: {
+        parameters: {
+            query?: {
+                mode?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_zuordnung_api_v1_imports_immoware24_lists_zuordnung_post"];
             };
         };
         responses: {

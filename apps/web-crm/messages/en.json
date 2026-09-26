@@ -531,7 +531,8 @@
       "ai:extract_property": "AI: property from documents",
       "immoware24:objektdaten": "Immoware24 list: property data",
       "immoware24:kontakte": "Immoware24 list: contacts",
-      "objektakte": "objektakte export (takeover)"
+      "objektakte": "objektakte export (takeover)",
+      "immoware24:zuordnung": "Immoware24 list: assignment"
     },
     "status": {
       "applied": "applied",
@@ -556,7 +557,8 @@
     "undoConfirm": "Really undo the import? Records that later data builds on are kept.",
     "undoneAt": "Undone on {at}",
     "immoware24Link": "Open import assistant",
-    "reconciliationLink": "Parallel operation reconciliation"
+    "reconciliationLink": "Parallel operation reconciliation",
+    "listImportLink": "Immoware24 list import"
   },
   "AiSettings": {
     "title": "AI settings",
@@ -664,10 +666,10 @@
     }
   },
   "ImmowareLists": {
-    "title": "Immoware24 lists",
-    "intro": "Create the property list and contact lists from Immoware24 as CSV (UTF-8, semicolon) directly. Test run first, then apply. No contracts, receivables or postings are created.",
+    "title": "Immoware24 Listenimport",
+    "intro": "Keep the order: 1. properties and units, 2. contacts, 3. owner and tenant assignment. In each section run a test first, then apply. Files as CSV (UTF-8, semicolon) from Immoware24.",
     "objektdaten": {
-      "title": "Property data",
+      "title": "1. Properties and units",
       "help": "Export of property data with the columns Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer. Owners, tenants and amounts are only stored as a source note on the unit.",
       "file": "Property list (csv)",
       "numberMap": "Number mapping (OLD=NEW, one per line or separated by commas)",
@@ -692,15 +694,15 @@
       }
     },
     "kontakte": {
-      "title": "Contacts",
-      "help": "One list per contact group (columns id and Name required). The same contact in several lists receives all roles.",
-      "file": "File {index} (csv)",
-      "role": "Role for file {index}",
+      "title": "2. Contacts",
+      "help": "One list per contact group (columns id and Name required). The role is prefilled from the file name and can be changed. The same contact in several lists receives all roles.",
+      "role": "Role for {name}",
       "roleOption": {
         "eigentuemer": "Owner",
         "mieter": "Tenant",
         "bank": "Bank",
-        "sonstige": "Other"
+        "sonstige": "Other",
+        "dienstleister": "Service provider"
       },
       "colFile": "File",
       "colLine": "Line",
@@ -713,7 +715,8 @@
         "unchanged": "Contacts unchanged",
         "role_added": "Role added",
         "invalid": "Lines invalid"
-      }
+      },
+      "files": "Contact lists (csv, several files allowed)"
     },
     "colStatus": "Status",
     "colMessages": "Messages",
@@ -728,13 +731,45 @@
     "testRun": "Test run",
     "apply": "Apply",
     "applyHint": "Apply is enabled after a test run with the same files and settings.",
-    "applyConfirm": "Apply the data from the test run now? Existing records are not overwritten.",
+    "applyConfirm": "Data will be written. Continue?",
     "fileRequired": "Please select a file.",
     "resultTest": "Test run, nothing was saved.",
     "resultApplied": "Applied. The run is listed under imports.",
     "runLink": "Open import run",
     "noEntries": "No entries.",
-    "busy": "Processing"
+    "busy": "Processing",
+    "colCount": "Counter",
+    "colValue": "Value",
+    "zuordnung": {
+      "title": "3. Owner and tenant assignment",
+      "help": "Object list as in step 1. Owners and tenants are matched by name to the imported contacts and created as contracts with a monthly payment. Existing contracts are never overwritten, ambiguous names are only reported.",
+      "file": "Object list (csv) for the assignment",
+      "startDate": "Contract start",
+      "startDateHelp": "Default is 1 January of the current year.",
+      "startUsed": "Contract start {date}.",
+      "startAssumed": "Assumed, please check.",
+      "colUnit": "Unit",
+      "notFoundTitle": "Not found",
+      "ambiguousTitle": "Ambiguous",
+      "conflictsTitle": "Conflicts",
+      "notesTitle": "Notes",
+      "count": {
+        "einheiten_gesamt": "Units total",
+        "eigentuemer_zugeordnet": "Owners assigned",
+        "mieter_zugeordnet": "Tenants assigned",
+        "leerstand": "Vacant",
+        "parties_angelegt": "Parties created",
+        "vertraege_angelegt": "Contracts created",
+        "vertraege_vorhanden": "Contracts already present",
+        "zahlungen_angelegt": "Payments created",
+        "einheit_fehlt": "Units not imported",
+        "uebersprungen_abgegeben": "Handed over, skipped",
+        "zahlungen_cent_hoa_fee": "Monthly HOA fees total",
+        "zahlungen_cent_rent": "Monthly rent total"
+      }
+    },
+    "backToImports": "Back to imports",
+    "noPermission": "Missing permission for the list import (create imports and create properties, contacts and contracts)."
   },
   "Immoware24": {
     "title": "Import assistant",
@@ -831,7 +866,8 @@
     "colFile": "Units according to file",
     "colPlatform": "Units in the platform",
     "colDifference": "Difference",
-    "restart": "Import another report"
+    "restart": "Import another report",
+    "listImportLink": "Open list import (objects, contacts, assignment)"
   },
   "Workspace": {
     "dashboard": "Home",
