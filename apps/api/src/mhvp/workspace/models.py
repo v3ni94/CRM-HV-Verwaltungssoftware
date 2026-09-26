@@ -156,7 +156,7 @@ class ComplianceDeadline(IdMixin, TimestampMixin, TenantMixin, Base):
     )
 
     # contract_end | contract_termination | meter_calibration | bank_consent |
-    # document_retention_end
+    # document_retention_end | service_contract_notice
     kind: Mapped[str] = mapped_column(String(48), nullable=False)
     source_type: Mapped[str] = mapped_column(String(64), nullable=False)
     source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)

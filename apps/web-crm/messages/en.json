@@ -59,6 +59,7 @@
     "dashboard": "Home",
     "calendar": "Calendar",
     "deadlines": "Deadlines",
+    "serviceContracts": "Service contracts",
     "entity": {
       "contact": "Contact",
       "property": "Property",
@@ -985,7 +986,8 @@
       "contract_termination": "Termination",
       "meter_calibration": "Meter calibration",
       "bank_consent": "Bank consent expiry",
-      "document_retention_end": "Retention end"
+      "document_retention_end": "Retention end",
+      "service_contract_notice": "Notice date service contract"
     },
     "status": {
       "open": "open",
@@ -4435,5 +4437,55 @@
     "hint": "When the Gmail mailboxes are synced, exactly one AI extraction is started for each new PDF attachment whose subject, sender or file name indicates an invoice (Rechnung, Invoice, Beleg, RE-). The result is a proposal under incoming invoices, nothing is posted.",
     "costHint": "Every automatic extraction incurs AI costs and uses the monthly AI provider budget. Budget and release checks apply unchanged. Default: off.",
     "saved": "Setting saved."
+  }
+,
+  "ServiceContracts": {
+    "title": "Service contracts",
+    "description": "Contracts with service providers with term, notice period and automatic renewal. The latest notice date appears in the deadline list with a 14 day lead time. Computed dates are for orientation and must be checked against the contract.",
+    "toCheck": "Orientation, to be verified",
+    "loadError": "The service contracts could not be loaded.",
+    "empty": "No service contracts recorded yet.",
+    "createTitle": "Create service contract",
+    "editTitle": "Edit service contract",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "actions": "Actions",
+    "confirmDelete": "Really delete this service contract?",
+    "saveError": "Saving failed.",
+    "choose": "Please choose",
+    "noProperty": "No property",
+    "unknown": "Unknown",
+    "openEnded": "open ended",
+    "until": "until",
+    "renewal": "renewal by {count} months",
+    "hint": "Notice periods in months end at the month end if the contract end is the last day of a month. The calculation does not replace a legal review.",
+    "field": {
+      "title": "Title",
+      "provider": "Service provider",
+      "property": "Property",
+      "term": "Term",
+      "startsAt": "Start",
+      "endsAt": "End (optional)",
+      "notice": "Notice period",
+      "unit": "Unit",
+      "autoRenewal": "Automatic renewal in months (optional)",
+      "cancelledAt": "Cancelled on (optional)",
+      "notes": "Notes",
+      "nextEnd": "Next possible end",
+      "noticeDate": "Latest notice date",
+      "status": "Status"
+    },
+    "unit": {
+      "days": "days",
+      "months": "months"
+    },
+    "status": {
+      "running": "Running",
+      "open_ended": "Open ended",
+      "cancelled": "Cancelled",
+      "expired": "Ended"
+    }
   }
 }

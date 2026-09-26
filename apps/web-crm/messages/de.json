@@ -59,6 +59,7 @@
     "dashboard": "Start",
     "calendar": "Kalender",
     "deadlines": "Fristen",
+    "serviceContracts": "Dienstleisterverträge",
     "entity": {
       "contact": "Kontakt",
       "property": "Objekt",
@@ -985,7 +986,8 @@
       "contract_termination": "Kündigung",
       "meter_calibration": "Eichfrist Zähler",
       "bank_consent": "Ablauf Bankzustimmung",
-      "document_retention_end": "Ende Aufbewahrung"
+      "document_retention_end": "Ende Aufbewahrung",
+      "service_contract_notice": "Kündigungsfrist Dienstleistervertrag"
     },
     "status": {
       "open": "offen",
@@ -4435,5 +4437,55 @@
     "hint": "Beim Abruf der Gmail-Postfächer wird für jeden neuen PDF-Anhang, dessen Betreff, Absender oder Dateiname auf eine Rechnung hindeutet (Rechnung, Invoice, Beleg, RE-), genau eine KI-Extraktion gestartet. Das Ergebnis ist ein Vorschlag unter Rechnungseingang, gebucht wird nichts.",
     "costHint": "Jede automatische Extraktion verursacht KI-Kosten und belastet das Monatsbudget der KI-Anbieter. Budget- und Freigabeprüfungen gelten unverändert. Standard: aus.",
     "saved": "Einstellung gespeichert."
+  }
+,
+  "ServiceContracts": {
+    "title": "Dienstleisterverträge",
+    "description": "Verträge mit Dienstleistern mit Laufzeit, Kündigungsfrist und automatischer Verlängerung. Der späteste Kündigungstermin erscheint in der Fristenliste mit 14 Tagen Vorfrist. Berechnete Termine sind Orientierung und anhand des Vertrags zu prüfen.",
+    "toCheck": "Orientierung, zu prüfen",
+    "loadError": "Die Dienstleisterverträge konnten nicht geladen werden.",
+    "empty": "Noch keine Dienstleisterverträge erfasst.",
+    "createTitle": "Dienstleistervertrag anlegen",
+    "editTitle": "Dienstleistervertrag ändern",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "actions": "Aktionen",
+    "confirmDelete": "Diesen Dienstleistervertrag wirklich löschen?",
+    "saveError": "Speichern fehlgeschlagen.",
+    "choose": "Bitte wählen",
+    "noProperty": "Kein Objekt",
+    "unknown": "Unbekannt",
+    "openEnded": "unbefristet",
+    "until": "bis",
+    "renewal": "Verlängerung um {count} Monate",
+    "hint": "Monatsfristen enden am Monatsende, wenn das Vertragsende ein Monatsletzter ist. Die Berechnung ersetzt keine rechtliche Prüfung.",
+    "field": {
+      "title": "Bezeichnung",
+      "provider": "Dienstleister",
+      "property": "Objekt",
+      "term": "Laufzeit",
+      "startsAt": "Beginn",
+      "endsAt": "Ende (optional)",
+      "notice": "Kündigungsfrist",
+      "unit": "Einheit",
+      "autoRenewal": "Automatische Verlängerung in Monaten (optional)",
+      "cancelledAt": "Gekündigt am (optional)",
+      "notes": "Notizen",
+      "nextEnd": "Nächstmögliches Vertragsende",
+      "noticeDate": "Spätester Kündigungstermin",
+      "status": "Status"
+    },
+    "unit": {
+      "days": "Tage",
+      "months": "Monate"
+    },
+    "status": {
+      "running": "Laufend",
+      "open_ended": "Unbefristet",
+      "cancelled": "Gekündigt",
+      "expired": "Beendet"
+    }
   }
 }
