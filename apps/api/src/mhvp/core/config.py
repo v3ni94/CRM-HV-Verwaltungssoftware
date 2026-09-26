@@ -81,6 +81,8 @@ class Settings(BaseSettings):
     # Public URLs for the OAuth redirect (API callback) and the return to the CRM screen.
     api_public_url: str | None = None
     web_crm_url: str | None = None
+    # Public URL of the portal (M21), used in invitation texts (M30-01); omitted if unset.
+    web_portal_url: str | None = None
     # WhatsApp Business Platform (Meta Cloud API, M35): app level secrets shared by all
     # tenants of this Meta App; per tenant config (phone_number_id, access token, templates)
     # lives in ``mhvp.sla.models.WhatsAppConfig``. Webhook verification (GET) compares

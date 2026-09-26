@@ -3051,6 +3051,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/invitation-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Einladung als E-Mail-Entwurf anlegen (neuer Einladungscode, Vier-Augen-Freigabe)
+         * @description Mail draft in the outbox, nothing is sent. The code is never part of the response.
+         */
+        post: operations["helper_invitation_draft_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/invitation-letter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Einladung als Anschreiben (PDF, neuer Einladungscode)
+         * @description Letter on the tenant letterhead (M6 renderer). POST, not GET: issuing the letter
+         *     rotates the invitation code, a prefetch must not invalidate a code already handed out.
+         */
+        post: operations["helper_invitation_letter_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_letter_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/resend": {
         parameters: {
             query?: never;
@@ -12100,6 +12141,11 @@ export interface components {
             email: string;
             /** Expires Days */
             expires_days?: number | null;
+            /**
+             * Invitation As Mail Draft
+             * @default true
+             */
+            invitation_as_mail_draft: boolean;
             /**
              * Kind
              * @default helper
@@ -24052,6 +24098,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    helper_invitation_draft_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    helper_invitation_letter_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_letter_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
             };
             /** @description Validation Error */
             422: {

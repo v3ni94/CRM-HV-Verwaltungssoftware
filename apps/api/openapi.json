@@ -9753,6 +9753,11 @@
             ],
             "title": "Expires Days"
           },
+          "invitation_as_mail_draft": {
+            "default": true,
+            "title": "Invitation As Mail Draft",
+            "type": "boolean"
+          },
           "kind": {
             "default": "helper",
             "pattern": "^(helper|tenant|owner)$",
@@ -36659,6 +36664,112 @@
           }
         },
         "summary": "Gehilfenzugang beenden",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/invitation-draft": {
+      "post": {
+        "description": "Mail draft in the outbox, nothing is sent. The code is never part of the response.",
+        "operationId": "helper_invitation_draft_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Helper Invitation Draft Api V1 Handover Protocols  Protocol Id  Helper Access  Grant Id  Invitation Draft Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einladung als E-Mail-Entwurf anlegen (neuer Einladungscode, Vier-Augen-Freigabe)",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/helper-access/{grant_id}/invitation-letter": {
+      "post": {
+        "description": "Letter on the tenant letterhead (M6 renderer). POST, not GET: issuing the letter\nrotates the invitation code, a prefetch must not invalidate a code already handed out.",
+        "operationId": "helper_invitation_letter_api_v1_handover_protocols__protocol_id__helper_access__grant_id__invitation_letter_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einladung als Anschreiben (PDF, neuer Einladungscode)",
         "tags": [
           "handover"
         ]

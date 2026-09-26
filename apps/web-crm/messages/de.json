@@ -3294,7 +3294,12 @@
       "confirmRevoke": "Zugang wirklich beenden?",
       "tokenTitle": "Einladungscode",
       "tokenHelp": "Kein Postfach hinterlegt, daher kein E-Mail-Entwurf möglich. Bitte den Code einmalig an den Gehilfen übermitteln.",
-      "mailDrafted": "Ein E-Mail-Entwurf mit dem Einladungscode wurde im Postausgang angelegt und wartet auf Freigabe."
+      "mailDrafted": "Ein E-Mail-Entwurf mit dem Einladungscode wurde im Postausgang angelegt und wartet auf Freigabe.",
+      "mailDraftOption": "Einladung als E-Mail-Entwurf anlegen",
+      "tokenHelpManual": "Kein E-Mail-Entwurf angelegt. Der Code wird nur jetzt angezeigt; alternativ später ein Anschreiben herunterladen.",
+      "invitationDraft": "E-Mail-Entwurf erstellen",
+      "invitationLetter": "Anschreiben herunterladen",
+      "confirmNewCode": "Es wird ein neuer Einladungscode erzeugt, ein bisher übermittelter Code wird ungültig. Fortfahren?"
     },
     "dispatch": {
       "title": "Zustellung an die Beteiligten",

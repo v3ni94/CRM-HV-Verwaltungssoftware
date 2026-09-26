@@ -221,6 +221,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/helper-access$`) },
   { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/helper-access/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/helper-access/${ID}/resend$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/helper-access/${ID}/invitation-draft$`) },
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/helper-access/${ID}/invitation-letter$`) },
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)(/order)?$`) },
   { method: "PATCH", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
