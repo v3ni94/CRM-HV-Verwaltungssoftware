@@ -3248,19 +3248,22 @@
       "all": "Alle",
       "rental": "Mietverwaltung",
       "hoa": "WEG",
-      "sev": "SEV"
+      "sev": "SEV",
+      "noOwner": "Ohne Eigentümer"
     },
     "scopeTitle": {
       "all": "Objekte",
       "rental": "Mietverwaltung",
       "hoa": "WEG-Objekte",
-      "sev": "Sondereigentumsverwaltung"
+      "sev": "Sondereigentumsverwaltung",
+      "noOwner": "Mietverwaltung ohne Eigentümer"
     },
     "emptyScope": {
       "all": "Keine Objekte vorhanden.",
       "rental": "Keine Objekte in Mietverwaltung.",
       "hoa": "Keine WEG-Objekte.",
-      "sev": "Keine WEG-Objekte mit aktivierter SEV und hinterlegten Mietverträgen."
+      "sev": "Keine WEG-Objekte mit aktivierter SEV und hinterlegten Mietverträgen.",
+      "noOwner": "Alle Objekte in Mietverwaltung haben einen Eigentümer."
     },
     "sevHint": "Angezeigt werden WEG-Objekte mit Sondereigentumsverwaltung, für die mindestens ein Mietvertrag hinterlegt ist.",
     "energyCertificate": {
@@ -3285,6 +3288,35 @@
       },
       "save": "Energieausweis speichern",
       "saved": "Gespeichert."
+    },
+    "noOwnerHint": "Ohne Objekteigentümer findet die Zuordnung keinen Vermieter, die Mietverträge bleiben offen. Eigentümer auf der Objektseite festlegen.",
+    "ownerColumn": "Eigentümer",
+    "ownerMissing": "Eigentümer fehlt",
+    "owner": {
+      "title": "Eigentümer",
+      "set": "Eigentümer festlegen",
+      "replace": "Eigentümer ersetzen",
+      "perUnit": "Eigentum wird je Einheit geführt.",
+      "missing": "Eigentümer fehlt",
+      "missingHint": "Ohne Eigentümer werden Mietverträge nicht zugeordnet.",
+      "since": "seit {date}",
+      "share": "Anteil {share}",
+      "contact": "Kontakt",
+      "searchPlaceholder": "Name suchen, mindestens 2 Zeichen",
+      "validFrom": "Eigentümer seit",
+      "validFromHelp": "Ohne Angabe gilt der Verwaltungsbeginn, sonst der 1. Januar des laufenden Jahres.",
+      "validFromReplaceHelp": "Der bisherige Eigentümer endet am Vortag.",
+      "sharePercent": "Anteil in Prozent (optional)",
+      "chooseContact": "Bitte einen Kontakt aus der Suche wählen.",
+      "shareInvalid": "Anteil muss größer 0 und höchstens 100 sein.",
+      "dateRequired": "Zum Ersetzen bitte das Datum angeben.",
+      "confirmSet": "{name} ab {date} als Eigentümer festlegen?",
+      "confirmReplace": "{name} ab {date} als Eigentümer festlegen und den bisherigen Eigentümer zum Vortag beenden?",
+      "defaultStart": "Verwaltungsbeginn bzw. 1. Januar",
+      "next": "Weiter",
+      "confirm": "Bestätigen",
+      "back": "Zurück",
+      "cancel": "Abbrechen"
     }
   },
   "AiChat": {

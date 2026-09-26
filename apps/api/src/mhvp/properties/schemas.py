@@ -3,7 +3,7 @@
 import uuid
 from datetime import date
 from decimal import Decimal
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -119,6 +119,9 @@ class PropertySummary(_Out):
     city: str | None
     street: str | None
     house_number: str | None
+    owner_missing: bool = Field(
+        default=False, description="Mietverwaltung ohne aktiven Objekteigentümer"
+    )
 
 
 class PropertyPage(BaseModel):
@@ -280,6 +283,35 @@ class OwnerOut(_Out):
     valid_from: date
     valid_to: date | None
     legal_entity_id: uuid.UUID | None = None
+
+
+class OwnerSetIn(_In):
+    contact_id: uuid.UUID
+    valid_from: date | None = Field(
+        default=None, description="Beginn; ohne Angabe Verwaltungsbeginn oder 1. Januar des Jahres"
+    )
+    share_percent: Qty | None = Field(default=None, gt=0, le=100)
+    replace: bool = Field(
+        default=False, description="Bestehenden Eigentümer zum Vortag beenden und ersetzen"
+    )
+
+
+class CurrentOwnerOut(BaseModel):
+    id: uuid.UUID
+    party_id: uuid.UUID
+    party_name: str
+    contact_id: uuid.UUID | None
+    contact_name: str | None
+    share_percent: Qty | None
+    valid_from: date
+    valid_to: date | None
+    legal_entity_id: uuid.UUID | None
+
+
+class OwnerSetOut(BaseModel):
+    status: Literal["created", "unchanged", "replaced"]
+    owner: CurrentOwnerOut
+    ended: list[CurrentOwnerOut] = Field(default_factory=list)
 
 
 class BankAccountIn(_Period):

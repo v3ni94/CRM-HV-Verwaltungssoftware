@@ -233,6 +233,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: new RegExp(`^banking/accounts/${ID}/legal-entity-default$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/bank-account-options$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/legal-entities$`) },
+  // Eigentümer festlegen (operator 26.09.2026): Objekteigentümer der Mietverwaltung.
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/owners$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/owner$`) },
   // Rechnung zu Bankumsatz abgleichen und Zahlungsvorschlag (M11-finapi Stage 3, G2 gesperrt).
   { method: "GET", pattern: new RegExp(`^banking/invoice-matching/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^banking/invoice-matching/${ID}/match$`) },
