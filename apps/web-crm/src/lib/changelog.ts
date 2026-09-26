@@ -17,6 +17,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.22.1",
+    date: "26.09.2026",
+    title: "SSH-Härtung: Passwortanmeldung bleibt aktiv",
+    changes: [
+      "Server: Härtungsskript lässt die Passwortanmeldung standardmäßig aktiv, Abschaltung nur auf ausdrücklichen Wunsch",
+      "Runbook Server-Recovery um den Vorfall vom 26.09.2026 ergänzt",
+    ],
+  },
+  {
     version: "1.22.0",
     date: "26.09.2026",
     title:

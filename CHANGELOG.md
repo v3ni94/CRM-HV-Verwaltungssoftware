@@ -5,6 +5,11 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.22.1 (26.09.2026) SSH-Härtung: Passwortanmeldung bleibt aktiv
+
+- Server: `scripts/server/harden-ssh.sh` lässt die Passwortanmeldung standardmäßig aktiv und schaltet sie nur mit `--nur-schluessel` ab. Drop-in heißt jetzt `00-mhvp-ssh.conf` und hat Vorrang vor fremden Drop-ins.
+- Runbook Server-Recovery: Vorfall 26.09.2026 (Drop-in `90-hardening.conf` sperrte Passwort-Login nach cloud-init-Reset) dokumentiert.
+
 ## 1.22.0 (26.09.2026) Master-Prompt-Umsetzung Welle 6: Ticket-Mails mit TNR#, Regel-Engine Stufe 2, Portal (Eigentümer, Beirat, Formulare, Schwarzes Brett, PWA), WEG (Darlehen, Versicherung, Überleitung, Protokoll, Einsicht), Telefonie, Abgleichbericht
 
 - Tickets und Mail: Mailverlauf im Ticket als Thread mit Anhängen (Vorschau Bild und PDF, Download, Als Beleg erfassen), Antwortformular im Ticket (An, Kopie, Betreff, Text, Anhänge) mit Vier-Augen-Freigabe wie bisher; jede Antwort trägt die Ticketnummer im Betreff (TNR#412), eingehende Mails mit TNR# werden dem Ticket nur zugeordnet, wenn der Absender am Ticket beteiligt ist, sonst als Vorschlag angezeigt; Antwort auf ein erledigtes Ticket öffnet es wieder und benachrichtigt den Bearbeiter; Postfachzugriff wird auch bei Einzelmails geprüft (Regel M19-06, Migration 0119)
