@@ -5,6 +5,10 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.23.1 (26.09.2026) Upload-Seite für Immoware24-Listen
+
+- Importe: neue Seite "Immoware24 Listenimport" (/importe/immoware24-listen) mit Upload im Browser für Objektdaten, Kontaktlisten (Rolle je Datei, auch Dienstleister) und die Zuordnung von Eigentümern und Mietern zu Einheiten. Je Abschnitt Testlauf und Übernehmen mit Bestätigung, Bericht mit Zählern, nicht gefundenen und mehrdeutigen Namen sowie Konflikten. Neuer Endpunkt POST /imports/immoware24/lists/zuordnung.
+
 ## 1.23.0 (26.09.2026) Objektbezüge im Kontakt, CSV-Zuordnung, Gmail-Archivierung, Ticketfilter
 
 - Kontakte: Abschnitt "Beziehungen zu Objekten und Einheiten" (Mieter, Eigentümer, Kategorie, Zeitraum, Status) unten auf der Kontaktseite, neuer Reiter "Tickets" mit allen personenbezogenen Tickets. Rollen Mieter und Eigentümer werden aus Verträgen, Eigentümerzuordnungen und Objektakte-Zuordnungen automatisch abgeleitet, Backfill über POST /contacts/roles/recompute.

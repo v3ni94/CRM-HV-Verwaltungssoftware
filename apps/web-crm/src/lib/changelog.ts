@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.23.1",
+    date: "26.09.2026",
+    title: "Upload-Seite für Immoware24-Listen",
+    changes: [
+      "Importe: Objektdaten, Kontaktlisten und Zuordnung von Eigentümern und Mietern im Browser hochladen, mit Testlauf, Übernehmen und Bericht",
+    ],
+  },
+  {
     version: "1.23.0",
     date: "26.09.2026",
     title: "Objektbezüge im Kontakt, CSV-Zuordnung, Gmail-Archivierung, Ticketfilter",
