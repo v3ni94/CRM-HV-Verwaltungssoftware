@@ -5,6 +5,12 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.24.1 (26.09.2026) Adressen nachtragen, Einheitenliste und Einheitenseite
+
+- Importe: Abschnitt "1a. Adressen nachtragen" auf der Listenimport-Seite: Straße und Hausnummer aus den Objektnamen ableiten oder eine Adressliste (Objektnummer, Straße, Hausnummer, PLZ, Ort; CSV oder XLSX) hochladen. Füllt nur leere Felder, meldet Abweichungen als Konflikt.
+- Objekte: Einheiten natürlich sortiert (1, 2, 10 statt 1, 10, 2), bei rein numerischen Nummern dreistellige Anzeige. Nummer und Bezeichnung verlinken auf die Einheitenseite. Neue Spalten Eigentümer, Mieter ("kein Mieter") und Fläche.
+- Einheitenseite: alle Stammdaten (Typ, Lage, Fläche, Miteigentumsanteile, Umlageschlüssel, Zusatzfelder, Altsystem-Notizen), Karten Eigentümer und Mieter mit Kontaktlink, seit, Anteil und Miete, beendete Verträge aufklappbar. Neue Endpunkte GET /units/{id}/occupants und /properties/{id}/units?with_occupants=true.
+
 ## 1.24.0 (26.09.2026) Ticketfilter, Erledigungsnotiz, Hallo Heidi, Wissensdatenbank, Assistent-Rolle
 
 - Tickets und Mail: Umschalter "Erledigte anzeigen" in den Übersichten, erledigte Vorgänge sind standardmäßig ausgeblendet. Kontakt-, Objekt- und Einheitenseite zeigen die volle Historie. Statusauswahl im Ticket nach Rolle: Administratoren wählen jeden Status, andere nur die erlaubten Folgestatus.
