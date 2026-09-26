@@ -69,4 +69,11 @@ describe("InspectionPanel", () => {
     expect(url).toBe(`/api/bff/hoa/inspection-requests/${ID}/transition`);
     expect(JSON.parse(String((init as RequestInit).body))).toEqual({ status: "provided", note: null, delivery_kind: "on_site" });
   });
+
+  it("confirms a completed status step (review 26.09.2026)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ ...request, status: "provided" })));
+    renderIntl(<InspectionPanel request={request} documents={documents} />);
+    await userEvent.click(screen.getByRole("button", { name: "Bereitstellen" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Gespeichert.");
+  });
 });

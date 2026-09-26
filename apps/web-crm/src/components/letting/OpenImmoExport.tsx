@@ -7,17 +7,28 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 type MissingField = { field: string; label: string; path: string; message: string };
+/** Schema check (M26-02): `xsd` when the operator stored the OpenImmo XSD, otherwise
+ * `structure` (documented elements only) with the operator notice "XSD nicht hinterlegt". */
+type SchemaResult = {
+  mode: "xsd" | "structure";
+  valid: boolean;
+  errors: string[];
+  notice: string | null;
+  xsd_configured: boolean;
+};
 type CheckResult = {
   complete: boolean;
   missing: MissingField[];
   warnings: string[];
   hints: string[];
   image_count: number;
+  schema?: SchemaResult;
 };
 
 /** OpenImmo 1.2.7 export (M26-02, docs/rules/M26-02.md): read only, no portal upload. Runs
- * the completeness check first and shows the missing fields. The download is offered when the
- * check passed or when the user explicitly ticks "trotzdem exportieren" (force=true). */
+ * the completeness and schema checks first and shows missing fields and schema errors. The
+ * download is offered when both checks passed or when the user explicitly ticks "trotzdem
+ * exportieren" (force=true). */
 export function OpenImmoExport({ listingId }: { listingId: string }) {
   const t = useTranslations("Broker.detail.openimmo");
   const [busy, setBusy] = useState(false);
@@ -39,7 +50,9 @@ export function OpenImmoExport({ listingId }: { listingId: string }) {
     }
   }
 
-  const canDownload = result !== null && (result.complete || force);
+  const schemaValid = result?.schema ? result.schema.valid : true;
+  const blocked = result !== null && (!result.complete || !schemaValid);
+  const canDownload = result !== null && (!blocked || force);
   const query = force ? "?force=true" : "";
   const base = `/api/bff/letting/listings/${listingId}/openimmo`;
 
@@ -69,7 +82,7 @@ export function OpenImmoExport({ listingId }: { listingId: string }) {
           {error}
         </p>
       ) : null}
-      {result && result.complete ? (
+      {result && !blocked ? (
         <p role="status" className={`${ui.notice} mt-3`}>
           {t("complete")}
         </p>
@@ -84,7 +97,36 @@ export function OpenImmoExport({ listingId }: { listingId: string }) {
               </li>
             ))}
           </ul>
-          <label className="mt-3 flex items-center gap-2">
+        </div>
+      ) : null}
+      {result?.schema ? (
+        <div
+          role={result.schema.valid ? undefined : "status"}
+          className={`${result.schema.valid ? ui.help : ui.notice} mt-3`}
+          data-testid="openimmo-schema"
+        >
+          <p>
+            {result.schema.valid
+              ? t(result.schema.mode === "xsd" ? "schemaValidXsd" : "schemaValidStructure")
+              : t(result.schema.mode === "xsd" ? "schemaInvalidXsd" : "schemaInvalidStructure")}
+          </p>
+          {result.schema.errors.length > 0 ? (
+            <ul className="list-disc pl-5" data-testid="openimmo-schema-errors">
+              {result.schema.errors.map((e) => (
+                <li key={e}>{e}</li>
+              ))}
+            </ul>
+          ) : null}
+          {result.schema.notice ? (
+            <p className={ui.help} data-testid="openimmo-schema-notice">
+              {result.schema.notice}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {blocked ? (
+        <div className="mt-3">
+          <label className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={force}

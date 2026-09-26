@@ -9,8 +9,12 @@ import { NotesPanel } from "@/components/contacts/NotesPanel";
 import { RelationsPanel } from "@/components/contacts/RelationsPanel";
 import { RolePills } from "@/components/contacts/RolePills";
 import { SepaMandatesPanel } from "@/components/contacts/SepaMandatesPanel";
-import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
+import {
+  TicketsSection,
+  type TicketSummary,
+} from "@/components/tickets/TicketsSection";
 import { serverApi, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { formatDate, formatDateTime } from "@/lib/format";
 
 import { loadContact } from "./load";
@@ -60,31 +64,49 @@ export default async function ContactDetailPage({
     getTranslations("ContactForm"),
     getTranslations("Labels"),
   ]);
-  const tab: Tab = (TABS as readonly string[]).includes(sp.tab ?? "") ? (sp.tab as Tab) : "stammdaten";
+  const tab: Tab = (TABS as readonly string[]).includes(sp.tab ?? "")
+    ? (sp.tab as Tab)
+    : "stammdaten";
   const contact = await loadContact(id);
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   const canDelete = me.data?.permissions.includes("contacts:delete") ?? false;
-  const canApproveBank = me.data?.permissions.includes("contacts:approve") ?? false;
+  const canApproveBank =
+    me.data?.permissions.includes("contacts:approve") ?? false;
   const currentUserId = me.data?.user_id ?? null;
+  const isPlatformAdmin = me.data?.is_platform_admin ?? false;
+  const canDismissCall =
+    me.data?.permissions.includes("communication:update") ?? false;
   const notes =
     tab === "notizen"
-      ? ((await api.GET("/api/v1/contacts/{contact_id}/notes", { params: { path: { contact_id: id } } })).data ?? [])
+      ? ((
+          await api.GET("/api/v1/contacts/{contact_id}/notes", {
+            params: { path: { contact_id: id } },
+          })
+        ).data ?? [])
       : [];
   const consents =
     tab === "einwilligungen"
-      ? ((await api.GET("/api/v1/contacts/{contact_id}/consents", { params: { path: { contact_id: id } } })).data ?? [])
+      ? ((
+          await api.GET("/api/v1/contacts/{contact_id}/consents", {
+            params: { path: { contact_id: id } },
+          })
+        ).data ?? [])
       : [];
   const mandates =
     tab === "bankverbindungen"
-      ? ((await api.GET("/api/v1/contacts/{contact_id}/sepa-mandates", { params: { path: { contact_id: id } } })).data ?? [])
+      ? ((
+          await api.GET("/api/v1/contacts/{contact_id}/sepa-mandates", {
+            params: { path: { contact_id: id } },
+          })
+        ).data ?? [])
       : [];
   // Personal tickets: linked contact or initiator (any_contact_id), deduplicated by id.
   const tickets =
     tab === "tickets"
       ? [
           ...new Map(
-            ((await api.GET("/api/v1/tickets", { params: { query: { any_contact_id: id, limit: 100 } } })).data ?? []).map(
+            ((await api.GET("/api/v1/tickets", { params: { query: { any_contact_id: id, limit: 100, include_closed: true } } })).data ?? []).map(
               (x) => [String((x as { id: unknown }).id), x],
             ),
           ).values(),
@@ -93,9 +115,15 @@ export default async function ContactDetailPage({
   const relations =
     (await api.GET("/api/v1/contacts/{contact_id}/relations", { params: { path: { contact_id: id } } })).data ?? [];
   // Anrufliste (13.5, A70): typisierter BFF-Fetch, kein generierter Client nötig.
-  const callsRes = tab === "kommunikation" ? await serverFetch(`/api/v1/contacts/${id}/calls`) : null;
-  const calls: CallOut[] = callsRes?.ok ? ((await callsRes.json()) as CallOut[]) : [];
-  const canCreateTicket = me.data?.permissions.includes("tickets:create") ?? false;
+  const callsRes =
+    tab === "kommunikation"
+      ? await serverFetch(`/api/v1/contacts/${id}/calls`)
+      : null;
+  const calls: CallOut[] = callsRes?.ok
+    ? ((await callsRes.json()) as CallOut[])
+    : [];
+  const canCreateTicket =
+    me.data?.permissions.includes("tickets:create") ?? false;
   const person = contact.kind === "person";
 
   return (
@@ -108,7 +136,9 @@ export default async function ContactDetailPage({
           <h1 className={ui.title}>{contact.display_name}</h1>
           <p className="text-xs text-muted">
             {tl(`kind.${contact.kind}`)}
-            {contact.types.length ? `, ${contact.types.map((x) => tl(`type.${x}`)).join(", ")}` : ""}
+            {contact.types.length
+              ? `, ${contact.types.map((x) => tl(`type.${x}`)).join(", ")}`
+              : ""}
             {contact.blocked ? `, ${t("blocked")}` : ""}
           </p>
           <p className="mt-1">
@@ -116,11 +146,18 @@ export default async function ContactDetailPage({
           </p>
         </div>
         <div className="ml-auto">
-          <ContactActions id={contact.id} name={contact.display_name} canDelete={canDelete} />
+          <ContactActions
+            id={contact.id}
+            name={contact.display_name}
+            canDelete={canDelete}
+          />
         </div>
       </div>
 
-      <nav aria-label={t("tabs.master")} className="flex gap-1 border-b border-border text-sm">
+      <nav
+        aria-label={t("tabs.master")}
+        className="flex gap-1 border-b border-border text-sm"
+      >
         {TABS.map((key) => (
           <Link
             key={key}
@@ -141,7 +178,10 @@ export default async function ContactDetailPage({
               <Row label={tf("title")} value={contact.title} />
               <Row label={tf("firstName")} value={contact.first_name} />
               <Row label={tf("lastName")} value={contact.last_name} />
-              <Row label={tf("dateOfBirth")} value={formatDate(contact.date_of_birth)} />
+              <Row
+                label={tf("dateOfBirth")}
+                value={formatDate(contact.date_of_birth)}
+              />
             </>
           ) : (
             <>
@@ -151,11 +191,31 @@ export default async function ContactDetailPage({
           )}
           <Row label={tf("position")} value={contact.position} />
           <Row label={tf("language")} value={contact.language} />
-          <Row label={tf("preferredChannel")} value={contact.preferred_channel ? tl(`channel.${contact.preferred_channel}`) : null} />
+          <Row
+            label={tf("preferredChannel")}
+            value={
+              contact.preferred_channel
+                ? tl(`channel.${contact.preferred_channel}`)
+                : null
+            }
+          />
           <Row label={tf("tags")} value={contact.tags.join(", ")} />
-          <Row label={tf("notes")} value={contact.notes ? <span className="whitespace-pre-wrap">{contact.notes}</span> : null} />
-          <Row label={t("created")} value={formatDateTime(contact.created_at)} />
-          <Row label={t("updated")} value={formatDateTime(contact.updated_at)} />
+          <Row
+            label={tf("notes")}
+            value={
+              contact.notes ? (
+                <span className="whitespace-pre-wrap">{contact.notes}</span>
+              ) : null
+            }
+          />
+          <Row
+            label={t("created")}
+            value={formatDateTime(contact.created_at)}
+          />
+          <Row
+            label={t("updated")}
+            value={formatDateTime(contact.updated_at)}
+          />
         </dl>
       ) : null}
 
@@ -175,7 +235,8 @@ export default async function ContactDetailPage({
                     {[a.street, a.house_number].filter(Boolean).join(" ")}
                     {a.addition ? <>, {a.addition}</> : null}
                     <br />
-                    {[a.postal_code, a.city].filter(Boolean).join(" ")} {a.country}
+                    {[a.postal_code, a.city].filter(Boolean).join(" ")}{" "}
+                    {a.country}
                   </li>
                 ))}
               </ul>
@@ -229,42 +290,88 @@ export default async function ContactDetailPage({
 
       {tab === "bankverbindungen" ? (
         contact.bank_accounts.length ? (
-          <div className="overflow-x-auto">
-            <p className="mb-2 text-xs text-muted">{t("bankApproval.hint")}</p>
-<table className="w-full text-sm">
-            <thead className="border-b border-border text-left text-xs text-muted">
-              <tr>
-                <th className="py-1 pr-3 font-medium">{tf("iban")}</th>
-                <th className="py-1 pr-3 font-medium">{tf("bic")}</th>
-                <th className="py-1 pr-3 font-medium">{tf("bankName")}</th>
-                <th className="py-1 pr-3 font-medium">{tf("holder")}</th>
-                <th className="py-1 pr-3 font-medium">{tf("validFrom")}</th>
-                <th className="py-1 pr-3 font-medium">{tf("validTo")}</th>
-                <th className="py-1 font-medium">{t("bankApproval.title")}</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-muted">{t("bankApproval.hint")}</p>
+            {/* Phone width: one card per account so the release status and buttons stay visible
+                without horizontal scrolling (review 26.09.2026, contacts B1). */}
+            <ul
+              className="flex flex-col gap-2 sm:hidden"
+              data-testid="bank-accounts-cards"
+            >
               {contact.bank_accounts.map((b) => (
-                <tr key={b.id} className="border-b border-border">
-                  <td className="py-1 pr-3 font-mono">{b.iban_masked}</td>
-                  <td className="py-1 pr-3">{b.bic ?? ""}</td>
-                  <td className="py-1 pr-3">{b.bank_name ?? ""}</td>
-                  <td className="py-1 pr-3">{b.holder ?? ""}</td>
-                  <td className="py-1 pr-3">{formatDate(b.valid_from)}</td>
-                  <td className="py-1 pr-3">{formatDate(b.valid_to)}</td>
-                  <td className="py-1">
+                <li
+                  key={b.id}
+                  className={`${ui.card} flex flex-col gap-1 text-sm`}
+                >
+                  <span className="font-mono whitespace-nowrap">
+                    {b.iban_masked}
+                  </span>
+                  <span className="text-xs text-muted">
+                    {[b.bank_name, b.bic, b.holder].filter(Boolean).join(", ")}
+                  </span>
+                  <span className="text-xs text-muted">
+                    {tf("validFrom")} {formatDate(b.valid_from)}
+                    {b.valid_to
+                      ? `, ${tf("validTo")} ${formatDate(b.valid_to)}`
+                      : ""}
+                  </span>
+                  <div className="mt-1">
                     <BankAccountApproval
                       contactId={contact.id}
                       account={b}
                       canApprove={canApproveBank}
                       currentUserId={currentUserId}
+                      isPlatformAdmin={isPlatformAdmin}
                     />
-                  </td>
-                </tr>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-</div>
+            </ul>
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border text-left text-xs text-muted">
+                  <tr>
+                    <th className="py-1 pr-3 font-medium">{tf("iban")}</th>
+                    <th className="py-1 pr-3 font-medium">{tf("bic")}</th>
+                    <th className="py-1 pr-3 font-medium">{tf("bankName")}</th>
+                    <th className="py-1 pr-3 font-medium">{tf("holder")}</th>
+                    <th className="py-1 pr-3 font-medium">{tf("validFrom")}</th>
+                    <th className="py-1 pr-3 font-medium">{tf("validTo")}</th>
+                    <th className="py-1 font-medium">
+                      {t("bankApproval.title")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contact.bank_accounts.map((b) => (
+                    <tr key={b.id} className="border-b border-border align-top">
+                      <td className="py-1.5 pr-3 font-mono whitespace-nowrap">
+                        {b.iban_masked}
+                      </td>
+                      <td className="py-1.5 pr-3">{b.bic ?? ""}</td>
+                      <td className="py-1.5 pr-3">{b.bank_name ?? ""}</td>
+                      <td className="py-1.5 pr-3">{b.holder ?? ""}</td>
+                      <td className="py-1.5 pr-3 whitespace-nowrap">
+                        {formatDate(b.valid_from)}
+                      </td>
+                      <td className="py-1.5 pr-3 whitespace-nowrap">
+                        {formatDate(b.valid_to)}
+                      </td>
+                      <td className="py-1.5">
+                        <BankAccountApproval
+                          contactId={contact.id}
+                          account={b}
+                          canApprove={canApproveBank}
+                          currentUserId={currentUserId}
+                          isPlatformAdmin={isPlatformAdmin}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : (
           <p className="text-sm text-muted">{t("none")}</p>
         )
@@ -272,7 +379,9 @@ export default async function ContactDetailPage({
 
       {tab === "bankverbindungen" ? (
         <section className="mt-4">
-          <h2 className="mb-1 text-sm font-semibold">{t("sepaMandates.title")}</h2>
+          <h2 className="mb-1 text-sm font-semibold">
+            {t("sepaMandates.title")}
+          </h2>
           <SepaMandatesPanel contactId={contact.id} mandates={mandates} />
         </section>
       ) : null}
@@ -281,7 +390,11 @@ export default async function ContactDetailPage({
       {tab === "kommunikation" ? (
         <section>
           <h2 className="mb-1 text-sm font-semibold">{t("calls.title")}</h2>
-          <CallsPanel calls={calls} canCreateTicket={canCreateTicket} />
+          <CallsPanel
+            calls={calls}
+            canCreateTicket={canCreateTicket}
+            canDismiss={canDismissCall}
+          />
         </section>
       ) : null}
       {tab === "notizen" ? <NotesPanel contactId={contact.id} notes={notes} /> : null}

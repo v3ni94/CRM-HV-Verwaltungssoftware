@@ -49,14 +49,17 @@ export function MatchingMetricsCard({ initialFrom, initialTo }: { initialFrom?: 
   const [to, setTo] = useState(initialTo ?? isoToday(now));
   const [data, setData] = useState<MatchingMetrics | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     const params = new URLSearchParams();
     if (from) params.set("from", from);
     if (to) params.set("to", to);
+    setLoading(true);
     bff<MatchingMetrics>(`/api/bff/banking/matching-metrics?${params.toString()}`).then((r) => {
       if (cancelled) return;
+      setLoading(false);
       if (r.ok) {
         setData(r.data);
         setError(null);
@@ -88,6 +91,11 @@ export function MatchingMetricsCard({ initialFrom, initialTo }: { initialFrom?: 
       {error ? (
         <p role="alert" className={`${ui.alert} mt-3`}>
           {error}
+        </p>
+      ) : null}
+      {loading && !data ? (
+        <p role="status" className="mt-3 text-sm text-muted">
+          {t("loading")}
         </p>
       ) : null}
       {data ? (

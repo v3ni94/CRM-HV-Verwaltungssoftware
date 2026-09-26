@@ -16,3 +16,13 @@ debtor account reservation.
 latest notice date), `service_contract_routers.py` (`/api/v1/service-contracts`). The notice
 date feeds the deadline list (`mhvp.workspace.jobs`, kind `service_contract_notice`, 14 days
 lead time). Plan: `docs/plans/M9-06-dienstleistervertraege.md`.
+
+## Performance (Review 26.09.2026)
+
+`GET /contracts`, `/contracts/{id}/versions`, `/sepa-mandates` and `/contracts/{id}/deposits`
+build their output with batched helpers (`_outs`, `_mandates_out`, `_deposits_out`: IN lists
+instead of one query per row). `GET /contracts` and `GET /sepa-mandates` paginate in the
+pattern of `GET /tickets` (`page`, `page_size`, headers `X-Total-Count`, `X-Page`,
+`X-Page-Size`; default `limit=200`). Indexes on `contract(tenant_id, end_date |
+termination_date | kind)` and `sepa_mandate(tenant_id, status)` (migration 0127). See
+`docs/reviews/2026-09-26-performance.md`.

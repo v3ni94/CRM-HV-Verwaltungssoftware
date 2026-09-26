@@ -37,9 +37,14 @@ export default async function BankPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("notice")}</p>
-      <Link href="/bank/zahlungen" className="text-sm font-medium hover:underline">
-        {t("ordersLink")}
-      </Link>
+      <nav aria-label={t("subpages")} className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium">
+        <Link href="/bank/zahlungen" className="hover:underline">
+          {t("ordersLink")}
+        </Link>
+        <Link href="/bank/lastschriften" className="hover:underline">
+          {t("directDebitsLink")}
+        </Link>
+      </nav>
       <BankAccountOverview />
       <FinApiConnections />
       <StatementImport />

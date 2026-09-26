@@ -11,9 +11,16 @@ Entfernung nur mit v2 nach mindestens sechs Monaten Vorlauf).
   Ziele nur in Entwicklung mit `MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS=true`), `event_types`
   (Liste aus dem Katalog unten oder `*`) und optionaler `description`. Die Antwort enthält
   das Geheimnis (`secret`) genau einmal; es wird verschlüsselt gespeichert.
-* Verwalten: `GET /api/v1/tenant/webhooks`, `PATCH .../{id}` (aktiv, Ereignistypen),
-  `GET .../{id}/deliveries` (Protokoll), `POST .../deliveries/{id}/redeliver` (manuelle
-  Neuzustellung). Recht `tenant_settings:update`.
+* Verwalten: `GET /api/v1/tenant/webhooks` (Liste mit letzter Zustellung:
+  `last_delivery_status`, `last_delivery_status_code`, `last_delivery_at`, sowie
+  `created_at`), `GET .../webhooks/event-types` (Katalog mit Beschreibung), `PATCH .../{id}`
+  (aktiv, Ereignistypen), `DELETE .../{id}` (löscht mit Zustellprotokoll, Recht
+  `webhooks:delete`), `GET .../{id}/deliveries` (Protokoll, `page`, `page_size`),
+  `POST /api/v1/tenant/webhook-deliveries/{id}/redeliver` (manuelle Neuzustellung). Rechte
+  `webhooks:read|create|update|delete`.
+* CRM: Pflegeseite unter Einstellungen, Webhooks (Karte mit `tenant_settings:update`),
+  siehe `docs/handbuch/kommunikation.md`. Eine Testzustellung gibt es nicht; beim Anlegen
+  entsteht `webhook_subscription.created` für bestehende Abonnements.
 * Jeder Mandant sieht und erhält nur eigene Ereignisse (RLS, `domain_event.tenant_id`).
 
 ## Zustellung und Signatur

@@ -7,7 +7,19 @@ import { useCallback, useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-type Change = { field: string; old: string | null; new: string | null; confidence?: number };
+type Change = { field: string; old: string | null; new: string | null; confidence?: number; label?: string | null };
+type CallInfo = {
+  caller_phone: string | null;
+  caller_phone_raw: string | null;
+  caller_phone_label: string | null;
+  caller_name: string | null;
+  property_hint: string | null;
+  property_label: string | null;
+  unit_hint: string | null;
+  unit_label: string | null;
+  concern: string | null;
+  callback_requested: boolean;
+};
 type ContactSnapshot = {
   id: string;
   display_name: string;
@@ -28,6 +40,8 @@ type Proposal = {
   ticket_id: string;
   decision: "pending" | "accepted" | "modified" | "rejected";
   proposed: {
+    kind?: "call";
+    call?: CallInfo;
     title: string;
     contact_id: string | null;
     contact_display_name: string | null;
@@ -92,7 +106,11 @@ export function TicketProposals({ ticketId }: { ticketId: string }) {
     void load();
   }, [load]);
 
-  async function act(proposal: Proposal, action: "accept" | "reject" | "correct", body?: unknown) {
+  async function act(
+    proposal: Proposal,
+    action: "accept" | "reject" | "correct" | "accept-and-reply",
+    body?: unknown,
+  ) {
     setBusy(proposal.id);
     setError(null);
     setNotice(null);
@@ -168,6 +186,27 @@ export function TicketProposals({ ticketId }: { ticketId: string }) {
               {p.proposed.reason ? ` · ${t("reason", { reason: p.proposed.reason })}` : ""}
               {p.proposed.source?.ai === "used" ? ` · ${t("aiUsed")}` : ` · ${t("aiSkipped")}`}
             </p>
+            {p.proposed.call ? (
+              <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-sm" data-testid="call-info">
+                <dt className="text-muted">{t("call.phone")}</dt>
+                <dd>
+                  {p.proposed.call.caller_phone ?? ""}
+                  {p.proposed.call.caller_phone_label ? ` (${t(`call.label.${p.proposed.call.caller_phone_label}`)})` : ""}
+                </dd>
+                <dt className="text-muted">{t("call.name")}</dt>
+                <dd>{p.proposed.call.caller_name ?? t("call.unknown")}</dd>
+                <dt className="text-muted">{t("call.property")}</dt>
+                <dd>{p.proposed.call.property_label ?? p.proposed.call.property_hint ?? t("call.unknown")}</dd>
+                <dt className="text-muted">{t("call.unit")}</dt>
+                <dd>{p.proposed.call.unit_label ?? p.proposed.call.unit_hint ?? t("call.unknown")}</dd>
+                {p.proposed.call.concern ? (
+                  <>
+                    <dt className="text-muted">{t("call.concern")}</dt>
+                    <dd>{p.proposed.call.concern}</dd>
+                  </>
+                ) : null}
+              </dl>
+            ) : null}
             {p.proposed.bank_change_mentioned ? (
               <p className={ui.notice} data-testid="bank-hint">
                 {p.proposed.bank_hint ?? t("bankHint")}
@@ -199,7 +238,9 @@ export function TicketProposals({ ticketId }: { ticketId: string }) {
                   e.preventDefault();
                   void act(p, "correct", {
                     contact_id: draftContact || null,
-                    changes: draft.filter((c) => (c.new ?? "").trim()).map((c) => ({ field: c.field, old: c.old, new: c.new })),
+                    changes: draft
+                      .filter((c) => (c.new ?? "").trim())
+                      .map((c) => ({ field: c.field, old: c.old, new: c.new, ...(c.label ? { label: c.label } : {}) })),
                   });
                 }}
               >
@@ -273,6 +314,17 @@ export function TicketProposals({ ticketId }: { ticketId: string }) {
                 >
                   {t("accept")}
                 </button>
+                {p.proposed.kind === "call" && p.proposed.reply_draft ? (
+                  <button
+                    type="button"
+                    className={ui.primary}
+                    disabled={busy === p.id || !p.proposed.contact_id}
+                    title={t("acceptAndReplyHint")}
+                    onClick={() => void act(p, "accept-and-reply")}
+                  >
+                    {t("acceptAndReply")}
+                  </button>
+                ) : null}
                 <button type="button" className={ui.secondary} disabled={busy === p.id} onClick={() => startEdit(p)}>
                   {t("correct")}
                 </button>

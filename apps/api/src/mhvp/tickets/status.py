@@ -4,20 +4,30 @@ Single place for the rules that apply whenever a ticket changes its status, rega
 entry point (PATCH, bulk action, merge, later mail intake): allowed transitions, completion
 checks, the ``TicketEvent`` row, ``resolved_at``, the SLA clock (``mhvp.sla``), the domain event
 ``ticket.status_changed``, playbook learning and mail archiving on closing statuses. The
-routers only validate input and call :func:`transition_status`.
+routers only validate input and call :func:`transition_status`. Assignment of the primary
+assignee goes through :func:`assign_ticket` (event ``ticket.assigned``, notification,
+``TicketAssignee.primary``).
+
+Mail archiving is an event consumer: it is registered with ``after_commit`` and runs only once
+the status change is committed (review 26.09.2026, M14), so a failed commit never leaves
+archived mails behind an open ticket.
 """
 
 import logging
 import uuid
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.core.db.tenancy import after_commit
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.tickets.models import Ticket, TicketEvent, TicketStatus, TicketTemplate
+from mhvp.tickets.models import Ticket, TicketAssignee, TicketEvent, TicketStatus, TicketTemplate
+from mhvp.workspace.services import notify
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +47,57 @@ TICKET_FLOW: dict[TicketStatus, set[TicketStatus]] = {
 
 # Statuses that end a ticket; they set resolved_at, stop the SLA clock and archive mails.
 CLOSING_STATUSES = frozenset({TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED})
+
+
+class ResolutionKind(StrEnum):
+    """Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``
+    setzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt."""
+
+    STAMMDATEN_ERGAENZT = "stammdaten_ergaenzt"
+    HANDWERKER_BEAUFTRAGT = "handwerker_beauftragt"
+    AUSKUNFT_ERTEILT = "auskunft_erteilt"
+    WEITERGELEITET = "weitergeleitet"
+    KEIN_HANDLUNGSBEDARF = "kein_handlungsbedarf"
+    ABGELEHNT = "abgelehnt"
+    ZUSAMMENGEFUEHRT = "zusammengefuehrt"
+    SONSTIGES = "sonstiges"
+
+
+RESOLUTION_LABELS: dict[str, str] = {
+    ResolutionKind.STAMMDATEN_ERGAENZT: "Stammdaten ergänzt",
+    ResolutionKind.HANDWERKER_BEAUFTRAGT: "Handwerker beauftragt",
+    ResolutionKind.AUSKUNFT_ERTEILT: "Auskunft erteilt",
+    ResolutionKind.WEITERGELEITET: "Weitergeleitet",
+    ResolutionKind.KEIN_HANDLUNGSBEDARF: "Kein Handlungsbedarf",
+    ResolutionKind.ABGELEHNT: "Abgelehnt",
+    ResolutionKind.ZUSAMMENGEFUEHRT: "Zusammengeführt",
+    ResolutionKind.SONSTIGES: "Sonstiges",
+}
+
+
+class ResolutionIn(BaseModel):
+    """Erledigungsnotiz beim Setzen auf done, closed oder rejected: Art plus Freitext, der
+    Freitext ist bei ``sonstiges`` Pflicht."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: ResolutionKind
+    note: str | None = Field(default=None, max_length=4000)
+
+    @model_validator(mode="after")
+    def _note_for_other(self) -> "ResolutionIn":
+        self.note = (self.note or "").strip() or None
+        if self.kind is ResolutionKind.SONSTIGES and not self.note:
+            raise ValueError("Bei Sonstiges ist eine Beschreibung erforderlich.")
+        return self
+
+
+def resolution_text(kind: str | None, note: str | None) -> str:
+    """Lesbare Erledigung, zum Beispiel ``Stammdaten ergänzt: Telefonnummer nachgetragen``."""
+    if not kind:
+        return (note or "").strip()
+    label = RESOLUTION_LABELS.get(kind, kind)
+    return f"{label}: {note.strip()}" if note and note.strip() else label
 
 
 def check_required_extra_fields(
@@ -78,6 +139,18 @@ async def queue_learn_playbook(session: AsyncSession, settings: Any, ticket: Tic
             )
         except Exception:
             log.warning("could not queue playbook learning", extra={"ticket_id": str(ticket.id)})
+
+
+async def record_resolution_example(session: AsyncSession, ticket: Ticket) -> None:
+    """Speichert je Abschluss ein Lernbeispiel (``AiExample``, Aufgabe ``ticket_resolution``);
+    ein Fehler darf den Statuswechsel nie stören (eigener Savepoint)."""
+    from mhvp.communication.suggest import resolution_example
+
+    try:
+        async with session.begin_nested():
+            session.add(await resolution_example(session, ticket))
+    except Exception:
+        log.warning("could not store resolution example", extra={"ticket_id": str(ticket.id)})
 
 
 async def assert_transition_allowed(
@@ -126,21 +199,32 @@ async def transition_status(
     *,
     bulk: bool = False,
     skip_flow: bool = False,
+    resolution: ResolutionIn | None = None,
 ) -> bool:
     """Applies a status change with all side effects. Returns False when the status is
     unchanged. Raises ``ProblemError`` for a forbidden transition or failed completion checks.
     The caller holds the row lock (``with_for_update``) and commits. ``skip_flow`` marks the
-    event with ``admin_override`` when the flow would have forbidden the change."""
+    event with ``admin_override`` when the flow would have forbidden the change. A closing
+    status requires ``resolution`` (Erledigungsnotiz), also for the admin bypass; it is stored
+    on the ticket and as a learning example (``AiExample``, task ``ticket_resolution``)."""
     if new_status is ticket.status:
         return False
+    closing = new_status in CLOSING_STATUSES
     admin_override = skip_flow and new_status not in TICKET_FLOW[ticket.status]
     await assert_transition_allowed(session, ticket, new_status, skip_flow=skip_flow)
+    if closing and resolution is None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Beim Abschluss ist eine Erledigungsnotiz (resolution) erforderlich.",
+        )
     previous = ticket.status
     data: dict[str, Any] = {"from": previous.value, "to": new_status.value}
     if bulk:
         data["bulk"] = True
     if admin_override:
         data["admin_override"] = True
+    if closing and resolution is not None:
+        data["resolution"] = {"kind": resolution.kind.value, "note": resolution.note}
     session.add(
         TicketEvent(
             tenant_id=ticket.tenant_id,
@@ -151,8 +235,15 @@ async def transition_status(
         )
     )
     ticket.status = new_status
-    closing = new_status in CLOSING_STATUSES
     ticket.resolved_at = datetime.now(UTC) if closing else None
+    if closing and resolution is not None:
+        ticket.resolution_kind = resolution.kind.value
+        ticket.resolution_note = resolution.note
+        ticket.resolved_by = actor_user_id
+    elif not closing:
+        ticket.resolution_kind = None
+        ticket.resolution_note = None
+        ticket.resolved_by = None
     await _sync_sla_clock(session, ticket, closing)
     await emit(
         session,
@@ -163,12 +254,106 @@ async def transition_status(
         actor_user_id=actor_user_id,
         payload={"from": previous.value, "to": new_status.value, "number": ticket.number},
     )
+    if closing:
+        await record_resolution_example(session, ticket)
     if new_status in (TicketStatus.DONE, TicketStatus.CLOSED):
         await queue_learn_playbook(session, settings, ticket)
     if closing:
         # Operator rule: every closing status (done, closed, rejected) archives the linked
-        # mails in the mailbox; the mailbox flag archive_on_ticket_done applies.
-        from mhvp.communication.services import enqueue_archive_for_ticket
+        # mails in the mailbox; the mailbox flag archive_on_ticket_done applies. Consumer of
+        # ticket.status_changed, executed after the commit.
+        after_commit(session, _archive_consumer(session, settings, ticket.tenant_id, ticket.id))
+    return True
 
-        await enqueue_archive_for_ticket(session, settings, ticket.tenant_id, ticket.id)
+
+def _archive_consumer(
+    session: AsyncSession, settings: Any, tenant_id: uuid.UUID, ticket_id: uuid.UUID
+) -> Any:
+    async def _run() -> None:
+        from mhvp.communication import services as communication_services
+
+        await communication_services.enqueue_archive_for_ticket(
+            session, settings, tenant_id, ticket_id
+        )
+
+    return _run
+
+
+async def assign_ticket(
+    session: AsyncSession,
+    ticket: Ticket,
+    user_id: uuid.UUID,
+    actor_user_id: uuid.UUID | None,
+    *,
+    reason: str = "manuell",
+    notify_user: bool = True,
+) -> bool:
+    """Sets the primary assignee with all side effects: ``TicketAssignee`` row with reason
+    (the previous primary row loses its ``primary`` mark, review N3), ``TicketEvent``
+    ``assigned`` with ``from`` and ``to``, notification and domain event ``ticket.assigned``.
+    Returns False when the assignee is unchanged."""
+    if user_id == ticket.assignee_user_id:
+        return False
+    previous = ticket.assignee_user_id
+    ticket.assignee_user_id = user_id
+    rows = (
+        await session.scalars(select(TicketAssignee).where(TicketAssignee.ticket_id == ticket.id))
+    ).all()
+    current = None
+    for row in rows:
+        if row.user_id == user_id:
+            current = row
+        elif row.primary:
+            row.primary = False
+    if current is None:
+        session.add(
+            TicketAssignee(
+                tenant_id=ticket.tenant_id,
+                ticket_id=ticket.id,
+                user_id=user_id,
+                primary=True,
+                reason=reason,
+            )
+        )
+    else:
+        current.primary = True
+        current.reason = reason
+    session.add(
+        TicketEvent(
+            tenant_id=ticket.tenant_id,
+            ticket_id=ticket.id,
+            kind="assigned",
+            user_id=actor_user_id,
+            data={
+                "user_id": str(user_id),
+                "from": str(previous) if previous else None,
+                "to": str(user_id),
+                "reason": reason,
+            },
+        )
+    )
+    if notify_user:
+        await notify(
+            session,
+            tenant_id=ticket.tenant_id,
+            user_id=user_id,
+            kind="ticket_assigned",
+            title=f"Ticket {ticket.number}: {ticket.title}",
+            entity_type="ticket",
+            entity_id=ticket.id,
+        )
+    await emit(
+        session,
+        tenant_id=ticket.tenant_id,
+        type="ticket.assigned",
+        entity_type="ticket",
+        entity_id=ticket.id,
+        actor_user_id=actor_user_id,
+        payload={
+            "from": str(previous) if previous else None,
+            "to": str(user_id),
+            "reason": reason,
+            "number": ticket.number,
+        },
+    )
     return True

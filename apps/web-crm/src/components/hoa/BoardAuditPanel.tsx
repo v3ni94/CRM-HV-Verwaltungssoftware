@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 export type BoardAccess = {
@@ -42,18 +43,17 @@ export function BoardAuditPanel({
   section,
   items,
   contactNames,
-  formatDate,
 }: {
   auditId: string;
   section: BoardSection;
   items: { id: string; label: string }[];
   contactNames: Record<string, string>;
-  formatDate: (value: string | null) => string;
 }) {
   const t = useTranslations("HoaWork");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const [invitation, setInvitation] = useState<string | null>(null);
   const [contactId, setContactId] = useState(section.auditor_contact_ids[0] ?? "");
   const [email, setEmail] = useState("");
@@ -67,6 +67,7 @@ export function BoardAuditPanel({
   async function call<T>(path: string, body?: unknown): Promise<T | null> {
     setBusy(true);
     setError(null);
+    setSaved(false);
     const res = await bff<T>(`/api/bff/hoa/audit-engagements/${auditId}/${path}`, {
       method: "POST",
       body: body === undefined ? "{}" : JSON.stringify(body),
@@ -76,6 +77,7 @@ export function BoardAuditPanel({
       setError(res.message);
       return null;
     }
+    setSaved(true);
     router.refresh();
     return res.data;
   }
@@ -115,6 +117,11 @@ export function BoardAuditPanel({
           {error}
         </p>
       ) : null}
+      {saved && !invitation ? (
+        <p role="status" className={ui.success}>
+          {t("audit.saved")}
+        </p>
+      ) : null}
       <ul className="text-sm">
         {section.access.map((a) => (
           <li key={a.id} className="flex flex-wrap items-center gap-2">
@@ -150,13 +157,13 @@ export function BoardAuditPanel({
           <span className={ui.label}>{t("audit.displayName")}</span>
           <input className={ui.input} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
         </label>
-        <button type="submit" className={ui.button} disabled={busy || !contactId}>
+        <button type="submit" className={ui.primary} disabled={busy || !contactId}>
           {t("audit.grant")}
         </button>
       </form>
       <p className={ui.help}>{t("audit.grantHint")}</p>
       {invitation ? (
-        <p className={ui.success}>
+        <p role="status" className={ui.success}>
           {t("audit.invitationToken")}: <code className="break-all">{invitation}</code>
         </p>
       ) : null}

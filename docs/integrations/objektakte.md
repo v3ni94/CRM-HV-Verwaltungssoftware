@@ -92,7 +92,7 @@ angelegt und im Ergebnis als `invalid` gezählt.
 Signatur über den rohen Inhalt mit `OBJEKTAKTE_WEBHOOK_SECRET`; ohne Geheimnis wird jede
 Zustellung abgewiesen (401). `X-Objektakte-Event` muss zum Inhalt passen (sonst 422).
 Idempotenz über (event, object_number, document.id) in `objektakte_webhook_receipt`
-(Migration 0126): die erste Zustellung wird verarbeitet, jede Wiederholung erhält 200 mit
+(Migration 0132): die erste Zustellung wird verarbeitet, jede Wiederholung erhält 200 mit
 `"status": "duplicate"` und ändert nichts. `object.taken_over` wird als Ereignis
 `objektakte.object_taken_over` protokolliert, weitere Folgen hat es in dieser Stufe nicht.
 Unbekannte Ereignisse werden als `ignored` vermerkt.

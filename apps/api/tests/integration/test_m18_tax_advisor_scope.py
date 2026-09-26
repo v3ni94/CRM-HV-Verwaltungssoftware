@@ -21,6 +21,7 @@ from moto import mock_aws
 from pydantic import SecretStr
 from sqlalchemy import create_engine, text
 
+from mhvp.core.auth.permission_cache import invalidate_permissions
 from mhvp.core.config import Settings
 from mhvp.main import create_app
 from mhvp.platform import services
@@ -168,6 +169,8 @@ def _grant_documents_read_to_tax_advisor(world: World) -> None:
             {"id": str(uuid.uuid4()), "t": str(world.tenant_a), "r": role_id},
         )
     engine.dispose()
+    # The grant bypasses the API, so the per process permission cache must be dropped.
+    invalidate_permissions(world.tenant_a)
 
 
 def test_tax_advisor_scope_limits_ledgers_reports_and_exports(

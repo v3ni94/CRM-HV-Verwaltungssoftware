@@ -68,3 +68,19 @@ describe("PortalFormsAdmin", () => {
     expect(screen.queryByRole("button", { name: "Bearbeiten" })).toBeNull();
   });
 });
+
+describe("PortalFormsAdmin feedback (review 26.09.2026)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("confirms a deactivation and shows the API error of a failed one", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(async () => jsonResponse({ ...TPL, active: false }));
+    const user = userEvent.setup();
+    renderIntl(<PortalFormsAdmin initialTemplates={[TPL]} canManage />);
+    await user.click(screen.getByRole("button", { name: "Deaktivieren" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Gespeichert."));
+    expect(screen.getByText("inaktiv")).toBeInTheDocument();
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(async () => jsonResponse({ title: "Nicht erlaubt", status: 403 }, 403));
+    await user.click(screen.getByRole("button", { name: "Aktivieren" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Nicht erlaubt"));
+  });
+});

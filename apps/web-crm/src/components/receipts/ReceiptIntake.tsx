@@ -78,6 +78,18 @@ function propertyLabel(draft: ReceiptDraft): string {
   return match ? `${match.number} ${match.name}` : (ref ?? "");
 }
 
+const MONEY_FIELDS: ReadonlySet<FieldName> = new Set<FieldName>(["net", "vat", "gross", "section_35a_amount"]);
+const DATE_FIELDS: ReadonlySet<FieldName> = new Set<FieldName>(["invoice_date", "due_date", "discount_until"]);
+
+/** Anzeige eines Vorschlagswerts im UI-Format (Beträge 1.234,56 EUR, Datum TT.MM.JJJJ); die
+ *  Eingabefelder behalten das API-Format. */
+export function displayValue(name: string, value: string | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "";
+  if (MONEY_FIELDS.has(name as FieldName)) return formatEur(value) || value;
+  if (DATE_FIELDS.has(name as FieldName)) return formatDate(value);
+  return value;
+}
+
 function confidenceClass(value: number): string {
   if (value >= 0.85) return ui.badgeSuccess;
   if (value >= 0.6) return ui.badgeWarning;
@@ -271,9 +283,14 @@ export function ReceiptIntake({
           </label>
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{t("intake.paperlessId")}</span>
-            <span className="flex gap-1">
+            <span className="flex flex-col gap-1 sm:flex-row">
               <input className={ui.input} inputMode="numeric" value={paperlessId} onChange={(e) => setPaperlessId(e.target.value)} />
-              <button type="button" className={ui.button} disabled={busy || !paperlessId} onClick={() => void startFromPaperless()}>
+              <button
+                type="button"
+                className={`${ui.button} shrink-0 justify-center whitespace-nowrap`}
+                disabled={busy || !paperlessId}
+                onClick={() => void startFromPaperless()}
+              >
                 {t("intake.paperlessStart")}
               </button>
             </span>
@@ -373,9 +390,9 @@ export function ReceiptIntake({
                   <li key={i}>
                     {t("review.conflictLine", {
                       field: FIELD_ORDER.includes(c.field as FieldName) ? t(`review.fields.${c.field}`) : c.field,
-                      xml: c.xml ?? t("review.conflictMissing"),
+                      xml: c.xml === null ? t("review.conflictMissing") : displayValue(c.field, c.xml),
                       source: t(`review.conflictSource.${c.other_source}`),
-                      other: c.other ?? t("review.conflictMissing"),
+                      other: c.other === null ? t("review.conflictMissing") : displayValue(c.field, c.other),
                     })}{" "}
                     <span className="text-xs">{c.note}</span>
                   </li>
@@ -444,7 +461,7 @@ export function ReceiptIntake({
                     return (
                       <tr key={name} className={conflicting ? "bg-danger-bg" : undefined} data-conflict={conflicting ? "true" : undefined}>
                         <td className="font-medium">{t(`review.fields.${name}`)}</td>
-                        <td>{name === "property_ref" ? (selected.property_suggestions.find((p) => p.property_id === f.value)?.name ?? f.value ?? "") : (f.value ?? "")}</td>
+                        <td>{name === "property_ref" ? (selected.property_suggestions.find((p) => p.property_id === f.value)?.name ?? f.value ?? "") : displayValue(name, f.value)}</td>
                         <td>
                           <span className={confidenceClass(f.confidence)}>{formatConfidence(f.confidence) || "0 %"}</span>
                         </td>
@@ -582,6 +599,7 @@ export function ReceiptIntake({
                   </button>
                 </div>
               </div>
+              {!canConfirm ? <p className={ui.help}>{t("review.confirmHint")}</p> : null}
             </>
           ) : null}
 

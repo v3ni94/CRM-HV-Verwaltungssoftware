@@ -11,7 +11,8 @@ import { TenantSwitcher } from "@/components/shell/TenantSwitcher";
 import { UserMenu } from "@/components/shell/UserMenu";
 import { NotificationBell } from "@/components/workspace/NotificationBell";
 import { ThemeToggle } from "@/components/workspace/ThemeToggle";
-import { redirectIfUnauthenticated, serverApi, sessionContext } from "@/lib/api-server";
+import { redirectIfUnauthenticated, sessionContext } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     getTranslations("Home"),
     sessionContext(),
   ]);
-  const { data: me, response } = await serverApi().GET("/api/v1/auth/me");
+  const { data: me, response } = await getMe();
   redirectIfUnauthenticated(response);
   const can = (p: string) => me?.permissions.includes(p) ?? false;
   const groups: NavGroup[] = [
@@ -44,6 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can("accounting:read") ? [{ href: "/weg", label: t("hoa"), icon: "hoa" }] : []),
         ...(can("properties:read") ? [{ href: "/objekte?art=sev", label: t("sev"), icon: "sev" }] : []),
         ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting"), icon: "letting" }] : []),
+        ...(can("contracts:read") ? [{ href: "/vertraege", label: t("contracts"), icon: "letting" }] : []),
         ...(can("contracts:read")
           ? [{ href: "/dienstleistervertraege", label: t("serviceContracts"), icon: "letting" }]
           : []),

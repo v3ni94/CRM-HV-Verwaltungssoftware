@@ -274,3 +274,36 @@ def test_tenant_separation_on_filters(client: TestClient, world: World) -> None:
         client.get("/api/v1/tickets", params={"assignee_user_id": str(tech)}, headers=h_b)
     )
     assert not any(t["id"] == ticket_a["id"] for t in result_b)
+
+
+def test_mine_includes_additional_assignees(client: TestClient, world: World) -> None:
+    """Review N8: ``mine`` uses the same rule as ``assignee_user_id`` (primary or
+    additional assignee)."""
+    h = bearer(login(client, world, "m19fadmin"))
+    h_tech = bearer(login(client, world, "m19ftech"))
+    primary = _ok(
+        client.post("/api/v1/tickets", json={"title": f"Mine primär {RUN}"}, headers=h), 201
+    )
+    secondary = _ok(
+        client.post("/api/v1/tickets", json={"title": f"Mine zusätzlich {RUN}"}, headers=h), 201
+    )
+    foreign = _ok(
+        client.post("/api/v1/tickets", json={"title": f"Mine fremd {RUN}"}, headers=h), 201
+    )
+    tech = str(world.users["m19ftech"])
+    _ok(
+        client.patch(f"/api/v1/tickets/{primary['id']}", json={"assignee_user_id": tech}, headers=h)
+    )
+    _ok(
+        client.post(
+            f"/api/v1/tickets/{secondary['id']}/assignees",
+            json={"user_id": tech, "reason": "Kompetenz Heizung"},
+            headers=h,
+        ),
+        201,
+    )
+    ids = {
+        t["id"] for t in _ok(client.get("/api/v1/tickets", params={"mine": True}, headers=h_tech))
+    }
+    assert {primary["id"], secondary["id"]} <= ids
+    assert foreign["id"] not in ids

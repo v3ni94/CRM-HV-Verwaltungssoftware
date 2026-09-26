@@ -49,6 +49,7 @@ export function InspectionPanel({ request, documents }: { request: InspectionReq
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const [packageResult, setPackageResult] = useState<{ sha256: string; entries: { file: string; sha256: string }[] } | null>(null);
   const base = `/api/bff/hoa/inspection-requests/${request.id}`;
   const canPackage = request.status === "released" || request.status === "provided";
@@ -56,6 +57,7 @@ export function InspectionPanel({ request, documents }: { request: InspectionReq
   const run = async (path: string, body: unknown, after?: (data: never) => void) => {
     setBusy(true);
     setError(null);
+    setSaved(false);
     const res = await bff<never>(`${base}/${path}`, { method: "POST", body: JSON.stringify(body) });
     setBusy(false);
     if (!res.ok) {
@@ -63,6 +65,7 @@ export function InspectionPanel({ request, documents }: { request: InspectionReq
       return;
     }
     after?.(res.data);
+    setSaved(true);
     router.refresh();
   };
   const transition = (status: string) =>
@@ -168,6 +171,11 @@ export function InspectionPanel({ request, documents }: { request: InspectionReq
           ))}
         </ul>
       </section>
+      {saved ? (
+        <p role="status" className={ui.success}>
+          {t("saved")}
+        </p>
+      ) : null}
       {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
     </div>
   );

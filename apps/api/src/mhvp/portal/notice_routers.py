@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document
@@ -67,9 +68,26 @@ def _validate(valid_from: date, valid_to: date | None, audience: str) -> None:
         )
 
 
-async def _document(session: Any, document_id: uuid.UUID | None) -> None:
-    if document_id is not None and await session.get(Document, document_id) is None:
+# Document visibility (6.9.6) a notice audience needs: the attachment is served through the
+# notice, so the document must already be released for every group the notice addresses.
+AUDIENCE_VISIBILITY = {"tenant": ("tenant",), "owner": ("owner",), "all": ("tenant", "owner")}
+AUDIENCE_LABELS = {"tenant": "Mieter", "owner": "Eigentümer"}
+
+
+async def _document(session: Any, document_id: uuid.UUID | None, audience: str) -> None:
+    if document_id is None:
+        return
+    document = await session.get(Document, document_id)
+    if document is None:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Dokument nicht gefunden.")
+    visibility = set(document.visibility or [])
+    missing = [g for g in AUDIENCE_VISIBILITY[audience] if g not in visibility]
+    if missing:
+        groups = ", ".join(AUDIENCE_LABELS[g] for g in missing)
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail=f"Das Dokument ist nicht für die Zielgruppe freigegeben (fehlt: {groups}).",
+        )
 
 
 def _out(n: PropertyNotice, today: date) -> dict[str, Any]:
@@ -126,7 +144,7 @@ async def create_notice(
     async with tenant_tx(request, principal) as session:
         if await session.get(Property, property_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        await _document(session, body.document_id)
+        await _document(session, body.document_id, body.audience)
         row = PropertyNotice(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -172,8 +190,10 @@ async def patch_notice(
         if body.clear_document:
             row.document_id = None
         elif "document_id" in changes:
-            await _document(session, body.document_id)
+            await _document(session, body.document_id, audience)
             row.document_id = body.document_id
+        elif row.document_id is not None and audience != row.audience:
+            await _document(session, row.document_id, audience)
         for field in ("title", "body"):
             if field in changes:
                 setattr(row, field, changes[field])
@@ -336,5 +356,8 @@ async def portal_notice_document(
         return Response(
             content=data,
             media_type=document.mime_type,
-            headers={"Content-Disposition": f'attachment; filename="{document.filename}"'},
+            headers={
+                "Content-Disposition": content_disposition("attachment", document.filename),
+                "X-Content-Type-Options": "nosniff",
+            },
         )

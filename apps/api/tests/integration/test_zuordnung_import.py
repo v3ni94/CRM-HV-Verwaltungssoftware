@@ -82,7 +82,7 @@ async def _run(factory: Any, tenant_id: uuid.UUID, text: str, *, apply: bool) ->
         factory,
         tenant_id,
         None,
-        objektdaten.parse_objektdaten(text),
+        objektdaten.parse_objektdaten(text).rows,
         apply=apply,
         start=START,
         start_assumed=False,
@@ -103,7 +103,7 @@ async def _scenario(settings: Any) -> None:
         prepared = objektdaten.prepare(objektdaten.parse_objektdaten(OBJEKTE), {})
         await objektdaten.import_prepared(factory, tenant, None, prepared, apply=True)
         rows = kontakte.parse_kontakte(EIGENTUEMER, ContactRoleCode.EIGENTUEMER, "eigentuemer.csv")
-        rows += kontakte.parse_kontakte(MIETER, ContactRoleCode.MIETER, "mieter.csv")
+        rows.extend(kontakte.parse_kontakte(MIETER, ContactRoleCode.MIETER, "mieter.csv"))
         await kontakte.import_prepared(factory, tenant, None, kontakte.prepare(rows), apply=True)
 
         dry = await _run(factory, tenant, OBJEKTE, apply=False)

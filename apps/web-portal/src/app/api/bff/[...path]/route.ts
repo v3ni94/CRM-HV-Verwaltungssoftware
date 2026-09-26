@@ -56,6 +56,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/board\/engagements$/ },
   { method: "GET", pattern: new RegExp(`^portal/board/engagements/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^portal/board/engagements/${ID}/notes$`) },
+  // A76: reports of the engagement and the board statement on a report version (text only).
+  { method: "GET", pattern: new RegExp(`^portal/board/engagements/${ID}/reports$`) },
+  { method: "POST", pattern: new RegExp(`^portal/board/engagements/${ID}/reports/${ID}/statement$`) },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */

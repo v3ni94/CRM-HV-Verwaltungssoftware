@@ -54,4 +54,23 @@ describe("TicketFilters", () => {
     await userEvent.click(screen.getByTestId("filter-reset"));
     expect(push).toHaveBeenCalledWith("/tickets");
   });
+
+  it("toggles erledigt=1 and keeps other filters", async () => {
+    currentParams = new URLSearchParams({ status: "new", page: "3" });
+    renderIntl(<TicketFilters meUserId="u1" />);
+    const toggle = await screen.findByTestId("filter-closed");
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(toggle).toHaveTextContent("Erledigte anzeigen");
+    await userEvent.click(toggle);
+    expect(push).toHaveBeenLastCalledWith("/tickets?status=new&erledigt=1");
+  });
+
+  it("removes erledigt when switched off", async () => {
+    currentParams = new URLSearchParams({ erledigt: "1" });
+    renderIntl(<TicketFilters meUserId="u1" />);
+    const toggle = await screen.findByTestId("filter-closed");
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(toggle);
+    expect(push).toHaveBeenLastCalledWith("/tickets");
+  });
 });

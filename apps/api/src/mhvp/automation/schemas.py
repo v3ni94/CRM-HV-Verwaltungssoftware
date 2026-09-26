@@ -190,13 +190,18 @@ _ACTION_MODELS: dict[str, type[Action]] = {
 }
 
 
-def parse_actions(raw: list[dict[str, Any]]) -> list[Action]:
+def parse_actions(raw: list[dict[str, Any]], *, stored: bool = False) -> list[Action]:
+    """``stored=False`` (API input) refuses ``secret_enc``: the ciphertext is set only by the
+    server (``seal_actions``), a client gives the plaintext ``secret`` once (Review 1.22 Nr. 11).
+    ``stored=True`` parses rows from the database, which carry ``secret_enc``."""
     parsed: list[Action] = []
     for item in raw:
         kind = item.get("type") if isinstance(item, dict) else None
         model = _ACTION_MODELS.get(str(kind))
         if model is None:
             raise ValueError(f"Unbekannte Aktion: {kind!r} (erlaubt: {', '.join(ACTION_TYPES)})")
+        if not stored and kind == "webhook" and item.get("secret_enc") is not None:
+            raise ValueError("secret_enc wird nur intern gesetzt; bitte secret angeben.")
         parsed.append(model.model_validate(item))
     return parsed
 

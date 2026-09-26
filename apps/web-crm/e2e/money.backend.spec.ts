@@ -44,6 +44,10 @@ test.describe("money paths against the API @backend", () => {
     const ledger = (await call<{ id: string }>("POST", "/accounting/ledgers", { legal_entity_id: entity, template_id: template.id }, 201)).id;
     const revenue = (await call<{ id: string }>("POST", `/accounting/ledgers/${ledger}/accounts`, { number: "061000", name: "Mieteinnahmen", category: "revenue", type: "income" }, 201)).id;
     await call("PUT", `/accounting/ledgers/${ledger}/payment-type-accounts`, { payment_type_code: "rent", account_id: revenue });
+    // Tenant default first (the API refuses a property override without it), then the object.
+    await call("PUT", "/accounting/dunning-settings", {
+      levels: [{ level: 1, min_days_overdue: 14, text: "Zahlungserinnerung" }],
+    });
     await call("PUT", "/accounting/dunning-settings", {
       property_id: prop.id,
       levels: [{ level: 1, min_days_overdue: 14, text: "Zahlungserinnerung" }],

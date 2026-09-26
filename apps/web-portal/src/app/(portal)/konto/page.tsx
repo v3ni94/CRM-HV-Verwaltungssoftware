@@ -25,26 +25,34 @@ export default async function AccountPage() {
       {statement.items.length === 0 ? (
         <p className={ui.notice}>{t("empty")}</p>
       ) : (
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("contract")}</th>
-              <th>{t("dueDate")}</th>
-              <th>{t("amount")}</th>
-              <th>{t("remaining")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {statement.items.map((item, i) => (
-              <tr key={i}>
-                <td>{item.contract_number}</td>
-                <td>{format.dateTime(new Date(item.due_date), { day: "2-digit", month: "2-digit", year: "numeric" })}</td>
-                <td>{formatAmount(item.amount)} EUR</td>
-                <td>{formatAmount(item.remaining)} EUR</td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th scope="col">{t("contract")}</th>
+                <th scope="col">{t("dueDate")}</th>
+                <th scope="col" className="num">
+                  {t("amount")}
+                </th>
+                <th scope="col" className="num">
+                  {t("remaining")}
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {statement.items.map((item, i) => (
+                <tr key={i}>
+                  <td>{item.contract_number}</td>
+                  <td className="whitespace-nowrap">
+                    {format.dateTime(new Date(item.due_date), { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  </td>
+                  <td className="num whitespace-nowrap">{formatAmount(item.amount)} EUR</td>
+                  <td className="num whitespace-nowrap">{formatAmount(item.remaining)} EUR</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

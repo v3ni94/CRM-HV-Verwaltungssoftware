@@ -90,3 +90,9 @@ lesend (Frage 8.3 offen, kein Upload).
 * Annahme A-048 (`docs/ASSUMPTIONS.md`): Vergleich der Options-ID mit `exact`, Gesamtzahl nach
   lokaler Nachprüfung nur für die aktuelle Seite korrigiert.
 
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: `mhvp.documents.paperless_search`, Endpunkte für Objekt, Ticket und Datei-Proxy, `DmsDocumentsPanel.tsx` in Ticket- und Objektseite, Pflege der Feld-IDs unter Einstellungen, DMS; Wiederverwendung durch Paperless-Eingang (M14) und Mail-Vorbereitung (M34).
+* Tests: `tests/unit/test_documents_paperless_search.py`, `test_m31_dms.py`. Keine offenen Punkte in diesem Plan.

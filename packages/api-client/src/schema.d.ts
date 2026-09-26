@@ -648,7 +648,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Rechnungseingang */
+        /**
+         * Rechnungseingang
+         * @description Rechnungen, neueste zuerst. Paginierung wie ``GET /tickets`` (Kopfzeilen
+         *     ``X-Total-Count``, ``X-Page``, ``X-Page-Size``), Antwort bleibt eine Liste.
+         */
         get: operations["list_invoices_api_v1_accounting_invoices_get"];
         put?: never;
         /** Eingangsrechnung erfassen */
@@ -941,7 +945,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Journal */
+        /**
+         * Journal
+         * @description Journal des Buchungskreises. Paginierung wie ``GET /tickets``: die Antwort bleibt eine
+         *     Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page`` und ``X-Page-Size``;
+         *     ``offset`` bleibt für bestehende Aufrufer erhalten.
+         */
         get: operations["journal_api_v1_accounting_ledgers__ledger_id__entries_get"];
         put?: never;
         /** Buchungssatz als Entwurf */
@@ -1430,6 +1439,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/examples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lernbeispiele (Wissensdatenbank)
+         * @description Bestätigte Lernbeispiele des Mandanten, neueste zuerst, optional nach Aufgabe gefiltert
+         *     (unter anderem ``ticket_resolution`` aus Erledigungsnotizen).
+         */
+        get: operations["list_examples_api_v1_ai_examples_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/fast-table-import": {
         parameters: {
             query?: never;
@@ -1446,6 +1476,26 @@ export interface paths {
          */
         put: operations["put_fast_table_import_api_v1_ai_fast_table_import_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/import-runs/{import_id}/apply-role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importlauf: Rolle nachträglich setzen
+         * @description Adds the role to every contact the import run created; existing roles are kept.
+         */
+        post: operations["apply_import_role_api_v1_ai_import_runs__import_id__apply_role_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3351,7 +3401,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Verträge */
+        /**
+         * Verträge
+         * @description Verträge nach Nummer und Version. Paginierung wie ``GET /tickets``: die Antwort bleibt
+         *     eine Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page``, ``X-Page-Size``.
+         */
         get: operations["list_contracts_api_v1_contracts_get"];
         put?: never;
         /** Vertrag anlegen */
@@ -4593,6 +4647,29 @@ export interface paths {
         patch: operations["patch_audit_item_api_v1_hoa_audit_items__item_id__patch"];
         trace?: never;
     };
+    "/api/v1/hoa/audit-reports/{report_id}/board-statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Beiratsstellungnahme zum Prüfbericht erfassen (PÜ09, nur Text)
+         * @description Records the statement of the board on a report version as text. It has no release
+         *     effect: neither the report nor the statement (Abrechnung) changes status, and the report
+         *     figures stay untouched. A later statement replaces the text; the previous one is kept in
+         *     the history of the report content.
+         */
+        post: operations["set_board_statement_api_v1_hoa_audit_reports__report_id__board_statement_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/audits": {
         parameters: {
             query?: never;
@@ -4628,6 +4705,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/audits/{audit_id}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gebuchte Positionen zur Auswahl als Prüfposition (Filter Konto, Lieferant, Datum)
+         * @description Posted journal entries of the community in the engagement period (or a narrower date
+         *     range inside it) with their accounts and, where an invoice is booked, the vendor. Read
+         *     only: the selection itself is ``POST /hoa/audits/{id}/items``; already selected entries are
+         *     flagged. At most ``MAX_CANDIDATES`` rows, ordered by booking date.
+         */
+        get: operations["audit_candidates_api_v1_hoa_audits__audit_id__candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/audits/{audit_id}/items": {
         parameters: {
             query?: never;
@@ -4652,7 +4752,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Prüfberichte eines Prüfauftrags (PÜ09) */
+        get: operations["list_reports_api_v1_hoa_audits__audit_id__reports_get"];
         put?: never;
         /** Prüfbericht (PÜ09) */
         post: operations["create_report_api_v1_hoa_audits__audit_id__reports_post"];
@@ -4819,7 +4920,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Status des Versicherungsfalls */
+        /** Status oder Beschluss des Versicherungsfalls */
         patch: operations["patch_claim_api_v1_hoa_insurance_claims__claim_id__patch"];
         trace?: never;
     };
@@ -4886,6 +4987,29 @@ export interface paths {
         put?: never;
         /** Darlehensposition erfassen */
         post: operations["add_loan_item_api_v1_hoa_loans__loan_id__items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/loans/{loan_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ratenplan als Orientierung (W10, A78)
+         * @description Annuity plan (instalment given) or linear plan (term given) from principal, rate, term,
+         *     instalment and start (`calc.loan_schedule`), plus the comparison of the planned repayment
+         *     and interest per month with the booked items. Nothing is posted; the loan contract
+         *     prevails (note_text).
+         */
+        get: operations["get_loan_schedule_api_v1_hoa_loans__loan_id__schedule_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5541,6 +5665,27 @@ export interface paths {
         put?: never;
         /** Kostenposition mit Verteilungsgrundlage */
         post: operations["add_cost_api_v1_hoa_statements__statement_id__costs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/statements/{statement_id}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Versionsvergleich zweier Hausgeldabrechnungen (D14)
+         * @description ``against`` is the older version (old), ``statement_id`` the newer one (new). Both must
+         *     belong to the same ledger (community) and year, otherwise 422; both need a snapshot.
+         */
+        get: operations["diff_hoa_statement_api_v1_hoa_statements__statement_id__diff_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7012,6 +7157,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/call-assistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Telefonassistenz (Hallo Heidi): Erkennungsmuster der Protokoll-Mails */
+        get: operations["get_call_assistant_api_v1_mail_call_assistant_get"];
+        /**
+         * Telefonassistenz (Hallo Heidi): Erkennungsmuster speichern
+         * @description Absendermuster (Teil der Absenderadresse) und Kennwörter (Betreff, im Text nur mit
+         *     beschrifteter Rufnummer). Leere Listen nutzen die eingebauten Muster.
+         */
+        put: operations["put_call_assistant_api_v1_mail_call_assistant_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/ingest": {
         parameters: {
             query?: never;
@@ -7075,7 +7242,13 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Postfach entfernen */
+        /**
+         * Postfach entfernen
+         * @description Soft delete (Review 26.09.2026, M12): the mailbox is deactivated (no sync, no send,
+         *     credentials removed, no longer a default mailbox) and disappears from the settings; its
+         *     messages keep the mailbox binding, so they stay visible only to administrators and the
+         *     users the mailbox was shared with, never to every member.
+         */
         delete: operations["delete_mailbox_api_v1_mail_mailboxes__mailbox_id__delete"];
         options?: never;
         head?: never;
@@ -7127,8 +7300,32 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Vorgangsliste */
+        /**
+         * Vorgangsliste (ohne Text, mit Vorschau)
+         * @description Rows carry ``body_preview`` (200 characters) instead of ``body`` and ``body_html``
+         *     (Review 26.09.2026, M3); ``GET /mail/messages/{id}`` delivers the full text.
+         */
         get: operations["messages_api_v1_mail_messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anzahl der Nachrichten je Filter
+         * @description Count with the same filters and visibility as the list (badge "Freigaben", M3).
+         */
+        get: operations["messages_count_api_v1_mail_messages_count_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7198,7 +7395,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Entwurf freigeben und senden */
+        /**
+         * Entwurf freigeben und senden
+         * @description Freigabe und Versand über ``approve_and_send`` (Vier-Augen oder Direktversand nach
+         *     Regel M20-03, siehe dort).
+         */
         post: operations["approve_api_v1_mail_messages__message_id__approve_post"];
         delete?: never;
         options?: never;
@@ -8523,6 +8724,28 @@ export interface paths {
         patch: operations["update_template_api_v1_portal_admin_forms__template_id__patch"];
         trace?: never;
     };
+    "/api/v1/portal-admin/forms/{template_id}/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Einreichungen einer Formularvorlage
+         * @description A73: submissions per template for the CRM (newest first) with the portal account, the
+         *     contact name and the ticket created from it. The values themselves are on the ticket
+         *     (public description); only the identification is listed here (data minimisation).
+         */
+        get: operations["list_submissions_api_v1_portal_admin_forms__template_id__submissions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/account": {
         parameters: {
             query?: never;
@@ -8564,7 +8787,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Prüfauftrag mit Positionen, Belegen und Vermerken */
+        /**
+         * Prüfauftrag mit Positionen, Belegen und Vermerken
+         * @description Engagement with positions, released receipts and notes. The optional filters (A77,
+         *     PÜ08) narrow the positions and their receipts by account, vendor, booking date or text
+         *     server side; ``filter_options`` lists the accounts and vendors of all positions so the
+         *     portal offers only values that occur. Notes and cost items are never filtered.
+         */
         get: operations["get_engagement_api_v1_portal_board_engagements__engagement_id__get"];
         put?: never;
         post?: never;
@@ -8602,6 +8831,47 @@ export interface paths {
         put?: never;
         /** Vermerk oder Rückfrage (PÜ08) */
         post: operations["create_note_api_v1_portal_board_engagements__engagement_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/board/engagements/{engagement_id}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prüfberichte des Prüfauftrags (PÜ09) */
+        get: operations["list_reports_api_v1_portal_board_engagements__engagement_id__reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/board/engagements/{engagement_id}/reports/{report_id}/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stellungnahme des Beirats zum Prüfbericht (A76, PÜ09, nur Text)
+         * @description Records the board statement on one report version as text, stored like the CRM entry in
+         *     ``audit_report.content.board_statement`` with the recording portal account and the history
+         *     of earlier texts. No release effect: neither the report nor the statement (Abrechnung)
+         *     changes status; the report figures stay untouched. A report of another engagement answers
+         *     404 without a hint.
+         */
+        post: operations["set_report_statement_api_v1_portal_board_engagements__engagement_id__reports__report_id__statement_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9827,7 +10097,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** SEPA-Mandate */
+        /**
+         * SEPA-Mandate
+         * @description Paginierung wie ``GET /tickets`` (Kopfzeilen ``X-Total-Count``, ``X-Page``,
+         *     ``X-Page-Size``), Antwort bleibt eine Liste.
+         */
         get: operations["list_mandates_api_v1_sepa_mandates_get"];
         put?: never;
         /** SEPA-Mandat erfassen */
@@ -10718,6 +10992,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant/members/{membership_id}/reply-approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Kennzeichen Freigabepflicht für Ticketantworten setzen (M20-03)
+         * @description Betreiberentscheidung 26.09.2026: Ticketantworten von Mitgliedern mit Kennzeichen
+         *     (Azubi, neuer Mitarbeiter, optional befristet) gehen als Vorlage an die Freigabeberechtigten;
+         *     alle anderen Mitglieder mit ``communication:approve`` senden direkt. Jede Änderung wird als
+         *     ``membership.reply_approval_changed`` protokolliert.
+         */
+        put: operations["put_member_reply_approval_api_v1_tenant_members__membership_id__reply_approval_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/members/{membership_id}/reset-password": {
         parameters: {
             query?: never;
@@ -10942,6 +11239,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant/webhooks/event-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ereigniskatalog für Webhooks
+         * @description Documented event types (``EVENT_TYPES``, docs/integrations/webhooks.md).
+         */
+        get: operations["list_webhook_event_types_api_v1_tenant_webhooks_event_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/webhooks/{hook_id}": {
         parameters: {
             query?: never;
@@ -10952,7 +11269,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Webhook löschen
+         * @description Remove the subscription with its delivery log (cascade); the domain events stay.
+         */
+        delete: operations["delete_webhook_api_v1_tenant_webhooks__hook_id__delete"];
         options?: never;
         head?: never;
         /** Webhook ändern */
@@ -11371,6 +11692,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tickets/{ticket_id}/proposals/{proposal_id}/accept-and-reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vorschlag freigeben und Antwortentwurf am Ticket anlegen (kein Versand)
+         * @description Hallo-Heidi-Anruf: übernimmt die Stammdaten wie ``accept`` und legt den vorbereiteten
+         *     Antwortentwurf als ausgehende Nachricht am Ticket an. Der Versand läuft über den
+         *     bestehenden Freigabepfad in ``/mail/messages`` (Einreichen, Vier-Augen-Freigabe).
+         */
+        post: operations["accept_and_reply_api_v1_tickets__ticket_id__proposals__proposal_id__accept_and_reply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tickets/{ticket_id}/proposals/{proposal_id}/correct": {
         parameters: {
             query?: never;
@@ -11441,6 +11784,15 @@ export interface paths {
          *     (Status ``pending``). Der Versand selbst erfolgt wie bei jeder Antwort über
          *     ``POST /mail/messages/{id}/approve`` (Vier-Augen-Prinzip, Postfach des Tickets). Ohne
          *     ``confirm`` wird nichts angelegt; ein Versand ohne ausdrücklichen Klick ist ausgeschlossen.
+         *
+         *     M20-03 (Betreiberentscheidung 26.09.2026, docs/rules/M20-06, Abschnitt Direktversand):
+         *     trägt der Verfasser das Kennzeichen Freigabepflicht (Azubi, neuer Mitarbeiter) oder ist
+         *     die Notbremse des Mandanten an, bleibt die Antwort ``pending`` und geht als Vorlage per
+         *     Benachrichtigung an alle Freigabeberechtigten. Sonst wird der Entwurf eines Nutzers mit
+         *     ``communication:approve`` sofort über den zweiphasigen Versandpfad (``approve_and_send``,
+         *     Regel M20-06) durch denselben Nutzer freigegeben und versendet. Die Antwort enthält
+         *     ``direct_send`` mit ``attempted``, ``reason`` (``author_flagged``, ``tenant_all``,
+         *     ``no_permission`` oder ``None``) und ``error``.
          */
         post: operations["reply_to_ticket_api_v1_tickets__ticket_id__reply_post"];
         delete?: never;
@@ -11592,6 +11944,23 @@ export interface paths {
         put?: never;
         /** Auftrag anlegen */
         post: operations["create_order_api_v1_work_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/{order_id}/appointment-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Terminvorschläge des Dienstleisters zum Auftrag mit bestätigtem Termin */
+        get: operations["appointment_proposals_api_v1_work_orders__order_id__appointment_proposals_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -12148,7 +12517,7 @@ export interface components {
          * AiTask
          * @enum {string}
          */
-        AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change";
+        AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change" | "ticket_resolution" | "call_summary";
         /**
          * AlertChannel
          * @enum {string}
@@ -12356,6 +12725,22 @@ export interface components {
              * Format: uuid
              */
             playbook_id: string;
+        };
+        /** ApplyRoleIn */
+        ApplyRoleIn: {
+            /** @description Rolle, die allen angelegten Kontakten ergänzt wird */
+            role: components["schemas"]["ContactRoleCode"];
+        };
+        /** ApplyRoleOut */
+        ApplyRoleOut: {
+            /** Contacts Changed */
+            contacts_changed: number;
+            /**
+             * Import Run Id
+             * Format: uuid
+             */
+            import_run_id: string;
+            role: components["schemas"]["ContactRoleCode"];
         };
         /** AssignAccountIn */
         AssignAccountIn: {
@@ -12721,6 +13106,11 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** BoardStatementIn */
+        BoardStatementIn: {
+            /** Statement */
+            statement: string;
+        };
         /** Body_apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post */
         Body_apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post: {
             /** File */
@@ -13057,6 +13447,7 @@ export interface components {
         };
         /** BulkStatusIn */
         BulkStatusIn: {
+            resolution?: components["schemas"]["ResolutionIn"] | null;
             status: components["schemas"]["TicketStatus"];
             /** Ticket Ids */
             ticket_ids: string[];
@@ -13211,6 +13602,27 @@ export interface components {
              * Format: uuid
              */
             contact_id: string;
+        };
+        /** CallAssistantSettingsIn */
+        CallAssistantSettingsIn: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Keywords */
+            keywords?: string[];
+            /** Sender Patterns */
+            sender_patterns?: string[];
+        };
+        /** CallAssistantSettingsOut */
+        CallAssistantSettingsOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Keywords */
+            keywords: string[];
+            /** Sender Patterns */
+            sender_patterns: string[];
         };
         /** CallNoteIn */
         CallNoteIn: {
@@ -13387,6 +13799,8 @@ export interface components {
         ChangeIn: {
             /** Field */
             field: string;
+            /** Label */
+            label?: ("work" | "mobile" | "private" | "fax" | "other") | null;
             /** New */
             new?: string | null;
             /** Old */
@@ -13503,6 +13917,8 @@ export interface components {
             regress_party?: string | null;
             /** Reported On */
             reported_on?: string | null;
+            /** Resolution Id */
+            resolution_id?: string | null;
             /** Title */
             title: string;
         };
@@ -13528,8 +13944,10 @@ export interface components {
         ClaimPatch: {
             /** Claim Number */
             claim_number?: string | null;
+            /** Resolution Id */
+            resolution_id?: string | null;
             /** Status */
-            status: string;
+            status?: string | null;
         };
         /**
          * ClassificationPatternType
@@ -17842,6 +18260,15 @@ export interface components {
             portal_access?: string | null;
             /** Portal Access Reason */
             portal_access_reason?: string | null;
+            /** Reply Approval Reason */
+            reply_approval_reason?: string | null;
+            /**
+             * Reply Approval Required
+             * @default false
+             */
+            reply_approval_required: boolean;
+            /** Reply Approval Until */
+            reply_approval_until?: string | null;
             /** Roles */
             roles: string[];
             /** Status */
@@ -17851,6 +18278,20 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+        };
+        /**
+         * MemberReplyApproval
+         * @description M20-03 Kennzeichen je Mitglied (Betreiberentscheidung 26.09.2026): Ticketantworten
+         *     brauchen die Freigabe einer zweiten Person. ``reason`` ist bei ``required`` Pflicht;
+         *     ``until`` (einschließlich) befristet das Kennzeichen, danach gilt es nicht mehr.
+         */
+        MemberReplyApproval: {
+            /** Reason */
+            reason?: ("azubi" | "neuer_mitarbeiter") | null;
+            /** Required */
+            required: boolean;
+            /** Until */
+            until?: string | null;
         };
         /** MemberRoles */
         MemberRoles: {
@@ -18763,6 +19204,14 @@ export interface components {
              * Format: date-time
              */
             scheduled_at: string;
+        };
+        /**
+         * PortalBoardStatementIn
+         * @description Statement of the board on one report version (A76, PÜ09): text only, no release.
+         */
+        PortalBoardStatementIn: {
+            /** Text */
+            text: string;
         };
         /** PortalChangeIn */
         PortalChangeIn: {
@@ -20045,6 +20494,23 @@ export interface components {
              */
             mandatory: boolean;
         };
+        /**
+         * ResolutionIn
+         * @description Erledigungsnotiz beim Setzen auf done, closed oder rejected: Art plus Freitext, der
+         *     Freitext ist bei ``sonstiges`` Pflicht.
+         */
+        ResolutionIn: {
+            kind: components["schemas"]["ResolutionKind"];
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * ResolutionKind
+         * @description Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``
+         *     setzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt.
+         * @enum {string}
+         */
+        ResolutionKind: "stammdaten_ergaenzt" | "handwerker_beauftragt" | "auskunft_erteilt" | "weitergeleitet" | "kein_handlungsbedarf" | "abgelehnt" | "zusammengefuehrt" | "sonstiges";
         /** RetentionProfileIn */
         RetentionProfileIn: {
             /** Document Class */
@@ -21008,6 +21474,11 @@ export interface components {
              * Format: uuid
              */
             tenant_id: string;
+            /**
+             * Ticket Reply Approval All
+             * @default false
+             */
+            ticket_reply_approval_all: boolean;
             /** Version */
             version: number;
         };
@@ -21015,6 +21486,8 @@ export interface components {
         TenantSettingsPatch: {
             branding?: components["schemas"]["Branding"] | null;
             company?: components["schemas"]["CompanyData"] | null;
+            /** Ticket Reply Approval All */
+            ticket_reply_approval_all?: boolean | null;
         };
         /** TerminationIn */
         TerminationIn: {
@@ -21091,6 +21564,7 @@ export interface components {
         };
         /** TicketMergeIn */
         TicketMergeIn: {
+            resolution?: components["schemas"]["ResolutionIn"] | null;
             /** Target Ticket Id */
             target_ticket_id?: string | null;
             /** Ticket Ids */
@@ -21110,9 +21584,12 @@ export interface components {
             extra_fields?: {
                 [key: string]: unknown;
             } | null;
+            /** Internal Description */
+            internal_description?: string | null;
             priority?: components["schemas"]["Priority"] | null;
             /** Property Id */
             property_id?: string | null;
+            resolution?: components["schemas"]["ResolutionIn"] | null;
             status?: components["schemas"]["TicketStatus"] | null;
             /** Team Id */
             team_id?: string | null;
@@ -21624,6 +22101,8 @@ export interface components {
         WebhookCreated: {
             /** Active */
             active: boolean;
+            /** Created At */
+            created_at?: string | null;
             /** Description */
             description: string | null;
             /** Event Types */
@@ -21633,6 +22112,12 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Last Delivery At */
+            last_delivery_at?: string | null;
+            /** Last Delivery Status */
+            last_delivery_status?: string | null;
+            /** Last Delivery Status Code */
+            last_delivery_status_code?: number | null;
             /**
              * Secret
              * @description Signaturschlüssel, wird nur einmal angezeigt
@@ -21641,10 +22126,19 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** WebhookEventTypeOut */
+        WebhookEventTypeOut: {
+            /** Description */
+            description: string;
+            /** Type */
+            type: string;
+        };
         /** WebhookOut */
         WebhookOut: {
             /** Active */
             active: boolean;
+            /** Created At */
+            created_at?: string | null;
             /** Description */
             description: string | null;
             /** Event Types */
@@ -21654,6 +22148,12 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Last Delivery At */
+            last_delivery_at?: string | null;
+            /** Last Delivery Status */
+            last_delivery_status?: string | null;
+            /** Last Delivery Status Code */
+            last_delivery_status_code?: number | null;
             /** Url */
             url: string;
         };
@@ -23502,6 +24002,11 @@ export interface operations {
             query?: {
                 ledger_id?: string | null;
                 review_status?: components["schemas"]["ReviewStatus"] | null;
+                limit?: number;
+                /** @description Seite (ab 1), zusammen mit page_size */
+                page?: number;
+                /** @description Einträge je Seite; ohne Angabe gilt limit (erste Seite) */
+                page_size?: number | null;
             };
             header?: never;
             path?: never;
@@ -23512,6 +24017,12 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Aktuelle Seite */
+                    "X-Page"?: number;
+                    /** @description Einträge je Seite */
+                    "X-Page-Size"?: number;
+                    /** @description Gesamtzahl der Einträge der Filterung */
+                    "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -24209,6 +24720,10 @@ export interface operations {
                 end?: string | null;
                 limit?: number;
                 offset?: number;
+                /** @description Seite (ab 1), zusammen mit page_size */
+                page?: number;
+                /** @description Einträge je Seite; ohne Angabe gilt limit (erste Seite) */
+                page_size?: number | null;
             };
             header?: never;
             path: {
@@ -24221,6 +24736,12 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Aktuelle Seite */
+                    "X-Page"?: number;
+                    /** @description Einträge je Seite */
+                    "X-Page-Size"?: number;
+                    /** @description Gesamtzahl der Einträge der Filterung */
+                    "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -25283,6 +25804,41 @@ export interface operations {
             };
         };
     };
+    list_examples_api_v1_ai_examples_get: {
+        parameters: {
+            query?: {
+                task?: components["schemas"]["AiTask"] | null;
+                page?: number;
+                per_page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_fast_table_import_api_v1_ai_fast_table_import_get: {
         parameters: {
             query?: never;
@@ -25323,6 +25879,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FastTableImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_import_role_api_v1_ai_import_runs__import_id__apply_role_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyRoleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyRoleOut"];
                 };
             };
             /** @description Validation Error */
@@ -29300,6 +29891,11 @@ export interface operations {
                 party_id?: string | null;
                 kind?: components["schemas"]["ContractKind"] | null;
                 active_on?: string | null;
+                limit?: number;
+                /** @description Seite (ab 1), zusammen mit page_size */
+                page?: number;
+                /** @description Einträge je Seite; ohne Angabe gilt limit (erste Seite) */
+                page_size?: number | null;
             };
             header?: never;
             path?: never;
@@ -29310,6 +29906,12 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Aktuelle Seite */
+                    "X-Page"?: number;
+                    /** @description Einträge je Seite */
+                    "X-Page-Size"?: number;
+                    /** @description Gesamtzahl der Einträge der Filterung */
+                    "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -32102,6 +32704,43 @@ export interface operations {
             };
         };
     };
+    set_board_statement_api_v1_hoa_audit_reports__report_id__board_statement_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoardStatementIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_audits_api_v1_hoa_audits_get: {
         parameters: {
             query: {
@@ -32203,6 +32842,45 @@ export interface operations {
             };
         };
     };
+    audit_candidates_api_v1_hoa_audits__audit_id__candidates_get: {
+        parameters: {
+            query?: {
+                account_id?: string | null;
+                vendor_contact_id?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                q?: string | null;
+            };
+            header?: never;
+            path: {
+                audit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     add_audit_item_api_v1_hoa_audits__audit_id__items_post: {
         parameters: {
             query?: never;
@@ -32227,6 +32905,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reports_api_v1_hoa_audits__audit_id__reports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                audit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */
@@ -32868,6 +33579,39 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_loan_schedule_api_v1_hoa_loans__loan_id__schedule_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                loan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34520,6 +35264,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    diff_hoa_statement_api_v1_hoa_statements__statement_id__diff_get: {
+        parameters: {
+            query: {
+                against: string;
+            };
+            header?: never;
+            path: {
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37074,7 +37853,7 @@ export interface operations {
                     "application/xml": unknown;
                 };
             };
-            /** @description unvollständig */
+            /** @description unvollständig oder Schemafehler */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -37106,7 +37885,7 @@ export interface operations {
                     "application/zip": unknown;
                 };
             };
-            /** @description unvollständig */
+            /** @description unvollständig oder Schemafehler */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -37541,6 +38320,59 @@ export interface operations {
             };
         };
     };
+    get_call_assistant_api_v1_mail_call_assistant_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAssistantSettingsOut"];
+                };
+            };
+        };
+    };
+    put_call_assistant_api_v1_mail_call_assistant_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CallAssistantSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAssistantSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ingest_api_v1_mail_ingest_post: {
         parameters: {
             query?: never;
@@ -37854,6 +38686,44 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    messages_count_api_v1_mail_messages_count_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                contact_id?: string | null;
+                direction?: string | null;
+                ticket_id?: string | null;
+                mailbox_id?: string | null;
+                q?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -40896,6 +41766,39 @@ export interface operations {
             };
         };
     };
+    list_submissions_api_v1_portal_admin_forms__template_id__submissions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     statement_api_v1_portal_account_get: {
         parameters: {
             query?: never;
@@ -40942,7 +41845,13 @@ export interface operations {
     };
     get_engagement_api_v1_portal_board_engagements__engagement_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                account_id?: string | null;
+                vendor_contact_id?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                q?: string | null;
+            };
             header?: never;
             path: {
                 engagement_id: string;
@@ -41022,6 +41931,77 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reports_api_v1_portal_board_engagements__engagement_id__reports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_report_statement_api_v1_portal_board_engagements__engagement_id__reports__report_id__statement_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagement_id: string;
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalBoardStatementIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -43715,6 +44695,11 @@ export interface operations {
             query?: {
                 party_id?: string | null;
                 status?: components["schemas"]["MandateStatus"] | null;
+                limit?: number;
+                /** @description Seite (ab 1), zusammen mit page_size */
+                page?: number;
+                /** @description Einträge je Seite; ohne Angabe gilt limit (erste Seite) */
+                page_size?: number | null;
             };
             header?: never;
             path?: never;
@@ -43725,6 +44710,12 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Aktuelle Seite */
+                    "X-Page"?: number;
+                    /** @description Einträge je Seite */
+                    "X-Page-Size"?: number;
+                    /** @description Gesamtzahl der Einträge der Filterung */
+                    "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -45767,6 +46758,41 @@ export interface operations {
             };
         };
     };
+    put_member_reply_approval_api_v1_tenant_members__membership_id__reply_approval_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberReplyApproval"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     reset_member_password_api_v1_tenant_members__membership_id__reset_password_post: {
         parameters: {
             query?: never;
@@ -46237,6 +47263,55 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WebhookCreated"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_webhook_event_types_api_v1_tenant_webhooks_event_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEventTypeOut"][];
+                };
+            };
+        };
+    };
+    delete_webhook_api_v1_tenant_webhooks__hook_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                hook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -47336,6 +48411,38 @@ export interface operations {
             };
         };
     };
+    accept_and_reply_api_v1_tickets__ticket_id__proposals__proposal_id__accept_and_reply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     correct_proposal_api_v1_tickets__ticket_id__proposals__proposal_id__correct_post: {
         parameters: {
             query?: never;
@@ -47824,6 +48931,39 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    appointment_proposals_api_v1_work_orders__order_id__appointment_proposals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

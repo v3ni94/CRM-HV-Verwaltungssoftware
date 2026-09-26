@@ -19,7 +19,11 @@ export type Message = {
   from_address: string | null;
   to_addresses: string[];
   subject: string | null;
-  body: string | null;
+  // The list delivers only `body_preview` (200 characters, review 26.09.2026, M3); the
+  // detail endpoint fills `body` and `body_html`.
+  body?: string | null;
+  body_html?: string | null;
+  body_preview?: string | null;
   received_at: string | null;
   sent_at: string | null;
   contact_id: string | null;
@@ -58,11 +62,13 @@ type Tab = "inbox" | "drafts" | "pending" | "sent";
 
 const INBOX_STATUSES = ["new", "assigned", "done"] as const;
 
-function queryFor(tab: Tab, status: string, mailboxId: string, q: string): string {
+function queryFor(tab: Tab, status: string, mailboxId: string, q: string, showClosed = false): string {
   const params = new URLSearchParams();
   if (tab === "inbox") {
     params.set("direction", "in");
     if (status) params.set("status", status);
+    // Operator 26.09.2026: done mails (or mails of closed tickets) stay hidden unless shown.
+    else if (showClosed) params.set("include_closed", "true");
   } else if (tab === "drafts") {
     params.set("direction", "out");
     params.set("status", "draft");
@@ -91,7 +97,12 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("message"),
   );
+  // Operator 26.09.2026: "Erledigte anzeigen", mirrored in the URL as erledigt=1.
+  const [showClosed, setShowClosed] = useState<boolean>(() =>
+    typeof window === "undefined" ? false : new URLSearchParams(window.location.search).get("erledigt") === "1",
+  );
   const [pendingCount, setPendingCount] = useState(0);
+  const [detail, setDetail] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -107,10 +118,10 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   }, [queryText]);
 
   const load = useCallback(
-    (activeTab: Tab, activeStatus: string, activeMailbox: string, activeQ: string) => {
+    (activeTab: Tab, activeStatus: string, activeMailbox: string, activeQ: string, activeShowClosed: boolean) => {
       setBusy(true);
       setError(null);
-      void bff<Message[]>(`/api/bff/mail/messages?${queryFor(activeTab, activeStatus, activeMailbox, activeQ)}`).then((res) => {
+      void bff<Message[]>(`/api/bff/mail/messages?${queryFor(activeTab, activeStatus, activeMailbox, activeQ, activeShowClosed)}`).then((res) => {
         setBusy(false);
         if (res.ok) {
           setMessages(res.data);
@@ -125,30 +136,58 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   );
 
   useEffect(() => {
-    load(tab, status, mailboxId, q);
-  }, [tab, status, mailboxId, q, load]);
+    load(tab, status, mailboxId, q, showClosed);
+  }, [tab, status, mailboxId, q, showClosed, load]);
+
+  // Badge "Freigaben": count endpoint instead of loading the whole pending list (M3).
+  const loadPendingCount = useCallback(() => {
+    if (!canApprove) return;
+    void bff<{ count: number }>(`/api/bff/mail/messages/count?${queryFor("pending", "", "", "")}`).then((res) => {
+      if (res.ok) setPendingCount(res.data.count);
+    });
+  }, [canApprove]);
 
   useEffect(() => {
-    if (!canApprove) return;
-    void bff<Message[]>(`/api/bff/mail/messages?${queryFor("pending", "", "", "")}`).then((res) => {
-      if (res.ok) setPendingCount(res.data.length);
+    loadPendingCount();
+  }, [loadPendingCount, tab, status, q]);
+
+  // The list carries only a preview; the selected message is loaded with its full text.
+  useEffect(() => {
+    setDetail(null);
+    if (!selectedId) return;
+    let active = true;
+    void bff<Message>(`/api/bff/mail/messages/${selectedId}`).then((res) => {
+      if (active && res.ok) setDetail(res.data);
     });
-  }, [canApprove, tab, status, q]);
+    return () => {
+      active = false;
+    };
+  }, [selectedId]);
 
-  const refresh = () => load(tab, status, mailboxId, q);
+  const refresh = () => load(tab, status, mailboxId, q, showClosed);
 
-  const selected = useMemo(() => messages?.find((m) => m.id === selectedId) ?? null, [messages, selectedId]);
+  const toggleClosed = (next: boolean) => {
+    setShowClosed(next);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (next) url.searchParams.set("erledigt", "1");
+    else url.searchParams.delete("erledigt");
+    window.history.replaceState(null, "", url.toString());
+  };
+
+  const selected = useMemo(() => {
+    if (!selectedId) return null;
+    if (detail && detail.id === selectedId) return detail;
+    return messages?.find((m) => m.id === selectedId) ?? null;
+  }, [messages, selectedId, detail]);
 
   const onUpdated = (next: Message) => {
     setMessages((prev) => (prev ? prev.map((m) => (m.id === next.id ? next : m)) : prev));
+    if (next.id === selectedId) setDetail(next);
     // A status change can move the message out of the current tab's filter (e.g. submit,
     // approve, mark done); the list is reloaded so it reflects that.
     refresh();
-    if (canApprove) {
-      void bff<Message[]>(`/api/bff/mail/messages?${queryFor("pending", "", "", "")}`).then((res) => {
-        if (res.ok) setPendingCount(res.data.length);
-      });
-    }
+    loadPendingCount();
   };
 
   const tabs: { key: Tab; label: string; badge?: number }[] = [
@@ -187,6 +226,17 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
                 </option>
               ))}
             </select>
+          ) : null}
+          {tab === "inbox" && !status ? (
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={showClosed}
+                onChange={(e) => toggleClosed(e.target.checked)}
+                data-testid="toggle-closed"
+              />
+              {t("showClosed")}
+            </label>
           ) : null}
           {mailboxes.length > 0 ? (
             <select className={ui.input} value={mailboxId} onChange={(e) => setMailboxId(e.target.value)}>

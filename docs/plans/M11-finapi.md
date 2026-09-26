@@ -158,3 +158,11 @@ branch; `alembic heads` confirmed a single head after each stage).
 - Portal/CRM UI for the account assignment step still takes a raw internal account id
   (`AssignForm`); a proper picker (search by property/unit) was out of scope for this rebuild's
   time budget and is a good next small UI task.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: Stufen 1 bis 6 des Umbaus wie oben, Zustimmungserinnerung als Beat-Job (A29), Zahlungsvorschlag nur als Entwurf (Regel M11-06), Zugangsdaten nie im CRM (Regel M11-05), Rechnungsabgleich mit Evidenz (`invoice_matching.py`, Migration 0061).
+* Tests: `tests/banking/test_finapi.py`, `tests/unit/test_banking_connectors.py`, `test_m11_invoice_matching.py`, `test_m11_portal_document_ref.py`, `test_m11_finapi.py`, Vitest `FinApiConnections`, `FinApiConsentBanner`, `InvoiceMatchPanel`.
+* Offen: M11-40 bis M11-45 (Vertrag, § 34 ZAG, Callback-Signatur, Ratenlimits), Historientiefe je Bank, `consent_valid_until` aus finAPI, Kontoauswahl mit Suche statt roher ID.

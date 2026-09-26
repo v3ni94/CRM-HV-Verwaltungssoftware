@@ -31,6 +31,28 @@ Weitere Kennzeichen am Vertrag: Lastschrift mit SEPA-Mandat, Mahnsperre mit Begr
 Sperre für Mieterhöhungen bis zu einem Datum, Nutzerwechselgebühr, Umlageausfallwagnis,
 Umsatzsteueroption, Sonderrechtsnachfolgehaftung (nur Eigentum), Notizen.
 
+## Vertrag anlegen
+
+Im CRM unter Verträge, Schaltfläche Vertrag anlegen (auch aus der Vermietung erreichbar,
+Berechtigung `contracts:create`). Das Formular fragt ab:
+
+1. Vertragsart (Mietvertrag oder Eigentum), Objekt und Einheit als Auswahl; bei mehreren
+   Rechtsträgern im Objekt wahlweise der Vermieter, sonst ermittelt ihn die Plattform.
+2. Vertragspartner über die Kontaktsuche mit Rollenfilter (Mieter, Eigentümer).
+3. Beginn und Ende (leer bei unbefristet), bei Eigentum zusätzlich Eigentumsübergang laut
+   Grundbuch (Pflicht, nicht nach dem Beginn), Nutzen und Lasten, Erwerbsart, Haftung bei
+   Sonderrechtsnachfolge und SEV (nur in Objekten mit Verwaltungsart WEG mit SEV).
+4. Umsatzsteuer, Lastschrift mit Verweis auf ein aktives SEPA-Mandat des Vertragspartners,
+   Mahnsperre mit Begründung, Mieterhöhungssperre, Nutzerwechselgebühr, Umlageausfallwagnis.
+5. Optional gleich ein Zahlungsplan (Intervall, Fälligkeitsregel, Tag, Gültigkeit) und bei
+   Mietverträgen eine Kaution (Art, Betrag im Format 1.234,56, Raten, Fälligkeit).
+
+Nach dem Speichern öffnet sich die Detailseite. Fehlermeldungen der Schnittstelle erscheinen
+am jeweiligen Feld. Bearbeiten legt eine neue Version ab einem Stichtag an (Lastschrift,
+Mandat, Sperren, Umsatzsteuer, Notizen); Einheit, Vertragspartner, Beginn und
+Eigentumsangaben bleiben fest. Ein Mietvertrag wird dort beendet, Eigentum nur über den
+Eigentümerwechsel. Kündigungen sind vorher durch die Geschäftsführung freizugeben.
+
 ## Versionen, Beendigung, Eigentümerwechsel
 
 - Vertragsversionen: Änderungen werden als neue Version mit Gültigkeitsbeginn erfasst; die
@@ -77,6 +99,38 @@ Liquiditätsvorschau getrennt vom freien Vermögen des Eigentümers.
 Je Objekt liefert die Belegungsliste die Einheiten mit ihren Verträgen zum Stichtag
 (Mieter, Eigentümer, Leerstand). Die Leerstandsliste im Bereich Vermietung zeigt leere
 Einheiten mit Wohnfläche, Leer seit und Tagen.
+
+## Dienstleisterverträge mit Kündigungsfristen
+
+Unter Verwaltung, Dienstleisterverträge werden Verträge mit Dienstleistern (Hausmeister,
+Wartung, Reinigung und ähnliche) mit Laufzeit, Kündigungsfrist und automatischer
+Verlängerung geführt. Rechte: Lesen mit Verträge lesen, Anlegen mit Verträge anlegen,
+Ändern mit Verträge ändern, Löschen mit Verträge löschen (in der Vorbelegung nur
+Administrator).
+
+Dienstleistervertrag anlegen: Bezeichnung, Dienstleister (Kontakt), Objekt (optional),
+Beginn, Ende (optional, leer = unbefristet), Kündigungsfrist mit Einheit Tage oder Monate,
+Automatische Verlängerung in Monaten (optional), Gekündigt am (optional), Notizen.
+
+Die Liste zeigt je Vertrag Status (Laufend, Unbefristet, Gekündigt, Beendet), das
+nächstmögliche Vertragsende und den spätesten Kündigungstermin, gekennzeichnet als
+Orientierung, zu prüfen. Regeln der Orientierungsrechnung:
+
+- Monatsfristen werden kalendermonatsweise vom Vertragsende zurückgerechnet; ist das
+  Vertragsende ein Monatsletzter, ist auch der Kündigungstermin ein Monatsletzter (Ende
+  30.06., drei Monate: spätester Kündigungstermin 31.03.).
+- Ohne Ende läuft der Vertrag unbefristet; das nächstmögliche Ende ist heute plus
+  Kündigungsfrist, ein fester Kündigungstermin wird nicht geführt.
+- Mit automatischer Verlängerung verschiebt sich das Ende um die Verlängerungsmonate,
+  solange der Kündigungstermin des aktuellen Endes bereits verstrichen ist.
+- Ein gekündigter Vertrag endet zum ersten Ende, dessen Kündigungstermin nicht vor dem
+  Kündigungstag liegt.
+
+Der späteste Kündigungstermin erscheint in der Fristenliste (Menü Fristen, Typ
+Kündigungsfrist Dienstleistervertrag) mit 14 Tagen Vorfrist; Benutzer mit dem Recht
+Verträge ändern erhalten einmalig eine Benachrichtigung. Die Berechnung ersetzt keine
+rechtliche Fristprüfung am Vertragsdokument; Kündigungen sind vor Abgabe mit der
+Geschäftsführung abzustimmen und werden nicht über die Plattform erklärt.
 
 ## Verweise
 

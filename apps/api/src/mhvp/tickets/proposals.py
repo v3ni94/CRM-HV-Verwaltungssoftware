@@ -40,7 +40,7 @@ import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -83,6 +83,7 @@ _NAME_FIELDS = ("salutation", "title", "first_name", "last_name", "company_name"
 _ADDRESS_FIELDS = ("street", "house_number", "postal_code", "city")
 _FIELD_ORDER = (*_NAME_FIELDS, *_ADDRESS_FIELDS, "phone", "email")
 # Felder, die nie über einen Vorschlag geändert werden (rule 0.1.6: keine automatische IBAN).
+PHONE_LABELS: frozenset[str] = frozenset({"work", "mobile", "private", "fax", "other"})
 BLOCKED_FIELDS: frozenset[str] = frozenset(
     {"iban", "bic", "bank_name", "bank_account", "bank_accounts", "holder", "mandate_reference"}
 )
@@ -876,6 +877,11 @@ async def propose_contact_change(
 ) -> AiProposal | None:
     """Builds the proposal for one inbound message of a ticket. Returns ``None`` when neither
     stage finds a master data change; never raises for provider problems."""
+    from mhvp.tickets import call_assistant
+
+    config = await call_assistant.load_config(session)
+    if call_assistant.is_call_mail(config, message.from_address, message.subject, message.body):
+        return await call_assistant.propose_call(session, settings, ticket, message, actor_user_id)
     existing = await _existing(session, ticket.id, message.id)
     if existing is not None:
         return existing
@@ -1022,7 +1028,10 @@ def _validate_changes(changes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         new = change.get("new")
         if new is None or not str(new).strip():
             raise ProblemError(ErrorCodes.VALIDATION, detail=f"Neuer Wert für {name} fehlt.")
-        cleaned.append({"field": name, "old": change.get("old"), "new": str(new).strip()})
+        item = {"field": name, "old": change.get("old"), "new": str(new).strip()}
+        if name == "phone" and change.get("label") in PHONE_LABELS:
+            item["label"] = change["label"]
+        cleaned.append(item)
     if not cleaned:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Keine Feldänderung enthalten.")
     return cleaned
@@ -1068,9 +1077,16 @@ async def apply_changes(
                 addresses.append(target)
             target[name] = value
         elif name == "phone":
+            from mhvp.tickets.call_assistant import normalise_e164
+
+            wanted = normalise_e164(value) or value
+            if any((normalise_e164(p["number"]) or p["number"]) == wanted for p in data["phones"]):
+                continue
             for phone in data["phones"]:
                 phone["is_primary"] = False
-            data["phones"].append({"label": "mobile", "number": value, "is_primary": True})
+            data["phones"].append(
+                {"label": change.get("label") or "mobile", "number": value, "is_primary": True}
+            )
         elif name == "email":
             for email in data["emails"]:
                 email["is_primary"] = False
@@ -1134,6 +1150,7 @@ class ChangeIn(_In):
     field: str = Field(max_length=64)
     old: str | None = Field(default=None, max_length=300)
     new: str | None = Field(default=None, max_length=300)
+    label: Literal["work", "mobile", "private", "fax", "other"] | None = None
 
 
 class CorrectIn(_In):
@@ -1366,26 +1383,61 @@ async def accept_proposal(
     async with tenant_tx(request, principal) as session:
         ticket = await _ticket(session, ticket_id)
         proposal = await _pending(session, ticket_id, proposal_id)
-        contact_id = proposal.proposed.get("contact_id")
-        if not contact_id:
-            raise ProblemError(
-                ErrorCodes.VALIDATION,
-                detail="Kein Kontakt zugeordnet. Bitte über Korrigieren einen Kontakt wählen.",
-            )
-        changes = _validate_changes(list(proposal.proposed.get("changes", [])))
-        applied = await apply_changes(
-            session, principal, uuid.UUID(contact_id), changes, proposal.id
-        )
-        await _decide(
-            session,
-            principal,
-            ticket,
-            proposal,
-            Decision.ACCEPTED,
-            {"contact_id": contact_id, "changes": changes, "applied": sorted(applied)},
-            "proposal_accepted",
-        )
+        await _accept(session, principal, ticket, proposal)
         return await _out(session, proposal)
+
+
+async def _accept(
+    session: AsyncSession, principal: TenantPrincipal, ticket: Ticket, proposal: AiProposal
+) -> None:
+    contact_id = proposal.proposed.get("contact_id")
+    if not contact_id:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Kein Kontakt zugeordnet. Bitte über Korrigieren einen Kontakt wählen.",
+        )
+    changes = _validate_changes(list(proposal.proposed.get("changes", [])))
+    applied = await apply_changes(session, principal, uuid.UUID(contact_id), changes, proposal.id)
+    await _decide(
+        session,
+        principal,
+        ticket,
+        proposal,
+        Decision.ACCEPTED,
+        {"contact_id": contact_id, "changes": changes, "applied": sorted(applied)},
+        "proposal_accepted",
+    )
+
+
+@router.post(
+    "/tickets/{ticket_id}/proposals/{proposal_id}/accept-and-reply",
+    status_code=201,
+    summary="Vorschlag freigeben und Antwortentwurf am Ticket anlegen (kein Versand)",
+)
+async def accept_and_reply(
+    ticket_id: uuid.UUID,
+    proposal_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> ContactChangeProposalOut:
+    """Hallo-Heidi-Anruf: übernimmt die Stammdaten wie ``accept`` und legt den vorbereiteten
+    Antwortentwurf als ausgehende Nachricht am Ticket an. Der Versand läuft über den
+    bestehenden Freigabepfad in ``/mail/messages`` (Einreichen, Vier-Augen-Freigabe)."""
+    _require_contact_update(principal)
+    _require_communication_update(principal)
+    async with tenant_tx(request, principal) as session:
+        ticket = await _ticket(session, ticket_id)
+        proposal = await _pending(session, ticket_id, proposal_id)
+        await _accept(session, principal, ticket, proposal)
+        await _reply_message(session, principal, ticket, proposal)
+        return await _out(session, proposal)
+
+
+def _require_communication_update(principal: TenantPrincipal) -> None:
+    if not principal.has("communication:update"):
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN, developer_message="Missing permission communication:update."
+        )
 
 
 @router.post(
@@ -1412,12 +1464,13 @@ async def correct_proposal(
             raise ProblemError(ErrorCodes.VALIDATION, detail="Kontakt fehlt.")
         changes = _validate_changes([c.model_dump() for c in body.changes])
         applied = await apply_changes(session, principal, contact_id, changes, proposal.id)
-        proposal.proposed = {
-            **proposal.proposed,
-            "reply_draft": _reply_after(
-                await session.get(Contact, contact_id), proposal.proposed, changes
-            ),
-        }
+        if proposal.proposed.get("kind") != "call":  # Anrufantwort bezieht sich aufs Anliegen
+            proposal.proposed = {
+                **proposal.proposed,
+                "reply_draft": _reply_after(
+                    await session.get(Contact, contact_id), proposal.proposed, changes
+                ),
+            }
         await _decide(
             session,
             principal,
@@ -1482,10 +1535,7 @@ async def create_reply_draft(
 ) -> dict[str, Any]:
     """Creates the prepared reply as an outbound draft on the ticket's mail thread. Sending
     stays with the existing path (submit, approve by someone else) in ``/mail/messages``."""
-    if not principal.has("communication:update"):
-        raise ProblemError(
-            ErrorCodes.FORBIDDEN, developer_message="Missing permission communication:update."
-        )
+    _require_communication_update(principal)
     async with tenant_tx(request, principal) as session:
         ticket = await _ticket(session, ticket_id)
         proposal = await session.get(AiProposal, proposal_id)
@@ -1500,61 +1550,75 @@ async def create_reply_draft(
                 ErrorCodes.CONFLICT,
                 detail="Der Antwortentwurf setzt einen übernommenen Vorschlag voraus.",
             )
-        existing_id = proposal.proposed.get("reply_message_id")
-        if existing_id:
-            existing = await session.get(Message, uuid.UUID(existing_id))
-            if existing is not None:
-                return {
-                    "id": existing.id,
-                    "status": existing.status,
-                    "subject": existing.subject,
-                    "body": existing.body,
-                }
-        message_id = proposal.proposed.get("message_id")
-        inbound = await session.get(Message, uuid.UUID(message_id)) if message_id else None
-        if inbound is None:
-            raise ProblemError(
-                ErrorCodes.CONFLICT, detail="Die eingehende E-Mail wurde nicht gefunden."
-            )
-        draft_text = proposal.proposed.get("reply_draft") or {}
-        draft = Message(
+        return await _reply_message(session, principal, ticket, proposal)
+
+
+async def _reply_message(
+    session: AsyncSession, principal: TenantPrincipal, ticket: Ticket, proposal: AiProposal
+) -> dict[str, Any]:
+    existing_id = proposal.proposed.get("reply_message_id")
+    if existing_id:
+        existing = await session.get(Message, uuid.UUID(existing_id))
+        if existing is not None:
+            return {
+                "id": existing.id,
+                "status": existing.status,
+                "subject": existing.subject,
+                "body": existing.body,
+            }
+    message_id = proposal.proposed.get("message_id")
+    inbound = await session.get(Message, uuid.UUID(message_id)) if message_id else None
+    if inbound is None:
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Die eingehende E-Mail wurde nicht gefunden."
+        )
+    contact_id = (
+        uuid.UUID(proposal.final["contact_id"])
+        if proposal.final and proposal.final.get("contact_id")
+        else inbound.contact_id
+    )
+    recipients = [inbound.from_address] if inbound.from_address else []
+    if proposal.proposed.get("kind") == "call":
+        # Die Mail kam von der Telefonassistenz; geantwortet wird dem Anrufer selbst.
+        from mhvp.tickets.call_assistant import primary_email
+
+        email = await primary_email(session, contact_id)
+        recipients = [email] if email else []
+    draft_text = proposal.proposed.get("reply_draft") or {}
+    draft = Message(
+        tenant_id=principal.tenant_id,
+        created_by=principal.user_id,
+        direction="out",
+        status="draft",
+        mailbox_id=inbound.mailbox_id,
+        to_addresses=recipients,
+        subject=str(draft_text.get("subject") or f"AW: {inbound.subject or ''}")[:998],
+        body=str(draft_text.get("body") or ""),
+        in_reply_to=None if proposal.proposed.get("kind") == "call" else inbound.header_message_id,
+        thread_id=inbound.thread_id or inbound.id,
+        contact_id=contact_id,
+        property_id=inbound.property_id or ticket.property_id,
+        ticket_id=ticket.id,
+    )
+    session.add(draft)
+    await session.flush()
+    proposal.proposed = {**proposal.proposed, "reply_message_id": str(draft.id)}
+    session.add(
+        TicketEvent(
             tenant_id=principal.tenant_id,
-            created_by=principal.user_id,
-            direction="out",
-            status="draft",
-            mailbox_id=inbound.mailbox_id,
-            to_addresses=[inbound.from_address] if inbound.from_address else [],
-            subject=str(draft_text.get("subject") or f"AW: {inbound.subject or ''}")[:998],
-            body=str(draft_text.get("body") or ""),
-            in_reply_to=inbound.header_message_id,
-            thread_id=inbound.thread_id or inbound.id,
-            contact_id=(
-                uuid.UUID(proposal.final["contact_id"])
-                if proposal.final and proposal.final.get("contact_id")
-                else inbound.contact_id
-            ),
-            property_id=inbound.property_id,
             ticket_id=ticket.id,
+            kind="proposal_reply_draft",
+            data={"proposal_id": str(proposal.id), "message_id": str(draft.id)},
+            user_id=principal.user_id,
         )
-        session.add(draft)
-        await session.flush()
-        proposal.proposed = {**proposal.proposed, "reply_message_id": str(draft.id)}
-        session.add(
-            TicketEvent(
-                tenant_id=principal.tenant_id,
-                ticket_id=ticket.id,
-                kind="proposal_reply_draft",
-                data={"proposal_id": str(proposal.id), "message_id": str(draft.id)},
-                user_id=principal.user_id,
-            )
-        )
-        await session.flush()
-        return {
-            "id": draft.id,
-            "status": draft.status,
-            "subject": draft.subject,
-            "body": draft.body,
-        }
+    )
+    await session.flush()
+    return {
+        "id": draft.id,
+        "status": draft.status,
+        "subject": draft.subject,
+        "body": draft.body,
+    }
 
 
 # Worker entry point -------------------------------------------------------------------------

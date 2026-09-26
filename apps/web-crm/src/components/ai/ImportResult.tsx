@@ -8,6 +8,8 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { ImportRoleForm } from "./ImportRoleForm";
+
 const ENTITY_KEYS = ["contact", "party", "property", "building", "unit", "contract", "property_owner"] as const;
 
 /** Result of an applied proposal or an import run, with undo (10.1 step 5). */
@@ -63,6 +65,9 @@ export function ImportResult({
             <li key={i}>{n}</li>
           ))}
         </ul>
+      ) : null}
+      {run.source === "ai:extract_contacts" && run.status !== "undone" && items.some((i) => i.entity_type === "contact") ? (
+        <ImportRoleForm id={run.id} />
       ) : null}
       {kept.length> 0 ? <p className="text-sm">{t("keptHint", { count: kept.length })}</p> : null}
       {error ? (

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ImportResult } from "@/components/ai/ImportResult";
 import { UserMappingTable, type UserMappingRow } from "@/components/objektakte/UserMappingTable";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
@@ -15,7 +16,7 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ i
   const api = serverApi();
   const [{ data, error, response }, me] = await Promise.all([
     api.GET("/api/v1/imports/{import_id}", { params: { path: { import_id: id } } }),
-    api.GET("/api/v1/auth/me"),
+    getMe(),
   ]);
   redirectIfUnauthenticated(response);
   if (response.status === 404 || response.status === 422) notFound();

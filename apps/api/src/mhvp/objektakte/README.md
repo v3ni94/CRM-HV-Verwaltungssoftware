@@ -189,7 +189,12 @@ Independent of the dump based takeover above; both meet on `Document.source_syst
 | `dms_service.py` | `link_filed_document` (M6 document plus property link, matching over objektakte id, `drive_file_id`, `sha256`), `reconcile_persons` (test run of an owner/tenant list against `lists.persons_list`, read only) |
 | `dms_routers.py` | `/api/v1/integrations/objektakte/...` for the DMS page and the import proposals; only for the tenant in `OBJEKTAKTE_TENANT` |
 | `webhook.py` | `POST /api/v1/integrations/objektakte/webhook`, HMAC (`OBJEKTAKTE_WEBHOOK_SECRET`), idempotent via `objektakte_webhook_receipt` |
-| `dms_models.py` | `ObjektakteWebhookReceipt`, `ObjektaktePersonProposal` (migration `0126_objektakte_dms`) |
+| `dms_models.py` | `ObjektakteWebhookReceipt`, `ObjektaktePersonProposal` (migration `0132_objektakte_dms`) |
 
 Tests: `tests/unit/test_m29_objektakte_remote.py`, `tests/integration/test_m29_dms_objektakte.py`.
 
+## Weitere Dateien (Nachtrag 26.09.2026)
+
+Im Abgleich mit dem Ordnerinhalt am 26.09.2026 fehlten oben:
+
+* `tasks.py`: Celery-Jobs der objektakte-Übernahme, Stufe 5 (täglicher Differenzimport je Mandant, Standard aus)

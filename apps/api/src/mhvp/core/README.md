@@ -29,3 +29,41 @@ statements of `db.rls.tenant_rls_statements()` in the same migration. The integr
 `mark_deprecated_routes`, which flattens included routers). `mhvp.openapi.breaking_removals`
 and `make openapi-check` stop the removal of a path or field without a passed sunset.
 Outgoing webhook event catalogue: `mhvp.core.webhooks.EVENT_TYPES` (docs/integrations/webhooks.md).
+
+## Further files (addendum 26.09.2026)
+
+Checked against the folder contents on 26.09.2026, the following files were not listed above:
+
+* `auth/keys.py`: `python -m mhvp.core.auth.keys`: new values for `MHVP_MASTER_KEY` and `MHVP_JWT_PRIVATE_KEY`
+* `auth/passwords.py`: Argon2id hashing and password policy (A-012)
+* `auth/permissions.py`: permission matrix resource x action, system roles with inheritance (3.4, M2-07)
+* `auth/principal.py`: request principal from bearer token or API key, tenant and host check, permission guard
+* `auth/service.py`: login, MFA, token sessions, tenant switch (3.4)
+* `auth/tokens.py`: access tokens (JWT ES256), MFA step tokens, opaque secrets
+* `auth/totp.py`: TOTP second factor (RFC 6238)
+* `crypto.py`: field encryption AES-256-GCM with HKDF scoped keys (3.5, ADR 0006)
+* `db/columns.py`: shared column definitions (id, tenant_id, created and updated metadata)
+* `db/engine.py`: engine factories, psycopg 3 for async API and sync callers (ADR 0001)
+* `db/tenancy.py`: tenant scoped transactions `tenant_tx` (ADR 0002, 5.3); `after_commit(session, hook)` registers a coroutine that `tenant_transaction` runs only after a successful commit (event consumers with side effects outside the database, for example mail archiving on ticket closure); hooks are dropped on rollback and a failing hook is logged, never raised
+* `escaping.py`: escaping helpers for values that leave the application in a foreign syntax
+* `events.py`: domain events and audit log, both append-only (2.5, 6.8)
+* `numbering.py`: tenant wide business number sequences (4.1: contract, document, ticket numbers)
+* `sqldump.py`: shared parser for `mysqldump`/MariaDB dumps used by data takeovers (FLOW, U-Protokoll, objektakte)
+* `webhook_tasks.py`: Celery job: enqueue and deliver outgoing webhooks for every tenant (every minute)
+
+## List pagination (`core/pagination.py`, review 26.09.2026)
+
+`paginate(session, query, response, page=, page_size=, limit=, offset=)` counts the query,
+fetches one page and sets `X-Total-Count`, `X-Page`, `X-Page-Size`; `PAGE_HEADERS`
+documents them in OpenAPI. Responses stay plain lists (pattern of `GET /tickets`).
+
+## Permission cache (`auth/permission_cache.py`, review 26.09.2026, item 2)
+
+`get_principal` resolves the principal once per request (`request.state.principal`) and takes
+roles and permissions of a bearer principal from a process local TTL cache keyed by
+`(tenant_id, user_id)`: at most 30 s (`MHVP_PERMISSION_CACHE_TTL_SECONDS`, capped at 30, 0
+disables), bound to the membership id. User (`active`) and membership (`status`, legal entity
+scope) are read on every request, so locks take effect immediately; portal grants never use
+the cache. `invalidate_permissions(tenant_id)` runs after the commit of `set_member_roles`,
+`PUT /tenant/roles/{id}/permissions` and `sync_roles`; a change made in another process takes
+effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.

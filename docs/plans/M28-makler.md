@@ -91,3 +91,11 @@ nichts doppelt an. FLOWFACT selbst wird weiterhin nicht angesprochen; `publicati
 ein aus `listing_flowfact_links.sync_status` abgeleiteter Platzhalter. Offen bleibt die
 automatische Einheitenzuordnung, da FLOW kein Einheitenkennzeichen mitführt; sie ist im
 Erfassungsbogen (`/makler/import`) manuell nachzutragen.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: Domäne `letting` mit Anzeigen (`listing`), Interessenten und Besichtigungen, FLOW-Import per SQL-Dump mit Vorschau und idempotenter Übernahme (Stufe 4, Regel M28-01, `mhvp.letting.flow_import`, CRM `/makler/import`), OpenImmo-Export (M26-02), Energieausweis und Angebotsmiete (A63), Übergabeprotokolle im Bereich Makler (`docs/plans/M30-uebergabeprotokoll.md`).
+* Nicht im Code: FLOWFACT-Adapter (Stufe 3, keine Dokumentation, keine Zugangsdaten), Ablösung von FLOW (Stufe 5), automatische Einheitenzuordnung beim Import. Stufe 1 (FLOW hinter Traefik) entfällt laut Befund oben.
+* Tests: `test_m26_letting.py`; Modul-README `apps/api/src/mhvp/letting/README.md`.

@@ -9,6 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.core.auth import passwords
+from mhvp.core.auth.permission_cache import invalidate_permissions
 from mhvp.core.auth.permissions import SYSTEM_ROLES
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
@@ -251,3 +252,6 @@ async def set_member_roles(
             payload={"roles": sorted(role_codes)},
             changes={"roles": {"old": before, "new": sorted(role_codes)}},
         )
+    # Performance review 26.09.2026, item 2: the cached roles of this tenant are dropped only
+    # after the commit, so a request in between never re-caches the old assignment.
+    invalidate_permissions(tenant_id)

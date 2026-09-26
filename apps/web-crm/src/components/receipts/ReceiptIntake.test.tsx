@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { minConfidence, ReceiptIntake, type ReceiptDraft } from "./ReceiptIntake";
+import { displayValue, minConfidence, ReceiptIntake, type ReceiptDraft } from "./ReceiptIntake";
 
 function field(value: string | null, confidence = 0.9, source: "ai" | "xml" | "ai_estimate" | "local" | "none" = "ai") {
   return { value, confidence, source, note: null };
@@ -198,7 +198,7 @@ describe("ReceiptIntake", () => {
     expect(within(review).getAllByText("XML (E-Rechnung)").length).toBeGreaterThanOrEqual(3);
     const conflicts = screen.getByTestId("receipt-conflicts");
     expect(conflicts).toHaveTextContent("Rechnungsnummer: XML RE-2026-100, PDF-Text nicht gefunden.");
-    expect(conflicts).toHaveTextContent("Brutto: XML 119.00, KI-Lesung des PDF 190.00.");
+    expect(conflicts).toHaveTextContent("Brutto: XML 119,00 EUR, KI-Lesung des PDF 190,00 EUR.");
     expect(screen.getByTestId("receipt-findings")).toHaveTextContent("Hybridrechnung");
     expect(within(review).getByText("Rechnungsempfänger (laut Beleg)").closest("tr")).toHaveTextContent("nur zur Prüfung, wird nicht übernommen");
     expect(within(review).getAllByRole("row").filter((r) => r.getAttribute("data-conflict") === "true")).toHaveLength(2);
@@ -226,11 +226,20 @@ describe("ReceiptIntake", () => {
     renderIntake([draft], "draft-1");
     const review = screen.getByTestId("receipt-review");
     const row = within(review).getByText("Anteil nach § 35a EStG").closest("tr");
-    expect(row).toHaveTextContent("300.00");
+    expect(row).toHaveTextContent("300,00 EUR");
     expect(row).toHaveTextContent("KI-Schätzung, nicht belegt");
     expect(row).toHaveTextContent("0 %");
     expect(row).toHaveTextContent("nur zur Prüfung, wird nicht übernommen");
     expect(within(row as HTMLElement).queryByDisplayValue("300.00")).toBeNull();
     expect(screen.getByTestId("receipt-findings")).toHaveTextContent("nur eine KI-Schätzung");
+  });
+});
+
+describe("displayValue", () => {
+  it("shows proposed amounts and dates in the UI format while inputs keep the API format", () => {
+    expect(displayValue("gross", "1234.56")).toBe("1.234,56 EUR");
+    expect(displayValue("invoice_date", "2026-09-18")).toBe("18.09.2026");
+    expect(displayValue("invoice_number", "RE-2026-0043")).toBe("RE-2026-0043");
+    expect(displayValue("net", null)).toBe("");
   });
 });

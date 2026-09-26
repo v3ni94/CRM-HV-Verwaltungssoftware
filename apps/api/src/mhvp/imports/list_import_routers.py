@@ -21,6 +21,7 @@ from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports import kontakte, objektdaten, zuordnung
+from mhvp.imports.csvtext import decode_csv
 from mhvp.imports.routers import WRITE, _need_domain
 
 router = APIRouter(prefix="/imports/immoware24/lists", tags=["Import Immoware24"])
@@ -35,19 +36,19 @@ LIST_ROLES: dict[str, ContactRoleCode] = {
 }
 
 
-async def _read_csv(file: UploadFile) -> str:
+async def _read_csv(file: UploadFile) -> tuple[str, str | None]:
+    """Text of the upload and a note when it was not UTF-8 (Windows-1252 exports are read)."""
     data = await file.read()
     if not data:
-        raise ProblemError(ErrorCodes.VALIDATION, detail="Die Datei ist leer.")
-    if len(data) > MAX_LIST_BYTES:
-        raise ProblemError(ErrorCodes.UPLOAD_REJECTED, detail="Die Datei ist zu groß.")
-    try:
-        return data.decode("utf-8-sig")
-    except UnicodeDecodeError as exc:
         raise ProblemError(
-            ErrorCodes.VALIDATION,
-            detail=f"{file.filename or 'Datei'} ist nicht als UTF-8 lesbar.",
-        ) from exc
+            ErrorCodes.VALIDATION, detail=f"{file.filename or 'Die Datei'} ist leer."
+        )
+    if len(data) > MAX_LIST_BYTES:
+        raise ProblemError(
+            ErrorCodes.UPLOAD_REJECTED, detail=f"{file.filename or 'Die Datei'} ist zu groß."
+        )
+    text, note = decode_csv(data)
+    return text, (f"{file.filename}: {note}" if note and file.filename else note)
 
 
 async def _run(
@@ -104,12 +105,14 @@ async def import_objektdaten(
     """``number_map``: ``ALT=NEU`` pairs separated by comma or line break for object numbers
     that are not three digits. Same rules as the command line (handbuch/import-objektdaten.md)."""
     _need_domain(principal)
-    text = await _read_csv(file)
+    text, encoding_note = await _read_csv(file)
     try:
         mapping = objektdaten._parse_number_map(number_map.replace("\n", ",").split(","))
-        prepared = objektdaten.prepare(objektdaten.parse_objektdaten(text), mapping)
-    except (argparse.ArgumentTypeError, ValueError, StopIteration) as exc:
+        parsed = objektdaten.parse_objektdaten(text, file.filename or None)
+        prepared = objektdaten.prepare(parsed, mapping)
+    except (argparse.ArgumentTypeError, ValueError) as exc:
         raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc) or "Datei unlesbar.") from exc
+    file_notes = ([encoding_note] if encoding_note else []) + parsed.notes
 
     async def work(session: Any, recorder: Recorder | None) -> dict[str, Any]:
         return await objektdaten.apply_prepared(
@@ -119,6 +122,7 @@ async def import_objektdaten(
             prepared,
             skip_handed_over=skip_handed_over,
             recorder=recorder,
+            file_notes=file_notes,
         )
 
     async with tenant_tx(request, principal) as session:
@@ -137,7 +141,7 @@ async def import_kontakte(
     _need_domain(principal)
     if len(files) != len(roles):
         raise ProblemError(ErrorCodes.VALIDATION, detail="Je Datei ist genau eine Rolle anzugeben.")
-    rows: list[kontakte.ContactRow] = []
+    parsed = kontakte.ParsedKontakte()
     for upload, role_text in zip(files, roles, strict=True):
         role = LIST_ROLES.get(role_text.strip().lower())
         if role is None:
@@ -148,16 +152,23 @@ async def import_kontakte(
                     "(eigentuemer, mieter, dienstleister, bank, sonstige)."
                 ),
             )
-        text = await _read_csv(upload)
+        text, encoding_note = await _read_csv(upload)
+        if encoding_note:
+            parsed.notes.append(encoding_note)
         try:
-            rows.extend(kontakte.parse_kontakte(text, role, upload.filename or role_text))
-        except (ValueError, StopIteration) as exc:
+            parsed.extend(kontakte.parse_kontakte(text, role, upload.filename or role_text))
+        except ValueError as exc:
             raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc) or "Datei unlesbar.") from exc
-    prepared = kontakte.prepare(rows)
+    prepared = kontakte.prepare(parsed)
 
     async def work(session: Any, recorder: Recorder | None) -> dict[str, Any]:
         return await kontakte.apply_prepared(
-            session, principal.tenant_id, principal.user_id, prepared, recorder=recorder
+            session,
+            principal.tenant_id,
+            principal.user_id,
+            prepared,
+            recorder=recorder,
+            file_notes=parsed.notes,
         )
 
     async with tenant_tx(request, principal) as session:
@@ -180,9 +191,9 @@ async def import_zuordnung(
     defaults to 1 January of the current year (reported as assumed). The contracts are not
     registered as undo items; the report lists every conflict, ambiguous and unknown name."""
     _need_domain(principal)
-    text = await _read_csv(file)
+    text, _note = await _read_csv(file)
     try:
-        rows = objektdaten.parse_objektdaten(text)
+        rows = objektdaten.parse_objektdaten(text, file.filename).rows
     except (ValueError, StopIteration) as exc:
         raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc) or "Datei unlesbar.") from exc
     start = start_date or zuordnung.default_start_date()

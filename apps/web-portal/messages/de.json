@@ -52,7 +52,10 @@
       "contacts": "Ansprechpartner",
       "hoaAccount": "Hausgeldkonto",
       "notices": "Aushänge",
-      "forms": "Formulare"
+      "forms": "Formulare",
+      "open": "Menü öffnen",
+      "close": "Menü schließen",
+      "label": "Hauptnavigation"
     },
     "start": {
       "title": "Übersicht",
@@ -74,7 +77,14 @@
       "newNotices": "{count, plural, one {Ein neuer Aushang} other {# neue Aushänge}} am Schwarzen Brett.",
       "forms": "Formulare der Verwaltung ausfüllen"
     },
-    "proposalNotice": "Vorschlag, wird von der Verwaltung geprüft."
+    "proposalNotice": "Vorschlag, wird von der Verwaltung geprüft.",
+    "errorTitle": "Die Seite konnte nicht geladen werden.",
+    "errorHint": "Bitte versuchen Sie es erneut. Bleibt der Fehler bestehen, wenden Sie sich an Ihre Verwaltung.",
+    "retry": "Erneut versuchen",
+    "loading": "Inhalt wird geladen",
+    "notFoundTitle": "Seite nicht gefunden",
+    "notFoundHint": "Die aufgerufene Seite existiert nicht oder steht Ihrem Zugang nicht zur Verfügung.",
+    "toStart": "Zur Übersicht"
   },
   "Documents": {
     "title": "Dokumente",
@@ -117,7 +127,8 @@
     "appointmentAccept": "Diesen Termin bestätigen",
     "appointmentAccepted": "Der Termin wurde bestätigt.",
     "appointmentConfirmed": "Bestätigter Termin",
-    "appointmentsOpen": "Terminvorschlag liegt vor"
+    "appointmentsOpen": "Terminvorschlag liegt vor",
+    "attachmentsList": "Anhänge der Meldung"
   },
   "Account": {
     "title": "Kontoauszug",
@@ -214,7 +225,12 @@
       "accepted": "Bestätigt",
       "declined": "Nicht gewählt",
       "superseded": "Ersetzt"
-    }
+    },
+    "quoteAmountRequired": "Bitte den Angebotsbetrag eingeben.",
+    "appointmentRequired": "Bitte einen Termin auswählen.",
+    "reportRequired": "Bitte den Ausführungsbericht eingeben.",
+    "invoiceFieldsRequired": "Bitte Rechnungsnummer, Rechnungsdatum und Rechnungsbetrag angeben.",
+    "orderTitle": "Auftrag"
   },
   "Handover": {
     "title": "Übergabeprotokolle",
@@ -543,7 +559,10 @@
     "balance": "Saldo",
     "balanceOwed": "(offener Betrag)",
     "balanceCredit": "(Guthaben)",
-    "balanceEven": "(ausgeglichen)"
+    "balanceEven": "(ausgeglichen)",
+    "reversed": "storniert",
+    "runningBalance": "Saldo danach",
+    "tableCaption": "Gebuchte Sollstellungen und Zahlungen"
   },
   "Notices": {
     "title": "Aushänge",
@@ -600,7 +619,45 @@
     "textLabel": "Text",
     "submit": "Absenden",
     "questionSent": "Die Rückfrage wurde an die Verwaltung übermittelt.",
-    "noteSaved": "Der Vermerk wurde gespeichert."
+    "noteSaved": "Der Vermerk wurde gespeichert.",
+    "periodRange": "{from} bis {to}",
+    "filter": {
+      "label": "Positionen filtern",
+      "account": "Konto",
+      "vendor": "Lieferant",
+      "dateFrom": "Buchungsdatum von",
+      "dateTo": "Buchungsdatum bis",
+      "text": "Buchungstext",
+      "all": "Alle",
+      "apply": "Filter anwenden",
+      "reset": "Filter zurücksetzen",
+      "result": "{shown} von {total} Positionen angezeigt.",
+      "unfiltered": "{total, plural, one {# Position} other {# Positionen}}, ungefiltert.",
+      "noMatch": "Keine Position entspricht dem Filter.",
+      "invalid": "Der Filter ist ungültig, zum Beispiel liegt das Enddatum vor dem Anfangsdatum. Es werden alle Positionen angezeigt."
+    },
+    "reports": {
+      "title": "Prüfberichte und Stellungnahme des Beirats",
+      "notice": "Der Prüfbericht wird von der Verwaltung je Version erstellt. Die Stellungnahme des Beirats ist ein eigener Text mit Zeitpunkt und Verfasser. Sie hat keine Freigabewirkung und ändert weder den Bericht noch die Abrechnung.",
+      "empty": "Noch kein Prüfbericht erstellt.",
+      "version": "Prüfbericht Version {n}",
+      "figures": "{checked} geprüft ({checkedValue}), {unchecked} ungeprüft ({uncheckedValue})",
+      "findings": "Feststellungen",
+      "recommendation": "Empfehlung",
+      "statement": "Stellungnahme des Beirats",
+      "noStatement": "Noch keine Stellungnahme erfasst.",
+      "recordedAt": "Erfasst am {at}",
+      "sourcePortal": "über das Portal",
+      "sourceCrm": "durch die Verwaltung erfasst",
+      "history": "{count, plural, one {eine frühere Fassung} other {# frühere Fassungen}}",
+      "statementLabel": "Text der Stellungnahme",
+      "statementHint": "Eine neue Stellungnahme ersetzt den bisherigen Text; frühere Fassungen bleiben im Bericht nachvollziehbar.",
+      "saveStatement": "Stellungnahme speichern",
+      "replaceStatement": "Stellungnahme ändern",
+      "cancel": "Abbrechen",
+      "statementSaved": "Die Stellungnahme wurde gespeichert."
+    },
+    "costTableCaption": "Abrechnungspositionen des Prüfauftrags"
   },
   "Forms": {
     "title": "Formulare",
@@ -611,7 +668,8 @@
     "submitting": "Wird gesendet",
     "submitted": "{name} wurde übermittelt. Den Vorgang finden Sie unter Meldungen.",
     "requiredMissing": "Bitte das Feld {label} ausfüllen.",
-    "proposalNote": "Die Angaben werden an die Verwaltung übermittelt und dort geprüft."
+    "proposalNote": "Die Angaben werden an die Verwaltung übermittelt und dort geprüft.",
+    "requiredHint": "Mit * gekennzeichnete Felder sind Pflichtfelder."
   },
   "Invitation": {
     "title": "Einladung annehmen",

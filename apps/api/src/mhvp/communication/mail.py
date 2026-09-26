@@ -40,14 +40,21 @@ def parse(raw: bytes) -> dict[str, Any]:
         text = re.sub(r"<[^>]+>", " ", text)
     html_part = msg.get_body(preferencelist=("html",))
     html = html_part.get_content() if html_part is not None else None
-    attachments = [
-        {
-            "filename": part.get_filename() or "anhang",
-            "mime": part.get_content_type(),
-            "data": part.get_payload(decode=True) or b"",
-        }
-        for part in msg.iter_attachments()
-    ]
+    attachments = []
+    inline_skipped = 0
+    for part in msg.iter_attachments():
+        if is_inline_part(part):
+            # Signaturgrafiken und eingebettete Bilder (Review 26.09.2026, M8) bleiben im
+            # Roh-.eml und werden nicht als eigenständige Dokumente abgelegt.
+            inline_skipped += 1
+            continue
+        attachments.append(
+            {
+                "filename": part.get_filename() or "anhang",
+                "mime": part.get_content_type(),
+                "data": part.get_payload(decode=True) or b"",
+            }
+        )
     received = None
     if msg["Date"]:
         try:
@@ -74,7 +81,48 @@ def parse(raw: bytes) -> dict[str, Any]:
         "references": clean(references, 20000) or None,
         "received_at": received,
         "attachments": attachments,
+        "inline_skipped": inline_skipped,
     }
+
+
+def is_inline_part(part: Any) -> bool:
+    """Inline part referenced from the HTML body (``Content-Disposition: inline`` with a
+    ``Content-ID``), typically a signature image; never a document of its own."""
+    return part.get_content_disposition() == "inline" and bool(part["Content-ID"])
+
+
+def reference_ids(header: str | None) -> list[str]:
+    """Message ids of a ``References`` (or ``In-Reply-To``) header, last (closest) first."""
+    return [i for i in reversed((header or "").split()) if i]
+
+
+_QUOTE_RE = re.compile(
+    r"^(>|Am .{3,120} schrieb .{0,200}:\s*$|On .{3,120} wrote:\s*$"
+    r"|-{2,}\s*Urspr.ngliche Nachricht\s*-{2,}|-{2,}\s*Original Message\s*-{2,}"
+    r"|_{5,}\s*$|Von: .{1,200}$|From: .{1,200}$)",
+    re.IGNORECASE,
+)
+_SIGNATURE_RE = re.compile(
+    r"^(-- |--\s*$|Mit freundlichen Gr..en|Viele Gr..e|Beste Gr..e|Freundliche Gr..e)"
+)
+
+
+def strip_quoted(body: str | None, limit: int = 4000) -> str | None:
+    """First text block of a mail without quoted earlier mails and without the signature
+    (Review 26.09.2026, M17): the ticket description shows what the sender wrote, the full
+    text stays on the message. Returns ``None`` when nothing is left."""
+    if not body:
+        return None
+    kept: list[str] = []
+    for line in body.splitlines():
+        stripped = line.strip()
+        if _QUOTE_RE.match(stripped) or _SIGNATURE_RE.match(stripped):
+            break
+        kept.append(line.rstrip())
+    text = "\n".join(kept).strip()
+    if not text:
+        text = body.strip()
+    return text[:limit] or None
 
 
 def urgency(subject: str | None, body: str | None) -> str:

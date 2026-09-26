@@ -31,7 +31,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
     api.GET("/api/v1/properties/{property_id}/units", path),
     api.GET("/api/v1/properties/{property_id}/contacts", path),
     api.GET("/api/v1/properties/{property_id}/maintenance", path),
-    api.GET("/api/v1/tickets", { params: { query: { property_id: propertyId, limit: 50 } } }),
+    api.GET("/api/v1/tickets", { params: { query: { property_id: propertyId, limit: 50, include_closed: true } } }),
   ]);
   redirectIfUnauthenticated(response);
   if (!data) {
@@ -68,7 +68,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className={ui.card}>
-          <p className={ui.subtitle}>{t("status")}</p>
+          <p className={ui.subtitle}>{t("statusLabel")}</p>
           <p className="mt-1">
             <StatusPill variant={STATUS_VARIANT[data.status] ?? "neutral"} label={t(`status.${data.status}`)} />
           </p>

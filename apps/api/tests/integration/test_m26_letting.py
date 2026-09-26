@@ -1563,3 +1563,164 @@ def test_energy_certificate_and_asking_rent(
         "deposit": "1950.00",
     }
     assert not [m for m in exp2["missing"] if m.startswith("asking_rent.")]
+
+
+def test_listing_openimmo_schema_check_and_lock(
+    clients: tuple[TestClient, TestClient],
+    world: World,
+    database: Database,
+    redis_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """M26-02: schema check of the export. Without an XSD the check runs structurally and
+    carries the operator notice; with a configured XSD (mini test schema, injected
+    validator because no schema library is installed) a schema error locks the export
+    unless force=true is set (docs/rules/M26-02.md)."""
+    import xml.etree.ElementTree as ET
+    from pathlib import Path
+
+    from mhvp.letting import openimmo_schema
+
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "769",
+                "name": "Schema-Haus",
+                "management_type": "rental",
+                "street": "Schemaweg",
+                "house_number": "1",
+                "postal_code": "40002",
+                "city": f"Schemastadt {RUN}",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    building = _ok(
+        client.post(f"/api/v1/properties/{prop['id']}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )["id"]
+    unit = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/units",
+            json={
+                "building_id": building,
+                "number": "02",
+                "unit_type": "apartment",
+                "living_area_sqm": "55",
+                "rooms": "2",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    listing = _ok(
+        client.post(f"{L}/listings", json={"unit_id": unit, "kind": "rental"}, headers=h), 201
+    )
+    _ok(
+        client.patch(
+            f"{L}/listings/{listing['id']}",
+            json={
+                "price": "700.00",
+                "additional_costs": "120.00",
+                "description": "Zwei Zimmer.",
+                "energy_status": "nicht_erforderlich",
+            },
+            headers=h,
+        )
+    )
+
+    # no XSD configured: structural check, valid, operator notice "XSD nicht hinterlegt"
+    check = _ok(client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=h))
+    assert check["complete"] is True
+    schema = check["schema"]
+    assert schema["mode"] == "structure"
+    assert schema["valid"] is True
+    assert schema["errors"] == []
+    assert schema["xsd_configured"] is False
+    assert "XSD nicht hinterlegt" in schema["notice"]
+    assert client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=h).status_code == 200
+
+    # XSD configured (mini test schema); the validator is injected because neither
+    # xmlschema nor lxml is installed. The fake first rejects every document.
+    def rejecting(_path: Path) -> openimmo_schema.Validator:
+        return lambda _xml: ["Schemafehler X"]
+
+    def accepting(_path: Path) -> openimmo_schema.Validator:
+        return lambda _xml: []
+
+    monkeypatch.setattr(openimmo_schema, "_xmlschema_validator", rejecting)
+    xsd = Path(__file__).parents[1] / "unit" / "fixtures" / "openimmo-mini.xsd"
+    from pydantic import SecretStr
+
+    from tests.integration.test_m2_platform import _settings as base_settings
+
+    settings = base_settings(
+        database,
+        redis_url,
+        s3_endpoint_url="https://s3.us-east-1.amazonaws.com",
+        s3_access_key_id=SecretStr("testing"),
+        s3_secret_access_key=SecretStr("testing"),
+        s3_bucket=BUCKET,
+        openimmo_xsd_path=str(xsd),
+    )
+    with mock_aws(), TestClient(create_app(settings)) as xsd_client:
+        boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
+        hx = bearer(login(xsd_client, world, "m26admin"))
+        check_xsd = _ok(xsd_client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=hx))
+        assert check_xsd["complete"] is True
+        assert check_xsd["schema"] == {
+            "mode": "xsd",
+            "valid": False,
+            "errors": ["Schemafehler X"],
+            "notice": None,
+            "xsd_configured": True,
+        }
+
+        # complete listing but schema error: the export is locked without force=true
+        locked = xsd_client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=hx)
+        assert locked.status_code == 422, locked.text
+        body = locked.json()
+        assert body["code"] == "MHVP-CORE-0004"
+        assert "Schemaprüfung" in body["detail"]
+        assert body["openimmo"]["complete"] is True
+        assert body["openimmo"]["missing"] == []
+        assert body["openimmo"]["schema"]["errors"] == ["Schemafehler X"]
+        locked_zip = xsd_client.get(f"{L}/listings/{listing['id']}/openimmo.zip", headers=hx)
+        assert locked_zip.status_code == 422
+        # explicit override ("trotzdem exportieren") still produces the file
+        forced = xsd_client.get(f"{L}/listings/{listing['id']}/openimmo.xml?force=true", headers=hx)
+        assert forced.status_code == 200
+        assert ET.fromstring(forced.content).tag == "openimmo"  # noqa: S314
+        forced_zip = xsd_client.get(
+            f"{L}/listings/{listing['id']}/openimmo.zip?force=true", headers=hx
+        )
+        assert forced_zip.status_code == 200
+
+        # a document the schema accepts is exported without override
+        monkeypatch.setattr(openimmo_schema, "_xmlschema_validator", accepting)
+        ok_check = _ok(xsd_client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=hx))
+        assert ok_check["schema"]["valid"] is True
+        assert ok_check["schema"]["errors"] == []
+        assert (
+            xsd_client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=hx).status_code
+            == 200
+        )
+
+        # incomplete listing and schema error together: both results in the 422 payload
+        monkeypatch.setattr(openimmo_schema, "_xmlschema_validator", rejecting)
+        _ok(
+            xsd_client.patch(
+                f"{L}/listings/{listing['id']}",
+                json={"energy_status": "in_erstellung"},
+                headers=hx,
+            )
+        )
+        both = xsd_client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=hx)
+        assert both.status_code == 422
+        assert "unvollständig" in both.json()["detail"]
+        assert "energy.status" in {m["field"] for m in both.json()["openimmo"]["missing"]}
+        assert both.json()["openimmo"]["schema"]["valid"] is False

@@ -10,6 +10,7 @@ import asyncio
 import json
 import threading
 import time
+import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -126,6 +127,41 @@ def receiver() -> Iterator[str]:
 def _ok(response: Any, status: int = 200) -> Any:
     assert response.status_code == status, response.text
     return response.json()
+
+
+def _draft_meta(settings: Settings, world: World, document_id: str) -> dict[str, Any]:
+    """Draft metadata of a generated document (A83) read as the tenant."""
+    from sqlalchemy import select
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import NullPool
+
+    from mhvp.core.db.engine import create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.documents.models import Document
+
+    async def _read() -> dict[str, Any]:
+        engine = create_async_engine(
+            settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+        )
+        try:
+            async with tenant_transaction(create_session_factory(engine), world.tenant_a) as s:
+                meta = await s.scalar(
+                    select(Document.source_meta).where(Document.id == uuid.UUID(document_id))
+                )
+        finally:
+            await engine.dispose()
+        meta = dict(meta or {})
+        assert "nicht versendet" in meta.get("draft_notice", "")
+        assert meta.get("automation_event_id")
+        return {
+            "is_draft": meta.get("is_draft"),
+            "automation_rule_id": meta.get("automation_rule_id"),
+            "automation_rule_name": meta.get("automation_rule_name"),
+            "template_code": meta.get("template_code"),
+            "sent": False,
+        }
+
+    return asyncio.run(_read())
 
 
 def _later(seconds: int = 30) -> datetime:
@@ -338,6 +374,30 @@ def test_stage_two_actions(
     links = {(link["entity_type"], link["entity_id"]) for link in document["links"]}
     assert ("contact", contact["id"]) in links
     assert ("ticket", live["id"]) in links
+    # A83: the generated letter is a marked draft: category "Entwurf", notice printed on
+    # the PDF (found by the text search), rule and draft flag in the metadata; not sent.
+    draft_category = next(
+        c
+        for c in _ok(client.get("/api/v1/document-categories", headers=admin))
+        if c["code"] == "entwurf"
+    )
+    assert draft_category["name"] == "Entwurf"
+    assert document["category_id"] == draft_category["id"]
+    marked = _ok(
+        client.get(
+            "/api/v1/documents",
+            params={"q": "automatisch erzeugt", "category_id": draft_category["id"]},
+            headers=admin,
+        )
+    )
+    assert [d["id"] for d in marked["items"]] == [document["id"]]
+    assert _draft_meta(settings, world, document["id"]) == {
+        "is_draft": True,
+        "automation_rule_id": rule["id"],
+        "automation_rule_name": body["name"],
+        "template_code": "free_letter",
+        "sent": False,
+    }
 
     # AI task: a queued run of the gateway (proposal only), nothing decided.
     ai_run = _ok(client.get(f"/api/v1/ai/runs/{run['actions'][3]['entity_id']}", headers=admin))

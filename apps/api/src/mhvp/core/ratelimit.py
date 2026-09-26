@@ -54,14 +54,20 @@ class RateLimitMiddleware:
             return
 
         identity = identify(scope, settings)
-        if identity is not None:
+        address = client_ip(scope, trust_forwarded_for=settings.rate_limit_trust_forwarded_for)
+        if identity is None:
+            limit = settings.rate_limit_per_minute_anonymous
+            subject = "ip:" + address
+        elif identity.actor.startswith("apikey:"):
+            # An API key is only parsed here, never verified (see request_identity): a forged
+            # key must not open a fresh counter per prefix, so the key path is counted per
+            # client address (Sicherheitsreview 1.22, Befund 1). The user limit still applies
+            # to genuine API clients.
+            limit = settings.rate_limit_per_minute_user
+            subject = f"ip:{address}:apikey"
+        else:
             limit = settings.rate_limit_per_minute_user
             subject = identity.scope_key
-        else:
-            limit = settings.rate_limit_per_minute_anonymous
-            subject = "ip:" + client_ip(
-                scope, trust_forwarded_for=settings.rate_limit_trust_forwarded_for
-            )
 
         now = int(time.time())
         window = now - now % WINDOW_SECONDS

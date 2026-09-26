@@ -20,6 +20,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^mail\/mailboxes$/ },
   // Mail (M20): message list, thread view, reply drafts and the four-eyes approval flow.
   { method: "GET", pattern: /^mail\/messages$/ },
+  { method: "GET", pattern: /^mail\/messages\/count$/ },
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/thread$`) },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}$`) },
@@ -29,6 +30,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/attachments/${ID}/invoice-extraction$`) },
   { method: "GET", pattern: /^mail\/invoice-forwarding$/ },
   { method: "PUT", pattern: /^mail\/invoice-forwarding$/ },
+  { method: "GET", pattern: /^mail\/call-assistant$/ },
+  { method: "PUT", pattern: /^mail\/call-assistant$/ },
   // KI-Vorschläge und Playbooks (M20 Übernahme aus dem Immoware Hub).
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/suggest$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/apply-playbook$`) },
@@ -48,6 +51,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^service-contracts/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^service-contracts/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^service-contracts/${ID}$`) },
+  // Vertragsformular (A88): Anlage, neue Version, Beendigung, Zahlungsplan, Kaution, Mandatsverweis.
+  { method: "POST", pattern: /^contracts$/ },
+  { method: "GET", pattern: new RegExp(`^contracts/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^contracts/${ID}/(versions|termination|schedules|deposits)$`) },
+  { method: "GET", pattern: /^sepa-mandates$/ },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
   // Google-Kalender-Termine (M23-02 bidirektional): ändern/löschen des verknüpften Google-Events
   // und, nur nach ausdrücklicher Bestätigung, Einladung an externe Teilnehmer (M23-05).
@@ -88,6 +96,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/roles$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/competences$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/mobile-phone$`) },
+  { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/reply-approval$`) },
   // A37: Zugriffsbereich je Rechtsträger (Steuerberater).
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/legal-entities$`) },
   { method: "GET", pattern: /^tenant\/legal-entities$/ },
@@ -104,6 +113,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^tenant\/portal-role-permissions$/ },
   { method: "PUT", pattern: /^tenant\/portal-role-permissions$/ },
   { method: "POST", pattern: /^tenant\/portal-role-permissions\/resync$/ },
+  // Ausgehende Webhook-Abonnements (Abschnitt 12, A69): Katalog, Liste, Anlegen, Ändern,
+  // Löschen, Zustellprotokoll und manuelle Neuzustellung (Rechte webhooks:*).
+  { method: "GET", pattern: /^tenant\/webhooks$/ },
+  { method: "GET", pattern: /^tenant\/webhooks\/event-types$/ },
+  { method: "POST", pattern: /^tenant\/webhooks$/ },
+  { method: "PATCH", pattern: new RegExp(`^tenant/webhooks/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^tenant/webhooks/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^tenant/webhooks/${ID}/deliveries$`) },
+  { method: "POST", pattern: new RegExp(`^tenant/webhook-deliveries/${ID}/redeliver$`) },
   { method: "GET", pattern: /^tenant\/settings$/ },
   { method: "PATCH", pattern: /^tenant\/settings$/ },
   // Rechnungsstellung und Steuer (M13-04/M18-01, operator decision 25.09.2026).
@@ -123,6 +141,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^ai/conversations/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^ai/conversations/${ID}/messages$`) },
   { method: "GET", pattern: new RegExp(`^ai/runs/${ID}$`) },
+  { method: "GET", pattern: /^ai\/examples$/ },
   { method: "GET", pattern: new RegExp(`^ai/proposals/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^ai/proposals/${ID}/(apply|reject)$`) },
   { method: "GET", pattern: /^ai\/usage$/ },
@@ -145,6 +164,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^imports$/ },
   { method: "GET", pattern: new RegExp(`^imports/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^imports/${ID}/undo$`) },
+  { method: "POST", pattern: new RegExp(`^ai/import-runs/${ID}/apply-role$`) },
   // Immoware24 import assistant (M8, 13.1).
   { method: "GET", pattern: /^imports\/immoware24\/(fields|mappings|overview)$/ },
   { method: "POST", pattern: /^imports\/immoware24\/(mappings|files)$/ },
@@ -178,10 +198,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^accounting/receivable-runs/${ID}/post$`) },
   // Bank (M11, M12): statement import, proposals, confirmed booking, ignore with reason.
   { method: "POST", pattern: /^banking\/imports$/ },
+  // Kennzahlen des Bankabgleichs (A45): Abdeckungsgrad und Fehlerquote je Zeitraum, lesend.
+  { method: "GET", pattern: /^banking\/matching-metrics$/ },
   { method: "GET", pattern: new RegExp(`^banking/transactions/${ID}/candidates$`) },
   { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(book|ignore)$`) },
   // Payment orders (M15): approval and cancel only; the payment file needs G2.
   { method: "POST", pattern: new RegExp(`^banking/payment-orders/${ID}/(approve|cancel)$`) },
+  // Direct debit runs (M15, pain.008): four eyes approval, cancel, file generation as a
+  // document. The download stays behind G2 (API); nothing here transmits anything to a bank.
+  { method: "GET", pattern: /^accounting\/direct-debits$/ },
+  { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/(approve|cancel|file)$`) },
   { method: "GET", pattern: /^banking\/payment-orders$/ },
   // finAPI (M11-finapi): read only aggregator onboarding, consent, fetch (Stufen 1-3).
   { method: "GET", pattern: /^banking\/finapi\/config$/ },
@@ -367,7 +393,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^tickets/${ID}$`) },
   // Stammdatenänderung aus der Ticket-Mail (Vorschlag, Entscheidung, Antwortentwurf; 26.09.2026).
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/proposals$`) },
-  { method: "POST", pattern: new RegExp(`^tickets/${ID}/proposals/(contact-change|${ID}/(accept|correct|reject|reply-draft))$`) },
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/proposals/(contact-change|${ID}/(accept|accept-and-reply|correct|reject|reply-draft))$`) },
   { method: "POST", pattern: /^tickets\/merge$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}$`) },
   // Energieausweis am Objekt (A63): Objektstammdaten vollständig speichern.
@@ -381,6 +407,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Paperless-Dokumente in Ticket- und Objektansicht (M31).
   { method: "GET", pattern: new RegExp(`^properties/${ID}/dms-documents$`) },
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/dms-documents$`) },
+  // Arbeitsaufträge (A74): Terminvorschläge je Auftrag für die Kurzanzeige im Ticket und die Auftragsseite.
+  { method: "GET", pattern: new RegExp(`^work-orders/${ID}/appointment-proposals$`) },
   { method: "GET", pattern: /^dms-documents\/[0-9]+\/file$/ },
   // Paperless-Suche und Gesellschaftsfilter (Übernahme aus dem Immoware Hub, 7.2), nur lesend.
   { method: "GET", pattern: /^dms-documents$/ },

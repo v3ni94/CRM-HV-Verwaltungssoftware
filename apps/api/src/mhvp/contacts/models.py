@@ -153,6 +153,7 @@ class Contact(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "contact"
     __table_args__ = (
         Index("ix_contact_tenant_id_last_name", "tenant_id", "last_name"),
+        Index("ix_contact_tenant_display_name", "tenant_id", "display_name"),
         Index("ix_contact_search_vector", "search_vector", postgresql_using="gin"),
         Index(
             "ix_contact_search_text_trgm",

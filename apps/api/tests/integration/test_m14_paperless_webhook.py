@@ -315,3 +315,26 @@ def test_tenant_separation(client: TestClient, world: World, fake: FakePaperless
         _ok(client.get(f"/api/v1/documents/{b_doc['document_id']}", headers=hb))["id"]
         == b_doc["document_id"]
     )
+
+
+def test_oversized_body_is_413_before_any_check(client: TestClient, world: World) -> None:
+    """Sicherheitsreview 1.22, Befund 2: a body above the limit is refused before the tenant
+    or the signature is looked at, with the declared length as well as with the read length."""
+    big = b"{" + b" " * hook.MAX_BODY_BYTES + b"}"
+    declared = client.post(
+        W,
+        content=big,
+        headers={"Content-Type": "application/json", hook.TENANT_HEADER: SLUG_A},
+    )
+    assert declared.status_code == 413, declared.text
+    assert declared.json()["code"] == "MHVP-HOOK-0004"
+    # A chunked delivery without Content-Length is measured after reading.
+    chunked = client.post(
+        W,
+        content=iter([big[: len(big) // 2], big[len(big) // 2 :]]),
+        headers={"Content-Type": "application/json", hook.TENANT_HEADER: SLUG_A},
+    )
+    assert chunked.status_code == 413, chunked.text
+    # A small body still runs into the signature check, not the size check.
+    small = client.post(W, content=b"{}", headers={hook.TENANT_HEADER: SLUG_A})
+    assert small.status_code == 401

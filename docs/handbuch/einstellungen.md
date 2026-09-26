@@ -3,8 +3,10 @@
 ## Zweck
 
 Einstellungen bündelt alles, was den Mandanten und seinen Betrieb betrifft: Benutzer,
-Rollen, Postfächer, DMS- und Google-Verbindung, SLA, KI, Immoware24-Anbindung, Bank und
-Ticketvorlagen.
+Rollen, Postfächer, DMS- und Google-Verbindung, SLA, KI, Immoware24-Anbindung, Bank,
+Ticketvorlagen, Antwortvorlagen, Automatisierung, Telefonie, Portalformulare, WEG
+(Mehrheitsregeln) und Buchhaltung, DATEV. Änderungen an Mandanteneinstellungen verlangen
+das Recht Mandanteneinstellungen ändern; ohne dieses Recht sind die Seiten nur lesbar.
 
 ## Rechtsträger der verwaltenden Gesellschaft
 
@@ -26,6 +28,17 @@ Unter Benutzer und Rollen werden Konten angelegt, Rollen zugewiesen und Kompeten
 nie gelöscht, sondern gesperrt oder wieder aktiviert, damit die Nachvollziehbarkeit
 gewahrt bleibt. Passwort zurücksetzen erzeugt ein Startpasswort, das persönlich zu
 übergeben ist; der Benutzer sollte es unter Meine Daten selbst ändern.
+
+Freigabepflicht für Ticketantworten (Betreiberentscheidung vom 26.09.2026): Je Benutzer kann
+mit dem Recht Mandanteneinstellungen ändern das Kennzeichen Freigabepflicht gesetzt werden,
+mit Grund Azubi oder neuer Mitarbeiter und optional befristet bis zu einem Datum
+(einschließlich). Antworten aus dem Ticket dieser Benutzer gehen als Vorlage an alle übrigen
+Freigabeberechtigten und werden erst nach Freigabe durch eine zweite Person versendet.
+Benutzer ohne Kennzeichen, die das Recht Kommunikation freigeben haben, versenden ihre
+Ticketantworten direkt. Jede Änderung des Kennzeichens wird im Ereignisprotokoll mit Benutzer
+festgehalten. Unter Mandant und Briefbogen steht zusätzlich die Notbremse Ticketantworten:
+Freigabe für alle (Standard aus): Ist sie an, brauchen alle Ticketantworten des Mandanten die
+Freigabe einer zweiten Person, unabhängig vom Kennzeichen.
 
 ## Rollen und Portalrechte
 
@@ -105,6 +118,57 @@ Die KI-Wissensbasis (Kapitel
 Mail, Abschnitt Vorbereitung) wird je Mandant und optional je Objekt unter KI,
 Wissensbasis gepflegt: Ablageregeln, Arbeitsweisen, Fakten und aus Korrekturen gelernte
 Einträge, filterbar je Objekt.
+
+## Automatischer Belegeingang
+
+Unter DMS-Anbindung, Karte Automatischer Belegeingang: Schalter Rechnungen aus neuen
+E-Mails automatisch erfassen (Standard aus). Aktiv startet je neuem PDF-Anhang mit
+Rechnungsmerkmal beim Postfachabruf genau eine KI-Extraktion als Belegentwurf; nichts wird
+gebucht, jede Extraktion belastet das KI-Monatsbudget (Kapitel Belegeingang).
+
+## Telefonie
+
+Unter Telefonie wird der anbieterneutrale Telefonie-Webhook eingerichtet: Webhook aktiv,
+Anbieter oder Anlage (freie Bezeichnung), Geheimnis (HMAC, mindestens 16 Zeichen, wird
+einmal gespeichert und nie wieder angezeigt; leer lassen, um es zu behalten). Die Seite
+zeigt den Endpunkt, den die Telefonanlage aufruft. Ohne Geheimnis lässt sich der Webhook
+nicht aktivieren. Es werden keine Gesprächsinhalte angenommen; Rufnummern erscheinen nur
+mit dem Recht Kontakte lesen unmaskiert. Anbieterwahl und Auftragsverarbeitung sind
+Betreiberentscheidung (M23-06). Anrufliste und Rückruf-Vorschlag: Kapitel Kommunikation.
+
+## Portalformulare
+
+Unter Portalformulare werden Formularvorlagen für das Portal gepflegt: Name, Hinweistext
+im Portal, Ticketkategorie (Kategorie des Tickets, das aus einer Einreichung entsteht),
+Zielgruppe (Mieter und Eigentümer, Nur Mieter, Nur Eigentümer), Reihenfolge und Felder
+(Feldtyp Text, Zahl, Datum, Auswahl mit Optionen, Datei; je Feld Pflicht). Aktivieren und
+Deaktivieren steuern die Sichtbarkeit im Portal; Vorlagen mit Einreichungen lassen sich nur
+deaktivieren, nicht löschen. Jede Einreichung wird ein Ticket mit Anhängen (Kapitel Portal,
+Formulare).
+
+## Automatisierung
+
+Unter Automatisierung werden Regeln der Regel-Engine (Auslöser Ereignis oder Zeitplan,
+Bedingungen, Aktionen, Testlauf, Protokoll) gepflegt. Regeln lösen keine Buchungen,
+Zahlungen, Freigaben oder Mailversand aus. Einzelheiten im Kapitel Automatisierung.
+
+## WEG (Mehrheitsregeln)
+
+Unter WEG stehen die Mehrheitsregeln je Beschlussgegenstand mit Fundstelle, Geltung (alle
+Gemeinschaften oder eine Gemeinschaft) und Freigabe durch eine zweite Person (Recht
+Buchhaltung freigeben). Einzelheiten im Kapitel WEG.
+
+## Buchhaltung, DATEV
+
+Unter Buchhaltung, DATEV wird die DATEV-Kontenzuordnung gepflegt (Recht Buchhaltung
+ändern; sonst nur Ansicht): CRM-Konto zu DATEV-Sachkonto mit Bezeichnung, Buchungskreis
+(oder alle Buchungskreise) und Gültig ab, Aktivieren und Deaktivieren. Es ist kein
+Kontenrahmen vorbelegt; jede Zuordnung wird nach Abstimmung mit dem Steuerberater
+eingetragen. Import aus CSV (Kopfzeile mit account_code, datev_account, optional label und
+valid_from) mit Vorschau (neu, ändern, unverändert, Fehler je Zeile) und Übernehmen. Der
+Prüfbericht nicht zugeordneter Konten zeigt je Buchungskreis und Zeitraum Konten mit
+Buchungen ohne Zuordnung; diese blockieren den DATEV-Buchungsstapel-Export. Der Export
+selbst bleibt wie die produktive Buchführung hinter G1 (Kapitel Buchhaltung).
 
 ## Immoware24-Verbindung und Diagnose
 

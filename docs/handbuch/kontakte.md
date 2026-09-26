@@ -33,6 +33,25 @@ Ohne Datum der Erteilung, Erteilungsart und Nachweis (PDF oder Vermerk) lässt s
 SEPA-Freigabe nicht speichern. Bereits gespeicherte Bankverbindungen werden beim
 erneuten Speichern des Kontakts nicht verändert und nur maskiert angezeigt.
 
+## IBAN-Freigabe im Vier-Augen-Prinzip
+
+Jede neue oder geänderte Bankverbindung (IBAN) steht zunächst im Status zur Freigabe.
+Freigeben oder Ablehnen (mit Rückfrage) darf nur eine andere Person als die, die die
+Bankverbindung erfasst hat (Recht Kontakte freigeben; bei eigener Erfassung zeigt die
+Zeile selbst erfasst, Freigabe durch eine andere Person). Ein zweites Benutzerkonto
+derselben Person zählt nicht als zweite Person.
+
+Bis zur Freigabe wird die Bankverbindung nicht verwendet: nicht im SEPA-Mandat, nicht in
+der Lastschrift, nicht in Zahlungsaufträgen und nicht im Rechnungsabgleich. Eine
+abweichende IBAN auf einer Rechnung meldet der Rechnungseingang als IBAN weicht von den
+freigegebenen Stammdaten ab (Kapitel Belegeingang); ein Zahlungsauftrag an eine nicht
+freigegebene IBAN wird abgewiesen. Bankverbindungen, die vor Einführung der Freigabe
+bestanden, gelten als freigegeben.
+
+Vorschläge aus dem Portal (Datenänderung) oder aus Ticket-Mails enthalten nie eine
+automatische Übernahme von Bankdaten; die IBAN ist von Hand mit Nachweis zu erfassen und
+anschließend freizugeben.
+
 ## Löschen und DSGVO-Auskunft
 
 Löschen markiert den Kontakt als gelöscht (Endgültig löschen zur Bestätigung); die
@@ -56,3 +75,9 @@ ohne Mandat darf keine Lastschrift eingezogen werden.
 - **Speichern trotz möglicher Dublette**: Die Dublettenprüfung meldet einen ähnlichen
   Kontakt; Trotzdem speichern legt den Kontakt dennoch an, vorher die Trefferliste
   prüfen.
+- **Freigeben der Bankverbindung abgewiesen**: Die Freigabe muss eine andere Person als
+  die erfassende vornehmen, oder die Bankverbindung wartet nicht mehr auf eine Freigabe.
+- **Lastschrift oder Zahlung nutzt die neue IBAN nicht**: Die Bankverbindung ist noch
+  nicht freigegeben (Reiter Bankverbindungen, Freigabe).
+- **Rufnummer in der Anrufliste maskiert**: Recht Kontakte lesen fehlt (Kapitel
+  Kommunikation).

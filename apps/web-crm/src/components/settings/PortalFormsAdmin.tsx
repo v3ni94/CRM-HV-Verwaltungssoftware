@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { PortalFormSubmissions } from "@/components/settings/PortalFormSubmissions";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -184,12 +185,12 @@ function TemplateForm({
           {error}
         </p>
       ) : null}
-      <div className="flex gap-2">
+      <div className={ui.formActions}>
         <button type="button" className={ui.primary} disabled={busy} onClick={submit}>
           {t("save")}
         </button>
         {onCancel ? (
-          <button type="button" className={ui.button} onClick={onCancel}>
+          <button type="button" className={ui.button} disabled={busy} onClick={onCancel}>
             {t("cancel")}
           </button>
         ) : null}
@@ -207,19 +208,31 @@ export function PortalFormsAdmin({ initialTemplates, canManage }: { initialTempl
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   async function toggle(tpl: PortalFormTemplate) {
+    setBusyId(tpl.id);
+    setError(null);
+    setMessage(null);
     const res = await bff<PortalFormTemplate>(`/api/bff/portal-admin/forms/${tpl.id}`, {
       method: "PATCH",
       body: JSON.stringify({ active: !tpl.active }),
     });
-    if (res.ok) setTemplates((list) => list.map((x) => (x.id === tpl.id ? res.data : x)));
-    else setError(res.message);
+    setBusyId(null);
+    if (res.ok) {
+      setTemplates((list) => list.map((x) => (x.id === tpl.id ? res.data : x)));
+      setMessage(t("saved"));
+    } else setError(res.message);
   }
 
   async function remove(tpl: PortalFormTemplate) {
     if (!window.confirm(t("confirmDelete", { name: tpl.name }))) return;
+    setBusyId(tpl.id);
+    setError(null);
+    setMessage(null);
     const res = await bff<null>(`/api/bff/portal-admin/forms/${tpl.id}`, { method: "DELETE" });
+    setBusyId(null);
     if (res.ok) setTemplates((list) => list.filter((x) => x.id !== tpl.id));
     else setError(res.message);
   }
@@ -230,6 +243,11 @@ export function PortalFormsAdmin({ initialTemplates, canManage }: { initialTempl
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p role="status" className={ui.success}>
+          {t("saved")}
         </p>
       ) : null}
       {canManage && !creating ? (
@@ -244,6 +262,7 @@ export function PortalFormsAdmin({ initialTemplates, canManage }: { initialTempl
           onSaved={(tpl) => {
             setTemplates((list) => [...list, tpl]);
             setCreating(false);
+            setMessage(t("saved"));
           }}
           onCancel={() => setCreating(false)}
         />
@@ -258,6 +277,7 @@ export function PortalFormsAdmin({ initialTemplates, canManage }: { initialTempl
                 onSaved={(next) => {
                   setTemplates((list) => list.map((x) => (x.id === tpl.id ? next : x)));
                   setEditing(null);
+                  setMessage(t("saved"));
                 }}
                 onCancel={() => setEditing(null)}
               />
@@ -278,15 +298,16 @@ export function PortalFormsAdmin({ initialTemplates, canManage }: { initialTempl
                   ? t("noFields")
                   : tpl.fields.map((f) => `${f.label}${f.required ? " *" : ""}`).join(", ")}
               </p>
+              <PortalFormSubmissions templateId={tpl.id} />
               {canManage ? (
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className={ui.buttonSm} onClick={() => setEditing(tpl.id)}>
                     {t("edit")}
                   </button>
-                  <button type="button" className={ui.buttonSm} onClick={() => toggle(tpl)}>
+                  <button type="button" className={ui.buttonSm} disabled={busyId === tpl.id} onClick={() => toggle(tpl)}>
                     {tpl.active ? t("deactivate") : t("activate")}
                   </button>
-                  <button type="button" className={ui.buttonSm} onClick={() => remove(tpl)}>
+                  <button type="button" className={ui.buttonSm} disabled={busyId === tpl.id} onClick={() => remove(tpl)}>
                     {t("delete")}
                   </button>
                 </div>

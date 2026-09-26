@@ -26,11 +26,11 @@ export default async function AuditListPage() {
             <Link href={`/pruefung/${row.id}`} className={`${ui.cardLink} flex flex-col gap-1`}>
               <span className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium">{row.legal_entity_name ?? row.legal_entity_id}</span>
-                <span className={ui.badge}>{t(`sampling.${row.sampling}`)}</span>
+                <span className={ui.badge}>{row.sampling === "sample" || row.sampling === "full" ? t(`sampling.${row.sampling}`) : row.sampling}</span>
               </span>
               <span className="text-sm text-muted">{row.purpose}</span>
               <span className="text-xs text-subtle">
-                {t("period")} {date(row.period_from)} bis {date(row.period_to)}
+                {t("period")} {t("periodRange", { from: date(row.period_from), to: date(row.period_to) })}
                 {row.open_questions ? ` · ${t("openQuestions", { count: row.open_questions })}` : ""}
               </span>
             </Link>

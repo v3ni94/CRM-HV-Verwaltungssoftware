@@ -1,9 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { CallAssistantSettings, type CallAssistant } from "@/components/mail/CallAssistantSettings";
 import { InvoiceForwardingSettings, type InvoiceForwarding } from "@/components/mail/InvoiceForwardingSettings";
 import { MailboxSettings, type Mailbox, type Member, type OAuthStatus } from "@/components/mail/MailboxSettings";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -19,7 +21,7 @@ export default async function MailboxSettingsPage({
   const t = await getTranslations("MailSettings");
   const params = await searchParams;
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
   const [oauth, mailboxes, members, invoiceForwarding] = await Promise.all([
@@ -28,6 +30,7 @@ export default async function MailboxSettingsPage({
     api.GET("/api/v1/tenant/members"),
     api.GET("/api/v1/mail/invoice-forwarding"),
   ]);
+  const callAssistant = await api.GET("/api/v1/mail/call-assistant");
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
@@ -51,6 +54,15 @@ export default async function MailboxSettingsPage({
             sender_allowlist: [],
             learning_list: [],
           }) as InvoiceForwarding
+        }
+      />
+      <CallAssistantSettings
+        initial={
+          (callAssistant.data ?? {
+            enabled: true,
+            sender_patterns: [],
+            keywords: [],
+          }) as CallAssistant
         }
       />
     </div>

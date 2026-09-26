@@ -224,3 +224,162 @@ def test_mail_intake_to_ticket(client: TestClient, world: World) -> None:
         {msg["id"], reply["id"]}
     )
     assert client.get(f"{M}/messages/{msg['id']}", headers=other).status_code == 404
+
+
+def test_list_preview_count_and_literal_search(client: TestClient, world: World) -> None:
+    """Review 26.09.2026, M3: the list carries a 200 character preview instead of the full
+    text, the detail delivers the text, the count endpoint answers the badge and ``%`` or
+    ``_`` in the search term match literally."""
+    h = bearer(login(client, world, "m20admin"))
+    long_text = "Zeile " * 100
+    doc = _upload(
+        client, h, "m3.eml", _eml(f"m3{RUN}@example.com", f"Lang {RUN}", long_text, f"<m3-{RUN}@x>")
+    )
+    msg = _ok(client.post(f"{M}/ingest", json={"document_id": doc}, headers=h), 201)
+    assert msg["body"].startswith("Zeile Zeile")
+    row = next(m for m in _ok(client.get(f"{M}/messages", headers=h)) if m["id"] == msg["id"])
+    assert "body" not in row
+    assert "body_html" not in row
+    assert row["body_preview"].endswith("…")
+    assert len(row["body_preview"]) == 201
+    detail = _ok(client.get(f"{M}/messages/{msg['id']}", headers=h))
+    assert detail["body"] == msg["body"]
+    assert detail["body_preview"] == row["body_preview"]
+
+    count = _ok(client.get(f"{M}/messages/count", params={"direction": "in"}, headers=h))
+    listed = _ok(client.get(f"{M}/messages", params={"direction": "in", "limit": 500}, headers=h))
+    assert count["count"] == len(listed) >= 1
+    assert _ok(client.get(f"{M}/messages/count", params={"status": "sent"}, headers=h)) == {
+        "count": 0
+    }
+    # A bare wildcard matches nothing literally instead of every message.
+    assert _ok(client.get(f"{M}/messages", params={"q": "%%%"}, headers=h)) == []
+    assert msg["id"] in {
+        m["id"] for m in _ok(client.get(f"{M}/messages", params={"q": f"Lang {RUN}"}, headers=h))
+    }
+
+
+def test_reply_found_by_references_header(client: TestClient, world: World) -> None:
+    """Review 26.09.2026, M7: a reply whose ``In-Reply-To`` points to a mail the system never
+    saw still joins the case through the ``References`` chain."""
+    h = bearer(login(client, world, "m20admin"))
+    sender = f"m7{RUN}@example.com"
+    first = _ok(
+        client.post(
+            f"{M}/ingest",
+            json={
+                "document_id": _upload(
+                    client, h, "m7a.eml", _eml(sender, f"Balkon {RUN}", "Frage", f"<m7a-{RUN}@x>")
+                ),
+                "auto_ticket": True,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    assert first["ticket_id"]
+    msg = EmailMessage()
+    msg["From"], msg["To"], msg["Subject"], msg["Message-ID"] = (
+        f"Mieterin <{sender}>",
+        "info@example.com",
+        f"AW: Balkon {RUN}",
+        f"<m7c-{RUN}@x>",
+    )
+    msg["In-Reply-To"] = f"<m7b-unknown-{RUN}@x>"  # forwarded via the customer's own client
+    msg["References"] = f"<m7a-{RUN}@x> <m7b-unknown-{RUN}@x>"
+    msg.set_content("Nachtrag")
+    reply = _ok(
+        client.post(
+            f"{M}/ingest",
+            json={"document_id": _upload(client, h, "m7c.eml", bytes(msg)), "auto_ticket": True},
+            headers=h,
+        ),
+        201,
+    )
+    assert reply["thread_id"] == first["id"]
+    assert reply["ticket_id"] == first["ticket_id"]
+
+
+def test_rejected_and_inline_attachments_are_recorded(client: TestClient, world: World) -> None:
+    """Review 26.09.2026, M8: an attachment the upload rules refuse is listed with name, type
+    and reason on the message; an inline signature image is not stored as a document."""
+    h = bearer(login(client, world, "m20admin"))
+    msg = EmailMessage()
+    msg["From"], msg["To"], msg["Subject"], msg["Message-ID"] = (
+        f"Mieterin <m8{RUN}@example.com>",
+        "info@example.com",
+        f"Anhang {RUN}",
+        f"<m8-{RUN}@x>",
+    )
+    msg.set_content("Siehe Anhang.")
+    msg.add_alternative('<p>Siehe Anhang <img src="cid:logo1"></p>', subtype="html")
+    logo = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00"
+        b"\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\x0f\x00\x01\x01\x01\x00\x18\xdd\x8d\xb4"
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    msg.add_attachment(
+        logo,
+        maintype="image",
+        subtype="png",
+        filename="logo.png",
+        disposition="inline",
+        cid="<logo1>",
+    )
+    msg.add_attachment(
+        b"MZ\x90\x00", maintype="application", subtype="x-msdownload", filename="setup.exe"
+    )
+    msg.add_attachment(b"%PDF-1.4 ok", maintype="application", subtype="pdf", filename="ok.pdf")
+    row = _ok(
+        client.post(
+            f"{M}/ingest",
+            json={"document_id": _upload(client, h, "m8.eml", bytes(msg))},
+            headers=h,
+        ),
+        201,
+    )
+    assert len(row["attachment_document_ids"]) == 1
+    rejected = row["classification"]["attachments_rejected"]
+    assert [r["filename"] for r in rejected] == ["setup.exe"]
+    assert rejected[0]["mime"] == "application/x-msdownload"
+    assert rejected[0]["size"] == 4
+    assert "nicht zulässig" in rejected[0]["reason"]
+    assert row["classification"]["attachments_total"] == 2
+    assert row["classification"]["inline_skipped"] == 1
+
+
+def test_ticket_from_mail_links_contact_and_trims_quotes(client: TestClient, world: World) -> None:
+    """Review 26.09.2026, M17: the ticket carries ``contact_id`` (contact page) and a public
+    description without quoted mails and signature; the full text stays on the message."""
+    h = bearer(login(client, world, "m20admin"))
+    sender = f"m17{RUN}@example.com"
+    contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={"kind": "person", "last_name": f"Quote{RUN}", "emails": [{"email": sender}]},
+            headers=h,
+        ),
+        201,
+    )
+    body = (
+        "Guten Tag,\n\nder Aufzug steht seit gestern.\n\nMit freundlichen Grüßen\nErika\n\n"
+        "Am 24.09.2026 um 09:00 schrieb Verwaltung <info@example.com>:\n> Ihre Anfrage ist da."
+    )
+    msg = _ok(
+        client.post(
+            f"{M}/ingest",
+            json={
+                "document_id": _upload(
+                    client, h, "m17.eml", _eml(sender, f"Aufzug {RUN}", body, f"<m17-{RUN}@x>")
+                ),
+                "auto_ticket": True,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    ticket = _ok(client.get(f"/api/v1/tickets/{msg['ticket_id']}", headers=h))
+    assert ticket["contact_id"] == contact["id"]
+    assert ticket["initiator_contact_id"] == contact["id"]
+    assert ticket["public_description"] == "Guten Tag,\n\nder Aufzug steht seit gestern."
+    assert "> Ihre Anfrage" in _ok(client.get(f"{M}/messages/{msg['id']}", headers=h))["body"]

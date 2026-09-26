@@ -189,6 +189,54 @@ export type BoardPosition = {
   booking_date: string | null;
   booking_text: string | null;
   booking_reference: string | null;
+  /** A77: accounts of the booked entry and the vendor behind the invoice (filter values). */
+  accounts?: { id: string; number: string; name: string }[];
+  vendor_contact_id?: string | null;
+  vendor_name?: string | null;
+};
+
+/** A77: server side filter of the audit room positions (query parameters of the detail). */
+export type BoardFilter = {
+  account_id: string | null;
+  vendor_contact_id: string | null;
+  date_from: string | null;
+  date_to: string | null;
+  q: string | null;
+};
+
+export type BoardFilterOptions = {
+  accounts: { id: string; number: string; name: string }[];
+  vendors: { id: string; name: string }[];
+};
+
+/** A76: statement of the board on one report version (text only, no release effect). */
+export type BoardStatement = {
+  text: string | null;
+  recorded_at: string | null;
+  recorded_by_account: string | null;
+  source: string;
+};
+
+export type BoardReport = {
+  id: string;
+  engagement_id: string;
+  version: number;
+  created_at: string;
+  content: {
+    date?: string | null;
+    sampling?: string | null;
+    scope_note?: string | null;
+    overall_status?: string | null;
+    selected?: number | null;
+    checked_count?: number | null;
+    checked_value?: string | null;
+    unchecked_count?: number | null;
+    unchecked_value?: string | null;
+    findings?: string | null;
+    recommendation?: string | null;
+  };
+  board_statement: BoardStatement | null;
+  board_statement_history: BoardStatement[];
 };
 
 export type BoardNote = {
@@ -207,6 +255,9 @@ export type BoardEngagementDetail = BoardEngagement & {
   overall_status: string;
   population: Record<string, unknown>;
   positions: BoardPosition[];
+  positions_total?: number;
+  filter?: BoardFilter;
+  filter_options?: BoardFilterOptions;
   cost_items: { id: string; label: string; amount: string; basis: string }[];
   documents: { id: string; title: string; filename: string; mime_type: string; created_at: string; audit_item_id: string | null }[];
   notes: BoardNote[];

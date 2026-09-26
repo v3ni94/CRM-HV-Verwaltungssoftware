@@ -15,8 +15,10 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports import reconciliation as rec
 
 router = APIRouter(prefix="/imports/reconciliation-reports", tags=["Import Immoware24"])
-READ = require_permission("ai:read")
-WRITE = require_permission("ai:create")
+# The report shows bank balances, account balances and open items per property: accounting
+# data, so the accounting permissions apply (Sicherheitsreview 1.22, Befund 3).
+READ = require_permission("accounting:read")
+WRITE = require_permission("accounting:create")
 
 
 class _In(BaseModel):

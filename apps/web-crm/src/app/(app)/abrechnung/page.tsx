@@ -4,6 +4,7 @@ import Link from "next/link";
 import { StatementCreate } from "@/components/billing/StatementCreate";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
+import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -22,8 +23,19 @@ export default async function StatementsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("notice")}</p>
+      {!ledgers.data ? (
+        <p role="alert" className={ui.alert}>
+          {problemMessage(ledgers.error as Problem | undefined, ledgers.response.status)}
+        </p>
+      ) : ledgers.data.length === 0 ? (
+        <p className={ui.help}>{t("noLedgers")}</p>
+      ) : null}
       <StatementCreate ledgers={(ledgers.data ?? []).map((l) => ({ id: l.id, name: l.name }))} />
-      {(list.data ?? []).length === 0 ? (
+      {!list.data ? (
+        <p role="alert" className={ui.alert}>
+          {problemMessage(list.error as Problem | undefined, list.response.status)}
+        </p>
+      ) : list.data.length === 0 ? (
         <EmptyState title={t("empty")} />
       ) : (
         <ul className="flex flex-col gap-1 text-sm">

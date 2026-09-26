@@ -77,7 +77,7 @@ objektakte-Repository umgesetzt). Stufe 4 im CRM:
   Dokumenttabelle).
 - Eigentümer- und Mieterlisten als Importvorschlag mit Testlauf, Abgleich und Freigabe
   (`objektakte_person_proposal`), ohne Schreiben in Stammdaten.
-- Migration `0126_objektakte_dms` (Tabellen `objektakte_webhook_receipt`,
+- Migration `0132_objektakte_dms` (Tabellen `objektakte_webhook_receipt`,
   `objektakte_person_proposal`, beide mit RLS).
 - CRM-Seite `/dms` mit Kacheln je Objekt (Status, offene Fälle, Vollständigkeit, fehlende
   Unterlagen) und `/dms/{nummer}` mit fehlenden Unterlagen, Dokumentliste mit Absprung in Drive,
@@ -98,3 +98,10 @@ Offen:
   Wert folgt, sobald die Werteliste im Vertrag festgelegt ist.
 - `object.taken_over` wird nur protokolliert; eine Folgeaktion (zum Beispiel Objektstatus im
   CRM) ist nicht festgelegt.
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: Paperless-Anzeige in Ticket und Objekt (M31), Drive-Objektordnersuche für die Mail-Vorbereitung (Regel M20-05), vollständige Übernahme von objektakte nach `docs/plans/M35-objektakte-uebernahme.md` (Stufen 1 bis 5 mit Differenzimport und Synchronisationsstand), OIDC-Browserbrücke für externe Dienste (`docs/plans/M30-sso.md`).
+* Die Stufen 1 bis 5 dieses Plans (Reiter DMS, SSO für objektakte, lesende Schnittstelle) sind durch die Entscheidung vom 25.09.2026 hinfällig; der Reiter `/dms` im CRM bleibt als Übergangslösung.
+* Offen: M34-02 (Drive-Suche gegen echten Account), Entscheidungen in Abschnitt 7 von M35.

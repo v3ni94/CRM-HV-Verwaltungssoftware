@@ -30,9 +30,16 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
       </h1>
       <span className={`${ui.badge} w-fit`}>{t(`status.${row.status}`)}</span>
       {(row.attachments ?? []).length > 0 ? (
-        <p className="text-sm text-muted">
-          {t("attachments")}: {row.attachments.map((a) => a.filename).join(", ")}
-        </p>
+        <div className="text-sm text-muted">
+          <p className={ui.label}>{t("attachments")}</p>
+          <ul aria-label={t("attachmentsList")} className="flex flex-col gap-0.5">
+            {row.attachments.map((a) => (
+              <li key={a.id} className="break-all">
+                {a.filename}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
       <AppointmentProposals proposals={row.appointment_proposals ?? []} />
       <TicketComments ticketId={row.id} comments={row.comments} />

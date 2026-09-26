@@ -22,6 +22,7 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from mhvp.ai import instructions as chat_instructions
 from mhvp.ai import providers, table_mapper, tasks
 from mhvp.ai.models import AiExample, AiProvider, AiProviderConfig, AiTask, AiTaskRun, RunStatus
 from mhvp.core.db.tenancy import tenant_transaction
@@ -753,6 +754,13 @@ async def _run_fast_contacts(
     map_prompt = tasks.prompt(AiTask.MAP_COLUMNS)
     map_schema = tasks.json_schema(AiTask.MAP_COLUMNS)
     map_messages = _messages(table_mapper.column_samples(table), {}, [])
+    # Operator instruction ("Rolle bank hinterlegen") goes to the mapping call too; before
+    # 26.09.2026 only the column samples were sent, so a role from the chat never arrived.
+    instructed_role = chat_instructions.role_from_instruction(instruction)
+    hint = instruction
+    if instructed_role:
+        hint += f"\nStandardrolle (roles) aus der Anweisung: {instructed_role}"
+    map_messages[0]["content"] = f"{hint}\n\n{map_messages[0]['content']}"
     map_result = await _call_plan(
         map_plan,
         keys,

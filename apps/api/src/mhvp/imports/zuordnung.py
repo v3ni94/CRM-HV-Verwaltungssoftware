@@ -622,7 +622,7 @@ async def run(argv: list[str] | None = None) -> int:
         help="Einheiten abgegebener Objekte (Präfix 'Z ABGEGEBEN') nicht zuordnen",
     )
     args = parser.parse_args(argv)
-    rows = parse_objektdaten(_read_file(args.file))
+    rows = parse_objektdaten(_read_file(args.file), str(args.file)).rows
     start = args.start_date or default_start_date()
 
     settings = get_settings()

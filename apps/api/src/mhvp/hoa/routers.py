@@ -615,6 +615,9 @@ async def post_statement(
                 ErrorCodes.CONFLICT,
                 detail="Konto für Abrechnungsergebnisse (Zahlungsart statement_result) fehlt.",
             )
+        # Debtor accounts reserved after the ledger was created (owner change, D15) are adopted
+        # here like in receivable runs and special levies (finding 26.09.2026).
+        await acc.sync_debtor_accounts(session, ledger)
         ids = []
         for unit in (st.snapshot or {}).get("units", []):
             amount = Decimal(unit["result"])
@@ -766,6 +769,99 @@ async def get_plan(
                 for i in items
             ]
         }
+
+
+def _snapshot_diff(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
+    """Compare two calculated snapshots per unit and per cost position (D14). Values are
+    strings of Decimals; the difference is new minus old."""
+    unit_fields = (
+        "cost_share",
+        "advances_resolved",
+        "advances_paid",
+        "result",
+        "arrears",
+        "information_total",
+    )
+
+    def triple(a: str | None, b: str | None) -> dict[str, str]:
+        da, db = Decimal(a or "0"), Decimal(b or "0")
+        return {"old": str(da), "new": str(db), "difference": str(db - da)}
+
+    old_units = {u["unit_number"]: u for u in old.get("units", [])}
+    new_units = {u["unit_number"]: u for u in new.get("units", [])}
+    units = [
+        {
+            "unit_number": number,
+            "in_old": number in old_units,
+            "in_new": number in new_units,
+            **{
+                f: triple(old_units.get(number, {}).get(f), new_units.get(number, {}).get(f))
+                for f in unit_fields
+            },
+        }
+        for number in sorted(set(old_units) | set(new_units))
+    ]
+    # Position splits are keyed by unit id in the snapshot; shown per unit number here.
+    number_of = {u["unit_id"]: u["unit_number"] for u in [*old_units.values(), *new_units.values()]}
+    old_pos = {p["label"]: p for p in old.get("positions", [])}
+    new_pos = {p["label"]: p for p in new.get("positions", [])}
+    positions = []
+    for label in sorted(set(old_pos) | set(new_pos)):
+        o, n = old_pos.get(label, {}), new_pos.get(label, {})
+        o_split = {number_of.get(k, k): v for k, v in o.get("split", {}).items()}
+        n_split = {number_of.get(k, k): v for k, v in n.get("split", {}).items()}
+        positions.append(
+            {
+                "label": label,
+                "in_old": label in old_pos,
+                "in_new": label in new_pos,
+                "amount": triple(o.get("amount"), n.get("amount")),
+                "split": {
+                    number: triple(o_split.get(number), n_split.get(number))
+                    for number in sorted(set(o_split) | set(n_split))
+                },
+            }
+        )
+    return {
+        "total_costs": triple(old.get("total_costs"), new.get("total_costs")),
+        "units": units,
+        "positions": positions,
+    }
+
+
+@router.get(
+    "/statements/{statement_id}/diff",
+    summary="Versionsvergleich zweier Hausgeldabrechnungen (D14)",
+)
+async def diff_hoa_statement(
+    statement_id: uuid.UUID,
+    against: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """``against`` is the older version (old), ``statement_id`` the newer one (new). Both must
+    belong to the same ledger (community) and year, otherwise 422; both need a snapshot."""
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(HoaStatement, statement_id)
+        other = await session.get(HoaStatement, against)
+        if st is None or other is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if st.ledger_id != other.ledger_id or st.year != other.year:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Vergleich nur zwischen Versionen derselben Gemeinschaft und Periode.",
+            )
+        if st.id == other.id:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Eine Version mit sich selbst.")
+        if not st.snapshot or not other.snapshot:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Beide Versionen müssen berechnet sein.")
+        return {
+            "statement_id": st.id,
+            "against_id": other.id,
+            "year": st.year,
+            "old": {"id": other.id, "version": other.version, "snapshot_hash": other.snapshot_hash},
+            "new": {"id": st.id, "version": st.version, "snapshot_hash": st.snapshot_hash},
+        } | _snapshot_diff(other.snapshot, st.snapshot)
 
 
 @router.get("/statements", summary="Hausgeldabrechnungen eines Buchungskreises")

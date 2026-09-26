@@ -7,6 +7,7 @@ which stays closed by default. Nothing here transmits anything to a bank.
 """
 
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
@@ -96,14 +97,25 @@ class DirectDebitRunOut(BaseModel):
 
 
 async def _run_out(session: Any, run: DirectDebitRun) -> DirectDebitRunOut:
-    orders = await dd.orders_of(session, run)
-    out = DirectDebitRunOut.model_validate(run)
-    out.approvals = len({a.user_id for a in await dd.valid_approvals(session, run, orders)})
-    out.orders = []
-    for o in orders:
-        item = DirectDebitOrderOut.model_validate(o)
-        item.debtor_iban_suffix = o.debtor_iban[-4:]
-        out.orders.append(item)
+    return (await _runs_out(session, [run]))[0]
+
+
+async def _runs_out(session: Any, runs: Sequence[DirectDebitRun]) -> list[DirectDebitRunOut]:
+    """Orders and valid approvals of all runs in two queries (performance review 26.09.2026)."""
+    if not runs:
+        return []
+    orders = await dd.orders_of_runs(session, [r.id for r in runs])
+    approvals = await dd.valid_approvals_of_runs(session, runs, orders)
+    out = []
+    for run in runs:
+        row = DirectDebitRunOut.model_validate(run)
+        row.approvals = len({a.user_id for a in approvals.get(run.id, [])})
+        row.orders = []
+        for o in orders.get(run.id, []):
+            item = DirectDebitOrderOut.model_validate(o)
+            item.debtor_iban_suffix = o.debtor_iban[-4:]
+            row.orders.append(item)
+        out.append(row)
     return out
 
 
@@ -210,7 +222,7 @@ async def list_runs(
         if status is not None:
             query = query.where(DirectDebitRun.status == DirectDebitRunStatus(status))
         rows = (await session.scalars(query.limit(limit))).all()
-        return [await _run_out(session, r) for r in rows]
+        return await _runs_out(session, rows)
 
 
 @router.post("", status_code=201, summary="Lastschriftlauf anlegen (Entwurf)")

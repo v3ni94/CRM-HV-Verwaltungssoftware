@@ -26,6 +26,7 @@ from mhvp.core.auth.principal import (
     tenant_tx,
 )
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
+from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import access, read_receipts
@@ -537,7 +538,8 @@ async def download(
             content=data,
             media_type=document.mime_type,
             headers={
-                "Content-Disposition": f'attachment; filename="{document.filename}"',
+                "Content-Disposition": content_disposition("attachment", document.filename),
+                "X-Content-Type-Options": "nosniff",
                 # Header values are latin-1 on the wire: percent encoded UTF-8 (RFC 8187 style).
                 **({"X-Redaction-Note": url_quote(note)} if note else {}),
             },
@@ -1025,6 +1027,9 @@ async def quote(
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
         order = await _own_order(session, account, order_id)
+        if body.document_id is not None:
+            # Review 1.22 Nr. 16: the quote document must be an own upload, like photos.
+            await _own_uploads(session, account, [body.document_id])
         await _step(session, order, OrderStatus.QUOTED, principal, "Angebot")
         order.quote_amount, order.quote_document_id = body.amount, body.document_id
         return await _order(session, order)

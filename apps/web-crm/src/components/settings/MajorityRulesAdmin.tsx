@@ -61,11 +61,13 @@ export function MajorityRulesAdmin({
   const [editId, setEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const entityName = (id: string | null) => (id ? (entities.find((e) => e.id === id)?.name ?? id) : t("tenantWide"));
 
   const send = async (path: string, method: string, body?: unknown) => {
     setBusy(true);
     setError(null);
+    setSaved(false);
     const res = await bff(`/api/bff/hoa/majority-rules/subject-rules${path}`, {
       method,
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -75,12 +77,18 @@ export function MajorityRulesAdmin({
       setError(res.message);
       return false;
     }
+    setSaved(true);
     router.refresh();
     return true;
   };
+  const custom = form.majority_type === "custom";
+  const num = Number(form.custom_numerator);
+  const den = Number(form.custom_denominator);
+  const customValid = !custom || (Number.isInteger(num) && Number.isInteger(den) && num > 0 && den > 0 && num <= den);
+  const sourceValid = form.source.trim().length >= 3;
+  const hint = !sourceValid ? t("sourceRequired") : !customValid ? t("customInvalid") : null;
 
   const save = async () => {
-    const custom = form.majority_type === "custom";
     const body = {
       legal_entity_id: form.legal_entity_id || null,
       subject_kind: form.subject_kind,
@@ -118,6 +126,11 @@ export function MajorityRulesAdmin({
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
+        </p>
+      ) : null}
+      {saved ? (
+        <p role="status" className={ui.success}>
+          {t("saved")}
         </p>
       ) : null}
       {rules.length === 0 ? (
@@ -237,7 +250,7 @@ export function MajorityRulesAdmin({
               <span className={ui.label}>{t("source")}</span>
               <input className={ui.input} value={form.source} placeholder={t("sourcePlaceholder")} onChange={set("source")} />
             </label>
-            <button type="button" className={ui.primary} onClick={save} disabled={busy || form.source.trim().length < 3}>
+            <button type="button" className={ui.primary} onClick={save} disabled={busy || !sourceValid || !customValid}>
               {t(editId ? "update" : "create")}
             </button>
             {editId ? (
@@ -246,6 +259,7 @@ export function MajorityRulesAdmin({
               </button>
             ) : null}
           </div>
+          {hint ? <p className={`${ui.help} mt-2`}>{hint}</p> : null}
         </div>
       ) : null}
     </div>

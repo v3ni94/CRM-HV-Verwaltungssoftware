@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 
 import { renderIntl } from "@/test/intl";
 
-import { HoaAccountTable, formatEur } from "./HoaAccountTable";
+import { HoaAccountTable, formatEur, runningBalances } from "./HoaAccountTable";
 import { PropertyContactList } from "./PropertyContactList";
 import { ResolutionList } from "./ResolutionList";
 import type { HoaAccount, PortalResolution, PropertyContacts } from "./types";
@@ -87,11 +87,31 @@ describe("HoaAccountTable", () => {
     renderIntl(<HoaAccountTable account={account} />);
     expect(screen.getByText(/Keine Abrechnung, keine Rechtsfolge/)).toBeInTheDocument();
     expect(screen.getByText("Vertrag E-0001")).toBeInTheDocument();
-    expect(screen.getByText("05.01.2026")).toBeInTheDocument();
-    expect(screen.getAllByText("1.250,00 EUR")).toHaveLength(2);
-    expect(screen.getAllByText("100,00 EUR")).toHaveLength(2);
+    expect(screen.getAllByText("05.01.2026")).toHaveLength(2); // card and table row
+    expect(screen.getAllByText("1.250,00 EUR")).toHaveLength(3); // card, table, sum
+    expect(screen.getAllByText("100,00 EUR")).toHaveLength(2); // table, sum (card shows -100,00)
+    expect(screen.getByText("-100,00 EUR")).toBeInTheDocument();
     expect(screen.getByText("1.150,00 EUR")).toBeInTheDocument();
     expect(screen.getByText("(offener Betrag)")).toBeInTheDocument();
+  });
+
+  it("renders a card per booking below md with running balance and the table from md (O01)", () => {
+    renderIntl(<HoaAccountTable account={account} />);
+    const cards = screen.getByTestId("hoa-cards");
+    expect(cards.className).toContain("md:hidden");
+    const items = cards.querySelectorAll("li");
+    expect(items).toHaveLength(2);
+    expect(items[0]?.textContent).toContain("Hausgeld Januar");
+    expect(items[0]?.textContent).toContain("Saldo danach 1.250,00 EUR");
+    expect(items[1]?.textContent).toContain("Saldo danach 1.150,00 EUR");
+    const table = screen.getByRole("table", { name: /Gebuchte Sollstellungen und Zahlungen E-0001/ });
+    expect(table.parentElement?.className).toContain("hidden");
+    expect(table.parentElement?.className).toContain("md:block");
+  });
+
+  it("runningBalances adds charges and subtracts credits in cents", () => {
+    expect(runningBalances(account.contracts[0]!.entries)).toEqual(["1250.00", "1150.00"]);
+    expect(runningBalances([])).toEqual([]);
   });
 
   it("shows the ledger note without amounts when no ledger exists", () => {
