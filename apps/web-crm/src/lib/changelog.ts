@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.24.0",
+    date: "26.09.2026",
+    title: "DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter",
+    changes: [
+      "DMS: Kachel je Objekt mit Übernahmestatus, Prüffällen, Vollständigkeit und fehlenden Dokumenten, Detailseite mit Dokumentliste, Sprung nach Google Drive und Nachholen der Verknüpfung",
+      "DMS: neue Dokumente aus der Objektübernahme werden über einen gesicherten Webhook automatisch am Objekt abgelegt",
+      "DMS: Eigentümer- und Mieterlisten aus der Objektübernahme als Importvorschlag mit Testlauf und Freigabe",
+      "Dokumente: Paperless-Suche nach Objektnummer ohne Teiltreffer und Filter nach Gesellschaft, Gesellschaftsoptionen in den DMS-Einstellungen",
+      "Dokumente: vertauschte Fehlertexte bei nicht erreichbarem oder nicht eingerichtetem Paperless korrigiert",
+    ],
+  },
+  {
     version: "1.23.1",
     date: "26.09.2026",
     title: "Upload-Seite für Immoware24-Listen",

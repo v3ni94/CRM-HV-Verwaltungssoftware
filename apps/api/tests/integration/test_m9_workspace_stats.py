@@ -206,5 +206,10 @@ def test_dashboard_stats(
     # Caretaker without tickets:read has no access; a caretaker here is not seeded, so check
     # the permission dependency directly via a role with tickets:read removed is out of scope
     # for this integration test (covered by the permission matrix tests).
-    ids_seen = {r["id"] for r in _ok(client.get("/api/v1/tickets", headers=h))}
+    # t1 is done; since 1.23.0 the list hides done, closed and rejected unless include_closed.
+    listed = _ok(client.get("/api/v1/tickets", params={"include_closed": "true"}, headers=h))
+    ids_seen = {r["id"] for r in listed}
     assert {t1["id"], t2["id"], t3["id"]} <= ids_seen
+    open_ids = {r["id"] for r in _ok(client.get("/api/v1/tickets", headers=h))}
+    assert t1["id"] not in open_ids
+    assert {t2["id"], t3["id"]} <= open_ids

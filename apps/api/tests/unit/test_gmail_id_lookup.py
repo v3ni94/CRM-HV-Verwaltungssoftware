@@ -1,5 +1,7 @@
 """Unit-Test: GmailClient.find_by_header_id (Nachtrag fehlender Gmail-Kennungen, 26.09.2026)."""
 
+from typing import Any
+
 import httpx
 import pytest
 
@@ -10,7 +12,7 @@ def _client(handler: httpx.MockTransport) -> GmailClient:
     return GmailClient("client-id", "client-secret", "refresh-token", transport=handler)
 
 
-def _handler(status: int, payload: dict) -> httpx.MockTransport:
+def _handler(status: int, payload: dict[str, Any]) -> httpx.MockTransport:
     def handle(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/token"):
             return httpx.Response(200, json={"access_token": "token-1"})

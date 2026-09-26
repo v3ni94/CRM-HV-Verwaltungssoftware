@@ -38,6 +38,15 @@ async def _world(settings: Any) -> World:
         await services.add_member(
             factory, tenant_id=a, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
         )
+        # Operator rule 26.09.2026: tenant admins may skip TICKET_FLOW, every other role stays
+        # bound to it. The clerk exercises the forbidden transitions.
+        clerk = await services.create_user(
+            factory, email=world.email("rvclerk"), display_name="rvclerk", password=PASSWORD
+        )
+        world.users["rvclerk"] = clerk
+        await services.add_member(
+            factory, tenant_id=a, user_id=clerk, role_codes=["standard"], actor_user_id=None
+        )
         return world
     finally:
         await engine.dispose()
@@ -103,11 +112,20 @@ def test_patch_done_stops_clock_and_emits_status_event(client: TestClient, world
     assert (clock["state"], clock["resolved_at"]) == ("running", None)
     assert _ok(client.get(f"{T}/{ticket['id']}", headers=h))["resolved_at"] is None
 
-    # A forbidden transition changes nothing and emits nothing.
+    # A forbidden transition changes nothing and emits nothing for a role bound to the flow.
+    clerk = bearer(login(client, world, "rvclerk"))
     assert (
-        client.patch(f"{T}/{ticket['id']}", json={"status": "closed"}, headers=h).status_code == 409
+        client.patch(f"{T}/{ticket['id']}", json={"status": "closed"}, headers=clerk).status_code
+        == 409
     )
     assert len(_events(client, h, ticket["id"])) == 3
+
+    # The tenant admin may skip the flow; the ticket event carries admin_override.
+    _ok(client.patch(f"{T}/{ticket['id']}", json={"status": "closed"}, headers=h))
+    assert len(_events(client, h, ticket["id"])) == 4
+    detail = _ok(client.get(f"{T}/{ticket['id']}", headers=h))
+    status_events = [e["data"] for e in detail["events"] if e["kind"] == "status"]
+    assert {"from": "in_progress", "to": "closed", "admin_override": True} in status_events
 
 
 def test_bulk_status_stops_clocks_and_reports_failures(client: TestClient, world: World) -> None:
@@ -118,11 +136,12 @@ def test_bulk_status_stops_clocks_and_reports_failures(client: TestClient, world
     _ok(client.patch(f"{T}/{closed['id']}", json={"status": "done"}, headers=h))
     _ok(client.patch(f"{T}/{closed['id']}", json={"status": "closed"}, headers=h))
 
+    clerk = bearer(login(client, world, "rvclerk"))
     result = _ok(
         client.post(
             f"{T}/bulk-status",
             json={"ticket_ids": [first["id"], second["id"], closed["id"]], "status": "rejected"},
-            headers=h,
+            headers=clerk,
         )
     )
     assert {c["id"] for c in result["changed"]} == {first["id"], second["id"]}

@@ -5,6 +5,15 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.24.0 (26.09.2026) DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter
+
+- DMS und Objektübernahme (M29 Stufe 4): Anbindung an die Lese-API von objektakte über die neuen Einstellungen OBJEKTAKTE_API_URL, OBJEKTAKTE_API_TOKEN, OBJEKTAKTE_WEBHOOK_SECRET und OBJEKTAKTE_TENANT (auch mit Präfix MHVP_, leer bedeutet aus). Die Seite /dms zeigt je Objekt eine Kachel mit Übernahmestatus, offenen Prüffällen, Vollständigkeit und fehlenden Dokumenten; /dms/{Nummer} zeigt fehlende Dokumente, die Dokumentliste mit Sprung nach Google Drive und in das CRM sowie das Nachholen der Dokumentverknüpfung. Neue Endpunkte unter /integrations/objektakte.
+- DMS und Objektübernahme: Webhook POST /integrations/objektakte/webhook mit HMAC-Prüfung und Idempotenz; abgelegte Dokumente werden als Dokument am Objekt angelegt und über objektakte-Kennung, Drive-Datei und Prüfsumme abgeglichen.
+- DMS und Objektübernahme: Eigentümer- und Mieterlisten aus objektakte werden als Importvorschlag mit Testlauf, Abgleich und Freigabe geführt und nie ungeprüft in die Stammdaten geschrieben (Migration 0126).
+- Dokumente (Übernahme aus dem Immoware Hub, 7.2): Paperless-Suche nach Objektnummer (genau die Nummer oder "Nummer, Zusatz", nie Teiltreffer), Gesellschaftsfilter über ein konfigurierbares Auswahlfeld in Paperless, neue Endpunkte GET /dms-documents und GET /dms-documents/companies, Filter company an den Dokumentlisten von Objekt und Ticket. Im CRM Auswahl und Spalte Gesellschaft im Dokumentbereich sowie Zuordnung der Gesellschaftsoptionen in den DMS-Einstellungen. Nur lesend, Annahme A-048.
+- Dokumente: vertauschte Fehlertexte für 502 und 503 im Dokumentbereich korrigiert.
+- Technik: Zusammenführung der Zweige claude/m29-dms-daten und claude/hub-paperless-suche auf den Stand 1.23.1, Migrationskette linear bis 0126, fehlende Typangabe in einem Gmail-Unit-Test ergänzt (mypy strict). Integrationstests zu Ticketstatus und Dashboard an die Regeln aus 1.23.0 angepasst (Administratoren wechseln ohne Zwischenschritte mit Kennzeichen admin_override, andere Rollen bleiben an den Ablauf gebunden; erledigte Tickets nur mit include_closed in der Liste).
+
 ## 1.23.1 (26.09.2026) Upload-Seite für Immoware24-Listen
 
 - Importe: neue Seite "Immoware24 Listenimport" (/importe/immoware24-listen) mit Upload im Browser für Objektdaten, Kontaktlisten (Rolle je Datei, auch Dienstleister) und die Zuordnung von Eigentümern und Mietern zu Einheiten. Je Abschnitt Testlauf und Übernehmen mit Bestätigung, Bericht mit Zählern, nicht gefundenen und mehrdeutigen Namen sowie Konflikten. Neuer Endpunkt POST /imports/immoware24/lists/zuordnung.
