@@ -989,3 +989,55 @@ def test_handover_portal_staff_lists_all_protocols(client: TestClient, world: Wo
     listed2 = _ok(client.get(f"{PH}/protocols", headers=staff2))
     assert all(row["id"] != pid for row in listed2)
     assert client.get(f"{PH}/{pid}", headers=staff2).status_code == 404
+
+
+PHS = "/api/v1/portal/handovers"
+
+
+def test_staff_portal_handovers_read_endpoints(client: TestClient, world: World) -> None:
+    """M2-08 Restpunkt: GET /portal/handovers lists and GET /portal/handovers/{id} reads the
+    protocols of the objects covered by the staff grant (tenant wide by default), read only and
+    without internal fields; a role without "handover:read" in the matrix gets 403."""
+    h = bearer(login(client, world, "m30admin"))
+    pid = _ok(client.post(H, json={"kind": "rental"}, headers=h), 201)["id"]
+    _ok(client.patch(f"{H}/{pid}", json={"internal_note": "nur intern"}, headers=h))
+    email = f"m30handovers-{RUN}@example.org"
+    _ok(
+        client.post(
+            "/api/v1/tenant/members",
+            json={
+                "email": email,
+                "display_name": "M30 Handovers",
+                "password": PASSWORD,
+                "role_codes": ["standard"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    step = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+    staff = {"Authorization": f"Bearer {step.json()['access_token']}"}
+
+    listed = _ok(client.get(PHS, headers=staff))
+    assert any(row["id"] == pid for row in listed)
+    detail = _ok(client.get(f"{PHS}/{pid}", headers=staff))
+    assert detail["id"] == pid
+    assert "internal_note" not in detail
+    assert detail["access"]["right"] == "read"
+    assert (
+        client.get(f"{PHS}/00000000-0000-0000-0000-000000000000", headers=staff).status_code == 404
+    )
+
+    # Matrix without "handover:read" for "standard": both endpoints are forbidden.
+    _ok(
+        client.put(
+            "/api/v1/tenant/portal-role-permissions",
+            json={"standard": ["documents:read"]},
+            headers=h,
+        )
+    )
+    try:
+        assert client.get(PHS, headers=staff).status_code == 403
+        assert client.get(f"{PHS}/{pid}", headers=staff).status_code == 403
+    finally:
+        client.put("/api/v1/tenant/portal-role-permissions", json={}, headers=h)

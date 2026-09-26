@@ -29,6 +29,8 @@ from mhvp.portal.routers import Portal, portal_user
 from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/portal/handover", tags=["Portal"])
+# Read only staff view (M2-08 Restpunkt, 26.09.2026): /api/v1/portal/handovers.
+staff_router = APIRouter(prefix="/portal/handovers", tags=["Portal"])
 
 # Days after the completion during which the participant may still open the finished PDF.
 READ_DAYS = 14
@@ -385,3 +387,77 @@ async def delete_item(
         await _granted(session, account, protocol_id, write=True)
         await _visible_note(session, section, item_id)
     return await crm.delete_item(protocol_id, section, item_id, request, principal)
+
+
+# Staff read endpoints /portal/handovers (M2-08 Restpunkt) ---------------------------------------
+
+
+async def _staff_scope(session: Any, account: PortalAccount) -> set[uuid.UUID] | None:
+    """Properties the staff account may read handover protocols for, per the portal matrix:
+    ``None`` means every property of the tenant (tenant wide staff grant); a set restricts to
+    ``property`` scoped staff grants. Raises 403 without "handover:read" or without an active
+    staff grant, so external portal users (participants, owners, tenants) never get here; they
+    keep using /portal/handover with their per protocol grant. RLS (tenant_tx) still limits
+    every query to the account's tenant."""
+    if "handover:read" not in await access.staff_permissions(session, account):
+        raise ProblemError(ErrorCodes.FORBIDDEN)
+    active = [
+        g
+        for g in await access.grants(session, account, local_today())
+        if g.legal_basis == access.STAFF_ACCESS_LEGAL_BASIS
+    ]
+    if any(g.scope_type == "tenant" and g.scope_id == account.tenant_id for g in active):
+        return None
+    properties = {g.scope_id for g in active if g.scope_type == "property"}
+    if not properties:
+        raise ProblemError(ErrorCodes.FORBIDDEN)
+    return properties
+
+
+def _staff_row(p: HandoverProtocol) -> dict[str, Any]:
+    return {
+        "id": p.id,
+        "number": p.number,
+        "version": p.version,
+        "kind": p.kind,
+        "status": p.status,
+        "property_id": p.property_id,
+        "address": svc.address_line(p),
+        "handover_date": p.handover_date,
+        "locked": svc.is_locked(p),
+    }
+
+
+@staff_router.get("", summary="Übergabeprotokolle lesen (Mitarbeiter)")
+async def staff_list_handovers(
+    request: Request,
+    ctx: Ctx,
+    property_id: uuid.UUID | None = None,
+    status: str | None = None,
+) -> list[dict[str, Any]]:
+    """Protocols of the objects the staff portal account may see (portal permission
+    "handover:read", M2-08); read only, no internal fields."""
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        scope = await _staff_scope(session, account)
+        query = select(HandoverProtocol).order_by(HandoverProtocol.number.desc())
+        if scope is not None:
+            query = query.where(HandoverProtocol.property_id.in_(scope))
+        if property_id is not None:
+            query = query.where(HandoverProtocol.property_id == property_id)
+        if status is not None:
+            query = query.where(HandoverProtocol.status == status)
+        return [_staff_row(p) for p in (await session.scalars(query)).all()]
+
+
+@staff_router.get("/{protocol_id}", summary="Übergabeprotokoll lesen (Mitarbeiter)")
+async def staff_get_handover(protocol_id: uuid.UUID, request: Request, ctx: Ctx) -> dict[str, Any]:
+    """Detail, read only, with the same hidden field filter as for participants (internal
+    note, internal contact, management number, internal remarks, versions)."""
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        scope = await _staff_scope(session, account)
+        p = await session.get(HandoverProtocol, protocol_id)
+        if p is None or (scope is not None and p.property_id not in scope):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return _public(await crm._full_out(session, p), AccessGrant(right="read", valid_to=None))
