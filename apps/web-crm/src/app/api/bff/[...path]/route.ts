@@ -456,6 +456,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^integrations\/objektakte\/objects\/[0-9A-Za-z]{1,16}\/documents\/link$/ },
   { method: "POST", pattern: /^integrations\/objektakte\/objects\/[0-9A-Za-z]{1,16}\/person-proposals$/ },
   { method: "GET", pattern: /^integrations\/objektakte\/person-proposals$/ },
+  // Ablagestand eines CRM-Dokuments über objektakte (Upload 26.09.2026).
+  { method: "GET", pattern: new RegExp(`^integrations/objektakte/documents/${ID}/filing$`) },
   { method: "GET", pattern: new RegExp(`^integrations/objektakte/person-proposals/${ID}$`) },
   {
     method: "POST",

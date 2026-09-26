@@ -3775,7 +3775,8 @@
         "no_unit": "without unit",
         "crm_only": "only in the CRM"
       }
-    }
+    },
+    "searchDocuments": "Document search"
   },
   "MailPlaybooks": {
     "title": "Playbooks",
@@ -5626,7 +5627,18 @@
     },
     "links": "Links",
     "linksNone": "none",
-    "receiptsUnavailable": "Read receipts could not be loaded."
+    "receiptsUnavailable": "Read receipts could not be loaded.",
+    "filing": {
+      "title": "Filing through the object takeover system",
+      "status": {
+        "pending": "waiting for transfer",
+        "submitted": "in processing",
+        "done": "filed",
+        "failed": "failed"
+      },
+      "drive": "Open in Drive",
+      "paperless": "Paperless preview"
+    }
   },
   "Notices": {
     "title": "Notice board",
@@ -6157,6 +6169,53 @@
       "check_statement": "Statement check",
       "answer_question": "Questions",
       "summarize": "Summary"
+    }
+  },
+  "DmsSearch": {
+    "area": "DMS",
+    "pageTitle": "Document search",
+    "intro": "Paperless archive in the CRM: full text, property and company, preview and download. Upload new documents here and assign them to the property; filing in Drive and Paperless is done by the object takeover system.",
+    "title": "Archive search",
+    "fields": {
+      "q": "Search term",
+      "qPlaceholder": "for example budget 2025",
+      "objectNumber": "Property",
+      "company": "Company",
+      "companyAll": "All companies"
+    },
+    "search": "Search",
+    "empty": "No documents found.",
+    "total": "{total} results",
+    "actions": {
+      "preview": "Preview",
+      "download": "Download"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page}"
+    },
+    "errors": {
+      "criterion": "Please enter a search term, property or company.",
+      "notConfigured": "Paperless not configured",
+      "unreachable": "Paperless unreachable"
+    },
+    "upload": {
+      "title": "Upload document",
+      "intro": "The document is assigned to the property or unit and filed in Drive (owner and tenant files) and Paperless once filing through the object takeover system is switched on.",
+      "file": "File",
+      "property": "Property",
+      "unit": "Unit",
+      "choose": "Please choose",
+      "wholeProperty": "whole property",
+      "titleField": "Title (optional)",
+      "submit": "Upload",
+      "routed": "Uploaded, filing in Drive and Paperless runs through the object takeover system.",
+      "notRouted": "Uploaded, filing follows the CRM mirrors.",
+      "open": "Open document",
+      "errors": {
+        "missing": "Please choose a file and a property."
+      }
     }
   }
 }

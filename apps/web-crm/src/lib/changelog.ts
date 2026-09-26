@@ -24,6 +24,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Dokumente: hochgeladene Dokumente mit genau einem Objekt werden über objektakte in Drive (mit Eigentümer- und Mieterakten) und in Paperless abgelegt, ohne doppelte Spiegelung",
       "Dokumente: Ablagestand je Dokument abrufbar, fehlgeschlagene Uploads lassen sich erneut anstoßen",
       "DMS: Meldungen von objektakte verknüpfen das vorhandene CRM-Dokument statt ein zweites anzulegen",
+      "DMS: neue Dokumentsuche im Paperless-Archiv mit Vorschau, Download und Upload direkt im CRM",
     ],
   },
   {

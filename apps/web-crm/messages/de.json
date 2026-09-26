@@ -3775,7 +3775,8 @@
         "no_unit": "ohne Einheit",
         "crm_only": "nur im CRM"
       }
-    }
+    },
+    "searchDocuments": "Dokumentsuche"
   },
   "MailPlaybooks": {
     "title": "Playbooks",
@@ -5626,7 +5627,18 @@
     },
     "links": "Verknüpfungen",
     "linksNone": "keine",
-    "receiptsUnavailable": "Lesebestätigungen konnten nicht geladen werden."
+    "receiptsUnavailable": "Lesebestätigungen konnten nicht geladen werden.",
+    "filing": {
+      "title": "Ablage über die Objektübernahme",
+      "status": {
+        "pending": "wartet auf Übertragung",
+        "submitted": "in Verarbeitung",
+        "done": "abgelegt",
+        "failed": "fehlgeschlagen"
+      },
+      "drive": "In Drive öffnen",
+      "paperless": "Paperless-Vorschau"
+    }
   },
   "Notices": {
     "title": "Schwarzes Brett",
@@ -6157,6 +6169,53 @@
       "check_statement": "Abrechnungsprüfung",
       "answer_question": "Fragen",
       "summarize": "Zusammenfassung"
+    }
+  },
+  "DmsSearch": {
+    "area": "DMS",
+    "pageTitle": "Dokumentsuche",
+    "intro": "Paperless-Archiv im CRM: Volltext, Objekt und Gesellschaft, Vorschau und Download. Neue Dokumente hier hochladen und dem Objekt zuordnen; die Ablage in Drive und Paperless übernimmt die Objektübernahme.",
+    "title": "Suche im Archiv",
+    "fields": {
+      "q": "Suchbegriff",
+      "qPlaceholder": "zum Beispiel Wirtschaftsplan 2025",
+      "objectNumber": "Objekt",
+      "company": "Gesellschaft",
+      "companyAll": "Alle Gesellschaften"
+    },
+    "search": "Suchen",
+    "empty": "Keine Dokumente gefunden.",
+    "total": "{total} Treffer",
+    "actions": {
+      "preview": "Vorschau",
+      "download": "Download"
+    },
+    "pagination": {
+      "previous": "Zurück",
+      "next": "Weiter",
+      "page": "Seite {page}"
+    },
+    "errors": {
+      "criterion": "Bitte Suchbegriff, Objekt oder Gesellschaft angeben.",
+      "notConfigured": "Paperless nicht eingerichtet",
+      "unreachable": "Paperless nicht erreichbar"
+    },
+    "upload": {
+      "title": "Dokument hochladen",
+      "intro": "Das Dokument wird dem Objekt oder der Einheit zugeordnet und in Drive (Eigentümer- und Mieterakten) und Paperless abgelegt, sobald die Ablage über die Objektübernahme eingeschaltet ist.",
+      "file": "Datei",
+      "property": "Objekt",
+      "unit": "Einheit",
+      "choose": "Bitte wählen",
+      "wholeProperty": "ganzes Objekt",
+      "titleField": "Titel (optional)",
+      "submit": "Hochladen",
+      "routed": "Hochgeladen, die Ablage in Drive und Paperless läuft über die Objektübernahme.",
+      "notRouted": "Hochgeladen, die Ablage folgt der Spiegelung des CRM.",
+      "open": "Dokument öffnen",
+      "errors": {
+        "missing": "Bitte Datei und Objekt wählen."
+      }
     }
   }
 }

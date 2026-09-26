@@ -30,9 +30,14 @@ export default async function DmsPage() {
       title={t("title")}
       description={t("intro")}
       action={
-        <a href={`${DMS_URL}/objekte/`} target="_blank" rel="noopener noreferrer" className={ui.primary}>
-          {t("openApp")}
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/dms/suche" className={ui.primary}>
+            {t("searchDocuments")}
+          </Link>
+          <a href={`${DMS_URL}/objekte/`} target="_blank" rel="noopener noreferrer" className={ui.secondary}>
+            {t("openApp")}
+          </a>
+        </div>
       }
     />
   );
