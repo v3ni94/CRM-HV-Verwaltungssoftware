@@ -27,6 +27,7 @@ from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRole
 from mhvp.handover import pdf as pdf_renderer
 from mhvp.handover import services as svc
+from mhvp.handover.images import ImageSanitizeError, sanitize_image
 from mhvp.handover.models import STATUSES, STEPS, HandoverProtocol, HandoverSignature
 from mhvp.workspace.services import local_today
 
@@ -487,6 +488,14 @@ async def upload_document(
     data = await file.read(limit + 1)
     mime = (file.content_type or "application/octet-stream").split(";")[0].strip()
     documents.check_upload(mime, data, limit)
+    try:
+        data = sanitize_image(
+            data, mime, max_edge=request.app.state.settings.handover_image_max_edge
+        )
+    except ImageSanitizeError as exc:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Bild konnte nicht gelesen werden."
+        ) from exc
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
         svc.require_unlocked(p)

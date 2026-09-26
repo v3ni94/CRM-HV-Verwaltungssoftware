@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     # Run AI tasks inside the request instead of the worker (development and tests only).
     ai_inline: bool = False
     document_max_bytes: int = Field(default=50 * 1024 * 1024, gt=0, le=1024 * 1024 * 1024)
+    # Handover photos (M30-04): longest edge after scaling, metadata is always stripped.
+    handover_image_max_edge: int = Field(default=2000, ge=100, le=20000)
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 
