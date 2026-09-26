@@ -8,6 +8,24 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 export const STATUSES = ["new", "in_progress", "waiting", "done", "closed", "rejected"] as const;
+/** Mirror of TICKET_FLOW in apps/api/src/mhvp/tickets/status.py (operator 26.09.2026). Users with
+ * tickets:delete (tenant admin) may switch to any status; everyone else follows this flow. */
+export const TICKET_FLOW: Record<string, readonly string[]> = {
+  new: ["in_progress", "waiting", "rejected", "done"],
+  in_progress: ["waiting", "done", "rejected"],
+  waiting: ["in_progress", "done", "rejected"],
+  done: ["closed", "in_progress"],
+  closed: [],
+  rejected: ["in_progress"],
+};
+
+/** Status options offered in the ticket status select: current status first allowed as is. */
+export function allowedStatuses(current: string, canChangeAnyStatus: boolean): string[] {
+  if (canChangeAnyStatus) return [...STATUSES];
+  const next = TICKET_FLOW[current] ?? [];
+  return STATUSES.filter((s) => s === current || next.includes(s));
+}
+
 export const PRIORITIES = ["low", "normal", "high", "urgent", "immediate"] as const;
 
 type TemplateSummary = {
@@ -113,7 +131,17 @@ export function TicketCreate() {
   );
 }
 
-export function TicketEdit({ id, status, priority }: { id: string; status: string; priority: string }) {
+export function TicketEdit({
+  id,
+  status,
+  priority,
+  canChangeAnyStatus = false,
+}: {
+  id: string;
+  status: string;
+  priority: string;
+  canChangeAnyStatus?: boolean;
+}) {
   const t = useTranslations("Tickets");
   const router = useRouter();
   const [comment, setComment] = useState("");
@@ -135,7 +163,7 @@ export function TicketEdit({ id, status, priority }: { id: string; status: strin
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("status")}</span>
           <select className={ui.input} value={status} disabled={busy} onChange={(e) => send("", "PATCH", { status: e.target.value })}>
-            {STATUSES.map((s) => (
+            {allowedStatuses(status, canChangeAnyStatus).map((s) => (
               <option key={s} value={s}>
                 {t(`statuses.${s}`)}
               </option>

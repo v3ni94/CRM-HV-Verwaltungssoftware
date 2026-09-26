@@ -27,7 +27,7 @@ type Event = { kind: string; at: string };
  *  side because document reads are outside the BFF allowlist. Unreadable documents are
  *  skipped; the list is a convenience, not a record. */
 async function loadMailAttachments(api: ReturnType<typeof serverApi>, ticketId: string): Promise<TicketMailAttachment[]> {
-  const messages = await api.GET("/api/v1/mail/messages", { params: { query: { ticket_id: ticketId, direction: "in", limit: 50 } } });
+  const messages = await api.GET("/api/v1/mail/messages", { params: { query: { ticket_id: ticketId, direction: "in", limit: 50, include_closed: true } } });
   const rows = (messages.data ?? []) as { id: string; subject: string | null; received_at: string | null; attachment_document_ids: string[] }[];
   const out: TicketMailAttachment[] = [];
   await Promise.all(
@@ -58,6 +58,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   redirectIfUnauthenticated(response);
   if (!data) return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
   const me = await serverApi().GET("/api/v1/auth/me");
+  const canChangeAnyStatus = me.data?.permissions.includes("tickets:delete") ?? false;
   const canManageSla = me.data?.permissions.includes("sla:update") ?? false;
   const canReply =
     (me.data?.permissions.includes("tickets:update") ?? false) && (me.data?.permissions.includes("communication:update") ?? false);
@@ -76,7 +77,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   const mergedInto = data.merged_into_ticket_id ? String(data.merged_into_ticket_id) : null;
   const [mergedTarget, mergedSources, contact, property] = await Promise.all([
     mergedInto ? api.GET("/api/v1/tickets/{ticket_id}", { params: { path: { ticket_id: mergedInto } } }) : null,
-    api.GET("/api/v1/tickets", { params: { query: { merged_into: ticketId } } }),
+    api.GET("/api/v1/tickets", { params: { query: { merged_into: ticketId, include_closed: true } } }),
     data.contact_id ? api.GET("/api/v1/contacts/{contact_id}", { params: { path: { contact_id: String(data.contact_id) } } }) : null,
     data.property_id ? api.GET("/api/v1/properties/{property_id}", { params: { path: { property_id: String(data.property_id) } } }) : null,
   ]);
@@ -117,7 +118,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           <SlaBadge ticketId={ticketId} canManage={canManageSla} />
           <TicketAppointmentButton ticketId={ticketId} ticketTitle={data.title ? String(data.title) : `#${String(data.number)}`} />
           <TicketAttachInvoiceButton ticketId={ticketId} hasProperty={Boolean(data.property_id)} />
-          <TicketEdit id={ticketId} status={String(data.status)} priority={String(data.priority)} />
+          <TicketEdit id={ticketId} status={String(data.status)} priority={String(data.priority)} canChangeAnyStatus={canChangeAnyStatus} />
           <TicketChecklist
             ticketId={ticketId}
             checklist={checklist}

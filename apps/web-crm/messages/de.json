@@ -2103,7 +2103,8 @@
       "category": "Kategorie",
       "createdFrom": "Erstellt ab",
       "createdTo": "Erstellt bis",
-      "reset": "Zurücksetzen"
+      "reset": "Zurücksetzen",
+      "showClosed": "Erledigte anzeigen"
     },
     "reply": {
       "title": "Antworten",
@@ -2585,7 +2586,8 @@
       "correctionSave": "Korrektur speichern",
       "correctionRecorded": "Zuletzt korrigiert"
     },
-    "tnrSuggestion": "Mögliche Zuordnung zu TNR#{number}: Der Absender ist nicht am Ticket beteiligt, die Mail wurde deshalb nicht automatisch zugeordnet."
+    "tnrSuggestion": "Mögliche Zuordnung zu TNR#{number}: Der Absender ist nicht am Ticket beteiligt, die Mail wurde deshalb nicht automatisch zugeordnet.",
+    "showClosed": "Erledigte anzeigen"
   },
   "Platform": {
     "title": "Plattform",

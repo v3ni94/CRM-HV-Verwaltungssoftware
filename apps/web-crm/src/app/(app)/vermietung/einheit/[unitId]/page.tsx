@@ -17,7 +17,7 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
   const [expose, prospects, tickets] = await Promise.all([
     api.GET("/api/v1/letting/units/{unit_id}/expose", { params: { path: { unit_id: unitId } } }),
     api.GET("/api/v1/letting/prospects", { params: { query: { unit_id: unitId } } }),
-    api.GET("/api/v1/tickets", { params: { query: { unit_id: unitId, limit: 50 } } }),
+    api.GET("/api/v1/tickets", { params: { query: { unit_id: unitId, limit: 50, include_closed: true } } }),
   ]);
   redirectIfUnauthenticated(expose.response);
   if (!expose.data) return <p role="alert" className={ui.alert}>{problemMessage(expose.error as Problem | undefined, expose.response.status)}</p>;

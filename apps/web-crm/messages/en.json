@@ -2103,7 +2103,8 @@
       "category": "Category",
       "createdFrom": "Created from",
       "createdTo": "Created to",
-      "reset": "Reset"
+      "reset": "Reset",
+      "showClosed": "Show completed"
     },
     "reply": {
       "title": "Reply",
@@ -2585,7 +2586,8 @@
       "correctionSave": "Save correction",
       "correctionRecorded": "Last corrected"
     },
-    "tnrSuggestion": "Possible assignment to TNR#{number}: the sender is not a participant of the ticket, so the mail was not assigned automatically."
+    "tnrSuggestion": "Possible assignment to TNR#{number}: the sender is not a participant of the ticket, so the mail was not assigned automatically.",
+    "showClosed": "Show completed"
   },
   "Platform": {
     "title": "Platform",

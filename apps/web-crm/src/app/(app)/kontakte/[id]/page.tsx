@@ -84,7 +84,7 @@ export default async function ContactDetailPage({
     tab === "tickets"
       ? [
           ...new Map(
-            ((await api.GET("/api/v1/tickets", { params: { query: { any_contact_id: id, limit: 100 } } })).data ?? []).map(
+            ((await api.GET("/api/v1/tickets", { params: { query: { any_contact_id: id, limit: 100, include_closed: true } } })).data ?? []).map(
               (x) => [String((x as { id: unknown }).id), x],
             ),
           ).values(),

@@ -31,7 +31,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
     api.GET("/api/v1/properties/{property_id}/units", path),
     api.GET("/api/v1/properties/{property_id}/contacts", path),
     api.GET("/api/v1/properties/{property_id}/maintenance", path),
-    api.GET("/api/v1/tickets", { params: { query: { property_id: propertyId, limit: 50 } } }),
+    api.GET("/api/v1/tickets", { params: { query: { property_id: propertyId, limit: 50, include_closed: true } } }),
   ]);
   redirectIfUnauthenticated(response);
   if (!data) {
