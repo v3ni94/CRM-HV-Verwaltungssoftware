@@ -9,7 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from mhvp import __version__
@@ -34,7 +34,9 @@ PLACEHOLDER_SECRET = "change-me"  # noqa: S105 (marker, not a credential)
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="MHVP_", extra="ignore", frozen=True)
+    model_config = SettingsConfigDict(
+        env_prefix="MHVP_", extra="ignore", frozen=True, populate_by_name=True
+    )
 
     env: Environment = Environment.DEV
     app_version: str = __version__
@@ -68,6 +70,37 @@ class Settings(BaseSettings):
     # Size limit of one export file the worker reads for the differential import (checked via
     # stat before reading). The upload path has its own 200 MB limit.
     objektakte_dump_max_bytes: int = Field(default=512 * 1024 * 1024, gt=0, le=4 * 1024**3)
+    # objektakte read API (M29 Stufe 4, contract in docs/integrations/objektakte.md): base URL
+    # (".../api/crm/v1/"), bearer token and the tenant (slug) whose data objektakte holds. The
+    # integration is off while URL, token or tenant is empty. The names of the contract
+    # (``OBJEKTAKTE_API_URL`` ...) are accepted next to the ``MHVP_`` prefixed ones.
+    objektakte_api_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "objektakte_api_url", "MHVP_OBJEKTAKTE_API_URL", "OBJEKTAKTE_API_URL"
+        ),
+    )
+    objektakte_api_token: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "objektakte_api_token", "MHVP_OBJEKTAKTE_API_TOKEN", "OBJEKTAKTE_API_TOKEN"
+        ),
+    )
+    objektakte_webhook_secret: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "objektakte_webhook_secret",
+            "MHVP_OBJEKTAKTE_WEBHOOK_SECRET",
+            "OBJEKTAKTE_WEBHOOK_SECRET",
+        ),
+    )
+    objektakte_tenant: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "objektakte_tenant", "MHVP_OBJEKTAKTE_TENANT", "OBJEKTAKTE_TENANT"
+        ),
+    )
+    objektakte_api_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
     # Time of day (HH:MM, Celery timezone Europe/Berlin) of the daily reconciliation report of
     # the parallel operation (13.1, A68); read and compare only, no posting.
     import_reconciliation_time: str = Field(default="05:30", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
@@ -138,6 +171,11 @@ class Settings(BaseSettings):
             if isinstance(value, SecretStr) and PLACEHOLDER_SECRET in value.get_secret_value():
                 raise ValueError(f"MHVP_{name.upper()} still contains the .env.example placeholder")
         return self
+
+    @property
+    def objektakte_api_configured(self) -> bool:
+        token = self.objektakte_api_token.get_secret_value() if self.objektakte_api_token else ""
+        return bool((self.objektakte_api_url or "").strip() and token.strip())
 
     @property
     def s3_configured(self) -> bool:

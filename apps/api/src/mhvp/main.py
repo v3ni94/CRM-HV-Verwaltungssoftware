@@ -71,11 +71,13 @@ from mhvp.letting.rentlaw import tenant_router as rentlaw_router
 from mhvp.letting.routers import router as letting_router
 from mhvp.objektakte.ai_call_routers import router as objektakte_ai_call_router
 from mhvp.objektakte.completeness_routers import router as objektakte_completeness_router
+from mhvp.objektakte.dms_routers import router as objektakte_dms_router
 from mhvp.objektakte.lists_routers import router as objektakte_lists_router
 from mhvp.objektakte.review_routers import router as objektakte_review_router
 from mhvp.objektakte.routers import router as objektakte_router
 from mhvp.objektakte.routers import sync_router as objektakte_sync_router
 from mhvp.objektakte.rules_routers import router as objektakte_rules_router
+from mhvp.objektakte.webhook import router as objektakte_webhook_router
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.licensing import router as licensing_router
 from mhvp.platform.routers import platform_router, tenant_router
@@ -238,6 +240,8 @@ def create_app(
     app.include_router(receipts_router, prefix=API_PREFIX)
     app.include_router(objektakte_ai_call_router, prefix=API_PREFIX)
     app.include_router(objektakte_lists_router, prefix=API_PREFIX)
+    app.include_router(objektakte_dms_router, prefix=API_PREFIX)
+    app.include_router(objektakte_webhook_router, prefix=API_PREFIX)
     app.include_router(mail_router, prefix=API_PREFIX)
     app.include_router(dispatch_router, prefix=API_PREFIX)
     app.include_router(telephony_router, prefix=API_PREFIX)

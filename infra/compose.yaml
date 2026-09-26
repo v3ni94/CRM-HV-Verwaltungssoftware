@@ -30,6 +30,11 @@ x-app-env: &app-env
   MHVP_API_PUBLIC_URL: ${MHVP_API_PUBLIC_URL:-}
   MHVP_WEB_CRM_URL: ${MHVP_WEB_CRM_URL:-}
   MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS: ${MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS:-false}
+  # objektakte read API and webhook (M29 Stufe 4, docs/integrations/objektakte.md); empty = off.
+  OBJEKTAKTE_API_URL: ${OBJEKTAKTE_API_URL:-}
+  OBJEKTAKTE_API_TOKEN: ${OBJEKTAKTE_API_TOKEN:-}
+  OBJEKTAKTE_WEBHOOK_SECRET: ${OBJEKTAKTE_WEBHOOK_SECRET:-}
+  OBJEKTAKTE_TENANT: ${OBJEKTAKTE_TENANT:-}
   # uvicorn trusts X-Forwarded-* only from these addresses (set to the Traefik network).
   FORWARDED_ALLOW_IPS: ${MHVP_FORWARDED_ALLOW_IPS:-127.0.0.1}
 
