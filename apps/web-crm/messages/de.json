@@ -179,6 +179,17 @@
       "revoke": "Widerrufen",
       "revokeConfirm": "SEPA-Mandat für {iban} wirklich widerrufen?",
       "revokedOn": "Widerrufen am"
+    },
+    "bankApproval": {
+      "title": "Freigabe",
+      "pending": "zur Freigabe",
+      "approved": "freigegeben",
+      "rejected": "abgelehnt",
+      "approve": "Freigeben",
+      "reject": "Ablehnen",
+      "rejectConfirm": "IBAN {iban} wirklich ablehnen?",
+      "ownRequest": "selbst erfasst, Freigabe durch eine andere Person",
+      "hint": "Neue und geänderte IBAN gelten erst nach Freigabe durch eine zweite Person (Vier-Augen-Prinzip). Bis dahin werden sie in Lastschrift- und Zahlungsläufen nicht verwendet."
     }
   },
   "ContactForm": {

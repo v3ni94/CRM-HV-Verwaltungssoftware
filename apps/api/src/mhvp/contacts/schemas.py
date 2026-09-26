@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 
 from mhvp.contacts.models import (
     AddressLabel,
+    BankAccountApproval,
     Completeness,
     ConsentKind,
     ContactKind,
@@ -199,6 +200,16 @@ class BankAccountOut(BaseModel):
     mandate_scheme: MandateScheme
     mandate_status: ContactMandateStatus
     mandate_revoked_on: date | None
+    approval_status: BankAccountApproval = Field(
+        description="Vier-Augen-Freigabe der IBAN (M5-01): nur approved wird verwendet."
+    )
+    requested_by: uuid.UUID | None = None
+    decided_by: uuid.UUID | None = None
+    decided_at: datetime | None = None
+
+
+class BankAccountDecisionIn(_Strict):
+    reason: str | None = Field(default=None, max_length=500)
 
 
 class SepaMandateOut(BaseModel):

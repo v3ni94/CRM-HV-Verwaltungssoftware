@@ -170,6 +170,7 @@ describe("ContactForm", () => {
               mandate_scheme: "core",
               mandate_status: "active",
               mandate_revoked_on: null,
+              approval_status: "approved",
             },
           ],
         })}

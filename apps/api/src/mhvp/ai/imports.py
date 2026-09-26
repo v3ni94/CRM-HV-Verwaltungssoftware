@@ -205,7 +205,9 @@ async def create_contact(
     contact_services.apply_fields(contact, data)
     session.add(contact)
     await session.flush()
-    await contact_services.write_children(session, tenant_id, contact.id, data)
+    await contact_services.write_children(
+        session, tenant_id, contact.id, data, actor_user_id=user_id
+    )
     return contact
 
 
