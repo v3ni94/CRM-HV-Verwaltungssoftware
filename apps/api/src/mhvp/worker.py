@@ -21,6 +21,9 @@ QUEUES: tuple[str, ...] = ("default", "io", "ocr", "ai", "bank", "mail", "beat")
 def create_celery(settings: Settings | None = None) -> Celery:
     settings = settings or get_settings()
     backend = settings.celery_result_backend
+    reconciliation_hour, reconciliation_minute = (
+        int(part) for part in settings.import_reconciliation_time.split(":")
+    )
     app = Celery(
         "mhvp",
         broker=settings.celery_broker_url.get_secret_value(),
@@ -34,6 +37,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.documents.mirror_deletion",
             "mhvp.ai.jobs",
             "mhvp.workspace.tasks",
+            "mhvp.workspace.backup_verify",
             "mhvp.communication.tasks",
             "mhvp.banking.tasks",
             "mhvp.accounting.tasks",
@@ -43,6 +47,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.immoware.tasks",
             "mhvp.objektakte.tasks",
             "mhvp.automation.tasks",
+            "mhvp.imports.tasks",
         ],
     )
     app.conf.update(
@@ -79,6 +84,14 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "documents-process-inbox": {
                 "task": "mhvp.documents.process_inbox",
                 "schedule": crontab(hour=6, minute=30),
+                "options": {"queue": "io"},
+            },
+            # Restore test of the newest backup (A67, M9, 15.1 ops.backup_verify): daily
+            # 02:00; result (status, duration, checked file, error) in /platform/ops/metrics.
+            # Not configured tenants/hosts record "not_configured" instead of failing.
+            "ops-backup-verify": {
+                "task": "mhvp.ops.backup_verify",
+                "schedule": crontab(hour=2, minute=0),
                 "options": {"queue": "io"},
             },
             # Maintenance reminders as in-app notifications (M9); idempotent per unread item.
@@ -140,8 +153,9 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "schedule": crontab(hour=20, minute=0),
             },
             # SLA-Ampel und Eskalation (M21 Übernahme aus dem Immoware Hub), alle 5 Minuten.
-            # Regel-Engine Stufe 1 (A38, 15.2): neue Ereignisse je Mandant seit Wasserstand;
-            # Aktionen nur Ticket, Benachrichtigung, Ticketfeld (keine Buchung, keine Zahlung).
+            # Regel-Engine (A38, A39, 15.2): neue Ereignisse je Mandant seit Wasserstand und
+            # faellige Zeitplanregeln (einmal je Termin); Aktionen ohne Geldwirkung (Ticket,
+            # Benachrichtigung, Ticketfeld, Webhook, Entwuerfe, KI-Vorschlag).
             "automation-process-events": {
                 "task": "mhvp.automation.process_events",
                 "schedule": 60.0,
@@ -169,6 +183,14 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "objektakte-sync-all": {
                 "task": "mhvp.objektakte.sync_all",
                 "schedule": crontab(hour=5, minute=15),
+                "options": {"queue": "io"},
+            },
+            # Daily reconciliation report of the parallel operation (13.1, A68): staged
+            # Immoware24 rows against platform figures, read and compare only; time of day from
+            # ``Settings.import_reconciliation_time`` (default 05:30).
+            "imports-reconciliation-report": {
+                "task": "mhvp.imports.reconciliation_all",
+                "schedule": crontab(hour=reconciliation_hour, minute=reconciliation_minute),
                 "options": {"queue": "io"},
             },
         },

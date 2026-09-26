@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { InvitationQr } from "@/components/portal/InvitationQr";
 import { bff } from "@/lib/bff";
 import { problemMessage, readProblem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -23,6 +24,7 @@ type HelperAccess = {
 type Created = {
   grant_id: string;
   invitation_token: string | null;
+  invitation_url?: string | null;
   mail_draft_id: string | null;
 };
 
@@ -318,6 +320,7 @@ export function HelperAccessSection({
             <code className="mt-1 block select-all break-all rounded bg-bg px-2 py-1 font-mono text-xs">
               {created.invitation_token}
             </code>
+            <InvitationQr url={created.invitation_url} title={t("helperAccess.linkTitle")} alt={t("helperAccess.qrAlt")} />
           </div>
         ) : (
           <p className="text-sm text-muted">{t("helperAccess.mailDrafted")}</p>

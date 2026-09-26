@@ -58,7 +58,7 @@ Frage M5-01, Umsetzung vor G2.
 - Nur `approved` Konten werden verwendet: Lastschriftlauf (`mandate_block_reason`),
   Erfassung eines SEPA-Mandats (`POST /sepa-mandates`), IBAN-Änderung eines Zahlungsauftrags
   (PÜ04) und der Stammdatenabgleich im Rechnungseingang.
-- Bestandskonten aus der Zeit vor Migration 0109 stehen ebenfalls auf `pending` und müssen
+- Bestandskonten aus der Zeit vor Migration 0121 stehen ebenfalls auf `pending` und müssen
   einmalig freigegeben werden.
 - Die KI darf keine Freigabe erteilen; KI-Importe und Ticketvorschläge legen Konten nur als
   `pending` an.

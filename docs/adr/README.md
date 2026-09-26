@@ -14,3 +14,4 @@ flag until decided. Copy `0000-template.md` for a new record.
 | [0005](0005-object-storage.md) | Object storage after the MinIO community archive | Proposed, operator decision required |
 | [0006](0006-identity-and-tenant-administration.md) | Identity, sessions, field encryption, tenant administration | Accepted |
 | [0008](0008-idempotency-and-rate-limiting.md) | Idempotency-Key middleware and rate limiting (A48, A49) | Accepted |
+| [0009](0009-api-versioning.md) | API versioning, deprecation headers and OpenAPI drift check (A50) | Accepted |

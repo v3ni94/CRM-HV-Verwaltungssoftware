@@ -16,6 +16,7 @@ from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.sla.escalation import check_and_escalate
 from mhvp.sla.models import ClockState, SlaClock
+from mhvp.sla.service import backfill_clocks
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ async def check_clocks_once(settings: Settings) -> dict[str, int]:
     engine = create_async_engine(
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
     )
-    totals = {"tenants": 0, "clocks": 0, "escalated": 0}
+    totals = {"tenants": 0, "clocks": 0, "escalated": 0, "backfilled": 0}
     try:
         factory = create_session_factory(engine)
         async with platform_transaction(factory) as session:
@@ -35,6 +36,7 @@ async def check_clocks_once(settings: Settings) -> dict[str, int]:
             totals["tenants"] += 1
             try:
                 async with tenant_transaction(factory, tenant_id) as session:
+                    totals["backfilled"] += await backfill_clocks(session, tenant_id)
                     clocks = list(
                         await session.scalars(
                             select(SlaClock).where(

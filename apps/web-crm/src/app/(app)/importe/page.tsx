@@ -27,9 +27,12 @@ export default async function ImportsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} description={t("intro")} />
-      <p>
+      <p className="flex flex-wrap gap-4">
         <Link href="/importe/immoware24" className="text-sm font-medium hover:underline">
           {t("immoware24Link")}
+        </Link>
+        <Link href="/importe/abgleich" className="text-sm font-medium hover:underline">
+          {t("reconciliationLink")}
         </Link>
       </p>
       {!data ? (

@@ -40,14 +40,26 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.22.0",
     date: "26.09.2026",
-    title: "Vier-Augen-IBAN, Fristen, Bankabgleich, Mahnwesen, WEG-Mehrheiten",
+    title:
+      "Master-Prompt-Umsetzung Welle 6: Ticket-Mails mit TNR#, Regel-Engine Stufe 2, Portal (Eigentümer, Beirat, Formulare, Schwarzes Brett, PWA), WEG (Darlehen, Versicherung, Überleitung, Protokoll, Einsicht), Telefonie, Abgleichbericht",
     changes: [
-      "Kontakte: neue oder geänderte IBAN braucht die Freigabe einer zweiten Person, nicht freigegebene Konten werden in Lastschrift, Zahlung und Mandat nicht verwendet",
-      "Verträge: Dienstleisterverträge mit Kündigungsfrist, Kündigungstermin in der Fristenliste",
-      "WEG: Beschlussfrist virtueller Versammlungen in der Fristenliste, Mehrheitsregeln je Beschlussgegenstand mit Prüfung am Beschluss",
-      "Bankabgleich: Tilgungsbestimmung aus dem Verwendungszweck mit Begründung je Zuordnung",
-      "Mahnwesen: Zahlungserinnerung immer ohne Gebühr und Zinsen, Standard-Zahlungsfristen je Stufe",
-      "KI-Kontierung als Vorschlag vorbereitet, gesperrt bis zur Freigabe des Anbieters",
+      "Tickets und Mail: Mailverlauf im Ticket als Thread mit Anhängen (Vorschau Bild und PDF, Download, Als Beleg erfassen), Antwortformular im Ticket (An, Kopie, Betreff, Text, Anhänge) mit Vier-Augen-Freigabe wie bisher; jede Antwort trägt die Ticketnummer im Betreff (TNR#412), eingehende Mails mit TNR# werden dem Ticket nur zugeordnet, wenn der Absender am Ticket beteiligt ist, sonst als Vorschlag angezeigt; Antwort auf ein erledigtes Ticket öffnet es wieder und benachrichtigt den Bearbeiter; Postfachzugriff wird auch bei Einzelmails geprüft (Regel M19-06, Migration 0119)",
+      "Behobene Befunde aus der Prüfung Tickets und Mail (docs/reviews/2026-09-26-review-tickets-mail.md): Gmail-Abruf verlor Mails bei mehr als 50 neuen Nachrichten oder bei Einzelfehlern (jetzt seitenweise mit Nachlauf), Rechnungsweiterleitung ohne Anhänge, SLA-Uhr für Tickets aus Mail und Portal, Ticketliste mit Seitensteuerung, Indizes und eindeutige Mail-Deduplizierung (Migration 0120)",
+      "Automatisierung: Regel-Engine Stufe 2 mit Aktionen Webhook (signiert), E-Mail-Entwurf aus Vorlage, Brief-Entwurf, KI-Aufgabe; Zeitplan als Auslöser (täglich, wöchentlich, monatlich, genau ein Lauf je Termin); strukturiertes Regelformular mit Vorschau statt JSON (Migration 0110)",
+      "Portal: Eigentümerseiten Beschlüsse, Ansprechpartner und Hausgeldkonto (nur gebuchte Werte, ohne Rechtsfolge); Portalrolle Beirat mit Prüfungsraum (Prüfauftrag, Belege, Vermerke, Rückfragen, keine Freigabe, Migration 0109); Schwarzes Brett je Objekt im CRM pflegbar und im Portal sichtbar; Lesebestätigungen am Dokument im CRM als Indiz mit Test D34; Fotos an Schadensmeldungen als Dokumentverknüpfung mit Metadatenbereinigung; Dienstleister-Terminvorschläge mit Bestätigung durch den Bewohner und Fotos der Ausführung (Migration 0111); konfigurierbare Formulare je Mandant mit Einreichung als Ticket (Migration 0115); QR-Code zur Einladung im CRM; Portal als PWA installierbar mit Offline-Startseite",
+      "WEG: Darlehen, Versicherungsfälle und größere Maßnahmen mit Positionen aus gebuchten Buchungen (Migration 0116); Überleitungsrechnung Gesamtgeldfluss im Abrechnungspaket mit erklärten Differenzen, unerklärte Differenz sperrt die interne Freigabe (Regeln W04, W10); Protokollentwurf der Versammlung als PDF im Mandanten-CI; Einsichtsanfragen außerhalb des Portals mit Verlauf und Bereitstellungspaket mit Prüfsummen (Migration 0117); neue Berechtigungsressource hoa",
+      "Vermietung: Energieausweisdaten am Objekt und Angebotsmiete an der Anzeige, Vollständigkeitsprüfung von OpenImmo-Export und Exposé darauf gestützt (Migration 0112)",
+      "Kommunikation und Betrieb: Telefonie-Webhook anbieterneutral mit Signatur, Zuordnung über Rufnummer, Anrufliste am Kontakt und Rückrufvorschlag (Migration 0118); täglicher Abgleichbericht Parallelbetrieb je Objekt aus Immoware24-Rohzeilen mit Differenzliste und CSV; Backup-Prüfjob 02:00 mit Kennzahl; ausgehende Webhooks contact.updated und invoice.issued; Namensmaskierung im Belegeingang auch ohne Anrede",
+      "API: Versionsregel als ADR 0009 mit Deprecation-Headern, Drift-Prüfung meldet Entfernung von Pfaden ohne Deprecation; Handbuchkapitel Objekte, Verträge, Dokumente, Buchhaltung, WEG und Abrechnung",
+      "Technik: Seed-Skript registriert alle Modelle (Abbruch bei membership.contact_id behoben), Migrationskette 0108 bis 0120 linear, Downgrades 0110 und 0112 unter erzwungener RLS lauffähig, eindeutige Schemanamen im OpenAPI-Dokument, Testnutzer je Modul eindeutig",
+      "Aus der parallelen Sitzung: Kontakte: neue oder geänderte IBAN braucht die Freigabe einer zweiten Person, nicht freigegebene Konten werden in Lastschrift, Zahlung und Mandat nicht verwendet",
+      "Aus der parallelen Sitzung: Verträge: Dienstleisterverträge mit Kündigungsfrist, Kündigungstermin in der Fristenliste",
+      "Aus der parallelen Sitzung: WEG: Beschlussfrist virtueller Versammlungen in der Fristenliste, Mehrheitsregeln je Beschlussgegenstand mit Prüfung am Beschluss",
+      "Aus der parallelen Sitzung: Bankabgleich: Tilgungsbestimmung aus dem Verwendungszweck mit Begründung je Zuordnung",
+      "Aus der parallelen Sitzung: Mahnwesen: Zahlungserinnerung immer ohne Gebühr und Zinsen, Standard-Zahlungsfristen je Stufe",
+      "Aus der parallelen Sitzung: KI-Kontierung als Vorschlag vorbereitet, gesperrt bis zur Freigabe des Anbieters",
+      "Oberfläche: Die obere Menüleiste des CRM ist jetzt deckend; der fixierte Tabellenkopf (Name, Art, Rolle) der Kontaktliste schien beim Scrollen durch die halbtransparente Leiste hindurch",
+      "Offen (Betreiberentscheidungen in docs/OPEN_QUESTIONS.md): Direktversand einfacher Ticketantworten ohne Vier-Augen-Freigabe (M20-03), Wiederholungsplan für Regel-Webhooks (M9-08), Verteilung von Zins und Tilgung in der Jahresabrechnung (M24-03), Fristen und Umfang der Einsicht (M25-05), Telefonieanbieter (M23-06), QR-Bibliothek für Einladungs-PDF (M21-08)",
     ],
   },
   {
@@ -163,7 +175,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "25.09.2026",
     title: "Worker: KI-Clients sauber schließen",
     changes: [
-      "Die HTTP-Clients der KI-Anbieter werden nach jedem Anbieterschritt geschlossen, der Worker meldet nach KI-Läufen kein \"Event loop is closed\" mehr",
+      'Die HTTP-Clients der KI-Anbieter werden nach jedem Anbieterschritt geschlossen, der Worker meldet nach KI-Läufen kein "Event loop is closed" mehr',
     ],
   },
   {
@@ -211,7 +223,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.15.0",
     date: "25.09.2026",
-    title: "Belegeingang mit KI, OpenImmo, Übergabeprotokoll mit Gehilfen und U-Protokoll-Übernahme",
+    title:
+      "Belegeingang mit KI, OpenImmo, Übergabeprotokoll mit Gehilfen und U-Protokoll-Übernahme",
     changes: [
       "Belegeingang (M14): KI-Extraktion von Rechnungen als Vorschlag (Aussteller, Nummern, Daten, Beträge, Skonto, Objektbezug) mit serverseitigen Warnungen bei IBAN-Abweichung und Dublette; Übernahme nur als Entwurf mit Vier-Augen-Prüfung, IBAN wird maskiert angezeigt und muss aus dem Original bestätigt werden; Fremdwährung wird gesperrt",
       "Belegeingang: Erfassung aus Mail-Anhängen (Schaltfläche Als Rechnung erfassen) und aus Paperless per Dokumentnummer; automatische Erfassung bleibt zurückgestellt (M14-05)",

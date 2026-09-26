@@ -65,15 +65,21 @@ def _due_at(
 
 
 async def start_clock(
-    session: AsyncSession, tenant_id: uuid.UUID, ticket_id: uuid.UUID, priority: Priority
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    ticket_id: uuid.UUID,
+    priority: Priority,
+    started_at: datetime | None = None,
 ) -> SlaClock:
-    """Startet die Uhr eines Tickets bei Anlage (Hook in tickets- und mail-Router)."""
+    """Startet die Uhr eines Tickets bei Anlage (Hook in Ticket-Router, Gmail-Abruf und
+    Portal). Idempotent: eine vorhandene Uhr bleibt. ``started_at`` erlaubt dem Nachlauf
+    (``mhvp.sla.tasks``), die Uhr rückwirkend ab Ticketanlage zu starten."""
     existing = await session.scalar(select(SlaClock).where(SlaClock.ticket_id == ticket_id))
     if existing is not None:
         return existing
     calendar = await get_calendar(session, tenant_id)
     rule = await resolve_rule(session, tenant_id, priority)
-    now = datetime.now(UTC)
+    now = started_at or datetime.now(UTC)
     if rule is not None:
         response_minutes, resolution_minutes, clock_type = (
             rule.response_minutes,
@@ -97,6 +103,29 @@ async def start_clock(
     await session.flush()
     session.add(SlaClockLog(tenant_id=tenant_id, clock_id=clock.id, event="started"))
     return clock
+
+
+async def backfill_clocks(session: AsyncSession, tenant_id: uuid.UUID, limit: int = 500) -> int:
+    """Startet Uhren für offene Tickets ohne Uhr rückwirkend ab Anlage (review 26.09.2026,
+    H6): Tickets aus Mail, Portal oder Import, die an ``start_clock`` vorbeigelaufen sind.
+    Liefert die Anzahl der gestarteten Uhren."""
+    from mhvp.tickets.models import Ticket, TicketStatus
+
+    open_without_clock = (
+        select(Ticket)
+        .where(
+            Ticket.status.notin_([TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED]),
+            Ticket.merged_into_ticket_id.is_(None),
+            ~select(SlaClock.id).where(SlaClock.ticket_id == Ticket.id).exists(),
+        )
+        .order_by(Ticket.created_at)
+        .limit(limit)
+    )
+    started = 0
+    for ticket in await session.scalars(open_without_clock):
+        await start_clock(session, tenant_id, ticket.id, ticket.priority, ticket.created_at)
+        started += 1
+    return started
 
 
 async def pause_clock(session: AsyncSession, clock: SlaClock) -> SlaClock:
@@ -132,6 +161,17 @@ async def mark_first_response(session: AsyncSession, clock: SlaClock) -> SlaCloc
         return clock
     clock.first_response_at = datetime.now(UTC)
     session.add(SlaClockLog(tenant_id=clock.tenant_id, clock_id=clock.id, event="first_response"))
+    return clock
+
+
+async def reopen_clock(session: AsyncSession, clock: SlaClock) -> SlaClock:
+    """Erledigte Uhr läuft nach einer Kundenantwort weiter (Wiedereröffnung des Tickets,
+    Hook in ``communication.services.attach_to_ticket``)."""
+    if clock.state != ClockState.DONE:
+        return clock
+    clock.resolved_at = None
+    clock.state = ClockState.RUNNING
+    session.add(SlaClockLog(tenant_id=clock.tenant_id, clock_id=clock.id, event="reopened"))
     return clock
 
 

@@ -1,4 +1,4 @@
-"""Rule engine stage 1 (/api/v1/automation, section 15.2, task A38).
+"""Rule engine (/api/v1/automation, section 15.2, tasks A38 and A39).
 
 Maintenance (rules, activation, test run) needs ``tenant_settings:update``; delete needs
 ``tenant_settings:delete`` (docs/rules/M2-07.md); the run log and the rule list are readable
@@ -7,20 +7,40 @@ event and returns the action previews; nothing is written.
 """
 
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.automation.models import ACTION_TYPES, AutomationRule, AutomationRun
+from mhvp.automation.models import (
+    ACTION_TYPES,
+    SETTABLE_TICKET_FIELDS,
+    TRIGGER_KINDS,
+    TRIGGER_SCHEDULE,
+    AutomationRule,
+    AutomationRun,
+)
+from mhvp.automation.rules import normalise
+from mhvp.automation.schedule import FREQUENCIES
 from mhvp.automation.schemas import (
+    AI_TASKS,
     AutomationActivateIn,
     AutomationRuleIn,
     AutomationRulePatch,
     TestEventIn,
+    check_trigger,
+    require_webhook_secrets,
 )
-from mhvp.automation.services import build_context, dry_run
+from mhvp.automation.services import (
+    build_context,
+    carry_secrets,
+    dry_run,
+    public_actions,
+    schedule_context,
+    seal_actions,
+)
 from mhvp.core.auth.principal import TenantPrincipal, get_principal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -71,9 +91,12 @@ def _rule_out(rule: AutomationRule) -> dict[str, Any]:
         "name": rule.name,
         "description": rule.description,
         "active": rule.active,
+        "trigger_kind": rule.trigger_kind,
         "trigger_event_type": rule.trigger_event_type,
+        "schedule": rule.schedule,
+        "last_scheduled_at": rule.last_scheduled_at,
         "conditions": rule.conditions,
-        "actions": rule.actions,
+        "actions": public_actions(rule.actions),
         "created_at": rule.created_at,
         "updated_at": rule.updated_at,
     }
@@ -109,11 +132,15 @@ async def _assert_unique_name(session: AsyncSession, name: str, exclude: uuid.UU
         raise ProblemError(ErrorCodes.CONFLICT, detail="Eine Regel mit diesem Namen existiert.")
 
 
-@router.get("/meta", summary="Bekannte Ereignistypen und Aktionen der Stufe 1")
+@router.get("/meta", summary="Bekannte Ereignistypen, Auslöser und Aktionen")
 async def meta(principal: TenantPrincipal = Depends(_read_principal)) -> dict[str, Any]:
     return {
         "event_types": list(KNOWN_EVENT_TYPES),
+        "trigger_kinds": list(TRIGGER_KINDS),
+        "schedule_frequencies": list(FREQUENCIES),
         "action_types": list(ACTION_TYPES),
+        "ai_tasks": list(AI_TASKS),
+        "settable_ticket_fields": list(SETTABLE_TICKET_FIELDS),
         "condition_ops": ["eq", "ne", "contains", "gt", "lt"],
     }
 
@@ -135,11 +162,13 @@ async def create_rule(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         await _assert_unique_name(session, body.name, None)
+        values = body.model_dump()
+        values["actions"] = seal_actions(values["actions"])
         rule = AutomationRule(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
             updated_by=principal.user_id,
-            **body.model_dump(),
+            **values,
         )
         session.add(rule)
         await session.flush()
@@ -175,6 +204,31 @@ async def patch_rule(
         values = body.model_dump(exclude_unset=True)
         if "name" in values and values["name"] is not None:
             await _assert_unique_name(session, values["name"], rule.id)
+        if values.get("actions") is not None:
+            carried = carry_secrets(values["actions"], rule.actions)
+            try:
+                require_webhook_secrets(carried)
+            except ValueError as exc:
+                raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from exc
+            values["actions"] = seal_actions(carried)
+        merged = {
+            "trigger_kind": values.get("trigger_kind", rule.trigger_kind),
+            "trigger_event_type": values.get("trigger_event_type", rule.trigger_event_type),
+            "schedule": values.get("schedule", rule.schedule),
+            "actions": values.get("actions", rule.actions),
+        }
+        try:
+            check_trigger(
+                merged["trigger_kind"],
+                merged["trigger_event_type"],
+                merged["schedule"],
+                merged["actions"],
+            )
+        except ValueError as exc:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from exc
+        if merged["trigger_kind"] != rule.trigger_kind or "schedule" in values:
+            # A changed schedule starts a fresh watermark (next due moment, not the past one).
+            values["last_scheduled_at"] = None
         before = {k: getattr(rule, k) for k in values}
         for key, value in values.items():
             setattr(rule, key, value)
@@ -188,7 +242,12 @@ async def patch_rule(
             actor_user_id=principal.user_id,
             payload={"fields": sorted(values)},
             changes={
-                k: {"old": before[k], "new": values[k]} for k in values if before[k] != values[k]
+                k: {
+                    "old": public_actions(before[k]) if k == "actions" else normalise(before[k]),
+                    "new": public_actions(values[k]) if k == "actions" else normalise(values[k]),
+                }
+                for k in values
+                if before[k] != values[k]
             },
         )
         await session.flush()
@@ -250,16 +309,30 @@ async def dry_run_rule(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         rule = await _get_rule(session, rule_id)
-        context = await build_context(
+        if rule.trigger_kind == TRIGGER_SCHEDULE:
+            due = body.due_at or datetime.now(UTC)
+            # The sample of a schedule rule is a due moment; ``type`` must be ``schedule.due``.
+            context = schedule_context(rule, due)
+            context["type"] = body.type
+            if body.entity:
+                context["entity"] = body.entity
+        else:
+            context = await build_context(
+                session,
+                type=body.type,
+                entity_type=body.entity_type,
+                entity_id=body.entity_id,
+                payload=body.payload,
+                actor_user_id=principal.user_id,
+                entity_override=body.entity or None,
+            )
+        result = await dry_run(
             session,
-            type=body.type,
-            entity_type=body.entity_type,
-            entity_id=body.entity_id,
-            payload=body.payload,
-            actor_user_id=principal.user_id,
-            entity_override=body.entity or None,
+            tenant_id=principal.tenant_id,
+            rule=rule,
+            context=context,
+            settings=request.app.state.settings,
         )
-        result = await dry_run(session, tenant_id=principal.tenant_id, rule=rule, context=context)
         # Belt and braces: a dry run writes nothing, and nothing pending is committed.
         await session.rollback()
         return result

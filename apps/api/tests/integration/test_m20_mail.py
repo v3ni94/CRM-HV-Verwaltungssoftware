@@ -32,14 +32,19 @@ async def _world(settings: Any) -> World:
     factory = create_session_factory(engine)
     try:
         a, _ = await services.provision_tenant(factory, slug=f"ml-{RUN}", name=f"Mail {RUN}")
-        world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        for name, role in [("m20admin", "tenant_admin"), ("m20read", "read_only_master_data")]:
+        b, _ = await services.provision_tenant(factory, slug=f"mlb-{RUN}", name=f"Mail B {RUN}")
+        world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
+        for name, role, tenant in [
+            ("m20admin", "tenant_admin", a),
+            ("m20read", "read_only_master_data", a),
+            ("m20adminb", "tenant_admin", b),
+        ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
             world.users[name] = uid
             await services.add_member(
-                factory, tenant_id=a, user_id=uid, role_codes=[role], actor_user_id=None
+                factory, tenant_id=tenant, user_id=uid, role_codes=[role], actor_user_id=None
             )
         return world
     finally:
@@ -211,3 +216,11 @@ def test_mail_intake_to_ticket(client: TestClient, world: World) -> None:
     assert {m["id"] for m in listed} >= {msg["id"], reply["id"]}
     reader = bearer(login(client, world, "m20read"))
     assert client.get(f"{M}/messages", headers=reader).status_code == 403
+
+    # Tenant separation (review 26.09.2026, H8): the second tenant sees none of these
+    # messages, neither in the list nor by id.
+    other = bearer(login(client, world, "m20adminb"))
+    assert {m["id"] for m in _ok(client.get(f"{M}/messages", headers=other))}.isdisjoint(
+        {msg["id"], reply["id"]}
+    )
+    assert client.get(f"{M}/messages/{msg['id']}", headers=other).status_code == 404

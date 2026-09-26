@@ -386,7 +386,8 @@ def test_w12_package_blocks_release(client: TestClient, world: World) -> None:
     _ok(client.post(f"{H}/statements/{st['id']}/calculate", headers=h))
     pkg = _ok(client.get(f"{H}/statements/{st['id']}/package", headers=h))
     codes = sorted(f["code"] for f in pkg["blocking"])
-    assert codes == ["no_account", "owner_gap"]
+    # W04 (A60): 1.000,00 distributed without any cost booked in the year is unexplained.
+    assert codes == ["no_account", "owner_gap", "reconciliation_unexplained"]
     assert pkg["releasable"] is False
     h2 = bearer(login(client, world, "w09second"))
     blocked = client.post(

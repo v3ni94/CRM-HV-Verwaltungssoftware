@@ -1,10 +1,11 @@
 """HOA statement package (W12): everything a resolution and a board review need, with the
 blocking checks that stop the internal approval (missing units, ownership gaps, cost items
 without an account reference, partial scope without a documented basis, unresolved bank
-transactions of the year)."""
+transactions of the year, unexplained difference of the cash flow reconciliation W04)."""
 
 import uuid
 from datetime import date, timedelta
+from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -194,13 +195,49 @@ async def blocking_checks(session: AsyncSession, st: HoaStatement) -> list[dict[
                 "detail": f"{len(open_tx)} ungeklärte Bankumsätze im Abrechnungsjahr.",
             }
         )
+    # W04 (A60): the cash flow reconciliation must close; an unexplained difference between
+    # the costs booked in the year and the costs distributed by the statement blocks.
+    recon = await reconciliation(session, st, ledger, list(items))
+    if Decimal(recon["unexplained"]) != 0:
+        findings.append(
+            {
+                "code": "reconciliation_unexplained",
+                "detail": (
+                    f"Überleitungsrechnung: unerklärte Differenz {recon['unexplained']} EUR "
+                    f"zwischen gebuchten Kosten ({recon['cost_booked']} EUR) und verteilten "
+                    f"Kosten ({recon['cost_distributed']} EUR); Differenzen erklären oder "
+                    "Positionen korrigieren (W04)."
+                ),
+            }
+        )
+    if not recon["cash"]["check_ok"]:
+        findings.append(
+            {
+                "code": "cash_check",
+                "detail": "Bank- und Kassenabstimmung: Anfangsbestand plus Zu- und Abflüsse "
+                "ergeben nicht den Endbestand (W04).",
+            }
+        )
     return findings
+
+
+async def reconciliation(
+    session: AsyncSession, st: HoaStatement, ledger: Any, items: list[Any]
+) -> dict[str, Any]:
+    """Live cash flow reconciliation of the statement year (W04) with the manager's notes."""
+    from mhvp.hoa.calc import cash_flow_reconciliation
+
+    total = sum((i.amount for i in items), Decimal("0.00"))
+    return await cash_flow_reconciliation(
+        session, ledger, st.year, total, list(st.reconciliation_notes or [])
+    )
 
 
 @router.get("/statements/{statement_id}/package", summary="Abrechnungspaket (W12)")
 async def statement_package(
     statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
+    from mhvp.accounting.models import Ledger
     from mhvp.properties.models import AllocationKey
 
     async with tenant_tx(request, principal) as session:
@@ -247,6 +284,8 @@ async def statement_package(
                 )
         findings = await blocking_checks(session, st)
         positions = {p["label"]: p for p in (st.snapshot or {}).get("positions", [])}
+        ledger = await session.get(Ledger, st.ledger_id)
+        recon = await reconciliation(session, st, ledger, list(items)) if ledger else None
         return {
             "statement": {
                 "id": st.id,
@@ -274,6 +313,7 @@ async def statement_package(
             "units": (st.snapshot or {}).get("units", []),
             "reserve": (st.snapshot or {}).get("reserve"),
             "asset_report": (st.snapshot or {}).get("asset_report"),
+            "reconciliation": recon,  # W04: live Gesamtgeldfluss and Überleitung
             "plan": {"id": plan.id, "version": plan.version, "resolution_id": plan.resolution_id}
             if plan
             else None,

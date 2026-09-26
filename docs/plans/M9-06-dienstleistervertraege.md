@@ -9,7 +9,7 @@ Verträge mit Dienstleistern (Hausmeister, Wartung, Reinigung und ähnliche) mit
 ## Umsetzung
 
 - Modell `ServiceContract`, Tabelle `service_contract` (`apps/api/src/mhvp/contracts/service_contracts.py`): Mandant, `provider_contact_id` (Kontakt), `property_id` optional, `title`, `starts_at`, `ends_at` optional, `notice_period_days` (Anzahl) mit `notice_period_unit` (`days` oder `months`), `auto_renewal_months` optional, `cancelled_at` optional, `notes`.
-- Migration `0110_service_contract.py`, `down_revision` 0108, RLS über `tenant_rls_statements()` wie die Vorgänger.
+- Migration `0122_service_contract.py`, `down_revision` 0121, RLS über `tenant_rls_statements()` wie die Vorgänger.
 - Endpunkte `/api/v1/service-contracts` (Liste, Anlegen, Lesen, Ändern, Löschen) in `service_contract_routers.py`. Rechte: `contracts:read`, `contracts:create`, `contracts:update`, `contracts:delete` (Löschen nur Administrator, M2-07). Ereignisse `service_contract.created`, `.updated`, `.deleted`.
 - Berechnete Felder `next_possible_end` und `latest_notice_date` mit `orientation_only: true`.
 - Fristenliste: Typ `service_contract_notice`, Bezug "Kündigungsfrist Dienstleistervertrag <Titel>", feste Vorfrist 14 Tage (`DEADLINE_LEAD_DAYS`), Rechte wie Verträge. Gekündigte Verträge erzeugen keinen Eintrag; offene Einträge schließt der Tagesjob.
@@ -31,5 +31,5 @@ Keine rechtliche Fristberechnung (M1-09). Regeln:
 ## Offen
 
 - Integrationstest der Endpunkte und des Tagesjobs gegen PostgreSQL (RLS, Rechte) steht aus.
-- Migrationsnummer 0110 setzt auf 0108 auf; eine 0109 aus einem anderen Zweig ist beim Zusammenführen einzuhängen.
+- Migrationsnummer 0122 setzt beim Zusammenführen am 26.09.2026 auf 0121 auf (ursprünglich 0110 auf 0108).
 - Fachliche Freigabe der Monatsende-Regel durch den Betreiber.

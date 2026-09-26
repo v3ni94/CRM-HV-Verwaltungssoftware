@@ -232,6 +232,16 @@ class Property(IdMixin, TimestampMixin, TenantMixin, Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     source_system: Mapped[str | None] = mapped_column(String(32))
     source_id: Mapped[str | None] = mapped_column(String(64))
+    # Energieausweis des Objekts (A63, M26-03): values are entered from the certificate
+    # document, never derived. Listings copy them on creation (mhvp.letting) and the exposé
+    # draft and OpenImmo completeness check read them; no legal claim about Pflichtangaben.
+    energy_certificate_type: Mapped[str | None] = mapped_column(String(16))  # verbrauch, bedarf
+    energy_certificate_value: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))  # kWh/(m²a)
+    energy_certificate_source: Mapped[str | None] = mapped_column(String(32))  # Energieträger
+    energy_certificate_construction_year: Mapped[int | None] = mapped_column(Integer)
+    energy_certificate_issued_on: Mapped[date | None] = mapped_column(Date)
+    energy_certificate_valid_until: Mapped[date | None] = mapped_column(Date)
+    energy_certificate_class: Mapped[str | None] = mapped_column(String(4))
 
 
 class LegalEntity(IdMixin, TimestampMixin, TenantMixin, Base):

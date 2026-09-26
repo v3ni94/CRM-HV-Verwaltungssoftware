@@ -60,6 +60,8 @@ type ListingForm = {
   energy_class: string;
   energy_year_of_installation: string;
   energy_valid_until: string;
+  energy_issued_on: string;
+  energy_building_year: string;
   energy_includes_hot_water: boolean;
   features: Record<string, boolean>;
 };
@@ -90,6 +92,8 @@ const EMPTY: ListingForm = {
   energy_class: "",
   energy_year_of_installation: "",
   energy_valid_until: "",
+  energy_issued_on: "",
+  energy_building_year: "",
   energy_includes_hot_water: false,
   features: Object.fromEntries(FEATURE_KEYS.map((k) => [k, false])),
 };
@@ -116,6 +120,8 @@ const STRING_FIELDS = [
   "energy_class",
   "energy_year_of_installation",
   "energy_valid_until",
+  "energy_issued_on",
+  "energy_building_year",
 ] as const;
 
 /** Makler (M28-01): create a listing from a property and one of its units. Prefill loads the
@@ -473,6 +479,31 @@ export function ListingCreate({ properties }: { properties: Option[] }) {
               className={ui.input}
               value={form.energy_valid_until}
               onChange={(e) => set("energy_valid_until", e.target.value)}
+              disabled={energyDisabled}
+            />
+          </div>
+          <div>
+            <label htmlFor="energy_issued_on" className={ui.label}>
+              {t("energyIssuedOn")}
+            </label>
+            <input
+              id="energy_issued_on"
+              type="date"
+              className={ui.input}
+              value={form.energy_issued_on}
+              onChange={(e) => set("energy_issued_on", e.target.value)}
+              disabled={energyDisabled}
+            />
+          </div>
+          <div>
+            <label htmlFor="energy_building_year" className={ui.label}>
+              {t("energyBuildingYear")}
+            </label>
+            <input
+              id="energy_building_year"
+              className={ui.input}
+              value={form.energy_building_year}
+              onChange={(e) => set("energy_building_year", e.target.value)}
               disabled={energyDisabled}
             />
           </div>

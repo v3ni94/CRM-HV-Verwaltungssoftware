@@ -18,13 +18,26 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/tickets$/ },
   { method: "POST", pattern: /^portal\/tickets$/ },
   { method: "POST", pattern: new RegExp(`^portal/tickets/${ID}/comments$`) },
+  // Formulare der Verwaltung (A56): Liste der eigenen Zielgruppe und Einreichung als Vorgang.
+  { method: "GET", pattern: /^portal\/forms$/ },
+  { method: "POST", pattern: new RegExp(`^portal/forms/${ID}/submissions$`) },
   { method: "POST", pattern: /^portal\/change-requests$/ },
   { method: "POST", pattern: /^portal\/meter-readings$/ },
   { method: "GET", pattern: /^portal\/account$/ },
+  // A51 Portal Eigentümer, lesend: Beschlüsse, Ansprechpartner, Hausgeldkonto.
+  { method: "GET", pattern: /^portal\/resolutions$/ },
+  { method: "GET", pattern: /^portal\/property-contacts$/ },
+  { method: "GET", pattern: /^portal\/hoa-account$/ },
+  // Schwarzes Brett (M21-01, A54): current notices of the own properties.
+  { method: "GET", pattern: /^portal\/notices$/ },
   { method: "GET", pattern: /^portal\/work-orders$/ },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/decline$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/quote$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/appointment$`) },
+  // A58: Terminvorschläge (Dienstleister) und Bestätigung (betroffener Bewohner).
+  { method: "GET", pattern: new RegExp(`^portal/work-orders/${ID}/appointment-proposals$`) },
+  { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/appointment-proposals$`) },
+  { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/appointment-proposals/${ID}/accept$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/complete$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/invoice$`) },
   // Übergabeprotokolle (M30 Stufe 3): fill in, photos, signatures, completion.
@@ -39,6 +52,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^portal/handover/${ID}/${SECTION}(/order)?$`) },
   { method: "PATCH", pattern: new RegExp(`^portal/handover/${ID}/${SECTION}/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^portal/handover/${ID}/${SECTION}/${ID}$`) },
+  // Prüfungsraum des Beirats (A52): read, and the note or question as the only action.
+  { method: "GET", pattern: /^portal\/board\/engagements$/ },
+  { method: "GET", pattern: new RegExp(`^portal/board/engagements/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^portal/board/engagements/${ID}/notes$`) },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */

@@ -10,6 +10,10 @@ const ALLOWED: RegExp[] = [
   new RegExp(`^portal/handover/${ID}/documents/${ID}/content$`),
   new RegExp(`^portal/handover/${ID}/pdf$`),
   new RegExp(`^portal/documents/${ID}/download$`),
+  // Anlage eines Aushangs (Schwarzes Brett, A54); visibility follows the notice.
+  new RegExp(`^portal/notices/${ID}/document$`),
+  // Beleg eines Prüfauftrags (A52): nur freigegebene Belege, Abruf als Indiz vermerkt.
+  new RegExp(`^portal/board/engagements/${ID}/documents/${ID}$`),
 ];
 const MAX_BYTES = 60 * 1024 * 1024;
 

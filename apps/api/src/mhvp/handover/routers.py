@@ -1201,7 +1201,7 @@ async def create_helper_access(
 ) -> dict[str, Any]:
     from mhvp.handover.models import HandoverParticipant
     from mhvp.portal.models import AccessGrant, PortalAccount
-    from mhvp.portal.routers import provision_account
+    from mhvp.portal.routers import invitation_url, provision_account
 
     email = body.email.strip().lower()
     display_name = body.name.strip()
@@ -1300,6 +1300,8 @@ async def create_helper_access(
             "valid_to": grant.valid_to,
             # Shown once, only when no mail draft could be prepared (no mailbox configured).
             "invitation_token": token if mail_id is None else None,
+            # A56: portal link for the QR code in the CRM, only with the code.
+            "invitation_url": invitation_url(request, token) if token and mail_id is None else None,
             "mail_draft_id": mail_id,
         }
 
@@ -1342,7 +1344,7 @@ async def resend_helper_access(
 ) -> dict[str, Any]:
     from mhvp.contacts.models import ContactEmail
     from mhvp.portal.models import AccessGrant, PortalAccount
-    from mhvp.portal.routers import INVITE_DAYS, _hash
+    from mhvp.portal.routers import INVITE_DAYS, _hash, invitation_url
 
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
@@ -1385,7 +1387,11 @@ async def resend_helper_access(
                 contact_id=account.contact_id,
             )
         await _event(session, principal, "handover.helper_access.resent", p, grant_id=str(grant_id))
-        return {"invitation_token": token if mail_id is None else None, "mail_draft_id": mail_id}
+        return {
+            "invitation_token": token if mail_id is None else None,
+            "invitation_url": invitation_url(request, token) if mail_id is None else None,
+            "mail_draft_id": mail_id,
+        }
 
 
 async def _rotate_invitation(
@@ -1587,7 +1593,7 @@ async def grant_portal_access(
     completion. Repeated calls renew the grant."""
     from mhvp.handover.models import HandoverParticipant
     from mhvp.portal.models import AccessGrant, PortalAccount
-    from mhvp.portal.routers import provision_account
+    from mhvp.portal.routers import invitation_url, provision_account
 
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
@@ -1662,6 +1668,7 @@ async def grant_portal_access(
         out = await portal_access_of(session, p, contact_id) or {}
         out["account_id"] = account.id
         out["invitation_token"] = token
+        out["invitation_url"] = invitation_url(request, token) if token else None
         out["email"] = email or None
         return out
 

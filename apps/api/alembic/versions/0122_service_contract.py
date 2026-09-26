@@ -1,8 +1,8 @@
 """service_contract: Dienstleisterverträge mit Laufzeit, Kündigungsfrist und automatischer
 Verlängerung (M9-06, A41 Fristenliste). Tenant table with RLS (ADR 0002).
 
-Revision ID: 0110
-Revises: 0108
+Revision ID: 0122
+Revises: 0121
 """
 
 from collections.abc import Sequence
@@ -12,8 +12,8 @@ from alembic import op
 
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
-revision: str = "0110"
-down_revision: str | None = "0109"
+revision: str = "0122"
+down_revision: str | None = "0121"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

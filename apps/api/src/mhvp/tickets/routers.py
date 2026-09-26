@@ -1,15 +1,15 @@
 """Tickets and work orders (/api/v1/tickets, /api/v1/work-orders, M19): ticket to order to
 invoice end to end. Payment stays in accounting (M14/M15); board status never pays."""
 
-import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.validation import InvalidValueError, normalise_iban
@@ -17,7 +17,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import emit
 from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.tickets import reply_templates
+from mhvp.tickets import reply_templates, tnr
 from mhvp.tickets.competences import is_known_code
 from mhvp.tickets.merge import assert_mergeable, assignees_to_carry, origin_data
 from mhvp.tickets.models import (
@@ -34,6 +34,10 @@ from mhvp.tickets.models import (
     TicketTemplate,
     WorkOrder,
     WorkOrderEvent,
+)
+from mhvp.tickets.status import (
+    CLOSING_STATUSES,
+    transition_status,
 )
 from mhvp.workspace.services import notify
 
@@ -66,22 +70,6 @@ SLA_HOURS = {
     Priority.NORMAL: 168,
     Priority.LOW: 336,
 }
-TICKET_FLOW = {
-    TicketStatus.NEW: {
-        TicketStatus.IN_PROGRESS,
-        TicketStatus.WAITING,
-        TicketStatus.REJECTED,
-        TicketStatus.DONE,
-    },
-    TicketStatus.IN_PROGRESS: {TicketStatus.WAITING, TicketStatus.DONE, TicketStatus.REJECTED},
-    TicketStatus.WAITING: {TicketStatus.IN_PROGRESS, TicketStatus.DONE, TicketStatus.REJECTED},
-    TicketStatus.DONE: {TicketStatus.CLOSED, TicketStatus.IN_PROGRESS},
-    TicketStatus.CLOSED: set(),
-    TicketStatus.REJECTED: {TicketStatus.IN_PROGRESS},
-}
-
-# Statuses that end a ticket; they set resolved_at and trigger mail archiving.
-CLOSING_STATUSES = frozenset({TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED})
 
 
 def _may_skip_flow(principal: TenantPrincipal) -> bool:
@@ -417,23 +405,6 @@ def _validate_extra_field_value(field: dict[str, Any], value: Any) -> Any:
     return value
 
 
-def _check_required_extra_fields(
-    template_fields: list[dict[str, Any]], values: dict[str, Any]
-) -> None:
-    for field in template_fields:
-        if field.get("required") and not values.get(field["key"]):
-            raise ProblemError(
-                ErrorCodes.VALIDATION,
-                detail=f"Pflichtfeld fehlt: {field.get('label', field['key'])}",
-            )
-
-
-def _check_checklist_complete(checklist: list[dict[str, Any]]) -> None:
-    for item in checklist:
-        if item.get("required") and not item.get("done"):
-            raise ProblemError(ErrorCodes.VALIDATION, detail="Checkliste unvollständig")
-
-
 @router.post("/ticket-templates", status_code=201, summary="Ticketvorlage mit Routing und SLA")
 async def create_template(
     body: TicketTemplateIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
@@ -569,6 +540,10 @@ class TicketReplyIn(_In):
     body: str = Field(min_length=1, max_length=100000)
     # Validated addresses (422), so approval never fails on a malformed header (review 26.09.2026).
     to_addresses: list[EmailStr] | None = Field(default=None, max_length=20)
+    cc_addresses: list[EmailStr] = Field(default_factory=list, max_length=20)
+    # Antwort auf eine bestimmte Nachricht des Tickets (Thread-Kopfzeilen, Vorbelegung);
+    # ohne Angabe gilt die letzte eingehende Nachricht.
+    reply_to_message_id: uuid.UUID | None = None
     attachment_document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
     confirm: bool = False
 
@@ -743,34 +718,78 @@ async def delete_reply_template(
         await session.flush()
 
 
-async def _reply_context(session: AsyncSession, ticket: Ticket) -> dict[str, Any]:
+async def _reply_context(
+    session: AsyncSession, ticket: Ticket, reply_to_message_id: uuid.UUID | None = None
+) -> dict[str, Any]:
     """Empfänger, Postfach und Platzhalterwerte der Antwort auf ein Ticket: geantwortet wird
-    auf die letzte eingehende Nachricht des Tickets (Absender, Postfach, Thread); ohne Mail
-    gilt die Haupt-E-Mail des Kontakts und das Standardpostfach des Mandanten."""
+    auf die gewählte oder die letzte eingehende Nachricht des Tickets (Absender, Kopie,
+    Postfach, Thread); ohne Mail gilt die Haupt-E-Mail des Kontakts und das Standardpostfach
+    des Mandanten."""
     from mhvp.communication.models import Mailbox, Message
+    from mhvp.communication.services import ticket_participants
     from mhvp.communication.transport import is_sendable
     from mhvp.contacts.models import Contact, ContactEmail
     from mhvp.properties.models import Property, Unit
     from mhvp.workspace.services import local_today
 
-    inbound = await session.scalar(
-        select(Message)
-        .where(Message.ticket_id == ticket.id, Message.direction == "in")
-        .order_by(Message.received_at.desc().nulls_last(), Message.created_at.desc())
-        .limit(1)
+    inbound = None
+    if reply_to_message_id is not None:
+        inbound = await session.scalar(
+            select(Message).where(Message.id == reply_to_message_id, Message.ticket_id == ticket.id)
+        )
+        if inbound is None:
+            raise ProblemError(
+                ErrorCodes.RESOURCE_NOT_FOUND, detail="Nachricht gehört nicht zu diesem Ticket."
+            )
+    if inbound is None:
+        inbound = await session.scalar(
+            select(Message)
+            .where(Message.ticket_id == ticket.id, Message.direction == "in")
+            .order_by(Message.received_at.desc().nulls_last(), Message.created_at.desc())
+            .limit(1)
+        )
+    participants = await ticket_participants(session, ticket, include_thread_senders=False)
+    sender_verified = bool(
+        inbound is not None
+        and inbound.from_address
+        and inbound.from_address.lower() in participants
     )
     contact_id = (
         ticket.contact_id
         or ticket.initiator_contact_id
-        or (inbound.contact_id if inbound else None)
+        or (inbound.contact_id if inbound is not None and sender_verified else None)
     )
     contact = await session.get(Contact, contact_id) if contact_id else None
     prop = await session.get(Property, ticket.property_id) if ticket.property_id else None
     unit = await session.get(Unit, ticket.unit_id) if ticket.unit_id else None
     to_addresses: list[str] = []
-    if inbound is not None and inbound.from_address:
-        to_addresses = [inbound.from_address]
-    elif contact is not None:
+    cc_addresses: list[str] = []
+    unverified_sender: str | None = None
+    mailbox_address = None
+    if inbound is not None and inbound.mailbox_id:
+        box = await session.get(Mailbox, inbound.mailbox_id)
+        mailbox_address = box.address.lower() if box else None
+    if inbound is not None and inbound.direction == "out":
+        # Antwort auf eine eigene ausgehende Mail: dieselben Empfänger erneut anschreiben.
+        to_addresses = list(inbound.to_addresses)
+        cc_addresses = list(inbound.cc_addresses or [])
+    elif inbound is not None and inbound.from_address:
+        sender = inbound.from_address
+        # Vorbelegung nur mit einem am Ticket beteiligten Absender (Review 26.09.2026, H5):
+        # ein fremder Absender wird nie automatisch Empfänger, sondern nur nach Auswahl.
+        if sender_verified:
+            to_addresses = [sender]
+            own = {a.lower() for a in (inbound.to_addresses or [])} - {
+                a.lower() for a in (inbound.cc_addresses or [])
+            }
+            cc_addresses = [
+                a
+                for a in (inbound.cc_addresses or [])
+                if a.lower() != mailbox_address and a.lower() not in own
+            ]
+        else:
+            unverified_sender = sender
+    if not to_addresses and contact is not None:
         primary = await session.scalar(
             select(ContactEmail.email)
             .where(ContactEmail.contact_id == contact.id)
@@ -779,6 +798,15 @@ async def _reply_context(session: AsyncSession, ticket: Ticket) -> dict[str, Any
         )
         if primary:
             to_addresses = [primary]
+    if not to_addresses:
+        first_inbound = await session.scalar(
+            select(Message)
+            .where(Message.ticket_id == ticket.id, Message.direction == "in")
+            .order_by(Message.received_at.asc().nulls_last(), Message.created_at.asc())
+            .limit(1)
+        )
+        if first_inbound is not None and first_inbound.from_address:
+            to_addresses = [first_inbound.from_address]
     mailbox = None
     if inbound is not None and inbound.mailbox_id:
         mailbox = await session.get(Mailbox, inbound.mailbox_id)
@@ -790,6 +818,8 @@ async def _reply_context(session: AsyncSession, ticket: Ticket) -> dict[str, Any
         "contact": contact,
         "mailbox": mailbox,
         "to_addresses": to_addresses,
+        "cc_addresses": cc_addresses,
+        "unverified_sender": unverified_sender,
         "values": reply_templates.values_for(
             ticket=ticket,
             contact=contact,
@@ -799,6 +829,40 @@ async def _reply_context(session: AsyncSession, ticket: Ticket) -> dict[str, Any
         ),
         "can_send": is_sendable(mailbox),
     }
+
+
+@router.get(
+    "/tickets/{ticket_id}/reply-context",
+    summary="Vorbelegung der Antwort (An, Kopie, Betreff, Postfach)",
+)
+async def reply_context(
+    ticket_id: uuid.UUID,
+    request: Request,
+    reply_to_message_id: uuid.UUID | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """Vorbelegung des Antwortformulars im Ticket ohne Vorlage: Empfänger und Kopie aus der
+    gewählten oder letzten eingehenden Mail, Betreff ``AW: <Betreff> TNR#<nummer>``, Postfach
+    des Tickets und ob es sendefähig ist. Legt nichts an."""
+    async with tenant_tx(request, principal) as session:
+        ticket = await session.get(Ticket, ticket_id)
+        if ticket is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ctx = await _reply_context(session, ticket, reply_to_message_id)
+        mailbox, inbound = ctx["mailbox"], ctx["inbound"]
+        return {
+            "reply_to_message_id": inbound.id if inbound else None,
+            "subject": tnr.reply_subject(
+                inbound.subject if inbound else ticket.title, ticket.number
+            ),
+            "to_addresses": ctx["to_addresses"],
+            "cc_addresses": ctx["cc_addresses"],
+            "unverified_sender": ctx["unverified_sender"],
+            "mailbox_id": mailbox.id if mailbox else None,
+            "mailbox_address": mailbox.address if mailbox else None,
+            "can_send": ctx["can_send"],
+            "tnr": tnr.format_tnr(ticket.number),
+        }
 
 
 @router.get(
@@ -825,10 +889,14 @@ async def preview_reply_template(
         return {
             "template_id": tpl.id,
             "template_name": tpl.name,
-            "subject": reply_templates.render(tpl.subject, ctx["values"]),
+            "subject": tnr.subject_with_tnr(
+                reply_templates.render(tpl.subject, ctx["values"]), ticket.number
+            ),
             "body": reply_templates.render(tpl.body, ctx["values"]),
             "values": ctx["values"],
             "to_addresses": ctx["to_addresses"],
+            "cc_addresses": ctx["cc_addresses"],
+            "unverified_sender": ctx["unverified_sender"],
             "mailbox_id": mailbox.id if mailbox else None,
             "mailbox_address": mailbox.address if mailbox else None,
             "can_send": ctx["can_send"],
@@ -853,7 +921,7 @@ async def reply_to_ticket(
     ``confirm`` wird nichts angelegt; ein Versand ohne ausdrücklichen Klick ist ausgeschlossen."""
     from mhvp.communication.models import Message
     from mhvp.communication.routers import _out as message_out
-    from mhvp.communication.routers import mailbox_accessible
+    from mhvp.communication.routers import mailbox_accessible, tnr_references
 
     if not principal.has("communication:update"):
         raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Missing communication:update.")
@@ -876,7 +944,7 @@ async def reply_to_ticket(
                     ErrorCodes.RESOURCE_NOT_FOUND, detail="Antwortvorlage nicht gefunden."
                 )
         await _assert_documents_exist(session, body.attachment_document_ids)
-        ctx = await _reply_context(session, ticket)
+        ctx = await _reply_context(session, ticket, body.reply_to_message_id)
         mailbox = ctx["mailbox"]
         if mailbox is None:
             raise ProblemError(
@@ -891,6 +959,7 @@ async def reply_to_ticket(
         to_addresses = [a.strip() for a in (body.to_addresses or ctx["to_addresses"]) if a.strip()]
         if not to_addresses:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Kein Empfänger für die Antwort.")
+        cc_addresses = [a.strip() for a in body.cc_addresses if a.strip()]
         inbound = ctx["inbound"]
         now = datetime.now(UTC)
         draft = Message(
@@ -900,9 +969,12 @@ async def reply_to_ticket(
             status="pending",
             mailbox_id=mailbox.id,
             to_addresses=to_addresses,
-            subject=body.subject[:998],
+            cc_addresses=cc_addresses,
+            # Kennung TNR#<nummer> genau einmal im Betreff (docs/rules/M19-02-tnr.md).
+            subject=tnr.subject_with_tnr(body.subject, ticket.number),
             body=body.body,
             in_reply_to=inbound.header_message_id if inbound else None,
+            references_header=tnr_references(inbound) if inbound else None,
             thread_id=(inbound.thread_id or inbound.id) if inbound else None,
             contact_id=ctx["contact"].id if ctx["contact"] else None,
             property_id=ticket.property_id,
@@ -923,11 +995,203 @@ async def reply_to_ticket(
                 "template_id": str(tpl.id) if tpl else None,
                 "template_name": tpl.name if tpl else None,
                 "to": to_addresses,
+                "cc": cc_addresses,
                 "attachments": len(body.attachment_document_ids),
             },
         )
         await session.flush()
         return message_out(draft)
+
+
+async def _ticket_messages(
+    session: AsyncSession, principal: TenantPrincipal, ticket: Ticket
+) -> Any:
+    """Nachrichten des Tickets, auf die der Benutzer über sein Postfach zugreifen darf
+    (dieselbe Regel wie ``GET /mail/messages``), chronologisch."""
+    from sqlalchemy import func, or_
+
+    from mhvp.communication.models import Message
+    from mhvp.communication.routers import _accessible_mailboxes
+
+    query = select(Message).where(Message.ticket_id == ticket.id)
+    if not principal.has("tenant_settings:update"):
+        allowed = await _accessible_mailboxes(session, principal.user_id)
+        query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
+    return (
+        await session.scalars(
+            query.order_by(
+                func.coalesce(Message.received_at, Message.sent_at, Message.created_at),
+                Message.created_at,
+            )
+        )
+    ).all()
+
+
+async def _attachment_rows(session: AsyncSession, ids: list[uuid.UUID]) -> list[dict[str, Any]]:
+    from mhvp.documents.models import Document
+
+    if not ids:
+        return []
+    docs = {
+        d.id: d for d in (await session.scalars(select(Document).where(Document.id.in_(ids)))).all()
+    }
+    out: list[dict[str, Any]] = []
+    for document_id in ids:
+        doc = docs.get(document_id)
+        if doc is None:
+            out.append(
+                {
+                    "document_id": document_id,
+                    "filename": None,
+                    "mime_type": None,
+                    "size": None,
+                    "missing": True,
+                }
+            )
+        else:
+            out.append(
+                {
+                    "document_id": doc.id,
+                    "filename": doc.filename or doc.title,
+                    "mime_type": doc.mime_type,
+                    "size": doc.size,
+                    "missing": False,
+                }
+            )
+    return out
+
+
+@router.get("/tickets/{ticket_id}/messages", summary="Mailverlauf des Tickets mit Anhängen")
+async def ticket_messages(
+    ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    """Ein- und ausgehende Mails des Tickets chronologisch, je Mail Empfänger, Kopie, Status,
+    Klartext, bereinigtes HTML und die Anhangsliste (Name, Größe, Typ). Postfachrechte gelten
+    wie in der Postfachansicht."""
+    from mhvp.communication.models import Mailbox
+    from mhvp.communication.routers import _out as message_out
+
+    async with tenant_tx(request, principal) as session:
+        ticket = await session.get(Ticket, ticket_id)
+        if ticket is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        rows = await _ticket_messages(session, principal, ticket)
+        mailbox_ids = {m.mailbox_id for m in rows if m.mailbox_id}
+        boxes = (
+            {
+                b.id: b.address
+                for b in (
+                    await session.scalars(select(Mailbox).where(Mailbox.id.in_(mailbox_ids)))
+                ).all()
+            }
+            if mailbox_ids
+            else {}
+        )
+        out = []
+        for m in rows:
+            data = message_out(m)
+            data["mailbox_address"] = boxes.get(m.mailbox_id) if m.mailbox_id else None
+            data["attachments"] = await _attachment_rows(session, list(m.attachment_document_ids))
+            out.append(data)
+        return out
+
+
+_PREVIEW_MIME = {"application/pdf", "image/png", "image/jpeg", "image/gif", "image/webp"}
+_ATTACHMENT_CSP = "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'"
+
+
+@router.get(
+    "/tickets/{ticket_id}/mail-attachments/{document_id}/content",
+    summary="Anhang einer Ticket-Mail anzeigen oder herunterladen",
+    response_class=Response,
+    responses={200: {"content": {"application/octet-stream": {}}}},
+)
+async def ticket_mail_attachment_content(
+    ticket_id: uuid.UUID,
+    document_id: uuid.UUID,
+    request: Request,
+    download: bool = False,
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    """Liefert nur Dokumente, die Anhang einer für den Benutzer sichtbaren Mail dieses
+    Tickets sind (Ticket-Bezug statt allgemeiner Dokumentenzugriff). Bilder und PDF werden
+    inline zur Vorschau ausgeliefert, alles andere und ``download=true`` als Download."""
+    from urllib.parse import quote
+
+    from mhvp.documents import services as document_services
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.documents.models import Document, StorageKind
+
+    async with tenant_tx(request, principal) as session:
+        ticket = await session.get(Ticket, ticket_id)
+        if ticket is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        rows = await _ticket_messages(session, principal, ticket)
+        if not any(document_id in (m.attachment_document_ids or []) for m in rows):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        document = await session.get(Document, document_id)
+        if document is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if document.storage is StorageKind.GOOGLE_DRIVE:
+            data = await document_services.download_from_drive(session, request, document)
+        else:
+            data = BlobStore(request.app.state.settings).get(document.storage_ref)
+        filename, mime = document.filename, document.mime_type
+    inline = not download and mime in _PREVIEW_MIME
+    disposition = "inline" if inline else "attachment"
+    return Response(
+        content=data,
+        media_type=mime if inline else "application/octet-stream",
+        headers={
+            "Content-Disposition": f"{disposition}; filename*=UTF-8''{quote(filename)}",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": _ATTACHMENT_CSP,
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
+@router.get(
+    "/tickets/{ticket_id}/reply-documents", summary="Dokumente als Anhang der Antwort suchen"
+)
+async def ticket_reply_documents(
+    ticket_id: uuid.UUID,
+    request: Request,
+    q: str = Query(min_length=2, max_length=200),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[dict[str, Any]]:
+    """Kleine Suche des Dokumentenmoduls für das Antwortformular (Titel oder Dateiname),
+    höchstens 20 Treffer, nur Metadaten. Der Ticketbezug prüft das Ticket, nicht die
+    Dokumente; der Rechtsträgerbereich der Mitgliedschaft (A37) gilt unverändert."""
+    from sqlalchemy import or_
+
+    from mhvp.documents.models import Document
+    from mhvp.documents.routers import _scope_filter
+
+    async with tenant_tx(request, principal) as session:
+        if await session.get(Ticket, ticket_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        like = f"%{_escape_like(q.strip())}%"
+        query = select(Document).where(
+            or_(
+                Document.title.ilike(like, escape="\\"),
+                Document.filename.ilike(like, escape="\\"),
+            )
+        )
+        scoped = _scope_filter(session)
+        if scoped is not None:
+            query = query.where(Document.id.in_(scoped))
+        docs = (await session.scalars(query.order_by(Document.created_at.desc()).limit(20))).all()
+        return [
+            {
+                "document_id": d.id,
+                "title": d.title,
+                "filename": d.filename,
+                "mime_type": d.mime_type,
+                "size": d.size,
+            }
+            for d in docs
+        ]
 
 
 @router.post("/tickets", status_code=201, summary="Ticket anlegen (Vorlage, Routing, SLA)")
@@ -1187,9 +1451,25 @@ def _parse_status_filter(raw: str | None) -> list[TicketStatus]:
         raise ProblemError(ErrorCodes.VALIDATION, detail=f"Unbekannter Status: {exc}") from exc
 
 
-@router.get("/tickets", summary="Tickets")
+@router.get(
+    "/tickets",
+    summary="Tickets",
+    responses={
+        200: {
+            "headers": {
+                "X-Total-Count": {
+                    "description": "Gesamtzahl der Tickets der Filterung",
+                    "schema": {"type": "integer"},
+                },
+                "X-Page": {"description": "Aktuelle Seite", "schema": {"type": "integer"}},
+                "X-Page-Size": {"description": "Einträge je Seite", "schema": {"type": "integer"}},
+            }
+        }
+    },
+)
 async def list_tickets(
     request: Request,
+    response: Response,
     status: str | None = Query(
         default=None, description="Ein Status oder mehrere, kommagetrennt (z. B. new,in_progress)"
     ),
@@ -1231,8 +1511,18 @@ async def list_tickets(
     ),
     merged_into: uuid.UUID | None = Query(default=None, description="Quelltickets eines Ziels"),
     limit: int = Query(default=100, ge=1, le=500),
+    page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
+    page_size: int | None = Query(
+        default=None,
+        ge=1,
+        le=500,
+        description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
+    """Liste der Tickets, neueste Nummer zuerst. Paginierung (review 26.09.2026, H7): die
+    Antwort bleibt eine Liste (bestehende Aufrufer); Gesamtzahl und Seite stehen in den
+    Kopfzeilen ``X-Total-Count``, ``X-Page`` und ``X-Page-Size``."""
     from mhvp.communication.models import Message
     from mhvp.contacts.models import Contact, ContactEmail, PartyMember
     from mhvp.contracts.models import Contract, ContractKind
@@ -1382,7 +1672,16 @@ async def list_tickets(
             query = query.where(Ticket.created_at <= created_to)
         if mine:
             query = query.where(Ticket.assignee_user_id == principal.user_id)
-        return [_ticket_out(t) for t in (await session.scalars(query.limit(limit))).all()]
+        size = page_size or limit
+        total = (
+            await session.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
+            or 0
+        )
+        rows = (await session.scalars(query.offset((page - 1) * size).limit(size))).all()
+        response.headers["X-Total-Count"] = str(total)
+        response.headers["X-Page"] = str(page)
+        response.headers["X-Page-Size"] = str(size)
+        return [_ticket_out(t) for t in rows]
 
 
 @router.get("/tickets/{ticket_id}/assignees", summary="Zuweiser eines Tickets mit Grund")
@@ -1447,32 +1746,6 @@ async def remove_assignee(
         await session.delete(row)
 
 
-async def _queue_learn_playbook(session: AsyncSession, settings: Any, ticket: Ticket) -> None:
-    """Playbook-Lernen beim Schließen eines Tickets (M20 Übernahme aus dem Immoware Hub):
-    synchron in Tests und Entwicklung (``ai_inline``), sonst über die Queue ``ai``. Ein
-    Fehler beim Lernen darf den Statuswechsel nie stören."""
-    if settings.ai_inline:
-        from mhvp.communication.suggest import learn_playbook_from_ticket
-
-        try:
-            await learn_playbook_from_ticket(session, settings, ticket)
-        except Exception:
-            return
-    else:
-        try:
-            from mhvp.worker import get_celery
-
-            get_celery().send_task(
-                "mhvp.communication.learn_playbook",
-                args=[str(ticket.tenant_id), str(ticket.id)],
-                queue="ai",
-            )
-        except Exception:
-            logging.getLogger(__name__).warning(
-                "could not queue playbook learning", extra={"ticket_id": str(ticket.id)}
-            )
-
-
 @router.patch("/tickets/{ticket_id}", summary="Status, Zuweisung, Checkliste")
 async def patch_ticket(
     ticket_id: uuid.UUID,
@@ -1500,39 +1773,14 @@ async def patch_ticket(
                 values[key] = _validate_extra_field_value(field, raw)
             ticket.extra_fields = values
         if body.status and body.status is not ticket.status:
-            admin_override = body.status not in TICKET_FLOW[ticket.status]
-            if admin_override and not _may_skip_flow(principal):
-                raise ProblemError(
-                    ErrorCodes.CONFLICT,
-                    detail=f"Wechsel {ticket.status.value} nach {body.status.value} unzulässig.",
-                )
-            if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
-                _check_checklist_complete(ticket.checklist)
-                if template:
-                    _check_required_extra_fields(template.extra_fields, ticket.extra_fields)
-            await _event(
+            await transition_status(
                 session,
+                request.app.state.settings,
                 ticket,
-                "status",
+                body.status,
                 principal.user_id,
-                {
-                    "from": ticket.status.value,
-                    "to": body.status.value,
-                    **({"admin_override": True} if admin_override else {}),
-                },
+                skip_flow=_may_skip_flow(principal),
             )
-            ticket.status = body.status
-            ticket.resolved_at = datetime.now(UTC) if body.status in CLOSING_STATUSES else None
-            if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
-                await _queue_learn_playbook(session, request.app.state.settings, ticket)
-            if body.status in CLOSING_STATUSES:
-                # Operator rule: every closing status (done, closed, rejected) archives the
-                # linked mails in the mailbox; the mailbox flag archive_on_ticket_done applies.
-                from mhvp.communication.services import enqueue_archive_for_ticket
-
-                await enqueue_archive_for_ticket(
-                    session, request.app.state.settings, principal.tenant_id, ticket.id
-                )
         if body.assignee_user_id and body.assignee_user_id != ticket.assignee_user_id:
             ticket.assignee_user_id = body.assignee_user_id
             await _event(
@@ -1727,45 +1975,19 @@ async def bulk_status(
             if body.status is ticket.status:
                 changed.append({"id": str(ticket.id), "status": ticket.status.value})
                 continue
-            if body.status not in TICKET_FLOW[ticket.status] and not _may_skip_flow(principal):
-                failed.append(
-                    {
-                        "id": str(ticket.id),
-                        "reason": (
-                            f"Wechsel {ticket.status.value} nach {body.status.value} unzulässig."
-                        ),
-                    }
+            try:
+                await transition_status(
+                    session,
+                    request.app.state.settings,
+                    ticket,
+                    body.status,
+                    principal.user_id,
+                    bulk=True,
+                    skip_flow=_may_skip_flow(principal),
                 )
+            except ProblemError as exc:
+                failed.append({"id": str(ticket.id), "reason": exc.detail})
                 continue
-            if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
-                try:
-                    _check_checklist_complete(ticket.checklist)
-                    if ticket.template_id:
-                        template = await session.get(TicketTemplate, ticket.template_id)
-                        if template:
-                            _check_required_extra_fields(template.extra_fields, ticket.extra_fields)
-                except ProblemError as exc:
-                    failed.append({"id": str(ticket.id), "reason": exc.detail})
-                    continue
-            await _event(
-                session,
-                ticket,
-                "status",
-                principal.user_id,
-                {"from": ticket.status.value, "to": body.status.value, "bulk": True},
-            )
-            ticket.status = body.status
-            ticket.resolved_at = datetime.now(UTC) if body.status in CLOSING_STATUSES else None
-            if body.status in (TicketStatus.DONE, TicketStatus.CLOSED):
-                await _queue_learn_playbook(session, request.app.state.settings, ticket)
-            if body.status in CLOSING_STATUSES:
-                # Operator rule: every closing status (done, closed, rejected) archives the
-                # linked mails in the mailbox; the mailbox flag archive_on_ticket_done applies.
-                from mhvp.communication.services import enqueue_archive_for_ticket
-
-                await enqueue_archive_for_ticket(
-                    session, request.app.state.settings, principal.tenant_id, ticket.id
-                )
             changed.append({"id": str(ticket.id), "status": ticket.status.value})
         await session.flush()
     return {"changed": changed, "failed": failed}

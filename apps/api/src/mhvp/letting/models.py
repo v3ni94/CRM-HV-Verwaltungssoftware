@@ -132,8 +132,9 @@ class Listing(IdMixin, TimestampMixin, TenantMixin, Base):
     warm_rent: Mapped[Decimal | None] = mapped_column(MONEY)
     hoa_fee: Mapped[Decimal | None] = mapped_column(MONEY)
     parking_price: Mapped[Decimal | None] = mapped_column(MONEY)
+    # String(24): "nicht_erforderlich" has 18 characters (widened in migration 0112).
     energy_status: Mapped[str] = mapped_column(
-        String(16),
+        String(24),
         nullable=False,
         default="in_erstellung",
         server_default=text("'in_erstellung'"),
@@ -146,6 +147,10 @@ class Listing(IdMixin, TimestampMixin, TenantMixin, Base):
     energy_includes_hot_water: Mapped[bool] = mapped_column(
         sa.Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # A63: issue date of the certificate and construction year of the building as shown on
+    # the certificate; copied from the property on creation, editable per listing.
+    energy_issued_on: Mapped[date | None] = mapped_column(Date)
+    energy_building_year: Mapped[int | None] = mapped_column(sa.Integer)
     features: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )

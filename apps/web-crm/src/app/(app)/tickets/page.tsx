@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { TicketCreate } from "@/components/tickets/TicketForms";
 import { TicketFilters } from "@/components/tickets/TicketFilters";
 import { TicketsList } from "@/components/tickets/TicketsList";
+import { TicketsPagination } from "@/components/tickets/TicketsPagination";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
@@ -32,6 +33,9 @@ const FORWARDED_KEYS = [
   "mine",
 ] as const;
 
+// Page size of the list (review 26.09.2026, H7); GET /tickets reports the total in X-Total-Count.
+const PAGE_SIZE = 50;
+
 type Ticket = {
   id: string;
   number: number;
@@ -48,16 +52,34 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
   // M36: merged source tickets stay hidden unless the filter is switched on.
   const showMerged = params.merged === "1";
 
+  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+
   const query = new URLSearchParams();
   query.set("include_merged", String(showMerged));
   for (const key of FORWARDED_KEYS) {
     const value = params[key];
     if (value) query.set(key, value);
   }
+  query.set("page", String(page));
+  query.set("page_size", String(PAGE_SIZE));
 
   const response = await serverFetch(`/api/v1/tickets?${query.toString()}`);
   redirectIfUnauthenticated(response);
   const data = response.ok ? ((await response.json()) as Record<string, unknown>[]) : null;
+  const total = Number.parseInt(response.headers.get("x-total-count") ?? "", 10);
+  const totalCount = Number.isFinite(total) ? total : (data?.length ?? 0);
+
+  function pageHref(target: number): string {
+    const sp = new URLSearchParams();
+    for (const key of FORWARDED_KEYS) {
+      const value = params[key];
+      if (value) sp.set(key, value);
+    }
+    if (showMerged) sp.set("merged", "1");
+    if (target > 1) sp.set("page", String(target));
+    const qs = sp.toString();
+    return `/tickets${qs ? `?${qs}` : ""}`;
+  }
   const error = response.ok ? null : ((await response.json().catch(() => null)) as Problem | null);
 
   const api = serverApi();
@@ -95,23 +117,26 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}
         </p>
-      ) : data.length === 0 ? (
+      ) : data.length === 0 && page === 1 ? (
         <EmptyState title={t("empty")} />
       ) : (
-        <TicketsList
-          initialTickets={data.map(
-            (tk): Ticket => ({
-              id: String(tk.id),
-              number: Number(tk.number),
-              title: tk.title ? String(tk.title) : null,
-              priority: String(tk.priority),
-              status: String(tk.status),
-              sla_due_at: tk.sla_due_at ? String(tk.sla_due_at) : null,
-              sla_breached: Boolean(tk.sla_breached),
-            }),
-          )}
-          canApprove={canApprove}
-        />
+        <>
+          <TicketsList
+            initialTickets={data.map(
+              (tk): Ticket => ({
+                id: String(tk.id),
+                number: Number(tk.number),
+                title: tk.title ? String(tk.title) : null,
+                priority: String(tk.priority),
+                status: String(tk.status),
+                sla_due_at: tk.sla_due_at ? String(tk.sla_due_at) : null,
+                sla_breached: Boolean(tk.sla_breached),
+              }),
+            )}
+            canApprove={canApprove}
+          />
+          <TicketsPagination page={page} pageSize={PAGE_SIZE} total={totalCount} shown={data.length} buildHref={pageHref} />
+        </>
       )}
     </div>
   );

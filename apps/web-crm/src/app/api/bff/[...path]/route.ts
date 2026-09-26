@@ -96,6 +96,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^tenant\/roles$/ },
   { method: "PUT", pattern: new RegExp(`^tenant/roles/${ID}/permissions$`) },
   // Portalrechte je Rolle (M2-08 entschieden, docs/rules/M2-07.md).
+  // Portalformulare (A56): Vorlagen je Mandant.
+  { method: "GET", pattern: /^portal-admin\/forms$/ },
+  { method: "POST", pattern: /^portal-admin\/forms$/ },
+  { method: "PATCH", pattern: new RegExp(`^portal-admin/forms/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^portal-admin/forms/${ID}$`) },
   { method: "GET", pattern: /^tenant\/portal-role-permissions$/ },
   { method: "PUT", pattern: /^tenant\/portal-role-permissions$/ },
   { method: "POST", pattern: /^tenant\/portal-role-permissions\/resync$/ },
@@ -147,6 +152,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/(validate|test-run|apply)$`) },
   // Immoware24-Listen (Objektdaten, Kontakte) als CSV-Upload, Testlauf oder Übernahme.
   { method: "POST", pattern: /^imports\/immoware24\/lists\/(objektdaten|kontakte)$/ },
+  // Abgleichberichte des Parallelbetriebs (A68): Liste, Erstellen, JSON, CSV, Spaltenzuordnung.
+  { method: "GET", pattern: /^imports\/reconciliation-reports(\/columns)?$/ },
+  { method: "POST", pattern: /^imports\/reconciliation-reports$/ },
+  { method: "PUT", pattern: /^imports\/reconciliation-reports\/columns$/ },
+  { method: "GET", pattern: new RegExp(`^imports/reconciliation-reports/${ID}(/csv)?$`) },
   // Evaluations (M18, 7.5): liquidity, payments by debtor, revenue; read only.
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/liquidity$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/payments-by-debtor$`) },
@@ -230,6 +240,22 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^hoa\/(plans|statements|meetings|resolutions|special-levies)$/ },
   { method: "POST", pattern: new RegExp(`^hoa/special-levies/${ID}/(calculate|resolve|apply|amend)$`) },
   { method: "POST", pattern: /^hoa\/majority-rules$/ },
+  // Darlehen, Versicherungsfälle, Maßnahmen (W10, A59) und erklärte Differenzen der
+  // Überleitungsrechnung (W04, A60): Erfassung und Nachweis, keine Buchung.
+  { method: "POST", pattern: /^hoa\/(loans|measures|insurance-claims)$/ },
+  { method: "POST", pattern: new RegExp(`^hoa/(loans|insurance-claims)/${ID}/items$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/measures/${ID}/financing$`) },
+  { method: "PATCH", pattern: new RegExp(`^hoa/(measures|insurance-claims)/${ID}$`) },
+  { method: "PUT", pattern: new RegExp(`^hoa/statements/${ID}/reconciliation-notes$`) },
+  // Beiratszugang und Antworten am Prüfauftrag (A52); der Beirat selbst arbeitet im Portal.
+  { method: "POST", pattern: new RegExp(`^hoa/audit-engagements/${ID}/board-access$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/audit-engagements/${ID}/board-access/${ID}/revoke$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/audit-engagements/${ID}/notes/${ID}/answer$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/(items|calculate|transition|apply)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(costs|calculate|transition|post|new-version)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
+  // Protokollentwurf der Versammlung als PDF (A62); Download über /api/handover-files.
+  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/protocol-draft$`) },
   // Mehrheitsregeln je Beschlussgegenstand (M25-01): Prüfung nur als Anzeige, keine Statusänderung.
   { method: "GET", pattern: /^hoa\/majority-rules\/subject-rules$/ },
   { method: "POST", pattern: /^hoa\/majority-rules\/subject-rules$/ },
@@ -237,14 +263,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}/approve$`) },
   { method: "GET", pattern: new RegExp(`^hoa/resolutions/${ID}/majority-check$`) },
-  { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/(items|calculate|transition|apply)$`) },
-  { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(costs|calculate|transition|post|new-version)$`) },
-  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
   // Beschlussfrist der virtuellen Versammlung (M9-07).
   { method: "PATCH", pattern: new RegExp(`^hoa/meetings/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/votes$`) },
   { method: "GET", pattern: new RegExp(`^hoa/agenda/${ID}/tally$`) },
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/announce$`) },
+  // Einsichtsanfragen außerhalb des Portals (A61): Erfassung, Statuswechsel, Rückfragen, Paket.
+  { method: "GET", pattern: /^hoa\/inspection-requests$/ },
+  { method: "POST", pattern: /^hoa\/inspection-requests$/ },
+  { method: "GET", pattern: new RegExp(`^hoa/inspection-requests/${ID}(/candidates|/package)?$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/inspection-requests/${ID}/(transition|notes|package)$`) },
   // Letting (M26): rent increase process (sending needs G3, checked by the API), prospects.
   { method: "POST", pattern: /^letting\/(rent-increases|prospects)$/ },
   { method: "POST", pattern: new RegExp(`^letting/rent-increases/${ID}/actions$`) },
@@ -328,6 +356,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^tickets/reply-templates/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/reply-templates/${ID}/preview$`) },
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/reply$`) },
+  // Ticket-Mailverlauf (operator 26.09.2026): Thread mit Anhängen, Vorbelegung der Antwort,
+  // Anhangsvorschau nur über den Ticketbezug, Dokumentsuche für eigene Anhänge.
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}/(messages|reply-context|reply-documents)$`) },
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}/mail-attachments/${ID}/content$`) },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}/checklist/[a-zA-Z0-9_-]{1,64}$`) },
   { method: "POST", pattern: /^tickets\/bulk-status$/ },
   // Tickets zusammenführen (M36): Zielsuche über die Liste (q), Vorschau über das Detail.
@@ -338,6 +370,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/proposals/(contact-change|${ID}/(accept|correct|reject|reply-draft))$`) },
   { method: "POST", pattern: /^tickets\/merge$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}$`) },
+  // Energieausweis am Objekt (A63): Objektstammdaten vollständig speichern.
+  { method: "PUT", pattern: new RegExp(`^properties/${ID}$`) },
   // Zuweiser mit Grund (operator 25.09.2026, mail-optimierung M20).
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/assignees$`) },
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/assignees$`) },
@@ -433,6 +467,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },
   // Beleg aus Paperless holen und als Rechnung erfassen (M14 KI-Extraktion, manuelle Aktion).
   { method: "POST", pattern: /^invoices\/intake\/paperless$/ },
+  // Telefonie (13.5, A70): settings (secret write only), call list, callback proposal.
+  { method: "GET", pattern: /^communication\/telephony\/settings$/ },
+  { method: "PUT", pattern: /^communication\/telephony\/settings$/ },
+  { method: "GET", pattern: /^communication\/calls$/ },
+  { method: "PATCH", pattern: new RegExp(`^communication/calls/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^communication/calls/${ID}/(assign|proposal/accept|proposal/dismiss)$`) },
+  { method: "GET", pattern: new RegExp(`^contacts/${ID}/calls$`) },
   // Belegeingang (M14): KI-Entwürfe aus Upload, Mail-Anhang oder Paperless, Feldprüfung, Entscheidung.
   { method: "GET", pattern: /^receipts\/drafts$/ },
   { method: "POST", pattern: /^receipts\/drafts$/ },
@@ -441,6 +482,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^receipts/drafts/${ID}/(confirm|reject)$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
+  // Schwarzes Brett je Objekt (M21-01, A54): maintenance of notices at the property.
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/notices$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/notices$`) },
+  { method: "PATCH", pattern: new RegExp(`^notices/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^notices/${ID}/end$`) },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */

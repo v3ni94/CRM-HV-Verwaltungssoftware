@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { StartTiles } from "@/components/portal/StartTiles";
 import type { Me } from "@/components/portal/types";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +15,16 @@ export default async function StartPage() {
   redirectIfUnauthenticated(response);
   if (!data) throw new Error(String(error));
   const me = data as unknown as Me;
+  // Hint on new notices of the Schwarzes Brett (A54); any failure hides the hint only.
+  let newNotices = 0;
+  if (!me.roles.includes("provider")) {
+    const notices = await serverFetch("/api/v1/portal/notices");
+    if (notices.ok) newNotices = ((await notices.json()) as { is_new: boolean }[]).filter((n) => n.is_new).length;
+  }
   return (
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("start.title")}</h1>
-      <StartTiles me={me} />
+      <StartTiles me={me} newNotices={newNotices} />
     </div>
   );
 }

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { PropertyBankAccounts } from "@/components/banking/PropertyBankAccounts";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { CompletenessPanel } from "@/components/objektakte/CompletenessPanel";
+import { EnergyCertificateForm } from "@/components/properties/EnergyCertificateForm";
+import { PropertyNotices } from "@/components/properties/PropertyNotices";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
@@ -168,8 +170,10 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
         </section>
       </div>
 
+      <EnergyCertificateForm property={data as unknown as Record<string, unknown> & { id: string; version: number }} />
       <PropertyBankAccounts propertyId={propertyId} legalEntities={(data.legal_entities ?? []).map((e) => ({ id: e.id, kind: e.kind, name: e.name }))} />
       <DmsDocumentsPanel entity="property" id={propertyId} />
+      <PropertyNotices propertyId={propertyId} />
       <CompletenessPanel propertyId={propertyId} />
       <TicketsSection tickets={(tickets.data ?? []) as TicketSummary[]} />
     </div>

@@ -13,6 +13,8 @@ TARGET="${RESTORE_DATABASE:-mhvp_restore_check}"
   || { echo "backup-verify: invalid RESTORE_DATABASE" >&2; exit 2; }
 LATEST="$(ls -1t "$BACKUP_DIR"/mhvp-2*.dump "$BACKUP_DIR"/mhvp-2*.dump.age 2>/dev/null | head -1 || true)"
 [[ -n "$LATEST" ]] || { echo "backup-verify: no backup in $BACKUP_DIR" >&2; exit 1; }
+# Read by the job ops.backup_verify (A67) for the operating metrics; keep the prefix.
+echo "backup-verify: file $LATEST"
 (cd "$(dirname "$LATEST")" && sha256sum --check --status "$(basename "$LATEST").sha256") \
   || { echo "backup-verify: checksum mismatch" >&2; exit 1; }
 

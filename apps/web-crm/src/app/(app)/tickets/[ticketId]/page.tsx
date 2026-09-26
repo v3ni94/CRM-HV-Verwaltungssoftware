@@ -10,7 +10,7 @@ import { TicketEdit } from "@/components/tickets/TicketForms";
 import { TicketMailAttachments, type TicketMailAttachment } from "@/components/tickets/TicketMailAttachments";
 import { TicketMergeDialog } from "@/components/tickets/TicketMergeDialog";
 import { TicketProposals } from "@/components/tickets/TicketProposals";
-import { TicketReplyPanel } from "@/components/tickets/TicketReplyPanel";
+import { TicketMailSection } from "@/components/tickets/TicketMailSection";
 import { SafeLine, SafeText } from "@/components/ui/SafeText";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -142,7 +142,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
       ) : null}
       {mergedInto ? null : (
         <>
-          <TicketReplyPanel ticketId={ticketId} canSend={canReply} />
+          <TicketMailSection ticketId={ticketId} canReply={canReply} />
           <TicketMailAttachments attachments={attachments} />
           <TicketProposals ticketId={ticketId} />
         </>

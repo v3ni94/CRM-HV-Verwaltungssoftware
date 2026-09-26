@@ -3,8 +3,8 @@ kind and stored majority check on resolutions (M25-01).
 
 Tenant tables must call mhvp.core.db.rls.tenant_rls_statements() (ADR 0002).
 
-Revision ID: 0114
-Revises: 0108
+Revision ID: 0125
+Revises: 0124
 """
 
 from collections.abc import Sequence
@@ -15,8 +15,8 @@ from sqlalchemy.dialects import postgresql
 
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
-revision: str = "0114"
-down_revision: str | None = "0113"
+revision: str = "0125"
+down_revision: str | None = "0124"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

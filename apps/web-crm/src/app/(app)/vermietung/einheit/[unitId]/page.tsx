@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 
 import { Prospects } from "@/components/letting/Prospects";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
@@ -30,6 +31,13 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
   );
   const fields = expose.data.fields as Record<string, unknown>;
   const missing = expose.data.missing as string[];
+  // A63: energy certificate (from the property) and asking rent (from the rental listing)
+  const blocks = {
+    energy_certificate: (expose.data.energy_certificate ?? {}) as Record<string, unknown>,
+    asking_rent: (expose.data.asking_rent ?? {}) as Record<string, unknown>,
+  } as const;
+  const listingId = (expose.data.listing_id as string | null | undefined) ?? null;
+  const show = (v: unknown) => (v === null || v === undefined || v === "" ? t("none") : String(v));
   return (
     <div className="flex flex-col gap-4">
       <PageHeader breadcrumb={[{ href: "/vermietung", label: t("title") }]} title={String(fields.title ?? "")} />
@@ -39,12 +47,34 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
           {Object.entries(fields).map(([k, v]) => (
             <div key={k} className="contents">
               <dt className="text-muted">{t(`fields.${k}`)}</dt>
-              <dd>{v === null || v === "" ? t("none") : String(v)}</dd>
+              <dd>{show(v)}</dd>
             </div>
           ))}
         </dl>
+        {(Object.keys(blocks) as (keyof typeof blocks)[]).map((block) => (
+          <div key={block} className="mt-3" data-testid={`expose-${block}`}>
+            <h3 className={ui.subtitle}>{t(`fields.${block}.title`)}</h3>
+            <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              {Object.entries(blocks[block]).map(([k, v]) => (
+                <div key={k} className="contents">
+                  <dt className="text-muted">{t(`fields.${block}.${k}`)}</dt>
+                  <dd>{show(v)}</dd>
+                </div>
+              ))}
+            </dl>
+            {block === "asking_rent" ? (
+              listingId ? (
+                <Link href={`/makler/${listingId}`} className="text-sm hover:underline">
+                  {t("toListing")}
+                </Link>
+              ) : (
+                <p className="text-sm text-muted">{t("noListing")}</p>
+              )
+            ) : null}
+          </div>
+        ))}
         <p className="mt-2 text-sm text-muted">
-          {t("missing")}: {missing.map((m) => t(`fields.${m}`)).join(", ")}
+          {t("missing")}: {missing.map((m) => (m.includes(".") ? `${t(`fields.${m.split(".")[0]}.title`)} ${t(`fields.${m}`)}` : t(`fields.${m}`))).join(", ")}
         </p>
         <p className="mt-1 text-xs text-muted">{String(expose.data.note)}</p>
       </section>

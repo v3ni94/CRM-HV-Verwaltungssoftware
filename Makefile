@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi db-bootstrap agent-docs seed ai-eval deploy backup backup-verify
+.PHONY: help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed ai-eval deploy backup backup-verify
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -47,9 +47,12 @@ typecheck: ## mypy strict and tsc --noEmit
 	cd apps/api && uv run mypy
 	pnpm typecheck
 
-openapi: ## Export apps/api/openapi.json and regenerate packages/api-client
+openapi: openapi-check ## Export apps/api/openapi.json and regenerate packages/api-client
 	cd apps/api && uv run python -m mhvp.openapi > openapi.json.tmp && mv openapi.json.tmp openapi.json
 	pnpm api-client:generate
+
+openapi-check: ## Fail when a path or field is removed without a passed deprecation (ADR 0009)
+	cd apps/api && uv run python -m mhvp.openapi --check openapi.json
 
 db-bootstrap: ## Run infra/postgres/bootstrap.sh against PGHOST (native dev/CI)
 	sh infra/postgres/bootstrap.sh

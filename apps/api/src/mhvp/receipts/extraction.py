@@ -43,7 +43,14 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document, TextStatus
 from mhvp.properties.models import Property
 from mhvp.receipts import einvoice
-from mhvp.receipts.masking import iban_candidates, iban_checksum_ok, mask_text, normalize_iban
+from mhvp.receipts.masking import (
+    iban_candidates,
+    iban_checksum_ok,
+    issuer_person_name,
+    mask_text,
+    name_variants,
+    normalize_iban,
+)
 from mhvp.receipts.models import ReceiptDraft, ReceiptDraftStatus
 
 MAX_TEXT_CHARS = 200_000
@@ -336,7 +343,8 @@ async def prepare(
         session.add(draft)
         await session.flush()
         return draft
-    masked = mask_text(f"Dateiname: {mask_text(document.filename)}\n\n{raw}")
+    names = await known_person_names(session, issuer=inv.seller_name if inv is not None else None)
+    masked = mask_text(f"Dateiname: {mask_text(document.filename, names)}\n\n{raw}", names)
     content = f"{INSTRUCTION}\n\n<daten>\n{masked}\n</daten>"
     prompt = tasks.prompt(AiTask.EXTRACT_INVOICE)
     context = {"context_type": "receipt_draft", "document_id": str(document.id)}
@@ -372,6 +380,31 @@ async def prepare(
     session.add(draft)
     await session.flush()
     return draft
+
+
+async def known_person_names(session: AsyncSession, *, issuer: str | None = None) -> list[str]:
+    """Names to mask deterministically before the provider call (A65): every person contact
+    of the tenant (RLS scoped session) in both spellings, plus the issuer name when it looks
+    like a natural person (sole trader as supplier)."""
+    from mhvp.contacts.models import Contact, ContactKind
+
+    rows = (
+        await session.execute(
+            select(Contact.first_name, Contact.last_name).where(
+                Contact.kind == ContactKind.PERSON,
+                Contact.deleted_at.is_(None),
+                Contact.first_name.is_not(None),
+                Contact.last_name.is_not(None),
+            )
+        )
+    ).all()
+    names: list[str] = []
+    for first, last in rows:
+        names.extend(name_variants(first, last))
+    person = issuer_person_name(issuer)
+    if person:
+        names.append(person)
+    return names
 
 
 async def platform_hints(

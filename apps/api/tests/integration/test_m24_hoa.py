@@ -74,6 +74,30 @@ def _ok(response: Any, status: int = 200) -> Any:
     return response.json()
 
 
+def _book_cost(
+    c: TestClient, h: dict[str, str], ledger: str, bank: str, cost: str, amount: str, day: str
+) -> None:
+    """Posted cost payment bank -> cost account, so that the W04 reconciliation of the
+    statement year closes (costs distributed must be costs booked, A60)."""
+    draft = _ok(
+        c.post(
+            f"{A}/ledgers/{ledger}/entries",
+            json={
+                "kind": "custom",
+                "booking_date": day,
+                "text": "Bewirtschaftungskosten",
+                "lines": [
+                    {"account_id": cost, "debit": amount},
+                    {"account_id": bank, "credit": amount},
+                ],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(c.post(f"{A}/ledgers/{ledger}/entries/{draft['id']}/post", headers=h))
+
+
 def _owner(
     c: TestClient, h: dict[str, str], prop: str, no: str, mea: str, key: str, pays: dict[str, str]
 ) -> tuple[str, dict[str, Any]]:
@@ -208,6 +232,7 @@ def test_hoa_statement_d01_d03(clients: tuple[TestClient, TestClient], world: Wo
             201,
         )
         _ok(client.post(f"{A}/ledgers/{ledger}/entries/{draft['id']}/post", headers=h))
+    _book_cost(client, h, ledger, acc["001200"], acc["043000"], "5500.00", "2025-03-01")
 
     st = _ok(
         client.post(
@@ -373,7 +398,8 @@ def test_hoa_statement_d01_d03(clients: tuple[TestClient, TestClient], world: Wo
         201,
     )
     assert audit["snapshot_hash"] == calc["snapshot_hash"]
-    assert audit["population"]["entries"] == 6  # 3 receivables + 3 payments 2025, not 2026 results
+    # 3 receivables + 3 payments + 1 cost payment (W04) in 2025, not the 2026 results
+    assert audit["population"]["entries"] == 7
     aitem = _ok(
         client.post(
             f"{H}/audits/{audit['id']}/items",
@@ -493,6 +519,15 @@ def test_d18_sub_community_without_basis_blocks_release(
         )
 
     def statement(year: int, basis: str) -> tuple[str, dict[str, Any]]:
+        _book_cost(
+            client,
+            h,
+            w["ledger"],
+            w["acc"]["001200"],
+            w["acc"]["043000"],
+            "2000.00",
+            f"{year}-02-01",
+        )
         st = _ok(
             client.post(
                 f"{H}/statements", json={"ledger_id": w["ledger"], "year": year}, headers=h
@@ -600,6 +635,9 @@ def test_d19_reserve_contribution_unpaid_no_settlement_entry(
         201,
     )
     _ok(client.post(f"{A}/ledgers/{w['ledger']}/entries/{draft['id']}/post", headers=h))
+    _book_cost(
+        client, h, w["ledger"], w["acc"]["001200"], w["acc"]["043000"], "100.00", "2025-02-01"
+    )
     before = _ok(client.get(f"{A}/ledgers/{w['ledger']}/entries", headers=h))
     st = _ok(
         client.post(
@@ -674,6 +712,9 @@ def test_d54_contested_resolution_blocks_posting_and_reverses_nothing(
         201,
     )
     _ok(client.post(f"{A}/receivable-runs/{run['id']}/post", headers=h))
+    _book_cost(
+        client, h, w["ledger"], w["acc"]["001200"], w["acc"]["043000"], "1500.00", "2025-02-01"
+    )
     sid = _ok(
         client.post(f"{H}/statements", json={"ledger_id": w["ledger"], "year": 2025}, headers=h),
         201,

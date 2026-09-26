@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AppointmentProposals } from "@/components/portal/AppointmentProposals";
 import { TicketComments } from "@/components/portal/TicketComments";
 import type { Ticket } from "@/components/portal/types";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -28,6 +29,12 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
         {t("number")} {row.number}: {row.title}
       </h1>
       <span className={`${ui.badge} w-fit`}>{t(`status.${row.status}`)}</span>
+      {(row.attachments ?? []).length > 0 ? (
+        <p className="text-sm text-muted">
+          {t("attachments")}: {row.attachments.map((a) => a.filename).join(", ")}
+        </p>
+      ) : null}
+      <AppointmentProposals proposals={row.appointment_proposals ?? []} />
       <TicketComments ticketId={row.id} comments={row.comments} />
     </div>
   );

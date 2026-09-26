@@ -7,7 +7,7 @@ import base64
 import json
 from collections.abc import Iterator
 from email.message import EmailMessage
-from typing import Any
+from typing import Any, cast
 
 import boto3
 import httpx
@@ -46,15 +46,19 @@ class FakeGmail:
 
     def __init__(self) -> None:
         self.inbox: dict[str, bytes] = {}
-        self.history: list[str] = []
+        # One history entry per added mail: (historyId, messageId), like Gmail's history.list.
+        self.history: list[tuple[int, str]] = []
         self.history_id = 1000
         self.token_ok = True
         self.expire_history = False
+        # Message ids whose raw fetch fails once with HTTP 500 (transient error).
+        self.flaky: set[str] = set()
+        self.raw_calls: dict[str, int] = {}
 
     def add(self, mid: str, raw: bytes) -> None:
         self.inbox[mid] = raw
-        self.history.append(mid)
         self.history_id += 1
+        self.history.append((self.history_id, mid))
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -73,14 +77,23 @@ class FakeGmail:
             if self.expire_history:
                 return httpx.Response(404, json={"error": "expired"})
             since = int(request.url.params["startHistoryId"])
-            added = self.history[max(0, since - 1000) :]
+            added = [(hid, m) for hid, m in self.history if hid > since]
             return httpx.Response(
                 200,
-                json={"history": [{"messagesAdded": [{"message": {"id": m}}]} for m in added]},
+                json={
+                    "history": [
+                        {"id": str(hid), "messagesAdded": [{"message": {"id": m}}]}
+                        for hid, m in added
+                    ]
+                },
             )
         mid = path.rsplit("/", 1)[-1]
         if mid not in self.inbox:
             return httpx.Response(404)
+        self.raw_calls[mid] = self.raw_calls.get(mid, 0) + 1
+        if mid in self.flaky:
+            self.flaky.discard(mid)
+            return httpx.Response(500, json={"error": "backend"})
         raw = base64.urlsafe_b64encode(self.inbox[mid]).decode().rstrip("=")
         return httpx.Response(200, json={"id": mid, "raw": raw})
 
@@ -152,6 +165,12 @@ def _ok(response: Any, status: int = 200) -> Any:
     return response.json()
 
 
+def _counts(result: dict[str, Any]) -> dict[str, int]:
+    """The four classic counters of a sync result (the run also reports retried, remaining
+    and the error list)."""
+    return {k: result[k] for k in ("fetched", "created", "duplicates", "failed")}
+
+
 def test_gmail_sync_creates_tickets_and_threads(
     client: TestClient, world: World, fake: FakeGmail, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -172,12 +191,8 @@ def test_gmail_sync_creates_tickets_and_threads(
     fake.add("g1", _eml(f"a{RUN}@example.com", f"Heizung defekt {RUN}", f"<g1-{RUN}@x>"))
     fake.add("g2", _eml(f"b{RUN}@example.com", f"Frage Abrechnung {RUN}", f"<g2-{RUN}@x>"))
     result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
-    assert {k: result[k] for k in ("fetched", "created", "duplicates", "failed")} == {
-        "fetched": 2,
-        "created": 2,
-        "duplicates": 0,
-        "failed": 0,
-    }
+    assert _counts(result) == {"fetched": 2, "created": 2, "duplicates": 0, "failed": 0}
+    assert (result["retried"], result["remaining"], result["errors"]) == (0, 0, [])
 
     msgs = {m["subject"]: m for m in _ok(client.get(f"{M}/messages", headers=h))}
     first, second = msgs[f"Heizung defekt {RUN}"], msgs[f"Frage Abrechnung {RUN}"]
@@ -188,6 +203,9 @@ def test_gmail_sync_creates_tickets_and_threads(
     # Gmail id is kept on ingest so "Erledigt archiviert Mail" can find the message (26.09.2026).
     assert first["gmail_message_id"]
     assert second["gmail_message_id"]
+    # H6: a ticket from mail has an SLA clock like a manually created one.
+    clock = _ok(client.get(f"/api/v1/sla/tickets/{first['ticket_id']}/sla", headers=h))
+    assert clock["state"] == "running"
 
     # Unchanged history: nothing new, nothing duplicated.
     assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["created"] == 0
@@ -203,8 +221,7 @@ def test_gmail_sync_creates_tickets_and_threads(
 
     # Expired history: fallback to the inbox listing, deduplicated by Message-ID.
     fake.expire_history = True
-    expired = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
-    assert {k: expired[k] for k in ("fetched", "created", "duplicates", "failed")} == {
+    assert _counts(_ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))) == {
         "fetched": 3,
         "created": 0,
         "duplicates": 3,
@@ -230,10 +247,20 @@ def test_gmail_sync_creates_tickets_and_threads(
     monkeypatch.setattr(services, "ingest_parsed", broken)
     result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
     assert (result["created"], result["failed"]) == (1, 1)
-    monkeypatch.setattr(services, "ingest_parsed", real_ingest)
+    assert [e["gmail_id"] for e in result["errors"]] == ["g4"]
     listed = {b["id"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
     assert "Nachricht g4" in (listed[box["id"]]["last_error"] or "")
     assert f"Heil {RUN}" in {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=h))}
+
+    # H1: the failed mail is retried on the next run (the cursor already moved past it) and
+    # arrives once the failure is gone; nothing else is fetched twice.
+    monkeypatch.setattr(services, "ingest_parsed", real_ingest)
+    result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert (result["retried"], result["created"], result["failed"]) == (1, 1, 0)
+    assert f"Kaputt {RUN}" in {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=h))}
+    assert (listed := {b["id"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=h))})
+    assert listed[box["id"]]["last_error"] is None
+    assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["retried"] == 0
 
     # Failing token refresh: error recorded on the mailbox, no crash, no partial data.
     fake.token_ok = False
@@ -328,3 +355,69 @@ def test_oauth_client_consent_and_mailbox_access(
     # Removing the mailbox keeps the messages (mailbox_id becomes null).
     assert client.delete(f"{M}/mailboxes/{box['id']}", headers=h).status_code == 204
     assert address not in {b["address"] for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+
+
+def _mailbox(client: TestClient, h: dict[str, str], address: str) -> dict[str, Any]:
+    box = _ok(
+        client.post(
+            f"{M}/mailboxes", json={"address": address, "kind": "gmail", "secret": "rt"}, headers=h
+        ),
+        201,
+    )
+    return cast(
+        dict[str, Any],
+        _ok(client.patch(f"{M}/mailboxes/{box['id']}", json={"enabled": True}, headers=h)),
+    )
+
+
+def test_gmail_sync_batch_limit_keeps_every_mail(
+    client: TestClient, world: World, fake: FakeGmail, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review 26.09.2026, H1: three new mails with gmail_sync_batch=2 arrive over two runs; the
+    cursor stops at the last processed history entry instead of skipping the third mail."""
+    state = client.app.state  # type: ignore[attr-defined]
+    monkeypatch.setattr(
+        state, "settings", state.settings.model_copy(update={"gmail_sync_batch": 2})
+    )
+    h = bearer(login(client, world, "gmadmin"))
+    box = _mailbox(client, h, f"batch{RUN}@example.com")
+    _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))  # sets the cursor
+    for i in range(3):
+        fake.add(f"b{i}", _eml(f"b{i}{RUN}@example.com", f"Batch {i} {RUN}", f"<b{i}-{RUN}@x>"))
+
+    first = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert (first["created"], first["remaining"]) == (2, 1)
+    second = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert (second["created"], second["remaining"], second["duplicates"]) == (1, 0, 0)
+    subjects = {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=h))}
+    assert {f"Batch {i} {RUN}" for i in range(3)} <= subjects
+    third = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert (third["fetched"], third["created"]) == (0, 0)
+
+
+def test_gmail_sync_transient_fetch_error_is_retried(
+    client: TestClient, world: World, fake: FakeGmail
+) -> None:
+    """Review 26.09.2026, H1: a mail whose raw fetch fails once (HTTP 500) is recorded for a
+    retry with the error text and ingested on the next run; the other mails of the batch are
+    unaffected and never fetched twice."""
+    h = bearer(login(client, world, "gmadmin"))
+    box = _mailbox(client, h, f"flaky{RUN}@example.com")
+    _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    fake.add("f1", _eml(f"f1{RUN}@example.com", f"Flaky eins {RUN}", f"<f1-{RUN}@x>"))
+    fake.add("f2", _eml(f"f2{RUN}@example.com", f"Flaky zwei {RUN}", f"<f2-{RUN}@x>"))
+    fake.flaky.add("f1")
+
+    first = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert (first["created"], first["failed"]) == (1, 1)
+    assert first["errors"][0]["gmail_id"] == "f1"
+    assert "HTTP 500" in first["errors"][0]["error"]
+    boxes = {b["id"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+    assert "Nachricht f1" in (boxes[box["id"]]["last_error"] or "")
+
+    second = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert (second["retried"], second["created"], second["failed"]) == (1, 1, 0)
+    subjects = {m["subject"] for m in _ok(client.get(f"{M}/messages", headers=h))}
+    assert {f"Flaky eins {RUN}", f"Flaky zwei {RUN}"} <= subjects
+    assert fake.raw_calls["f2"] == 1
+    assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["retried"] == 0

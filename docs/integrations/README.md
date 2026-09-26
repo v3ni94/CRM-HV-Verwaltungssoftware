@@ -10,5 +10,6 @@ Je Bestandstool und Fremdsystem entsteht hier ein Dossier nach Anhang B des Mast
 | Übergabeprotokoll | `docs/integrations/uebergabeprotokoll.md` | offen |
 | Objektakte | `docs/integrations/objektakte.md` | offen |
 | smart-einzug | `docs/integrations/smart-einzug.md` | offen |
+| Ausgehende Webhooks (Vertrag für alle Fremdsysteme) | `docs/integrations/webhooks.md` | erstellt 26.09.2026 (A69, `contact.updated`, `invoice.issued`) |
 
 Die Dateinamen sind ein Vorschlag nach dem Muster `docs/integrations/<tool>.md`. Mit Vorliegen aller Dossiers entsteht Version 2.1 des Master-Prompts (Abschnitt 19.3).

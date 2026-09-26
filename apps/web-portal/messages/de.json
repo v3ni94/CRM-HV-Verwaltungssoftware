@@ -46,7 +46,13 @@
       "account": "Kontoauszug",
       "meter": "Zählerstand",
       "data": "Datenänderung",
-      "orders": "Aufträge"
+      "orders": "Aufträge",
+      "audit": "Prüfungsraum",
+      "resolutions": "Beschlüsse",
+      "contacts": "Ansprechpartner",
+      "hoaAccount": "Hausgeldkonto",
+      "notices": "Aushänge",
+      "forms": "Formulare"
     },
     "start": {
       "title": "Übersicht",
@@ -58,7 +64,15 @@
       "meter": "Zählerstand melden",
       "data": "Stammdaten ändern lassen",
       "orders": "Aufträge bearbeiten",
-      "handover": "Übergabeprotokolle"
+      "audit": "Prüfungsraum des Beirats öffnen",
+      "greetingBoard": "Ihr Prüfauftrag als Verwaltungsbeirat.",
+      "handover": "Übergabeprotokolle",
+      "resolutions": "Beschlüsse der Gemeinschaft einsehen",
+      "contacts": "Ansprechpartner des Objekts",
+      "hoaAccount": "Hausgeldkonto ansehen",
+      "notices": "Aushänge lesen",
+      "newNotices": "{count, plural, one {Ein neuer Aushang} other {# neue Aushänge}} am Schwarzen Brett.",
+      "forms": "Formulare der Verwaltung ausfüllen"
     },
     "proposalNotice": "Vorschlag, wird von der Verwaltung geprüft."
   },
@@ -77,7 +91,7 @@
     "new": "Neue Schadensmeldung",
     "titleField": "Titel",
     "description": "Beschreibung",
-    "photo": "Foto anhängen (optional)",
+    "photo": "Fotos anhängen (optional, JPEG oder PNG)",
     "submit": "Melden",
     "submitted": "Meldung wurde übermittelt.",
     "back": "Zurück zur Übersicht",
@@ -95,7 +109,15 @@
       "done": "Erledigt",
       "closed": "Geschlossen",
       "rejected": "Abgelehnt"
-    }
+    },
+    "photoHint": "Fotos werden ohne Aufnahmedaten (Ort, Kamera) gespeichert.",
+    "attachments": "Anhänge",
+    "appointments": "Terminvorschläge des Handwerkers",
+    "appointmentsHint": "Bitte wählen Sie einen Termin. Die Auswahl gilt als Bestätigung gegenüber Handwerker und Verwaltung.",
+    "appointmentAccept": "Diesen Termin bestätigen",
+    "appointmentAccepted": "Der Termin wurde bestätigt.",
+    "appointmentConfirmed": "Bestätigter Termin",
+    "appointmentsOpen": "Terminvorschlag liegt vor"
   },
   "Account": {
     "title": "Kontoauszug",
@@ -152,7 +174,7 @@
     "appointmentSubmit": "Termin festlegen",
     "appointmentSubmitted": "Der Termin wurde übermittelt.",
     "report": "Ausführungsbericht",
-    "photos": "Fotos der Ausführung (optional)",
+    "photos": "Fotos der Ausführung (optional, JPEG oder PNG)",
     "completeSubmit": "Ausführung dokumentieren",
     "completeSubmitted": "Die Ausführung wurde dokumentiert.",
     "invoiceNumber": "Rechnungsnummer",
@@ -174,6 +196,24 @@
       "accepted": "Angenommen",
       "rejected": "Abgelehnt",
       "cancelled": "Storniert"
+    },
+    "proposalsTitle": "Terminvorschläge an den Bewohner",
+    "proposalsHint": "Bis zu drei Vorschläge. Der Bewohner wählt einen Termin im Portal; die Bestätigung setzt den Termin am Auftrag.",
+    "proposal1": "Vorschlag 1",
+    "proposal2": "Vorschlag 2 (optional)",
+    "proposal3": "Vorschlag 3 (optional)",
+    "proposalNote": "Hinweis (optional)",
+    "proposalsSubmit": "Terminvorschläge senden",
+    "proposalsSubmitted": "Die Terminvorschläge wurden an den Bewohner gesendet.",
+    "proposalRequired": "Bitte mindestens einen Termin angeben.",
+    "proposalsList": "Gesendete Terminvorschläge",
+    "appointmentDirect": "Termin direkt festlegen (ohne Vorschlag)",
+    "photosStored": "Fotos der Ausführung",
+    "proposalStatus": {
+      "proposed": "Offen",
+      "accepted": "Bestätigt",
+      "declined": "Nicht gewählt",
+      "superseded": "Ersetzt"
     }
   },
   "Handover": {
@@ -451,5 +491,147 @@
     },
     "pdfDraft": "Vorschau (Entwurf)",
     "pdfFinal": "Protokoll als PDF"
+  },
+  "Resolutions": {
+    "title": "Beschlüsse",
+    "intro": "Verkündete Beschlüsse Ihrer Gemeinschaft. Maßgeblich bleibt die Beschluss-Sammlung der Verwaltung.",
+    "empty": "Keine verkündeten Beschlüsse vorhanden.",
+    "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
+    "number": "Beschluss",
+    "decidedOn": "Beschlossen am",
+    "votes": "Ja {yes}, Nein {no}, Enthaltung {abstain}",
+    "status": {
+      "positive": "angenommen",
+      "negative": "abgelehnt",
+      "final": "bestandskräftig",
+      "contested": "angefochten",
+      "annulled": "für ungültig erklärt",
+      "legally_binding": "rechtskräftig",
+      "void": "nichtig"
+    },
+    "kind": {
+      "meeting": "Versammlung",
+      "circular": "Umlaufbeschluss",
+      "court": "Gericht",
+      "external": "Erfasst"
+    }
+  },
+  "Contacts": {
+    "title": "Ansprechpartner",
+    "empty": "Kein Objekt zugeordnet.",
+    "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
+    "manager": "Verwaltung",
+    "managerUnknown": "Zentrale Erreichbarkeit der Hausverwaltung",
+    "noContacts": "Weitere Ansprechpartner sind für dieses Objekt nicht hinterlegt.",
+    "category": {
+      "caretaker": "Hausmeister",
+      "emergency": "Notdienst"
+    }
+  },
+  "HoaAccount": {
+    "title": "Hausgeldkonto",
+    "empty": "Kein Eigentumsvertrag zugeordnet.",
+    "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
+    "contract": "Vertrag",
+    "bookingDate": "Buchungsdatum",
+    "text": "Buchungstext",
+    "charge": "Sollstellung",
+    "credit": "Zahlung oder Gutschrift",
+    "noEntries": "Noch keine gebuchten Einträge.",
+    "sumCharges": "Summe Sollstellungen",
+    "sumCredits": "Summe Zahlungen und Gutschriften",
+    "balance": "Saldo",
+    "balanceOwed": "(offener Betrag)",
+    "balanceCredit": "(Guthaben)",
+    "balanceEven": "(ausgeglichen)"
+  },
+  "Notices": {
+    "title": "Aushänge",
+    "intro": "Aushänge der Verwaltung für Ihre Objekte. Ein Aushang ist eine Information der Verwaltung, keine Zustellung.",
+    "empty": "Derzeit keine Aushänge.",
+    "new": "Neu",
+    "validUntil": "Gültig bis {date}",
+    "validFrom": "Seit {date}",
+    "download": "Anlage herunterladen"
+  },
+  "Audit": {
+    "title": "Prüfungsraum des Beirats",
+    "roleNotice": "Sie sehen den Prüfauftrag, die ausgewählten Positionen und die dazu freigegebenen Belege. Der Beirat bucht nichts, gibt nichts frei und ändert keine Abrechnung. Ein Abruf gilt nicht als Anerkennung der Abrechnung.",
+    "empty": "Kein Prüfauftrag zugewiesen.",
+    "back": "Zurück zur Liste",
+    "period": "Zeitraum",
+    "openQuestions": "{count, plural, one {eine offene Rückfrage} other {# offene Rückfragen}}",
+    "sampling": {
+      "sample": "Stichprobe",
+      "full": "Vollprüfung"
+    },
+    "overallStatus": "Gesamtstatus",
+    "positions": "Geprüfte Positionen",
+    "noPositions": "Noch keine Positionen ausgewählt.",
+    "positionNumber": "Position {n}",
+    "wholeEngagement": "Gesamter Prüfauftrag",
+    "status": {
+      "open": "Offen",
+      "checked": "Geprüft",
+      "query": "Rückfrage",
+      "objection": "Beanstandet",
+      "outdated": "Veraltet"
+    },
+    "managementNote": "Vermerk der Verwaltung",
+    "managementQuestion": "Frage",
+    "managementAnswer": "Antwort der Verwaltung",
+    "costItems": "Abrechnungspositionen",
+    "costLabel": "Bezeichnung",
+    "costBasis": "Grundlage",
+    "costAmount": "Betrag",
+    "documents": "Belege",
+    "noDocuments": "Zu den Positionen sind keine Belege freigegeben.",
+    "open": "Beleg öffnen",
+    "notes": "Vermerke und Rückfragen",
+    "noNotes": "Noch keine Vermerke oder Rückfragen.",
+    "kind": {
+      "note": "Vermerk",
+      "question": "Rückfrage",
+      "answered": "Beantwortet"
+    },
+    "newNote": "Vermerk oder Rückfrage erfassen",
+    "kindLabel": "Art",
+    "positionLabel": "Position",
+    "textLabel": "Text",
+    "submit": "Absenden",
+    "questionSent": "Die Rückfrage wurde an die Verwaltung übermittelt.",
+    "noteSaved": "Der Vermerk wurde gespeichert."
+  },
+  "Forms": {
+    "title": "Formulare",
+    "intro": "Formulare Ihrer Verwaltung, zum Beispiel Anträge und Anfragen. Jede Einreichung wird ein Vorgang, den Sie unter Meldungen verfolgen können.",
+    "empty": "Derzeit stellt Ihre Verwaltung keine Formulare bereit.",
+    "choose": "Bitte wählen",
+    "submit": "Absenden",
+    "submitting": "Wird gesendet",
+    "submitted": "{name} wurde übermittelt. Den Vorgang finden Sie unter Meldungen.",
+    "requiredMissing": "Bitte das Feld {label} ausfüllen.",
+    "proposalNote": "Die Angaben werden an die Verwaltung übermittelt und dort geprüft."
+  },
+  "Invitation": {
+    "title": "Einladung annehmen",
+    "hint": "Bitte den Einladungscode aus dem Schreiben oder dem Link eingeben und ein Passwort mit mindestens 12 Zeichen wählen.",
+    "code": "Einladungscode",
+    "password": "Neues Passwort",
+    "passwordRepeat": "Passwort wiederholen",
+    "submit": "Zugang aktivieren",
+    "submitting": "Bitte warten",
+    "codeRequired": "Bitte den Einladungscode eingeben.",
+    "passwordTooShort": "Das Passwort muss mindestens 12 Zeichen haben.",
+    "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+    "done": "Ihr Zugang ist aktiviert. Bitte melden Sie sich jetzt mit E-Mail und Passwort an.",
+    "toLogin": "Zur Anmeldung"
+  },
+  "Pwa": {
+    "title": "MH Portal installieren",
+    "hint": "Das Portal lässt sich wie eine App auf dem Startbildschirm ablegen. Es werden keine Daten auf dem Gerät gespeichert.",
+    "iosHint": "In Safari über Teilen und Zum Home-Bildschirm hinzufügen. Es werden keine Daten auf dem Gerät gespeichert.",
+    "install": "Installieren",
+    "dismiss": "Später"
   }
 }

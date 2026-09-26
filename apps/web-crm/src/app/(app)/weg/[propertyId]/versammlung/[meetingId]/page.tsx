@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { MajorityRules, MeetingPanel, type MajorityRule } from "@/components/hoa/HoaForms";
 import { MeetingDeadlineForm } from "@/components/hoa/MeetingDeadlineForm";
 import { MemberVoting } from "@/components/hoa/MemberVoting";
+import { ProtocolDraft } from "@/components/hoa/ProtocolDraft";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -55,6 +56,11 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
         rules={rules as MajorityRule[]}
       />
       <MajorityRules legalEntityId={entity} rules={rules as MajorityRule[]} />
+      <ProtocolDraft
+        meetingId={meetingId}
+        draftDocumentId={(data as { minutes_draft_document_id?: string | null }).minutes_draft_document_id ?? null}
+        minutesDocumentId={(data as { minutes_document_id?: string | null }).minutes_document_id ?? null}
+      />
     </div>
   );
 }

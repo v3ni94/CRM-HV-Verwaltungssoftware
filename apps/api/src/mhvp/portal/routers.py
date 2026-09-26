@@ -10,6 +10,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from urllib.parse import quote as url_quote
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import Response
@@ -96,9 +97,25 @@ class PortalAppointmentIn(_In):
     scheduled_at: datetime
 
 
+class PortalProposalIn(_In):
+    starts_at: datetime
+    note: str | None = Field(default=None, max_length=500)
+
+
+class PortalProposalsIn(_In):
+    """A58: one round of up to three appointment proposals; a new round supersedes the open
+    proposals of the previous round."""
+
+    proposals: list[PortalProposalIn] = Field(min_length=1, max_length=3)
+
+
 class PortalCompleteIn(_In):
     report: str = Field(min_length=3, max_length=20000)
-    photo_document_ids: list[uuid.UUID] = Field(default_factory=list)
+    # A58: photos of the execution, uploaded by this account via POST /portal/uploads and linked
+    # to the order as attachments (same ownership rule as ticket photos, A55).
+    document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
+    # Kept for older portal clients; merged into document_ids.
+    photo_document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
 
 
 class PortalInvoiceSubmitIn(_In):
@@ -110,6 +127,12 @@ class PortalInvoiceSubmitIn(_In):
 
 def _hash(secret: str) -> str:
     return hashlib.sha256(secret.encode()).hexdigest()
+
+
+def invitation_url(request: Request, token: str) -> str | None:
+    """Public link to the portal's invitation page with the one time code (A56)."""
+    base = getattr(request.app.state.settings, "web_portal_url", None)
+    return f"{str(base).rstrip('/')}/einladung?code={url_quote(token)}" if base else None
 
 
 # Management -----------------------------------------------------------------------------
@@ -198,11 +221,15 @@ async def provision_account(
             actor_user_id=principal.user_id,
             payload={"grants": grants},
         )
+        token = f"{principal.tenant_id.hex}.{secret}"
         return {
             "id": account.id,
             "user_id": user_id,
             "grants": grants,
-            "invitation_token": f"{principal.tenant_id.hex}.{secret}",
+            "invitation_token": token,
+            # A56: link to the portal's invitation page (shown as text and QR in the CRM); None
+            # when no public portal URL is configured.
+            "invitation_url": invitation_url(request, token),
         }
 
 
@@ -524,16 +551,35 @@ async def upload(
     from mhvp.documents.blobs import BlobStore
     from mhvp.documents.models import DocumentSource, LinkRole
     from mhvp.documents.services import check_upload, store_document
+    from mhvp.handover.images import ImageSanitizeError, sanitize_image, supports
 
     principal, account = ctx
     data = await file.read()
-    mime = file.content_type or "application/octet-stream"
+    mime = (file.content_type or "application/octet-stream").split(";")[0].strip()
     if mime not in PORTAL_UPLOAD_MIME_TYPES:
         raise ProblemError(
             ErrorCodes.UPLOAD_REJECTED,
             detail="Im Portal sind nur Fotos (JPEG, PNG, TIFF, HEIC) und PDF zulässig.",
         )
     check_upload(mime, data, request.app.state.settings.document_max_bytes)
+    # A55/A58: photos lose EXIF, GPS and other metadata and are scaled like handover photos
+    # (M30-04). A photo type the sanitizer cannot re-encode (HEIC) is refused rather than
+    # stored with its metadata; the original is never kept.
+    if mime.startswith("image/"):
+        if not supports(mime):
+            raise ProblemError(
+                ErrorCodes.UPLOAD_REJECTED,
+                detail="Dieses Bildformat kann nicht bereinigt werden. Bitte JPEG oder PNG "
+                "verwenden.",
+            )
+        try:
+            data = sanitize_image(
+                data, mime, max_edge=request.app.state.settings.handover_image_max_edge
+            )
+        except ImageSanitizeError as exc:
+            raise ProblemError(
+                ErrorCodes.UPLOAD_REJECTED, detail="Das Bild konnte nicht gelesen werden."
+            ) from exc
     async with tenant_tx(request, principal) as session:
         doc = await store_document(
             session,
@@ -557,25 +603,14 @@ async def create_ticket(
     body: PortalTicketIn, request: Request, ctx: Portal = Depends(portal_user)
 ) -> dict[str, Any]:
     from mhvp.core.numbering import next_number
-    from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRole
+    from mhvp.documents.models import DocumentLink, LinkRole
     from mhvp.properties.models import Unit
     from mhvp.tickets.models import Priority, Ticket, TicketSource
     from mhvp.tickets.routers import SLA_HOURS
 
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
-        # A55: only documents this account uploaded itself may be attached; anything else is
-        # answered as not found so the portal never learns whether a foreign id exists.
-        attachments: list[Document] = []
-        for document_id in dict.fromkeys(body.document_ids):
-            doc = await session.get(Document, document_id)
-            if (
-                doc is None
-                or doc.created_by != account.user_id
-                or doc.source is not DocumentSource.PORTAL
-            ):
-                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Anhang nicht gefunden.")
-            attachments.append(doc)
+        attachments = await _own_uploads(session, account, body.document_ids)
         scopes = await _scopes(session, account)
         property_id = None
         if body.unit_id is not None:
@@ -599,6 +634,10 @@ async def create_ticket(
         )
         session.add(ticket)
         await session.flush()
+        # SLA-Uhr auch für Portal-Tickets (review 26.09.2026, H6).
+        from mhvp.sla.service import start_clock
+
+        await start_clock(session, principal.tenant_id, ticket.id, ticket.priority)
         for doc in attachments:
             session.add(
                 DocumentLink(
@@ -622,9 +661,32 @@ def _attachment_out(doc: Any) -> dict[str, Any]:
     return {"id": doc.id, "title": doc.title, "filename": doc.filename, "mime_type": doc.mime_type}
 
 
-async def ticket_attachments(session: AsyncSession, ticket_id: uuid.UUID) -> list[dict[str, Any]]:
-    """Documents linked to a ticket as attachments (A55), oldest first. Shared with the CRM
-    ticket detail (mhvp.tickets.routers.get_ticket)."""
+async def _own_uploads(
+    session: AsyncSession, account: PortalAccount, document_ids: list[uuid.UUID]
+) -> list[Any]:
+    """A55/A58: only documents this portal account uploaded itself (POST /portal/uploads) may
+    be attached; anything else is answered as not found so the portal never learns whether a
+    foreign id exists. RLS already hides documents of other tenants."""
+    from mhvp.documents.models import Document, DocumentSource
+
+    out: list[Any] = []
+    for document_id in dict.fromkeys(document_ids):
+        doc = await session.get(Document, document_id)
+        if (
+            doc is None
+            or doc.created_by != account.user_id
+            or doc.source is not DocumentSource.PORTAL
+        ):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Anhang nicht gefunden.")
+        out.append(doc)
+    return out
+
+
+async def entity_attachments(
+    session: AsyncSession, entity_type: str, entity_id: uuid.UUID
+) -> list[dict[str, Any]]:
+    """Documents linked to an entity as attachments, oldest first (A55 ticket photos, A58
+    execution photos of a work order)."""
     from mhvp.documents.models import Document, DocumentLink, LinkRole
 
     rows = (
@@ -632,14 +694,21 @@ async def ticket_attachments(session: AsyncSession, ticket_id: uuid.UUID) -> lis
             select(Document)
             .join(DocumentLink, DocumentLink.document_id == Document.id)
             .where(
-                DocumentLink.entity_type == "ticket",
-                DocumentLink.entity_id == ticket_id,
+                DocumentLink.entity_type == entity_type,
+                DocumentLink.entity_id == entity_id,
                 DocumentLink.role == LinkRole.ATTACHMENT,
             )
-            .order_by(DocumentLink.created_at)
+            # Links of one request share a timestamp; the UUID v7 id keeps the given order.
+            .order_by(DocumentLink.created_at, DocumentLink.id)
         )
     ).all()
     return [_attachment_out(d) for d in rows]
+
+
+async def ticket_attachments(session: AsyncSession, ticket_id: uuid.UUID) -> list[dict[str, Any]]:
+    """Documents linked to a ticket as attachments (A55). Shared with the CRM ticket detail
+    (mhvp.tickets.routers.get_ticket)."""
+    return await entity_attachments(session, "ticket", ticket_id)
 
 
 @router.get("/tickets", summary="Eigene Meldungen mit Verlauf")
@@ -672,9 +741,41 @@ async def tickets(request: Request, ctx: Portal = Depends(portal_user)) -> list[
                     "status": t.status.value,
                     "comments": [c.body for c in comments],
                     "attachments": await ticket_attachments(session, t.id),
+                    # A58: open or accepted appointment proposals of the orders to this
+                    # ticket; the resident accepts one via
+                    # POST /portal/work-orders/{id}/appointment-proposals/{pid}/accept.
+                    "appointment_proposals": await _ticket_proposals(session, t.id),
                 }
             )
         return out
+
+
+async def _ticket_proposals(session: AsyncSession, ticket_id: uuid.UUID) -> list[dict[str, Any]]:
+    from mhvp.tickets.models import WorkOrder, WorkOrderAppointmentProposal
+
+    rows = (
+        await session.scalars(
+            select(WorkOrderAppointmentProposal)
+            .join(WorkOrder, WorkOrder.id == WorkOrderAppointmentProposal.work_order_id)
+            .where(
+                WorkOrder.ticket_id == ticket_id,
+                WorkOrderAppointmentProposal.status.in_(("proposed", "accepted")),
+            )
+            .order_by(WorkOrderAppointmentProposal.starts_at)
+        )
+    ).all()
+    return [_proposal_out(p) for p in rows]
+
+
+def _proposal_out(p: Any) -> dict[str, Any]:
+    return {
+        "id": p.id,
+        "work_order_id": p.work_order_id,
+        "starts_at": p.starts_at,
+        "note": p.note,
+        "status": p.status,
+        "decided_at": p.decided_at,
+    }
 
 
 @router.post(
@@ -862,13 +963,28 @@ async def _step(
     order.status = target
 
 
-def _order(o: Any) -> dict[str, Any]:
+async def _order(session: AsyncSession, o: Any) -> dict[str, Any]:
+    from mhvp.tickets.models import WorkOrderAppointmentProposal
+
+    proposals = (
+        await session.scalars(
+            select(WorkOrderAppointmentProposal)
+            .where(WorkOrderAppointmentProposal.work_order_id == o.id)
+            .order_by(
+                WorkOrderAppointmentProposal.created_at, WorkOrderAppointmentProposal.starts_at
+            )
+        )
+    ).all()
     return {
         "id": o.id,
         "description": o.description,
         "status": o.status.value,
         "quote_amount": o.quote_amount,
         "scheduled_at": o.scheduled_at,
+        # A58: every proposal of this order with its status (proposed, accepted, declined,
+        # superseded) and the execution photos linked as attachments.
+        "appointment_proposals": [_proposal_out(p) for p in proposals],
+        "photos": await entity_attachments(session, "work_order", o.id),
     }
 
 
@@ -884,7 +1000,7 @@ async def work_orders(request: Request, ctx: Portal = Depends(portal_user)) -> l
         if "work_orders:read" not in staff_perms:
             query = query.where(WorkOrder.provider_contact_id == account.contact_id)
         rows = await session.scalars(query)
-        return [_order(o) for o in rows.all()]
+        return [await _order(session, o) for o in rows.all()]
 
 
 @router.post("/work-orders/{order_id}/decline", summary="Auftrag ablehnen")
@@ -897,7 +1013,7 @@ async def decline(
     async with tenant_tx(request, principal) as session:
         order = await _own_order(session, account, order_id)
         await _step(session, order, OrderStatus.REJECTED, principal, "abgelehnt")
-        return _order(order)
+        return await _order(session, order)
 
 
 @router.post("/work-orders/{order_id}/quote", summary="Angebot abgeben")
@@ -911,7 +1027,7 @@ async def quote(
         order = await _own_order(session, account, order_id)
         await _step(session, order, OrderStatus.QUOTED, principal, "Angebot")
         order.quote_amount, order.quote_document_id = body.amount, body.document_id
-        return _order(order)
+        return await _order(session, order)
 
 
 @router.post("/work-orders/{order_id}/appointment", summary="Termin festlegen (nach Freigabe)")
@@ -928,7 +1044,7 @@ async def appointment(
         order = await _own_order(session, account, order_id)
         await _step(session, order, OrderStatus.SCHEDULED, principal, "Termin")
         order.scheduled_at = body.scheduled_at
-        return _order(order)
+        return await _order(session, order)
 
 
 @router.post("/work-orders/{order_id}/complete", summary="Ausführung dokumentieren")
@@ -938,16 +1054,244 @@ async def complete(
     request: Request,
     ctx: Portal = Depends(portal_user),
 ) -> dict[str, Any]:
+    from mhvp.documents.models import DocumentLink, LinkRole
     from mhvp.tickets.models import OrderStatus
 
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
         order = await _own_order(session, account, order_id)
+        photos = await _own_uploads(
+            session, account, [*body.document_ids, *body.photo_document_ids]
+        )
         if order.status is OrderStatus.SCHEDULED:
             await _step(session, order, OrderStatus.IN_PROGRESS, principal, "Beginn")
         await _step(session, order, OrderStatus.DONE, principal, "ausgeführt")
-        order.completion_report, order.photo_document_ids = body.report, body.photo_document_ids
-        return _order(order)
+        order.completion_report = body.report
+        order.photo_document_ids = [d.id for d in photos]
+        for doc in photos:
+            session.add(
+                DocumentLink(
+                    tenant_id=principal.tenant_id,
+                    document_id=doc.id,
+                    entity_type="work_order",
+                    entity_id=order.id,
+                    role=LinkRole.ATTACHMENT,
+                )
+            )
+        await session.flush()
+        return await _order(session, order)
+
+
+# Appointment proposals (A58) ------------------------------------------------------------
+
+
+async def _resident_scope(session: AsyncSession, account: PortalAccount, order: Any) -> bool:
+    """True when this portal account is the resident affected by the order: the initiator of
+    the order's ticket or an occupant (grant on the unit) of the ticket's unit."""
+    from mhvp.tickets.models import Ticket
+
+    if order.ticket_id is None:
+        return False
+    ticket = await session.get(Ticket, order.ticket_id)
+    if ticket is None:
+        return False
+    if ticket.initiator_contact_id == account.contact_id:
+        return True
+    if ticket.unit_id is None:
+        return False
+    scopes = await _scopes(session, account)
+    return ticket.unit_id in scopes.get("unit", set())
+
+
+@router.post(
+    "/work-orders/{order_id}/appointment-proposals",
+    status_code=201,
+    summary="Terminvorschläge an den Bewohner (bis zu drei, nach Freigabe)",
+)
+async def propose_appointments(
+    order_id: uuid.UUID,
+    body: PortalProposalsIn,
+    request: Request,
+    ctx: Portal = Depends(portal_user),
+) -> list[dict[str, Any]]:
+    from mhvp.tickets.models import OrderStatus, ProposalStatus, WorkOrderAppointmentProposal
+
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        order = await _own_order(session, account, order_id)
+        if order.status not in (OrderStatus.APPROVED, OrderStatus.SCHEDULED):
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Terminvorschläge sind erst nach Freigabe des Auftrags möglich.",
+            )
+        if order.ticket_id is None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Der Auftrag hat keine Meldung, an die ein Bewohner gebunden ist.",
+            )
+        if len({p.starts_at for p in body.proposals}) != len(body.proposals):
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Terminvorschläge sind doppelt.")
+        open_rows = (
+            await session.scalars(
+                select(WorkOrderAppointmentProposal).where(
+                    WorkOrderAppointmentProposal.work_order_id == order.id,
+                    WorkOrderAppointmentProposal.status == ProposalStatus.PROPOSED.value,
+                )
+            )
+        ).all()
+        for old in open_rows:
+            old.status = ProposalStatus.SUPERSEDED.value
+        rows = [
+            WorkOrderAppointmentProposal(
+                tenant_id=principal.tenant_id,
+                work_order_id=order.id,
+                starts_at=p.starts_at,
+                note=p.note,
+                proposed_by_contact_id=account.contact_id,
+                created_by=principal.user_id,
+            )
+            for p in body.proposals
+        ]
+        session.add_all(rows)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="work_order.appointment_proposed",
+            entity_type="work_order",
+            entity_id=order.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "ticket_id": str(order.ticket_id),
+                "proposal_ids": [str(r.id) for r in rows],
+                "starts_at": [r.starts_at.isoformat() for r in rows],
+            },
+        )
+        return [_proposal_out(r) for r in rows]
+
+
+@router.get(
+    "/work-orders/{order_id}/appointment-proposals",
+    summary="Terminvorschläge zum Auftrag (Dienstleister oder betroffener Bewohner)",
+)
+async def appointment_proposals(
+    order_id: uuid.UUID, request: Request, ctx: Portal = Depends(portal_user)
+) -> list[dict[str, Any]]:
+    from mhvp.tickets.models import WorkOrder, WorkOrderAppointmentProposal
+
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        order = await session.get(WorkOrder, order_id)
+        if order is None or (
+            order.provider_contact_id != account.contact_id
+            and not await _resident_scope(session, account, order)
+        ):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        rows = (
+            await session.scalars(
+                select(WorkOrderAppointmentProposal)
+                .where(WorkOrderAppointmentProposal.work_order_id == order.id)
+                .order_by(WorkOrderAppointmentProposal.starts_at)
+            )
+        ).all()
+        return [_proposal_out(p) for p in rows]
+
+
+@router.post(
+    "/work-orders/{order_id}/appointment-proposals/{proposal_id}/accept",
+    summary="Terminvorschlag annehmen (betroffener Bewohner)",
+)
+async def accept_appointment(
+    order_id: uuid.UUID,
+    proposal_id: uuid.UUID,
+    request: Request,
+    ctx: Portal = Depends(portal_user),
+) -> dict[str, Any]:
+    from mhvp.tickets.models import (
+        OrderStatus,
+        ProposalStatus,
+        TicketComment,
+        WorkOrder,
+        WorkOrderAppointmentProposal,
+        WorkOrderEvent,
+    )
+
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        order = await session.get(WorkOrder, order_id, with_for_update=True)
+        # Only the affected resident confirms; the provider and everyone else get not found.
+        if order is None or not await _resident_scope(session, account, order):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        proposal = await session.get(WorkOrderAppointmentProposal, proposal_id)
+        if proposal is None or proposal.work_order_id != order.id:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if proposal.status != ProposalStatus.PROPOSED.value:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Dieser Terminvorschlag ist nicht mehr offen."
+            )
+        if order.status not in (OrderStatus.APPROVED, OrderStatus.SCHEDULED):
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Der Auftrag ist nicht mehr in der Terminplanung."
+            )
+        now = datetime.now(UTC)
+        siblings = (
+            await session.scalars(
+                select(WorkOrderAppointmentProposal).where(
+                    WorkOrderAppointmentProposal.work_order_id == order.id,
+                    WorkOrderAppointmentProposal.status == ProposalStatus.PROPOSED.value,
+                    WorkOrderAppointmentProposal.id != proposal.id,
+                )
+            )
+        ).all()
+        for other in siblings:
+            other.status = ProposalStatus.DECLINED.value
+            other.decided_by_contact_id = account.contact_id
+            other.decided_at = now
+        proposal.status = ProposalStatus.ACCEPTED.value
+        proposal.decided_by_contact_id = account.contact_id
+        proposal.decided_at = now
+        if order.status is OrderStatus.APPROVED:
+            await _step(session, order, OrderStatus.SCHEDULED, principal, "Termin bestätigt")
+        else:
+            session.add(
+                WorkOrderEvent(
+                    tenant_id=order.tenant_id,
+                    work_order_id=order.id,
+                    from_status=order.status.value,
+                    to_status=order.status.value,
+                    user_id=principal.user_id,
+                    note="Portal: Termin bestätigt (neuer Vorschlag)",
+                )
+            )
+        order.scheduled_at = proposal.starts_at
+        when = proposal.starts_at.astimezone(ZoneInfo("Europe/Berlin")).strftime("%d.%m.%Y %H:%M")
+        session.add(
+            TicketComment(
+                tenant_id=principal.tenant_id,
+                ticket_id=order.ticket_id,
+                internal=False,
+                author_contact_id=account.contact_id,
+                body=f"Termin bestätigt: {when} Uhr",
+            )
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="work_order.appointment_confirmed",
+            entity_type="work_order",
+            entity_id=order.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "ticket_id": str(order.ticket_id),
+                "proposal_id": str(proposal.id),
+                "scheduled_at": proposal.starts_at.isoformat(),
+            },
+        )
+        await session.flush()
+        return {
+            "order": await _order(session, order),
+            "proposal": _proposal_out(proposal),
+        }
 
 
 @router.post(

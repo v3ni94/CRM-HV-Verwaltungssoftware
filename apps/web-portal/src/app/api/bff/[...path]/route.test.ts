@@ -100,6 +100,7 @@ describe("portal bff", () => {
       "portal/tickets",
       "portal/account",
       "portal/work-orders",
+      `portal/work-orders/${ID}/appointment-proposals`,
     ]) {
       expect((await GET(new Request("http://portal.localhost/x"), ctx(path))).status).toBe(200);
     }
@@ -111,6 +112,8 @@ describe("portal bff", () => {
       `portal/work-orders/${ID}/decline`,
       `portal/work-orders/${ID}/quote`,
       `portal/work-orders/${ID}/appointment`,
+      `portal/work-orders/${ID}/appointment-proposals`,
+      `portal/work-orders/${ID}/appointment-proposals/${ID}/accept`,
       `portal/work-orders/${ID}/complete`,
       `portal/work-orders/${ID}/invoice`,
     ]) {

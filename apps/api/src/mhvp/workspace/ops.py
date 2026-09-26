@@ -1,6 +1,8 @@
 """Operations metrics per job for monitoring and alerts (M9, section 16 Beobachtbarkeit).
 
 Counts only, no personal data. JSON for the admin UI, Prometheus text format for scraping.
+Job results with a protocol (A67 ``ops.backup_verify``: status, duration, checked file,
+error) are read from Redis and returned under ``jobs``; they are gauges in Prometheus.
 """
 
 import uuid
@@ -14,6 +16,7 @@ from sqlalchemy import func, select
 from mhvp.core.auth.principal import Principal, require_platform_admin, sessions
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.platform.models import Tenant, TenantStatus
+from mhvp.workspace import backup_verify
 
 router = APIRouter(prefix="/platform/ops", tags=["Betrieb"])
 
@@ -22,7 +25,36 @@ ALERTING = {
     "webhook_deliveries_failed",
     "document_mirrors_failed",
     "ai_runs_failed_24h",
+    "backup_verify_failed",
+    "backup_verify_stale",
 }
+
+
+async def job_results(request: Request) -> dict[str, dict[str, Any]]:
+    """Protocol of the last run per job (A67). Redis errors yield the ``missing`` view."""
+    resources = getattr(request.app.state, "resources", None)
+    record = None
+    if resources is not None:
+        try:
+            record = await backup_verify.load_result(resources.redis)
+        except Exception:  # metrics must not fail on a Redis error
+            record = None
+    return {"backup_verify": backup_verify.summarize(record)}
+
+
+def job_gauges(jobs: dict[str, dict[str, Any]]) -> dict[str, int]:
+    """Numeric view of the job protocol for alerts and Prometheus."""
+    result = jobs["backup_verify"]
+    return {
+        "backup_verify_ok": int(result["status"] == backup_verify.STATUS_OK),
+        "backup_verify_failed": int(result["status"] == backup_verify.STATUS_FAILED),
+        "backup_verify_not_configured": int(
+            result["status"] == backup_verify.STATUS_NOT_CONFIGURED
+        ),
+        "backup_verify_stale": int(bool(result["stale"])),
+        "backup_verify_duration_seconds": int(result["duration_seconds"] or 0),
+        "backup_verify_age_seconds": int(result["age_seconds"] or 0),
+    }
 
 
 async def collect(request: Request) -> dict[str, int]:
@@ -78,10 +110,12 @@ async def metrics(
     request: Request, format: str = "json", _: Principal = Depends(require_platform_admin)
 ) -> Response:
     values = await collect(request)
+    jobs = await job_results(request)
+    values.update(job_gauges(jobs))
     if format == "prometheus":
         lines = []
         for name, value in values.items():
             lines += [f"# TYPE mhvp_{name} gauge", f"mhvp_{name} {value}"]
         return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
     alerts = sorted(n for n in ALERTING if values.get(n, 0) > 0)
-    return JSONResponse({"metrics": values, "alerts": alerts})
+    return JSONResponse({"metrics": values, "alerts": alerts, "jobs": jobs})

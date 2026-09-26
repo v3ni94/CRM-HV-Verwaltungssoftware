@@ -87,7 +87,10 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   const [mailboxId, setMailboxId] = useState("");
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [messages, setMessages] = useState<Message[] | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Deep link from the ticket mail thread (operator 26.09.2026): /mail?message=<id>.
+  const [selectedId, setSelectedId] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("message"),
+  );
   const [pendingCount, setPendingCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

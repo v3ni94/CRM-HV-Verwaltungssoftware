@@ -54,6 +54,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M35-03](M35-03.md) | objektakte-Übernahme Stufe 4: Berechtigungsschlüssel `objektakte:*`, Benutzerabbildung nur als Vorschlag, KI-Protokoll nur lesend | M35 | implemented, not accepted |
 | [M21-05](M21-05.md) | WhatsApp nur mit freigegebenen Vorlagen und Einwilligung | M21 | implemented, not accepted |
 | [M21-06](M21-06.md) | Zugriffsmatrix auf jedem Pfad: GdWE-Einsicht, fremde Akten, KI-Kontext, freigegebene Fassung (D29 bis D31) | M21, M6, M7, 6.9.6, 14, E06 | implemented, not accepted |
+| [M21-07](M21-07.md) | Prüfungsraum Beirat: Portalrolle `board` je Prüfauftrag, nur Lesen und Vermerk, keine Buchung oder Freigabe, Belege nur aus Prüfpositionen (PÜ07, PÜ08) | M21, M25, 7.9.2, 14, D32, D33 | implemented, not accepted |
 | [M9-02](M9-02-automation.md) | Regel-Engine Stufe 1: nur Ticket, Benachrichtigung und Ticketfeld, Tiefe 1, Testlauf ohne Wirkung | M9, 15.2 | implemented, not accepted |
 | [M7-06](M7-06.md) | Tabellenimport deterministisch, KI nur für Spaltenzuordnung und Restzeilen | M7 | implemented, not accepted |
 | [B01](B01.md) | Richtiger Rechtsträger | 7.1 | implemented, not accepted |
@@ -75,13 +76,13 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | W01 | Eigene Gemeinschaft | 7.8 | implemented (M24), ledger check |
 | W02 | Wirtschaftsplan | 7.8 | implemented (M24), behind G4 |
 | [W03](W03-cost-allocation.md) | Kostenverteilung | 7.8 | implemented, not accepted (M24, `mhvp.hoa.calc.unit_weights`; D18 partial scope check in `mhvp.hoa.package`) |
-| W04 | Jahresabrechnung als nachvollziehbare Überleitung | 7.8 | specified, not implemented |
+| [W04](W04-cash-flow-reconciliation.md) | Jahresabrechnung als nachvollziehbare Überleitung | 7.8 | implemented, not accepted (A60: Gesamtgeldfluss and bridge in `mhvp.hoa.calc.cash_flow_reconciliation`, unexplained difference blocks the package; migration year open) |
 | W05 | Abrechnungsspitze und Rückstände | 7.8 | implemented (M24), [W05](W05-hoa-result.md) |
 | W06 | Beschluss und Buchung | 7.8 | implemented (M24), [W06](W06-resolution.md); D54 contested resolution locks the posting, reverses nothing |
 | W07 | Eigentümerwechsel | 7.8 | open, M24-01 |
 | W08 | Erhaltungsrücklagen | 7.8 | implemented (M24), D03 and D19 tested (bank balance shown apart, no settlement entry) |
 | W09 | Sonderumlagen und Maßnahmen | 7.8 | implemented, not accepted (special levy and amendments per W09-01, D20 partial refund, `test_w09_special_levy.py`) |
-| W10 | Darlehen, Versicherungen, größere Maßnahmen | 7.8 | specified, not implemented |
+| [W10](W10-loans-insurance-measures.md) | Darlehen, Versicherungen, größere Maßnahmen | 7.8 | implemented, not accepted (A59: `mhvp.hoa.finance`, items only with journal entry reference; treatment in the statement open, M24-03) |
 | W11 | Vermögensbericht | 7.8 | partly implemented (M24 asset report); structure open, M24-02 |
 | W12 | Abrechnungspaket | 7.8 | implemented, not accepted (package and blocking checks, `test_w09_special_levy.py::test_w12_package_blocks_release`) |
 | W13 | Beirat und Versammlung | 7.8 | implemented, not accepted (M25); majority rules open, M25-01 |
@@ -112,3 +113,5 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | S06 | Datenschutz und Auskunft | 7.11 | specified, not implemented |
 | [A07-tenant-letters](A07-tenant-letters.md) | Bedienung: Anschreiben Guthaben/Nachzahlung und Vorauszahlungsvorschlag je Mieter | 7.6 A07 | implemented, not accepted |
 | [M9-06](M9-06-tagesjobs.md) | Tagesjobs Tagesübersicht und Fristenliste: Orientierung, Vorfrist aus Einstellungen, keine Rechtsfristen | M9, 15.1 | implemented, not accepted |
+| [A61](A61-einsicht.md) | Einsichtsanfragen außerhalb des Portals protokollieren | 14, M25 (PÜ12, PÜ13) | implemented, not accepted |
+| [M19-06](M19-06-tnr.md) | Ticketnummer im Betreff (TNR#<nummer>), Zuordnung eingehender Mails nur bei bekanntem Absender, Wiedereröffnung, Postfachzugriff je Mail | M19, M20, 6.6 | implemented, not accepted |

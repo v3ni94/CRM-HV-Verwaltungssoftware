@@ -510,6 +510,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | Abnahme M11 mit echten Beispieldateien |
 | Datum | 26.09.2026 |
 
+## A-047
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Für den täglichen Abgleichbericht des Parallelbetriebs (A68, `mhvp.imports.reconciliation`) werden die Rohzeilen der Immoware24-Exporte Journal und Bankumsätze mit folgenden Standardspalten gelesen: Journal `Objekt`, `Konto`, `Datum`, `Betrag` (Soll positiv, Haben negativ), ersatzweise `Soll` und `Haben`; Bankumsätze `Objekt`, `IBAN`, `Datum`, `Betrag` (Gutschrift positiv), optional `Saldo` (Saldo nach Buchung). Kontonummern mit weniger als sechs Stellen werden links mit Nullen aufgefüllt (1200 wird 001200), ein- und zweistellige Objektnummern auf drei Stellen. Die Kontoart eines Quellkontos (Bank, Debitor, Kreditor, Rücklage) wird über das gleichnamige Konto im Buchungskreis der Plattform bestimmt; ohne Treffer bleibt das Konto ohne Kontoart und geht nur in den Kontosaldenvergleich ein. |
+| Begründung | Die Spaltennamen der Immoware24-Exporte sind nicht spezifiziert (13.1); die Zuordnung ist je Mandant über `PUT /api/v1/imports/reconciliation-reports/columns` änderbar. Der Bericht liest und vergleicht nur, er bucht und korrigiert nichts; eine falsche Zuordnung führt zu ausgewiesenen Abweichungen, nie zu einer Buchung. Keine Kontenklassen oder Vorzeichenregeln werden erfunden, die Kontoart kommt aus dem Buchungskreis. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb; vor Nutzung im Parallelbetrieb mit echten Exporten zu prüfen (M8-01, M8-02) |
+| Betroffene Bereiche | Abgleichbericht `POST /api/v1/imports/reconciliation-reports`, Beat-Job `mhvp.imports.reconciliation_all`, CRM-Seite Importe, Abgleichbericht |
+| Überprüfung spätestens bei Meilenstein | Abnahme M8 mit echten Exportdateien (M8-01) |
+| Datum | 26.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:

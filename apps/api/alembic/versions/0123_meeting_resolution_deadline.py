@@ -1,8 +1,8 @@
 """owners_meeting: resolution deadline of a virtual meeting with its source (M9-07,
 deadline list A41). Entered, never computed.
 
-Revision ID: 0111
-Revises: 0108
+Revision ID: 0123
+Revises: 0122
 """
 
 from collections.abc import Sequence
@@ -10,8 +10,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0111"
-down_revision: str | None = "0110"
+revision: str = "0123"
+down_revision: str | None = "0122"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

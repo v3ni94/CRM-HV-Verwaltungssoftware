@@ -123,6 +123,12 @@ class ErrorCodes:
         "Webhook bereits verarbeitet",
         "Same signature delivered again within the replay window (A30).",
     )
+    WEBHOOK_TOO_LARGE = ErrorCode(
+        "MHVP-HOOK-0004",
+        413,
+        "Webhook-Inhalt zu groß",
+        "Inbound webhook body exceeds the size limit (A70).",
+    )
     GATE_FOUR_EYES = ErrorCode(
         "MHVP-GATE-0002",
         403,

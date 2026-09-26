@@ -9,7 +9,7 @@ Die Auszählung eines Beschlusses wird automatisch gegen eine hinterlegte Mehrhe
 geprüft. Das Ergebnis ist nur Anzeige und Protokollvermerk. Der Beschlussstatus wird nie
 automatisch geändert, die Verkündung bleibt bei der Versammlungsleitung.
 
-## Regel (Tabelle `hoa_majority_rule`, Migration 0114, RLS je Mandant)
+## Regel (Tabelle `hoa_majority_rule`, Migration 0125, RLS je Mandant)
 
 * `subject_kind`: economic_plan (Wirtschaftsplan), annual_statement (Jahresabrechnung),
   maintenance (Erhaltung), structural_change (bauliche Veränderung), manager_appointment

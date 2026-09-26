@@ -133,6 +133,9 @@ export function MailDetail({
   const invoiceForward = message.classification?.invoice_forward as
     | { decision: string; reason: string }
     | undefined;
+  // TNR#<nummer> im Betreff eines nicht am Ticket beteiligten Absenders: nur Vorschlag,
+  // keine automatische Zuordnung (Review 26.09.2026, H5).
+  const tnrSuggestion = message.classification?.tnr_suggestion as { ticket_id: string; number: number } | undefined;
   const reject = async () => {
     if (!rejectNote.trim()) return;
     const next = await act("/reject", "POST", { note: rejectNote.trim() });
@@ -182,6 +185,14 @@ export function MailDetail({
         ) : null}
       </div>
 
+      {message.direction === "in" && tnrSuggestion ? (
+        <p className={ui.notice} data-testid="mail-tnr-suggestion">
+          {t("tnrSuggestion", { number: String(tnrSuggestion.number) })}{" "}
+          <Link href={`/tickets/${tnrSuggestion.ticket_id}`} className="font-medium text-fg hover:underline">
+            {t("openTicket")}
+          </Link>
+        </p>
+      ) : null}
       {message.direction === "in" ? <SuggestionCard message={message} onUpdated={onUpdated} onDraftCreated={onCreated} /> : null}
       {message.direction === "in" ? <PreparationCard message={message} onDraftCreated={onCreated} /> : null}
 

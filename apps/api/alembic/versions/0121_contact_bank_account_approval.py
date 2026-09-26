@@ -5,8 +5,8 @@ Existing rows start as pending as well: no IBAN entered before M5-01 has been re
 second person, so none may feed mandates or payment runs until it is (rule 0.1.3). The table
 already carries tenant RLS (migration 0003); new columns inherit it.
 
-Revision ID: 0109
-Revises: 0108
+Revision ID: 0121
+Revises: 0120
 """
 
 from collections.abc import Sequence
@@ -15,8 +15,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0109"
-down_revision: str | None = "0108"
+revision: str = "0121"
+down_revision: str | None = "0120"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

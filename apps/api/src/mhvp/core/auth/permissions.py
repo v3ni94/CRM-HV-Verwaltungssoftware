@@ -39,6 +39,9 @@ RESOURCES: tuple[str, ...] = (
     # or required documents (docs/rules/M2-07.md: tenant_admin only). `create`/`export` are
     # registered by the matrix but not used by any endpoint yet.
     "objektakte",
+    # A61 (docs/rules/A61-einsicht.md): inspection requests of the community. `read` lists and
+    # downloads the package (logged), `update` records, releases, delivers and builds packages.
+    "hoa",
 )
 ALL_PERMISSIONS: frozenset[str] = frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS)
 READ_ALL: frozenset[str] = frozenset(f"{r}:read" for r in RESOURCES)
@@ -97,7 +100,13 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole(
         "standard",
         "Standard",
-        _SETTINGS_R | _MASTER_RWD | _ACC_RW | _TICKETS | _SLA_MANAGE | _OBJEKTAKTE_MANAGE,
+        _SETTINGS_R
+        | _MASTER_RWD
+        | _ACC_RW
+        | _TICKETS
+        | _SLA_MANAGE
+        | _OBJEKTAKTE_MANAGE
+        | _rw("hoa"),
     ),
     SystemRole("read_only", "Nur Lesezugriff", READ_ALL),
     SystemRole(
@@ -113,7 +122,7 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
     SystemRole(
         "clerk_no_accounting",
         "Sachbearbeiter ohne Buchhaltung",
-        _SETTINGS_R | _MASTER_RWD | _TICKETS | _SLA_MANAGE | _OBJEKTAKTE_REVIEW,
+        _SETTINGS_R | _MASTER_RWD | _TICKETS | _SLA_MANAGE | _OBJEKTAKTE_REVIEW | _rw("hoa"),
     ),
     SystemRole(
         "accountant_no_banking",

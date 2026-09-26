@@ -7,15 +7,17 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-/** Neue Schadensmeldung (M21): Titel, Beschreibung und optional ein Foto. Die API verknüpft
- *  hochgeladene Fotos nicht mit der Meldung selbst; die Beleg-ID wird deshalb in der
- *  Beschreibung vermerkt, damit die Verwaltung das Foto zuordnen kann. */
+const MAX_PHOTOS = 10;
+
+/** Neue Schadensmeldung (M21, A55): Titel, Beschreibung und optional Fotos. Fotos werden
+ *  zuerst über den Portal-Upload angelegt (die API entfernt Aufnahmedaten) und dann als
+ *  Dokumentverknüpfung `document_ids` an die Meldung übergeben. */
 export function NewTicket() {
   const t = useTranslations("Tickets");
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [photo, setPhoto] = useState<File | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -32,8 +34,8 @@ export function NewTicket() {
       return;
     }
     setBusy(true);
-    let finalDescription = description.trim();
-    if (photo) {
+    const documentIds: string[] = [];
+    for (const photo of photos.slice(0, MAX_PHOTOS)) {
       const form = new FormData();
       form.append("file", photo);
       const upload = await bff<{ id: string }>("/api/bff/portal/uploads", { method: "POST", body: form });
@@ -42,11 +44,11 @@ export function NewTicket() {
         setError(upload.message);
         return;
       }
-      finalDescription += `\n\nFoto-Beleg: ${photo.name} (Beleg-ID ${upload.data.id})`;
+      documentIds.push(upload.data.id);
     }
     const result = await bff<{ id: string }>("/api/bff/portal/tickets", {
       method: "POST",
-      body: JSON.stringify({ title: title.trim(), description: finalDescription }),
+      body: JSON.stringify({ title: title.trim(), description: description.trim(), document_ids: documentIds }),
     });
     setBusy(false);
     if (!result.ok) {
@@ -56,7 +58,7 @@ export function NewTicket() {
     setDone(true);
     setTitle("");
     setDescription("");
-    setPhoto(null);
+    setPhotos([]);
     router.refresh();
   }
 
@@ -94,10 +96,12 @@ export function NewTicket() {
         <input
           id="ticket-photo"
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png"
+          multiple
           className={ui.input}
-          onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+          onChange={(e) => setPhotos(Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS))}
         />
+        <p className={ui.help}>{t("photoHint")}</p>
       </div>
       <div className={ui.formActions}>
         <button type="submit" className={`${ui.primary} ${ui.actionFull}`} disabled={busy}>

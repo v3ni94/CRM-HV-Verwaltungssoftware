@@ -49,3 +49,15 @@ current year and is reported as assumption. An active contract of the same kind 
 party is left as is; another party or a missing landlord is a conflict. Handbook:
 `docs/handbuch/import-zuordnung.md`. Tests: `tests/unit/test_zuordnung_import.py`,
 `tests/integration/test_zuordnung_import.py`.
+## Abgleichbericht Parallelbetrieb (26.09.2026, A68)
+
+`reconciliation.py` compares the staged rows of the report types `journal` and
+`bank_transactions` per property with the platform (account balances, open receivables and
+payables, reserve, bank balance, incoming payments) and stores the result as `import_run` with
+`source = immoware24:reconciliation`; `reconciliation_routers.py` serves
+`/api/v1/imports/reconciliation-reports` (list, create, JSON, CSV, column configuration);
+`tasks.py` runs it daily (`mhvp.imports.reconciliation_all`, time `MHVP_IMPORT_RECONCILIATION_TIME`,
+default 05:30). Read and compare only, nothing is posted. Column defaults are an assumption
+(docs/ASSUMPTIONS.md A-047), configurable per tenant. Handbook:
+`docs/handbuch/import-abgleichbericht.md`. Tests: `tests/unit/test_m8_reconciliation_report.py`,
+`tests/integration/test_m8_reconciliation.py`.

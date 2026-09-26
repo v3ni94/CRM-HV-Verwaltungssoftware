@@ -71,3 +71,26 @@ def test_non_image_unchanged() -> None:
 def test_broken_image_rejected() -> None:
     with pytest.raises(ImageSanitizeError):
         sanitize_image(b"\xff\xd8\xff\xe1 kaputt", "image/jpeg")
+
+
+def test_tiff_reencoded_without_metadata_and_supports_reports_types() -> None:
+    """A55/A58: portal photos use the same sanitizer; TIFF is re-encoded, HEIC is unsupported."""
+    from PIL.TiffImagePlugin import ImageFileDirectory_v2
+
+    from mhvp.handover.images import supports
+
+    info = ImageFileDirectory_v2()
+    info[270] = "Location 51.0,10.0"  # ImageDescription
+    buf = io.BytesIO()
+    Image.new("RGB", (60, 40), (10, 20, 30)).save(buf, format="TIFF", tiffinfo=info)
+    raw = buf.getvalue()
+    assert b"Location" in raw
+    out = sanitize_image(raw, "image/tiff")
+    assert b"Location" not in out
+    with Image.open(io.BytesIO(out)) as img:
+        assert img.format == "TIFF"
+        assert img.size == (60, 40)
+    assert supports("image/jpeg; charset=binary")
+    assert supports("image/png")
+    assert not supports("image/heic")
+    assert not supports("application/pdf")

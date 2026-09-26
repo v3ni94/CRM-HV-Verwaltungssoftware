@@ -1960,7 +1960,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Bekannte Ereignistypen und Aktionen der Stufe 1 */
+        /** Bekannte Ereignistypen, Auslöser und Aktionen */
         get: operations["meta_api_v1_automation_meta_get"];
         put?: never;
         post?: never;
@@ -2906,6 +2906,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/communication/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Anrufliste des Mandanten */
+        get: operations["list_calls_api_v1_communication_calls_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/communication/calls/{call_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Anrufnotiz bearbeiten */
+        patch: operations["patch_call_api_v1_communication_calls__call_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/communication/calls/{call_id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Anruf einem Kontakt zuordnen */
+        post: operations["assign_call_api_v1_communication_calls__call_id__assign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/communication/calls/{call_id}/proposal/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rückruf-Vorschlag annehmen (Ticket anlegen) */
+        post: operations["accept_proposal_api_v1_communication_calls__call_id__proposal_accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/communication/calls/{call_id}/proposal/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rückruf-Vorschlag verwerfen */
+        post: operations["dismiss_proposal_api_v1_communication_calls__call_id__proposal_dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/communication/telephony/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Telefonie-Einstellungen */
+        get: operations["get_settings_api_v1_communication_telephony_settings_get"];
+        /** Telefonie-Einstellungen speichern */
+        put: operations["put_settings_api_v1_communication_telephony_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/communication/webhooks/telephony": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Telefonie-Webhook (HMAC je Mandant, anbieterneutral) */
+        post: operations["receive_api_v1_communication_webhooks_telephony_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/communication/webhooks/telephony/{tenant_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Telefonie-Webhook (Mandant im Pfad) */
+        post: operations["receive_for_tenant_api_v1_communication_webhooks_telephony__tenant_key__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/consents/{consent_id}/revoke": {
         parameters: {
             query?: never;
@@ -3042,6 +3179,23 @@ export interface paths {
         put?: never;
         /** Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person) */
         post: operations["reject_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Anrufliste eines Kontakts */
+        get: operations["list_contact_calls_api_v1_contacts__contact_id__calls_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3740,7 +3894,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/documents/{document_id}/read-receipts": {
+    "/api/v1/documents/{document_id}/portal-read-receipts": {
         parameters: {
             query?: never;
             header?: never;
@@ -3753,7 +3907,28 @@ export interface paths {
          *     through the portal and when. An indication only, kept apart from dispatch evidence
          *     (``mhvp.communication``) and from any receipt date; it changes no delivery status.
          */
-        get: operations["read_receipts_api_v1_documents__document_id__read_receipts_get"];
+        get: operations["read_receipts_api_v1_documents__document_id__portal_read_receipts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{document_id}/read-receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Portalzugriffe (alter Pfad, gleich /portal-read-receipts)
+         * @description Alias of the published path (1.21.0); same answer as ``/portal-read-receipts``. A
+         *     formal deprecation mark follows with ADR 0009 once that is in place.
+         */
+        get: operations["read_receipts_legacy_api_v1_documents__document_id__read_receipts_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4290,6 +4465,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/audit-engagements/{engagement_id}/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Beiratszugänge und Rückfragen */
+        get: operations["board_section_api_v1_hoa_audit_engagements__engagement_id__board_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/audit-engagements/{engagement_id}/board-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Beiratszugang zum Prüfauftrag anlegen (Einladung wie bei Eigentümern) */
+        post: operations["create_board_access_api_v1_hoa_audit_engagements__engagement_id__board_access_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/audit-engagements/{engagement_id}/board-access/{access_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Beiratszugang beenden */
+        post: operations["revoke_board_access_api_v1_hoa_audit_engagements__engagement_id__board_access__access_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/audit-engagements/{engagement_id}/notes/{note_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rückfrage des Beirats beantworten (PÜ08) */
+        post: operations["answer_board_note_api_v1_hoa_audit_engagements__engagement_id__notes__note_id__answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/audit-items/{item_id}": {
         parameters: {
             query?: never;
@@ -4314,7 +4557,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Prüfaufträge einer GdWE */
+        get: operations["list_audits_api_v1_hoa_audits_get"];
         put?: never;
         /** Prüfauftrag (PÜ06) */
         post: operations["create_audit_api_v1_hoa_audits_post"];
@@ -4396,6 +4640,215 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/inspection-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Einsichtsanfragen (A61) */
+        get: operations["list_requests_api_v1_hoa_inspection_requests_get"];
+        put?: never;
+        /** Einsichtsanfrage erfassen */
+        post: operations["create_request_api_v1_hoa_inspection_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/inspection-requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Einsichtsanfrage lesen */
+        get: operations["get_request_api_v1_hoa_inspection_requests__request_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/inspection-requests/{request_id}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dokumente des Objekts für das Paket */
+        get: operations["list_candidates_api_v1_hoa_inspection_requests__request_id__candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/inspection-requests/{request_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rückfrage */
+        post: operations["add_note_api_v1_hoa_inspection_requests__request_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/inspection-requests/{request_id}/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bereitstellungspaket abrufen */
+        get: operations["download_package_api_v1_hoa_inspection_requests__request_id__package_get"];
+        put?: never;
+        /** Bereitstellungspaket erzeugen */
+        post: operations["create_package_api_v1_hoa_inspection_requests__request_id__package_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/inspection-requests/{request_id}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Statuswechsel */
+        post: operations["transition_api_v1_hoa_inspection_requests__request_id__transition_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/insurance-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Versicherungsfälle einer GdWE */
+        get: operations["list_claims_api_v1_hoa_insurance_claims_get"];
+        put?: never;
+        /** Versicherungsfall anlegen (W10) */
+        post: operations["create_claim_api_v1_hoa_insurance_claims_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/insurance-claims/{claim_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Versicherungsfall mit Positionen */
+        get: operations["get_claim_api_v1_hoa_insurance_claims__claim_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Status des Versicherungsfalls */
+        patch: operations["patch_claim_api_v1_hoa_insurance_claims__claim_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/hoa/insurance-claims/{claim_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Position zum Versicherungsfall */
+        post: operations["add_claim_item_api_v1_hoa_insurance_claims__claim_id__items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/loans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Darlehen einer GdWE */
+        get: operations["list_loans_api_v1_hoa_loans_get"];
+        put?: never;
+        /** Darlehen anlegen (W10) */
+        post: operations["create_loan_api_v1_hoa_loans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/loans/{loan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Darlehen mit Positionen und Stand */
+        get: operations["get_loan_api_v1_hoa_loans__loan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/loans/{loan_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Darlehensposition erfassen */
+        post: operations["add_loan_item_api_v1_hoa_loans__loan_id__items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/majority-rules": {
         parameters: {
             query?: never;
@@ -4461,6 +4914,59 @@ export interface paths {
         put?: never;
         /** Mehrheitsregel fachlich freigeben (zweite Person) */
         post: operations["approve_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/measures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Maßnahmen einer GdWE */
+        get: operations["list_measures_api_v1_hoa_measures_get"];
+        put?: never;
+        /** Größere Maßnahme anlegen (W10) */
+        post: operations["create_measure_api_v1_hoa_measures_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/measures/{measure_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Maßnahme mit Finanzierung und Belegen */
+        get: operations["get_measure_api_v1_hoa_measures__measure_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Status, Einordnung oder Beschluss ändern */
+        patch: operations["patch_measure_api_v1_hoa_measures__measure_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/hoa/measures/{measure_id}/financing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finanzierungsanteil erfassen */
+        post: operations["add_financing_api_v1_hoa_measures__measure_id__financing_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4589,6 +5095,30 @@ export interface paths {
         get: operations["meeting_members_api_v1_hoa_meetings__meeting_id__members_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/meetings/{meeting_id}/protocol-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Protokollentwurf als PDF (A62, Entwurf ohne Rechtsfolge)
+         * @description Renders the minutes template (agenda, attendance with voting rights, resolution text,
+         *     tally, announcement, signature lines) on the tenant letterhead and files it as a draft
+         *     document linked to the meeting (`minutes_draft_document_id`). The signed minutes in
+         *     `minutes_document_id` are never replaced. Permission: the write right of the HOA module
+         *     (accounting:create, as for every other meeting action).
+         */
+        post: operations["protocol_draft_api_v1_hoa_meetings__meeting_id__protocol_draft_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5023,6 +5553,27 @@ export interface paths {
          *     the resolution date; arrears are not duplicated (7.3 Abrechnungsergebnis, D01, D02).
          */
         post: operations["post_statement_api_v1_hoa_statements__statement_id__post_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/statements/{statement_id}/reconciliation-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Erklärte Differenzen der Überleitungsrechnung (W04)
+         * @description Only while the statement is a draft or calculated; the calculated snapshot keeps its
+         *     reconciliation, the package always shows the live one with these notes.
+         */
+        put: operations["put_reconciliation_notes_api_v1_hoa_statements__statement_id__reconciliation_notes_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5555,6 +6106,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/imports/reconciliation-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abgleichberichte */
+        get: operations["list_reports_api_v1_imports_reconciliation_reports_get"];
+        put?: never;
+        /**
+         * Abgleichbericht jetzt erstellen
+         * @description Compares the newest staged journal and bank rows (or the given files) with the
+         *     platform as of ``as_of`` (default: newest booking date of the rows). Read only.
+         */
+        post: operations["create_report_api_v1_imports_reconciliation_reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/reconciliation-reports/columns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Spaltenzuordnung des Abgleichs */
+        get: operations["get_columns_api_v1_imports_reconciliation_reports_columns_get"];
+        /** Spaltenzuordnung des Abgleichs speichern */
+        put: operations["put_columns_api_v1_imports_reconciliation_reports_columns_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/reconciliation-reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abgleichbericht (JSON) */
+        get: operations["get_report_api_v1_imports_reconciliation_reports__report_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/reconciliation-reports/{report_id}/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abgleichbericht (CSV) */
+        get: operations["get_report_csv_api_v1_imports_reconciliation_reports__report_id__csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/imports/{import_id}": {
         parameters: {
             query?: never;
@@ -6071,7 +6696,9 @@ export interface paths {
         /**
          * Exposé-Entwurf aus Stammdaten
          * @description Draft only from master data; no personal data of former tenants, no invented text.
-         *     Energy certificate data are required for ads but not modelled yet (M26-03).
+         *     Energy certificate data come from the property (A63), the asking rent from the newest
+         *     rental listing of the unit; both are reported as missing when not recorded. Whether the
+         *     listed values satisfy the Pflichtangaben of an advertisement stays open (M26-03).
          */
         get: operations["expose_api_v1_letting_units__unit_id__expose_get"];
         put?: never;
@@ -6582,6 +7209,40 @@ export interface paths {
         put?: never;
         /** Zählerstand erfassen */
         post: operations["add_reading_api_v1_meters__meter_id__readings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notices/{notice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Aushang ändern */
+        patch: operations["patch_notice_api_v1_notices__notice_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/notices/{notice_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aushang beenden (sofort aus dem Portal) */
+        post: operations["end_notice_api_v1_notices__notice_id__end_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7540,6 +8201,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal-admin/forms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Formularvorlagen des Portals */
+        get: operations["list_templates_api_v1_portal_admin_forms_get"];
+        put?: never;
+        /** Formularvorlage anlegen */
+        post: operations["create_template_api_v1_portal_admin_forms_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal-admin/forms/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Formularvorlage löschen */
+        delete: operations["delete_template_api_v1_portal_admin_forms__template_id__delete"];
+        options?: never;
+        head?: never;
+        /** Formularvorlage ändern */
+        patch: operations["update_template_api_v1_portal_admin_forms__template_id__patch"];
+        trace?: never;
+    };
     "/api/v1/portal/account": {
         parameters: {
             query?: never;
@@ -7551,6 +8248,74 @@ export interface paths {
         get: operations["statement_api_v1_portal_account_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/board/engagements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eigene Prüfaufträge (Beirat) */
+        get: operations["list_engagements_api_v1_portal_board_engagements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/board/engagements/{engagement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prüfauftrag mit Positionen, Belegen und Vermerken */
+        get: operations["get_engagement_api_v1_portal_board_engagements__engagement_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/board/engagements/{engagement_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Beleg des Prüfauftrags öffnen (Abruf wird als Indiz vermerkt) */
+        get: operations["open_document_api_v1_portal_board_engagements__engagement_id__documents__document_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/board/engagements/{engagement_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Vermerk oder Rückfrage (PÜ08) */
+        post: operations["create_note_api_v1_portal_board_engagements__engagement_id__notes_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7623,6 +8388,40 @@ export interface paths {
         get: operations["download_api_v1_portal_documents__document_id__download_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/forms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Formulare für die eigene Zielgruppe */
+        get: operations["portal_forms_api_v1_portal_forms_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/forms/{template_id}/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Formular einreichen (Vorgang) */
+        post: operations["submit_form_api_v1_portal_forms__template_id__submissions_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7925,6 +8724,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/hoa-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Hausgeldkonto des Eigentümers (nur gebuchte Einträge)
+         * @description Posted journal lines on the owner's debtor account in the ledger of the community
+         *     (legal entity kind hoa, 6.9.1): debits are charges (Sollstellungen), credits are payments
+         *     or credit notes; balance = debits minus credits (positive: amount owed). Drafts are never
+         *     shown. Without a ledger the contract is listed with a note and no amounts.
+         */
+        get: operations["hoa_account_api_v1_portal_hoa_account_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/invitations/accept": {
         parameters: {
             query?: never;
@@ -7970,6 +8792,92 @@ export interface paths {
         put?: never;
         /** Zählerstand melden (Vorschlag) */
         post: operations["meter_reading_api_v1_portal_meter_readings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Aushänge der eigenen Objekte (Schwarzes Brett)
+         * @description Current notices of the account's properties for its roles. Reading writes nothing.
+         */
+        get: operations["portal_notices_api_v1_portal_notices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/notices/{notice_id}/document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anlage eines Aushangs herunterladen
+         * @description The attachment is visible exactly like the notice (same property, audience and day).
+         *     No read receipt is written: a notice is information of the management, not a delivery.
+         */
+        get: operations["portal_notice_document_api_v1_portal_notices__notice_id__document_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/property-contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ansprechpartner des Objekts (Eigentümer)
+         * @description Per property of the own ownership contracts: the responsible manager
+         *     (``Property.manager_user_id``, display name only) and the property contacts of the
+         *     categories caretaker and emergency that are released for owners in the master data
+         *     (``visible_in_portal_for``). Private phone numbers are never returned.
+         */
+        get: operations["property_contacts_api_v1_portal_property_contacts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Beschluss-Sammlung der eigenen Gemeinschaft (Eigentümer)
+         * @description Announced resolutions only: a resolution row exists once a result was announced
+         *     (``/hoa/agenda/{id}/announce``), a circular resolution was recorded or an external
+         *     resolution was captured. Tallies without announcement are proposals and never listed.
+         */
+        get: operations["resolutions_api_v1_portal_resolutions_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8056,6 +8964,41 @@ export interface paths {
         put?: never;
         /** Termin festlegen (nach Freigabe) */
         post: operations["appointment_api_v1_portal_work_orders__order_id__appointment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/work-orders/{order_id}/appointment-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Terminvorschläge zum Auftrag (Dienstleister oder betroffener Bewohner) */
+        get: operations["appointment_proposals_api_v1_portal_work_orders__order_id__appointment_proposals_get"];
+        put?: never;
+        /** Terminvorschläge an den Bewohner (bis zu drei, nach Freigabe) */
+        post: operations["propose_appointments_api_v1_portal_work_orders__order_id__appointment_proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/work-orders/{order_id}/appointment-proposals/{proposal_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Terminvorschlag annehmen (betroffener Bewohner) */
+        post: operations["accept_appointment_api_v1_portal_work_orders__order_id__appointment_proposals__proposal_id__accept_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8323,6 +9266,24 @@ export interface paths {
         put?: never;
         /** Zähler anlegen */
         post: operations["add_meter_api_v1_properties__property_id__meters_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Aushänge des Objekts */
+        get: operations["list_notices_api_v1_properties__property_id__notices_get"];
+        put?: never;
+        /** Aushang anlegen */
+        post: operations["create_notice_api_v1_properties__property_id__notices_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9753,7 +10714,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Tickets */
+        /**
+         * Tickets
+         * @description Liste der Tickets, neueste Nummer zuerst. Paginierung (review 26.09.2026, H7): die
+         *     Antwort bleibt eine Liste (bestehende Aufrufer); Gesamtzahl und Seite stehen in den
+         *     Kopfzeilen ``X-Total-Count``, ``X-Page`` und ``X-Page-Size``.
+         */
         get: operations["list_tickets_api_v1_tickets_get"];
         put?: never;
         /** Ticket anlegen (Vorlage, Routing, SLA) */
@@ -10024,6 +10990,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tickets/{ticket_id}/mail-attachments/{document_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anhang einer Ticket-Mail anzeigen oder herunterladen
+         * @description Liefert nur Dokumente, die Anhang einer für den Benutzer sichtbaren Mail dieses
+         *     Tickets sind (Ticket-Bezug statt allgemeiner Dokumentenzugriff). Bilder und PDF werden
+         *     inline zur Vorschau ausgeliefert, alles andere und ``download=true`` als Download.
+         */
+        get: operations["ticket_mail_attachment_content_api_v1_tickets__ticket_id__mail_attachments__document_id__content_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mailverlauf des Tickets mit Anhängen
+         * @description Ein- und ausgehende Mails des Tickets chronologisch, je Mail Empfänger, Kopie, Status,
+         *     Klartext, bereinigtes HTML und die Anhangsliste (Name, Größe, Typ). Postfachrechte gelten
+         *     wie in der Postfachansicht.
+         */
+        get: operations["ticket_messages_api_v1_tickets__ticket_id__messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tickets/{ticket_id}/proposals": {
         parameters: {
             query?: never;
@@ -10147,6 +11157,50 @@ export interface paths {
          *     ``confirm`` wird nichts angelegt; ein Versand ohne ausdrücklichen Klick ist ausgeschlossen.
          */
         post: operations["reply_to_ticket_api_v1_tickets__ticket_id__reply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/reply-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vorbelegung der Antwort (An, Kopie, Betreff, Postfach)
+         * @description Vorbelegung des Antwortformulars im Ticket ohne Vorlage: Empfänger und Kopie aus der
+         *     gewählten oder letzten eingehenden Mail, Betreff ``AW: <Betreff> TNR#<nummer>``, Postfach
+         *     des Tickets und ob es sendefähig ist. Legt nichts an.
+         */
+        get: operations["reply_context_api_v1_tickets__ticket_id__reply_context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/reply-documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dokumente als Anhang der Antwort suchen
+         * @description Kleine Suche des Dokumentenmoduls für das Antwortformular (Titel oder Dateiname),
+         *     höchstens 20 Treffer, nur Metadaten. Der Ticketbezug prüft das Ticket, nicht die
+         *     Dokumente; der Rechtsträgerbereich der Mitgliedschaft (A37) gilt unverändert.
+         */
+        get: operations["ticket_reply_documents_api_v1_tickets__ticket_id__reply_documents_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11202,8 +12256,17 @@ export interface components {
             description?: string | null;
             /** Name */
             name: string;
+            /** Schedule */
+            schedule?: {
+                [key: string]: unknown;
+            } | null;
             /** Trigger Event Type */
-            trigger_event_type: string;
+            trigger_event_type?: string | null;
+            /**
+             * Trigger Kind
+             * @default event
+             */
+            trigger_kind: string;
         };
         /** AutomationRulePatch */
         AutomationRulePatch: {
@@ -11221,8 +12284,14 @@ export interface components {
             description?: string | null;
             /** Name */
             name?: string | null;
+            /** Schedule */
+            schedule?: {
+                [key: string]: unknown;
+            } | null;
             /** Trigger Event Type */
             trigger_event_type?: string | null;
+            /** Trigger Kind */
+            trigger_kind?: string | null;
         };
         /**
          * BandSegment
@@ -11334,6 +12403,37 @@ export interface components {
         BatchIn: {
             /** Order Ids */
             order_ids: string[];
+        };
+        /** BoardAccessIn */
+        BoardAccessIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Display Name */
+            display_name?: string | null;
+            /** Email */
+            email?: string | null;
+        };
+        /** BoardAnswerIn */
+        BoardAnswerIn: {
+            /** Answer */
+            answer: string;
+        };
+        /** BoardNoteIn */
+        BoardNoteIn: {
+            /** Audit Item Id */
+            audit_item_id?: string | null;
+            /** Cost Item Id */
+            cost_item_id?: string | null;
+            /**
+             * Kind
+             * @default note
+             */
+            kind: string;
+            /** Text */
+            text: string;
         };
         /** Body_apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post */
         Body_apply_ocr_cache_api_v1_objektakte_imports__import_run_id__ocr_cache_post: {
@@ -11806,6 +12906,91 @@ export interface components {
             /** Notices */
             notices?: components["schemas"]["CalendarNotice"][];
         };
+        /** CallAssignIn */
+        CallAssignIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+        };
+        /** CallNoteIn */
+        CallNoteIn: {
+            /** Note */
+            note?: string | null;
+        };
+        /** CallOut */
+        CallOut: {
+            /** Candidate Contact Ids */
+            candidate_contact_ids: string[];
+            /** Candidate Names */
+            candidate_names: string[];
+            /** Contact Id */
+            contact_id: string | null;
+            /** Contact Name */
+            contact_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Direction */
+            direction: string;
+            /** Duration Seconds */
+            duration_seconds: number | null;
+            /** Event */
+            event: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Match Status */
+            match_status: string;
+            /** Note */
+            note: string | null;
+            /** Number */
+            number: string;
+            /** Number Masked */
+            number_masked: boolean;
+            /** Proposal Status */
+            proposal_status: string;
+            /** Provider Ref */
+            provider_ref: string | null;
+            /** Related Ticket Id */
+            related_ticket_id: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Ticket Id */
+            ticket_id: string | null;
+        };
+        /**
+         * CandidateOut
+         * @description Document of the community offered for the package; ``released`` means owner visibility.
+         */
+        CandidateOut: {
+            /** Category */
+            category: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Filename */
+            filename: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Released */
+            released: boolean;
+            /** Title */
+            title: string;
+        };
         /** CapAreaIn */
         CapAreaIn: {
             /** Cap Percent */
@@ -11987,6 +13172,67 @@ export interface components {
             /** Wording */
             wording: string;
         };
+        /** ClaimIn */
+        ClaimIn: {
+            /** Claim Number */
+            claim_number?: string | null;
+            /**
+             * Damage Date
+             * Format: date
+             */
+            damage_date: string;
+            /**
+             * Deductible
+             * @default 0.00
+             */
+            deductible: number | string;
+            /** Description */
+            description?: string | null;
+            /** Insurer */
+            insurer?: string | null;
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /** Measure Id */
+            measure_id?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Policy Reference */
+            policy_reference?: string | null;
+            /** Regress Party */
+            regress_party?: string | null;
+            /** Reported On */
+            reported_on?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** ClaimItemIn */
+        ClaimItemIn: {
+            /** Amount */
+            amount: number | string;
+            /**
+             * Booking Date
+             * Format: date
+             */
+            booking_date: string;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Journal Entry Id */
+            journal_entry_id?: string | null;
+            /** Kind */
+            kind: string;
+            /** Note */
+            note?: string | null;
+        };
+        /** ClaimPatch */
+        ClaimPatch: {
+            /** Claim Number */
+            claim_number?: string | null;
+            /** Status */
+            status: string;
+        };
         /**
          * ClassificationPatternType
          * @description M35 Stufe 3 (docs/plans/M35-objektakte-uebernahme.md section 4, rule stage): the four
@@ -12042,6 +13288,45 @@ export interface components {
             costs: number | string;
             /** Specific Emissions */
             specific_emissions: number | string;
+        };
+        /** ColumnFieldOut */
+        ColumnFieldOut: {
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Required */
+            required: boolean;
+        };
+        /** ColumnsIn */
+        ColumnsIn: {
+            /** Columns */
+            columns: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+        };
+        /** ColumnsOut */
+        ColumnsOut: {
+            /** Columns */
+            columns: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /** Customised */
+            customised: boolean;
+            /** Defaults */
+            defaults: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /** Fields */
+            fields: {
+                [key: string]: components["schemas"]["ColumnFieldOut"][];
+            };
         };
         /** CommentIn */
         CommentIn: {
@@ -13977,6 +15262,19 @@ export interface components {
             /** Web Form Url */
             web_form_url: string | null;
         };
+        /** FinancingIn */
+        FinancingIn: {
+            /** Amount */
+            amount: number | string;
+            /** Loan Id */
+            loan_id?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Source */
+            source: string;
+            /** Special Levy Id */
+            special_levy_id?: string | null;
+        };
         /** FlowImportApplyIn */
         FlowImportApplyIn: {
             /** Items */
@@ -13990,6 +15288,74 @@ export interface components {
             index: number;
             /** Unit Id */
             unit_id?: string | null;
+        };
+        /** FormFieldIn */
+        FormFieldIn: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options?: string[] | null;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /** Type */
+            type: string;
+        };
+        /** FormSubmissionIn */
+        FormSubmissionIn: {
+            /** Unit Id */
+            unit_id?: string | null;
+            /** Values */
+            values?: {
+                [key: string]: unknown;
+            };
+        };
+        /** FormTemplateIn */
+        FormTemplateIn: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /**
+             * Audience
+             * @default all
+             */
+            audience: string;
+            /** Category */
+            category: string;
+            /** Description */
+            description?: string | null;
+            /** Fields */
+            fields?: components["schemas"]["FormFieldIn"][];
+            /** Name */
+            name: string;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+        };
+        /** FormTemplatePatch */
+        FormTemplatePatch: {
+            /** Active */
+            active?: boolean | null;
+            /** Audience */
+            audience?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Fields */
+            fields?: components["schemas"]["FormFieldIn"][] | null;
+            /** Name */
+            name?: string | null;
+            /** Sort Order */
+            sort_order?: number | null;
         };
         /** GateDecision */
         GateDecision: {
@@ -14544,6 +15910,43 @@ export interface components {
          * @enum {string}
          */
         ImportStatus: "applied" | "undone" | "partially_undone";
+        /** InspectionEventOut */
+        InspectionEventOut: {
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /** From Status */
+            from_status: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** To Status */
+            to_status: string | null;
+        };
+        /** InspectionNoteIn */
+        InspectionNoteIn: {
+            /** Text */
+            text: string;
+        };
+        /** InspectionTransitionIn */
+        InspectionTransitionIn: {
+            /** Delivery Kind */
+            delivery_kind?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Status */
+            status: string;
+        };
         /**
          * IntakeAcceptIn
          * @description Overrides for the proposed values; omitted fields take the proposal, ``null`` drops it.
@@ -15304,6 +16707,8 @@ export interface components {
             deposit?: number | string | null;
             /** Description */
             description?: string | null;
+            /** Energy Building Year */
+            energy_building_year?: number | null;
             /** Energy Class */
             energy_class?: string | null;
             /**
@@ -15311,6 +16716,8 @@ export interface components {
              * @default false
              */
             energy_includes_hot_water: boolean;
+            /** Energy Issued On */
+            energy_issued_on?: string | null;
             /** Energy Note */
             energy_note?: string | null;
             /** Energy Source */
@@ -15386,10 +16793,14 @@ export interface components {
             deposit?: number | string | null;
             /** Description */
             description?: string | null;
+            /** Energy Building Year */
+            energy_building_year?: number | null;
             /** Energy Class */
             energy_class?: string | null;
             /** Energy Includes Hot Water */
             energy_includes_hot_water?: boolean | null;
+            /** Energy Issued On */
+            energy_issued_on?: string | null;
             /** Energy Note */
             energy_note?: string | null;
             /** Energy Source */
@@ -15447,6 +16858,59 @@ export interface components {
             status: "ok";
             /** Version */
             version: string;
+        };
+        /** LoanIn */
+        LoanIn: {
+            /** Account Id */
+            account_id?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Instalment */
+            instalment?: number | string | null;
+            /** Interest Rate Percent */
+            interest_rate_percent: number | string;
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /** Lender */
+            lender: string;
+            /** Measure Id */
+            measure_id?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Principal */
+            principal: number | string;
+            /** Purpose */
+            purpose: string;
+            /** Reference */
+            reference?: string | null;
+            /** Resolution Id */
+            resolution_id?: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Term Months */
+            term_months?: number | null;
+        };
+        /** LoanItemIn */
+        LoanItemIn: {
+            /** Amount */
+            amount: number | string;
+            /**
+             * Booking Date
+             * Format: date
+             */
+            booking_date: string;
+            /** Journal Entry Id */
+            journal_entry_id?: string | null;
+            /** Kind */
+            kind: string;
+            /** Note */
+            note?: string | null;
         };
         /** LockIn */
         LockIn: {
@@ -15893,6 +17357,50 @@ export interface components {
             /** User Id */
             user_id: string | null;
         };
+        /** MeasureIn */
+        MeasureIn: {
+            /** Account Id */
+            account_id?: string | null;
+            /** Cost Frame */
+            cost_frame: number | string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Kind
+             * @default undecided
+             */
+            kind: string;
+            /** Kind Basis */
+            kind_basis?: string | null;
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /** Note */
+            note?: string | null;
+            /** Planned End */
+            planned_end?: string | null;
+            /** Planned Start */
+            planned_start?: string | null;
+            /** Resolution Id */
+            resolution_id?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** MeasurePatch */
+        MeasurePatch: {
+            /** Cost Frame */
+            cost_frame?: number | string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Kind Basis */
+            kind_basis?: string | null;
+            /** Resolution Id */
+            resolution_id?: string | null;
+            /** Status */
+            status?: string | null;
+        };
         /** MeetingIn */
         MeetingIn: {
             /**
@@ -16236,6 +17744,52 @@ export interface components {
              */
             pinned: boolean;
         };
+        /** NoticeIn */
+        NoticeIn: {
+            /**
+             * Audience
+             * @default all
+             */
+            audience: string;
+            /** Body */
+            body: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** NoticePatch */
+        NoticePatch: {
+            /** Audience */
+            audience?: string | null;
+            /** Body */
+            body?: string | null;
+            /**
+             * Clear Document
+             * @default false
+             */
+            clear_document: boolean;
+            /**
+             * Clear Valid To
+             * @default false
+             */
+            clear_valid_to: boolean;
+            /** Document Id */
+            document_id?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+        };
         /** NotificationOut */
         NotificationOut: {
             /** Body */
@@ -16553,6 +18107,49 @@ export interface components {
              */
             title_transfer_date: string;
         };
+        /** PackageEntry */
+        PackageEntry: {
+            /** Bytes */
+            bytes: number;
+            /** Category */
+            category: string | null;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** File */
+            file: string;
+            /** Sha256 */
+            sha256: string;
+        };
+        /** PackageIn */
+        PackageIn: {
+            /** Document Ids */
+            document_ids: string[];
+        };
+        /** PackageOut */
+        PackageOut: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Entries */
+            entries: components["schemas"]["PackageEntry"][];
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Sha256 */
+            sha256: string;
+        };
         /** PaperlessIntakeIn */
         PaperlessIntakeIn: {
             /** Paperless Document Id */
@@ -16860,6 +18457,8 @@ export interface components {
         };
         /** PortalCompleteIn */
         PortalCompleteIn: {
+            /** Document Ids */
+            document_ids?: string[];
             /** Photo Document Ids */
             photo_document_ids?: string[];
             /** Report */
@@ -16915,6 +18514,25 @@ export interface components {
             read_at: string;
             /** Value */
             value: number | string;
+        };
+        /** PortalProposalIn */
+        PortalProposalIn: {
+            /** Note */
+            note?: string | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+        };
+        /**
+         * PortalProposalsIn
+         * @description A58: one round of up to three appointment proposals; a new round supersedes the open
+         *     proposals of the previous round.
+         */
+        PortalProposalsIn: {
+            /** Proposals */
+            proposals: components["schemas"]["PortalProposalIn"][];
         };
         /** PortalQuoteIn */
         PortalQuoteIn: {
@@ -17081,6 +18699,20 @@ export interface components {
             custom_fields?: {
                 [key: string]: unknown;
             };
+            /** Energy Certificate Class */
+            energy_certificate_class?: string | null;
+            /** Energy Certificate Construction Year */
+            energy_certificate_construction_year?: number | null;
+            /** Energy Certificate Issued On */
+            energy_certificate_issued_on?: string | null;
+            /** Energy Certificate Source */
+            energy_certificate_source?: string | null;
+            /** Energy Certificate Type */
+            energy_certificate_type?: string | null;
+            /** Energy Certificate Valid Until */
+            energy_certificate_valid_until?: string | null;
+            /** Energy Certificate Value */
+            energy_certificate_value?: number | string | null;
             /** Garden Notes */
             garden_notes?: string | null;
             /** Garden Use */
@@ -17154,6 +18786,20 @@ export interface components {
             custom_fields?: {
                 [key: string]: unknown;
             };
+            /** Energy Certificate Class */
+            energy_certificate_class?: string | null;
+            /** Energy Certificate Construction Year */
+            energy_certificate_construction_year?: number | null;
+            /** Energy Certificate Issued On */
+            energy_certificate_issued_on?: string | null;
+            /** Energy Certificate Source */
+            energy_certificate_source?: string | null;
+            /** Energy Certificate Type */
+            energy_certificate_type?: string | null;
+            /** Energy Certificate Valid Until */
+            energy_certificate_valid_until?: string | null;
+            /** Energy Certificate Value */
+            energy_certificate_value?: string | null;
             /** Garden Notes */
             garden_notes?: string | null;
             /** Garden Use */
@@ -17255,6 +18901,13 @@ export interface components {
             status: components["schemas"]["PropertyStatus"];
             /** Street */
             street: string | null;
+        };
+        /** ProposalAcceptIn */
+        ProposalAcceptIn: {
+            /** @default normal */
+            priority: components["schemas"]["Priority"];
+            /** Title */
+            title?: string | null;
         };
         /** ProposalOut */
         ProposalOut: {
@@ -17690,6 +19343,69 @@ export interface components {
             /** Changed */
             changed: number;
         };
+        /**
+         * ReconciliationNoteIn
+         * @description Explained difference of the cash flow reconciliation (W04): signed amount that bridges
+         *     the costs booked in the year to the distributed costs, with the reason.
+         */
+        ReconciliationNoteIn: {
+            /** Amount */
+            amount: number | string;
+            /** Code */
+            code: string;
+            /** Note */
+            note: string;
+        };
+        /** ReconciliationNotesIn */
+        ReconciliationNotesIn: {
+            /** Notes */
+            notes?: components["schemas"]["ReconciliationNoteIn"][];
+        };
+        /** ReconciliationReportOut */
+        ReconciliationReportOut: {
+            /** As Of */
+            as_of: string | null;
+            /** Columns */
+            columns: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lines */
+            lines: {
+                [key: string]: unknown;
+            }[];
+            /** Properties */
+            properties: {
+                [key: string]: unknown;
+            }[];
+            /** Sources */
+            sources: {
+                [key: string]: unknown;
+            }[];
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
+            /** Trigger */
+            trigger: string | null;
+            /** Warnings */
+            warnings: string[];
+        };
         /** RefreshRequest */
         RefreshRequest: {
             /** Refresh Token */
@@ -17830,6 +19546,13 @@ export interface components {
             /** Topic */
             topic?: string | null;
         };
+        /** ReportIn */
+        ReportIn: {
+            /** As Of */
+            as_of?: string | null;
+            /** Source File Ids */
+            source_file_ids?: string[] | null;
+        };
         /** ReportLineOut */
         ReportLineOut: {
             /** Account Code */
@@ -17855,6 +19578,31 @@ export interface components {
             unmapped: boolean;
             /** Unmapped Lines */
             unmapped_lines: number;
+        };
+        /** ReportListOut */
+        ReportListOut: {
+            /** As Of */
+            as_of: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Sources */
+            sources: {
+                [key: string]: unknown;
+            }[];
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
+            /** Trigger */
+            trigger: string | null;
         };
         /** ReportOut */
         ReportOut: {
@@ -17885,6 +19633,81 @@ export interface components {
          * @enum {string}
          */
         ReportType: "properties" | "units" | "contacts" | "tenancies" | "ownerships" | "payments" | "journal" | "bank_transactions";
+        /** RequestIn */
+        RequestIn: {
+            /**
+             * Applicant Contact Id
+             * Format: uuid
+             */
+            applicant_contact_id: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /**
+             * Requested On
+             * Format: date
+             */
+            requested_on: string;
+            /** Scope Kinds */
+            scope_kinds?: string[];
+            /** Scope Text */
+            scope_text?: string | null;
+        };
+        /** RequestOut */
+        RequestOut: {
+            /**
+             * Applicant Contact Id
+             * Format: uuid
+             */
+            applicant_contact_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Delivery Kind */
+            delivery_kind: string | null;
+            /** Events */
+            events?: components["schemas"]["InspectionEventOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Package Created At */
+            package_created_at: string | null;
+            /** Package Document Id */
+            package_document_id: string | null;
+            /** Package Sha256 */
+            package_sha256: string | null;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Released At */
+            released_at: string | null;
+            /** Released By User Id */
+            released_by_user_id: string | null;
+            /**
+             * Requested On
+             * Format: date
+             */
+            requested_on: string;
+            /** Scope Kinds */
+            scope_kinds: string[];
+            /** Scope Text */
+            scope_text: string | null;
+            /** Status */
+            status: string;
+        };
         /** RequiredDocumentIn */
         RequiredDocumentIn: {
             /**
@@ -18718,6 +20541,29 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** TelephonySettingsIn */
+        TelephonySettingsIn: {
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /** Provider Label */
+            provider_label?: string | null;
+            /** Webhook Secret */
+            webhook_secret?: string | null;
+        };
+        /** TelephonySettingsOut */
+        TelephonySettingsOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Has Webhook Secret */
+            has_webhook_secret: boolean;
+            /** Provider Label */
+            provider_label: string | null;
+            /** Webhook Path */
+            webhook_path: string;
+        };
         /** TemplateIn */
         TemplateIn: {
             /** Body */
@@ -18867,6 +20713,8 @@ export interface components {
          * @description Sample event for a dry run; an existing ``entity_id`` loads the real ticket fields.
          */
         TestEventIn: {
+            /** Due At */
+            due_at?: string | null;
             /** Entity */
             entity?: {
                 [key: string]: unknown;
@@ -18963,11 +20811,15 @@ export interface components {
             attachment_document_ids?: string[];
             /** Body */
             body: string;
+            /** Cc Addresses */
+            cc_addresses?: string[];
             /**
              * Confirm
              * @default false
              */
             confirm: boolean;
+            /** Reply To Message Id */
+            reply_to_message_id?: string | null;
             /** Subject */
             subject: string;
             /** Template Id */
@@ -26088,6 +27940,286 @@ export interface operations {
             };
         };
     };
+    list_calls_api_v1_communication_calls_get: {
+        parameters: {
+            query?: {
+                contact_id?: string | null;
+                event?: string | null;
+                proposal_status?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_call_api_v1_communication_calls__call_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CallNoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_call_api_v1_communication_calls__call_id__assign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CallAssignIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_proposal_api_v1_communication_calls__call_id__proposal_accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposalAcceptIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_proposal_api_v1_communication_calls__call_id__proposal_dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_api_v1_communication_telephony_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelephonySettingsOut"];
+                };
+            };
+        };
+    };
+    put_settings_api_v1_communication_telephony_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelephonySettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelephonySettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receive_api_v1_communication_webhooks_telephony_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    receive_for_tenant_api_v1_communication_webhooks_telephony__tenant_key__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     revoke_consent_api_v1_consents__consent_id__revoke_post: {
         parameters: {
             query?: never;
@@ -26434,6 +28566,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_contact_calls_api_v1_contacts__contact_id__calls_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallOut"][];
                 };
             };
             /** @description Validation Error */
@@ -28149,7 +30314,40 @@ export interface operations {
             };
         };
     };
-    read_receipts_api_v1_documents__document_id__read_receipts_get: {
+    read_receipts_api_v1_documents__document_id__portal_read_receipts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_receipts_legacy_api_v1_documents__document_id__read_receipts_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -29344,6 +31542,148 @@ export interface operations {
             };
         };
     };
+    board_section_api_v1_hoa_audit_engagements__engagement_id__board_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_board_access_api_v1_hoa_audit_engagements__engagement_id__board_access_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoardAccessIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_board_access_api_v1_hoa_audit_engagements__engagement_id__board_access__access_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagement_id: string;
+                access_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    answer_board_note_api_v1_hoa_audit_engagements__engagement_id__notes__note_id__answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagement_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoardAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     patch_audit_item_api_v1_hoa_audit_items__item_id__patch: {
         parameters: {
             query?: never;
@@ -29368,6 +31708,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_audits_api_v1_hoa_audits_get: {
+        parameters: {
+            query: {
+                legal_entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */
@@ -29533,6 +31906,582 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CircularIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_requests_api_v1_hoa_inspection_requests_get: {
+        parameters: {
+            query?: {
+                legal_entity_id?: string | null;
+                property_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_request_api_v1_hoa_inspection_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_request_api_v1_hoa_inspection_requests__request_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_candidates_api_v1_hoa_inspection_requests__request_id__candidates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_note_api_v1_hoa_inspection_requests__request_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InspectionNoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_package_api_v1_hoa_inspection_requests__request_id__package_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_package_api_v1_hoa_inspection_requests__request_id__package_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transition_api_v1_hoa_inspection_requests__request_id__transition_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InspectionTransitionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_claims_api_v1_hoa_insurance_claims_get: {
+        parameters: {
+            query: {
+                legal_entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_claim_api_v1_hoa_insurance_claims_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_claim_api_v1_hoa_insurance_claims__claim_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                claim_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_claim_api_v1_hoa_insurance_claims__claim_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                claim_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_claim_item_api_v1_hoa_insurance_claims__claim_id__items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                claim_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimItemIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_loans_api_v1_hoa_loans_get: {
+        parameters: {
+            query: {
+                legal_entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_loan_api_v1_hoa_loans_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoanIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_loan_api_v1_hoa_loans__loan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                loan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_loan_item_api_v1_hoa_loans__loan_id__items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                loan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoanItemIn"];
             };
         };
         responses: {
@@ -29773,6 +32722,181 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_measures_api_v1_hoa_measures_get: {
+        parameters: {
+            query: {
+                legal_entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_measure_api_v1_hoa_measures_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasureIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_measure_api_v1_hoa_measures__measure_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measure_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_measure_api_v1_hoa_measures__measure_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measure_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasurePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_financing_api_v1_hoa_measures__measure_id__financing_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measure_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinancingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30099,6 +33223,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    protocol_draft_api_v1_hoa_meetings__meeting_id__protocol_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -31078,6 +34235,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_reconciliation_notes_api_v1_hoa_statements__statement_id__reconciliation_notes_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconciliationNotesIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -32114,6 +35308,183 @@ export interface operations {
                     "application/json": {
                         [key: string]: number;
                     };
+                };
+            };
+        };
+    };
+    list_reports_api_v1_imports_reconciliation_reports_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportListOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_report_api_v1_imports_reconciliation_reports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_columns_api_v1_imports_reconciliation_reports_columns_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ColumnsOut"];
+                };
+            };
+        };
+    };
+    put_columns_api_v1_imports_reconciliation_reports_columns_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ColumnsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ColumnsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_api_v1_imports_reconciliation_reports__report_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_csv_api_v1_imports_reconciliation_reports__report_id__csv_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -34547,6 +37918,76 @@ export interface operations {
             };
         };
     };
+    patch_notice_api_v1_notices__notice_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    end_notice_api_v1_notices__notice_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ai_call_summary_api_v1_objektakte_ai_calls_summary_get: {
         parameters: {
             query?: {
@@ -36500,6 +39941,129 @@ export interface operations {
             };
         };
     };
+    list_templates_api_v1_portal_admin_forms_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    create_template_api_v1_portal_admin_forms_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormTemplateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_template_api_v1_portal_admin_forms__template_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_template_api_v1_portal_admin_forms__template_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormTemplatePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     statement_api_v1_portal_account_get: {
         parameters: {
             query?: never;
@@ -36518,6 +40082,130 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    list_engagements_api_v1_portal_board_engagements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    get_engagement_api_v1_portal_board_engagements__engagement_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_document_api_v1_portal_board_engagements__engagement_id__documents__document_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagement_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_note_api_v1_portal_board_engagements__engagement_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoardNoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -36630,6 +40318,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portal_forms_api_v1_portal_forms_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    submit_form_api_v1_portal_forms__template_id__submissions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormSubmissionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -37227,6 +40974,28 @@ export interface operations {
             };
         };
     };
+    hoa_account_api_v1_portal_hoa_account_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     accept_api_v1_portal_invitations_accept_post: {
         parameters: {
             query?: never;
@@ -37315,6 +41084,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portal_notices_api_v1_portal_notices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    portal_notice_document_api_v1_portal_notices__notice_id__document_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    property_contacts_api_v1_portal_property_contacts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    resolutions_api_v1_portal_resolutions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
         };
@@ -37484,6 +41350,110 @@ export interface operations {
                 "application/json": components["schemas"]["PortalAppointmentIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    appointment_proposals_api_v1_portal_work_orders__order_id__appointment_proposals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    propose_appointments_api_v1_portal_work_orders__order_id__appointment_proposals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalProposalsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_appointment_api_v1_portal_work_orders__order_id__appointment_proposals__proposal_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -38271,6 +42241,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeterOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notices_api_v1_properties__property_id__notices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_notice_api_v1_properties__property_id__notices_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -41513,6 +45553,10 @@ export interface operations {
                 /** @description Quelltickets eines Ziels */
                 merged_into?: string | null;
                 limit?: number;
+                /** @description Seite (ab 1), zusammen mit page_size */
+                page?: number;
+                /** @description Einträge je Seite; ohne Angabe gilt limit (erste Seite) */
+                page_size?: number | null;
             };
             header?: never;
             path?: never;
@@ -41523,6 +45567,12 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Aktuelle Seite */
+                    "X-Page"?: number;
+                    /** @description Einträge je Seite */
+                    "X-Page-Size"?: number;
+                    /** @description Gesamtzahl der Tickets der Filterung */
+                    "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -42289,6 +46339,73 @@ export interface operations {
             };
         };
     };
+    ticket_mail_attachment_content_api_v1_tickets__ticket_id__mail_attachments__document_id__content_get: {
+        parameters: {
+            query?: {
+                download?: boolean;
+            };
+            header?: never;
+            path: {
+                ticket_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ticket_messages_api_v1_tickets__ticket_id__messages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_proposals_api_v1_tickets__ticket_id__proposals_get: {
         parameters: {
             query?: never;
@@ -42513,6 +46630,76 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reply_context_api_v1_tickets__ticket_id__reply_context_get: {
+        parameters: {
+            query?: {
+                reply_to_message_id?: string | null;
+            };
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ticket_reply_documents_api_v1_tickets__ticket_id__reply_documents_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */

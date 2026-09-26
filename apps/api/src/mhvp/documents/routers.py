@@ -253,7 +253,7 @@ async def get_document(
 
 
 @router.get(
-    "/documents/{document_id}/read-receipts",
+    "/documents/{document_id}/portal-read-receipts",
     summary="Portalzugriffe (Indiz, keine Zustellung)",
 )
 async def read_receipts(
@@ -271,6 +271,18 @@ async def read_receipts(
             "note": receipts.LEGAL_NOTE,
             "items": await receipts.for_document(session, document.id),
         }
+
+
+@router.get(
+    "/documents/{document_id}/read-receipts",
+    summary="Portalzugriffe (alter Pfad, gleich /portal-read-receipts)",
+)
+async def read_receipts_legacy(
+    document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """Alias of the published path (1.21.0); same answer as ``/portal-read-receipts``. A
+    formal deprecation mark follows with ADR 0009 once that is in place."""
+    return await read_receipts(document_id, request, principal)
 
 
 @router.get(

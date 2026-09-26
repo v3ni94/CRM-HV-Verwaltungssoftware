@@ -72,7 +72,7 @@ class Resolution(IdMixin, TimestampMixin, TenantMixin, Base):
     votes: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     majority_basis: Mapped[str | None] = mapped_column(Text)
     document_id: Mapped[uuid.UUID | None] = _fk("document.id")
-    # Beschlussgegenstand für die Mehrheitsprüfung (M25-01, migration 0114); the stored check is
+    # Beschlussgegenstand für die Mehrheitsprüfung (M25-01, migration 0125); the stored check is
     # a protocol note only and never changes the status.
     subject_kind: Mapped[str | None] = mapped_column(String(32))
     majority_check: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
@@ -125,6 +125,11 @@ class HoaStatement(IdMixin, TimestampMixin, TenantMixin, Base):
     snapshot_hash: Mapped[str | None] = mapped_column(String(64))
     resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
     posted_entry_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    # W04 (A60): explained differences of the cash flow reconciliation entered by the manager
+    # [{code, amount, note}]; automatic explanations are computed, an unexplained rest blocks.
+    reconciliation_notes: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class HoaCostItem(IdMixin, TenantMixin, Base):
@@ -161,6 +166,9 @@ class Meeting(IdMixin, TimestampMixin, TenantMixin, Base):
     )  # planned, invited, held, closed
     chair_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     minutes_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
+    # A62: generated draft of the minutes (PDF on the tenant letterhead); never replaces the
+    # signed minutes linked in minutes_document_id.
+    minutes_draft_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
     # Resolution deadline of a virtual meeting (M9-07): entered with its source (resolution
     # or community rules with reference); never computed, shown in the deadline list (A41).
     resolution_deadline_at: Mapped[date | None] = mapped_column(Date)
@@ -306,8 +314,138 @@ class MajorityRule(IdMixin, TimestampMixin, TenantMixin, Base):
     valid_to: Mapped[date | None] = mapped_column(Date)
 
 
+# W10 (A59): loans, insurance claims and larger measures. None of these tables carries a balance
+# of its own: amounts become financial facts only through the referenced journal entry.
+
+
+class HoaMeasure(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Larger measure of a community (W10): resolution reference, cost frame, financing from
+    reserve, special levy or loan. The kind (maintenance or structural change) is set from the
+    facts and the legal basis named in `kind_basis`, never from an AI account proposal alone."""
+
+    __tablename__ = "hoa_measure"
+
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id", nullable=False)
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="undecided"
+    )  # maintenance, structural_change, undecided
+    kind_basis: Mapped[str | None] = mapped_column(Text)  # facts and legal basis of the kind
+    cost_frame: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="planned"
+    )  # planned, resolved, in_progress, completed, cancelled
+    planned_start: Mapped[date | None] = mapped_column(Date)
+    planned_end: Mapped[date | None] = mapped_column(Date)
+    account_id: Mapped[uuid.UUID | None] = _fk("ledger_account.id")
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class HoaLoan(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Loan of a community (W10): lender, principal, rate, term, instalment. Disbursement,
+    repayment, interest and fees are separate items with a journal entry reference."""
+
+    __tablename__ = "hoa_loan"
+
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id", nullable=False)
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", nullable=False)
+    lender: Mapped[str] = mapped_column(String(200), nullable=False)
+    reference: Mapped[str | None] = mapped_column(String(100))
+    principal: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    interest_rate_percent: Mapped[Decimal] = mapped_column(RATE, nullable=False)
+    term_months: Mapped[int | None] = mapped_column(Integer)
+    instalment: Mapped[Decimal | None] = mapped_column(MONEY)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date | None] = mapped_column(Date)
+    purpose: Mapped[str] = mapped_column(Text, nullable=False)
+    resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
+    measure_id: Mapped[uuid.UUID | None] = _fk("hoa_measure.id")
+    account_id: Mapped[uuid.UUID | None] = _fk("ledger_account.id")  # loan account
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft"
+    )  # draft, active, repaid, closed
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class HoaLoanItem(IdMixin, TenantMixin, Base):
+    """Loan position (W10): disbursement, repayment, interest or fee, each with its own amount
+    and the journal entry that carries it. Items without a posted entry are planned only."""
+
+    __tablename__ = "hoa_loan_item"
+
+    loan_id: Mapped[uuid.UUID] = _fk("hoa_loan.id", nullable=False, ondelete="CASCADE")
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    booking_date: Mapped[date] = mapped_column(Date, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id")
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class HoaMeasureFinancing(IdMixin, TenantMixin, Base):
+    """Financing share of a measure: reserve, special levy, loan or other (W10)."""
+
+    __tablename__ = "hoa_measure_financing"
+
+    measure_id: Mapped[uuid.UUID] = _fk("hoa_measure.id", nullable=False, ondelete="CASCADE")
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    special_levy_id: Mapped[uuid.UUID | None] = _fk("special_levy.id")
+    loan_id: Mapped[uuid.UUID | None] = _fk("hoa_loan.id")
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class HoaInsuranceClaim(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Insurance claim (W10): damage, insurer, claim number, deductible, benefit, recourse.
+    Amounts are items with a journal entry reference; documents hang on DocumentLink with
+    entity_type `hoa_insurance_claim`."""
+
+    __tablename__ = "hoa_insurance_claim"
+
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id", nullable=False)
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    damage_date: Mapped[date] = mapped_column(Date, nullable=False)
+    reported_on: Mapped[date | None] = mapped_column(Date)
+    insurer: Mapped[str | None] = mapped_column(String(200))
+    policy_reference: Mapped[str | None] = mapped_column(String(100))
+    claim_number: Mapped[str | None] = mapped_column(String(100))
+    deductible: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal(0))
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="reported"
+    )  # reported, accepted, rejected, settled, closed
+    regress_party: Mapped[str | None] = mapped_column(String(200))
+    measure_id: Mapped[uuid.UUID | None] = _fk("hoa_measure.id")
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class HoaInsuranceClaimItem(IdMixin, TenantMixin, Base):
+    """Claim position: damage cost, benefit, deductible, recourse or payment to one owner."""
+
+    __tablename__ = "hoa_insurance_claim_item"
+
+    claim_id: Mapped[uuid.UUID] = _fk("hoa_insurance_claim.id", nullable=False, ondelete="CASCADE")
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    booking_date: Mapped[date] = mapped_column(Date, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id")
+    contract_id: Mapped[uuid.UUID | None] = _fk("contract.id")  # owner receiving a payment
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
 class HoaMajorityRule(IdMixin, TimestampMixin, TenantMixin, Base):
-    """Majority rule per subject kind (M25-01, migration 0114): tenant default with optional
+    """Majority rule per subject kind (M25-01, migration 0125): tenant default with optional
     override for one community (legal_entity_id). Values need a source and a functional release
     (approved_by); the system only evaluates them and never treats them as legal advice."""
 

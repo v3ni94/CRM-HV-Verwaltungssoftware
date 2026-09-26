@@ -444,7 +444,9 @@ async def expose(
     unit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
     """Draft only from master data; no personal data of former tenants, no invented text.
-    Energy certificate data are required for ads but not modelled yet (M26-03)."""
+    Energy certificate data come from the property (A63), the asking rent from the newest
+    rental listing of the unit; both are reported as missing when not recorded. Whether the
+    listed values satisfy the Pflichtangaben of an advertisement stays open (M26-03)."""
     from mhvp.properties.models import Property, Unit
 
     async with tenant_tx(request, principal) as session:
@@ -454,6 +456,14 @@ async def expose(
         prop = await session.get(Property, unit.property_id)
         if prop is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        listing = await session.scalar(
+            select(Listing)
+            .where(Listing.unit_id == unit.id, Listing.kind == "rental")
+            .order_by(Listing.created_at.desc())
+            .limit(1)
+        )
+        energy = openimmo.expose_energy_fields(prop)
+        rent = openimmo.expose_rent_fields(listing)
         fields = {
             "title": unit.label or f"{unit.unit_type} {unit.number}",
             "street": unit.street or prop.street,
@@ -468,10 +478,15 @@ async def expose(
             "last_modernization_year": unit.last_modernization_year,
         }
         missing = [k for k, v in fields.items() if v in (None, "")]
+        missing += [f"energy_certificate.{k}" for k, v in energy.items() if v in (None, "")]
+        missing += [f"asking_rent.{k}" for k, v in rent.items() if v in (None, "")]
         return {
             "status": "draft",
             "fields": fields,
-            "missing": [*missing, "energy_certificate", "asking_rent"],
+            "energy_certificate": energy,
+            "asking_rent": rent,
+            "listing_id": listing.id if listing else None,
+            "missing": missing,
             "note": "Entwurf. Pflichtangaben für Anzeigen vor Veröffentlichung prüfen (M26-03).",
         }
 
@@ -606,6 +621,8 @@ class ListingIn(LettingBaseIn):
     energy_year_of_installation: int | None = Field(default=None, ge=1800, le=2100)
     energy_valid_until: date | None = None
     energy_includes_hot_water: bool = False
+    energy_issued_on: date | None = None
+    energy_building_year: int | None = Field(default=None, ge=1500, le=2100)
     features: dict[str, Any] = Field(default_factory=dict)
     commission_type: str | None = Field(default=None, max_length=16)
 
@@ -639,6 +656,8 @@ class ListingPatch(LettingBaseIn):
     energy_year_of_installation: int | None = Field(default=None, ge=1800, le=2100)
     energy_valid_until: date | None = None
     energy_includes_hot_water: bool | None = None
+    energy_issued_on: date | None = None
+    energy_building_year: int | None = Field(default=None, ge=1500, le=2100)
     features: dict[str, Any] | None = None
     commission_type: str | None = Field(default=None, max_length=16)
 
@@ -697,6 +716,7 @@ async def _listing_prefill(session: Any, unit_id: uuid.UUID) -> dict[str, Any]:
         "living_area_sqm": unit.living_area_sqm,
         "rooms": unit.rooms,
         "floor": unit.floor,
+        "energy": openimmo.property_energy_prefill(prop),
     }
 
 
@@ -752,6 +772,8 @@ def _listing_out(
         "energy_year_of_installation": listing.energy_year_of_installation,
         "energy_valid_until": listing.energy_valid_until,
         "energy_includes_hot_water": listing.energy_includes_hot_water,
+        "energy_issued_on": listing.energy_issued_on,
+        "energy_building_year": listing.energy_building_year,
         "features": listing.features,
         "commission_type": listing.commission_type,
         "external_uuid": listing.external_uuid,
@@ -796,6 +818,11 @@ async def create_listing(
             floor=data.pop("floor") if body.floor is not None else prefill["floor"],
             **{k: v for k, v in data.items() if k not in ("living_area_sqm", "rooms", "floor")},
         )
+        # A63: energy certificate of the property is copied unless the caller set a status.
+        if "energy_status" not in body.model_fields_set:
+            for key, value in prefill["energy"].items():
+                if getattr(body, key, None) is None or key == "energy_status":
+                    setattr(listing, key, value)
         _compute_warm_rent(listing)
         session.add(listing)
         await session.flush()
