@@ -34,6 +34,13 @@ def upgrade() -> None:
     op.add_column(TABLE, sa.Column("requested_by", postgresql.UUID(as_uuid=True), nullable=True))
     op.add_column(TABLE, sa.Column("decided_by", postgresql.UUID(as_uuid=True), nullable=True))
     op.add_column(TABLE, sa.Column("decided_at", sa.DateTime(timezone=True), nullable=True))
+    # Bestandskonten vor Einführung der Vier-Augen-Regel gelten als freigegeben, sonst würde
+    # nach dem Deploy kein Lastschriftlauf mehr laufen; neue oder geänderte IBANs starten
+    # als "zur Freigabe" (Ereignis bank_account.pending im Kontaktmodul).
+    op.execute(
+        "UPDATE contact_bank_account SET approval_status = 'approved', decided_at = now() "
+        "WHERE approval_status = 'pending'"
+    )
 
 
 def downgrade() -> None:

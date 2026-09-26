@@ -13,7 +13,7 @@ from alembic import op
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
 revision: str = "0110"
-down_revision: str | None = "0108"
+down_revision: str | None = "0109"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
