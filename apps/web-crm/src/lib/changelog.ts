@@ -17,6 +17,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.27.1",
+    date: "26.09.2026",
+    title: "Erledigungsnotiz für Administratoren optional",
+    changes: ["Tickets: Administratoren schließen ohne Erledigungsnotiz, für alle anderen bleibt sie Pflicht"],
+  },
+  {
     version: "1.27.0",
     date: "26.09.2026",
     title: "Zuordnung im Bericht, Objekteigentümer, Freigabe der Importverträge",

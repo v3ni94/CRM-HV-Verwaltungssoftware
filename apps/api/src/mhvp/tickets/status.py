@@ -206,14 +206,15 @@ async def transition_status(
     unchanged. Raises ``ProblemError`` for a forbidden transition or failed completion checks.
     The caller holds the row lock (``with_for_update``) and commits. ``skip_flow`` marks the
     event with ``admin_override`` when the flow would have forbidden the change. A closing
-    status requires ``resolution`` (Erledigungsnotiz), also for the admin bypass; it is stored
+    status requires ``resolution`` (Erledigungsnotiz) for regular users; administrators
+    (``skip_flow``) may close without one (Betreiber 26.09.2026). A given resolution is stored
     on the ticket and as a learning example (``AiExample``, task ``ticket_resolution``)."""
     if new_status is ticket.status:
         return False
     closing = new_status in CLOSING_STATUSES
     admin_override = skip_flow and new_status not in TICKET_FLOW[ticket.status]
     await assert_transition_allowed(session, ticket, new_status, skip_flow=skip_flow)
-    if closing and resolution is None:
+    if closing and resolution is None and not skip_flow:
         raise ProblemError(
             ErrorCodes.VALIDATION,
             detail="Beim Abschluss ist eine Erledigungsnotiz (resolution) erforderlich.",
