@@ -13,10 +13,17 @@ The token never reaches the browser: only the API calls objektakte, server side.
 becomes :class:`ObjektakteUnavailableError`, which the CRM endpoints answer with 502; a 404 of
 an object becomes :class:`ObjektakteNotFoundError`. Messages never contain the token or the
 response body.
+
+Upload (26.09.2026, docs/integrations/objektakte.md): endpoint 6
+``POST objects/{number}/documents/`` (documents:write) hands a CRM document to the objektakte
+pipeline, endpoint 7 ``documents/{id}/`` (documents:read) returns its state. A 503 (switch off
+in objektakte) becomes :class:`ObjektakteDeferredError`, a definite rejection (400, 404, 409,
+413) :class:`ObjektakteRejectedError` with the German reason objektakte gives.
 """
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import httpx
@@ -24,6 +31,7 @@ import httpx
 from mhvp.core.config import Settings
 
 MAX_PAGE_SIZE = 500
+UPLOAD_TIMEOUT_SECONDS = 120.0  # a file of up to 50 MB over the office line; reads keep 10 s
 # Upper bound of pages read for one "all" listing (500 x 40 = 20,000 rows); objektakte holds
 # 67 objects and a few thousand documents per object at most, so hitting it means a paging bug.
 MAX_PAGES = 40
@@ -35,6 +43,14 @@ class ObjektakteError(Exception):
 
 class ObjektakteUnavailableError(ObjektakteError):
     pass
+
+
+class ObjektakteDeferredError(ObjektakteError):
+    """objektakte accepts uploads later (switch sync.crm_uploads_enabled off, HTTP 503)."""
+
+
+class ObjektakteRejectedError(ObjektakteError):
+    """objektakte rejected an upload for good (400, 404, 409, 413); retrying does not help."""
 
 
 class ObjektakteNotFoundError(ObjektakteError):
@@ -175,3 +191,70 @@ class ObjektakteClient:
     async def tenants(self, number: str) -> list[dict[str, Any]]:
         """Endpoint 5, all pages."""
         return await self._all(f"objects/{self._number(number)}/tenants/")
+
+    async def upload_document(
+        self,
+        number: str,
+        *,
+        crm_document_id: str,
+        filename: str,
+        data: bytes,
+        mime_type: str,
+        hints: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Upload endpoint 6 (POST on the document list, scope documents:write)."""
+        url = self._base + f"objects/{self._number(number)}/documents/"
+        try:
+            response = await self._client.post(
+                url,
+                data={
+                    "crm_document_id": crm_document_id,
+                    "hints": json.dumps(hints, ensure_ascii=False),
+                },
+                files={"file": (filename, data, mime_type)},
+                timeout=UPLOAD_TIMEOUT_SECONDS,
+            )
+        except httpx.TimeoutException:
+            raise ObjektakteUnavailableError(
+                "objektakte antwortet nicht (Zeitüberschreitung)."
+            ) from None
+        except httpx.HTTPError:
+            raise ObjektakteUnavailableError("objektakte ist nicht erreichbar.") from None
+        if response.status_code == 503:
+            raise ObjektakteDeferredError("objektakte nimmt Uploads derzeit nicht an (HTTP 503).")
+        if response.status_code in (400, 404, 409, 413):
+            raise ObjektakteRejectedError(
+                f"objektakte lehnt den Upload ab (HTTP {response.status_code}): "
+                f"{_error_text(response)}"
+            )
+        if response.status_code in (401, 403):
+            raise ObjektakteUnavailableError(
+                f"objektakte verweigert den Upload (HTTP {response.status_code}); "
+                "Token oder Scope documents:write prüfen."
+            )
+        if response.status_code >= 400:
+            raise ObjektakteUnavailableError(f"objektakte meldet HTTP {response.status_code}.")
+        try:
+            body = response.json()
+        except ValueError:
+            raise ObjektakteUnavailableError("objektakte liefert keine gültige Antwort.") from None
+        if not isinstance(body, dict):
+            raise ObjektakteUnavailableError("objektakte liefert keine gültige Antwort.")
+        return body
+
+    async def document_status(self, document_id: int) -> dict[str, Any]:
+        """Status endpoint 7."""
+        data = await self._get(f"documents/{int(document_id)}/")
+        if not isinstance(data, dict):
+            raise ObjektakteUnavailableError("objektakte liefert keine gültige Antwort.")
+        return data
+
+
+def _error_text(response: httpx.Response) -> str:
+    """The German ``error`` text objektakte returns, cut to 200 characters; never the body."""
+    try:
+        data = response.json()
+    except ValueError:
+        return "ohne Begründung"
+    text = data.get("error") if isinstance(data, dict) else None
+    return str(text)[:200] if text else "ohne Begründung"

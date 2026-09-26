@@ -31,6 +31,7 @@ from mhvp.documents.models import (
     TextStatus,
 )
 from mhvp.objektakte import lists
+from mhvp.objektakte.dms_models import ObjektakteUpload
 from mhvp.properties.models import Property, Unit
 
 SOURCE_SYSTEM = "objektakte"  # same as mhvp.objektakte.objektakte_import.SOURCE_SYSTEM
@@ -85,6 +86,9 @@ class FiledDocument:
     filed_at: str | None
     mime_type: str | None
     size_bytes: int | None
+    # Contract extension 26.09.2026 (upload from the CRM): CRM document id and Paperless id
+    crm_document_id: str | None = None
+    paperless_id: int | None = None
 
     @property
     def source_id(self) -> str:
@@ -114,6 +118,9 @@ def parse_document(raw: object) -> FiledDocument:
     size = raw.get("size_bytes")
     if size is not None and (not isinstance(size, int) or isinstance(size, bool) or size < 0):
         raise ValueError("size_bytes ist ungültig.")
+    paperless = raw.get("paperless_id")
+    if isinstance(paperless, bool):
+        paperless = None
     return FiledDocument(
         id=doc_id,
         title=_opt_str(raw, "title", 300) or f"objektakte-{doc_id}",
@@ -127,6 +134,8 @@ def parse_document(raw: object) -> FiledDocument:
         filed_at=_opt_str(raw, "filed_at", 64),
         mime_type=_opt_str(raw, "mime_type", 127),
         size_bytes=size,
+        crm_document_id=_opt_str(raw, "crm_document_id", 64),
+        paperless_id=paperless if isinstance(paperless, int) and paperless > 0 else None,
     )
 
 
@@ -138,8 +147,45 @@ def _remote_meta(doc: FiledDocument) -> dict[str, Any]:
         "subfolder": doc.subfolder,
         "doc_type": doc.doc_type,
         "drive_url": doc.drive_url,
+        "drive_file_id": doc.drive_file_id,
+        "paperless_id": doc.paperless_id,
         "filed_at": doc.filed_at,
     }
+
+
+async def crm_document_for(
+    session: AsyncSession, tenant_id: uuid.UUID, doc: FiledDocument
+) -> Document | None:
+    """The CRM document an objektakte document came from (upload from the CRM), or None."""
+    if not doc.crm_document_id:
+        return None
+    try:
+        crm_id = uuid.UUID(doc.crm_document_id)
+    except ValueError:
+        return None
+    found: Document | None = await session.scalar(
+        select(Document).where(Document.tenant_id == tenant_id, Document.id == crm_id)
+    )
+    return found
+
+
+async def _mark_upload_done(
+    session: AsyncSession, tenant_id: uuid.UUID, document_id: uuid.UUID, doc: FiledDocument
+) -> None:
+    upload = await session.scalar(
+        select(ObjektakteUpload).where(
+            ObjektakteUpload.tenant_id == tenant_id, ObjektakteUpload.document_id == document_id
+        )
+    )
+    if upload is None:
+        return
+    upload.objektakte_document_id = upload.objektakte_document_id or doc.id
+    upload.remote = {k: v for k, v in _remote_meta(doc).items() if v is not None}
+    if upload.status != "done":
+        upload.status = "done"
+        upload.done_at = datetime.now(UTC)
+        upload.next_attempt_at = None
+        upload.last_error = None
 
 
 async def matching_documents(
@@ -232,7 +278,11 @@ async def link_filed_document(
     prop = await property_by_number(session, tenant_id, object_number)
     property_id = prop.id if prop is not None else None
     if existing is None:
+        existing = await crm_document_for(session, tenant_id, doc)
+    if existing is None:
         existing = (await matching_documents(session, tenant_id, [doc])).get(doc.id)
+    if existing is not None and doc.status == "filed":
+        await _mark_upload_done(session, tenant_id, existing.id, doc)
     remote = _remote_meta(doc)
 
     if existing is None:

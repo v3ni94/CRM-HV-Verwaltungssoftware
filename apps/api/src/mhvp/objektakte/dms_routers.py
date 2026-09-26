@@ -39,7 +39,7 @@ from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import DocumentLink
 from mhvp.objektakte import dms_service as svc
-from mhvp.objektakte.dms_models import ObjektaktePersonProposal
+from mhvp.objektakte.dms_models import ObjektaktePersonProposal, ObjektakteUpload
 from mhvp.objektakte.remote import (
     ObjektakteClient,
     ObjektakteError,
@@ -124,7 +124,41 @@ async def status(request: Request, principal: TenantPrincipal = Depends(READ)) -
         "configured": reason is None,
         "reason": reason,
         "webhook_configured": bool(reason is None and secret and secret.get_secret_value()),
+        "upload_enabled": bool(reason is None and settings.objektakte_upload_active),
     }
+
+
+@router.get(
+    "/documents/{document_id}/filing",
+    summary="Ablage eines CRM-Dokuments über objektakte (Drive und Paperless)",
+)
+async def document_filing(
+    document_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """State of the upload to objektakte; ``routed`` is false when the document goes the CRM's
+    own mirror way (no single property, upload off, other tenant)."""
+    async with tenant_tx(request, principal) as session:
+        upload = await session.scalar(
+            select(ObjektakteUpload).where(ObjektakteUpload.document_id == document_id)
+        )
+        if upload is None:
+            return {"routed": False, "document_id": str(document_id)}
+        remote = upload.remote or {}
+        return {
+            "routed": True,
+            "document_id": str(document_id),
+            "status": upload.status,
+            "object_number": upload.object_number,
+            "objektakte_document_id": upload.objektakte_document_id,
+            "objektakte_status": remote.get("status"),
+            "category": remote.get("category"),
+            "subfolder": remote.get("subfolder"),
+            "drive_url": remote.get("drive_url"),
+            "paperless_id": remote.get("paperless_id"),
+            "attempts": upload.attempts,
+            "last_error": upload.last_error,
+            "done_at": upload.done_at.isoformat() if upload.done_at else None,
+        }
 
 
 @router.get("/objects", summary="Objekte aus objektakte (Kacheln der DMS-Seite)")

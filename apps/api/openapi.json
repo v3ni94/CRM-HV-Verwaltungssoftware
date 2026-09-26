@@ -53944,6 +53944,52 @@
         ]
       }
     },
+    "/api/v1/integrations/objektakte/documents/{document_id}/filing": {
+      "get": {
+        "description": "State of the upload to objektakte; ``routed`` is false when the document goes the CRM's\nown mirror way (no single property, upload off, other tenant).",
+        "operationId": "document_filing_api_v1_integrations_objektakte_documents__document_id__filing_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Document Filing Api V1 Integrations Objektakte Documents  Document Id  Filing Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ablage eines CRM-Dokuments über objektakte (Drive und Paperless)",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
     "/api/v1/integrations/objektakte/objects": {
       "get": {
         "operationId": "objects_api_v1_integrations_objektakte_objects_get",

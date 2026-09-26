@@ -101,6 +101,17 @@ class Settings(BaseSettings):
         ),
     )
     objektakte_api_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
+    # Upload of CRM documents to objektakte (26.09.2026): documents linked to exactly one property
+    # go to objektakte for filing in Drive and Paperless instead of the CRM's own mirrors. Needs
+    # the read API above and a token with documents:write; off by default.
+    objektakte_upload_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "objektakte_upload_enabled",
+            "MHVP_OBJEKTAKTE_UPLOAD_ENABLED",
+            "OBJEKTAKTE_UPLOAD_ENABLED",
+        ),
+    )
     # Time of day (HH:MM, Celery timezone Europe/Berlin) of the daily reconciliation report of
     # the parallel operation (13.1, A68); read and compare only, no posting.
     import_reconciliation_time: str = Field(default="05:30", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
@@ -180,6 +191,10 @@ class Settings(BaseSettings):
     def objektakte_api_configured(self) -> bool:
         token = self.objektakte_api_token.get_secret_value() if self.objektakte_api_token else ""
         return bool((self.objektakte_api_url or "").strip() and token.strip())
+
+    @property
+    def objektakte_upload_active(self) -> bool:
+        return self.objektakte_upload_enabled and self.objektakte_api_configured
 
     @property
     def s3_configured(self) -> bool:

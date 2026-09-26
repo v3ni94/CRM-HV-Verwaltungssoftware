@@ -246,6 +246,7 @@ def test_switched_off_and_other_tenant(
         "configured": False,
         "reason": "not_configured",
         "webhook_configured": False,
+        "upload_enabled": False,
     }
     refused = off.get(f"{BASE}/objects", headers=h)
     assert refused.status_code == 502

@@ -149,3 +149,11 @@ def sync_tenant(tenant_id: str) -> dict[str, int]:
     export for this tenant only while `ObjektakteSyncState.enabled` is on (the endpoint
     checks the switch as well, the job checks it again at run time)."""
     return asyncio.run(sync_tenant_once(get_settings(), uuid.UUID(tenant_id), trigger="manual"))
+
+
+@shared_task(name="mhvp.objektakte.upload")
+def upload() -> dict[str, int]:
+    """Uploads CRM documents to objektakte and polls their filing (mhvp.objektakte.upload)."""
+    from mhvp.objektakte import upload as objektakte_upload
+
+    return asyncio.run(objektakte_upload.upload_once(get_settings()))

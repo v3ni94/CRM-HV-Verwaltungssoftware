@@ -108,3 +108,70 @@ Mietbeginn und Mietende, keine E-Mail und keine IBAN, auch nicht maskiert. Die F
 bestätigt den Abgleich als Arbeitsgrundlage; Kontakte, Verträge und Einheiten werden weder beim
 Testlauf noch bei der Freigabe geändert (`writes_master_data: false`). Die Pflege der
 Stammdaten erfolgt in den Stammdatenmasken oder über den Import M8.
+
+## 4. Upload aus dem CRM in objektakte (Ergänzung 26.09.2026)
+
+Ziel: Ein im CRM hochgeladenes Dokument wird von objektakte verarbeitet und dort abgelegt, in
+der Drive-Struktur des Objekts mit Eigentümer- und Mieterakten und in Paperless. Das CRM
+behält das Original in S3 und den Index; es spiegelt solche Dokumente nicht selbst nach
+Paperless oder Drive, damit jedes System das Dokument genau einmal hält.
+
+Endpunkte in objektakte (Umsetzung dort: `docs/betrieb/crm-schnittstelle.md`, Abschnitt 3a):
+
+| Nr. | Endpunkt | Scope | Inhalt |
+| --- | --- | --- | --- |
+| 6 | `POST /objects/{number}/documents/` | documents:write | `multipart/form-data`: `file`, `crm_document_id` (UUID des CRM-Dokuments), `hints` (JSON); Antwort 202 oder bei Wiederholung 200 mit dem Stand wie Endpunkt 7 |
+| 7 | `GET /documents/{id}/` | documents:read | Zeile wie Endpunkt 3, dazu `object_number`, `open_review_cases`, `deleted`, `duplicate_of` |
+
+Jede Dokumentzeile (Endpunkte 3 und 7, Webhook) trägt zusätzlich `crm_document_id` und
+`paperless_id` (sonst null). `hints` enthält nur Kennungen und Bezeichnungen: `title`,
+`unit_labels`, `contact_refs` (Kontakt-IDs des CRM), `ticket_number` (`TNR#<nummer>`),
+`category`; keine Namen, keine Kontaktdaten. Statuscodes des Uploads: 400 (Datei, Kennung,
+Hinweise oder Dateityp ungültig), 404 (Objekt unbekannt), 409 (Kennung einem anderen Objekt
+zugeordnet oder Objekt archiviert), 413 (zu groß), 503 mit `Retry-After`, solange der Schalter
+`sync.crm_uploads_enabled` in objektakte aus ist.
+
+Weiche im CRM (`mhvp.objektakte.upload`, Tabelle `objektakte_upload`, Migration 0133): Ein
+Dokument geht an objektakte, wenn
+
+1. `OBJEKTAKTE_UPLOAD_ENABLED=true` gesetzt und die Lese-API eingerichtet ist,
+2. der Mandant der in `OBJEKTAKTE_TENANT` genannte ist,
+3. die Quelle ein Upload oder Scan ist (erzeugte Schreiben, Exporte, SEPA-Dateien, E-Mails,
+   Portal und Importe gehen weiter den bisherigen Weg),
+4. der Dateityp von objektakte angenommen wird (PDF, Bilder, DOCX, XLSX, XLSM, CSV, TXT, EML,
+   MSG, HTML) und
+5. die Verknüpfungen genau ein Objekt ergeben: direkt, über eine Einheit oder über ein Ticket
+   mit Objekt. Kontakte allein bestimmen kein Objekt.
+
+Sonst gilt die bisherige Spiegelung (`mhvp.documents.tasks.mirror`). Verknüpfungen, die erst
+nach dem Upload entstehen, ändern den Weg nicht.
+
+Job `mhvp.objektakte.upload` (Beat jede Minute, Warteschlange `io`): `pending` wird hochgeladen
+und wird `submitted`; `submitted` wird alle 5 Minuten mit Endpunkt 7 abgefragt, bis objektakte
+das Dokument abgelegt hat (`done`, Verknüpfung mit dem Objekt und Vermerk in
+`source_meta.objektakte` mit Drive-Datei, Paperless-ID, Kategorie und Unterordner). Eine
+Dublette in objektakte wird mit der Ablage des Originals verknüpft. 503 verschiebt den Upload
+um 15 Minuten ohne Fehlerzählung; eine endgültige Ablehnung (400, 404, 409, 413) setzt
+`failed` mit der Begründung von objektakte; Netz- und Serverfehler wiederholen mit derselben
+Staffel wie die Spiegelung und setzen nach sechs Versuchen `failed`. Die Aktion "Spiegelung
+erneut anstoßen" (`POST /documents/{id}/mirror`) setzt einen fehlgeschlagenen Upload zurück.
+Der Webhook `document.filed` mit `crm_document_id` schließt den Upload sofort ab und legt kein
+zweites Dokument an.
+
+Stand je Dokument: `GET /api/v1/integrations/objektakte/documents/{document_id}/filing`
+(`objektakte:read`), `routed` false bedeutet bisheriger Spiegelweg. `GET .../status` meldet
+zusätzlich `upload_enabled`.
+
+Einrichtung:
+
+1. objektakte: neues Token mit den Scopes `objects:read documents:read persons:read
+   documents:write` anlegen, das bisherige sperren; Schalter `sync.crm_uploads_enabled`
+   einschalten. Nach Paperless überträgt objektakte nur, wenn `paperless.mode` es erlaubt
+   (`full`, im Pilotbetrieb nur Pilotobjekte).
+2. CRM: `OBJEKTAKTE_API_TOKEN` auf das neue Token setzen, `OBJEKTAKTE_UPLOAD_ENABLED=true`,
+   API und Worker neu starten.
+
+Grenzen: Die Zuordnung zu Eigentümer- und Mieterakten in objektakte setzt voraus, dass dort
+Einheiten und Personen des Objekts bekannt sind; die Hinweise des Uploads werden gespeichert
+und in einem folgenden Schritt für diese Zuordnung genutzt. Bis dahin entscheidet die
+Klassifikation von objektakte allein.

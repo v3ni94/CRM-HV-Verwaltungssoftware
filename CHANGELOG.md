@@ -5,6 +5,13 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.27.0 (26.09.2026) Upload im CRM mit Ablage über objektakte in Drive und Paperless
+
+- Dokumente: Ein im CRM hochgeladenes oder gescanntes Dokument, das genau einem Objekt zugeordnet ist (direkt, über eine Einheit oder über ein Ticket), geht an objektakte und wird dort verarbeitet und abgelegt: Drive-Struktur des Objekts mit Eigentümer- und Mieterakten und Paperless. Das CRM spiegelt solche Dokumente nicht mehr selbst nach Paperless oder Drive, damit jedes System das Dokument genau einmal hält; Original und Index bleiben im CRM. Schalter OBJEKTAKTE_UPLOAD_ENABLED (Vorgabe aus), in objektakte zusätzlich Token mit documents:write und Schalter sync.crm_uploads_enabled.
+- Dokumente: Job mhvp.objektakte.upload (jede Minute) mit den Zuständen pending, submitted, done und failed, Abfrage des Ablagestands alle 5 Minuten, Dublette in objektakte wird mit der Ablage des Originals verknüpft, 503 verschiebt ohne Fehlerzählung, "Spiegelung erneut anstoßen" setzt einen fehlgeschlagenen Upload zurück (Migration 0133).
+- DMS und Objektübernahme: Webhook document.filed mit crm_document_id verknüpft das vorhandene CRM-Dokument statt ein neues anzulegen; Drive-Datei und Paperless-ID stehen im Vermerk objektakte des Dokuments. Neuer Endpunkt GET /integrations/objektakte/documents/{id}/filing, Status meldet upload_enabled.
+- Hinweise an objektakte tragen nur Kennungen und Bezeichnungen (Titel, Einheit, Kontakt-ID, Ticketnummer, Kategorie), keine Namen und keine Kontaktdaten.
+
 ## 1.26.0 (26.09.2026) DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter
 
 - DMS und Objektübernahme (M29 Stufe 4): Anbindung an die Lese-API von objektakte über die neuen Einstellungen OBJEKTAKTE_API_URL, OBJEKTAKTE_API_TOKEN, OBJEKTAKTE_WEBHOOK_SECRET und OBJEKTAKTE_TENANT (auch mit Präfix MHVP_, leer bedeutet aus). Die Seite /dms zeigt je Objekt eine Kachel mit Übernahmestatus, offenen Prüffällen, Vollständigkeit und fehlenden Dokumenten; /dms/{Nummer} zeigt fehlende Dokumente, die Dokumentliste mit Sprung nach Google Drive und in das CRM sowie das Nachholen der Dokumentverknüpfung. Neue Endpunkte unter /integrations/objektakte.

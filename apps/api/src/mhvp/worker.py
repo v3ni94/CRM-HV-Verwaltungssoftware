@@ -79,6 +79,13 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "schedule": 60.0,
                 "options": {"queue": "io"},
             },
+            # Upload of CRM documents to objektakte (filing in Drive and Paperless there); no-op
+            # unless OBJEKTAKTE_UPLOAD_ENABLED and the read API are configured.
+            "objektakte-upload": {
+                "task": "mhvp.objektakte.upload",
+                "schedule": 60.0,
+                "options": {"queue": "io"},
+            },
             # Document inbox (A42, 11.4, 15.1): daily 06:30, proposals only (rule 0.1.6);
             # Paperless, Drive inbox folder and mailbox attachments since the tenant watermark.
             "documents-process-inbox": {

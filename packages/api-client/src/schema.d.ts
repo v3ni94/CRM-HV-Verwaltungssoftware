@@ -6427,6 +6427,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/integrations/objektakte/documents/{document_id}/filing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ablage eines CRM-Dokuments über objektakte (Drive und Paperless)
+         * @description State of the upload to objektakte; ``routed`` is false when the document goes the CRM's
+         *     own mirror way (no single property, upload off, other tenant).
+         */
+        get: operations["document_filing_api_v1_integrations_objektakte_documents__document_id__filing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/integrations/objektakte/objects": {
         parameters: {
             query?: never;
@@ -36735,6 +36756,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    document_filing_api_v1_integrations_objektakte_documents__document_id__filing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

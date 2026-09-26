@@ -17,6 +17,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.27.0",
+    date: "26.09.2026",
+    title: "Upload im CRM mit Ablage über objektakte in Drive und Paperless",
+    changes: [
+      "Dokumente: hochgeladene Dokumente mit genau einem Objekt werden über objektakte in Drive (mit Eigentümer- und Mieterakten) und in Paperless abgelegt, ohne doppelte Spiegelung",
+      "Dokumente: Ablagestand je Dokument abrufbar, fehlgeschlagene Uploads lassen sich erneut anstoßen",
+      "DMS: Meldungen von objektakte verknüpfen das vorhandene CRM-Dokument statt ein zweites anzulegen",
+    ],
+  },
+  {
     version: "1.26.0",
     date: "26.09.2026",
     title: "DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter",

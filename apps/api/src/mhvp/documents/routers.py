@@ -186,6 +186,7 @@ async def upload(
             category_id=category_id,
             links=[(x.entity_type, x.entity_id, x.role) for x in link_items],
             created_by=principal.user_id,
+            settings=request.app.state.settings,
         )
         await _event(session, principal, "document.created", document.id, size=document.size)
         return await _out(session, document)
@@ -481,6 +482,9 @@ async def remirror(
 ) -> s.DocumentOut:
     async with tenant_tx(request, principal) as session:
         document = await _get(session, Document, document_id)
+        from mhvp.objektakte import upload as objektakte_upload  # local: avoids an import cycle
+
+        await objektakte_upload.reset_failed(session, document.id)
         await svc.queue_mirrors(session, principal.tenant_id, document.id)
         for m in (
             await session.scalars(
