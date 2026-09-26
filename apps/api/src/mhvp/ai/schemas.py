@@ -16,6 +16,7 @@ from mhvp.ai.models import (
     ImportStatus,
     RunStatus,
 )
+from mhvp.contacts.models import ContactRoleCode
 
 
 class _In(BaseModel):
@@ -256,6 +257,16 @@ class ApplyIn(_In):
     contacts: list[ContactChoice] | None = None
     property: PropertyChoice | None = None
     invoice: InvoiceApplyIn | None = None
+
+
+class ApplyRoleIn(_In):
+    role: ContactRoleCode = Field(description="Rolle, die allen angelegten Kontakten ergänzt wird")
+
+
+class ApplyRoleOut(_Out):
+    import_run_id: uuid.UUID
+    role: ContactRoleCode
+    contacts_changed: int
 
 
 class ImportItemOut(_Out):

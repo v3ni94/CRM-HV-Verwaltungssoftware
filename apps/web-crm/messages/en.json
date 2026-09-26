@@ -556,7 +556,19 @@
     "undoConfirm": "Really undo the import? Records that later data builds on are kept.",
     "undoneAt": "Undone on {at}",
     "immoware24Link": "Open import assistant",
-    "reconciliationLink": "Parallel operation reconciliation"
+    "reconciliationLink": "Parallel operation reconciliation",
+    "roleTitle": "Set role afterwards",
+    "roleLabel": "Role for all created contacts",
+    "roleApply": "Set role",
+    "roleDone": "Role {role} set for {count} contacts.",
+    "role": {
+      "eigentuemer": "Owner",
+      "mieter": "Tenant",
+      "verwalter": "Manager",
+      "dienstleister": "Service provider",
+      "bank": "Bank",
+      "sonstiges": "Other"
+    }
   },
   "AiSettings": {
     "title": "AI settings",

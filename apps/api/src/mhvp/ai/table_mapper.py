@@ -256,6 +256,12 @@ ROLE_MAP = {
     "tenant": "tenant",
     "dienstleister": "provider",
     "provider": "provider",
+    "bank": "bank",
+    "banken": "bank",
+    "kreditinstitut": "bank",
+    "verwalter": "manager",
+    "sonstige": "other",
+    "sonstiges": "other",
 }
 
 

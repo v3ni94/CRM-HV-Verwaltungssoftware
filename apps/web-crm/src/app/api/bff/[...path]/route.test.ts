@@ -63,6 +63,7 @@ describe("BFF proxy", () => {
     ["GET", "imports"],
     ["GET", `imports/${ID}`],
     ["POST", `imports/${ID}/undo`],
+    ["POST", `ai/import-runs/${ID}/apply-role`],
     ["GET", "imports/immoware24/fields"],
     ["GET", "imports/immoware24/mappings"],
     ["POST", "imports/immoware24/mappings"],

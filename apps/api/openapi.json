@@ -1313,6 +1313,43 @@
         "title": "ApplyPlaybookIn",
         "type": "object"
       },
+      "ApplyRoleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/ContactRoleCode",
+            "description": "Rolle, die allen angelegten Kontakten ergänzt wird"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "ApplyRoleIn",
+        "type": "object"
+      },
+      "ApplyRoleOut": {
+        "properties": {
+          "contacts_changed": {
+            "title": "Contacts Changed",
+            "type": "integer"
+          },
+          "import_run_id": {
+            "format": "uuid",
+            "title": "Import Run Id",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ContactRoleCode"
+          }
+        },
+        "required": [
+          "import_run_id",
+          "role",
+          "contacts_changed"
+        ],
+        "title": "ApplyRoleOut",
+        "type": "object"
+      },
       "AssignAccountIn": {
         "additionalProperties": false,
         "properties": {
@@ -36905,6 +36942,60 @@
           }
         },
         "summary": "Schnellen Tabellenimport setzen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/import-runs/{import_id}/apply-role": {
+      "post": {
+        "description": "Adds the role to every contact the import run created; existing roles are kept.",
+        "operationId": "apply_import_role_api_v1_ai_import_runs__import_id__apply_role_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyRoleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyRoleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Importlauf: Rolle nachträglich setzen",
         "tags": [
           "KI-Assistent"
         ]
