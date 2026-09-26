@@ -19,6 +19,8 @@ export async function bff<T>(path: string, init: RequestInit = {}): Promise<BffR
     const problem = await readProblem(response);
     return { ok: false, status: response.status, problem, message: problemMessage(problem, response.status) };
   }
-  const data = response.status === 204 ? (null as T) : ((await response.json()) as T);
+  // 204 and other empty bodies (e.g. 202 Accepted) yield null instead of a JSON parse error.
+  const text = response.status === 204 ? "" : await response.text();
+  const data = text ? (JSON.parse(text) as T) : (null as T);
   return { ok: true, data, status: response.status, etag: response.headers.get("etag") };
 }

@@ -4925,6 +4925,18 @@
             ],
             "title": "Reported On"
           },
+          "resolution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Id"
+          },
           "title": {
             "maxLength": 300,
             "minLength": 3,
@@ -5026,15 +5038,31 @@
             ],
             "title": "Claim Number"
           },
+          "resolution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Id"
+          },
           "status": {
-            "pattern": "^(reported|accepted|rejected|settled|closed)$",
-            "title": "Status",
-            "type": "string"
+            "anyOf": [
+              {
+                "pattern": "^(reported|accepted|rejected|settled|closed)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
           }
         },
-        "required": [
-          "status"
-        ],
         "title": "ClaimPatch",
         "type": "object"
       },
@@ -18555,6 +18583,34 @@
             ],
             "title": "Portal Access Reason"
           },
+          "reply_approval_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Approval Reason"
+          },
+          "reply_approval_required": {
+            "default": false,
+            "title": "Reply Approval Required",
+            "type": "boolean"
+          },
+          "reply_approval_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Approval Until"
+          },
           "roles": {
             "items": {
               "type": "string"
@@ -18581,6 +18637,48 @@
           "roles"
         ],
         "title": "MemberOut",
+        "type": "object"
+      },
+      "MemberReplyApproval": {
+        "additionalProperties": false,
+        "description": "M20-03 Kennzeichen je Mitglied (Betreiberentscheidung 26.09.2026): Ticketantworten\nbrauchen die Freigabe einer zweiten Person. ``reason`` ist bei ``required`` Pflicht;\n``until`` (einschließlich) befristet das Kennzeichen, danach gilt es nicht mehr.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "azubi",
+                  "neuer_mitarbeiter"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          }
+        },
+        "required": [
+          "required"
+        ],
+        "title": "MemberReplyApproval",
         "type": "object"
       },
       "MemberRoles": {
@@ -28335,6 +28433,11 @@
             "title": "Tenant Id",
             "type": "string"
           },
+          "ticket_reply_approval_all": {
+            "default": false,
+            "title": "Ticket Reply Approval All",
+            "type": "boolean"
+          },
           "version": {
             "title": "Version",
             "type": "integer"
@@ -28373,6 +28476,17 @@
                 "type": "null"
               }
             ]
+          },
+          "ticket_reply_approval_all": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Reply Approval All"
           }
         },
         "title": "TenantSettingsPatch",
@@ -28726,6 +28840,18 @@
               }
             ],
             "title": "Extra Fields"
+          },
+          "internal_description": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Description"
           },
           "priority": {
             "anyOf": [
@@ -30457,6 +30583,18 @@
             "title": "Active",
             "type": "boolean"
           },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
           "description": {
             "anyOf": [
               {
@@ -30479,6 +30617,40 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "last_delivery_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Delivery At"
+          },
+          "last_delivery_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Delivery Status"
+          },
+          "last_delivery_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Delivery Status Code"
           },
           "secret": {
             "description": "Signaturschlüssel, wird nur einmal angezeigt",
@@ -30501,11 +30673,41 @@
         "title": "WebhookCreated",
         "type": "object"
       },
+      "WebhookEventTypeOut": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "description"
+        ],
+        "title": "WebhookEventTypeOut",
+        "type": "object"
+      },
       "WebhookOut": {
         "properties": {
           "active": {
             "title": "Active",
             "type": "boolean"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           },
           "description": {
             "anyOf": [
@@ -30529,6 +30731,40 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "last_delivery_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Delivery At"
+          },
+          "last_delivery_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Delivery Status"
+          },
+          "last_delivery_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Delivery Status Code"
           },
           "url": {
             "title": "Url",
@@ -31363,6 +31599,22 @@
         "title": "TenantOut",
         "type": "object"
       },
+      "mhvp__hoa__board__BoardStatementIn": {
+        "additionalProperties": false,
+        "properties": {
+          "statement": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement"
+        ],
+        "title": "BoardStatementIn",
+        "type": "object"
+      },
       "mhvp__platform__schemas__TenantOut": {
         "properties": {
           "id": {
@@ -31390,6 +31642,23 @@
           "status"
         ],
         "title": "TenantOut",
+        "type": "object"
+      },
+      "mhvp__portal__board__BoardStatementIn": {
+        "additionalProperties": false,
+        "description": "Statement of the board on one report version (A76, PÜ09): text only, no release.",
+        "properties": {
+          "text": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "BoardStatementIn",
         "type": "object"
       },
       "mhvp__properties__schemas__BankAccountIn": {
@@ -33802,6 +34071,7 @@
     },
     "/api/v1/accounting/invoices": {
       "get": {
+        "description": "Rechnungen, neueste zuerst. Paginierung wie ``GET /tickets`` (Kopfzeilen\n``X-Total-Count``, ``X-Page``, ``X-Page-Size``), Antwort bleibt eine Liste.",
         "operationId": "list_invoices_api_v1_accounting_invoices_get",
         "parameters": [
           {
@@ -33836,6 +34106,51 @@
               ],
               "title": "Review Status"
             }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Seite (ab 1), zusammen mit page_size",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Seite (ab 1), zusammen mit page_size",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+              "title": "Page Size"
+            }
           }
         ],
         "responses": {
@@ -33852,7 +34167,27 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Page": {
+                "description": "Aktuelle Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Einträge je Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Total-Count": {
+                "description": "Gesamtzahl der Einträge der Filterung",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           },
           "422": {
             "content": {
@@ -34851,6 +35186,7 @@
     },
     "/api/v1/accounting/ledgers/{ledger_id}/entries": {
       "get": {
+        "description": "Journal des Buchungskreises. Paginierung wie ``GET /tickets``: die Antwort bleibt eine\nListe, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page`` und ``X-Page-Size``;\n``offset`` bleibt für bestehende Aufrufer erhalten.",
         "operationId": "journal_api_v1_accounting_ledgers__ledger_id__entries_get",
         "parameters": [
           {
@@ -34935,6 +35271,39 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "description": "Seite (ab 1), zusammen mit page_size",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Seite (ab 1), zusammen mit page_size",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+              "title": "Page Size"
+            }
           }
         ],
         "responses": {
@@ -34950,7 +35319,27 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Page": {
+                "description": "Aktuelle Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Einträge je Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Total-Count": {
+                "description": "Gesamtzahl der Einträge der Filterung",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           },
           "422": {
             "content": {
@@ -42610,6 +42999,7 @@
     },
     "/api/v1/contracts": {
       "get": {
+        "description": "Verträge nach Nummer und Version. Paginierung wie ``GET /tickets``: die Antwort bleibt\neine Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page``, ``X-Page-Size``.",
         "operationId": "list_contracts_api_v1_contracts_get",
         "parameters": [
           {
@@ -42695,6 +43085,51 @@
               ],
               "title": "Active On"
             }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Seite (ab 1), zusammen mit page_size",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Seite (ab 1), zusammen mit page_size",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+              "title": "Page Size"
+            }
           }
         ],
         "responses": {
@@ -42710,7 +43145,27 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Page": {
+                "description": "Aktuelle Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Einträge je Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Total-Count": {
+                "description": "Gesamtzahl der Einträge der Filterung",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           },
           "422": {
             "content": {
@@ -46874,6 +47329,62 @@
         ]
       }
     },
+    "/api/v1/hoa/audit-reports/{report_id}/board-statement": {
+      "post": {
+        "description": "Records the statement of the board on a report version as text. It has no release\neffect: neither the report nor the statement (Abrechnung) changes status, and the report\nfigures stay untouched. A later statement replaces the text; the previous one is kept in\nthe history of the report content.",
+        "operationId": "set_board_statement_api_v1_hoa_audit_reports__report_id__board_statement_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__hoa__board__BoardStatementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Set Board Statement Api V1 Hoa Audit Reports  Report Id  Board Statement Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Beiratsstellungnahme zum Prüfbericht erfassen (PÜ09, nur Text)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/audits": {
       "get": {
         "operationId": "list_audits_api_v1_hoa_audits_get",
@@ -47008,6 +47519,137 @@
         ]
       }
     },
+    "/api/v1/hoa/audits/{audit_id}/candidates": {
+      "get": {
+        "description": "Posted journal entries of the community in the engagement period (or a narrower date\nrange inside it) with their accounts and, where an invoice is booked, the vendor. Read\nonly: the selection itself is ``POST /hoa/audits/{id}/items``; already selected entries are\nflagged. At most ``MAX_CANDIDATES`` rows, ordered by booking date.",
+        "operationId": "audit_candidates_api_v1_hoa_audits__audit_id__candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "audit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Audit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "vendor_contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Vendor Contact Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Audit Candidates Api V1 Hoa Audits  Audit Id  Candidates Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gebuchte Positionen zur Auswahl als Prüfposition (Filter Konto, Lieferant, Datum)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/audits/{audit_id}/items": {
       "post": {
         "operationId": "add_audit_item_api_v1_hoa_audits__audit_id__items_post",
@@ -47064,6 +47706,52 @@
       }
     },
     "/api/v1/hoa/audits/{audit_id}/reports": {
+      "get": {
+        "operationId": "list_reports_api_v1_hoa_audits__audit_id__reports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "audit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Audit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Reports Api V1 Hoa Audits  Audit Id  Reports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüfberichte eines Prüfauftrags (PÜ09)",
+        "tags": [
+          "hoa"
+        ]
+      },
       "post": {
         "operationId": "create_report_api_v1_hoa_audits__audit_id__reports_post",
         "parameters": [
@@ -47741,7 +48429,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Status des Versicherungsfalls",
+        "summary": "Status oder Beschluss des Versicherungsfalls",
         "tags": [
           "WEG"
         ]
@@ -47986,6 +48674,52 @@
           }
         },
         "summary": "Darlehensposition erfassen",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/loans/{loan_id}/schedule": {
+      "get": {
+        "description": "Annuity plan (instalment given) or linear plan (term given) from principal, rate, term,\ninstalment and start (`calc.loan_schedule`), plus the comparison of the planned repayment\nand interest per month with the booked items. Nothing is posted; the loan contract\nprevails (note_text).",
+        "operationId": "get_loan_schedule_api_v1_hoa_loans__loan_id__schedule_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Loan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Loan Schedule Api V1 Hoa Loans  Loan Id  Schedule Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ratenplan als Orientierung (W10, A78)",
         "tags": [
           "WEG"
         ]
@@ -50278,6 +51012,62 @@
           }
         },
         "summary": "Kostenposition mit Verteilungsgrundlage",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/statements/{statement_id}/diff": {
+      "get": {
+        "description": "``against`` is the older version (old), ``statement_id`` the newer one (new). Both must\nbelong to the same ledger (community) and year, otherwise 422; both need a snapshot.",
+        "operationId": "diff_hoa_statement_api_v1_hoa_statements__statement_id__diff_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "against",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Against",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Diff Hoa Statement Api V1 Hoa Statements  Statement Id  Diff Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Versionsvergleich zweier Hausgeldabrechnungen (D14)",
         "tags": [
           "WEG"
         ]
@@ -53334,7 +54124,7 @@
             "description": "Successful Response"
           },
           "422": {
-            "description": "unvollständig"
+            "description": "unvollständig oder Schemafehler"
           }
         },
         "summary": "OpenImmo 1.2.7 Export als XML (nur lesend, kein Portal-Upload)",
@@ -53378,7 +54168,7 @@
             "description": "Successful Response"
           },
           "422": {
-            "description": "unvollständig"
+            "description": "unvollständig oder Schemafehler"
           }
         },
         "summary": "OpenImmo 1.2.7 Export als ZIP (XML und verknüpfte Bilder, kein Portal-Upload)",
@@ -54163,6 +54953,7 @@
     },
     "/api/v1/mail/mailboxes/{mailbox_id}": {
       "delete": {
+        "description": "Soft delete (Review 26.09.2026, M12): the mailbox is deactivated (no sync, no send,\ncredentials removed, no longer a default mailbox) and disappears from the settings; its\nmessages keep the mailbox binding, so they stay visible only to administrators and the\nusers the mailbox was shared with, never to every member.",
         "operationId": "delete_mailbox_api_v1_mail_mailboxes__mailbox_id__delete",
         "parameters": [
           {
@@ -54353,6 +55144,7 @@
     },
     "/api/v1/mail/messages": {
       "get": {
+        "description": "Rows carry ``body_preview`` (200 characters) instead of ``body`` and ``body_html``\n(Review 26.09.2026, M3); ``GET /mail/messages/{id}`` delivers the full text.",
         "operationId": "messages_api_v1_mail_messages_get",
         "parameters": [
           {
@@ -54495,7 +55287,145 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Vorgangsliste",
+        "summary": "Vorgangsliste (ohne Text, mit Vorschau)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/count": {
+      "get": {
+        "description": "Count with the same filters and visibility as the list (badge \"Freigaben\", M3).",
+        "operationId": "messages_count_api_v1_mail_messages_count_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contact Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(in|out)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Direction"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticket_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticket Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mailbox_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mailbox Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Messages Count Api V1 Mail Messages Count Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anzahl der Nachrichten je Filter",
         "tags": [
           "Postfach"
         ]
@@ -54711,6 +55641,7 @@
     },
     "/api/v1/mail/messages/{message_id}/approve": {
       "post": {
+        "description": "Freigabe und Versand über ``approve_and_send`` (Vier-Augen oder Direktversand nach\nRegel M20-03, siehe dort).",
         "operationId": "approve_api_v1_mail_messages__message_id__approve_post",
         "parameters": [
           {
@@ -58941,6 +59872,55 @@
         ]
       }
     },
+    "/api/v1/portal-admin/forms/{template_id}/submissions": {
+      "get": {
+        "description": "A73: submissions per template for the CRM (newest first) with the portal account, the\ncontact name and the ticket created from it. The values themselves are on the ticket\n(public description); only the identification is listed here (data minimisation).",
+        "operationId": "list_submissions_api_v1_portal_admin_forms__template_id__submissions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Submissions Api V1 Portal Admin Forms  Template Id  Submissions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einreichungen einer Formularvorlage",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      }
+    },
     "/api/v1/portal/account": {
       "get": {
         "operationId": "statement_api_v1_portal_account_get",
@@ -58992,6 +59972,7 @@
     },
     "/api/v1/portal/board/engagements/{engagement_id}": {
       "get": {
+        "description": "Engagement with positions, released receipts and notes. The optional filters (A77,\nPÜ08) narrow the positions and their receipts by account, vendor, booking date or text\nserver side; ``filter_options`` lists the accounts and vendors of all positions so the\nportal offers only values that occur. Notes and cost items are never filtered.",
         "operationId": "get_engagement_api_v1_portal_board_engagements__engagement_id__get",
         "parameters": [
           {
@@ -59002,6 +59983,91 @@
               "format": "uuid",
               "title": "Engagement Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "vendor_contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Vendor Contact Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
             }
           }
         ],
@@ -59136,6 +60202,120 @@
           }
         },
         "summary": "Vermerk oder Rückfrage (PÜ08)",
+        "tags": [
+          "Portal Beirat"
+        ]
+      }
+    },
+    "/api/v1/portal/board/engagements/{engagement_id}/reports": {
+      "get": {
+        "operationId": "list_reports_api_v1_portal_board_engagements__engagement_id__reports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Engagement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Reports Api V1 Portal Board Engagements  Engagement Id  Reports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prüfberichte des Prüfauftrags (PÜ09)",
+        "tags": [
+          "Portal Beirat"
+        ]
+      }
+    },
+    "/api/v1/portal/board/engagements/{engagement_id}/reports/{report_id}/statement": {
+      "post": {
+        "description": "Records the board statement on one report version as text, stored like the CRM entry in\n``audit_report.content.board_statement`` with the recording portal account and the history\nof earlier texts. No release effect: neither the report nor the statement (Abrechnung)\nchanges status; the report figures stay untouched. A report of another engagement answers\n404 without a hint.",
+        "operationId": "set_report_statement_api_v1_portal_board_engagements__engagement_id__reports__report_id__statement_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Engagement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__portal__board__BoardStatementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Set Report Statement Api V1 Portal Board Engagements  Engagement Id  Reports  Report Id  Statement Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stellungnahme des Beirats zum Prüfbericht (A76, PÜ09, nur Text)",
         "tags": [
           "Portal Beirat"
         ]
@@ -63136,6 +64316,7 @@
     },
     "/api/v1/sepa-mandates": {
       "get": {
+        "description": "Paginierung wie ``GET /tickets`` (Kopfzeilen ``X-Total-Count``, ``X-Page``,\n``X-Page-Size``), Antwort bleibt eine Liste.",
         "operationId": "list_mandates_api_v1_sepa_mandates_get",
         "parameters": [
           {
@@ -63170,6 +64351,51 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Seite (ab 1), zusammen mit page_size",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Seite (ab 1), zusammen mit page_size",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+              "title": "Page Size"
+            }
           }
         ],
         "responses": {
@@ -63185,7 +64411,27 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Page": {
+                "description": "Aktuelle Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Einträge je Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Total-Count": {
+                "description": "Gesamtzahl der Einträge der Filterung",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           },
           "422": {
             "content": {
@@ -66009,6 +67255,60 @@
         ]
       }
     },
+    "/api/v1/tenant/members/{membership_id}/reply-approval": {
+      "put": {
+        "description": "Betreiberentscheidung 26.09.2026: Ticketantworten von Mitgliedern mit Kennzeichen\n(Azubi, neuer Mitarbeiter, optional befristet) gehen als Vorlage an die Freigabeberechtigten;\nalle anderen Mitglieder mit ``communication:approve`` senden direkt. Jede Änderung wird als\n``membership.reply_approval_changed`` protokolliert.",
+        "operationId": "put_member_reply_approval_api_v1_tenant_members__membership_id__reply_approval_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberReplyApproval"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kennzeichen Freigabepflicht für Ticketantworten setzen (M20-03)",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/tenant/members/{membership_id}/reset-password": {
       "post": {
         "description": "Sets a new start password, clears the lockout and ends all sessions of the user. The\nadministrator hands the password over personally; the user changes it under Meine Daten.",
@@ -66642,7 +67942,68 @@
         ]
       }
     },
+    "/api/v1/tenant/webhooks/event-types": {
+      "get": {
+        "description": "Documented event types (``EVENT_TYPES``, docs/integrations/webhooks.md).",
+        "operationId": "list_webhook_event_types_api_v1_tenant_webhooks_event_types_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WebhookEventTypeOut"
+                  },
+                  "title": "Response List Webhook Event Types Api V1 Tenant Webhooks Event Types Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ereigniskatalog für Webhooks",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/tenant/webhooks/{hook_id}": {
+      "delete": {
+        "description": "Remove the subscription with its delivery log (cascade); the domain events stay.",
+        "operationId": "delete_webhook_api_v1_tenant_webhooks__hook_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Hook Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Webhook löschen",
+        "tags": [
+          "Mandant"
+        ]
+      },
       "patch": {
         "operationId": "patch_webhook_api_v1_tenant_webhooks__hook_id__patch",
         "parameters": [
@@ -68699,7 +70060,7 @@
     },
     "/api/v1/tickets/{ticket_id}/reply": {
       "post": {
-        "description": "Legt die ausgehende Nachricht am Ticket an und reicht sie sofort zur Freigabe ein\n(Status ``pending``). Der Versand selbst erfolgt wie bei jeder Antwort über\n``POST /mail/messages/{id}/approve`` (Vier-Augen-Prinzip, Postfach des Tickets). Ohne\n``confirm`` wird nichts angelegt; ein Versand ohne ausdrücklichen Klick ist ausgeschlossen.",
+        "description": "Legt die ausgehende Nachricht am Ticket an und reicht sie sofort zur Freigabe ein\n(Status ``pending``). Der Versand selbst erfolgt wie bei jeder Antwort über\n``POST /mail/messages/{id}/approve`` (Vier-Augen-Prinzip, Postfach des Tickets). Ohne\n``confirm`` wird nichts angelegt; ein Versand ohne ausdrücklichen Klick ist ausgeschlossen.\n\nM20-03 (Betreiberentscheidung 26.09.2026, docs/rules/M20-06, Abschnitt Direktversand):\nträgt der Verfasser das Kennzeichen Freigabepflicht (Azubi, neuer Mitarbeiter) oder ist\ndie Notbremse des Mandanten an, bleibt die Antwort ``pending`` und geht als Vorlage per\nBenachrichtigung an alle Freigabeberechtigten. Sonst wird der Entwurf eines Nutzers mit\n``communication:approve`` sofort über den zweiphasigen Versandpfad (``approve_and_send``,\nRegel M20-06) durch denselben Nutzer freigegeben und versendet. Die Antwort enthält\n``direct_send`` mit ``attempted``, ``reason`` (``author_flagged``, ``tenant_all``,\n``no_permission`` oder ``None``) und ``error``.",
         "operationId": "reply_to_ticket_api_v1_tickets__ticket_id__reply_post",
         "parameters": [
           {
@@ -69334,6 +70695,51 @@
         "summary": "Auftrag anlegen",
         "tags": [
           "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/work-orders/{order_id}/appointment-proposals": {
+      "get": {
+        "operationId": "appointment_proposals_api_v1_work_orders__order_id__appointment_proposals_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Appointment Proposals Api V1 Work Orders  Order Id  Appointment Proposals Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Terminvorschläge des Dienstleisters zum Auftrag mit bestätigtem Termin",
+        "tags": [
+          "tickets"
         ]
       }
     },

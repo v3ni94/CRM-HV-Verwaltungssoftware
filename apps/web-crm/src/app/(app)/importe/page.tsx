@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -21,7 +22,7 @@ const STATUS_VARIANT: Record<string, StatusPillVariant> = {
 export default async function ImportsPage() {
   const t = await getTranslations("Imports");
   const api = serverApi();
-  const [{ data, error, response }, me] = await Promise.all([api.GET("/api/v1/imports"), api.GET("/api/v1/auth/me")]);
+  const [{ data, error, response }, me] = await Promise.all([api.GET("/api/v1/imports"), getMe()]);
   redirectIfUnauthenticated(response);
   const canUndo = me.data?.permissions.includes("ai:delete") ?? false;
   return (

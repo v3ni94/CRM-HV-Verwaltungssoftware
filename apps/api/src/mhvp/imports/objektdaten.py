@@ -11,6 +11,11 @@ amount is posted (rule 0.1.3: an amount from a list is no released rule).
 Default is a test run without database changes; ``--apply`` writes. Object numbers with more
 than three digits cannot be created (``property.number`` is three characters) and must be
 assigned with ``--number-map OLD=NEW``; one and two digit numbers are zero padded and reported.
+
+The file is read with ``mhvp.imports.csvtext`` (encoding, delimiter, quoting, spacing, empty
+and repeated header rows, column order and extra columns are tolerated and reported); rows
+without object or unit number and exact duplicate rows are reported and skipped instead of
+aborting the whole file.
 """
 
 # ruff: noqa: T201 - operator CLI, output goes to the terminal
@@ -18,14 +23,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import csv
-import io
 import re
 import sys
 import uuid
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
@@ -35,16 +39,37 @@ from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.logging import configure_logging, get_logger
 from mhvp.imports import services as import_services
+from mhvp.imports.csvtext import Table, column_key, decode_csv, read_table
 from mhvp.imports.models import RowStatus
 from mhvp.platform.models import Tenant, User
 from mhvp.properties.models import Property, PropertyStatus, Unit, UnitType
 
 MANAGEMENT_MAP = {
     "WEG-Verwaltung": "hoa",
+    "WEG": "hoa",
     "Mietverwaltung": "rental",
+    "Miete": "rental",
     "WEG mit SE-Verwaltung": "hoa_with_sev",
+    "WEG mit SEV": "hoa_with_sev",
     "Sondereigentumsverwaltung": "hoa_with_sev",
+    "SE-Verwaltung": "hoa_with_sev",
+    "SEV": "hoa_with_sev",
 }
+_MANAGEMENT_BY_KEY = {column_key(k): v for k, v in MANAGEMENT_MAP.items()}
+# Accepted header spellings per required or optional column (compared via ``column_key``).
+COLUMNS: dict[str, tuple[str, ...]] = {
+    "Objekt-Nummer": ("Objekt-Nummer", "Objektnummer", "Objekt Nr", "Objekt-Nr."),
+    "Objekt": ("Objekt", "Objektbezeichnung", "Objektname"),
+    "Verwaltungsart": ("Verwaltungsart", "Verwaltung"),
+    "VE-Nummer": ("VE-Nummer", "VE Nr", "VE-Nr.", "Einheitennummer", "Einheit-Nummer"),
+    "Gebäude": ("Gebäude", "Gebaeude", "Haus"),
+    "VE-Beschreibung": ("VE-Beschreibung", "VE Bezeichnung", "Einheit", "Bezeichnung"),
+    "VE-Lage": ("VE-Lage", "Lage"),
+    "aktueller Eigentümer": ("aktueller Eigentümer", "Eigentümer", "Eigentuemer"),
+    "aktueller Mieter": ("aktueller Mieter", "Mieter"),
+    "vereinbarter Zahlbetrag": ("vereinbarter Zahlbetrag", "Zahlbetrag", "Betrag"),
+}
+REQUIRED = ("Objekt-Nummer", "Objekt", "Verwaltungsart", "VE-Nummer")
 # Immoware24 name prefixes the operator uses to mark the state of an object.
 _HANDED_OVER = re.compile(r"^\s*Z\s*[-.]?\s*ABGE(GE)?BEN\b[\s:-]*", re.IGNORECASE)
 _FINAL_STATEMENT = re.compile(r"^\s*Y\s*ABRECHNUNG\b[\s:-]*", re.IGNORECASE)
@@ -67,6 +92,19 @@ class UnitRow:
     def unit_type(self) -> UnitType:
         return guess_unit_type(self.label, self.location)
 
+    def content(self) -> tuple[str | None, ...]:
+        """Everything but the line: two rows with the same content are one unit."""
+        return (
+            self.number,
+            self.label,
+            self.building,
+            self.location,
+            self.owner,
+            self.owner_amount,
+            self.tenant,
+            self.tenant_amount,
+        )
+
 
 @dataclass
 class PropertyRow:
@@ -75,6 +113,15 @@ class PropertyRow:
     management: str
     units: list[UnitRow] = field(default_factory=list)
     line: int = 0
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ParsedObjektdaten:
+    """Grouped rows plus what the reader tolerated (encoding, delimiter, skipped lines)."""
+
+    rows: list[PropertyRow]
+    notes: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -117,10 +164,20 @@ def guess_unit_type(label: str | None, location: str | None) -> UnitType:
 
 
 def normalise_number(raw: str, number_map: dict[str, str]) -> tuple[str | None, str | None]:
-    """Three digit platform number for a source number; ``(None, reason)`` if impossible."""
+    """Three digit platform number for a source number; ``(None, reason)`` if impossible.
+
+    Leading zeros are not significant in the source ("081", "81" and "0081" are the same
+    object); one and two digit numbers are zero padded, and ``number_map`` is consulted with
+    the number as written and without leading zeros."""
     src = raw.strip()
-    if src in number_map:
-        target = number_map[src]
+    target = number_map.get(src)
+    if target is None and src.isdigit():
+        target = number_map.get(src.lstrip("0") or "0")
+    if target is not None:
+        target = target.strip()
+        if re.fullmatch(r"[0-9]{1,2}", target):
+            padded = target.zfill(3)
+            return padded, f"Objektnummer {src} laut Zuordnung {src}={target} als {padded} angelegt"
         if not re.fullmatch(r"[0-9]{3}", target):
             return None, f"Zuordnung {src}={target} ist nicht dreistellig"
         return target, f"Objektnummer {src} laut Zuordnung als {target} angelegt"
@@ -128,9 +185,17 @@ def normalise_number(raw: str, number_map: dict[str, str]) -> tuple[str | None, 
         return src, None
     if re.fullmatch(r"[0-9]{1,2}", src):
         return src.zfill(3), f"Objektnummer {src} mit führenden Nullen als {src.zfill(3)} angelegt"
+    if re.fullmatch(r"0+[0-9]{1,3}", src):
+        short = src.lstrip("0").zfill(3)
+        return short, f"Objektnummer {src} ohne überzählige führende Nullen als {short} angelegt"
     return None, (
         f"Objektnummer {src!r} ist nicht dreistellig; bitte mit --number-map {src}=NNN zuordnen"
     )
+
+
+def management_type_for(raw: str) -> str | None:
+    """Platform management type for the export's spelling (case, spacing, hyphens ignored)."""
+    return _MANAGEMENT_BY_KEY.get(column_key(raw))
 
 
 def classify_name(name: str) -> tuple[str, PropertyStatus, str | None]:
@@ -144,73 +209,87 @@ def classify_name(name: str) -> tuple[str, PropertyStatus, str | None]:
     return name.strip(), PropertyStatus.ONBOARDING, None
 
 
-def parse_objektdaten(text: str) -> list[PropertyRow]:
-    """Rows grouped by object number in file order; header names as Immoware24 exports them."""
-    dialect = csv.Sniffer().sniff(text[:4096], delimiters=";,\t")
-    reader = csv.reader(io.StringIO(text), dialect)
-    headers = [h.strip() for h in next(reader)]
-    required = ("Objekt-Nummer", "Objekt", "Verwaltungsart", "VE-Nummer")
-    missing = [h for h in required if h not in headers]
-    if missing:
-        raise ValueError(f"Spalten fehlen: {', '.join(missing)}")
-    index = {h: i for i, h in enumerate(headers)}
-    # "vereinbarter Zahlbetrag" appears twice: after the owner and after the tenant column.
-    amount_cols = [i for i, h in enumerate(headers) if h == "vereinbarter Zahlbetrag"]
-    owner_col = index.get("aktueller Eigentümer")
-    tenant_col = index.get("aktueller Mieter")
+def parse_objektdaten(text: str, source: str | None = None) -> ParsedObjektdaten:
+    """Rows grouped by object number in file order; header names as Immoware24 exports them.
 
-    def cell(row: list[str], i: int | None) -> str | None:
-        if i is None or i >= len(row):
+    Column order and extra columns do not matter; a missing required column raises a
+    ``ValueError`` that names it. Rows without object or unit number and exact duplicate rows
+    are skipped and reported in ``notes``."""
+    table: Table = read_table(text, source)
+    table.require({label: COLUMNS[label] for label in REQUIRED}, source)
+    col = {label: table.column(*names) for label, names in COLUMNS.items()}
+    # "vereinbarter Zahlbetrag" appears twice, once after the owner and once after the tenant
+    # column: the amount columns are paired with the owner and tenant columns in file order.
+    amount_cols = table.columns(*COLUMNS["vereinbarter Zahlbetrag"])
+    owner_col = col["aktueller Eigentümer"]
+    tenant_col = col["aktueller Mieter"]
+    anchors = sorted(c for c in (owner_col, tenant_col) if c is not None)
+    amount_of: dict[int, int] = dict(zip(anchors, amount_cols, strict=False))
+
+    def amount_after(row: Any, anchor: int | None) -> str | None:
+        if anchor is None:
             return None
-        return row[i].strip() or None
+        return table.cell(row, amount_of.get(anchor))
 
-    def amount_after(row: list[str], col: int | None) -> str | None:
-        if col is None:
-            return None
-        following = [i for i in amount_cols if i > col]
-        return cell(row, following[0]) if following else None
-
+    notes = list(table.notes)
     grouped: dict[str, PropertyRow] = {}
-    for line, row in enumerate(reader, start=2):
-        if not any(c.strip() for c in row):
-            continue
-        src = cell(row, index["Objekt-Nummer"])
-        unit_number = cell(row, index["VE-Nummer"])
+    skipped = 0
+    duplicates = 0
+    for row in table.rows:
+        src = table.cell(row, col["Objekt-Nummer"])
+        unit_number = table.cell(row, col["VE-Nummer"])
         if src is None or unit_number is None:
-            raise ValueError(f"Zeile {line}: Objekt-Nummer oder VE-Nummer fehlt")
+            missing = "Objekt-Nummer" if src is None else "VE-Nummer"
+            notes.append(f"Zeile {row.line}: {missing} fehlt, Zeile übersprungen")
+            skipped += 1
+            continue
         prop = grouped.get(src)
         if prop is None:
             prop = PropertyRow(
                 source_number=src,
-                name=cell(row, index["Objekt"]) or "",
-                management=cell(row, index["Verwaltungsart"]) or "",
-                line=line,
+                name=table.cell(row, col["Objekt"]) or "",
+                management=table.cell(row, col["Verwaltungsart"]) or "",
+                line=row.line,
             )
             grouped[src] = prop
-        prop.units.append(
-            UnitRow(
-                number=unit_number,
-                label=cell(row, index.get("VE-Beschreibung")),
-                building=cell(row, index.get("Gebäude")),
-                location=cell(row, index.get("VE-Lage")),
-                owner=cell(row, owner_col),
-                owner_amount=amount_after(row, owner_col),
-                tenant=cell(row, tenant_col),
-                tenant_amount=amount_after(row, tenant_col),
-                line=line,
-            )
+        unit = UnitRow(
+            number=unit_number,
+            label=table.cell(row, col["VE-Beschreibung"]),
+            building=table.cell(row, col["Gebäude"]),
+            location=table.cell(row, col["VE-Lage"]),
+            owner=table.cell(row, owner_col),
+            owner_amount=amount_after(row, owner_col),
+            tenant=table.cell(row, tenant_col),
+            tenant_amount=amount_after(row, tenant_col),
+            line=row.line,
         )
-    return list(grouped.values())
+        twin = next((u for u in prop.units if u.content() == unit.content()), None)
+        if twin is not None:
+            prop.notes.append(
+                f"Zeile {row.line}: VE {unit_number} ist ein Duplikat von Zeile {twin.line}, "
+                "einmal übernommen"
+            )
+            duplicates += 1
+            continue
+        prop.units.append(unit)
+    if skipped:
+        notes.append(f"{skipped} Zeile(n) ohne Objekt-Nummer oder VE-Nummer übersprungen")
+    if duplicates:
+        notes.append(f"{duplicates} doppelte Zeile(n) nur einmal übernommen")
+    return ParsedObjektdaten(rows=list(grouped.values()), notes=notes)
 
 
-def prepare(rows: list[PropertyRow], number_map: dict[str, str]) -> list[Prepared]:
+def prepare(
+    parsed: ParsedObjektdaten | list[PropertyRow], number_map: dict[str, str]
+) -> list[Prepared]:
+    rows = parsed.rows if isinstance(parsed, ParsedObjektdaten) else parsed
     out: list[Prepared] = []
     for row in rows:
         number, number_note = normalise_number(row.source_number, number_map)
         name, status, state_note = classify_name(row.name)
-        management_type = MANAGEMENT_MAP.get(row.management)
+        management_type = management_type_for(row.management)
         problems: list[str] = []
-        notes = [n for n in (number_note, state_note) if n]
+        notes = [n for n in (number_note, state_note) if n] + list(row.notes)
         if number is None and number_note:
             problems.append(number_note)
         if management_type is None:
@@ -220,7 +299,9 @@ def prepare(rows: list[PropertyRow], number_map: dict[str, str]) -> list[Prepare
         seen: Counter[str] = Counter(u.number for u in row.units)
         for unit_number, count in seen.items():
             if count > 1:
-                problems.append(f"VE-Nummer {unit_number} kommt {count} mal vor")
+                problems.append(
+                    f"VE-Nummer {unit_number} kommt {count} mal mit abweichenden Angaben vor"
+                )
         out.append(Prepared(number, name[:200], management_type, status, notes, problems, row))
     return out
 
@@ -254,11 +335,13 @@ async def apply_prepared(
     *,
     skip_handed_over: bool = False,
     recorder: Any | None = None,
+    file_notes: list[str] | None = None,
 ) -> dict[str, Any]:
     """Create properties and units in an open tenant session (CLI and API share this).
 
     The caller decides whether the transaction is committed (apply) or rolled back (test run).
-    ``recorder`` (``mhvp.ai.imports.Recorder``) registers created rows for undo."""
+    ``recorder`` (``mhvp.ai.imports.Recorder``) registers created rows for undo; ``file_notes``
+    (encoding, delimiter, skipped lines) are passed through to the report."""
     principal = _Principal(tenant_id, user_id)
     imported_at = datetime.now(UTC).strftime("%d.%m.%Y")
     counts: Counter[str] = Counter()
@@ -334,7 +417,7 @@ async def apply_prepared(
                 }
         entry["einheiten"] = dict(unit_counts)
     await session.flush()
-    return {"counts": dict(counts), "objekte": lines}
+    return {"counts": dict(counts), "objekte": lines, "datei_hinweise": list(file_notes or [])}
 
 
 async def import_prepared(
@@ -345,13 +428,19 @@ async def import_prepared(
     *,
     apply: bool,
     skip_handed_over: bool = False,
+    file_notes: list[str] | None = None,
 ) -> dict[str, Any]:
     """Create properties and units; a test run rolls the transaction back."""
     report: dict[str, Any] = {}
     try:
         async with tenant_transaction(factory, tenant_id) as session:
             report = await apply_prepared(
-                session, tenant_id, user_id, prepared, skip_handed_over=skip_handed_over
+                session,
+                tenant_id,
+                user_id,
+                prepared,
+                skip_handed_over=skip_handed_over,
+                file_notes=file_notes,
             )
             if not apply:
                 raise _DryRunError
@@ -377,6 +466,8 @@ def _parse_number_map(values: list[str]) -> dict[str, str]:
 def _print_report(report: dict[str, Any]) -> None:
     mode = "ÜBERNOMMEN" if report["apply"] else "TESTLAUF (nichts gespeichert)"
     print(f"Objektdaten-Import: {mode}")
+    for note in report.get("datei_hinweise", []):
+        print(f"  Datei: {note}")
     for key, value in sorted(report["counts"].items()):
         print(f"  {key}: {value}")
     for entry in report["objekte"]:
@@ -394,9 +485,9 @@ def _print_report(report: dict[str, Any]) -> None:
             print(f"    VE {up['ve']}: {'; '.join(up['meldungen'])}")
 
 
-def _read_file(path: str) -> str:
+def _read_file(path: str) -> tuple[str, str | None]:
     with open(path, "rb") as handle:
-        return handle.read().decode("utf-8-sig", errors="strict")
+        return decode_csv(handle.read())
 
 
 async def run(argv: list[str] | None = None) -> int:
@@ -404,7 +495,9 @@ async def run(argv: list[str] | None = None) -> int:
         prog="python -m mhvp.imports.objektdaten",
         description="Objekte und Einheiten aus einer Immoware24-Objektliste anlegen.",
     )
-    parser.add_argument("file", help="CSV (Semikolon, UTF-8) mit den Objektdaten")
+    parser.add_argument(
+        "file", help="CSV mit den Objektdaten (UTF-8 oder Windows-1252; Semikolon, Komma, Tab)"
+    )
     parser.add_argument(
         "--tenant", required=True, help="Mandanten-Slug, z. B. hausverwaltung-mueller"
     )
@@ -426,8 +519,16 @@ async def run(argv: list[str] | None = None) -> int:
         help="Objekte mit Präfix 'Z ABGEGEBEN' nicht anlegen",
     )
     args = parser.parse_args(argv)
-    number_map = _parse_number_map(args.number_map)
-    prepared = prepare(parse_objektdaten(_read_file(args.file)), number_map)
+    try:
+        number_map = _parse_number_map(args.number_map)
+        text, encoding_note = _read_file(args.file)
+        parsed = parse_objektdaten(text, Path(args.file).name)
+    except (argparse.ArgumentTypeError, ValueError, OSError) as exc:
+        print(f"Datei nicht lesbar: {exc}", file=sys.stderr)
+        return 2
+    if encoding_note:
+        parsed.notes.insert(0, encoding_note)
+    prepared = prepare(parsed, number_map)
 
     settings = get_settings()
     configure_logging(settings)
@@ -455,6 +556,7 @@ async def run(argv: list[str] | None = None) -> int:
             prepared,
             apply=args.apply,
             skip_handed_over=args.skip_handed_over,
+            file_notes=parsed.notes,
         )
         _print_report(report)
         log.info("objektdaten_import", apply=args.apply, counts=report["counts"])

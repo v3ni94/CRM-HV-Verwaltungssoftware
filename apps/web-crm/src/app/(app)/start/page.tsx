@@ -7,6 +7,7 @@ import { TicketAnalytics } from "@/components/dashboard/TicketAnalytics";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TileSkeleton } from "@/components/ui/Skeleton";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -131,7 +132,7 @@ async function DigestData() {
 
 export default async function DashboardPage() {
   const t = await getTranslations("Workspace");
-  const { data: me } = await serverApi().GET("/api/v1/auth/me");
+  const { data: me } = await getMe();
   const canSeeAnalytics = me?.permissions.includes("tickets:read") ?? false;
   return (
     <div className="flex flex-col gap-8">

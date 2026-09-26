@@ -4,11 +4,14 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { formatDateTime, type WorkOrder } from "@/components/portal/types";
+import { formatEur } from "@/components/portal/HoaAccountTable";
+import { ORDER_STATUS, formatDateTime, type WorkOrder } from "@/components/portal/types";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 const CLOSED = new Set(["rejected", "cancelled", "accepted", "invoiced"]);
+
+const STATUS = new Set<string>(ORDER_STATUS);
 
 const PROPOSAL_STATES = new Set(["approved", "scheduled"]);
 
@@ -72,7 +75,10 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
     event.preventDefault();
     await run(async () => {
       const amount = quoteAmount.trim().replace(",", ".");
-      if (!amount) return;
+      if (!amount) {
+        setError(t("quoteAmountRequired"));
+        return;
+      }
       let documentId: string | null = null;
       if (quoteFile) {
         documentId = await uploadOne(quoteFile);
@@ -90,7 +96,10 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
   async function submitAppointment(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
-      if (!appointment) return;
+      if (!appointment) {
+        setError(t("appointmentRequired"));
+        return;
+      }
       const result = await bff(`/api/bff/portal/work-orders/${order.id}/appointment`, {
         method: "POST",
         body: JSON.stringify({ scheduled_at: new Date(appointment).toISOString() }),
@@ -128,7 +137,10 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
   async function submitComplete(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
-      if (report.trim().length < 3) return;
+      if (report.trim().length < 3) {
+        setError(t("reportRequired"));
+        return;
+      }
       const ids: string[] = [];
       for (const file of Array.from(photos ?? [])) {
         const id = await uploadOne(file);
@@ -151,7 +163,10 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
         setError(t("invoiceDocumentRequired"));
         return;
       }
-      if (!invoiceNumber.trim() || !invoiceDate || !invoiceGross.trim()) return;
+      if (!invoiceNumber.trim() || !invoiceDate || !invoiceGross.trim()) {
+        setError(t("invoiceFieldsRequired"));
+        return;
+      }
       const documentId = await uploadOne(invoiceFile);
       if (documentId === null) return;
       const result = await bff(`/api/bff/portal/work-orders/${order.id}/invoice`, {
@@ -171,18 +186,25 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
   return (
     <div className={ui.pageGap}>
       <div className={`${ui.card} flex flex-col gap-2`}>
-        <span className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-medium">{order.description}</span>
-          <span className={ui.badge}>{t(`status.${order.status}`)}</span>
-        </span>
-        {order.quote_amount ? <span className="text-sm text-muted">{t("quoteAmount")}: {order.quote_amount} EUR</span> : null}
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h1 className={`${ui.h2} break-words`}>
+            <span className="sr-only">{t("orderTitle")}: </span>
+            {order.description}
+          </h1>
+          <span className={ui.badge}>{STATUS.has(order.status) ? t(`status.${order.status}`) : order.status}</span>
+        </div>
+        {order.quote_amount ? (
+          <span className="text-sm text-muted">
+            {t("quoteAmount")}: <span className="whitespace-nowrap">{formatEur(order.quote_amount)}</span>
+          </span>
+        ) : null}
         {order.scheduled_at ? (
           <span className="text-sm text-muted">
             {t("appointmentDate")}: {formatDateTime(order.scheduled_at)}
           </span>
         ) : null}
         {order.photos.length > 0 ? (
-          <span className="text-sm text-muted">
+          <span className="break-all text-sm text-muted">
             {t("photosStored")}: {order.photos.map((p) => p.filename).join(", ")}
           </span>
         ) : null}
@@ -192,13 +214,17 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           {error}
         </p>
       ) : null}
-      {notice ? <p className={ui.success}>{notice}</p> : null}
+      {notice ? (
+        <p role="status" className={ui.success}>
+          {notice}
+        </p>
+      ) : null}
       {!CLOSED.has(order.status) ? (
         <button type="button" className={ui.danger} disabled={busy} onClick={() => void decline()}>
           {t("declineAction")}
         </button>
       ) : null}
-      <form onSubmit={submitQuote} className={`${ui.card} flex flex-col gap-3`}>
+      <form onSubmit={submitQuote} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
         <h2 className={ui.h2}>{t("quoteSubmit")}</h2>
         <p className={ui.help}>{tPortal("proposalNotice")}</p>
         <div>
@@ -208,6 +234,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           <input
             id="quote-amount"
             inputMode="decimal"
+            aria-required="true"
             className={ui.input}
             value={quoteAmount}
             onChange={(e) => setQuoteAmount(e.target.value)}
@@ -224,7 +251,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
         </button>
       </form>
       {PROPOSAL_STATES.has(order.status) ? (
-        <form onSubmit={submitProposals} className={`${ui.card} flex flex-col gap-3`}>
+        <form onSubmit={submitProposals} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
           <h2 className={ui.h2}>{t("proposalsTitle")}</h2>
           <p className={ui.help}>{t("proposalsHint")}</p>
           {slots.map((value, index) => (
@@ -268,7 +295,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           </ul>
         </div>
       ) : null}
-      <form onSubmit={submitAppointment} className={`${ui.card} flex flex-col gap-3`}>
+      <form onSubmit={submitAppointment} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
         <h2 className={ui.h2}>{t("appointmentDirect")}</h2>
         <div>
           <label htmlFor="appointment-date" className={ui.label}>
@@ -277,6 +304,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           <input
             id="appointment-date"
             type="datetime-local"
+            aria-required="true"
             className={ui.input}
             value={appointment}
             onChange={(e) => setAppointment(e.target.value)}
@@ -286,13 +314,13 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           {t("appointmentSubmit")}
         </button>
       </form>
-      <form onSubmit={submitComplete} className={`${ui.card} flex flex-col gap-3`}>
+      <form onSubmit={submitComplete} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
         <h2 className={ui.h2}>{t("completeSubmit")}</h2>
         <div>
           <label htmlFor="report" className={ui.label}>
             {t("report")}
           </label>
-          <textarea id="report" rows={4} className={ui.input} value={report} onChange={(e) => setReport(e.target.value)} />
+          <textarea id="report" rows={4} className={ui.input} aria-required="true" value={report} onChange={(e) => setReport(e.target.value)} />
         </div>
         <div>
           <label htmlFor="photos" className={ui.label}>
@@ -304,20 +332,20 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           {t("completeSubmit")}
         </button>
       </form>
-      <form onSubmit={submitInvoice} className={`${ui.card} flex flex-col gap-3`}>
+      <form onSubmit={submitInvoice} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
         <h2 className={ui.h2}>{t("invoiceSubmit")}</h2>
         <p className={ui.help}>{tPortal("proposalNotice")}</p>
         <div>
           <label htmlFor="invoice-number" className={ui.label}>
             {t("invoiceNumber")}
           </label>
-          <input id="invoice-number" className={ui.input} value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+          <input id="invoice-number" className={ui.input} aria-required="true" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
         </div>
         <div>
           <label htmlFor="invoice-date" className={ui.label}>
             {t("invoiceDate")}
           </label>
-          <input id="invoice-date" type="date" className={ui.input} value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+          <input id="invoice-date" type="date" className={ui.input} aria-required="true" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
         </div>
         <div>
           <label htmlFor="invoice-gross" className={ui.label}>
@@ -326,6 +354,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           <input
             id="invoice-gross"
             inputMode="decimal"
+            aria-required="true"
             className={ui.input}
             value={invoiceGross}
             onChange={(e) => setInvoiceGross(e.target.value)}
@@ -335,7 +364,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           <label htmlFor="invoice-file" className={ui.label}>
             {t("invoiceDocument")}
           </label>
-          <input id="invoice-file" type="file" className={ui.input} onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)} />
+          <input id="invoice-file" type="file" className={ui.input} aria-required="true" onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)} />
         </div>
         <button type="submit" className={`${ui.button} ${ui.actionFull}`} disabled={busy}>
           {t("invoiceSubmit")}

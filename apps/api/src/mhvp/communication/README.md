@@ -21,16 +21,36 @@ oder `pending` -> `draft` bei Zurückweisung:
 2. `POST /mail/messages/{id}/submit` reicht ihn ein (`draft` -> `pending`,
    `submitted_by`/`submitted_at` gesetzt, eine vorherige `rejection_note` entfällt).
 3. `POST /mail/messages/{id}/approve` (Berechtigung `communication:approve`) gibt frei und
-   sendet sofort. Vier-Augen-Prinzip: Wer den Entwurf erstellt oder eingereicht hat, kann ihn
-   nicht selbst freigeben (`409`). Versand läuft je nach Postfachart über `gmail.send_raw`
-   (Gmail-Postfächer, Scope `gmail.send`) oder den bestehenden SMTP-Weg. Bei Erfolg: `status`
-   wird `sent`, `sent_at`, `approved_by`/`approved_at`, `header_message_id`
-   (`email.utils.make_msgid`), bei Gmail zusätzlich `gmail_message_id`; am verknüpften Ticket
-   entsteht ein `TicketEvent` der Art `mail_sent`, das Domain-Event `mail.sent` wird
-   ausgelöst. Schlägt der Versand fehl (z. B. `403`, fehlende Sendeberechtigung), bleibt der
-   Status `pending` und die Anfrage endet mit `409`.
+   sendet in zwei Schritten (Review 26.09.2026, M1, `docs/rules/M20-06-mail-versand-nachweis.md`):
+   Transaktion 1 speichert `sending` mit der `Message-ID` (`header_message_id`,
+   `email.utils.make_msgid`) als Idempotenzschlüssel, Transaktion 2 sendet unter Zeilensperre
+   über `gmail.send_raw` (Gmail, Scope `gmail.send`) oder SMTP und setzt `sent`, `sent_at`,
+   `approved_by`/`approved_at`, bei Gmail `gmail_message_id`; am verknüpften Ticket entsteht
+   ein `TicketEvent` der Art `mail_sent`, das Domain-Event `mail.sent` wird ausgelöst.
+   Vier-Augen-Prinzip: Ersteller, Einreicher und letzte Bearbeiter (`updated_by`) können nicht
+   freigeben (`409`); der Freigebende braucht Zugriff auf das Postfach (`mailbox_accessible`,
+   sonst `403`). Lehnt der Transport ab (z. B. `403`), bleibt der Status `pending` mit
+   `send_error` und die Anfrage endet mit `409`. Bleibt eine Nachricht `sending` (Fehler nach
+   dem Versand), sucht die nächste Freigabe bei Gmail nach der `Message-ID`
+   (`GmailClient.find_by_rfc822_msgid`): Treffer heißt `sent` ohne zweiten Versand, sonst ein
+   Versand mit derselben `Message-ID`; bei SMTP kein erneuter Versand, Auflösung über `reject`.
+   Ausnahme M20-03 (Betreiberentscheidung 26.09.2026, `docs/rules/M20-06`, Abschnitt
+   Direktversand): Eine dem Ticket zugeordnete Antwort darf der Verfasser selbst freigeben,
+   wenn er `communication:approve` hat, weder zum Zeitpunkt der Vorformulierung noch aktuell
+   das Kennzeichen `membership.reply_approval_required` trägt und die Notbremse
+   `tenant_settings.ticket_reply_approval_all` aus ist (`_self_approval_allowed`).
+   `POST /tickets/{id}/reply` nutzt denselben Pfad (`approve_and_send`) für den sofortigen
+   Versand; sonst benachrichtigt `services.notify_reply_approvers` alle übrigen
+   Freigabeberechtigten (`mail.approval_requested`). Ereignisse: `message.direct_sent`,
+   am Ticket `reply_drafted`, `reply_approved`, `reply_sent`.
 4. `POST /mail/messages/{id}/reject` (`communication:approve`, Pflichtfeld `note`) weist einen
-   eingereichten Entwurf zurück (`pending` -> `draft`, `rejection_note` gesetzt).
+   eingereichten oder offenen Versuch zurück (`pending` oder `sending` -> `draft`,
+   `rejection_note` gesetzt).
+
+Die Liste `GET /mail/messages` liefert `body_preview` (200 Zeichen) statt `body` und
+`body_html` (M3); `GET /mail/messages/{id}` und der Thread liefern den Text,
+`GET /mail/messages/count` die Anzahl je Filter (Badge "Freigaben"). `DELETE /mail/mailboxes/{id}`
+ist ein Soft-Delete (`deleted_at`, M12): Nachrichten behalten die Postfachbindung.
 
 Die Berechtigung `communication:approve` ist Teil von `ALL_PERMISSIONS` und damit in den
 Administratorrollen automatisch enthalten; sie ist in keiner Sachbearbeiterrolle vorbelegt und
@@ -102,4 +122,21 @@ fetch or ingest fails is stored in `mailbox_sync_retry` (`sync_retry.py`, up to 
 and retried first in the following runs; the run result lists `errors` per Gmail id. Tickets
 created from mail get their SLA clock in the sync; `mhvp.sla.tasks` backfills clocks for open
 tickets without one. The invoice forwarding (`forwarding_dispatch.py`) attaches the stored
-attachments of the original and archives the original only when all of them were sent.
+attachments of the original and archives the original only when all of them were sent. The
+ingest only queues the forwarding (`classification.invoice_forward.status = "queued"`, M13);
+`services.forward_queued` sends after the commit (row lock, marker `sent`/`failed` per message),
+started by `/mail/ingest`, `/mail/mailboxes/{id}/sync` and the sync job (Celery task
+`mhvp.communication.forward_queued`, inline with `ai_inline`). Inbound mails store
+`gmail_message_id` and `gmail_thread_id` (M15, M7); threading uses `In-Reply-To`, then
+`References`, then the Gmail thread id (`services.find_parent`).
+
+## Further files (addendum 26.09.2026)
+
+Checked against the folder contents on 26.09.2026, the following files were not listed above:
+
+* `assignment.py`: automatic ticket assignment from inbound mails (operator 25.09.2026)
+* `gcal.py`: Google Calendar API client with refresh token (M23-02)
+* `html.py`: sanitised HTML for mail display in the ticket mail thread (M20, M19-06)
+* `invoice_intake.py`: automatic invoice intake from mail attachments behind the tenant switch `invoice_intake_auto` (M14-05, default off)
+* `preparation.py`: mail preparation: sender to contact, role, unit, documents per property, reply draft (M34, rule M20-05)
+* `transport.py`: shared mail transport of a mailbox: Gmail `send_raw` or SMTP; used after four eyes approval and by system mails

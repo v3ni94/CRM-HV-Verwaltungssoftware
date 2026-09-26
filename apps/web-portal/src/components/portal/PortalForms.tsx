@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { PortalForm, PortalFormField } from "@/components/portal/types";
 import { bff } from "@/lib/bff";
@@ -20,6 +20,12 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
   const [files, setFiles] = useState<Files>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  // Keyboard: the opening button is replaced by the form, so focus moves to its heading.
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
 
   function fieldId(field: PortalFormField) {
     return `form-${form.id}-${field.key}`;
@@ -72,14 +78,24 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className={`${ui.card} flex flex-col gap-3`} aria-label={form.name} data-testid="portal-form">
-      <h2 className={ui.h2}>{form.name}</h2>
+    <form
+      onSubmit={onSubmit}
+      noValidate
+      aria-busy={busy}
+      className={`${ui.card} flex flex-col gap-3`}
+      aria-label={form.name}
+      data-testid="portal-form"
+    >
+      <h2 ref={headingRef} tabIndex={-1} className={`${ui.h2} focus:outline-none`}>
+        {form.name}
+      </h2>
       {form.description ? <p className="text-sm text-muted">{form.description}</p> : null}
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
         </p>
       ) : null}
+      {form.fields.some((field) => field.required) ? <p className={ui.help}>{t("requiredHint")}</p> : null}
       {form.fields.map((field) => (
         <div key={field.key}>
           <label htmlFor={fieldId(field)} className={ui.label}>
@@ -90,6 +106,7 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
             <select
               id={fieldId(field)}
               className={ui.input}
+              aria-required={field.required || undefined}
               value={values[field.key] ?? ""}
               onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
             >
@@ -104,6 +121,7 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
             <input
               id={fieldId(field)}
               type="file"
+              aria-required={field.required || undefined}
               multiple
               accept="image/jpeg,image/png,application/pdf"
               className={ui.input}
@@ -114,6 +132,7 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
               id={fieldId(field)}
               type={field.type === "date" ? "date" : field.type === "number" ? "number" : "text"}
               step={field.type === "number" ? "any" : undefined}
+              aria-required={field.required || undefined}
               className={ui.input}
               value={values[field.key] ?? ""}
               onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
@@ -157,7 +176,7 @@ export function PortalForms({ forms }: { forms: PortalForm[] }) {
                 }}
               />
             ) : (
-              <button type="button" className={`${ui.cardLink} w-full text-left`} onClick={() => setOpen(form.id)}>
+              <button type="button" className={`${ui.cardLink} w-full text-left`} aria-expanded="false" onClick={() => setOpen(form.id)}>
                 <span className="font-medium">{form.name}</span>
                 {form.description ? <span className="mt-1 block text-sm text-muted">{form.description}</span> : null}
               </button>

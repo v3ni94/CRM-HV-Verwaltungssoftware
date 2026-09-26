@@ -8,7 +8,8 @@ D03 reserve: opening 20.000,00 + paid 4.500,00 - withdrawals 3.000,00 + interest
 
 import asyncio
 from collections.abc import Iterator
-from typing import Any
+from decimal import Decimal
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
@@ -803,3 +804,124 @@ def test_d54_contested_resolution_blocks_posting_and_reverses_nothing(
     package = _ok(client.get(f"{H}/statements/{sid}/package", headers=h))
     assert package["resolution"]["validity"]["posting_allowed"] is False
     assert package["statement"]["status"] == "posted"
+
+
+def test_check_transition_messages_carry_the_rule_id() -> None:
+    """Refusals of check_transition name the violated rule; behaviour is unchanged (D13, 6.9.3)."""
+    from mhvp.billing.status import StatementStatus as S
+    from mhvp.billing.status import TransitionError, check_transition
+
+    for current in (S.CALCULATED, S.INTERNALLY_APPROVED, S.RESOLVED, S.ISSUED):
+        with pytest.raises(TransitionError, match=r"not allowed \(D13, 6.9.3\)"):
+            check_transition(current, S.POSTED, is_hoa=True)
+    with pytest.raises(TransitionError, match=r"not allowed \(6.9.3\)"):
+        check_transition(S.ISSUED, S.POSTED, is_hoa=False)
+    with pytest.raises(TransitionError, match=r"not allowed \(6.9.3\)"):
+        check_transition(S.CALCULATED, S.DRAFT, is_hoa=True)
+    with pytest.raises(TransitionError, match=r"\(W06\)"):
+        check_transition(S.INTERNALLY_APPROVED, S.ISSUED, is_hoa=True)
+    with pytest.raises(TransitionError, match=r"\(D14\)"):
+        check_transition(S.BOARD_REVIEWED, S.RESOLVED, is_hoa=True)
+    with pytest.raises(TransitionError, match=r"\(D13\)"):
+        check_transition(S.DUE, S.POSTED, is_hoa=True, resolution_status="contested")
+    with pytest.raises(TransitionError, match=r"\(6.9.3\)"):
+        check_transition(S.INTERNALLY_APPROVED, S.RESOLVED, is_hoa=False)
+    check_transition(S.DUE, S.POSTED, is_hoa=True, resolution_status="final")
+
+
+def test_d14_statement_version_diff(clients: tuple[TestClient, TestClient], world: World) -> None:
+    """D14 version comparison: version 1 costs 5.500,00 (3.000,00 / 2.500,00 by MEA 3.000 /
+    2.500), version 2 adds 100,00 -> 5.600,00: unit 01 = 3.054,55, unit 02 = 2.545,45; the
+    difference per unit is +54,55 / +45,45 on cost share and result (advances unchanged).
+    The endpoint compares only versions of the same community and year (422 otherwise)."""
+    client, _ = clients
+    h = bearer(login(client, world, "m24admin"))
+    w = _hoa_ledger(client, h, "745")
+    for no, mea in (("01", "3000"), ("02", "2500")):
+        _owner(client, h, w["property"], no, mea, w["keys"]["MEA"], {})
+    other = _hoa_ledger(client, h, "746")
+    _owner(client, h, other["property"], "01", "1000", other["keys"]["MEA"], {})
+
+    def statement(ledger: str, year: int, amount: str) -> dict[str, Any]:
+        sid = _ok(
+            client.post(f"{H}/statements", json={"ledger_id": ledger, "year": year}, headers=h),
+            201,
+        )["id"]
+        _ok(
+            client.post(
+                f"{H}/statements/{sid}/costs",
+                json={
+                    "label": "Bewirtschaftung",
+                    "amount": amount,
+                    "allocation_key_id": w["keys"]["MEA"]
+                    if ledger == w["ledger"]
+                    else other["keys"]["MEA"],
+                    "basis": "Gemeinschaftsordnung",
+                },
+                headers=h,
+            ),
+            201,
+        )
+        return cast(dict[str, Any], _ok(client.post(f"{H}/statements/{sid}/calculate", headers=h)))
+
+    v1 = statement(w["ledger"], 2025, "5500.00")
+    v2 = _ok(client.post(f"{H}/statements/{v1['id']}/new-version", headers=h), 201)
+    _ok(
+        client.post(
+            f"{H}/statements/{v2['id']}/costs",
+            json={
+                "label": "Nachtrag",
+                "amount": "100.00",
+                "allocation_key_id": w["keys"]["MEA"],
+                "basis": "Teilungserklärung, Verteilung nach MEA",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    v2 = _ok(client.post(f"{H}/statements/{v2['id']}/calculate", headers=h))
+    diff = _ok(
+        client.get(f"{H}/statements/{v2['id']}/diff", params={"against": v1["id"]}, headers=h)
+    )
+    assert (diff["old"]["version"], diff["new"]["version"]) == (1, 2)
+    assert diff["total_costs"] == {"old": "5500.00", "new": "5600.00", "difference": "100.00"}
+    units = {u["unit_number"]: u for u in diff["units"]}
+    assert units["01"]["cost_share"] == {"old": "3000.00", "new": "3054.55", "difference": "54.55"}
+    assert units["02"]["cost_share"] == {"old": "2500.00", "new": "2545.45", "difference": "45.45"}
+    assert units["01"]["result"]["difference"] == "54.55"
+    assert units["02"]["result"]["difference"] == "45.45"
+    assert units["01"]["advances_resolved"]["difference"] == "0.00"
+    assert Decimal(units["01"]["cost_share"]["difference"]) + Decimal(
+        units["02"]["cost_share"]["difference"]
+    ) == Decimal("100.00")
+    positions = {p["label"]: p for p in diff["positions"]}
+    assert (positions["Bewirtschaftung"]["in_old"], positions["Bewirtschaftung"]["in_new"]) == (
+        True,
+        True,
+    )
+    assert positions["Bewirtschaftung"]["amount"]["difference"] == "0.00"
+    assert (positions["Nachtrag"]["in_old"], positions["Nachtrag"]["in_new"]) == (False, True)
+    assert positions["Nachtrag"]["amount"] == {"old": "0", "new": "100.00", "difference": "100.00"}
+    assert positions["Nachtrag"]["split"]["01"]["new"] == "54.55"
+
+    # Other community or other year: refused with 422; self comparison too.
+    foreign = statement(other["ledger"], 2025, "1000.00")
+    assert (
+        client.get(
+            f"{H}/statements/{v2['id']}/diff", params={"against": foreign["id"]}, headers=h
+        ).status_code
+        == 422
+    )
+    v_2024 = statement(w["ledger"], 2024, "5500.00")
+    assert (
+        client.get(
+            f"{H}/statements/{v2['id']}/diff", params={"against": v_2024["id"]}, headers=h
+        ).status_code
+        == 422
+    )
+    assert (
+        client.get(
+            f"{H}/statements/{v2['id']}/diff", params={"against": v2["id"]}, headers=h
+        ).status_code
+        == 422
+    )

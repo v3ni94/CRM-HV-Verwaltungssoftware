@@ -59,3 +59,11 @@ den Stufen oben:
   Zugriff auf den gesamten Drive-Bestand des Mandanten, siehe Regel `docs/rules/M20-05.md`.
 - Ohne verbundenes DMS oder ohne auflösbares Objekt bleibt die Dokumentliste leer; ein DMS-Fehler
   unterbricht die Vorbereitung nicht.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: Paperless-Anzeige in Ticket und Objekt (M31), Drive-Objektordnersuche für die Mail-Vorbereitung (Regel M20-05), vollständige Übernahme von objektakte nach `docs/plans/M35-objektakte-uebernahme.md` (Stufen 1 bis 5 mit Differenzimport und Synchronisationsstand), OIDC-Browserbrücke für externe Dienste (`docs/plans/M30-sso.md`).
+* Die Stufen 1 bis 5 dieses Plans (Reiter DMS, SSO für objektakte, lesende Schnittstelle) sind durch die Entscheidung vom 25.09.2026 hinfällig; der Reiter `/dms` im CRM bleibt als Übergangslösung.
+* Offen: M34-02 (Drive-Suche gegen echten Account), Entscheidungen in Abschnitt 7 von M35.

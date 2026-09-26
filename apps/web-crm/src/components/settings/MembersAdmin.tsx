@@ -7,7 +7,7 @@ import { useState } from "react";
 
 import { StatusPill } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
-import { formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 type Member = components["schemas"]["MemberOut"] & { legal_entity_ids?: string[] };
@@ -132,6 +132,92 @@ function CompetencesEditor({
           {c.label}
         </label>
       ))}
+      {error ? <p className={ui.error}>{error}</p> : null}
+      <div className="flex gap-2">
+        <button type="button" className={ui.button} disabled={busy} onClick={() => void save()}>
+          {t("save")}
+        </button>
+        <button type="button" className={ui.button} disabled={busy} onClick={() => setOpen(false)}>
+          {t("cancel")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** M20-03 (operator decision 26.09.2026): per member flag "reply approval required" (Azubi,
+ *  neuer Mitarbeiter, optional until a date). Ticket replies of flagged members go to the
+ *  approvers as a draft; PUT /tenant/members/{id}/reply-approval needs tenant_settings:update. */
+function ReplyApprovalEditor({
+  member,
+  onSaved,
+}: {
+  member: Member;
+  onSaved: (patch: Pick<Member, "reply_approval_required" | "reply_approval_reason" | "reply_approval_until">) => void;
+}) {
+  const t = useTranslations("Members");
+  const [open, setOpen] = useState(false);
+  const [required, setRequired] = useState(member.reply_approval_required ?? false);
+  const [reason, setReason] = useState(member.reply_approval_reason ?? "azubi");
+  const [until, setUntil] = useState(member.reply_approval_until ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const res = await bff<Member>(`/api/bff/tenant/members/${member.membership_id}/reply-approval`, {
+      method: "PUT",
+      body: JSON.stringify(required ? { required: true, reason, until: until || null } : { required: false }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      onSaved({
+        reply_approval_required: res.data.reply_approval_required,
+        reply_approval_reason: res.data.reply_approval_reason,
+        reply_approval_until: res.data.reply_approval_until,
+      });
+      setOpen(false);
+    } else {
+      setError(res.message);
+    }
+  }
+
+  const flagged = member.reply_approval_required ?? false;
+  if (!open) {
+    return (
+      <button type="button" className={ui.buttonSm} onClick={() => setOpen(true)} data-testid="reply-approval-toggle">
+        {flagged
+          ? t("replyApprovalShow", {
+              reason: t(`replyApprovalReason.${member.reply_approval_reason ?? "azubi"}`),
+              until: member.reply_approval_until ? t("replyApprovalUntil", { date: formatDate(member.reply_approval_until) }) : "",
+            })
+          : t("editReplyApproval")}
+      </button>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2" data-testid="reply-approval-editor">
+      <label className="flex items-center gap-2 text-xs">
+        <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
+        {t("replyApprovalRequired")}
+      </label>
+      {required ? (
+        <>
+          <label className="flex flex-col gap-1 text-xs">
+            {t("replyApprovalReasonLabel")}
+            <select className={ui.input} value={reason} onChange={(e) => setReason(e.target.value)}>
+              <option value="azubi">{t("replyApprovalReason.azubi")}</option>
+              <option value="neuer_mitarbeiter">{t("replyApprovalReason.neuer_mitarbeiter")}</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs">
+            {t("replyApprovalUntilLabel")}
+            <input type="date" className={ui.input} value={until} onChange={(e) => setUntil(e.target.value)} />
+          </label>
+        </>
+      ) : null}
+      <p className="text-xs text-muted">{t("replyApprovalHint")}</p>
       {error ? <p className={ui.error}>{error}</p> : null}
       <div className="flex gap-2">
         <button type="button" className={ui.button} disabled={busy} onClick={() => void save()}>
@@ -485,6 +571,7 @@ export function MembersAdmin({
                   <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
                   <CompetencesEditor member={m} catalogue={competenceCatalogue} onSaved={(competences) => updateMember(m.membership_id, { competences })} />
                   <MobilePhoneEditor member={m} onSaved={(mobile_phone) => updateMember(m.membership_id, { mobile_phone })} />
+                  {canUpdateScope ? <ReplyApprovalEditor member={m} onSaved={(patch) => updateMember(m.membership_id, patch)} /> : null}
                   {canUpdateScope ? (
                     <LegalEntitiesEditor member={m} options={legalEntityOptions ?? []} onSaved={(legal_entity_ids) => updateMember(m.membership_id, { legal_entity_ids })} />
                   ) : null}
@@ -539,6 +626,7 @@ export function MembersAdmin({
                       <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
                       <CompetencesEditor member={m} catalogue={competenceCatalogue} onSaved={(competences) => updateMember(m.membership_id, { competences })} />
                   <MobilePhoneEditor member={m} onSaved={(mobile_phone) => updateMember(m.membership_id, { mobile_phone })} />
+                  {canUpdateScope ? <ReplyApprovalEditor member={m} onSaved={(patch) => updateMember(m.membership_id, patch)} /> : null}
                       {canUpdateScope ? (
                         <LegalEntitiesEditor member={m} options={legalEntityOptions ?? []} onSaved={(legal_entity_ids) => updateMember(m.membership_id, { legal_entity_ids })} />
                       ) : null}

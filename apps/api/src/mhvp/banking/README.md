@@ -89,3 +89,10 @@ reversed / automatic assignments, split into corrected and cancelled) from exist
 with the same `bank_transaction_id`. Endpoint `GET /api/v1/banking/matching-metrics?from=&to=`
 (`accounting:read`). Operational figures only; they never release the automation (7.4).
 
+## Further files (addendum 26.09.2026)
+
+Checked against the folder contents on 26.09.2026, the following files were not listed above:
+
+* `ai_posting.py`: AI posting proposal `propose_posting` (M7-09, M12): input minimisation, tenant switch, proposal only, nothing posted
+* `allocation.py`: payer's determination (Tilgungsbestimmung) parsed from the payment purpose (M12-03, D39), deterministic, no AI
+* `invoice_matching.py`: invoice to bank transaction matching and draft payment proposal (M11-finapi stage 3, rule M11-06, G2 closed)

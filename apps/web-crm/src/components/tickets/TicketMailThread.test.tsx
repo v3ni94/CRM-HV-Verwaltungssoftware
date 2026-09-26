@@ -105,4 +105,32 @@ describe("TicketMailThread", () => {
     renderIntl(<TicketMailThread ticketId={TICKET} messages={[]} canReply />);
     expect(screen.getByText("Zu diesem Ticket liegen keine E-Mails vor.")).toBeInTheDocument();
   });
+
+  it("shows who drafted and who approved an outbound reply (M20-03)", () => {
+    const flagged: ThreadMessage = {
+      ...outbound,
+      id: "01920000-0000-7000-8000-0000000000a3",
+      status: "sent",
+      send_error: null,
+      sent_at: "2026-09-25T08:00:00Z",
+      created_by_name: "Azubi Anna",
+      approved_by_name: "Chefin Clara",
+      approved_at: "2026-09-25T07:55:00Z",
+      author_approval_required: true,
+      author_approval_reason: "azubi",
+    };
+    const direct: ThreadMessage = {
+      ...flagged,
+      id: "01920000-0000-7000-8000-0000000000a4",
+      created_by_name: "Chefin Clara",
+      author_approval_required: false,
+      author_approval_reason: null,
+    };
+    const waiting: ThreadMessage = { ...flagged, id: "01920000-0000-7000-8000-0000000000a5", status: "pending", approved_by_name: null, approved_at: null };
+    renderIntl(<TicketMailThread ticketId={TICKET} messages={[flagged, direct, waiting]} canReply={false} />);
+    const traces = screen.getAllByTestId("ticket-mail-trace");
+    expect(traces[0]).toHaveTextContent("Vorformuliert von Azubi Anna am 24.09.2026 11:00 (Freigabepflicht: Azubi), freigegeben von Chefin Clara am 25.09.2026 09:55");
+    expect(traces[1]).toHaveTextContent("Vorformuliert von Chefin Clara am 24.09.2026 11:00, selbst freigegeben am 25.09.2026 09:55");
+    expect(traces[2]).toHaveTextContent("wartet auf Freigabe durch eine zweite Person");
+  });
 });

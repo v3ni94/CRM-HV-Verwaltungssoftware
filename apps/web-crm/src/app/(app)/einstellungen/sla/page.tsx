@@ -12,6 +12,7 @@ import {
   type WorkCalendar,
 } from "@/components/sla/SlaSettings";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ async function getJson<T>(path: string, fallback: T): Promise<T> {
 export default async function SlaSettingsPage() {
   const t = await getTranslations("Sla");
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("sla:read")) notFound();

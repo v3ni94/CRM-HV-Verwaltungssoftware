@@ -19,6 +19,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import (
+    ensure_session_legal_entity_allowed,
+    session_allowed_legal_entity_ids,
+)
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import (
     HoaInsuranceClaim,
@@ -121,12 +125,16 @@ class ClaimIn(_In):
     deductible: Decimal = Field(default=Decimal("0.00"), ge=0, decimal_places=2)
     regress_party: str | None = Field(default=None, max_length=200)
     measure_id: uuid.UUID | None = None
+    resolution_id: uuid.UUID | None = None  # A79: resolution of the same community
     note: str | None = Field(default=None, max_length=4000)
 
 
 class ClaimPatch(_In):
-    status: str = Field(pattern="^(reported|accepted|rejected|settled|closed)$")
+    status: str | None = Field(
+        default=None, pattern="^(reported|accepted|rejected|settled|closed)$"
+    )
     claim_number: str | None = Field(default=None, max_length=100)
+    resolution_id: uuid.UUID | None = None
 
 
 class ClaimItemIn(_In):
@@ -144,14 +152,25 @@ class ClaimItemIn(_In):
 async def _ledger(session: AsyncSession, ledger_id: uuid.UUID) -> Any:
     from mhvp.hoa.routers import _hoa_ledger
 
-    return await _hoa_ledger(session, ledger_id)
+    ledger = await _hoa_ledger(session, ledger_id)
+    # A37: a membership scoped to legal entities (tax advisor) records nothing for a foreign
+    # community; answered as not found (Sicherheitsreview 1.22, Befund 4).
+    ensure_session_legal_entity_allowed(session, ledger.legal_entity_id)
+    return ledger
 
 
 async def _get(session: AsyncSession, model: Any, row_id: uuid.UUID) -> Any:
     row = await session.get(model, row_id)
     if row is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    ensure_session_legal_entity_allowed(session, row.legal_entity_id)
     return row
+
+
+def _entity_visible(session: AsyncSession, legal_entity_id: uuid.UUID) -> bool:
+    """List filter of A37: a scoped membership sees only its own legal entities."""
+    allowed = session_allowed_legal_entity_ids(session)
+    return allowed is None or legal_entity_id in allowed
 
 
 async def _check_resolution(
@@ -313,6 +332,8 @@ async def list_measures(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
+        if not _entity_visible(session, legal_entity_id):
+            return []
         rows = await session.scalars(
             select(HoaMeasure)
             .where(HoaMeasure.legal_entity_id == legal_entity_id)
@@ -473,6 +494,8 @@ async def list_loans(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
+        if not _entity_visible(session, legal_entity_id):
+            return []
         rows = await session.scalars(
             select(HoaLoan)
             .where(HoaLoan.legal_entity_id == legal_entity_id)
@@ -522,6 +545,41 @@ async def loan_report(session: AsyncSession, loan: HoaLoan) -> dict[str, Any]:
         "document_ids": await _documents(session, "hoa_loan", loan.id),
         "note_text": NOTE,
     }
+
+
+@router.get("/loans/{loan_id}/schedule", summary="Ratenplan als Orientierung (W10, A78)")
+async def get_loan_schedule(
+    loan_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """Annuity plan (instalment given) or linear plan (term given) from principal, rate, term,
+    instalment and start (`calc.loan_schedule`), plus the comparison of the planned repayment
+    and interest per month with the booked items. Nothing is posted; the loan contract
+    prevails (note_text)."""
+    from mhvp.hoa.calc import loan_schedule, schedule_comparison
+
+    async with tenant_tx(request, principal) as session:
+        loan = await _get(session, HoaLoan, loan_id)
+        plan = loan_schedule(
+            loan.principal,
+            loan.interest_rate_percent,
+            loan.term_months,
+            loan.instalment,
+            loan.start_date,
+        )
+        rows = (
+            await session.scalars(select(HoaLoanItem).where(HoaLoanItem.loan_id == loan.id))
+        ).all()
+        items = await _items_out(session, list(rows), loan.ledger_id)
+        return {
+            "loan_id": loan.id,
+            "principal": str(loan.principal),
+            "interest_rate_percent": str(loan.interest_rate_percent),
+            "term_months": loan.term_months,
+            "instalment": str(loan.instalment) if loan.instalment is not None else None,
+            "start_date": loan.start_date,
+            **plan,
+            "comparison": schedule_comparison(plan["rows"], items),
+        }
 
 
 @router.post("/loans/{loan_id}/items", status_code=201, summary="Darlehensposition erfassen")
@@ -585,6 +643,7 @@ def _claim_out(c: HoaInsuranceClaim) -> dict[str, Any]:
         "status": c.status,
         "regress_party": c.regress_party,
         "measure_id": c.measure_id,
+        "resolution_id": c.resolution_id,
         "note": c.note,
     }
 
@@ -596,6 +655,7 @@ async def create_claim(
     async with tenant_tx(request, principal) as session:
         ledger = await _ledger(session, body.ledger_id)
         await _check_measure(session, body.measure_id, ledger.id)
+        await _check_resolution(session, body.resolution_id, ledger.legal_entity_id)
         row = HoaInsuranceClaim(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -612,6 +672,8 @@ async def list_claims(
     legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
+        if not _entity_visible(session, legal_entity_id):
+            return []
         rows = await session.scalars(
             select(HoaInsuranceClaim)
             .where(HoaInsuranceClaim.legal_entity_id == legal_entity_id)
@@ -650,7 +712,9 @@ async def get_claim(
         }
 
 
-@router.patch("/insurance-claims/{claim_id}", summary="Status des Versicherungsfalls")
+@router.patch(
+    "/insurance-claims/{claim_id}", summary="Status oder Beschluss des Versicherungsfalls"
+)
 async def patch_claim(
     claim_id: uuid.UUID,
     body: ClaimPatch,
@@ -659,6 +723,7 @@ async def patch_claim(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         c = await _get(session, HoaInsuranceClaim, claim_id)
+        await _check_resolution(session, body.resolution_id, c.legal_entity_id)
         for field, value in body.model_dump(exclude_none=True).items():
             setattr(c, field, value)
         c.updated_by = principal.user_id
@@ -686,6 +751,13 @@ async def add_claim_item(
                 raise ProblemError(
                     ErrorCodes.VALIDATION,
                     detail="Zahlung an einen Eigentümer braucht den Eigentumsvertrag (W10).",
+                )
+            if contract.legal_entity_id != c.legal_entity_id:
+                # 6.9.1: the owner must belong to the community of the claim
+                # (Sicherheitsreview 1.22, Befund 7).
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Der Eigentumsvertrag gehört nicht zur Gemeinschaft des Schadensfalls.",
                 )
         row = HoaInsuranceClaimItem(
             tenant_id=principal.tenant_id,

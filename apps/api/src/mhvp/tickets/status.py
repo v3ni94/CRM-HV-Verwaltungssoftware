@@ -4,7 +4,13 @@ Single place for the rules that apply whenever a ticket changes its status, rega
 entry point (PATCH, bulk action, merge, later mail intake): allowed transitions, completion
 checks, the ``TicketEvent`` row, ``resolved_at``, the SLA clock (``mhvp.sla``), the domain event
 ``ticket.status_changed``, playbook learning and mail archiving on closing statuses. The
-routers only validate input and call :func:`transition_status`.
+routers only validate input and call :func:`transition_status`. Assignment of the primary
+assignee goes through :func:`assign_ticket` (event ``ticket.assigned``, notification,
+``TicketAssignee.primary``).
+
+Mail archiving is an event consumer: it is registered with ``after_commit`` and runs only once
+the status change is committed (review 26.09.2026, M14), so a failed commit never leaves
+archived mails behind an open ticket.
 """
 
 import logging
@@ -15,9 +21,11 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.core.db.tenancy import after_commit
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.tickets.models import Ticket, TicketEvent, TicketStatus, TicketTemplate
+from mhvp.tickets.models import Ticket, TicketAssignee, TicketEvent, TicketStatus, TicketTemplate
+from mhvp.workspace.services import notify
 
 log = logging.getLogger(__name__)
 
@@ -160,8 +168,100 @@ async def transition_status(
         await queue_learn_playbook(session, settings, ticket)
     if closing:
         # Operator rule: every closing status (done, closed, rejected) archives the linked
-        # mails in the mailbox; the mailbox flag archive_on_ticket_done applies.
-        from mhvp.communication.services import enqueue_archive_for_ticket
+        # mails in the mailbox; the mailbox flag archive_on_ticket_done applies. Consumer of
+        # ticket.status_changed, executed after the commit.
+        after_commit(session, _archive_consumer(session, settings, ticket.tenant_id, ticket.id))
+    return True
 
-        await enqueue_archive_for_ticket(session, settings, ticket.tenant_id, ticket.id)
+
+def _archive_consumer(
+    session: AsyncSession, settings: Any, tenant_id: uuid.UUID, ticket_id: uuid.UUID
+) -> Any:
+    async def _run() -> None:
+        from mhvp.communication import services as communication_services
+
+        await communication_services.enqueue_archive_for_ticket(
+            session, settings, tenant_id, ticket_id
+        )
+
+    return _run
+
+
+async def assign_ticket(
+    session: AsyncSession,
+    ticket: Ticket,
+    user_id: uuid.UUID,
+    actor_user_id: uuid.UUID | None,
+    *,
+    reason: str = "manuell",
+    notify_user: bool = True,
+) -> bool:
+    """Sets the primary assignee with all side effects: ``TicketAssignee`` row with reason
+    (the previous primary row loses its ``primary`` mark, review N3), ``TicketEvent``
+    ``assigned`` with ``from`` and ``to``, notification and domain event ``ticket.assigned``.
+    Returns False when the assignee is unchanged."""
+    if user_id == ticket.assignee_user_id:
+        return False
+    previous = ticket.assignee_user_id
+    ticket.assignee_user_id = user_id
+    rows = (
+        await session.scalars(select(TicketAssignee).where(TicketAssignee.ticket_id == ticket.id))
+    ).all()
+    current = None
+    for row in rows:
+        if row.user_id == user_id:
+            current = row
+        elif row.primary:
+            row.primary = False
+    if current is None:
+        session.add(
+            TicketAssignee(
+                tenant_id=ticket.tenant_id,
+                ticket_id=ticket.id,
+                user_id=user_id,
+                primary=True,
+                reason=reason,
+            )
+        )
+    else:
+        current.primary = True
+        current.reason = reason
+    session.add(
+        TicketEvent(
+            tenant_id=ticket.tenant_id,
+            ticket_id=ticket.id,
+            kind="assigned",
+            user_id=actor_user_id,
+            data={
+                "user_id": str(user_id),
+                "from": str(previous) if previous else None,
+                "to": str(user_id),
+                "reason": reason,
+            },
+        )
+    )
+    if notify_user:
+        await notify(
+            session,
+            tenant_id=ticket.tenant_id,
+            user_id=user_id,
+            kind="ticket_assigned",
+            title=f"Ticket {ticket.number}: {ticket.title}",
+            entity_type="ticket",
+            entity_id=ticket.id,
+        )
+    await emit(
+        session,
+        tenant_id=ticket.tenant_id,
+        type="ticket.assigned",
+        entity_type="ticket",
+        entity_id=ticket.id,
+        actor_user_id=actor_user_id,
+        payload={
+            "from": str(previous) if previous else None,
+            "to": str(user_id),
+            "reason": reason,
+            "number": ticket.number,
+        },
+    )
     return True

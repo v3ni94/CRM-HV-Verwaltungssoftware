@@ -66,3 +66,40 @@ restart on reopening), domain event `ticket.status_changed` (payload `from`, `to
 playbook learning and mail archiving. `PATCH /tickets/{id}` and `POST /tickets/bulk-status`
 call it; new entry points (mail, portal) must too. `GET /tickets` paginates with `page` and
 `page_size` (the body stays a list); the total is in the `X-Total-Count` header.
+
+Mail archiving on a closing status is an event consumer: `transition_status` registers it with
+`mhvp.core.db.tenancy.after_commit`, so `enqueue_archive_for_ticket` runs only once the status
+change is committed (review M14). A rolled back request never archives.
+
+`assign_ticket` (same module) is the single service for the primary assignee: it keeps
+`TicketAssignee.primary` in sync (the previous primary row loses its mark, review N3), writes the
+`TicketEvent` `assigned` with `from`, `to` and `reason`, notifies the assignee and emits the
+domain event `ticket.assigned` (payload `from`, `to`, `reason`, `number`). Used by
+`POST /tickets` (template default assignee, reason `Vorlage`), `PATCH /tickets/{id}` and
+`POST /tickets/{id}/assignees` with `primary: true`.
+
+## Ticket detail (review 26.09.2026, M5, M6, N4, N8)
+
+* `GET /tickets/{id}` returns `internal_description` (6.6, patchable via `PATCH`), comments with
+  `id`, `author_user_id`, `author_name`, `author_contact_id` and `document_ids`, events with
+  `data`, `user_name` and `assignee_name`, and `mail_attachments` (attachments of the inbound
+  mails with filename, mime type and size from one bundled `document` query; mailbox rights as
+  in the mail view). The CRM detail page renders these without further requests.
+* `contact_id`, `property_id`, `unit_id` (create and patch) and comment `document_ids` must exist
+  in the tenant, otherwise 404.
+* `GET /tickets?mine=true` matches primary and additional assignees, like `assignee_user_id`.
+* `TicketReplyIn.subject` is folded to a single line (header safety, N1).
+
+## Further files (addendum 26.09.2026)
+
+Checked against the folder contents on 26.09.2026, the following files were not listed above:
+
+* `competences.py`: competence catalogue of members and ticket topics (operator 25.09.2026)
+* `tnr.py`: ticket number in the subject `TNR#<number>`, matching of inbound mails only for known senders (rule M19-06)
+
+## Appointment proposals in the CRM (A74)
+
+`work_order_proposal_routers.py`: `GET /api/v1/work-orders/{id}/appointment-proposals`
+(tickets:read) returns the proposals a provider made in the portal (A58) with status, the
+confirmed appointment (`scheduled_at`, `confirmed_proposal_id`) and the open count. Read only;
+proposing and accepting stay in `mhvp.portal.routers`. CRM page `/auftraege/{id}`.

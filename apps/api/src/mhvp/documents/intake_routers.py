@@ -125,10 +125,16 @@ async def list_intake_proposals(
                 .limit(page_size)
             )
         ).all()
-        data = []
-        for row in rows:
-            document = await session.get(Document, row.context_id) if row.context_id else None
-            data.append(_out(row, document))
+        document_ids = {row.context_id for row in rows if row.context_id}
+        documents = {
+            d.id: d
+            for d in (
+                await session.scalars(select(Document).where(Document.id.in_(document_ids)))
+            ).all()
+        }
+        data = [
+            _out(row, documents.get(row.context_id) if row.context_id else None) for row in rows
+        ]
         return IntakeProposalPage(
             data=data, meta={"page": page, "per_page": page_size, "total": total}
         )
@@ -153,7 +159,12 @@ def _pick(body: IntakeAcceptIn, name: str, proposed: dict[str, Any]) -> uuid.UUI
     if name in body.model_fields_set or not body.use_proposed:
         return None
     value = proposed.get(name)
-    return uuid.UUID(str(value)) if value else None
+    if not value:
+        return None
+    try:
+        return uuid.UUID(str(value))
+    except ValueError:
+        raise svc.invalid(f"Vorschlagswert für {name} ist keine gültige Kennung.") from None
 
 
 @router.post(

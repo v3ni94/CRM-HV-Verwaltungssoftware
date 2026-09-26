@@ -5,6 +5,7 @@ import { PropertyCreate } from "@/components/properties/PropertyCreate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
@@ -34,7 +35,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
   const api = serverApi();
   const [{ data, error, response }, me] = await Promise.all([
     api.GET("/api/v1/properties", { params: { query: { page_size: 200, ...SCOPE_QUERY[scope], ...(q ? { q } : {}) } } }),
-    api.GET("/api/v1/auth/me"),
+    getMe(),
   ]);
   redirectIfUnauthenticated(response);
   // "WEG" covers both HOA and HOA with SEV; the API filter takes one type, so filter here.

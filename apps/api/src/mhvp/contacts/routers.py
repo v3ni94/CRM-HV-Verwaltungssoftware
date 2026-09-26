@@ -1,6 +1,7 @@
 """Contact endpoints (/api/v1/contacts, /parties, /search)."""
 
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
@@ -599,26 +600,31 @@ async def revoke_consent(
 
 
 async def _party_out(session: Any, party: Party) -> schemas.PartyOut:
-    rows = (
+    return (await _parties_out(session, [party]))[0]
+
+
+async def _parties_out(session: Any, parties: Sequence[Party]) -> list[schemas.PartyOut]:
+    """Members and display names of all parties in one query."""
+    if not parties:
+        return []
+    members: dict[uuid.UUID, list[schemas.PartyMemberOut]] = {}
+    for m, name in (
         await session.execute(
             select(PartyMember, Contact.display_name)
             .join(Contact, Contact.id == PartyMember.contact_id)
-            .where(PartyMember.party_id == party.id)
+            .where(PartyMember.party_id.in_([p.id for p in parties]))
+            .order_by(PartyMember.id)
         )
-    ).all()
-    return schemas.PartyOut(
-        id=party.id,
-        name=party.name,
-        members=[
+    ).all():
+        members.setdefault(m.party_id, []).append(
             schemas.PartyMemberOut(
                 contact_id=m.contact_id,
                 role=m.role,
                 share_percent=m.share_percent,
                 display_name=name,
             )
-            for m, name in rows
-        ],
-    )
+        )
+    return [schemas.PartyOut(id=p.id, name=p.name, members=members.get(p.id, [])) for p in parties]
 
 
 @router.post("/parties", status_code=201, summary="Vertragspartei anlegen")
@@ -679,9 +685,10 @@ async def list_parties(
                 select(Party)
                 .join(PartyMember, PartyMember.party_id == Party.id)
                 .where(PartyMember.contact_id == contact_id)
+                .order_by(Party.name, Party.id)
             )
         ).all()
-        return [await _party_out(session, p) for p in parties]
+        return await _parties_out(session, parties)
 
 
 # Global search -------------------------------------------------------------------------

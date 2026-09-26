@@ -30,5 +30,13 @@ Stand 25.09.2026, Version 1.17.0. Baut auf M6 (Migration 0037, `POST /api/v1/tic
 
 - Verschieben von Verlaufseinträgen ist ein Update der Ticketzuordnung (Verhalten aus M6); die
   Herkunft ist über `merged_from` nachvollziehbar, die Einträge selbst tragen keine Quelle.
-- Integrationstest `tests/integration/test_m6_ticket_merge.py` deckt den Zielmodus noch nicht ab.
+- Zielmodus seit 26.09.2026 abgedeckt durch `tests/integration/test_m36_ticket_merge.py::test_merge_into_existing_target` (A64); `test_m6_ticket_merge.py` deckt weiterhin den Modus ohne Ziel ab.
 - Anzahl Nachrichten in der Vorschau = Mails plus Kommentare.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: `target_ticket_id` im Merge, `merged_from` und `merged_into`, Sperre der Quellen, Filter `include_merged` und `merged_into`, `TicketMergeDialog` im CRM, reine Regeln in `mhvp/tickets/merge.py`.
+* Tests: `tests/unit/test_m36_ticket_merge.py`, `tests/integration/test_m36_ticket_merge.py::test_merge_into_existing_target` (Zielmodus, seit A64 ausgeführt, grün), `test_m6_ticket_merge.py` (Modus ohne Ziel). Der frühere offene Punkt "Zielmodus nicht abgedeckt" ist erledigt.
+* Offen: Verlaufseinträge tragen keine Quelle (Herkunft nur über `merged_from`).

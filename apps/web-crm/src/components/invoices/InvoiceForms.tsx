@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 type Option = { id: string; label: string };
@@ -110,9 +111,10 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
         {field("recipient_name")}
       </div>
       <p className="text-sm text-muted" data-testid="gross">
-        {Number.isFinite(net) ? t("gross", { gross: fmt(net + vat).replace(".", ","), vat: fmt(vat).replace(".", ",") }) : ""}
+        {Number.isFinite(net) ? t("gross", { gross: formatEur(fmt(net + vat)), vat: formatEur(fmt(vat)) }) : ""}
       </p>
       <button type="button" className={`${ui.primary} ${ui.actionFull}`} onClick={submit} disabled={busy || !valid}>{t("create")}</button>
+      {!valid ? <p className={ui.help}>{t("requiredHint")}</p> : null}
       {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
     </div>
   );
@@ -139,8 +141,13 @@ export function InvoiceActions({ id, reviewStatus, postingStatus, released, iban
   };
   if (postingStatus !== "unposted") return null;
   const closed = reviewStatus === "closed_ok" || reviewStatus === "closed_with_reservation";
+  // Der nächste Schritt wird benannt, damit kein Button fehlt, ohne dass klar ist, warum.
+  const nextStep = released ? "post" : closed ? "release" : ibanOpen ? "iban" : "review";
   return (
     <div className="flex flex-col gap-3">
+      <p className={ui.help} data-testid="invoice-next-step">
+        {t(`nextStep.${nextStep}`)}
+      </p>
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("step")}</span>

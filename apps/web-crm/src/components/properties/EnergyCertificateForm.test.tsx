@@ -73,3 +73,33 @@ describe("EnergyCertificateForm", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/Ausstellungsdatum/);
   });
 });
+
+describe("EnergyCertificateForm validation (review 26.09.2026)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("blocks a malformed year and a validity before the issue date without calling the API", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    renderIntl(<EnergyCertificateForm property={PROPERTY} />);
+    await userEvent.type(screen.getByLabelText("Baujahr laut Ausweis"), "78");
+    await userEvent.click(screen.getByText("Energieausweis speichern"));
+    expect(screen.getByRole("alert")).toHaveTextContent("Baujahr als vierstellige Jahreszahl.");
+    await userEvent.clear(screen.getByLabelText("Baujahr laut Ausweis"));
+    await userEvent.type(screen.getByLabelText("Ausstellungsdatum"), "2024-03-01");
+    await userEvent.type(screen.getByLabelText("Gültig bis"), "2020-01-01");
+    await userEvent.click(screen.getByText("Energieausweis speichern"));
+    expect(screen.getByRole("alert")).toHaveTextContent("liegt vor dem Ausstellungsdatum");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sends a German decimal value as a decimal string and the class in capitals", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ ...PROPERTY, version: 4 }));
+    renderIntl(<EnergyCertificateForm property={PROPERTY} />);
+    await userEvent.type(screen.getByLabelText("Kennwert in kWh/(m²a)"), "112,5");
+    await userEvent.type(screen.getByLabelText("Effizienzklasse"), "d");
+    await userEvent.click(screen.getByText("Energieausweis speichern"));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Gespeichert."));
+    const body = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body)) as Record<string, unknown>;
+    expect(body.energy_certificate_value).toBe("112.5");
+    expect(body.energy_certificate_class).toBe("D");
+  });
+});

@@ -21,3 +21,11 @@ abgeschlossener Protokolle. Dateien liegen als Dokumente (M6) mit Verknüpfung
 Nicht enthalten (offen): Zustellung des Einladungscodes für den Portalzugang (M30-01 in
 `docs/OPEN_QUESTIONS.md`), Datenübernahme aus U-Protokoll (M30-03), Entfernen von
 Bildmetadaten (M30-04), zweiter Faktor für Gehilfen (M30-05).
+
+## Weitere Dateien (Nachtrag 26.09.2026)
+
+Im Abgleich mit dem Ordnerinhalt am 26.09.2026 fehlten oben:
+
+* `images.py`: Bildbereinigung für Übergabefotos und Portal-Uploads (M30-04, A55, A58): EXIF, GPS, XMP, ICC entfernen, Ausrichtung übernehmen, skalieren
+* `imports.py`: Router `/api/v1/handover/imports/uprotokoll` für die Datenübernahme aus U-Protokoll (M30 Stufe 4)
+* `uprotokoll_import.py`: Parser und Übernahmelogik für den U-Protokoll-Datenbankexport (M30 Stufe 4)

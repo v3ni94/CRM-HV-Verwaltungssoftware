@@ -237,3 +237,57 @@ def test_invoice_issued_delivers_identifiers_and_amounts_only(
     assert "Hook Haus" not in raw.decode()
     assert "Rheinpromenade" not in raw.decode()
     assert not _events("/b-invoice", "invoice.issued")
+
+
+def test_admin_endpoints_catalogue_last_delivery_delete_and_tenant_separation(
+    client: TestClient, world: World, database: Database, redis_url: str, receiver: str
+) -> None:
+    """CRM settings page (Lückenliste A89): catalogue with descriptions, last delivery in the
+    list, delivery log, delete with cascade; a foreign tenant neither sees nor deletes."""
+    h = bearer(login(client, world, "whadmin"))
+    other = bearer(login(client, world, "whother"))
+    catalogue = _ok(client.get("/api/v1/tenant/webhooks/event-types", headers=h))
+    assert {c["type"]: c["description"] for c in catalogue} == EVENT_TYPES
+
+    created = _ok(
+        client.post(
+            "/api/v1/tenant/webhooks",
+            json={"url": f"{receiver}/admin-ui", "event_types": ["webhook_subscription.created"]},
+            headers=h,
+        ),
+        201,
+    )
+    hook_id = created["id"]
+    listed = next(
+        x for x in _ok(client.get("/api/v1/tenant/webhooks", headers=h)) if x["id"] == hook_id
+    )
+    assert listed["last_delivery_status"] is None
+    assert listed["created_at"]
+    # Another subscription of the same tenant triggers ``webhook_subscription.created``.
+    _ok(
+        client.post(
+            "/api/v1/tenant/webhooks",
+            json={"url": f"{receiver}/admin-ui-2", "event_types": ["contact.deleted"]},
+            headers=h,
+        ),
+        201,
+    )
+    asyncio.run(dispatch_once(_settings(database, redis_url)))
+    listed = next(
+        x for x in _ok(client.get("/api/v1/tenant/webhooks", headers=h)) if x["id"] == hook_id
+    )
+    assert listed["last_delivery_status"] == "succeeded"
+    assert listed["last_delivery_status_code"] == 204
+    assert listed["last_delivery_at"]
+    log = _ok(client.get(f"/api/v1/tenant/webhooks/{hook_id}/deliveries", headers=h))
+    assert log
+    assert log[0]["attempts"] == 1
+
+    # Tenant separation: tenant B sees nothing of tenant A and cannot delete.
+    assert hook_id not in {
+        x["id"] for x in _ok(client.get("/api/v1/tenant/webhooks", headers=other))
+    }
+    assert client.delete(f"/api/v1/tenant/webhooks/{hook_id}", headers=other).status_code == 404
+    assert client.delete(f"/api/v1/tenant/webhooks/{hook_id}", headers=h).status_code == 204
+    assert hook_id not in {x["id"] for x in _ok(client.get("/api/v1/tenant/webhooks", headers=h))}
+    assert client.get(f"/api/v1/tenant/webhooks/{hook_id}/deliveries", headers=h).json() == []

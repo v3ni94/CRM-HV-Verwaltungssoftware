@@ -18,7 +18,8 @@ Eine Rechnung entsteht auf drei Wegen:
 - Aus der Mail-Ansicht über Als Rechnung erfassen (siehe Kapitel Mail) oder aus Paperless
   per Dokumentnummer.
 
-Eine automatische Erfassung ohne diesen Prüfschritt gibt es nicht.
+Eine automatische Erfassung ohne diesen Prüfschritt gibt es nicht. Der automatische
+Belegeingang (siehe unten) erzeugt nur Entwürfe, die denselben Prüfschritt durchlaufen.
 
 ## Belegeingang (KI-Entwürfe)
 
@@ -91,6 +92,30 @@ Pfadsegment, Signatur `sha256=<hex>` in X-MHVP-Signature über die Zeichenkette
 `<Zeitstempel>.` gefolgt vom Rohinhalt der Meldung, Inhalt als JSON mit `document_id`
 (Paperless-Nummer) und optional `title`. Meldungen älter als fünf Minuten werden
 abgewiesen.
+
+## Automatischer Belegeingang aus E-Mails
+
+Unter Einstellungen, DMS-Anbindung, Karte Automatischer Belegeingang schaltet der Schalter
+Rechnungen aus neuen E-Mails automatisch erfassen (Standard aus, Recht Mandanteneinstellungen
+ändern) den automatischen Eingang ein. Ist er aktiv, wird beim Abruf der Gmail-Postfächer
+für jeden neuen PDF-Anhang, dessen Betreff, Absender oder Dateiname auf eine Rechnung
+hinweist, genau eine KI-Extraktion als Belegentwurf gestartet (je Anhang nur einmal, auch
+bei erneutem Abruf). Der Entwurf erscheint im Belegeingang mit Quelle Mail-Anhang und
+durchläuft Feldprüfung, IBAN-Bestätigung und Freigabe unverändert; nichts wird gebucht.
+Jede Extraktion belastet das Monatsbudget der KI (Einstellungen, KI); ohne freigegebenen
+Anbieter oder bei ausgeschöpftem Budget entsteht kein Entwurf.
+
+## Maskierung vor der KI
+
+Vor der Übermittlung an den KI-Anbieter maskiert die Plattform im Belegtext IBAN,
+E-Mail-Adressen, Telefonnummern und Personennamen. Personennamen werden erkannt, wenn sie
+mit einer Anrede stehen (Herr, Frau, Familie, Eheleute, z. Hd.) und, auch ohne Anrede,
+wenn sie als Personenkontakt des Mandanten bekannt sind oder der Aussteller wie eine
+natürliche Person ohne Rechtsform aussieht. Firmennamen bleiben erhalten, ein einzelner
+Nachname wird nie für sich maskiert (Elektro Müller GmbH bleibt lesbar). Der Entwurf zeigt
+unter Übermittelter Text (maskiert, Auszug), was das CRM verlassen hat; von der KI
+zurückgegebene Maskierungsplatzhalter werden verworfen. Die IBAN wird nur maskiert
+angezeigt (siehe IBAN-Bestätigung).
 
 ## KI-Erfassung und Prüfung
 

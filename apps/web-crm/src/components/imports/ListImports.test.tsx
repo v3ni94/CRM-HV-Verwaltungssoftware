@@ -37,6 +37,7 @@ describe("ObjektdatenCard", () => {
     renderIntl(<ObjektdatenCard />);
     const apply = screen.getByTestId("objektdaten-apply");
     expect(apply).toBeDisabled();
+    expect(screen.queryByTestId("objektdaten-report-file-notes")).toBeNull();
     await userEvent.upload(screen.getByLabelText("Objektliste (csv)"), csv("objektdaten.csv"));
     await userEvent.type(screen.getByLabelText(/Nummernzuordnung/), "10012=012");
     await userEvent.click(screen.getByLabelText(/Abgegebene Objekte/));
@@ -81,8 +82,10 @@ describe("KontakteCard", () => {
       jsonResponse({
         mode: "preview",
         apply: false,
-        counts: { created: 2, invalid: 1 },
+        counts: { created: 2, invalid: 1, duplicate: 1 },
+        datei_hinweise: ["mieter.csv: Datei als Windows-1252 (ANSI) gelesen, nicht als UTF-8", "mieter.csv: Trennzeichen Komma erkannt"],
         kontakte: [
+          { datei: "mieter.csv", zeile: 4, id: "1", name: "Max Muster", rolle: "mieter", status: "duplicate", hinweise: ["id 1 bereits in Zeile 2, nicht erneut angelegt"] },
           { datei: "eigentuemer.csv", zeile: 2, id: "1", name: "Max Muster", rolle: "eigentuemer", status: "created", hinweise: ["Reihenfolge Vorname Nachname angenommen"] },
           { datei: "mieter.csv", zeile: 3, id: "9", name: "Erika", rolle: "mieter", status: "created", hinweise: [] },
         ],
@@ -100,7 +103,13 @@ describe("KontakteCard", () => {
     expect(body.getAll("files").map((f) => (f as File).name)).toEqual(["eigentuemer.csv", "mieter.csv"]);
     const table = screen.getByTestId("kontakte-notes");
     expect(table).toHaveTextContent("Max Muster");
+    expect(table).toHaveTextContent("Duplikat");
+    expect(table).toHaveTextContent("id 1 bereits in Zeile 2, nicht erneut angelegt");
     expect(table).not.toHaveTextContent("Erika");
+    const notes = screen.getByTestId("kontakte-report-file-notes");
+    expect(notes).toHaveTextContent("Windows-1252");
+    expect(notes).toHaveTextContent("Trennzeichen Komma erkannt");
+    expect(screen.getByText("Duplikate in der Datei")).toBeInTheDocument();
     expect(screen.getByTestId("kontakte-apply")).toBeEnabled();
   });
 });

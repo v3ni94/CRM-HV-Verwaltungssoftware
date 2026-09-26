@@ -83,6 +83,75 @@ describe("OpenImmoExport", () => {
     expect(screen.queryByTestId("openimmo-force")).not.toBeInTheDocument();
   });
 
+  it("shows the structural check with the operator notice when no XSD is stored", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          complete: true,
+          missing: [],
+          warnings: [],
+          hints: [],
+          image_count: 0,
+          schema: {
+            mode: "structure",
+            valid: true,
+            errors: [],
+            notice: "OpenImmo-XSD nicht hinterlegt. Die Datei wird nur strukturell geprüft.",
+            xsd_configured: false,
+          },
+        }),
+      ),
+    );
+
+    renderIntl(<OpenImmoExport listingId={LISTING_ID} />);
+    await userEvent.click(screen.getByRole("button", { name: "Vollständigkeit prüfen" }));
+
+    await screen.findByTestId("openimmo-download");
+    expect(screen.getByTestId("openimmo-schema")).toHaveTextContent("Strukturprüfung bestanden");
+    expect(screen.getByTestId("openimmo-schema-notice")).toHaveTextContent("OpenImmo-XSD nicht hinterlegt");
+    expect(screen.queryByTestId("openimmo-schema-errors")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("openimmo-force")).not.toBeInTheDocument();
+  });
+
+  it("locks the download on schema errors until 'trotzdem exportieren' is ticked", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          complete: true,
+          missing: [],
+          warnings: [],
+          hints: [],
+          image_count: 0,
+          schema: {
+            mode: "xsd",
+            valid: false,
+            errors: ["Zeile 3: Element 'geo' fehlt."],
+            notice: null,
+            xsd_configured: true,
+          },
+        }),
+      ),
+    );
+
+    renderIntl(<OpenImmoExport listingId={LISTING_ID} />);
+    await userEvent.click(screen.getByRole("button", { name: "Vollständigkeit prüfen" }));
+
+    await screen.findByTestId("openimmo-schema");
+    expect(screen.getByTestId("openimmo-schema")).toHaveTextContent(
+      "Schemaprüfung gegen die hinterlegte OpenImmo-XSD nicht bestanden",
+    );
+    expect(screen.getByTestId("openimmo-schema-errors")).toHaveTextContent("Zeile 3: Element 'geo' fehlt.");
+    expect(screen.queryByTestId("openimmo-warnings")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("openimmo-download")).not.toBeInTheDocument();
+    expect(screen.queryByText("Alle Pflichtfelder sind vorhanden. Der Export kann heruntergeladen werden.")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("openimmo-force"));
+    const xml = await screen.findByTestId("openimmo-download");
+    expect(xml).toHaveAttribute("href", `/api/bff/letting/listings/${LISTING_ID}/openimmo.xml?force=true`);
+  });
+
   it("shows an error message when the check request fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ title: "Fehler", detail: "kaputt" }, 500)));
 

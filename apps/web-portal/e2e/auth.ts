@@ -14,6 +14,9 @@ import * as OTPAuth from "otpauth";
  * the two apps' specs do not race the same TOTP step.
  */
 const STATE = path.resolve(process.cwd(), ".e2e-portal-auth.json");
+// The CRM suite (scripts/e2e-backend.sh runs it first) may already have set up TOTP for the
+// same seeded admin; its state file is the fallback when this app has none of its own.
+const CRM_STATE = path.resolve(process.cwd(), "../web-crm/.e2e-auth.json");
 export const TENANT = "Hausverwaltung Müller GmbH";
 export const email = process.env.E2E_ADMIN_EMAIL ?? "";
 export const password = process.env.E2E_ADMIN_PASSWORD ?? "";
@@ -22,12 +25,15 @@ export const apiBase = process.env.MHVP_API_INTERNAL_URL ?? "http://127.0.0.1:80
 type State = { email: string; secret: string; lastStep: number };
 
 function readState(): State | null {
-  try {
-    const s = JSON.parse(fs.readFileSync(STATE, "utf8")) as State;
-    return s.email === email ? s : null;
-  } catch {
-    return null;
+  for (const file of [STATE, CRM_STATE]) {
+    try {
+      const s = JSON.parse(fs.readFileSync(file, "utf8")) as State;
+      if (s.email === email) return s;
+    } catch {
+      // no state in this file
+    }
   }
+  return null;
 }
 
 function writeState(s: State) {

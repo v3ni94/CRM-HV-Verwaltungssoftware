@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { ServiceContracts, type ServiceContract } from "@/components/contracts/ServiceContracts";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export default async function ServiceContractsPage() {
   const t = await getTranslations("ServiceContracts");
   const api = serverApi();
   const [me, response, contacts, properties] = await Promise.all([
-    api.GET("/api/v1/auth/me"),
+    getMe(),
     serverFetch("/api/v1/service-contracts"),
     api.GET("/api/v1/contacts", { params: { query: { role: "dienstleister", page_size: 200 } } }),
     api.GET("/api/v1/properties", { params: { query: { page_size: 200 } } }),

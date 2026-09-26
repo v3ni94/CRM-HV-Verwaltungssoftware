@@ -1,11 +1,12 @@
 """Contract endpoints (/api/v1/contracts, /sepa-mandates, /deposits, occupancy)."""
 
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 
@@ -27,6 +28,7 @@ from mhvp.contracts.models import (
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties.models import ManagementType, Property, Unit
 from mhvp.properties.services import check_catalog
@@ -58,30 +60,63 @@ async def _flush(session: Any, message: str) -> None:
 async def _out(session: Any, contract: Contract) -> s.ContractOut:
     await session.flush()
     await session.refresh(contract)
-    account = await session.get(DebtorAccountReservation, contract.debtor_account_id)
-    payments = (
+    return (await _outs(session, [contract]))[0]
+
+
+async def _outs(session: Any, contracts: Sequence[Contract]) -> list[s.ContractOut]:
+    """Output of several contracts with three batched queries (debtor accounts, payments,
+    schedules) instead of three per row (performance review 26.09.2026)."""
+    if not contracts:
+        return []
+    ids = [c.id for c in contracts]
+    accounts = {
+        a.id: a
+        for a in (
+            await session.scalars(
+                select(DebtorAccountReservation).where(
+                    DebtorAccountReservation.id.in_({c.debtor_account_id for c in contracts})
+                )
+            )
+        ).all()
+    }
+    payments: dict[uuid.UUID, list[ContractPayment]] = {}
+    for p in (
         await session.scalars(
             select(ContractPayment)
-            .where(ContractPayment.contract_id == contract.id)
+            .where(ContractPayment.contract_id.in_(ids))
             .order_by(ContractPayment.payment_type_code, ContractPayment.valid_from)
         )
-    ).all()
-    schedules = (
+    ).all():
+        payments.setdefault(p.contract_id, []).append(p)
+    schedules: dict[uuid.UUID, list[PaymentSchedule]] = {}
+    for x in (
         await session.scalars(
             select(PaymentSchedule)
-            .where(PaymentSchedule.contract_id == contract.id)
+            .where(PaymentSchedule.contract_id.in_(ids))
             .order_by(PaymentSchedule.valid_from)
         )
-    ).all()
-    data = {c.key: getattr(contract, c.key) for c in Contract.__table__.columns}
-    return s.ContractOut.model_validate(
-        {
-            **data,
-            "debtor_account": s.DebtorAccountOut.model_validate(account),
-            "payments": [s.PaymentOut.model_validate(p) for p in payments],
-            "schedules": [s.ScheduleOut.model_validate(x) for x in schedules],
-        }
-    )
+    ).all():
+        schedules.setdefault(x.contract_id, []).append(x)
+    out = []
+    for contract in contracts:
+        data = {c.key: getattr(contract, c.key) for c in Contract.__table__.columns}
+        out.append(
+            s.ContractOut.model_validate(
+                {
+                    **data,
+                    "debtor_account": s.DebtorAccountOut.model_validate(
+                        accounts[contract.debtor_account_id]
+                    ),
+                    "payments": [
+                        s.PaymentOut.model_validate(p) for p in payments.get(contract.id, [])
+                    ],
+                    "schedules": [
+                        s.ScheduleOut.model_validate(x) for x in schedules.get(contract.id, [])
+                    ],
+                }
+            )
+        )
+    return out
 
 
 async def _event(
@@ -141,16 +176,27 @@ async def _create(
 # Contracts -----------------------------------------------------------------------------
 
 
-@router.get("/contracts", summary="Verträge")
+@router.get("/contracts", summary="Verträge", responses=PAGE_HEADERS)
 async def list_contracts(
     request: Request,
+    response: Response,
     property_id: uuid.UUID | None = None,
     unit_id: uuid.UUID | None = None,
     party_id: uuid.UUID | None = None,
     kind: ContractKind | None = None,
     active_on: date | None = None,
+    limit: int = Query(default=200, ge=1, le=1000),
+    page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
+    page_size: int | None = Query(
+        default=None,
+        ge=1,
+        le=1000,
+        description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.ContractOut]:
+    """Verträge nach Nummer und Version. Paginierung wie ``GET /tickets``: die Antwort bleibt
+    eine Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page``, ``X-Page-Size``."""
     async with tenant_tx(request, principal) as session:
         query = select(Contract)
         for column, value in (
@@ -166,8 +212,15 @@ async def list_contracts(
                 Contract.start_date <= active_on,
                 or_(Contract.end_date.is_(None), Contract.end_date >= active_on),
             )
-        rows = (await session.scalars(query.order_by(Contract.number, Contract.version))).all()
-        return [await _out(session, c) for c in rows]
+        rows = await paginate(
+            session,
+            query.order_by(Contract.number, Contract.version),
+            response,
+            page=page,
+            page_size=page_size,
+            limit=limit,
+        )
+        return await _outs(session, rows)
 
 
 @router.post("/contracts", status_code=201, summary="Vertrag anlegen")
@@ -201,7 +254,7 @@ async def contract_versions(
                 .order_by(Contract.version)
             )
         ).all()
-        return [await _out(session, c) for c in rows]
+        return await _outs(session, rows)
 
 
 @router.post("/contracts/{contract_id}/versions", status_code=201, summary="Neue Vertragsversion")
@@ -398,27 +451,65 @@ async def add_schedule(
 
 
 async def _mandate_out(session: Any, mandate: SepaMandate) -> s.MandateOut:
-    account = await session.get(ContactBankAccount, mandate.contact_bank_account_id)
-    out = s.MandateOut.model_validate(mandate)
-    out.iban_masked = mask_iban(account.iban) if account is not None else None
+    return (await _mandates_out(session, [mandate]))[0]
+
+
+async def _mandates_out(session: Any, mandates: Sequence[SepaMandate]) -> list[s.MandateOut]:
+    """One query for the bank accounts of all mandates (masked IBAN)."""
+    if not mandates:
+        return []
+    accounts = {
+        a.id: a
+        for a in (
+            await session.scalars(
+                select(ContactBankAccount).where(
+                    ContactBankAccount.id.in_({m.contact_bank_account_id for m in mandates})
+                )
+            )
+        ).all()
+    }
+    out = []
+    for mandate in mandates:
+        row = s.MandateOut.model_validate(mandate)
+        account = accounts.get(mandate.contact_bank_account_id)
+        row.iban_masked = mask_iban(account.iban) if account is not None else None
+        out.append(row)
     return out
 
 
-@router.get("/sepa-mandates", summary="SEPA-Mandate")
+@router.get("/sepa-mandates", summary="SEPA-Mandate", responses=PAGE_HEADERS)
 async def list_mandates(
     request: Request,
+    response: Response,
     party_id: uuid.UUID | None = None,
     status: MandateStatus | None = None,
+    limit: int = Query(default=200, ge=1, le=1000),
+    page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
+    page_size: int | None = Query(
+        default=None,
+        ge=1,
+        le=1000,
+        description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.MandateOut]:
+    """Paginierung wie ``GET /tickets`` (Kopfzeilen ``X-Total-Count``, ``X-Page``,
+    ``X-Page-Size``), Antwort bleibt eine Liste."""
     async with tenant_tx(request, principal) as session:
         query = select(SepaMandate)
         if party_id is not None:
             query = query.where(SepaMandate.party_id == party_id)
         if status is not None:
             query = query.where(SepaMandate.status == status)
-        rows = (await session.scalars(query.order_by(SepaMandate.signed_at))).all()
-        return [await _mandate_out(session, m) for m in rows]
+        rows = await paginate(
+            session,
+            query.order_by(SepaMandate.signed_at, SepaMandate.id),
+            response,
+            page=page,
+            page_size=page_size,
+            limit=limit,
+        )
+        return await _mandates_out(session, rows)
 
 
 @router.post("/sepa-mandates", status_code=201, summary="SEPA-Mandat erfassen")
@@ -476,25 +567,36 @@ async def revoke_mandate(
 async def _deposit_out(session: Any, deposit: Deposit) -> s.DepositOut:
     await session.flush()
     await session.refresh(deposit)
-    movements = list(
-        (
-            await session.scalars(
-                select(DepositMovement)
-                .where(DepositMovement.deposit_id == deposit.id)
-                .order_by(DepositMovement.date)
-            )
-        ).all()
-    )
-    received, balance = svc.deposit_totals(deposit, movements)
-    out = s.DepositOut.model_validate(deposit)
-    out.received = received
-    out.balance = balance
-    out.outstanding = max(deposit.amount_due - received, Decimal("0.00"))
-    out.movements = []
-    for m in movements:
-        row = s.DepositMovementOut.model_validate(m)
-        row.review_required = m.posting_id is None  # not yet a ledger posting (M10, G1)
-        out.movements.append(row)
+    return (await _deposits_out(session, [deposit]))[0]
+
+
+async def _deposits_out(session: Any, deposits: Sequence[Deposit]) -> list[s.DepositOut]:
+    """Movements of all deposits in one query."""
+    if not deposits:
+        return []
+    movements: dict[uuid.UUID, list[DepositMovement]] = {}
+    for m in (
+        await session.scalars(
+            select(DepositMovement)
+            .where(DepositMovement.deposit_id.in_([d.id for d in deposits]))
+            .order_by(DepositMovement.date)
+        )
+    ).all():
+        movements.setdefault(m.deposit_id, []).append(m)
+    out = []
+    for deposit in deposits:
+        rows = movements.get(deposit.id, [])
+        received, balance = svc.deposit_totals(deposit, rows)
+        item = s.DepositOut.model_validate(deposit)
+        item.received = received
+        item.balance = balance
+        item.outstanding = max(deposit.amount_due - received, Decimal("0.00"))
+        item.movements = []
+        for m in rows:
+            row = s.DepositMovementOut.model_validate(m)
+            row.review_required = m.posting_id is None  # not yet a ledger posting (M10, G1)
+            item.movements.append(row)
+        out.append(item)
     return out
 
 
@@ -523,9 +625,11 @@ async def list_deposits(
     async with tenant_tx(request, principal) as session:
         await _get(session, Contract, contract_id)
         rows = (
-            await session.scalars(select(Deposit).where(Deposit.contract_id == contract_id))
+            await session.scalars(
+                select(Deposit).where(Deposit.contract_id == contract_id).order_by(Deposit.id)
+            )
         ).all()
-        return [await _deposit_out(session, d) for d in rows]
+        return await _deposits_out(session, rows)
 
 
 @router.post("/deposits/{deposit_id}/movements", status_code=201, summary="Kautionsbewegung")

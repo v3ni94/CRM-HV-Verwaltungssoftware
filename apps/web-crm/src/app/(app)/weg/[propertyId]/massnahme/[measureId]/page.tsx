@@ -48,8 +48,16 @@ export default async function MeasurePage({ params }: { params: Promise<{ proper
       </p>
       <section className={ui.card} data-testid="measure-financing">
         <h2 className={ui.h2}>{t("financing")}</h2>
+        {d.financing.length === 0 ? <p className="mt-2 text-sm text-muted">{t("noFinancing")}</p> : null}
         <div className="overflow-x-auto">
           <table className="mhvp-table">
+            <thead>
+              <tr>
+                <th>{t("source")}</th>
+                <th className="num">{t("amount")}</th>
+                <th>{t("reference")}</th>
+              </tr>
+            </thead>
             <tbody>
               {d.financing.map((f) => (
                 <tr key={f.id}>

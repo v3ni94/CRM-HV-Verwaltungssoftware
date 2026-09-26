@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -11,6 +11,8 @@ import { ui } from "@/lib/ui";
  *  differences of the cash flow reconciliation. Everything is recording; nothing posts. */
 
 type Account = { id: string; number: string; name: string };
+export type ResolutionOption = { id: string; number?: number | null; decided_on: string; subject: string };
+const resolutionLabel = (r: ResolutionOption) => `${r.number ? `Nr. ${r.number} · ` : ""}${r.decided_on} · ${r.subject}`;
 const MONEY = /^-?\d+([.,]\d{1,2})?$/;
 const num = (v: string) => v.replace(",", ".");
 
@@ -18,19 +20,38 @@ function useCall() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const call = async <T,>(path: string, body: unknown, method = "POST"): Promise<T | null> => {
     setBusy(true);
     setError(null);
+    setSaved(false);
     const res = await bff<T>(`/api/bff/hoa/${path}`, { method, body: JSON.stringify(body) });
     setBusy(false);
     if (!res.ok) {
       setError(res.message);
       return null;
     }
+    setSaved(true);
     router.refresh();
     return res.data;
   };
-  return { busy, error, call, router };
+  return { busy, error, saved, call, router };
+}
+
+/** Validation hint under a form: which fields are missing or malformed (the button stays
+ *  disabled until the hint disappears). */
+function Hint({ text }: { text: string | null }) {
+  return text ? <p className={ui.help}>{text}</p> : null;
+}
+
+function StatusLine({ saved, busy }: { saved: boolean; busy: boolean }) {
+  const t = useTranslations("HoaFinance");
+  if (busy) return <p className={ui.help}>{t("saving")}</p>;
+  return saved ? (
+    <p role="status" className={ui.success}>
+      {t("saved")}
+    </p>
+  ) : null;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -56,23 +77,45 @@ export function FinanceCreate({
   ledgerId,
   basePath,
   loanAccounts = [],
+  resolutions = [],
 }: {
   kind: "loan" | "claim" | "measure";
   ledgerId: string;
   basePath: string;
   loanAccounts?: Account[];
+  /** A79: resolutions of the same community, offered for the claim. */
+  resolutions?: ResolutionOption[];
 }) {
   const t = useTranslations("HoaFinance");
   const { busy, error, call, router } = useCall();
-  const [f, setF] = useState<Record<string, string>>({ kind: "undecided", account: "" });
+  const [f, setF] = useState<Record<string, string>>({ kind: "undecided", account: "", resolution: "" });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((s) => ({ ...s, [k]: e.target.value }));
-  const valid =
-    kind === "loan"
-      ? (f.lender ?? "").trim().length >= 2 && MONEY.test(f.principal ?? "") && MONEY.test(f.rate ?? "") && !!f.start && (f.purpose ?? "").trim().length >= 3
-      : kind === "claim"
-        ? (f.title ?? "").trim().length >= 3 && !!f.damageDate
-        : (f.title ?? "").trim().length >= 3 && MONEY.test(f.costFrame ?? "") && (f.kind === "undecided" || (f.kindBasis ?? "").trim().length >= 3);
+  const missing: string[] = [];
+  const malformed: string[] = [];
+  const need = (ok: boolean, label: string) => (ok ? undefined : missing.push(label));
+  const number = (v: string | undefined, label: string) => (v && !MONEY.test(v) ? malformed.push(label) : undefined);
+  if (kind === "loan") {
+    need((f.lender ?? "").trim().length >= 2, t("lender"));
+    need(MONEY.test(f.principal ?? ""), t("principal"));
+    need(MONEY.test(f.rate ?? ""), t("rate"));
+    need(!!f.start, t("startDate"));
+    need((f.purpose ?? "").trim().length >= 3, t("purpose"));
+    number(f.principal, t("principal"));
+    number(f.rate, t("rate"));
+    number(f.instalment, t("instalment"));
+  } else if (kind === "claim") {
+    need((f.title ?? "").trim().length >= 3, t("title"));
+    need(!!f.damageDate, t("damageDate"));
+    number(f.deductible, t("deductible"));
+  } else {
+    need((f.title ?? "").trim().length >= 3, t("title"));
+    need(MONEY.test(f.costFrame ?? ""), t("costFrame"));
+    need(f.kind === "undecided" || (f.kindBasis ?? "").trim().length >= 3, t("kindBasis"));
+    number(f.costFrame, t("costFrame"));
+  }
+  const valid = missing.length === 0 && malformed.length === 0;
+  const hint = malformed.length ? `${t("invalidNumber")} (${malformed.join(", ")})` : missing.length ? t("missingFields", { fields: missing.join(", ") }) : null;
   const create = async () => {
     const body =
       kind === "loan"
@@ -95,6 +138,7 @@ export function FinanceCreate({
               insurer: f.insurer?.trim() || null,
               policy_reference: f.policy?.trim() || null,
               deductible: f.deductible ? num(f.deductible) : "0.00",
+              resolution_id: f.resolution || null,
             }
           : {
               ledger_id: ledgerId,
@@ -162,6 +206,18 @@ export function FinanceCreate({
             <Field label={t("deductible")}>
               <input className={ui.input} inputMode="decimal" value={f.deductible ?? ""} onChange={set("deductible")} />
             </Field>
+            {resolutions.length > 0 ? (
+              <Field label={t("resolution")}>
+                <select className={ui.input} value={f.resolution} onChange={set("resolution")}>
+                  <option value="">{t("noResolution")}</option>
+                  {resolutions.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {resolutionLabel(r)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
           </>
         ) : null}
         {kind === "measure" ? (
@@ -186,10 +242,12 @@ export function FinanceCreate({
             </Field>
           </>
         ) : null}
-        <button type="button" className={ui.button} disabled={busy || !valid} onClick={create}>
+        <button type="button" className={ui.primary} disabled={busy || !valid} onClick={create}>
           {t(`create.${kind}`)}
         </button>
       </div>
+      <Hint text={hint} />
+      {busy ? <p className={ui.help}>{t("saving")}</p> : null}
       <ErrorLine error={error} />
     </div>
   );
@@ -198,7 +256,8 @@ export function FinanceCreate({
 /** Loan or claim item with optional journal entry reference (the entry makes it a fact). */
 export function ItemForm({ target, id, kinds }: { target: "loans" | "insurance-claims"; id: string; kinds: string[] }) {
   const t = useTranslations("HoaFinance");
-  const { busy, error, call } = useCall();
+  const { busy, error, saved, call } = useCall();
+  const dayRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState(kinds[0] ?? "");
   const [day, setDay] = useState("");
   const [amount, setAmount] = useState("");
@@ -206,7 +265,14 @@ export function ItemForm({ target, id, kinds }: { target: "loans" | "insurance-c
   const [contract, setContract] = useState("");
   const [note, setNote] = useState("");
   const group = target === "loans" ? "loanKinds" : "claimKinds";
-  const valid = !!kind && !!day && MONEY.test(amount) && !amount.startsWith("-") && (kind !== "owner_payment" || contract.trim().length > 0);
+  const amountValid = MONEY.test(amount) && !amount.startsWith("-");
+  const missing = [
+    ...(day ? [] : [t("bookingDate")]),
+    ...(amount ? [] : [t("amount")]),
+    ...(kind === "owner_payment" && contract.trim().length === 0 ? [t("contract")] : []),
+  ];
+  const valid = !!kind && amountValid && missing.length === 0;
+  const hint = amount && !amountValid ? t("invalidAmount") : missing.length ? t("missingFields", { fields: missing.join(", ") }) : null;
   const add = async () => {
     const res = await call(`${target}/${id}/items`, {
       kind,
@@ -220,6 +286,7 @@ export function ItemForm({ target, id, kinds }: { target: "loans" | "insurance-c
       setAmount("");
       setEntry("");
       setNote("");
+      dayRef.current?.focus();
     }
   };
   return (
@@ -235,10 +302,10 @@ export function ItemForm({ target, id, kinds }: { target: "loans" | "insurance-c
           </select>
         </Field>
         <Field label={t("bookingDate")}>
-          <input className={ui.input} type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+          <input ref={dayRef} className={ui.input} type="date" value={day} onChange={(e) => setDay(e.target.value)} />
         </Field>
         <Field label={t("amount")}>
-          <input className={ui.input} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <input className={ui.input} inputMode="decimal" value={amount} aria-invalid={!!amount && !amountValid} onChange={(e) => setAmount(e.target.value)} />
         </Field>
         <Field label={t("journalEntry")}>
           <input className={ui.input} value={entry} onChange={(e) => setEntry(e.target.value)} />
@@ -251,10 +318,12 @@ export function ItemForm({ target, id, kinds }: { target: "loans" | "insurance-c
         <Field label={t("note")}>
           <input className={ui.input} value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
-        <button type="button" className={ui.button} disabled={busy || !valid} onClick={add}>
+        <button type="button" className={ui.primary} disabled={busy || !valid} onClick={add}>
           {t("addItem")}
         </button>
       </div>
+      <Hint text={hint} />
+      <StatusLine saved={saved} busy={busy} />
       <ErrorLine error={error} />
     </div>
   );
@@ -263,12 +332,15 @@ export function ItemForm({ target, id, kinds }: { target: "loans" | "insurance-c
 /** Financing share of a measure (reserve, special levy, loan, other). */
 export function FinancingForm({ measureId }: { measureId: string }) {
   const t = useTranslations("HoaFinance");
-  const { busy, error, call } = useCall();
+  const { busy, error, saved, call } = useCall();
+  const amountRef = useRef<HTMLInputElement>(null);
   const [source, setSource] = useState("reserve");
   const [amount, setAmount] = useState("");
   const [ref, setRef] = useState("");
   const needsRef = source === "special_levy" || source === "loan";
-  const valid = MONEY.test(amount) && !amount.startsWith("-") && (!needsRef || ref.trim().length > 0);
+  const amountValid = MONEY.test(amount) && !amount.startsWith("-");
+  const valid = amountValid && (!needsRef || ref.trim().length > 0);
+  const hint = amount && !amountValid ? t("invalidAmount") : !amount ? t("missingFields", { fields: t("amount") }) : needsRef && ref.trim().length === 0 ? t("missingFields", { fields: t("reference") }) : null;
   const add = async () => {
     const res = await call(`measures/${measureId}/financing`, {
       source,
@@ -279,6 +351,7 @@ export function FinancingForm({ measureId }: { measureId: string }) {
     if (res !== null) {
       setAmount("");
       setRef("");
+      amountRef.current?.focus();
     }
   };
   return (
@@ -294,17 +367,19 @@ export function FinancingForm({ measureId }: { measureId: string }) {
           </select>
         </Field>
         <Field label={t("amount")}>
-          <input className={ui.input} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <input ref={amountRef} className={ui.input} inputMode="decimal" value={amount} aria-invalid={!!amount && !amountValid} onChange={(e) => setAmount(e.target.value)} />
         </Field>
         {needsRef ? (
           <Field label={t("reference")}>
             <input className={ui.input} value={ref} onChange={(e) => setRef(e.target.value)} />
           </Field>
         ) : null}
-        <button type="button" className={ui.button} disabled={busy || !valid} onClick={add}>
+        <button type="button" className={ui.primary} disabled={busy || !valid} onClick={add}>
           {t("addFinancing")}
         </button>
       </div>
+      <Hint text={hint} />
+      <StatusLine saved={saved} busy={busy} />
       <ErrorLine error={error} />
     </div>
   );
@@ -313,7 +388,7 @@ export function FinancingForm({ measureId }: { measureId: string }) {
 /** Status of a measure or claim (PATCH). */
 export function StatusSelect({ target, id, status, options, group }: { target: "measures" | "insurance-claims"; id: string; status: string; options: string[]; group: "measureStatus" | "claimStatus" }) {
   const t = useTranslations("HoaFinance");
-  const { busy, error, call } = useCall();
+  const { busy, error, saved, call } = useCall();
   const [value, setValue] = useState(status);
   return (
     <div className="flex flex-col gap-1">
@@ -327,8 +402,42 @@ export function StatusSelect({ target, id, status, options, group }: { target: "
             ))}
           </select>
         </Field>
-        <button type="button" className={ui.button} disabled={busy || value === status} onClick={() => call(`${target}/${id}`, { status: value }, "PATCH")}>
+        <button type="button" className={ui.primary} disabled={busy || value === status} onClick={() => call(`${target}/${id}`, { status: value }, "PATCH")}>
           {t("setStatus")}
+        </button>
+      </div>
+      <StatusLine saved={saved} busy={busy} />
+      <ErrorLine error={error} />
+    </div>
+  );
+}
+
+/** A79: structured resolution link of an insurance claim (PATCH resolution_id), checked
+ *  server side against the resolutions of the same community. */
+export function ResolutionSelect({ claimId, resolutionId, resolutions }: { claimId: string; resolutionId: string | null; resolutions: ResolutionOption[] }) {
+  const t = useTranslations("HoaFinance");
+  const { busy, error, call } = useCall();
+  const [value, setValue] = useState(resolutionId ?? "");
+  return (
+    <div className="flex flex-col gap-1" data-testid="claim-resolution">
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label={t("resolution")}>
+          <select className={ui.input} value={value} onChange={(e) => setValue(e.target.value)}>
+            <option value="">{t("noResolution")}</option>
+            {resolutions.map((r) => (
+              <option key={r.id} value={r.id}>
+                {resolutionLabel(r)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <button
+          type="button"
+          className={ui.button}
+          disabled={busy || value === (resolutionId ?? "") || value === ""}
+          onClick={() => call(`insurance-claims/${claimId}`, { resolution_id: value }, "PATCH")}
+        >
+          {t("setResolution")}
         </button>
       </div>
       <ErrorLine error={error} />
@@ -337,15 +446,16 @@ export function StatusSelect({ target, id, status, options, group }: { target: "
 }
 
 type Note = { code: string; amount: string; note: string };
-const NOTE_CODES = ["heating_accrual", "creditor_timing", "prior_year", "other"] as const;
+const NOTE_CODES = ["heating_accrual", "creditor_timing", "prior_year", "migration_opening", "other"] as const;
 
 /** Explained differences of the cash flow reconciliation (W04); only before the internal approval. */
 export function ReconciliationNotes({ statementId, notes }: { statementId: string; notes: Note[] }) {
   const t = useTranslations("HoaFinance");
-  const { busy, error, call } = useCall();
+  const { busy, error, saved, call } = useCall();
   const [rows, setRows] = useState<Note[]>(notes);
   const update = (i: number, k: keyof Note, v: string) => setRows((r) => r.map((n, j) => (j === i ? { ...n, [k]: v } : n)));
   const valid = rows.every((n) => MONEY.test(n.amount) && n.note.trim().length >= 3);
+  const hint = valid ? null : rows.some((n) => n.amount && !MONEY.test(n.amount)) ? t("invalidNumber") : t("missingFields", { fields: `${t("noteAmount")}, ${t("noteText")}` });
   return (
     <div className="flex flex-col gap-2" data-testid="reconciliation-notes">
       <h3 className={ui.h2}>{t("notes")}</h3>
@@ -386,6 +496,8 @@ export function ReconciliationNotes({ statementId, notes }: { statementId: strin
           {t("saveNotes")}
         </button>
       </div>
+      <Hint text={hint} />
+      <StatusLine saved={saved} busy={busy} />
       <ErrorLine error={error} />
     </div>
   );

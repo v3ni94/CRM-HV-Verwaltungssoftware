@@ -42,19 +42,23 @@ export function TicketComments({ ticketId, comments }: { ticketId: string; comme
       ) : (
         <ul className="flex flex-col gap-2">
           {comments.map((c, i) => (
-            <li key={i} className="rounded-md border border-border bg-surface px-3 py-2 text-sm">
+            <li key={i} className="whitespace-pre-wrap break-words rounded-md border border-border bg-surface px-3 py-2 text-sm">
               {c}
             </li>
           ))}
         </ul>
       )}
-      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-2">
+      <form onSubmit={onSubmit} noValidate aria-busy={busy} className="flex flex-col gap-2">
         {error ? (
           <p role="alert" className={ui.alert}>
             {error}
           </p>
         ) : null}
-        {sent ? <p className={ui.success}>{t("commentSent")}</p> : null}
+        {sent ? (
+          <p role="status" className={ui.success}>
+            {t("commentSent")}
+          </p>
+        ) : null}
         <label htmlFor="comment-body" className={ui.label}>
           {t("commentField")}
         </label>

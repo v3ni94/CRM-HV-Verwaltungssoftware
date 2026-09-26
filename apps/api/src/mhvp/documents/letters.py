@@ -86,6 +86,9 @@ class Letter:
     # Optional prominent note above the subject (plain text, escaped on rendering), for
     # example "Vorbereitung, Prüfung durch Rechtsanwalt erforderlich, kein Antrag".
     notice: str | None = None
+    # Optional draft marking (A83): printed as a red header line on every page and as a light
+    # diagonal watermark "ENTWURF"; off for every caller unless set explicitly.
+    draft_notice: str | None = None
 
 
 def render_text(source: str, context: dict[str, Any]) -> str:
@@ -152,8 +155,24 @@ class _Pages:
                 c.drawCentredString(PAGE_W / 2, y, line)
                 y -= 3.4 * mm
 
+    def _draft(self, c: Canvas) -> None:
+        notice = self.letter.draft_notice
+        if not notice:
+            return
+        c.saveState()
+        c.setFillColor(HexColor("#D9D9DC"))
+        c.setFont("Helvetica-Bold", 90)
+        c.translate(PAGE_W / 2, PAGE_H / 2)
+        c.rotate(45)
+        c.drawCentredString(0, 0, "ENTWURF")
+        c.restoreState()
+        c.setFillColor(HexColor("#8A1C1C"))
+        c.setFont("Helvetica-Bold", 8.5)
+        c.drawString(LEFT, PAGE_H - 7.5 * mm, notice[:160])
+
     def first(self, c: Canvas, _doc: Any) -> None:
         head, letter = self.head, self.letter
+        self._draft(c)
         _band(c, head.branding, PAGE_H, 3 * mm)
         # Fold and hole marks (DIN 5008 form B).
         c.setStrokeColor(HexColor("#9C9D9F"))
@@ -197,6 +216,7 @@ class _Pages:
         self._footer(c)
 
     def later(self, c: Canvas, doc: Any) -> None:
+        self._draft(c)
         _band(c, self.head.branding, PAGE_H, 1.2 * mm)
         c.setFillColor(HexColor(MUTED))
         c.setFont("Helvetica", 8)

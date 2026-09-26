@@ -22,6 +22,7 @@ from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m5_contracts import _party, _unit
 from tests.integration.test_m8_import import BUCKET, _settings
+from tests.integration.test_m10_ledger import _accounts, _book, _entry, _line
 
 pytestmark = pytest.mark.integration
 H = "/api/v1/hoa"
@@ -462,3 +463,172 @@ def test_board_sees_only_own_community_and_tenant(client: TestClient, world: Wor
         == 404
     )
     assert _ok(client.get(f"{H}/audits", params={"legal_entity_id": hoa_a}, headers=hb)) == []
+
+
+def test_a76_a77_board_filters_positions_and_records_statement_on_report(
+    client: TestClient, world: World
+) -> None:
+    """A77 (PÜ08): the board filters the positions of its audit room by account, vendor, booking
+    date and text server side; the filter options list only accounts and vendors of the
+    positions. A76 (PÜ09): the board records its statement on a report version in the portal;
+    the text lands like the CRM entry in ``audit_report.content.board_statement`` with the
+    recording portal account and a history, without any release effect. Board access of another
+    community, a report of another engagement and tenant B all answer 404."""
+    h = bearer(login(client, world, "bdadmin"))
+    hoa, _, board = _hoa(client, h, "905")
+    doc = _doc(client, h, "rechnung-905.pdf", b"%PDF-1.4 905")
+    _, invoice = _ledger_with_invoice(client, h, hoa, "905", doc)
+    ledger = str(invoice["ledger_id"])
+    vendor = str(invoice["provider_contact_id"])
+    acc = _accounts(client, h, ledger)
+    cleaning = _book(
+        client,
+        h,
+        ledger,
+        _entry(
+            "custom",
+            "2025-06-01",
+            [_line(acc["040300"], "120.00"), _line(acc["001200"], "0", "120.00")],
+            document_id=doc,
+            text="Reinigung Juni",
+        ),
+    )
+    garden = _book(
+        client,
+        h,
+        ledger,
+        _entry(
+            "custom",
+            "2025-09-15",
+            [_line(acc["040400"], "80.00"), _line(acc["001200"], "0", "80.00")],
+            text="Gartenpflege September",
+        ),
+    )
+    engagement = _engagement(client, h, hoa, board["id"])
+    item_cleaning = _ok(
+        client.post(
+            f"{H}/audits/{engagement}/items",
+            json={"journal_entry_id": cleaning["id"], "amount": "120.00"},
+            headers=h,
+        ),
+        201,
+    )
+    item_garden = _ok(
+        client.post(
+            f"{H}/audits/{engagement}/items",
+            json={"journal_entry_id": garden["id"], "amount": "80.00"},
+            headers=h,
+        ),
+        201,
+    )
+    bh = _board_login(client, h, world, "bd905", engagement, board["id"])
+    base = f"{B}/engagements/{engagement}"
+
+    # Unfiltered: both positions with accounts and vendor; options from the positions only.
+    detail = _ok(client.get(base, headers=bh))
+    assert [p["id"] for p in detail["positions"]] == [item_cleaning["id"], item_garden["id"]]
+    assert detail["positions_total"] == 2
+    assert detail["positions"][0]["vendor_contact_id"] == vendor
+    assert detail["positions"][0]["vendor_name"].startswith("Gärtner 905")
+    assert {a["number"] for a in detail["positions"][0]["accounts"]} == {"040300", "001200"}
+    assert detail["positions"][1]["vendor_contact_id"] is None
+    assert {a["number"] for a in detail["filter_options"]["accounts"]} == {
+        "040300",
+        "040400",
+        "001200",
+    }
+    assert [v["id"] for v in detail["filter_options"]["vendors"]] == [vendor]
+    assert detail["filter"]["account_id"] is None
+
+    by_account = _ok(client.get(base, params={"account_id": acc["040400"]}, headers=bh))
+    assert [p["id"] for p in by_account["positions"]] == [item_garden["id"]]
+    assert by_account["positions_total"] == 2
+    assert by_account["filter"]["account_id"] == acc["040400"]
+    by_vendor = _ok(client.get(base, params={"vendor_contact_id": vendor}, headers=bh))
+    assert [p["id"] for p in by_vendor["positions"]] == [item_cleaning["id"]]
+    # Receipts follow the filtered positions; the invoice document belongs to the cleaning.
+    assert {d["id"] for d in by_vendor["documents"]} == {doc}
+    assert by_account["documents"] == []
+    by_date = _ok(
+        client.get(base, params={"date_from": "2025-09-01", "date_to": "2025-09-30"}, headers=bh)
+    )
+    assert [p["id"] for p in by_date["positions"]] == [item_garden["id"]]
+    by_text = _ok(client.get(base, params={"q": "reinigung"}, headers=bh))
+    assert [p["id"] for p in by_text["positions"]] == [item_cleaning["id"]]
+    none = _ok(client.get(base, params={"account_id": acc["040400"], "q": "reinigung"}, headers=bh))
+    assert none["positions"] == []
+    assert none["overall_status"] == detail["overall_status"]  # status never depends on filter
+    assert (
+        client.get(
+            base, params={"date_from": "2025-12-01", "date_to": "2025-11-01"}, headers=bh
+        ).status_code
+        == 422
+    )
+
+    # Reports: none yet, then one version created in the CRM; the board sees no position ids.
+    assert _ok(client.get(f"{base}/reports", headers=bh)) == []
+    report = _ok(
+        client.post(
+            f"{H}/audits/{engagement}/reports",
+            json={"findings": "Stichprobe ohne Beanstandung", "recommendation": "Entlastung"},
+            headers=h,
+        ),
+        201,
+    )
+    reports = _ok(client.get(f"{base}/reports", headers=bh))
+    assert [r["id"] for r in reports] == [report["id"]]
+    assert reports[0]["version"] == 1
+    assert reports[0]["board_statement"] is None
+    assert reports[0]["content"]["findings"] == "Stichprobe ohne Beanstandung"
+    assert "open" not in reports[0]["content"]
+    assert "snapshot_hash" not in reports[0]["content"]
+
+    statement = f"{base}/reports/{report['id']}/statement"
+    assert client.post(statement, json={"text": "   "}, headers=bh).status_code == 422
+    first = _ok(
+        client.post(
+            statement, json={"text": "Der Beirat nimmt den Bericht zur Kenntnis."}, headers=bh
+        )
+    )
+    assert first["board_statement"]["text"] == "Der Beirat nimmt den Bericht zur Kenntnis."
+    assert first["board_statement"]["recorded_at"]
+    assert first["board_statement"]["source"] == "portal"
+    me = _ok(client.get(f"{P}/me", headers=bh))
+    assert me["roles"] == ["board"]
+    second = _ok(client.post(statement, json={"text": "Ergänzung des Beirats."}, headers=bh))
+    assert second["board_statement"]["text"] == "Ergänzung des Beirats."
+    assert [s["text"] for s in second["board_statement_history"]] == [
+        "Der Beirat nimmt den Bericht zur Kenntnis."
+    ]
+    # Stored like the CRM entry: the CRM report list shows the same statement with the account.
+    crm = _ok(client.get(f"{H}/audits/{engagement}/reports", headers=h))
+    assert crm[0]["board_statement"]["text"] == "Ergänzung des Beirats."
+    assert crm[0]["board_statement"]["recorded_by_account"]
+    assert crm[0]["content"]["findings"] == "Stichprobe ohne Beanstandung"
+    assert crm[0]["version"] == 1
+    # No release effect: engagement and positions unchanged.
+    assert _ok(client.get(f"{H}/audits/{engagement}", headers=h))["status"] == "open"
+    assert _ok(client.get(base, headers=bh))["positions"][0]["status"] == "open"
+
+    # Separation: a report of another engagement is 404 through this engagement; a board member
+    # of another community and the administrator of tenant B reach nothing.
+    hoa_other, _, board_other = _hoa(client, h, "906")
+    eng_other = _engagement(client, h, hoa_other, board_other["id"])
+    report_other = _ok(
+        client.post(f"{H}/audits/{eng_other}/reports", json={"findings": "x"}, headers=h), 201
+    )
+    assert (
+        client.post(
+            f"{base}/reports/{report_other['id']}/statement", json={"text": "x"}, headers=bh
+        ).status_code
+        == 404
+    )
+    bh_other = _board_login(client, h, world, "bd906", eng_other, board_other["id"])
+    assert client.get(f"{base}/reports", headers=bh_other).status_code == 404
+    assert (
+        client.get(base, params={"vendor_contact_id": vendor}, headers=bh_other).status_code == 404
+    )
+    assert client.post(statement, json={"text": "fremd"}, headers=bh_other).status_code == 404
+    hb = bearer(login(client, world, "bdadmin_b", tenant_id=world.tenant_b))
+    assert client.get(f"{base}/reports", headers=hb).status_code in (403, 404)
+    assert client.post(statement, json={"text": "fremd"}, headers=hb).status_code in (403, 404)

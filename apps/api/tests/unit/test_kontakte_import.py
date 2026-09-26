@@ -98,7 +98,7 @@ def test_phone_and_street() -> None:
 
 
 def test_parse_and_prepare() -> None:
-    rows = parse_kontakte(SAMPLE, ContactRoleCode.MIETER, "mieter.csv")
+    rows = parse_kontakte(SAMPLE, ContactRoleCode.MIETER, "mieter.csv").rows
     assert len(rows) == 7
     prepared = {p.row.external_id: p for p in prepare(rows)}
     assert all(p.data is not None for p in prepared.values())
@@ -132,5 +132,5 @@ def test_parse_and_prepare() -> None:
     assert vermittlung is not None
     assert vermittlung.kind is ContactKind.COMPANY
     assert vermittlung.phones[0].number == "+493043917008"
-    with pytest.raises(ValueError, match="Spalten fehlen"):
+    with pytest.raises(ValueError, match=r"x\.csv: Spalte fehlt: Name"):
         parse_kontakte("Nr;Wert\n1;x\n", ContactRoleCode.MIETER, "x.csv")

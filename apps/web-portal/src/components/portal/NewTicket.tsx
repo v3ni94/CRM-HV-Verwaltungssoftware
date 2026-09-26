@@ -63,19 +63,25 @@ export function NewTicket() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className={`${ui.card} flex flex-col gap-3`}>
-      <h2 className={ui.h2}>{t("new")}</h2>
+    <form onSubmit={onSubmit} noValidate aria-busy={busy} aria-labelledby="ticket-new-title" className={`${ui.card} flex flex-col gap-3`}>
+      <h2 id="ticket-new-title" className={ui.h2}>
+        {t("new")}
+      </h2>
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
         </p>
       ) : null}
-      {done ? <p className={ui.success}>{t("submitted")}</p> : null}
+      {done ? (
+        <p role="status" className={ui.success}>
+          {t("submitted")}
+        </p>
+      ) : null}
       <div>
         <label htmlFor="ticket-title" className={ui.label}>
           {t("titleField")}
         </label>
-        <input id="ticket-title" className={ui.input} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input id="ticket-title" className={ui.input} aria-required="true" value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
       <div>
         <label htmlFor="ticket-description" className={ui.label}>
@@ -84,6 +90,7 @@ export function NewTicket() {
         <textarea
           id="ticket-description"
           rows={4}
+          aria-required="true"
           className={ui.input}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -96,12 +103,15 @@ export function NewTicket() {
         <input
           id="ticket-photo"
           type="file"
+          aria-describedby="ticket-photo-hint"
           accept="image/jpeg,image/png"
           multiple
           className={ui.input}
           onChange={(e) => setPhotos(Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS))}
         />
-        <p className={ui.help}>{t("photoHint")}</p>
+        <p id="ticket-photo-hint" className={ui.help}>
+          {t("photoHint")}
+        </p>
       </div>
       <div className={ui.formActions}>
         <button type="submit" className={`${ui.primary} ${ui.actionFull}`} disabled={busy}>

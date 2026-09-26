@@ -7,7 +7,8 @@ import { TicketsList } from "@/components/tickets/TicketsList";
 import { TicketsPagination } from "@/components/tickets/TicketsPagination";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
@@ -82,8 +83,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
   }
   const error = response.ok ? null : ((await response.json().catch(() => null)) as Problem | null);
 
-  const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   const canApprove = me.data?.permissions.includes("tickets:approve") ?? false;
   const meUserId = me.data?.user_id ? String(me.data.user_id) : null;
 

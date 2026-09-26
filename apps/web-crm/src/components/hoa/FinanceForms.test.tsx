@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { FinanceCreate, ItemForm, ReconciliationNotes } from "./FinanceForms";
+import { FinanceCreate, ItemForm, ReconciliationNotes, ResolutionSelect } from "./FinanceForms";
 
 const refresh = vi.fn();
 const push = vi.fn();
@@ -63,6 +63,39 @@ describe("W10 finance forms", () => {
     });
   });
 
+  it("creates a claim with a resolution of the community (A79)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: ID }, 201));
+    renderIntl(
+      <FinanceCreate kind="claim" ledgerId="l1" basePath="/weg/p" resolutions={[{ id: "r1", number: 3, decided_on: "10.04.2025", subject: "Sanierung Keller" }]} />,
+    );
+    await userEvent.type(screen.getByLabelText("Bezeichnung"), "Wasserschaden");
+    await userEvent.type(screen.getByLabelText("Schadensdatum"), "2025-03-02");
+    await userEvent.selectOptions(screen.getByLabelText("Beschluss"), "r1");
+    expect(screen.getByText("Nr. 3 · 10.04.2025 · Sanierung Keller")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Versicherungsfall anlegen"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(`/weg/p/versicherung/${ID}`));
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toMatchObject({ ledger_id: "l1", title: "Wasserschaden", resolution_id: "r1" });
+  });
+
+  it("assigns a resolution to an existing claim with PATCH", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: ID }));
+    renderIntl(<ResolutionSelect claimId={ID} resolutionId={null} resolutions={[{ id: "r1", number: 3, decided_on: "10.04.2025", subject: "Sanierung Keller" }]} />);
+    expect(screen.getByText("Beschluss zuordnen")).toBeDisabled();
+    await userEvent.selectOptions(screen.getByLabelText("Beschluss"), "r1");
+    await userEvent.click(screen.getByText("Beschluss zuordnen"));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`/api/bff/hoa/insurance-claims/${ID}`);
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("PATCH");
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ resolution_id: "r1" });
+  });
+
+  it("offers the takeover code migration_opening as explained difference (A80)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: ID }));
+    renderIntl(<ReconciliationNotes statementId={ID} notes={[{ code: "migration_opening", amount: "800.00", note: "Vorperiode Altsystem" }]} />);
+    expect(screen.getByLabelText("Art")).toHaveValue("migration_opening");
+    expect(screen.getByText("Übernahme aus Altsystem (Vorperiode)")).toBeInTheDocument();
+  });
+
   it("saves the explained differences of the reconciliation with PUT", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: ID }));
     renderIntl(<ReconciliationNotes statementId={ID} notes={[]} />);
@@ -78,5 +111,45 @@ describe("W10 finance forms", () => {
     expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
       notes: [{ code: "heating_accrual", amount: "300.00", note: "Heizkostenabrechnung 2025" }],
     });
+  });
+});
+
+describe("W10 finance forms usability (review 26.09.2026)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("explains a malformed amount and the missing fields instead of a silent disabled button", async () => {
+    renderIntl(<ItemForm target="loans" id={ID} kinds={["disbursement", "repayment"]} />);
+    expect(screen.getByText("Bitte ausfüllen: Datum, Betrag")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Betrag"), "12,345");
+    expect(screen.getByText("Betrag im Format 1.234,56 ohne Vorzeichen.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Betrag")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Position erfassen")).toBeDisabled();
+  });
+
+  it("confirms a recorded item and returns the focus to the date field", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: "i1", booked: false }, 201));
+    renderIntl(<ItemForm target="loans" id={ID} kinds={["disbursement"]} />);
+    await userEvent.type(screen.getByLabelText("Datum"), "2025-05-02");
+    await userEvent.type(screen.getByLabelText("Betrag"), "250,00");
+    await userEvent.click(screen.getByText("Position erfassen"));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Gespeichert."));
+    expect(screen.getByLabelText("Betrag")).toHaveValue("");
+    expect(screen.getByLabelText("Datum")).toHaveFocus();
+  });
+
+  it("names the missing loan fields while the create button is disabled", async () => {
+    renderIntl(<FinanceCreate kind="loan" ledgerId="l1" basePath="/weg/p" />);
+    expect(screen.getByText("Bitte ausfüllen: Darlehensgeber, Darlehensbetrag, Zinssatz in Prozent, Beginn, Zweck")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Darlehensbetrag"), "abc");
+    expect(screen.getByText(/Zahl im Format 1.234,56. \(Darlehensbetrag\)/)).toBeInTheDocument();
+  });
+
+  it("shows the API error of a failed status change", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ title: "Statuswechsel nicht erlaubt", status: 409 }, 409));
+    const { StatusSelect } = await import("./FinanceForms");
+    renderIntl(<StatusSelect target="measures" id={ID} status="planned" options={["planned", "resolved"]} group="measureStatus" />);
+    await userEvent.selectOptions(screen.getByLabelText("Status"), "resolved");
+    await userEvent.click(screen.getByText("Status setzen"));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Statuswechsel nicht erlaubt"));
   });
 });

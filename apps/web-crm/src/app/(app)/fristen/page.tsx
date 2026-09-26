@@ -3,7 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DeadlinesTable, type Deadline } from "@/components/workspace/DeadlinesTable";
 import { JobSettingsForm, type JobSettings } from "@/components/workspace/JobSettingsForm";
-import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export default async function DeadlinesPage({ searchParams }: { searchParams: Pr
   if (params.to) query.set("to", params.to);
 
   const [me, response, settingsResponse] = await Promise.all([
-    serverApi().GET("/api/v1/auth/me"),
+    getMe(),
     serverFetch(`/api/v1/workspace/deadlines?${query.toString()}`),
     serverFetch("/api/v1/workspace/job-settings"),
   ]);

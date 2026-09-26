@@ -99,7 +99,9 @@
     "immowareLearning": "Learning phase",
     "objektakte": "Objektakte (Records)",
     "immoware24:reconciliation": "Immoware24: parallel operation reconciliation",
-    "serviceContracts": "Service contracts"
+    "serviceContracts": "Service contracts",
+    "loading": "Loading page.",
+    "contracts": "Contracts"
   },
   "Contacts": {
     "title": "Contacts",
@@ -191,9 +193,18 @@
       "rejected": "rejected",
       "approve": "Release",
       "reject": "Reject",
-      "rejectConfirm": "Really reject IBAN {iban}?",
       "ownRequest": "entered by you, release by another person",
-      "hint": "New and changed IBANs take effect only after release by a second person (four eyes principle). Until then they are not used in direct debit or payment runs."
+      "hint": "New and changed IBANs take effect only after release by a second person (four eyes principle). Until then they are not used in direct debit or payment runs.",
+      "decidedAt": "on {date}",
+      "approvedNotice": "IBAN {iban} released.",
+      "rejectedNotice": "IBAN {iban} rejected.",
+      "rejectTitle": "Reject IBAN {iban}",
+      "rejectReason": "Reason for rejection",
+      "rejectReasonHelp": "Required, at most {max} characters. The reason is stored in the audit log.",
+      "rejectSubmit": "Confirm rejection",
+      "cancel": "Cancel",
+      "noPermission": "Release only with permission contacts:approve by a second person.",
+      "platformAdmin": "Platform administrators do not release IBANs; a second person of the tenant releases them."
     }
   },
   "ContactForm": {
@@ -652,7 +663,7 @@
   },
   "ImmowareLists": {
     "title": "Immoware24 lists",
-    "intro": "Create the property list and contact lists from Immoware24 as CSV (UTF-8, semicolon) directly. Test run first, then apply. No contracts, receivables or postings are created.",
+    "intro": "Create the object list and contact lists from Immoware24 as CSV directly (UTF-8 or Windows-1252; semicolon, comma or tab are detected). Test run first, then apply. No contracts, receivables, bank accounts or postings are created.",
     "objektdaten": {
       "title": "Property data",
       "help": "Export of property data with the columns Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer. Owners, tenants and amounts are only stored as a source note on the unit.",
@@ -699,9 +710,11 @@
         "created": "Contacts created",
         "unchanged": "Contacts unchanged",
         "role_added": "Role added",
-        "invalid": "Lines invalid"
+        "invalid": "Lines invalid",
+        "duplicate": "Duplicates in the file"
       }
     },
+    "fileNotes": "File notes",
     "colStatus": "Status",
     "colMessages": "Messages",
     "status": {
@@ -710,7 +723,8 @@
       "conflict": "Conflict",
       "invalid": "invalid",
       "role_added": "Role added",
-      "übersprungen": "skipped"
+      "übersprungen": "skipped",
+      "duplicate": "duplicate"
     },
     "testRun": "Test run",
     "apply": "Apply",
@@ -1282,10 +1296,14 @@
         "complete": "All required fields are present. The export can be downloaded.",
         "missingTitle": "Missing or incomplete required fields. The export is locked until the details are completed or the export is explicitly triggered anyway:",
         "forceLabel": "Export anyway",
-        "forceHint": "The file is generated without the missing details. Missing values are not invented, the corresponding elements remain empty.",
+        "forceHint": "The file is generated despite missing data or schema errors. Missing values are not invented, the related elements stay empty.",
         "hintsTitle": "Notes (not blocking):",
         "error": "Check failed.",
-        "notice": "Read only export to OpenImmo 1.2.7 (M26-02), XML or ZIP with linked images. No transfer to a portal. The list of required fields is a product standard, not a legal completeness check."
+        "notice": "Read only export to OpenImmo 1.2.7 (M26-02), XML or ZIP with linked images. No transfer to a portal. The list of required fields is a product standard, not a legal completeness check.",
+        "schemaValidXsd": "Schema check against the stored OpenImmo XSD passed.",
+        "schemaValidStructure": "Structural check passed (documented elements). No check against the official OpenImmo schema.",
+        "schemaInvalidXsd": "Schema check against the stored OpenImmo XSD failed. The export is locked until the errors are fixed or the export is explicitly forced:",
+        "schemaInvalidStructure": "Structural check failed. The export is locked until the errors are fixed or the export is explicitly forced:"
       },
       "images": {
         "title": "Images",
@@ -1376,7 +1394,8 @@
       "ignored": "{count} ignored",
       "noBase": "no base",
       "period": "Period {from} to {to}.",
-      "note": "Operational figures, no release of the automation."
+      "note": "Operational figures, no release of the automation.",
+      "loading": "Loading metrics."
     },
     "notice": "Matches are proposals. An IBAN alone does not prove the debtor. Booking only after confirmation; not the leading bookkeeping until release gate G1.",
     "statementFile": "Bank statement (CAMT.053)",
@@ -1410,7 +1429,9 @@
       "transfers": "transfers",
       "statements": "statements"
     },
-    "ordersLink": "Payment orders"
+    "ordersLink": "Payment orders",
+    "subpages": "More bank functions",
+    "directDebitsLink": "Direct debit runs"
   },
   "Payments": {
     "title": "Payment orders",
@@ -1435,7 +1456,10 @@
     "status_partially_executed": "Partially executed",
     "status_rejected": "Rejected",
     "status_returned": "Returned",
-    "status_cancelled": "Cancelled"
+    "status_cancelled": "Cancelled",
+    "bank": "Bank",
+    "directDebitsLink": "Direct debit runs",
+    "fileLocked": "Payment file only with release gate G2. Until then the order stays prepared; nothing is transmitted to the bank."
   },
   "Dunning": {
     "title": "Dunning",
@@ -1531,7 +1555,13 @@
     "mahnbescheidPdfFiled": "PDF filed",
     "paymentDaysHint": "Payment deadline per level in days: the dunning letter computes the payment date as letter date plus these days. Defaults: level 1 14 days, level 2 10 days, level 3 7 days. Without a value the letter asks for payment without a date.",
     "reminderNoFee": "The payment reminder (level 1) never carries a fee or interest: fee from level must be at least 2 and the level 1 fee must be empty or 0.00 EUR.",
-    "reminderNoFeeHint": "Level 1 (payment reminder) never carries a fee or statutory interest; fees apply from level 2 at the earliest."
+    "reminderNoFeeHint": "Level 1 (payment reminder) never carries a fee or statutory interest; fees apply from level 2 at the earliest.",
+    "emptyHint": "Create a preview for a cut-off date. Cases only arise from open items in the leading system.",
+    "approveHint": "{count} proposed cases. Approval is given by a person other than the one who created the preview.",
+    "nothingToApprove": "No proposed cases, nothing to approve.",
+    "noCases": "No cases were determined for the cut-off date.",
+    "reminderLevel": "Payment reminder",
+    "noFee": "none"
   },
   "Billing": {
     "title": "Operating cost statement",
@@ -1597,7 +1627,10 @@
       "due": "Due",
       "posted": "Posted",
       "locked": "Locked"
-    }
+    },
+    "issueGateHint": "Issuing requires release gate G3. If it is not granted for the tenant, the API refuses the step with a reason; the statement stays internally approved.",
+    "approveInternalHint": "Internal approval is given by a second person, not the one who calculated.",
+    "noLedgers": "No ledger available. Without a ledger no statement can be created."
   },
   "HoaWork": {
     "audits": "Board audits",
@@ -1627,6 +1660,8 @@
         "outdated": "outdated"
       },
       "wholeEngagement": "Whole engagement",
+      "statusLabel": "Status",
+      "saved": "Saved.",
       "board": "Board access and questions",
       "boardHint": "In the portal the board sees only this engagement, the selected positions and the receipts released for them. It does not post, release or change any statement.",
       "accessRevoked": "ended",
@@ -1652,7 +1687,64 @@
         "answered": "answered"
       },
       "answer": "Answer of the management",
-      "sendAnswer": "Send answer"
+      "sendAnswer": "Send answer",
+      "search": "Search",
+      "create": {
+        "open": "Create audit engagement",
+        "hint": "The engagement fixes period, purpose and auditors. The positions are then selected on the engagement from the posted bookings.",
+        "periodFrom": "Period from",
+        "periodTo": "Period to",
+        "sampling": "Audit type",
+        "purpose": "Purpose",
+        "statement": "Statement reference (optional)",
+        "noStatement": "No statement reference",
+        "accounts": "Population accounts (optional)",
+        "accountsHint": "Multiple selection possible. Without a selection the whole ledger of the period applies.",
+        "auditor": "Search auditor (board)",
+        "auditors": "Auditors",
+        "removeAuditor": "Remove {name}",
+        "needAuditor": "Please select at least one auditor.",
+        "submit": "Create engagement",
+        "cancel": "Cancel"
+      },
+      "picker": {
+        "title": "Select audit positions",
+        "hint": "Posted bookings of the community in the audit period. Filter by account, vendor, date and booking text. A selected position is visible to the board in the portal with the released receipts.",
+        "account": "Account",
+        "allAccounts": "All accounts",
+        "vendor": "Search vendor",
+        "clearVendor": "Clear vendor filter",
+        "dateFrom": "Booking date from",
+        "dateTo": "Booking date to",
+        "text": "Booking text",
+        "load": "Load positions",
+        "count": "{n} bookings in the period {from} to {to}.",
+        "truncated": "Only the first 200 are shown, please narrow the filters.",
+        "empty": "No bookings for these filters.",
+        "date": "Date",
+        "number": "No.",
+        "booking": "Booking",
+        "accounts": "Accounts",
+        "invoice": "Invoice {number}",
+        "selected": "selected",
+        "add": "Add as audit position"
+      },
+      "reports": {
+        "title": "Audit reports",
+        "hint": "A report records the state of the positions (sample, checked and open positions). The board statement is recorded as text and has no release effect.",
+        "none": "No report created yet.",
+        "version": "Report version {n}",
+        "figures": "{selected} positions selected, {checked} checked ({checkedValue}), {unchecked} not checked ({uncheckedValue}).",
+        "findings": "Findings",
+        "recommendation": "Recommendation",
+        "boardStatement": "Board statement",
+        "replaceStatement": "Replace board statement (previous text stays in the history)",
+        "saveStatement": "Record statement",
+        "statementHint": "Text only. Neither the report nor the statement changes status.",
+        "create": "Create new report",
+        "confirmCreate": "Create the report with the current state of the positions?",
+        "submit": "Create report"
+      }
     },
     "noLedger": "No ledger exists for this community yet.",
     "inspection": "Inspection requests",
@@ -1704,6 +1796,22 @@
     "annualReserve": "Reserve per year",
     "monthlyReserve": "Reserve per month",
     "statementNotice": "Result against resolved advances. Arrears stay separate claims; the total is information only. Issuing and posting need release gate G4.",
+    "versionDiff": {
+      "title": "Version comparison V{old} to V{new}",
+      "notice": "Comparison of the calculated versions. Difference = new version minus old version. The resolution stays with the resolved version.",
+      "old": "V{version}",
+      "new": "V{version}",
+      "difference": "Difference",
+      "totalCosts": "Total costs",
+      "position": "Position",
+      "onlyOld": "only in old version",
+      "onlyNew": "only in new version",
+      "perUnit": "Per unit",
+      "unit": "Unit",
+      "costShare": "Cost share",
+      "advancesResolved": "Advances due",
+      "result": "Result"
+    },
     "costShare": "Cost share",
     "advancesResolved": "Advances due",
     "result": "Result",
@@ -2113,7 +2221,7 @@
       "openPlaceholders": "Der Text enthält noch offene Platzhalter.",
       "send": "Antwort senden",
       "sendHint": "Der Versand erfolgt erst nach Klick auf Antwort senden über das Postfach des Tickets und den bestehenden Freigabeweg. Es wird nichts automatisch gesendet.",
-      "sent": "Antwort eingereicht. Sie wird nach Freigabe über das Postfach des Tickets versendet.",
+      "sent": "Reply submitted. It goes to the approvers as a draft and is sent through the ticket's mailbox after approval.",
       "openMail": "Im Postfach öffnen",
       "cc": "Cc",
       "replyingTo": "Reply to the mail of {at}",
@@ -2130,8 +2238,9 @@
       "noDocumentsFound": "No documents found.",
       "addDocument": "Add",
       "invalidAddress": "Invalid e-mail address: {address}",
-      "approvalHint": "Sending happens after the four-eyes approval in the mailbox, through the ticket's mailbox.",
-      "reset": "Discard"
+      "approvalHint": "With the approval permission the reply is sent immediately and logged. With the flag approval required (trainee, new employee) or while the tenant brake is on, it goes to the approvers as a draft and is sent only after their approval.",
+      "reset": "Discard",
+      "sentDirect": "Reply sent directly (approved by yourself, logged)."
     },
     "openTicket": "Ticket öffnen",
     "messages": "Nachrichten",
@@ -2160,7 +2269,8 @@
         "draft": "Draft",
         "pending": "awaiting approval",
         "sent": "sent",
-        "failed": "failed"
+        "failed": "failed",
+        "sending": "sending"
       },
       "sendError": "Last send error",
       "rejected": "Rejected",
@@ -2174,8 +2284,52 @@
       "closePreview": "Close preview",
       "download": "Download",
       "replyTo": "Reply to this mail",
-      "openMail": "Open in mailbox"
-    }
+      "openMail": "Open in mailbox",
+      "draftedBy": "Drafted by {name} on {at}",
+      "draftFlag": "(approval required: {reason})",
+      "approvedBy": "approved by {name} on {at}",
+      "selfApproved": "self approved on {at}",
+      "awaitingApproval": "awaiting approval by a second person",
+      "approvalReason": {
+        "azubi": "trainee",
+        "neuer_mitarbeiter": "new employee"
+      }
+    },
+    "workOrders": {
+      "title": "Work orders",
+      "empty": "No work orders for this ticket.",
+      "open": "{n, plural, =0 {no open appointment proposals} =1 {1 open appointment proposal} other {# open appointment proposals}}",
+      "confirmed": "Confirmed appointment: {when}",
+      "noneConfirmed": "no appointment confirmed yet",
+      "loading": "Loading appointment proposals.",
+      "loadError": "Appointment proposals could not be loaded.",
+      "detail": "Open work order"
+    },
+    "events": {
+      "empty": "No history.",
+      "by": "by {name}",
+      "bulk": "bulk action",
+      "created": "created",
+      "status": "Status",
+      "assigned": "assigned to",
+      "reopened": "reopened",
+      "mail_received": "Mail received",
+      "merged_from": "merged from",
+      "merged_into": "merged into",
+      "invoice_attached": "Invoice attached",
+      "routing": {
+        "template": "via template",
+        "manual": "manual"
+      }
+    },
+    "noComments": "No comments.",
+    "portalAuthor": "Portal user",
+    "unknownAuthor": "Unknown",
+    "commentDocuments": "{count, plural, one {1 document} other {# documents}}",
+    "internalDescription": "Internal description",
+    "internalDescriptionHint": "Visible to staff only, not in the portal.",
+    "internalDescriptionSaved": "Saved.",
+    "saveInternalDescription": "Save internal description"
   },
   "Automation": {
     "title": "Automation",
@@ -2342,6 +2496,29 @@
       "payload": {
         "source": "Event source",
         "number": "Event number"
+      },
+      "property": {
+        "number": "Property number",
+        "management_type": "Property management type",
+        "status": "Property status",
+        "city": "Property city",
+        "manager_user_id": "Property manager (user ID)"
+      },
+      "unit": {
+        "number": "Unit number",
+        "unit_type": "Unit type",
+        "floor": "Unit floor"
+      },
+      "contact": {
+        "roles": "Contact roles",
+        "tags": "Contact tags",
+        "kind": "Contact kind",
+        "blocked": "Contact blocked"
+      },
+      "contract": {
+        "kind": "Contract kind",
+        "status": "Contract status",
+        "number": "Contract number"
       }
     },
     "webhookUrl": "Target URL (https)",
@@ -2387,7 +2564,52 @@
       "weekly": "weekly on {weekday} at {time}",
       "monthly": "monthly on day {day} at {time}"
     },
-    "testRunSchedule": "Schedule rule: the test run checks the actions for the next due moment without creating anything."
+    "testRunSchedule": "Schedule rule: the test run checks the actions for the next due moment without creating anything.",
+    "fieldGroups": {
+      "ticket": "Ticket",
+      "event": "Event",
+      "property": "Property",
+      "unit": "Unit",
+      "contact": "Contact",
+      "contract": "Contract"
+    },
+    "fieldValues": {
+      "property": {
+        "management_type": {
+          "rental": "Rental",
+          "hoa": "HOA",
+          "hoa_with_sev": "HOA with SEV"
+        },
+        "status": {
+          "onboarding": "Onboarding",
+          "active": "Active",
+          "terminated": "Terminated"
+        }
+      },
+      "contact": {
+        "roles": {
+          "eigentuemer": "Owner",
+          "mieter": "Tenant",
+          "verwalter": "Manager",
+          "dienstleister": "Service provider",
+          "bank": "Bank",
+          "sonstiges": "Other"
+        }
+      },
+      "contract": {
+        "kind": {
+          "tenancy": "Tenancy",
+          "ownership": "Ownership"
+        },
+        "status": {
+          "future": "Future",
+          "active": "Active",
+          "terminated": "Terminated",
+          "ended": "Ended"
+        }
+      }
+    },
+    "relatedHelp": "Conditions on property, unit, contact and contract are read from the master data linked to the ticket at evaluation time; without a link the condition does not match."
   },
   "TicketTemplates": {
     "title": "Ticket templates",
@@ -2515,7 +2737,8 @@
       "done": "done",
       "draft": "draft",
       "pending": "awaiting approval",
-      "sent": "sent"
+      "sent": "sent",
+      "sending": "sending"
     },
     "suggestion": {
       "title": "AI suggestion",
@@ -2572,7 +2795,10 @@
       "correctionSave": "Save correction",
       "correctionRecorded": "Last corrected"
     },
-    "tnrSuggestion": "Possible assignment to TNR#{number}: the sender is not a participant of the ticket, so the mail was not assigned automatically."
+    "tnrSuggestion": "Possible assignment to TNR#{number}: the sender is not a participant of the ticket, so the mail was not assigned automatically.",
+    "sendingHint": "Approved, dispatch not yet confirmed. Approving again verifies the dispatch by Message-ID and only sends when the message did not go out.",
+    "attachmentsRejected": "Attachments not stored: {list}",
+    "loadingDetail": "Loading message..."
   },
   "Platform": {
     "title": "Platform",
@@ -2594,7 +2820,7 @@
     "search": "Search",
     "choose": "please choose",
     "create": "Capture invoice",
-    "gross": "Gross {gross} EUR (VAT {vat} EUR)",
+    "gross": "Gross {gross} (VAT {vat})",
     "grossLabel": "Gross",
     "review": "Review",
     "posting": "Posting",
@@ -2673,7 +2899,17 @@
       "createDraft": "Create as draft",
       "propertyGuess": "Property hint from the receipt: {value}"
     },
-    "receiptIntakeLink": "Receipt intake (AI drafts)"
+    "receiptIntakeLink": "Receipt intake (AI drafts)",
+    "lineText": "Line",
+    "lineVat": "VAT",
+    "noReviews": "No review step recorded yet.",
+    "nextStep": {
+      "review": "Next step: record all three review steps (completeness, factual, arithmetic and tax). Only then can a second person release.",
+      "iban": "Next step: confirm the deviating IBAN after calling the issuer, then complete the review steps.",
+      "release": "Review completed. Next step: release by a second person (not the reviewer).",
+      "post": "Released. Next step: post. Until release gate G1 the posting is not the leading bookkeeping; correction only by reversal."
+    },
+    "requiredHint": "Required: ledger, issuer, invoice number, invoice date, net amount and cost account. Only then can the invoice be created."
   },
   "Levy": {
     "title": "Special levy",
@@ -2783,6 +3019,7 @@
     "noMaintenance": "No open maintenance.",
     "toHoa": "HOA management",
     "toLetting": "Letting",
+    "statusLabel": "Status",
     "create": "Add property",
     "createButton": "Create",
     "createHint": "The management type fixes the legal entities and cannot be changed later.",
@@ -2852,6 +3089,11 @@
       "issuedOn": "Issue date",
       "validUntil": "Valid until",
       "class": "Efficiency class",
+      "errors": {
+        "value": "Value as a number, for example 112.5.",
+        "year": "Construction year as a four digit year.",
+        "validUntil": "Valid until lies before the issue date."
+      },
       "save": "Save energy certificate",
       "saved": "Saved."
     }
@@ -3064,7 +3306,18 @@
     "editLegalEntities": "Legal entities ({count})",
     "legalEntitiesHint": "Access scope for tax advisors: only the selected legal entities are visible in ledgers, reports, exports and linked documents.",
     "legalEntitiesNone": "Without a selection the tax advisor has no access to accounting data.",
-    "legalEntitiesEmpty": "No legal entities exist yet."
+    "legalEntitiesEmpty": "No legal entities exist yet.",
+    "editReplyApproval": "Approval required for ticket replies",
+    "replyApprovalShow": "Approval required: {reason} {until}",
+    "replyApprovalUntil": "until {date}",
+    "replyApprovalRequired": "Ticket replies need approval by a second person",
+    "replyApprovalReasonLabel": "Reason",
+    "replyApprovalReason": {
+      "azubi": "trainee",
+      "neuer_mitarbeiter": "new employee"
+    },
+    "replyApprovalUntilLabel": "Limited until",
+    "replyApprovalHint": "Without the flag a member with the permission to approve communication sends ticket replies directly. With the flag replies go to the approvers as a draft. The change is logged."
   },
   "Roles": {
     "title": "Roles and permissions",
@@ -3118,6 +3371,19 @@
     "alreadySetUp": "Already set up, nothing changed.",
     "readOnly": "Setting this up requires the permission to update tenant settings.",
     "loadError": "The status could not be loaded."
+  },
+  "TicketReplyApprovalAll": {
+    "title": "Ticket replies: approval for everyone (emergency brake)",
+    "status": {
+      "on": "on",
+      "off": "off"
+    },
+    "description": "Operator decision of 26.09.2026: staff with the permission to approve communication send their ticket replies directly; the approval by the same person is logged. Staff with the flag approval required (trainee, new employee) submit their replies as a draft that a second person approves.",
+    "members": "The per member flag is maintained under Settings, Users (permission to change tenant settings). All other mail drafts (mailbox without ticket, playbook, forwarding) keep the four-eyes principle.",
+    "risk": "Emergency brake: when on, every ticket reply of the tenant needs approval by a second person regardless of the flag. Default off. Every change is logged (event tenant settings changed with user).",
+    "label": "Send all ticket replies only after approval by a second person",
+    "saved": "Saved.",
+    "readOnly": "Changing this requires the permission to change tenant settings."
   },
   "DatevMappings": {
     "title": "DATEV account mapping",
@@ -3193,6 +3459,7 @@
     "readOnly": "View only. Changes require the permission to change tenant settings.",
     "hint": "The invoice issuer is always the tenant you are signed in to. The invoice number is assigned without gaps in the format PREFIX-YYYY-000001 per tenant and year.",
     "secretHint": "Stored encrypted; only the last 4 characters are shown.",
+    "invalid": "Please check the input: {fields}",
     "field": {
       "invoice_prefix": "Invoice prefix",
       "vat_status": "VAT status",
@@ -4340,7 +4607,10 @@
     "bankAccountId": "Internal account id",
     "executionDate": "Execution date",
     "proposalCreated": "Payment proposal created: prepared, not executed.",
-    "error": "Reconciliation failed."
+    "error": "Reconciliation failed.",
+    "loading": "Loading bank reconciliation.",
+    "bankAccount": "Bank account (legal entity)",
+    "proposeHint": "Preparing only creates a payment order as draft. Approval by two people under Bank, payment orders; the payment file stays locked until G2."
   },
   "TicketInvoice": {
     "attach": "Assign as invoice",
@@ -4675,7 +4945,8 @@
         "vat": "VAT"
       },
       "xmlPayment": "Payment details according to XML (IBAN masked)",
-      "xmlPaymentNone": "none"
+      "xmlPaymentNone": "none",
+      "confirmHint": "Creating requires cost account, issuer, invoice number, invoice date, net, VAT and gross; an entered IBAN and reviewed contradictions must be confirmed."
     }
   },
   "OwnerStatements": {
@@ -4745,7 +5016,9 @@
       "hoaResult": "HOA result",
       "tenantCosts": "Allocated to tenants",
       "ownerBurden": "Owner burden"
-    }
+    },
+    "accounting": "Accounting",
+    "noLedgers": "No ledger available. Without a ledger no owner statement can be created."
   },
   "InvoiceIntakeAuto": {
     "title": "Automatic invoice intake",
@@ -4810,7 +5083,11 @@
     },
     "empty": "No inspection requests.",
     "notFound": "Inspection request not found.",
-    "notice": "Record of inspection outside the portal. Periods and scope of inspection are the manager's decision; the software derives no claim from it. Every download of the package is logged."
+    "notice": "Record of inspection outside the portal. Periods and scope of inspection are the manager's decision; the software derives no claim from it. Every download of the package is logged.",
+    "saved": "Saved.",
+    "chooseApplicant": "Please pick an applicant from the search.",
+    "dateRequired": "Please enter the request date.",
+    "scopeRequired": "Please choose at least one scope or describe it as free text."
   },
   "PortalForms": {
     "title": "Portal forms",
@@ -4851,11 +5128,26 @@
     "deactivate": "Deactivate",
     "delete": "Delete",
     "confirmDelete": "Delete form \"{name}\"? Templates with submissions can only be deactivated.",
+    "saved": "Saved.",
     "activeState": "active",
     "inactiveState": "inactive",
     "errors": {
       "name": "Please enter a name.",
       "category": "Please enter a ticket category."
+    },
+    "submissions": {
+      "show": "Show submissions",
+      "reload": "Reload submissions",
+      "empty": "No submissions for this template yet.",
+      "date": "Submitted on",
+      "account": "Portal account",
+      "ticket": "Ticket",
+      "ticketNumber": "Ticket {number}",
+      "accountStatus": {
+        "invited": "invited",
+        "active": "active",
+        "locked": "locked"
+      }
     }
   },
   "ReconciliationReports": {
@@ -4941,8 +5233,11 @@
       "dismiss": "Dismiss",
       "accepted": "Callback created as ticket.",
       "created": "Ticket {number} created.",
-      "dismissed": "Proposal dismissed."
-    }
+      "dismissed": "Proposal dismissed.",
+      "dismissConfirm": "Really dismiss the callback proposal? No ticket will be created.",
+      "noDismiss": "Dismissing requires permission communication:update."
+    },
+    "maskedHelp": "Full number only with permission contacts:read."
   },
   "HoaFinance": {
     "loans": "Loans",
@@ -5060,7 +5355,8 @@
       "prior_year": "Prior year",
       "other": "Other explained difference",
       "cost_distributed": "Distribution relevant costs",
-      "unexplained": "Unexplained difference"
+      "unexplained": "Unexplained difference",
+      "migration_opening": "Takeover from the old system (pre period)"
     },
     "notes": "Explained differences",
     "noteCode": "Kind",
@@ -5068,7 +5364,43 @@
     "noteText": "Reason",
     "saveNotes": "Save explanations",
     "addNote": "Add row",
-    "removeNote": "Remove"
+    "removeNote": "Remove",
+    "saved": "Saved.",
+    "saving": "Saving.",
+    "noItems": "No items recorded yet.",
+    "noFinancing": "No financing recorded yet.",
+    "invalidAmount": "Amount in the format 1,234.56 without sign.",
+    "invalidNumber": "Number in the format 1,234.56.",
+    "missingFields": "Please fill in: {fields}",
+    "schedule": "Instalment schedule",
+    "scheduleNote": "Orientation only; the loan contract prevails.",
+    "scheduleKinds": {
+      "annuity": "Annuity plan",
+      "linear": "Linear repayment plan"
+    },
+    "scheduleUnavailable": "No schedule: instalment or term is missing.",
+    "dueDate": "Due date",
+    "interestShare": "Interest share",
+    "repaymentShare": "Repayment share",
+    "balance": "Remaining balance",
+    "interestTotal": "Total interest",
+    "residual": "Remaining balance at end of term",
+    "comparison": "Plan against booked items",
+    "month": "Month",
+    "plannedRepayment": "Repayment planned",
+    "bookedRepayment": "Repayment booked",
+    "plannedInterest": "Interest planned",
+    "bookedInterest": "Interest booked",
+    "differenceRepayment": "Difference repayment",
+    "differenceInterest": "Difference interest",
+    "resolution": "Resolution",
+    "noResolution": "no resolution",
+    "setResolution": "Assign resolution",
+    "migration": "Takeover from the old system",
+    "migrationCashOpening": "Opening balance of bank and cash from the migration journal",
+    "migrationCostOpening": "Costs of the pre period from the old system",
+    "migrationEntries": "{n} opening balance entries",
+    "migrationCutoff": "Takeover date"
   },
   "ReadReceipts": {
     "title": "Portal accesses",
@@ -5141,7 +5473,9 @@
       "validTo": "The end date lies before the start.",
       "document": "The document ID is invalid."
     },
-    "endConfirm": "End the notice \"{title}\"? It will no longer be shown in the portal."
+    "endConfirm": "End the notice \"{title}\"? It will no longer be shown in the portal.",
+    "saved": "Notice saved.",
+    "ended": "Notice ended."
   },
   "MajorityRules": {
     "title": "Majority rules per resolution subject",
@@ -5168,6 +5502,9 @@
     "numerator": "Numerator",
     "denominator": "Denominator",
     "customValue": "at least {n}/{d}",
+    "saved": "Saved.",
+    "sourceRequired": "Enter a source with at least 3 characters.",
+    "customInvalid": "Numerator and denominator as whole numbers greater than 0, numerator at most equal to the denominator.",
     "check": "Majority check",
     "subjectKinds": {
       "economic_plan": "Economic plan",
@@ -5231,17 +5568,348 @@
       "notes": "Notes",
       "nextEnd": "Next possible end",
       "noticeDate": "Latest notice date",
-      "status": "Status"
+      "status": "Status",
+      "renewal": "Renewal"
     },
     "unit": {
-      "days": "days",
-      "months": "months"
+      "days": "{count, plural, one {day} other {days}}",
+      "months": "{count, plural, one {month} other {months}}"
     },
     "status": {
       "running": "Running",
       "open_ended": "Open ended",
       "cancelled": "Cancelled",
       "expired": "Ended"
+    },
+    "computedHint": "Next possible end and latest notice date are computed from term, notice period and renewal. Orientation only, to be checked against the contract.",
+    "saved": "Service contract saved.",
+    "dateOrder": "The end must not be before the start.",
+    "cancelledBeforeStart": "The cancellation date must not be before the start.",
+    "noticeExample": "Example: 3 months to the end of the term.",
+    "cancelledAtHelp": "Enter only when the notice was actually given.",
+    "noRenewal": "none"
+  },
+  "WorkOrders": {
+    "title": "Work order",
+    "breadcrumbTickets": "Tickets",
+    "notFound": "Work order not found.",
+    "orderStatus": {
+      "draft": "draft",
+      "requested": "requested",
+      "quoted": "quoted",
+      "approved": "approved",
+      "scheduled": "scheduled",
+      "in_progress": "in progress",
+      "done": "done",
+      "invoiced": "invoiced",
+      "accepted": "accepted",
+      "rejected": "rejected",
+      "cancelled": "cancelled"
+    },
+    "proposals": {
+      "title": "Provider appointment proposals",
+      "hint": "The provider proposes up to three appointments per round in the portal, the affected resident confirms one of them. The office only sees the result here.",
+      "reload": "Reload",
+      "confirmed": "Confirmed appointment: {when}",
+      "open": "{n} open proposals, no appointment confirmed yet.",
+      "noneConfirmed": "No appointment confirmed yet.",
+      "empty": "No proposals yet.",
+      "startsAt": "Appointment",
+      "note": "Note",
+      "status": "Status",
+      "decidedAt": "Decided on",
+      "statuses": {
+        "proposed": "proposed",
+        "accepted": "accepted",
+        "declined": "declined",
+        "superseded": "superseded"
+      },
+      "toTicket": "To the ticket"
     }
+  },
+  "Webhooks": {
+    "card": {
+      "title": "Webhooks",
+      "description": "Outgoing event notifications to third party systems: subscriptions, delivery log, redelivery."
+    },
+    "title": "Webhook subscriptions",
+    "pageIntro": "Third party systems receive platform events as signed messages (HMAC SHA-256). A message carries identifiers, field names, numbers, dates and amounts only, never names, addresses or IBANs. Contract and catalogue: docs/integrations/webhooks.md.",
+    "readOnlyHint": "Read only; changes require the permission to update tenant settings.",
+    "newSubscription": "New subscription",
+    "cancel": "Cancel",
+    "create": "Create subscription",
+    "form": {
+      "url": "Target URL",
+      "urlHint": "https only and publicly reachable. Private network addresses are rejected.",
+      "urlInvalid": "The target URL must start with https://.",
+      "description": "Description (optional)",
+      "eventTypes": "Event types",
+      "eventTypesHint": "Select at least one type or subscribe to all events.",
+      "eventTypesRequired": "Please select at least one event type.",
+      "allEvents": "All events (*)",
+      "catalogueUnavailable": "The event catalogue could not be loaded."
+    },
+    "secret": {
+      "title": "Secret for signature verification",
+      "hint": "Shown only now and stored encrypted. Store it at the receiver; it cannot be retrieved later.",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "dismiss": "Understood, hide"
+    },
+    "list": {
+      "empty": "No subscriptions yet.",
+      "url": "Target URL",
+      "eventTypes": "Event types",
+      "all": "all",
+      "active": "Active",
+      "lastDelivery": "Last delivery",
+      "none": "none yet",
+      "actions": "Actions",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "delete": "Delete",
+      "log": "Log",
+      "hideLog": "Hide log",
+      "deleteConfirm": "Really delete this subscription? Its delivery log is deleted as well.",
+      "loadError": "The subscriptions could not be loaded."
+    },
+    "status": {
+      "active": "active",
+      "inactive": "inactive",
+      "pending": "pending",
+      "succeeded": "delivered",
+      "failed": "failed"
+    },
+    "log": {
+      "title": "Delivery log (last 20)",
+      "empty": "No deliveries yet.",
+      "event": "Event",
+      "status": "Status",
+      "code": "Response code",
+      "attempts": "Attempts",
+      "nextAttempt": "Next attempt",
+      "deliveredAt": "Delivered at",
+      "error": "Error",
+      "redeliver": "Redeliver",
+      "redelivered": "Redelivery scheduled.",
+      "loadError": "The delivery log could not be loaded."
+    },
+    "testDelivery": "The API offers no test delivery. Creating a subscription emits the event webhook_subscription.created, which is delivered to existing subscriptions and can be checked in the log."
+  },
+  "ContractForm": {
+    "hint": "Contracts are stored in versions. Unit, party, start and ownership data are fixed after creation; later changes create a new version.",
+    "choose": "Please choose",
+    "yes": "yes",
+    "no": "no",
+    "sections": {
+      "base": "Basic data",
+      "term": "Term",
+      "ownership": "Ownership (HOA)",
+      "payment": "Payment and blocks",
+      "schedule": "Payment schedule",
+      "deposit": "Deposit"
+    },
+    "kinds": {
+      "tenancy": "Tenancy",
+      "ownership": "Ownership (HOA, SEV)"
+    },
+    "roles": {
+      "mieter": "Tenant",
+      "eigentuemer": "Owner"
+    },
+    "fields": {
+      "kind": "Contract type",
+      "property": "Property",
+      "unit": "Unit",
+      "legalEntity": "Legal entity (landlord)",
+      "legalEntityHelp": "Only needed when the landlord is not unique in the property.",
+      "legalEntityAuto": "determine automatically",
+      "party": "Party",
+      "startDate": "Start",
+      "endDate": "End",
+      "endDateHelp": "Leave empty for an open ended contract.",
+      "rentIncreaseBlockUntil": "Rent increase block until",
+      "titleTransferDate": "Title transfer (land register)",
+      "titleTransferHelp": "Required for ownership, must not be after the start.",
+      "benefitBurdenDate": "Benefit and burden transfer",
+      "acquisitionKind": "Acquisition kind",
+      "specialSuccessionLiability": "Special succession with liability for arrears",
+      "sevEnabled": "Special property management (SEV) active",
+      "sevFeeDebtor": "SEV fee debtor (optional)",
+      "sevNotPossible": "SEV is only possible in properties managed as HOA with SEV.",
+      "vatOption": "VAT",
+      "directDebit": "Direct debit",
+      "sepaMandate": "SEPA mandate",
+      "sepaMandateHelp": "Reference to a recorded, active mandate of the party. Collection stays locked until gate G2.",
+      "noMandates": "No active mandate",
+      "pickPartyFirst": "Choose the party first",
+      "dunningBlock": "Dunning block",
+      "dunningBlockReason": "Reason for the dunning block",
+      "userChangeFee": "User change fee",
+      "allocationLossRisk": "Allocation loss risk",
+      "notes": "Notes",
+      "number": "Contract number",
+      "effectiveDate": "Effective from"
+    },
+    "party": {
+      "role": "Role",
+      "roleAny": "all roles",
+      "search": "Search contact",
+      "placeholder": "Name, at least two characters",
+      "searchButton": "Search",
+      "noResults": "No contact found.",
+      "results": "Search results",
+      "picked": "Selected:",
+      "remove": "Remove"
+    },
+    "acquisitionKinds": {
+      "purchase": "Purchase",
+      "first_acquisition": "First acquisition",
+      "inheritance": "Inheritance",
+      "foreclosure": "Foreclosure",
+      "gift": "Gift",
+      "other": "Other"
+    },
+    "vatOptions": {
+      "none": "none (residential)",
+      "commercial_no_vat": "commercial without VAT",
+      "commercial_full_vat": "commercial with full VAT",
+      "commercial_reduced_vat": "commercial with reduced VAT"
+    },
+    "intervals": {
+      "monthly": "monthly",
+      "quarterly": "quarterly",
+      "semiannual": "semiannual",
+      "annual": "annual"
+    },
+    "dueDayRules": {
+      "day": "Calendar day",
+      "workday": "Workday",
+      "last_day": "Last day of month",
+      "day_next_month": "Day in following month"
+    },
+    "depositKinds": {
+      "cash": "Cash deposit",
+      "savings_book": "Savings book",
+      "insurance": "Deposit insurance",
+      "guarantee": "Guarantee",
+      "fixed_deposit": "Fixed deposit",
+      "letter_of_comfort": "Letter of comfort",
+      "other": "Other"
+    },
+    "schedule": {
+      "interval": "Interval",
+      "dueDayRule": "Due day rule",
+      "dueDay": "Due day",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "help": "The schedule defines when receivables fall due. The amounts themselves are recorded as payments on the contract.",
+      "enable": "Create a payment schedule now",
+      "existing": "Existing payment schedules",
+      "from": "from",
+      "to": "to",
+      "none": "No payment schedule recorded yet."
+    },
+    "deposit": {
+      "enable": "Record a deposit now",
+      "kind": "Deposit kind",
+      "amount": "Amount",
+      "amountHelp": "Format 1.234,56",
+      "installments": "Installments (1 to 12)",
+      "validFrom": "Due from",
+      "interestRule": "Interest rule (text)"
+    },
+    "errors": {
+      "unitRequired": "Please choose a unit.",
+      "partyRequired": "Please choose a party.",
+      "startRequired": "Please enter the start.",
+      "endRequired": "Please enter the end.",
+      "endBeforeStart": "The end must not be before the start.",
+      "titleTransferRequired": "For ownership the title transfer per land register is required.",
+      "titleTransferAfterStart": "The start must not be before the title transfer.",
+      "dunningReasonRequired": "The dunning block needs a reason.",
+      "mandateRequired": "Direct debit needs an active SEPA mandate.",
+      "dueDay": "The due day is between 1 and 31.",
+      "validFromRequired": "Please enter from when the schedule applies.",
+      "amount": "Please enter an amount above 0,00 EUR in the format 1.234,56.",
+      "installments": "The number of installments is between 1 and 12.",
+      "checkFields": "Please check the marked fields.",
+      "scheduleFailed": "The contract was created, the schedule was not: {message}",
+      "depositFailed": "The contract was created, the deposit was not: {message}",
+      "effectiveDateRequired": "Please enter from when the change applies.",
+      "effectiveDateAfterStart": "The change must apply after the contract start.",
+      "effectiveDateBeforeEnd": "The change must apply within the term."
+    },
+    "actions": {
+      "create": "Create contract",
+      "cancel": "Cancel",
+      "saveVersion": "Save new version",
+      "addSchedule": "Add schedule",
+      "terminate": "End contract"
+    },
+    "edit": {
+      "fixedTitle": "Fixed contract data",
+      "fixedHelp": "These entries cannot be changed after creation. Changing unit or party is a new contract, for ownership an ownership transfer.",
+      "version": "Version {n}",
+      "openEnd": "open ended",
+      "versionTitle": "Change as new version",
+      "versionHelp": "The current version ends the day before, the new version takes over all data with the changes from the chosen date."
+    },
+    "termination": {
+      "title": "End contract",
+      "approval": "Terminations require approval by the management before recording. Deadlines are orientation and to be verified.",
+      "alreadyEnded": "The contract already ends on {date}.",
+      "endDate": "Contract end",
+      "terminationDate": "Date of the termination notice",
+      "reason": "Reason",
+      "ownershipHint": "Ownership ends only by an ownership transfer, recorded on the detail page or via the API."
+    },
+    "page": {
+      "list": "Contracts",
+      "listDescription": "Tenancy and ownership contracts with versions, schedules, mandates and deposits.",
+      "new": "Create contract",
+      "newDescription": "Create a tenancy, an ownership (HOA) or an ownership with SEV.",
+      "edit": "Edit",
+      "editTitle": "Edit contract",
+      "detail": "Contract",
+      "loadError": "The contract could not be loaded.",
+      "listError": "The contracts could not be loaded.",
+      "empty": "No contracts recorded yet.",
+      "number": "Number",
+      "kind": "Type",
+      "term": "Term",
+      "unit": "Unit",
+      "toDetail": "Open",
+      "notice": "Notice",
+      "schedules": "Payment schedules",
+      "noRight": "Permission to create is missing."
+    }
+  },
+  "DirectDebits": {
+    "title": "Direct debit runs",
+    "bank": "Bank",
+    "notice": "SEPA direct debit (pain.008) only with a valid mandate and pre-notification. Approval by two different people; any change voids approvals. The file is filed as a document; handing it to the bank stays locked until release gate G2. Nothing is transmitted.",
+    "ordersLink": "Payment orders",
+    "empty": "No direct debit runs yet.",
+    "emptyHint": "Direct debit runs are created per ledger and collection date via the API (preview of collectible receivables, then run).",
+    "collectionDate": "Collection",
+    "ledger": "Ledger",
+    "creditor": "Creditor",
+    "count": "Items",
+    "controlSum": "Total",
+    "status": "Status",
+    "actions": "Actions",
+    "excluded": "{count} excluded (no mandate)",
+    "approvals": "{n} of 2 approvals",
+    "fileLocked": "File stored as document. Download and submission only with release gate G2.",
+    "status_draft": "Draft",
+    "status_approved": "Approved",
+    "status_file_generated": "File stored",
+    "status_exported": "Exported",
+    "status_cancelled": "Cancelled",
+    "approve": "Approve",
+    "generateFile": "Store file as document",
+    "cancel": "Cancel",
+    "confirmCancel": "Cancel direct debit run? Approvals are voided."
   }
 }

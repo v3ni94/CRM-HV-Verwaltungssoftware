@@ -423,6 +423,8 @@ class HoaInsuranceClaim(IdMixin, TimestampMixin, TenantMixin, Base):
     )  # reported, accepted, rejected, settled, closed
     regress_party: Mapped[str | None] = mapped_column(String(200))
     measure_id: Mapped[uuid.UUID | None] = _fk("hoa_measure.id")
+    # A79: structured link to the resolution of the same community (migration 0128).
+    resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
     note: Mapped[str | None] = mapped_column(Text)
 
 

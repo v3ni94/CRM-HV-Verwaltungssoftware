@@ -26,11 +26,21 @@ const candidate: DuplicateCandidate = {
 
 describe("DuplicateWarning", () => {
   it("lists candidates with score, reasons and a link to open them", () => {
-    renderIntl(<DuplicateWarning candidates={[candidate]} onSaveAnyway={vi.fn()} onCancel={vi.fn()} />);
-    expect(screen.getByRole("heading", { name: "Mögliche Dubletten" })).toBeInTheDocument();
+    renderIntl(
+      <DuplicateWarning
+        candidates={[candidate]}
+        onSaveAnyway={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Mögliche Dubletten" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Erika Mustermann")).toBeInTheDocument();
     expect(screen.getByText("95 %")).toBeInTheDocument();
-    expect(screen.getByText("gleiche E-Mail-Adresse, ähnlicher Name")).toBeInTheDocument();
+    expect(
+      screen.getByText("gleiche E-Mail-Adresse, ähnlicher Name"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Öffnen" })).toHaveAttribute(
       "href",
       "/kontakte/01920000-0000-7000-8000-000000000001",
@@ -40,8 +50,16 @@ describe("DuplicateWarning", () => {
   it("offers save anyway and cancel", async () => {
     const save = vi.fn();
     const cancel = vi.fn();
-    renderIntl(<DuplicateWarning candidates={[candidate]} onSaveAnyway={save} onCancel={cancel} />);
-    await userEvent.click(screen.getByRole("button", { name: "Trotzdem speichern" }));
+    renderIntl(
+      <DuplicateWarning
+        candidates={[candidate]}
+        onSaveAnyway={save}
+        onCancel={cancel}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Trotzdem speichern" }),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
     expect(save).toHaveBeenCalledOnce();
     expect(cancel).toHaveBeenCalledOnce();

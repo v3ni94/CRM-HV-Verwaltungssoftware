@@ -10,7 +10,9 @@ Portal specific endpoints and access matrix filters.
 
 Portal forms (A56): `forms.py` (templates, submissions, pure validation and rendering) and
 `form_routers.py` (management under `/portal-admin/forms`, portal under `/portal/forms`); a
-submission creates a ticket of the template's category with own uploads as attachments.
+submission creates a ticket of the template's category with own uploads as attachments. The
+CRM lists the submissions per template (`GET /portal-admin/forms/{id}/submissions`, A73,
+tickets:read) with account, contact name and the created ticket; the values stay on the ticket.
 
 Layout once implemented: `models.py`, `schemas.py`, `services.py`, `routers.py`, tests under
 `apps/api/tests/portal/`. Register models in `mhvp/models.py` for Alembic autogenerate.
@@ -48,3 +50,9 @@ Board audit room (A52, docs/rules/M21-07.md): `board.py` holds the role `board` 
 endpoints under `/portal/board`. The board reads its engagements, positions and the receipts
 released through the positions only (`released_document_ids`), and records notes and questions;
 the management answers in `mhvp.hoa.board`. No CRM right is granted.
+
+## Further files (addendum 26.09.2026)
+
+Checked against the folder contents on 26.09.2026, the following files were not listed above:
+
+* `staff_access.py`: portal access for staff members per CRM role matrix (M2-08)

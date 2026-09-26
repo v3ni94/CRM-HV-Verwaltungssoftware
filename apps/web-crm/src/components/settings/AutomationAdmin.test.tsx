@@ -207,6 +207,60 @@ describe("AutomationAdmin", () => {
     ).toBeInTheDocument();
   });
 
+  it("offers related master data fields grouped and sends the field path (A81)", async () => {
+    const created: Rule = {
+      ...rule,
+      id: "r-3",
+      name: "WEG Objekte",
+      conditions: {
+        op: "and",
+        conditions: [
+          { field: "property.management_type", op: "eq", value: "hoa" },
+        ],
+      },
+    };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => jsonResponse(created, 201));
+    renderIntl(
+      <AutomationAdmin
+        initialRules={[]}
+        initialRuns={[]}
+        pickers={pickers}
+        canManage={true}
+      />,
+    );
+    await userEvent.click(screen.getByText("Neue Regel"));
+    await userEvent.type(screen.getByLabelText("Name"), "WEG Objekte");
+    await userEvent.click(screen.getByText("Bedingung hinzufügen"));
+    const field = screen.getByLabelText("Feld") as HTMLSelectElement;
+    const groups = Array.from(field.querySelectorAll("optgroup")).map(
+      (g) => g.label,
+    );
+    expect(groups).toEqual([
+      "Ticket",
+      "Ereignis",
+      "Objekt",
+      "Einheit",
+      "Kontakt",
+      "Vertrag",
+    ]);
+    await userEvent.selectOptions(field, "property.management_type");
+    await userEvent.selectOptions(screen.getByLabelText("Wert"), "hoa");
+    expect(screen.getByTestId("rule-sentence")).toHaveTextContent(
+      "Objekt Verwaltungsart gleich WEG",
+    );
+    await userEvent.click(screen.getByText("Speichern"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls[0]![1]?.body as string);
+    expect(body.conditions).toEqual({
+      op: "and",
+      conditions: [
+        { field: "property.management_type", op: "eq", value: "hoa" },
+      ],
+    });
+  });
+
   it("creates a weekly schedule rule with a webhook and a mail draft is not offered", async () => {
     const created: Rule = {
       ...rule,

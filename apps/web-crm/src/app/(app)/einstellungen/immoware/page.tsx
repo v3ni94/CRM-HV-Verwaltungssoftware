@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ImmowareSettings, type ImmowareConnection, type ImmowareSyncRun } from "@/components/immoware/ImmowareSettings";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function ImmowareSettingsPage() {
   const t = await getTranslations("ImmowareSettings");
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("immoware:read")) notFound();

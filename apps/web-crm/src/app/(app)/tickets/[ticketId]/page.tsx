@@ -6,48 +6,22 @@ import { SlaBadge } from "@/components/tickets/SlaBadge";
 import { TicketAppointmentButton } from "@/components/tickets/TicketAppointmentButton";
 import { TicketAttachInvoiceButton } from "@/components/tickets/TicketAttachInvoiceButton";
 import { TicketChecklist } from "@/components/tickets/TicketChecklist";
+import { TicketComments, type TicketCommentRow } from "@/components/tickets/TicketComments";
 import { TicketEdit } from "@/components/tickets/TicketForms";
+import { TicketHistory, type TicketEventRow } from "@/components/tickets/TicketHistory";
 import { TicketMailAttachments, type TicketMailAttachment } from "@/components/tickets/TicketMailAttachments";
 import { TicketMergeDialog } from "@/components/tickets/TicketMergeDialog";
 import { TicketProposals } from "@/components/tickets/TicketProposals";
 import { TicketMailSection } from "@/components/tickets/TicketMailSection";
-import { SafeLine, SafeText } from "@/components/ui/SafeText";
+import { TicketWorkOrders, type TicketWorkOrderRow } from "@/components/tickets/TicketWorkOrders";
+import { SafeText } from "@/components/ui/SafeText";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
-import { formatDateTime } from "@/lib/format";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
-
-type Comment = { body: string; internal: boolean; created_at: string };
-type Event = { kind: string; at: string };
-
-/** Attachments of the ticket's inbound mails with document metadata (mime type), read server
- *  side because document reads are outside the BFF allowlist. Unreadable documents are
- *  skipped; the list is a convenience, not a record. */
-async function loadMailAttachments(api: ReturnType<typeof serverApi>, ticketId: string): Promise<TicketMailAttachment[]> {
-  const messages = await api.GET("/api/v1/mail/messages", { params: { query: { ticket_id: ticketId, direction: "in", limit: 50 } } });
-  const rows = (messages.data ?? []) as { id: string; subject: string | null; received_at: string | null; attachment_document_ids: string[] }[];
-  const out: TicketMailAttachment[] = [];
-  await Promise.all(
-    rows.flatMap((m) =>
-      (m.attachment_document_ids ?? []).map(async (documentId) => {
-        const doc = await api.GET("/api/v1/documents/{document_id}", { params: { path: { document_id: documentId } } });
-        if (!doc.data) return;
-        out.push({
-          message_id: m.id,
-          document_id: documentId,
-          filename: doc.data.filename || doc.data.title,
-          mime_type: doc.data.mime_type,
-          received_at: m.received_at,
-          subject: m.subject,
-        });
-      }),
-    ),
-  );
-  return out.sort((a, b) => (b.received_at ?? "").localeCompare(a.received_at ?? "") || a.filename.localeCompare(b.filename));
-}
 
 export default async function TicketPage({ params }: { params: Promise<{ ticketId: string }> }) {
   const { ticketId } = await params;
@@ -57,12 +31,24 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   });
   redirectIfUnauthenticated(response);
   if (!data) return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
-  const me = await serverApi().GET("/api/v1/auth/me");
+  // auth/me is shared with the app layout through the per request cache (review M5).
+  const me = await getMe();
   const canManageSla = me.data?.permissions.includes("sla:update") ?? false;
   const canReply =
     (me.data?.permissions.includes("tickets:update") ?? false) && (me.data?.permissions.includes("communication:update") ?? false);
-  const comments = (data.comments ?? []) as Comment[];
-  const events = (data.events ?? []) as Event[];
+  const comments = (data.comments ?? []) as TicketCommentRow[];
+  const events = (data.events ?? []) as TicketEventRow[];
+  // Anhänge der eingehenden Mails kommen gebündelt mit dem Ticketdetail (Review M5), kein
+  // Einzelabruf je Dokument mehr.
+  const attachments = (data.mail_attachments ?? []) as TicketMailAttachment[];
+  const workOrders = ((data.work_orders ?? []) as { id: unknown; description: unknown; status: unknown; scheduled_at: unknown }[]).map(
+    (o): TicketWorkOrderRow => ({
+      id: String(o.id),
+      description: String(o.description ?? ""),
+      status: String(o.status),
+      scheduled_at: o.scheduled_at ? String(o.scheduled_at) : null,
+    }),
+  );
   const checklist = (data.checklist ?? []) as { key: string; label: string; required: boolean; done: boolean }[];
   const extraFieldValues = (data.extra_fields ?? {}) as Record<string, unknown>;
   let extraFieldDefs: { key: string; label: string; type: string; required: boolean }[] = [];
@@ -80,7 +66,6 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
     data.contact_id ? api.GET("/api/v1/contacts/{contact_id}", { params: { path: { contact_id: String(data.contact_id) } } }) : null,
     data.property_id ? api.GET("/api/v1/properties/{property_id}", { params: { path: { property_id: String(data.property_id) } } }) : null,
   ]);
-  const attachments = await loadMailAttachments(api, ticketId);
   const sources = (mergedSources.data ?? []).map((s) => ({ id: String(s.id), number: Number(s.number), title: s.title ? String(s.title) : "" }));
   const canMerge = !mergedInto && data.status !== "closed";
   return (
@@ -117,7 +102,12 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           <SlaBadge ticketId={ticketId} canManage={canManageSla} />
           <TicketAppointmentButton ticketId={ticketId} ticketTitle={data.title ? String(data.title) : `#${String(data.number)}`} />
           <TicketAttachInvoiceButton ticketId={ticketId} hasProperty={Boolean(data.property_id)} />
-          <TicketEdit id={ticketId} status={String(data.status)} priority={String(data.priority)} />
+          <TicketEdit
+            id={ticketId}
+            status={String(data.status)}
+            priority={String(data.priority)}
+            internalDescription={data.internal_description ? String(data.internal_description) : ""}
+          />
           <TicketChecklist
             ticketId={ticketId}
             checklist={checklist}
@@ -144,33 +134,17 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
         <>
           <TicketMailSection ticketId={ticketId} canReply={canReply} />
           <TicketMailAttachments attachments={attachments} />
+          <TicketWorkOrders orders={workOrders} />
           <TicketProposals ticketId={ticketId} />
         </>
       )}
       <section className="flex min-w-0 flex-col gap-2">
         <h2 className={ui.h2}>{t("comments")}</h2>
-        <ul className="flex min-w-0 flex-col gap-2 text-sm">
-          {comments.map((c, i) => (
-            <li key={i} className={`${ui.card} min-w-0`}>
-              <div className="text-xs text-muted">
-                {formatDateTime(c.created_at)} · {c.internal ? t("internal") : t("external")}
-              </div>
-              <SafeText>{c.body}</SafeText>
-            </li>
-          ))}
-        </ul>
+        <TicketComments comments={comments} />
       </section>
       <section className="flex flex-col gap-1">
         <h2 className={ui.h2}>{t("history")}</h2>
-        <ul className="text-xs text-muted">
-          {events.map((e, i) => (
-            <li key={i} className="min-w-0">
-              <SafeLine>
-                {formatDateTime(e.at)} · {e.kind}
-              </SafeLine>
-            </li>
-          ))}
-        </ul>
+        <TicketHistory events={events} />
       </section>
       <DmsDocumentsPanel entity="ticket" id={ticketId} />
     </div>

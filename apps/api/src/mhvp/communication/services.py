@@ -36,8 +36,14 @@ async def ingest_parsed(
     document_id: uuid.UUID,
     mailbox_id: uuid.UUID | None,
     auto_ticket: bool,
+    gmail_message_id: str | None = None,
+    gmail_thread_id: str | None = None,
 ) -> tuple[Message, bool]:
-    """Store a parsed inbound mail. Returns (message, created)."""
+    """Store a parsed inbound mail. Returns (message, created).
+
+    ``gmail_message_id`` and ``gmail_thread_id`` come from the Gmail sync (Review 26.09.2026,
+    M15): the archive job and the forwarding need the Gmail id, the thread id is the last
+    resort for threading (M7)."""
     from mhvp.contacts.models import ContactEmail
     from mhvp.documents.models import DocumentSource
     from mhvp.documents.services import check_upload, store_document
@@ -67,16 +73,18 @@ async def ingest_parsed(
     )
     categories = list(await session.scalars(select(TicketTemplate.category)))
     thread_id = None
-    parent = None
-    if parsed["in_reply_to"]:
-        parent = await session.scalar(
-            select(Message).where(Message.header_message_id == parsed["in_reply_to"])
-        )
-        if parent is not None:
-            thread_id = parent.thread_id or parent.id
-            contact_id = contact_id or parent.contact_id
-            property_id = property_id or parent.property_id
+    parent = await find_parent(
+        session,
+        in_reply_to=parsed["in_reply_to"],
+        references=parsed.get("references"),
+        gmail_thread_id=gmail_thread_id,
+    )
+    if parent is not None:
+        thread_id = parent.thread_id or parent.id
+        contact_id = contact_id or parent.contact_id
+        property_id = property_id or parent.property_id
     attachments = []
+    rejected: list[dict[str, Any]] = []
     for att in parsed["attachments"]:
         try:
             check_upload(att["mime"], att["data"], settings.document_max_bytes)
@@ -94,8 +102,17 @@ async def ingest_parsed(
                 created_by=actor_user_id,
             )
             attachments.append(doc.id)
-        except ProblemError:
-            continue  # unsupported attachment types stay in the original mail document
+        except ProblemError as exc:
+            # Abgewiesene Anhänge (Typ oder Größe, Review 26.09.2026, M8) bleiben im Roh-.eml;
+            # Name, Typ, Größe und Grund werden an der Nachricht vermerkt und angezeigt.
+            rejected.append(
+                {
+                    "filename": att["filename"],
+                    "mime": att["mime"],
+                    "size": len(att["data"]),
+                    "reason": (exc.detail or exc.error.title)[:300],
+                }
+            )
     row = Message(
         tenant_id=tenant_id,
         created_by=actor_user_id,
@@ -116,6 +133,8 @@ async def ingest_parsed(
         property_id=property_id,
         document_id=document_id,
         attachment_document_ids=attachments,
+        gmail_message_id=gmail_message_id,
+        gmail_thread_id=gmail_thread_id,
         status="assigned" if contact_id else "new",
         classification={
             "method": "rules",
@@ -123,6 +142,9 @@ async def ingest_parsed(
             "category": mail.category(parsed["subject"], parsed["body"], categories),
             "property_number": number,
             "contact_matched": contact_id is not None,
+            "attachments_total": len(parsed["attachments"]),
+            "attachments_rejected": rejected,
+            "inline_skipped": int(parsed.get("inline_skipped") or 0),
         },
         appointment_suggestions=mail.appointments(parsed["body"], local_today()),
     )
@@ -169,23 +191,56 @@ async def ingest_parsed(
 
         await queue_for_message(session, settings, tenant_id, row)
     if property_id is None:  # Objektrechnungen laufen nie über die Weiterleitung.
-        await _classify_and_maybe_forward(
-            session, settings, tenant_id, actor_user_id, row, attachments
-        )
+        await _classify_and_queue_forward(session, tenant_id, row, attachments)
     return row, True
 
 
-async def _classify_and_maybe_forward(
+async def find_parent(
     session: AsyncSession,
-    settings: Settings,
+    *,
+    in_reply_to: str | None,
+    references: str | None,
+    gmail_thread_id: str | None,
+) -> Message | None:
+    """Known message the inbound mail replies to (Review 26.09.2026, M7): ``In-Reply-To``
+    first, then every id of ``References`` (closest first, so a reply to a forwarded or
+    externally sent mail still finds the case), finally the Gmail thread id."""
+    candidates = mail.reference_ids(in_reply_to) + mail.reference_ids(references)
+    seen: set[str] = set()
+    for header_id in candidates:
+        if header_id in seen:
+            continue
+        seen.add(header_id)
+        parent = await session.scalar(
+            select(Message)
+            .where(Message.header_message_id == header_id)
+            .order_by(Message.created_at)
+            .limit(1)
+        )
+        if parent is not None:
+            return parent
+    if gmail_thread_id:
+        by_thread: Message | None = await session.scalar(
+            select(Message)
+            .where(Message.gmail_thread_id == gmail_thread_id)
+            .order_by(Message.created_at)
+            .limit(1)
+        )
+        return by_thread
+    return None
+
+
+async def _classify_and_queue_forward(
+    session: AsyncSession,
     tenant_id: uuid.UUID,
-    actor_user_id: uuid.UUID | None,
     row: Message,
     attachment_ids: list[uuid.UUID],
 ) -> None:
     """Rechnungs-Weiterleitung (M20, operator 25.09.2026): siehe ``mhvp.communication.forwarding``.
-    Ein automatischer Versand fasst nur eine ohnehin schon eingetroffene Mail zusammen (keine neue
-    fachliche Erklärung); dennoch wird jede Weiterleitung protokolliert (``message.forwarded``)."""
+    Die Klassifikation läuft im Ingest; der Versand selbst wird nur vorgemerkt
+    (``classification.invoice_forward.status = "queued"``) und nach dem Commit durch
+    ``forward_queued`` ausgeführt (Review 26.09.2026, M13). Rollt der Ingest zurück, ist nichts
+    versendet; der Marker je Nachricht mit Zeilensperre verhindert einen zweiten Versand."""
     from mhvp.communication.forwarding import classify_invoice
     from mhvp.documents.models import Document
     from mhvp.platform.models import TenantSettings
@@ -209,18 +264,92 @@ async def _classify_and_maybe_forward(
         sender_allowlist=list(cfg.get("sender_allowlist", [])) + list(cfg.get("learning_list", [])),
     )
     classification = dict(row.classification)
-    classification["invoice_forward"] = {"decision": result.decision, "reason": result.reason}
+    forward: dict[str, Any] = {"decision": result.decision, "reason": result.reason}
+    if result.decision == "forward":
+        forward["status"] = "queued"
+    classification["invoice_forward"] = forward
     row.classification = classification
-    if result.decision != "forward":
-        return
-    from mhvp.communication.forwarding_dispatch import forward_and_archive
+    await session.flush()
 
-    try:
-        await forward_and_archive(
-            session, settings, tenant_id, actor_user_id, row, cfg["forward_address"]
+
+FORWARD_QUEUE_LIMIT = 50
+
+
+async def forward_queued(
+    session: AsyncSession, settings: Settings, tenant_id: uuid.UUID
+) -> dict[str, int]:
+    """Nachlaufjob der automatischen Weiterleitung (Review 26.09.2026, M13): sendet jede
+    vorgemerkte Nachricht des Mandanten genau einmal. Die Zeilensperre (``FOR UPDATE SKIP
+    LOCKED``) serialisiert parallele Läufe; nach dem Versand wird der Marker auf ``sent``
+    gesetzt, ein Fehler auf ``failed`` mit Grund (kein automatischer zweiter Versuch, der
+    Vorschlag bleibt im Postfach manuell auslösbar)."""
+    from mhvp.communication.forwarding_dispatch import forward_and_archive
+    from mhvp.platform.models import TenantSettings
+
+    counts = {"forwarded": 0, "failed": 0}
+    tenant_settings = await session.scalar(
+        select(TenantSettings).where(TenantSettings.tenant_id == tenant_id)
+    )
+    cfg = tenant_settings.invoice_forwarding if tenant_settings else {}
+    address = cfg.get("forward_address")
+    rows = list(
+        await session.scalars(
+            select(Message)
+            .where(
+                Message.direction == "in",
+                Message.classification["invoice_forward"]["status"].astext == "queued",
+            )
+            .order_by(Message.created_at)
+            .limit(FORWARD_QUEUE_LIMIT)
+            .with_for_update(skip_locked=True)
         )
-    except Exception:
-        log.warning("invoice forward failed", extra={"message_id": str(row.id)})
+    )
+    for row in rows:
+        classification = dict(row.classification)
+        forward = dict(classification.get("invoice_forward") or {})
+        if not cfg.get("enabled") or not address:
+            forward["status"] = "skipped"
+            forward["error"] = "Weiterleitung nicht mehr eingerichtet."
+        else:
+            try:
+                await forward_and_archive(
+                    session, settings, tenant_id, row.created_by, row, address
+                )
+                forward["status"] = "sent"
+                forward["forwarded_to"] = address
+                counts["forwarded"] += 1
+            except Exception as exc:
+                log.warning("invoice forward failed", extra={"message_id": str(row.id)})
+                forward["status"] = "failed"
+                forward["error"] = f"{type(exc).__name__}: {exc}"[:500]
+                counts["failed"] += 1
+        classification["invoice_forward"] = forward
+        row.classification = classification
+    await session.flush()
+    return counts
+
+
+async def dispatch_forward_queue(settings: Settings, tenant_id: uuid.UUID) -> None:
+    """Startet ``forward_queued`` nach dem Commit des Ingests: synchron ohne Worker
+    (``ai_inline``, Tests), sonst über die Queue ``mail``. Ein Fehler beim Anstoßen darf den
+    Ingest nie stören; vorgemerkte Nachrichten bleiben ``queued`` und werden vom nächsten
+    Lauf nachgeholt."""
+    if settings.ai_inline:
+        from mhvp.communication.tasks import forward_queued_once
+
+        try:
+            await forward_queued_once(settings, tenant_id)
+        except Exception:
+            log.warning("forward queue failed inline", extra={"tenant_id": str(tenant_id)})
+    else:
+        try:
+            from mhvp.worker import get_celery
+
+            get_celery().send_task(
+                "mhvp.communication.forward_queued", args=[str(tenant_id)], queue="mail"
+            )
+        except Exception:
+            log.warning("could not queue forward job", extra={"tenant_id": str(tenant_id)})
 
 
 async def _queue_suggestion(
@@ -262,6 +391,8 @@ async def ingest_raw(
     raw: bytes,
     mailbox_id: uuid.UUID | None,
     auto_ticket: bool,
+    gmail_message_id: str | None = None,
+    gmail_thread_id: str | None = None,
 ) -> tuple[Message, bool]:
     """Store the raw RFC 822 message as a document, then ingest it."""
     from mhvp.documents.models import DocumentSource
@@ -299,6 +430,8 @@ async def ingest_raw(
         document_id=document.id,
         mailbox_id=mailbox_id,
         auto_ticket=auto_ticket,
+        gmail_message_id=gmail_message_id,
+        gmail_thread_id=gmail_thread_id,
     )
 
 
@@ -507,10 +640,13 @@ async def create_ticket(
         template_id=tpl.id if tpl else None,
         category=tpl.category if tpl else None,
         title=(row.subject or "E-Mail ohne Betreff")[:300],
-        public_description=row.body,
+        # Nur der eigene Textblock ohne zitierte Mails und Signatur (Review 26.09.2026,
+        # M17); der Volltext bleibt an der Nachricht.
+        public_description=mail.strip_quoted(row.body),
         priority=priority,
         team_id=tpl.default_team_id if tpl else None,
         assignee_user_id=tpl.default_assignee_user_id if tpl else None,
+        contact_id=row.contact_id,
         initiator_contact_id=row.contact_id,
         property_id=row.property_id,
         source=TicketSource.EMAIL,
@@ -525,3 +661,73 @@ async def create_ticket(
     row.ticket_id, row.status = ticket.id, "assigned"
     await session.flush()
     return ticket
+
+
+# M20-03 Freigabepflicht je Mitglied und Direktversand ------------------------------------
+
+
+async def author_reply_approval(
+    session: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID | None
+) -> tuple[bool, str | None]:
+    """Kennzeichen des Verfassers (Betreiberentscheidung 26.09.2026): ``(pflichtig, grund)``.
+    Ein befristetes Kennzeichen (``reply_approval_until``) gilt bis einschließlich dieses
+    Tages (Betreiberzeitzone), danach nicht mehr."""
+    from mhvp.platform.models import Membership
+
+    if user_id is None:
+        return False, None
+    row = (
+        await session.execute(
+            select(
+                Membership.reply_approval_required,
+                Membership.reply_approval_reason,
+                Membership.reply_approval_until,
+            ).where(Membership.tenant_id == tenant_id, Membership.user_id == user_id)
+        )
+    ).first()
+    if row is None or not row.reply_approval_required:
+        return False, None
+    if row.reply_approval_until is not None and row.reply_approval_until < local_today():
+        return False, None
+    return True, row.reply_approval_reason
+
+
+async def reply_approval_all(session: AsyncSession, tenant_id: uuid.UUID) -> bool:
+    """Notbremse des Mandanten: alle Ticketantworten mit Freigabe (Standard aus)."""
+    from mhvp.platform.models import TenantSettings
+
+    return bool(
+        await session.scalar(
+            select(TenantSettings.ticket_reply_approval_all).where(
+                TenantSettings.tenant_id == tenant_id
+            )
+        )
+    )
+
+
+async def notify_reply_approvers(
+    session: AsyncSession, row: Message, *, ticket_number: int | None, exclude: uuid.UUID | None
+) -> int:
+    """Offene Vorlage an alle Freigabeberechtigten (``communication:approve``) des Mandanten
+    außer dem Verfasser; idempotent je Nachricht (``workspace.services.notify``)."""
+    from mhvp.banking.tasks import users_with_permission
+    from mhvp.workspace.services import notify
+
+    count = 0
+    tnr = f"TNR#{ticket_number} " if ticket_number is not None else ""
+    for user_id in await users_with_permission(session, row.tenant_id, "communication:approve"):
+        if user_id == exclude:
+            continue
+        created = await notify(
+            session,
+            tenant_id=row.tenant_id,
+            user_id=user_id,
+            kind="mail.approval_requested",
+            title=f"Antwort {tnr}zur Freigabe: {row.subject or '(ohne Betreff)'}",
+            body="Eine vorformulierte Ticketantwort wartet auf die Freigabe durch eine "
+            "zweite Person.",
+            entity_type="message",
+            entity_id=row.id,
+        )
+        count += 1 if created is not None else 0
+    return count

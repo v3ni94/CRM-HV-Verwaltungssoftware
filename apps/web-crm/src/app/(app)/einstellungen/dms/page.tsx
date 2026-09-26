@@ -5,6 +5,7 @@ import { DmsConnectionSettings, type DmsConnection } from "@/components/document
 import { InvoiceIntakeAutoSettings } from "@/components/invoices/InvoiceIntakeAutoSettings";
 import type { OAuthStatus } from "@/components/mail/MailboxSettings";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ui } from "@/lib/ui";
 
@@ -23,7 +24,7 @@ export default async function DmsSettingsPage({
   const t = await getTranslations("DmsSettings");
   const params = await searchParams;
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
   const [connections, oauth, intake] = await Promise.all([

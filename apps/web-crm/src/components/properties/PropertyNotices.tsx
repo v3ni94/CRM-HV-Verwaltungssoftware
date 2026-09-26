@@ -62,6 +62,7 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
   const [editing, setEditing] = useState<"new" | string | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
   const [formError, setFormError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -82,12 +83,14 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
   function startNew() {
     setDraft(emptyDraft());
     setFormError(null);
+    setMessage(null);
     setEditing("new");
   }
 
   function startEdit(n: PropertyNotice) {
     setDraft(toDraft(n));
     setFormError(null);
+    setMessage(null);
     setEditing(n.id);
   }
 
@@ -124,15 +127,18 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
     setBusy(false);
     if (!res.ok) return setFormError(res.message);
     setEditing(null);
+    setMessage(t("saved"));
     await load();
   }
 
   async function end(n: PropertyNotice) {
     if (!window.confirm(t("endConfirm", { title: n.title }))) return;
     setBusy(true);
+    setMessage(null);
     const res = await bff<PropertyNotice>(`/api/bff/notices/${n.id}/end`, { method: "POST" });
     setBusy(false);
     if (!res.ok) return setError(res.message);
+    setMessage(t("ended"));
     await load();
   }
 
@@ -153,6 +159,11 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p role="status" className={ui.success}>
+          {message}
         </p>
       ) : null}
 

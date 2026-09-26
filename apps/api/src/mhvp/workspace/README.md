@@ -24,3 +24,19 @@ Exit-Code, Fehler) liegt in Redis (`mhvp:ops:backup_verify:last`, sieben Tage) u
 `GET /api/v1/platform/ops/metrics` unter `jobs.backup_verify` sowie als Gauges
 `mhvp_backup_verify_*`; Alarme `backup_verify_failed` und `backup_verify_stale` (älter als 36 h
 oder kein Lauf). Tests: `tests/integration/test_ops_jobs.py`.
+
+## Further files (addendum 26.09.2026)
+
+Checked against the folder contents on 26.09.2026, the following files were not listed above:
+
+* `models.py`: notifications, calendar entries, saved filters, calendar event links (M9, M23-02)
+* `routers.py`: `/api/v1/workspace` endpoints (dashboard, search, notifications, calendar, filters, digest, deadlines, job settings)
+* `services.py`: idempotent `notify`, derived calendar dates, maintenance reminders
+* `tasks.py`: Celery jobs: reminders (hourly), digest (07:00), compliance deadlines (20:00)
+
+## Performance (Review 26.09.2026)
+
+`GET /workspace/dashboard` computes all tiles in one statement (scalar subqueries). The
+query budget of the start page, digest and search is asserted in
+`tests/integration/test_perf_queries.py` (under 15 statements per request including the 8 of
+authentication and tenant context). Measurements in `docs/reviews/2026-09-26-performance.md`.

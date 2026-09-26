@@ -6,12 +6,13 @@ tenant scoped.
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
@@ -131,6 +132,17 @@ class Membership(IdMixin, TimestampMixin, Base):
     legal_entity_ids: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
+    # M20-03 (Betreiberentscheidung 26.09.2026, docs/rules/M20-06-mail-versand-nachweis.md,
+    # Abschnitt Direktversand): Antworten aus dem Ticket dieses Mitglieds brauchen die Freigabe
+    # einer zweiten Person (Grund ``azubi`` oder ``neuer_mitarbeiter``, optional befristet bis
+    # ``reply_approval_until`` einschließlich). Ohne Kennzeichen sendet ein Mitglied mit
+    # ``communication:approve`` seine Ticketantwort direkt. Pflege nur mit
+    # ``tenant_settings:update``; jede Änderung als ``membership.reply_approval_changed``.
+    reply_approval_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    reply_approval_reason: Mapped[str | None] = mapped_column(String(32))
+    reply_approval_until: Mapped[date | None] = mapped_column(Date)
 
 
 class RefreshToken(IdMixin, Base):
@@ -314,6 +326,14 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # `mhvp.objektakte.classification.DEFAULT_AUTO_APPLY_THRESHOLD`.
     objektakte_classification: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    # M20-03 Notbremse (Betreiberentscheidung 26.09.2026, docs/rules/M20-06, Abschnitt
+    # Direktversand): bei true brauchen alle Ticketantworten des Mandanten die Freigabe einer
+    # zweiten Person, unabhängig vom Kennzeichen je Mitglied. Standard aus (Direktversand für
+    # Mitglieder mit ``communication:approve`` ohne Kennzeichen). Änderung wird als
+    # ``tenant_settings.updated`` protokolliert.
+    ticket_reply_approval_all: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 

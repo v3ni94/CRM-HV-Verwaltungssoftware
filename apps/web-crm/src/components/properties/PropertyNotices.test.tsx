@@ -90,3 +90,20 @@ describe("PropertyNotices", () => {
     );
   });
 });
+
+describe("PropertyNotices feedback (review 26.09.2026)", () => {
+  it("asks before ending a notice and confirms the end", async () => {
+    fetchMock.mockImplementation((url: string, init?: RequestInit) =>
+      Promise.resolve(init?.method === "POST" ? jsonResponse(notice({ ended_at: "2026-09-26T08:00:00Z", is_current: false })) : jsonResponse([notice()])),
+    );
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderIntl(<PropertyNotices propertyId={PROPERTY} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Beenden" }));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("Treppenhausreinigung"));
+    expect(fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "POST")).toHaveLength(0);
+    confirmSpy.mockReturnValue(true);
+    await userEvent.click(screen.getByRole("button", { name: "Beenden" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Aushang beendet."));
+    confirmSpy.mockRestore();
+  });
+});

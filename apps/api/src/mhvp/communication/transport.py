@@ -9,6 +9,7 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication.models import Mailbox
@@ -19,6 +20,11 @@ SMTP_TIMEOUT = 30
 
 class MailTransportError(RuntimeError):
     """Sending failed or no usable transport is configured."""
+
+
+class MailTransportUncertainError(MailTransportError):
+    """The transport did not answer (network error, timeout): the mail may or may not have
+    left. The caller keeps the send attempt open and verifies by Message-ID (M1)."""
 
 
 def is_sendable(box: Mailbox | None) -> bool:
@@ -43,6 +49,12 @@ async def send_message(
                 await client.aclose()
         except gmail.GmailError as exc:
             raise MailTransportError(str(exc)) from exc
+        except httpx.HTTPError as exc:
+            # Netzfehler vor oder nach dem Versand: der Aufrufer behandelt den Versand als
+            # nicht nachgewiesen (Review 26.09.2026, M1, Abgleich per Message-ID).
+            raise MailTransportUncertainError(
+                f"Gmail nicht erreichbar: {type(exc).__name__}"
+            ) from exc
     if not box.smtp_host:
         raise MailTransportError("Kein eingerichtetes Postfach für den Versand (M20-01).")
     try:

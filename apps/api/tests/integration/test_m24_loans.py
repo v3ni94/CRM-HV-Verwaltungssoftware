@@ -26,12 +26,42 @@ Reconciliation (test_w04_reconciliation), year 2025, fresh ledger (opening 0,00)
   distributed: Allgemeinstrom 1.200,00 + Heizkosten (consumption) 2.300,00 = 3.500,00
   unexplained before note: 3.500,00 - 3.200,00 = 300,00 -> blocks
   note heating_accrual +300,00 -> unexplained 0,00 -> releasable
+
+Schedule (A78, test_w10_loan_schedule_hand_values), monthly interest = balance * rate / 12,
+rounded half up to the cent, first instalment one month after the start:
+  annuity 1.000,00 at 6 %, instalment 400,00, start 31.01.2025:
+    1  28.02.2025  interest 1.000,00 * 0,005 = 5,00      repayment 395,00  balance 605,00
+    2  31.03.2025  interest 605,00 * 0,005 = 3,025 -> 3,03  repayment 396,97  balance 208,03
+    3  30.04.2025  interest 208,03 * 0,005 = 1,04015 -> 1,04  repayment 208,03 (rest),
+       instalment 209,07, balance 0,00; interest total 9,07; repayment total 1.000,00
+  linear 1.000,00 at 6 %, 3 months: repayment 333,33, 333,33, 333,34 (rest);
+    interest 5,00; 666,67 * 0,005 = 3,33335 -> 3,33; 333,34 * 0,005 = 1,6667 -> 1,67;
+    total 10,00
+  loan of test_w10_loan (20.000,00 at 3,5 %, 363,83, 60 months, start 01.04.2025):
+    1  01.05.2025  interest 20.000,00 * 0,035 / 12 = 58,333.. -> 58,33  repayment 305,50
+       balance 19.694,50
+    2  01.06.2025  interest 19.694,50 * 0,035 / 12 = 57,442.. -> 57,44  repayment 306,39
+       balance 19.388,11
+    comparison 2025-05: booked repayment 1.000,00 - planned 305,50 = +694,50;
+    booked interest 0,00 - planned 58,33 = -58,33 (the interest item has no journal entry)
+
+Migration year (A80, test_w04_reconciliation_migration_year), year 2025, fresh ledger:
+  opening balance entry 30.06.2025 (takeover from the old system): bank 001200 5.000,00,
+  cost 043000 800,00 (costs of the pre period), against 009000 5.800,00
+  platform cost 043000 01.08.2025            -600,00  (cost)
+  cash: opening 0,00 (prior year) + 5.000,00 (migration) = 5.000,00; inflows 0,00;
+  outflows 600,00; closing 4.400,00
+  cost booked on the platform 600,00; migration_opening 800,00 (automatic)
+  distributed: Allgemeinstrom 1.400,00 -> unexplained 1.400,00 - 600,00 - 800,00 = 0,00
+  -> releasable without a manual note
 """
 
 import asyncio
 import json
 import uuid
 from collections.abc import Iterator
+from datetime import date
+from decimal import Decimal
 from typing import Any
 
 import boto3
@@ -314,6 +344,35 @@ def test_w10_loan_measure_items_and_separation(client: TestClient, world: World)
     )
     assert _ok(client.get(f"{H}/loans/{loan['id']}", headers=h))["document_ids"] == [doc["id"]]
 
+    # A78: schedule as orientation and comparison with the booked items per month.
+    plan = _ok(client.get(f"{H}/loans/{loan['id']}/schedule", headers=h))
+    assert (plan["kind"], plan["months"], plan["note_text"]) == (
+        "annuity",
+        60,
+        "Orientierung, maßgeblich ist der Darlehensvertrag.",
+    )
+    assert plan["rows"][0] == {
+        "number": 1,
+        "due_date": "2025-05-01",
+        "instalment": "363.83",
+        "interest": "58.33",
+        "repayment": "305.50",
+        "balance": "19694.50",
+    }
+    assert (plan["rows"][1]["interest"], plan["rows"][1]["balance"]) == ("57.44", "19388.11")
+    may = next(c for c in plan["comparison"] if c["month"] == "2025-05")
+    assert may == {
+        "month": "2025-05",
+        "planned_repayment": "305.50",
+        "planned_interest": "58.33",
+        "booked_repayment": "1000.00",
+        "booked_interest": "0.00",
+        "difference_repayment": "694.50",
+        "difference_interest": "-58.33",
+    }
+    assert client.get(f"{H}/loans/{loan['id']}/schedule", headers=hr).status_code == 200
+    assert client.get(f"{H}/loans/{loan['id']}/schedule", headers=ho).status_code == 404
+
     # Authorization and tenant separation.
     assert (
         _ok(client.get(f"{H}/loans", params={"legal_entity_id": w["hoa"]}, headers=hr))[0]["id"]
@@ -338,21 +397,52 @@ def test_w10_insurance_claim_items(client: TestClient, world: World) -> None:
     w = _hoa_ledger(client, h, "746")
     acc, ledger = w["acc"], w["ledger"]
     _, contract = _owner(client, h, w["property"], "01", "1000", w["keys"]["MEA"], {})
-    claim = _ok(
+    body = {
+        "ledger_id": ledger,
+        "title": "Wasserschaden Keller",
+        "damage_date": "2025-03-02",
+        "insurer": "Gebäudeversicherung AG",
+        "policy_reference": "GV-1234",
+        "deductible": "500.00",
+    }
+    # A79: the resolution must belong to the same community (structured link).
+    resolution = {
+        "decided_on": "2025-04-10",
+        "subject": "Sanierung Keller nach Wasserschaden",
+        "wording": "Die Gemeinschaft beauftragt die Trocknung des Kellers.",
+        "status": "positive",
+    }
+    own = _ok(
+        client.post(f"{H}/resolutions", json=resolution | {"legal_entity_id": w["hoa"]}, headers=h),
+        201,
+    )
+    foreign_hoa = _hoa_ledger(client, h, "748")["hoa"]
+    foreign = _ok(
         client.post(
-            f"{H}/insurance-claims",
-            json={
-                "ledger_id": ledger,
-                "title": "Wasserschaden Keller",
-                "damage_date": "2025-03-02",
-                "insurer": "Gebäudeversicherung AG",
-                "policy_reference": "GV-1234",
-                "deductible": "500.00",
-            },
-            headers=h,
+            f"{H}/resolutions", json=resolution | {"legal_entity_id": foreign_hoa}, headers=h
         ),
         201,
     )
+    assert (
+        client.post(
+            f"{H}/insurance-claims", json=body | {"resolution_id": foreign["id"]}, headers=h
+        ).status_code
+        == 422
+    )
+    claim = _ok(client.post(f"{H}/insurance-claims", json=body, headers=h), 201)
+    assert claim["resolution_id"] is None
+    assert (
+        client.patch(
+            f"{H}/insurance-claims/{claim['id']}", json={"resolution_id": foreign["id"]}, headers=h
+        ).status_code
+        == 422
+    )
+    patched = _ok(
+        client.patch(
+            f"{H}/insurance-claims/{claim['id']}", json={"resolution_id": own["id"]}, headers=h
+        )
+    )
+    assert (patched["resolution_id"], patched["status"]) == (own["id"], "reported")
     cost = _post(
         client,
         h,
@@ -413,6 +503,7 @@ def test_w10_insurance_claim_items(client: TestClient, world: World) -> None:
     )
     report = _ok(client.get(f"{H}/insurance-claims/{claim['id']}", headers=h))
     assert (report["status"], report["claim_number"]) == ("settled", "S-77")
+    assert report["resolution_id"] == own["id"]
     assert report["net_burden_booked"] == "500.00"
     assert report["owner_payments_booked"] == "0.00"
     assert report["totals"]["regress"] == {"booked": "0.00", "planned": "200.00"}
@@ -690,3 +781,145 @@ def test_w04_reconciliation_blocks_until_explained(client: TestClient, world: Wo
         ).status_code
         == 409
     )
+
+
+def test_w10_loan_schedule_hand_values() -> None:
+    """A78: annuity and linear plan against the hand computed rows of the module docstring;
+    no plan without instalment or term."""
+    from mhvp.core.problems import ProblemError
+    from mhvp.hoa.calc import loan_schedule
+
+    annuity = loan_schedule(
+        Decimal("1000.00"), Decimal("6"), None, Decimal("400.00"), date(2025, 1, 31)
+    )
+    assert annuity["kind"] == "annuity"
+    assert [
+        (r["due_date"], r["interest"], r["repayment"], r["balance"]) for r in annuity["rows"]
+    ] == [
+        ("2025-02-28", "5.00", "395.00", "605.00"),
+        ("2025-03-31", "3.03", "396.97", "208.03"),
+        ("2025-04-30", "1.04", "208.03", "0.00"),
+    ]
+    assert annuity["rows"][2]["instalment"] == "209.07"
+    assert (annuity["interest_total"], annuity["repayment_total"], annuity["residual"]) == (
+        "9.07",
+        "1000.00",
+        "0.00",
+    )
+    linear = loan_schedule(Decimal("1000.00"), Decimal("6"), 3, None, date(2025, 1, 31))
+    assert linear["kind"] == "linear"
+    assert [(r["interest"], r["repayment"]) for r in linear["rows"]] == [
+        ("5.00", "333.33"),
+        ("3.33", "333.33"),
+        ("1.67", "333.34"),
+    ]
+    assert (linear["interest_total"], linear["residual"]) == ("10.00", "0.00")
+    # instalment and term: the plan stops after the term and reports the residual
+    capped = loan_schedule(
+        Decimal("1000.00"), Decimal("6"), 2, Decimal("400.00"), date(2025, 1, 31)
+    )
+    assert (capped["months"], capped["residual"]) == (2, "208.03")
+    with pytest.raises(ProblemError):
+        loan_schedule(Decimal("1000.00"), Decimal("6"), None, None, date(2025, 1, 31))
+    with pytest.raises(ProblemError):  # instalment below the first month's interest
+        loan_schedule(Decimal("1000.00"), Decimal("6"), None, Decimal("5.00"), date(2025, 1, 31))
+
+
+def test_w04_reconciliation_migration_year(client: TestClient, world: World) -> None:
+    """A80 (6.9.10): opening balance entries of the year are the takeover from the old system;
+    their cash lines give the opening balance, their cost lines the explained difference
+    migration_opening. Values in the module docstring."""
+    h = bearer(login(client, world, "a59admin"))
+    h2 = bearer(login(client, world, "a59second"))
+    w = _hoa_ledger(client, h, "750")
+    acc, ledger = w["acc"], w["ledger"]
+    _owner(client, h, w["property"], "01", "1000", w["keys"]["MEA"], {})
+    draft = _ok(
+        client.post(
+            f"{A}/ledgers/{ledger}/entries",
+            json={
+                "kind": "opening_balance",
+                "booking_date": "2025-06-30",
+                "text": "Übernahme aus Immoware24 zum 30.06.2025",
+                "lines": [
+                    {"account_id": acc["001200"], "debit": "5000.00"},
+                    {"account_id": acc["043000"], "debit": "800.00"},
+                    {"account_id": acc["009000"], "credit": "5800.00"},
+                ],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.post(f"{A}/ledgers/{ledger}/entries/{draft['id']}/approve", headers=h2))
+    _ok(client.post(f"{A}/ledgers/{ledger}/entries/{draft['id']}/post", headers=h))
+    _post(
+        client,
+        h,
+        ledger,
+        "2025-08-01",
+        "Allgemeinstrom",
+        [
+            {"account_id": acc["043000"], "debit": "600.00"},
+            {"account_id": acc["001200"], "credit": "600.00"},
+        ],
+    )
+    sid = _ok(
+        client.post(f"{H}/statements", json={"ledger_id": ledger, "year": 2025}, headers=h), 201
+    )["id"]
+    _ok(
+        client.post(
+            f"{H}/statements/{sid}/costs",
+            json={
+                "label": "Allgemeinstrom",
+                "amount": "1400.00",
+                "allocation_key_id": w["keys"]["MEA"],
+                "basis": "Gemeinschaftsordnung",
+                "account_id": acc["043000"],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    recon = _ok(client.post(f"{H}/statements/{sid}/calculate", headers=h))["snapshot"][
+        "reconciliation"
+    ]
+    bank = next(a for a in recon["cash"]["accounts"] if a["number"] == "001200")
+    assert (bank["opening"], bank["opening_migration"], bank["closing"]) == (
+        "0.00",
+        "5000.00",
+        "4400.00",
+    )
+    assert {
+        k: recon["cash"][k] for k in ("opening", "inflows", "outflows", "closing", "check_ok")
+    } == {
+        "opening": "5000.00",
+        "inflows": "0.00",
+        "outflows": "600.00",
+        "closing": "4400.00",
+        "check_ok": True,
+    }
+    assert recon["inflows"] == {}
+    assert recon["outflows"] == {"cost": "600.00"}
+    migration = recon["migration"]
+    assert (migration["applied"], migration["entries"], migration["sources"]) == (
+        True,
+        1,
+        ["manual"],
+    )
+    assert (migration["cash_opening"], migration["cost_opening"], migration["other_opening"]) == (
+        "5000.00",
+        "800.00",
+        "-5800.00",
+    )
+    bridge = {b["code"]: b for b in recon["bridge"]}
+    assert bridge["migration_opening"]["amount"] == "800.00"
+    assert bridge["migration_opening"]["migration"] is True
+    assert (recon["cost_booked"], recon["cost_distributed"], recon["unexplained"]) == (
+        "600.00",
+        "1400.00",
+        "0.00",
+    )
+    package = _ok(client.get(f"{H}/statements/{sid}/package", headers=h))
+    assert (package["blocking"], package["releasable"]) == ([], True)
+    assert package["reconciliation"]["migration"]["applied"] is True

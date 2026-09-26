@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -11,8 +12,8 @@ export const dynamic = "force-dynamic";
  *  page which enforces the permission again server side. */
 export default async function SettingsPage() {
   const t = await getTranslations("Settings");
-  const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const tw = await getTranslations("Webhooks");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
 
@@ -25,6 +26,7 @@ export default async function SettingsPage() {
     { href: "/einstellungen/dms", title: t("dms.title"), description: t("dms.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/bank", title: t("bank.title"), description: t("bank.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/telefonie", title: t("telephony.title"), description: t("telephony.description"), show: can("tenant_settings:read") },
+    { href: "/einstellungen/webhooks", title: tw("card.title"), description: tw("card.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/weg", title: t("weg.title"), description: t("weg.description"), show: can("accounting:read") },
     { href: "/einstellungen/sla", title: t("sla.title"), description: t("sla.description"), show: can("sla:read") },
     {

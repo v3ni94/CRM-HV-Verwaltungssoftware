@@ -49,6 +49,9 @@ class SequenceType(StrEnum):
 
 class DirectDebitRun(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "direct_debit_run"
+    __table_args__ = (
+        Index("ix_direct_debit_run_tenant_status_date", "tenant_id", "status", "collection_date"),
+    )
 
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
     legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")

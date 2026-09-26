@@ -80,3 +80,28 @@ per path.
 
 - `docs/MASTER-PROMPT.md` sections 0.1 (rules 5, 9), 0.2, 3.3, 5.3, 6.9.1, 7.1 (B01), annex E (E01, E12)
 - `infra/postgres/sql/bootstrap.sql`, `docs/plans/M1.md` sections 4.3, 6, 7
+
+## Nachtrag 26.09.2026: Cache der Rollen und Berechtigungen (Performance-Prüfung, Punkt 2)
+
+Der Mandanten- und Berechtigungskontext eines Bearer-Aufrufs kostete acht Anweisungen je
+Anfrage (Benutzer, Mitgliedschaft, Rollen, Rollenvererbung, Berechtigungen, Mandantendomäne,
+zwei Mal `set_config`). `mhvp.core.auth.permission_cache` hält seither das Ergebnis von
+`effective_permissions` je `(tenant_id, user_id)` prozesslokal für höchstens 30 Sekunden
+(`MHVP_PERMISSION_CACHE_TTL_SECONDS`, nach oben auf 30 begrenzt, 0 schaltet ab). Auf einem
+Treffer bleiben drei Anweisungen: Benutzer, Mitgliedschaft, Mandantendomäne.
+
+Unverändertes Sicherheitsverhalten:
+
+- Sperren werden nie gecacht: `User.active` und `Membership.status` werden bei jeder Anfrage
+  gelesen, eine Sperre wirkt sofort. Ebenso die Legal-Entity-Zuordnung der Mitgliedschaft.
+- Portal-Grants (`mhvp.portal.access`) laufen nicht über diesen Cache.
+- Rollenänderungen (`set_member_roles`: PUT /tenant/members/{id}/roles, Anlegen einer
+  Mitgliedschaft) und Rechteänderungen einer Rolle (PUT /tenant/roles/{id}/permissions) sowie
+  `python -m mhvp.platform.sync_roles` verwerfen die Einträge des Mandanten nach dem Commit;
+  im selben Prozess wirkt ein Rollenentzug sofort. In anderen Prozessen (mehrere Worker,
+  Re-Sync als eigener Job) greift er spätestens nach Ablauf der TTL.
+- Der Eintrag ist an die Mitgliedschafts-ID gebunden; eine ersetzte Mitgliedschaft nutzt
+  keinen alten Eintrag. Der RLS-Kontext (`set_config`) je Transaktion bleibt unverändert.
+
+Nachweis: `tests/integration/test_perf_queries.py` (Anweisungszahl kalt und warm, Rollenentzug
+sofort, Sperre sofort, TTL-Ablauf).

@@ -85,3 +85,13 @@ describe("ReconciliationReports", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Keine Rohzeilen");
   });
 });
+
+describe("ReconciliationReports loading state (review 26.09.2026)", () => {
+  it("ends the loading state and shows the error when the list cannot be loaded", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ title: "Nicht erreichbar", status: 503 }, 503));
+    renderIntl(<ReconciliationReports canCreate={false} />);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Nicht erreichbar"));
+    expect(screen.queryByText("Berichte werden geladen.")).not.toBeInTheDocument();
+    expect(screen.getByTestId("reconciliation-empty")).toBeInTheDocument();
+  });
+});

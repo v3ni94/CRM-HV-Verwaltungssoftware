@@ -129,12 +129,32 @@ class GmailClient:
         return [mid for _, mid in entries][:limit]
 
     async def raw_message(self, message_id: str) -> bytes | None:
+        fetched = await self.raw_message_with_thread(message_id)
+        return fetched[0] if fetched is not None else None
+
+    async def raw_message_with_thread(self, message_id: str) -> tuple[bytes, str | None] | None:
+        """Raw RFC 822 bytes and the Gmail thread id (threading fallback, M7); None when the
+        message is gone."""
         r = await self._get(f"messages/{message_id}", format="raw")
         if r.status_code == 404:
             return None
         if r.status_code != 200:
             raise GmailError(f"Nachricht nicht lesbar (HTTP {r.status_code}).")
-        return base64.urlsafe_b64decode(r.json()["raw"] + "==")
+        data = r.json()
+        thread = data.get("threadId")
+        return base64.urlsafe_b64decode(data["raw"] + "=="), (str(thread) if thread else None)
+
+    async def find_by_rfc822_msgid(self, header_message_id: str) -> str | None:
+        """Gmail id of a message with this ``Message-ID`` header, or None. Proof of dispatch
+        for a message whose status change failed after ``send_raw`` (Review 26.09.2026, M1)."""
+        needle = header_message_id.strip().strip("<>")
+        if not needle:
+            return None
+        r = await self._get("messages", q=f"rfc822msgid:{needle}", maxResults=1)
+        if r.status_code != 200:
+            raise GmailError(f"Versandnachweis nicht abrufbar (HTTP {r.status_code}).")
+        found = r.json().get("messages") or []
+        return str(found[0]["id"]) if found else None
 
     async def send_raw(self, raw: bytes) -> str:
         """Sends a raw RFC 822 message; returns the Gmail message id."""
@@ -293,7 +313,7 @@ async def _ingest_one(
     from mhvp.communication.services import ingest_raw
 
     try:
-        raw = await client.raw_message(mid)
+        fetched = await client.raw_message_with_thread(mid)
     except (GmailError, httpx.HTTPError) as exc:
         # Transient fetch error of one message (HTTP 5xx, network): remembered for the retry
         # queue, the rest of the batch continues. Token errors surface before this point.
@@ -301,8 +321,9 @@ async def _ingest_one(
         log.warning("gmail message not fetched", extra={"gmail_id": mid, "reason": str(exc)})
         counts["errors"].append({"gmail_id": mid, "error": str(exc)[:500]})
         return False
-    if raw is None:
+    if fetched is None:
         return True
+    raw, thread_id = fetched
     counts["fetched"] += 1
     # Savepoint per mail: one unreadable or unstorable mail must not roll back the
     # whole batch or poison the session (seen 25.09.2026 as PendingRollbackError).
@@ -317,6 +338,8 @@ async def _ingest_one(
                 raw=raw,
                 mailbox_id=mailbox.id,
                 auto_ticket=True,
+                gmail_message_id=mid,
+                gmail_thread_id=thread_id,
             )
     except Exception as exc:  # recorded for retry, batch continues
         counts["failed"] += 1
@@ -482,7 +505,9 @@ async def sync_mailbox(
 
 async def enabled_gmail_mailboxes(session: AsyncSession) -> list[Mailbox]:
     rows = await session.scalars(
-        select(Mailbox).where(Mailbox.kind == "gmail", Mailbox.enabled.is_(True))
+        select(Mailbox).where(
+            Mailbox.kind == "gmail", Mailbox.enabled.is_(True), Mailbox.deleted_at.is_(None)
+        )
     )
     return list(rows)
 
@@ -494,7 +519,7 @@ async def sync_one(
     created_ids: list[uuid.UUID] | None = None,
 ) -> dict[str, Any]:
     mailbox = await session.get(Mailbox, mailbox_id, with_for_update=True)
-    if mailbox is None:
+    if mailbox is None or mailbox.deleted_at is not None:
         raise GmailError("Postfach nicht gefunden.")
     client_id, client_secret = await oauth_client(session, settings)
     client = make_client(client_id, client_secret, mailbox)

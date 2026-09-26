@@ -3,9 +3,10 @@ import { getTranslations } from "next-intl/server";
 import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
 import { ReconciliationNotes } from "@/components/hoa/FinanceForms";
 import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
+import { StatementVersionDiff, type StatementDiff } from "@/components/hoa/StatementVersionDiff";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
-import { formatEur } from "@/lib/format";
+import { formatDate, formatEur } from "@/lib/format";
 import { hoaContext } from "@/lib/hoa";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -15,8 +16,9 @@ export const dynamic = "force-dynamic";
 type Unit = { unit_number: string; cost_share: string; advances_resolved: string; advances_paid: string; result: string; arrears: string; information_total: string };
 type Reserve = { opening: string; contributions_paid: string; contributions_open: string; withdrawals: string; interest: string; closing: string };
 type Recon = {
-  cash: { accounts: { number: string; name: string; opening: string; closing: string }[]; opening: string; inflows: string; outflows: string; closing: string };
-  bridge: { code: string; amount: string; subtotal?: boolean; manual?: boolean; note?: string }[];
+  cash: { accounts: { number: string; name: string; opening: string; opening_migration?: string; closing: string }[]; opening: string; inflows: string; outflows: string; closing: string };
+  bridge: { code: string; amount: string; subtotal?: boolean; manual?: boolean; migration?: boolean; note?: string }[];
+  migration?: { applied: boolean; entries: number; cutoff: string | null; cash_opening: string; cost_opening: string; note: string };
   unexplained: string;
   note: string;
 };
@@ -43,6 +45,11 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
     return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
   }
   const items = (data.cost_items ?? []) as { id: string; label: string; amount: string; basis: string }[];
+  // Versionsvergleich (D14): only when this version supersedes another and both are calculated.
+  const supersedes = (data.supersedes_id as string | null) ?? null;
+  const diff = supersedes
+    ? ((await ctx.api.GET("/api/v1/hoa/statements/{statement_id}/diff", { params: { path: { statement_id: stId }, query: { against: supersedes } } })).data as StatementDiff | undefined) ?? null
+    : null;
   const snap = data.snapshot as { units?: Unit[]; reserve?: Reserve } | null;
   return (
     <div className="flex flex-col gap-4">
@@ -105,6 +112,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
         </table>
 </div>
       ) : null}
+      {diff ? <StatementVersionDiff diff={diff} /> : null}
       {recon ? (
         <section className={ui.card} data-testid="reconciliation">
           <h2 className={ui.h2}>{tf("reconciliation")}</h2>
@@ -115,10 +123,25 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
           <ul className="text-sm text-muted">
             {recon.cash.accounts.map((a) => (
               <li key={a.number}>
-                {a.number} {a.name}: {formatEur(a.opening)} → {formatEur(a.closing)}
+                {a.number} {a.name}: {formatEur(a.opening)}
+                {a.opening_migration && a.opening_migration !== "0.00" ? ` + ${formatEur(a.opening_migration)} (${tf("migration")})` : ""} → {formatEur(a.closing)}
               </li>
             ))}
           </ul>
+          {recon.migration?.applied ? (
+            <div className="mt-2 rounded border border-border p-2 text-sm" data-testid="reconciliation-migration">
+              <h3 className="font-medium">{tf("migration")}</h3>
+              <p className="text-muted">{recon.migration.note}</p>
+              <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1">
+                <dt className="text-muted">{tf("migrationEntries", { n: recon.migration.entries })}</dt>
+                <dd className="tabular-nums">{recon.migration.cutoff ? `${tf("migrationCutoff")}: ${formatDate(recon.migration.cutoff)}` : ""}</dd>
+                <dt className="text-muted">{tf("migrationCashOpening")}</dt>
+                <dd className="tabular-nums">{formatEur(recon.migration.cash_opening)}</dd>
+                <dt className="text-muted">{tf("migrationCostOpening")}</dt>
+                <dd className="tabular-nums">{formatEur(recon.migration.cost_opening)}</dd>
+              </dl>
+            </div>
+          ) : null}
           <div className="mt-2 overflow-x-auto">
             <table className="mhvp-table">
               <tbody>

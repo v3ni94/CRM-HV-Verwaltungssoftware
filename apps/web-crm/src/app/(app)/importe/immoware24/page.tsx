@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Immoware24Wizard } from "@/components/imports/Immoware24Wizard";
 import { ListImports } from "@/components/imports/ListImports";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -19,7 +20,7 @@ export default async function Immoware24Page() {
     api.GET("/api/v1/imports/immoware24/fields"),
     api.GET("/api/v1/imports/immoware24/mappings"),
     api.GET("/api/v1/imports/immoware24/overview"),
-    api.GET("/api/v1/auth/me"),
+    getMe(),
   ]);
   redirectIfUnauthenticated(fields.response);
   const canUndo = me.data?.permissions.includes("ai:delete") ?? false;

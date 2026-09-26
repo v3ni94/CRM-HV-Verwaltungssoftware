@@ -51,7 +51,10 @@ export function ReconciliationReports({ canCreate }: { canCreate: boolean }) {
   const load = useCallback(async () => {
     const res = await bff<ReportSummary[]>(API);
     if (res.ok) setReports(res.data);
-    else setError(res.message);
+    else {
+      setReports([]);
+      setError(res.message);
+    }
   }, []);
 
   useEffect(() => {

@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.core.auth import tokens
+from mhvp.core.auth.permission_cache import permission_cache
 from mhvp.core.auth.permissions import PLATFORM_SWITCH_PERMISSIONS, effective_permissions
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -139,16 +140,33 @@ async def _from_bearer(request: Request, settings: Settings, raw: str) -> Princi
             is_platform_admin=True,
             platform_access_reason=claims.platform_access_reason,
         )
-    async with tenant_transaction(sessions(request), claims.tenant_id) as session:
-        permissions, roles = await effective_permissions(session, claims.tenant_id, membership.id)
+    permissions, roles = await _membership_permissions(
+        request, claims.tenant_id, claims.user_id, membership.id
+    )
     return Principal(
         user_id=claims.user_id,
         tenant_id=claims.tenant_id,
         permissions=permissions,
-        roles=tuple(roles),
+        roles=roles,
         is_platform_admin=is_admin,
         legal_entity_ids=_scope_ids(membership.legal_entity_ids),
     )
+
+
+async def _membership_permissions(
+    request: Request, tenant_id: uuid.UUID, user_id: uuid.UUID, membership_id: uuid.UUID
+) -> tuple[frozenset[str], tuple[str, ...]]:
+    """Roles and permissions of the membership, served from the short process local cache
+    (``permission_cache``, TTL at most 30 s, invalidated on role changes). Locks are checked
+    by the caller on every request and never cached."""
+    cached = permission_cache.get(tenant_id, user_id, membership_id)
+    if cached is not None:
+        return cached.permissions, cached.roles
+    async with tenant_transaction(sessions(request), tenant_id) as session:
+        permissions, codes = await effective_permissions(session, tenant_id, membership_id)
+    roles = tuple(codes)
+    permission_cache.put(tenant_id, user_id, membership_id, permissions, roles)
+    return permissions, roles
 
 
 def _scope_ids(raw: object) -> tuple[uuid.UUID, ...]:

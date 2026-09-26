@@ -65,8 +65,8 @@ async def _scenario(settings: Any) -> None:
         tenant_b, _ = await services.provision_tenant(
             factory, slug=f"kt-b-{RUN}", name=f"Kontakte B {RUN}"
         )
-        rows = parse_kontakte(OWNERS, ContactRoleCode.EIGENTUEMER, "eigentuemer.csv")
-        rows += parse_kontakte(OTHERS, ContactRoleCode.SONSTIGES, "sonstige.csv")
+        rows = list(parse_kontakte(OWNERS, ContactRoleCode.EIGENTUEMER, "eigentuemer.csv").rows)
+        rows += list(parse_kontakte(OTHERS, ContactRoleCode.SONSTIGES, "sonstige.csv").rows)
         prepared = prepare(rows)
 
         dry = await import_prepared(factory, tenant_a, None, prepared, apply=False)

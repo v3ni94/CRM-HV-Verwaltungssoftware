@@ -5,7 +5,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import Select, delete, func, or_, select
+from sqlalchemy import Select, String, cast, delete, func, literal_column, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts import schemas
@@ -25,6 +25,7 @@ from mhvp.contacts.models import (
     ContactTag,
     ContactTagLink,
     ContactType,
+    ContactTypeCode,
     Party,
     PartyMember,
 )
@@ -411,52 +412,45 @@ async def summaries(session: AsyncSession, contacts: list[Contact]) -> list[sche
     ids = [c.id for c in contacts]
     if not ids:
         return []
-    emails = {
-        r.contact_id: r.email
-        for r in (
-            await session.execute(
-                select(ContactEmail.contact_id, ContactEmail.email).where(
-                    ContactEmail.contact_id.in_(ids), ContactEmail.is_primary.is_(True)
-                )
-            )
-        ).all()
-    }
-    phones = {
-        r.contact_id: r.number
-        for r in (
-            await session.execute(
-                select(ContactPhone.contact_id, ContactPhone.number).where(
-                    ContactPhone.contact_id.in_(ids), ContactPhone.is_primary.is_(True)
-                )
-            )
-        ).all()
-    }
-    cities = {
-        r.contact_id: r.city
-        for r in (
-            await session.execute(
-                select(ContactAddress.contact_id, ContactAddress.city).where(
-                    ContactAddress.contact_id.in_(ids), ContactAddress.is_primary.is_(True)
-                )
-            )
-        ).all()
-    }
+    # Primary email, phone, city, tags and types of all contacts in ONE statement (UNION ALL of
+    # (kind, contact_id, value)) instead of five (performance review 26.09.2026).
+    emails_q: Any = select(
+        literal_column("'email'").label("kind"),
+        ContactEmail.contact_id.label("contact_id"),
+        ContactEmail.email.label("value"),
+    ).where(ContactEmail.contact_id.in_(ids), ContactEmail.is_primary.is_(True))
+    parts: Any = emails_q.union_all(
+        select(literal_column("'phone'"), ContactPhone.contact_id, ContactPhone.number).where(
+            ContactPhone.contact_id.in_(ids), ContactPhone.is_primary.is_(True)
+        ),
+        select(literal_column("'city'"), ContactAddress.contact_id, ContactAddress.city).where(
+            ContactAddress.contact_id.in_(ids), ContactAddress.is_primary.is_(True)
+        ),
+        select(literal_column("'tag'"), ContactTagLink.contact_id, ContactTag.name)
+        .join(ContactTag, ContactTag.id == ContactTagLink.tag_id)
+        .where(ContactTagLink.contact_id.in_(ids)),
+        select(
+            literal_column("'type'"), ContactType.contact_id, cast(ContactType.type, String)
+        ).where(ContactType.contact_id.in_(ids)),
+    )
+    emails: dict[uuid.UUID, str] = {}
+    phones: dict[uuid.UUID, str] = {}
+    cities: dict[uuid.UUID, str] = {}
     tags: dict[uuid.UUID, list[str]] = {}
-    for r in (
-        await session.execute(
-            select(ContactTagLink.contact_id, ContactTag.name)
-            .join(ContactTag, ContactTag.id == ContactTagLink.tag_id)
-            .where(ContactTagLink.contact_id.in_(ids))
-        )
-    ).all():
-        tags.setdefault(r.contact_id, []).append(r.name)
     types: dict[uuid.UUID, list[Any]] = {}
-    for t in (
-        await session.execute(
-            select(ContactType.contact_id, ContactType.type).where(ContactType.contact_id.in_(ids))
-        )
-    ).all():
-        types.setdefault(t.contact_id, []).append(t.type)
+    for kind, contact_id, value in (await session.execute(parts)).all():
+        if value is None:
+            continue
+        if kind == "email":
+            emails[contact_id] = value
+        elif kind == "phone":
+            phones[contact_id] = value
+        elif kind == "city":
+            cities[contact_id] = value
+        elif kind == "tag":
+            tags.setdefault(contact_id, []).append(value)
+        else:
+            types.setdefault(contact_id, []).append(ContactTypeCode(value))
     return [
         schemas.ContactSummary(
             id=c.id,

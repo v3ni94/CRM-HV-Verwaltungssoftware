@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PortalRolePermissions } from "@/components/settings/PortalRolePermissions";
 import { RolesAdmin } from "@/components/settings/RolesAdmin";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { PageHeader } from "@/components/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function RolesPage() {
   const t = await getTranslations("Roles");
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
   if (!can("roles:read")) notFound();

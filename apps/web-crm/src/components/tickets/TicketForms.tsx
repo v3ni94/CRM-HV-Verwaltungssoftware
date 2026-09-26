@@ -113,11 +113,24 @@ export function TicketCreate() {
   );
 }
 
-export function TicketEdit({ id, status, priority }: { id: string; status: string; priority: string }) {
+export function TicketEdit({
+  id,
+  status,
+  priority,
+  internalDescription = "",
+}: {
+  id: string;
+  status: string;
+  priority: string;
+  /** 6.6 interne Beschreibung (Review 26.09.2026, M6): nur für Mitarbeiter, nie im Portal. */
+  internalDescription?: string;
+}) {
   const t = useTranslations("Tickets");
   const router = useRouter();
   const [comment, setComment] = useState("");
   const [internal, setInternal] = useState(true);
+  const [internalText, setInternalText] = useState(internalDescription);
+  const [internalSaved, setInternalSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const send = async (path: string, method: string, body: unknown) => {
@@ -152,6 +165,35 @@ export function TicketEdit({ id, status, priority }: { id: string; status: strin
             ))}
           </select>
         </label>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("internalDescription")}</span>
+          <textarea
+            className={ui.input}
+            rows={3}
+            maxLength={20000}
+            value={internalText}
+            onChange={(e) => {
+              setInternalText(e.target.value);
+              setInternalSaved(false);
+            }}
+          />
+        </label>
+        <p className={ui.help}>{t("internalDescriptionHint")}</p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className={ui.button}
+            disabled={busy || internalText === internalDescription}
+            onClick={async () => {
+              if (await send("", "PATCH", { internal_description: internalText.trim() || "" })) setInternalSaved(true);
+            }}
+          >
+            {t("saveInternalDescription")}
+          </button>
+          {internalSaved ? <span className="text-xs text-muted">{t("internalDescriptionSaved")}</span> : null}
+        </div>
       </div>
       <div className="flex flex-col gap-1">
         <label className="flex flex-col gap-1">

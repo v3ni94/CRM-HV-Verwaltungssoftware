@@ -54,11 +54,15 @@ class FakeGmail:
         # Message ids whose raw fetch fails once with HTTP 500 (transient error).
         self.flaky: set[str] = set()
         self.raw_calls: dict[str, int] = {}
+        self.threads: dict[str, str] = {}
+        # Gmail ids whose INBOX label was removed (archive after ticket done, M15).
+        self.archived: list[str] = []
 
-    def add(self, mid: str, raw: bytes) -> None:
+    def add(self, mid: str, raw: bytes, thread: str | None = None) -> None:
         self.inbox[mid] = raw
         self.history_id += 1
         self.history.append((self.history_id, mid))
+        self.threads[mid] = thread or f"thread-{mid}"
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -87,6 +91,9 @@ class FakeGmail:
                     ]
                 },
             )
+        if path.endswith("/modify"):
+            self.archived.append(path.rsplit("/", 2)[-2])
+            return httpx.Response(200, json={})
         mid = path.rsplit("/", 1)[-1]
         if mid not in self.inbox:
             return httpx.Response(404)
@@ -95,7 +102,7 @@ class FakeGmail:
             self.flaky.discard(mid)
             return httpx.Response(500, json={"error": "backend"})
         raw = base64.urlsafe_b64encode(self.inbox[mid]).decode().rstrip("=")
-        return httpx.Response(200, json={"id": mid, "raw": raw})
+        return httpx.Response(200, json={"id": mid, "threadId": self.threads[mid], "raw": raw})
 
 
 async def _world(settings: Any) -> World:
@@ -349,9 +356,21 @@ def test_oauth_client_consent_and_mailbox_access(
     ]
     assert f"OAuth Test {RUN}" in subjects(clerk)
 
-    # Removing the mailbox keeps the messages (mailbox_id becomes null).
+    # Removing the mailbox (M12): soft delete, the messages keep their mailbox binding and
+    # are no longer visible to members without a grant (the box is no default any more);
+    # the administrator still sees them, the box leaves the settings and cannot be synced.
+    mail_id = next(
+        m["id"]
+        for m in _ok(client.get(f"{M}/messages", headers=h))
+        if m["subject"] == f"OAuth Test {RUN}"
+    )
     assert client.delete(f"{M}/mailboxes/{box['id']}", headers=h).status_code == 204
     assert address not in {b["address"] for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+    assert f"OAuth Test {RUN}" not in subjects(clerk)
+    assert client.get(f"{M}/messages/{mail_id}", headers=clerk).status_code == 404
+    assert _ok(client.get(f"{M}/messages/{mail_id}", headers=h))["mailbox_id"] == box["id"]
+    assert client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h).status_code == 404
+    assert client.delete(f"{M}/mailboxes/{box['id']}", headers=h).status_code == 404
 
 
 def _mailbox(client: TestClient, h: dict[str, str], address: str) -> dict[str, Any]:
@@ -418,3 +437,36 @@ def test_gmail_sync_transient_fetch_error_is_retried(
     assert {f"Flaky eins {RUN}", f"Flaky zwei {RUN}"} <= subjects
     assert fake.raw_calls["f2"] == 1
     assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["retried"] == 0
+
+
+def test_gmail_ids_enable_archiving_and_thread_fallback(
+    client: TestClient, world: World, fake: FakeGmail, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review 26.09.2026, M15 and M7: a fetched mail stores its Gmail message and thread id;
+    closing the ticket archives the mail at Gmail (INBOX label removed); a mail without any
+    threading header but in the same Gmail thread joins the existing ticket."""
+    state = client.app.state  # type: ignore[attr-defined]
+    monkeypatch.setattr(state, "settings", state.settings.model_copy(update={"ai_inline": True}))
+    h = bearer(login(client, world, "gmadmin"))
+    box = _mailbox(client, h, f"ids{RUN}@example.com")
+    _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    fake.add("i1", _eml(f"i1{RUN}@example.com", f"Ids eins {RUN}", f"<i1-{RUN}@x>"), thread="th-1")
+    assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["created"] == 1
+    first = next(
+        m for m in _ok(client.get(f"{M}/messages", headers=h)) if m["subject"] == f"Ids eins {RUN}"
+    )
+    assert first["gmail_message_id"] == "i1"
+    assert first["ticket_id"]
+
+    # Same Gmail thread, no In-Reply-To or References (client dropped them): same ticket.
+    fake.add("i2", _eml(f"i1{RUN}@example.com", "Nachtrag", f"<i2-{RUN}@x>"), thread="th-1")
+    assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))["created"] == 1
+    second = next(
+        m for m in _ok(client.get(f"{M}/messages", headers=h)) if m["subject"] == "Nachtrag"
+    )
+    assert second["ticket_id"] == first["ticket_id"]
+    assert second["thread_id"] == first["id"]
+
+    # Ticket done: both Gmail messages are archived (mailbox default archive_on_ticket_done).
+    _ok(client.patch(f"/api/v1/tickets/{first['ticket_id']}", json={"status": "done"}, headers=h))
+    assert sorted(fake.archived) == ["i1", "i2"]

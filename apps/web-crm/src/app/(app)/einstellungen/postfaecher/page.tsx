@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { InvoiceForwardingSettings, type InvoiceForwarding } from "@/components/mail/InvoiceForwardingSettings";
 import { MailboxSettings, type Mailbox, type Member, type OAuthStatus } from "@/components/mail/MailboxSettings";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -19,7 +20,7 @@ export default async function MailboxSettingsPage({
   const t = await getTranslations("MailSettings");
   const params = await searchParams;
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
   const [oauth, mailboxes, members, invoiceForwarding] = await Promise.all([

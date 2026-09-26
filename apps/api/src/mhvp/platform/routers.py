@@ -8,9 +8,11 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth import passwords, tokens
 from mhvp.core.auth import service as auth_service
+from mhvp.core.auth.permission_cache import invalidate_permissions
 from mhvp.core.auth.permissions import ALL_PERMISSIONS, validate_permission
 from mhvp.core.auth.principal import (
     Principal,
@@ -28,6 +30,7 @@ from mhvp.core.events import AuditLog, DomainEvent, diff, emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import GATE_LABELS, ReleaseGate
 from mhvp.core.webhooks import (
+    EVENT_TYPES,
     UnsafeWebhookTargetError,
     WebhookDelivery,
     WebhookSubscription,
@@ -71,6 +74,7 @@ from mhvp.platform.schemas import (
     MemberLegalEntities,
     MemberMobilePhone,
     MemberOut,
+    MemberReplyApproval,
     MemberRoles,
     MemberStatusIn,
     PasswordResetIn,
@@ -87,6 +91,7 @@ from mhvp.platform.schemas import (
     UserOut,
     WebhookCreate,
     WebhookCreated,
+    WebhookEventTypeOut,
     WebhookOut,
     WebhookPatch,
 )
@@ -237,6 +242,7 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         branding=Branding.model_validate(row.branding),
         sources=row.sources,
         auto_posting_enabled=row.auto_posting_enabled,
+        ticket_reply_approval_all=row.ticket_reply_approval_all,
         version=row.version,
     )
 
@@ -269,12 +275,23 @@ async def patch_settings(
             raise _not_found()
         if if_match is not None and if_match.strip('"') != str(row.version):
             raise ProblemError(ErrorCodes.VERSION_CONFLICT)
-        before = {"company": row.company, "branding": row.branding}
+        before = {
+            "company": row.company,
+            "branding": row.branding,
+            "ticket_reply_approval_all": row.ticket_reply_approval_all,
+        }
         if body.company is not None:
             row.company = body.company.model_dump(mode="json")
         if body.branding is not None:
             row.branding = body.branding.model_dump(mode="json", by_alias=True)
-        after = {"company": row.company, "branding": row.branding}
+        if body.ticket_reply_approval_all is not None:
+            # M20-03 Notbremse: Änderung wird mit Nutzer im Ereignis protokolliert.
+            row.ticket_reply_approval_all = body.ticket_reply_approval_all
+        after = {
+            "company": row.company,
+            "branding": row.branding,
+            "ticket_reply_approval_all": row.ticket_reply_approval_all,
+        }
         changes = diff(before, after)
         if changes:
             row.version += 1
@@ -650,7 +667,10 @@ async def set_role_permissions(
             actor_user_id=principal.user_id,
             changes={"permissions": {"old": before, "new": out.permissions}},
         )
-        return out
+    # Cached permissions of every member of the tenant are dropped after the commit
+    # (mhvp.core.auth.permission_cache).
+    invalidate_permissions(principal.tenant_id)
+    return out
 
 
 @tenant_router.get("/members", summary="Mitglieder des Mandanten")
@@ -668,6 +688,9 @@ async def list_members(
                     Membership.competences,
                     Membership.mobile_phone,
                     Membership.legal_entity_ids,
+                    Membership.reply_approval_required,
+                    Membership.reply_approval_reason,
+                    Membership.reply_approval_until,
                     User.email,
                     User.display_name,
                     User.last_login_at,
@@ -701,6 +724,9 @@ async def list_members(
             last_login_at=r.last_login_at,
             mobile_phone=r.mobile_phone,
             legal_entity_ids=_uuid_list(r.legal_entity_ids),
+            reply_approval_required=r.reply_approval_required,
+            reply_approval_reason=r.reply_approval_reason,
+            reply_approval_until=r.reply_approval_until,
         )
         for r in rows
     ]
@@ -1300,6 +1326,56 @@ async def put_member_mobile_phone(
     return Response(status_code=204)
 
 
+@tenant_router.put(
+    "/members/{membership_id}/reply-approval",
+    summary="Kennzeichen Freigabepflicht für Ticketantworten setzen (M20-03)",
+)
+async def put_member_reply_approval(
+    membership_id: uuid.UUID,
+    body: MemberReplyApproval,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> MemberOut:
+    """Betreiberentscheidung 26.09.2026: Ticketantworten von Mitgliedern mit Kennzeichen
+    (Azubi, neuer Mitarbeiter, optional befristet) gehen als Vorlage an die Freigabeberechtigten;
+    alle anderen Mitglieder mit ``communication:approve`` senden direkt. Jede Änderung wird als
+    ``membership.reply_approval_changed`` protokolliert."""
+    async with platform_transaction(sessions(request)) as session:
+        membership = await session.get(Membership, membership_id)
+        if membership is None or membership.tenant_id != principal.tenant_id:
+            raise _not_found()
+        before = {
+            "required": membership.reply_approval_required,
+            "reason": membership.reply_approval_reason,
+            "until": membership.reply_approval_until.isoformat()
+            if membership.reply_approval_until
+            else None,
+        }
+        membership.reply_approval_required = body.required
+        membership.reply_approval_reason = body.reason
+        membership.reply_approval_until = body.until
+        membership.updated_by = principal.user_id
+        after = {
+            "required": body.required,
+            "reason": body.reason,
+            "until": body.until.isoformat() if body.until else None,
+        }
+    if before != after:
+        async with tenant_tx(request, principal) as session:
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="membership.reply_approval_changed",
+                entity_type="membership",
+                entity_id=membership_id,
+                actor_user_id=principal.user_id,
+                payload={"user_id": str(membership.user_id), "before": before, "after": after},
+                changes={"reply_approval": {"old": before, "new": after}},
+            )
+    members = await list_members(request, principal)
+    return next(m for m in members if m.membership_id == membership_id)
+
+
 # API keys ------------------------------------------------------------------------------
 
 
@@ -1389,14 +1465,28 @@ async def revoke_api_key(
 # Webhooks ------------------------------------------------------------------------------
 
 
-def _hook_out(hook: WebhookSubscription) -> WebhookOut:
+def _hook_out(hook: WebhookSubscription, last: WebhookDelivery | None = None) -> WebhookOut:
     return WebhookOut(
         id=hook.id,
         url=hook.url,
         event_types=hook.event_types,
         active=hook.active,
         description=hook.description,
+        created_at=hook.created_at,
+        last_delivery_status=last.status.value if last else None,
+        last_delivery_status_code=last.last_status_code if last else None,
+        last_delivery_at=(last.delivered_at or last.updated_at) if last else None,
     )
+
+
+async def _last_delivery(session: AsyncSession, hook_id: uuid.UUID) -> WebhookDelivery | None:
+    row: WebhookDelivery | None = await session.scalar(
+        select(WebhookDelivery)
+        .where(WebhookDelivery.subscription_id == hook_id, WebhookDelivery.attempts > 0)
+        .order_by(WebhookDelivery.updated_at.desc())
+        .limit(1)
+    )
+    return row
 
 
 def _check_url(request: Request, url: str) -> None:
@@ -1412,14 +1502,20 @@ async def list_webhooks(
     request: Request, principal: TenantPrincipal = Depends(require_permission("webhooks:read"))
 ) -> list[WebhookOut]:
     async with tenant_tx(request, principal) as session:
-        return [
-            _hook_out(h)
-            for h in (
-                await session.scalars(
-                    select(WebhookSubscription).order_by(WebhookSubscription.created_at)
-                )
-            ).all()
-        ]
+        hooks = (
+            await session.scalars(
+                select(WebhookSubscription).order_by(WebhookSubscription.created_at)
+            )
+        ).all()
+        return [_hook_out(h, await _last_delivery(session, h.id)) for h in hooks]
+
+
+@tenant_router.get("/webhooks/event-types", summary="Ereigniskatalog für Webhooks")
+async def list_webhook_event_types(
+    principal: TenantPrincipal = Depends(require_permission("webhooks:read")),
+) -> list[WebhookEventTypeOut]:
+    """Documented event types (``EVENT_TYPES``, docs/integrations/webhooks.md)."""
+    return [WebhookEventTypeOut(type=k, description=v) for k, v in EVENT_TYPES.items()]
 
 
 @tenant_router.post("/webhooks", status_code=201, summary="Webhook abonnieren")
@@ -1481,6 +1577,30 @@ async def patch_webhook(
                 changes=changes,
             )
         return _hook_out(hook)
+
+
+@tenant_router.delete("/webhooks/{hook_id}", status_code=204, summary="Webhook löschen")
+async def delete_webhook(
+    hook_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("webhooks:delete")),
+) -> Response:
+    """Remove the subscription with its delivery log (cascade); the domain events stay."""
+    async with tenant_tx(request, principal) as session:
+        hook = await session.get(WebhookSubscription, hook_id)
+        if hook is None:
+            raise _not_found()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="webhook_subscription.deleted",
+            entity_type="webhook_subscription",
+            entity_id=hook.id,
+            actor_user_id=principal.user_id,
+            payload={"url": hook.url},
+        )
+        await session.delete(hook)
+    return Response(status_code=204)
 
 
 @tenant_router.get("/webhooks/{hook_id}/deliveries", summary="Zustellprotokoll")

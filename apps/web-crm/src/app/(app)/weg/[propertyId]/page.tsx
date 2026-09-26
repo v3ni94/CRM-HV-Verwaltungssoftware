@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { AuditCreateForm } from "@/components/hoa/AuditCreateForm";
 import { FinanceCreate } from "@/components/hoa/FinanceForms";
 import { HoaCreate } from "@/components/hoa/HoaForms";
 import { LevyCreate } from "@/components/hoa/LevyForms";
@@ -29,7 +30,8 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
     ctx.api.GET("/api/v1/hoa/special-levies", { params: { query: { legal_entity_id: ctx.entity.id } } }),
     serverFetch(`/api/v1/hoa/audits?legal_entity_id=${encodeURIComponent(ctx.entity.id)}`),
   ]);
-  // Beiratsprüfungen (PÜ06, A52): list only; the engagement is created through the API.
+  // Beiratsprüfungen (PÜ06, A52, A72): list and creation form; positions are selected on the
+  // engagement page with the filters of PÜ08.
   const audits = auditsResponse.ok
     ? ((await auditsResponse.json()) as { id: string; period_from: string; period_to: string; purpose: string; status: string }[])
     : [];
@@ -40,9 +42,15 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
     ctx.api.GET("/api/v1/hoa/measures", { params: { query: { legal_entity_id: ctx.entity.id } } }),
     ctx.ledger ? ctx.api.GET("/api/v1/accounting/ledgers/{ledger_id}/accounts", { params: { path: { ledger_id: ctx.ledger.id } } }) : null,
   ]);
-  const loanAccounts = ((accounts?.data ?? []) as { id: string; number: string; name: string; category: string }[])
-    .filter((a) => a.category === "loan")
-    .map((a) => ({ id: a.id, number: a.number, name: a.name }));
+  const allAccounts = (accounts?.data ?? []) as { id: string; number: string; name: string; category: string }[];
+  const loanAccounts = allAccounts.filter((a) => a.category === "loan").map((a) => ({ id: a.id, number: a.number, name: a.name }));
+  // A79: resolutions of the community for the claim form (structured link).
+  const claimResolutions = ((resolutions.data ?? []) as { id: string; number?: number | null; decided_on: string; subject: string }[]).map((r) => ({ id: String(r.id), number: r.number ?? null, decided_on: formatDate(String(r.decided_on)), subject: String(r.subject) }));
+  const expenseAccounts = allAccounts.filter((a) => a.category === "expense").map((a) => ({ id: a.id, number: a.number, name: a.name }));
+  const statementOptions = (statements?.data ?? []).map((s) => ({
+    id: String(s.id),
+    label: `${String(s.year)} · V${String(s.version)} · ${tw(`status.${String(s.status)}`)}`,
+  }));
   const finance = [
     { kind: "loan" as const, title: tf("loans"), path: "darlehen", rows: (loans.data ?? []).map((l) => ({ id: String(l.id), label: `${String(l.lender)} · ${tf(`loanStatus.${String(l.status)}`)}` })) },
     { kind: "claim" as const, title: tf("claims"), path: "versicherung", rows: (claims.data ?? []).map((c) => ({ id: String(c.id), label: `${String(c.title)} · ${tf(`claimStatus.${String(c.status)}`)}` })) },
@@ -127,6 +135,7 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
             </li>
           ))}
         </ul>
+        <AuditCreateForm legalEntityId={ctx.entity.id} statements={statementOptions} accounts={expenseAccounts} basePath={base} />
       </section>
       {finance.map((sec) => (
         <section key={sec.kind} className="flex flex-col gap-2" data-testid={`hoa-${sec.kind}s`}>
@@ -140,7 +149,7 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
               </li>
             ))}
           </ul>
-          {ctx.ledger ? <FinanceCreate kind={sec.kind} ledgerId={ctx.ledger.id} basePath={base} loanAccounts={loanAccounts} /> : null}
+          {ctx.ledger ? <FinanceCreate kind={sec.kind} ledgerId={ctx.ledger.id} basePath={base} loanAccounts={loanAccounts} resolutions={sec.kind === "claim" ? claimResolutions : []} /> : null}
         </section>
       ))}
       <section className="flex flex-col gap-2">

@@ -33,3 +33,10 @@ Keine rechtliche Fristberechnung (M1-09). Regeln:
 - Integrationstest der Endpunkte und des Tagesjobs gegen PostgreSQL (RLS, Rechte) steht aus.
 - Migrationsnummer 0122 setzt beim Zusammenführen am 26.09.2026 auf 0121 auf (ursprünglich 0110 auf 0108).
 - Fachliche Freigabe der Monatsende-Regel durch den Betreiber.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: `mhvp.contracts.service_contracts`, `service_contract_routers` (in `main.py` registriert), Migration 0122, Fristenlistentyp `service_contract_notice`, CRM `/dienstleistervertraege` (`components/contracts/ServiceContracts.tsx`). Die Aussage in `docs/plans/M9.md` "Not covered: service provider contracts (no model)" ist damit überholt und dort korrigiert.
+* Offen wie oben: Integrationstest gegen PostgreSQL, fachliche Freigabe der Monatsende-Regel.

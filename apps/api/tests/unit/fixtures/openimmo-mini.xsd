@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Minimal test schema for the M26-02 schema check. This is NOT the OpenImmo 1.2.7 XSD
+     (copyright OpenImmo e.V., not bundled); it only mirrors the outer structure the export
+     writes so that the XSD code path can be exercised in tests. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="openimmo">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="uebertragung">
+          <xs:complexType>
+            <xs:attribute name="art" type="xs:string" use="required"/>
+            <xs:attribute name="umfang" type="xs:string" use="required"/>
+            <xs:attribute name="version" type="xs:string" use="required"/>
+            <xs:anyAttribute processContents="skip"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="anbieter" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="firma" type="xs:string" minOccurs="0"/>
+              <xs:element name="immobilie" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="objektkategorie">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:any processContents="skip" minOccurs="0" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="geo">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:any processContents="skip" minOccurs="0" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:any processContents="skip" minOccurs="0" maxOccurs="unbounded"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

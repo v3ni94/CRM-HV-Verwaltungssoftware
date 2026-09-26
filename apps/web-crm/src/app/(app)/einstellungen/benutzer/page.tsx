@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { MembersAdmin, type LegalEntityOption } from "@/components/settings/MembersAdmin";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -14,7 +15,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const [t, query] = await Promise.all([getTranslations("Members"), searchParams]);
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
   if (!can("members:read")) notFound();

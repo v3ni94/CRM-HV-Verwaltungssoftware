@@ -182,6 +182,7 @@ class Property(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "number"),
         CheckConstraint("number ~ '^[0-9]{3}$'", name="number_format"),
+        Index("ix_property_tenant_status", "tenant_id", "status", "management_type"),
         Index(
             "uq_property_source",
             "tenant_id",
@@ -511,6 +512,9 @@ class PropertyBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class MaintenanceItem(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "maintenance_item"
+    __table_args__ = (
+        Index("ix_maintenance_item_tenant_status_due", "tenant_id", "status", "due_date"),
+    )
 
     property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
     unit_id: Mapped[uuid.UUID | None] = _fk("unit.id", nullable=True)

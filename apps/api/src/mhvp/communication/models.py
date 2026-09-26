@@ -68,6 +68,11 @@ class Mailbox(IdMixin, TimestampMixin, TenantMixin, Base):
     calendar_id: Mapped[str] = mapped_column(
         String(320), nullable=False, default="primary", server_default="primary"
     )
+    # Soft delete (Review 26.09.2026, M12): ein entferntes Postfach bleibt als deaktivierter
+    # Datensatz erhalten, seine Nachrichten behalten die Postfachbindung und damit die
+    # bisherige Sichtbarkeitsregel (Freigabe je Benutzer oder Administrator). Ein erneutes
+    # Verbinden derselben Adresse belebt den Datensatz wieder.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class MailboxUser(IdMixin, TenantMixin, Base):
@@ -90,14 +95,19 @@ class MailboxUser(IdMixin, TenantMixin, Base):
 
 class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "message"
-    __table_args__ = (Index("ix_message_header_id", "tenant_id", "header_message_id"),)
+    __table_args__ = (
+        Index("ix_message_header_id", "tenant_id", "header_message_id"),
+        Index("ix_message_gmail_thread", "tenant_id", "gmail_thread_id"),
+    )
 
     channel: Mapped[str] = mapped_column(String(16), nullable=False, default="email")
     direction: Mapped[str] = mapped_column(String(8), nullable=False)  # in, out
     mailbox_id: Mapped[uuid.UUID | None] = _fk("mailbox.id")
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="new"
-    )  # in: new, assigned, done. out: draft, pending, sent (Vier-Augen-Freigabe, M20).
+    )  # in: new, assigned, done. out: draft, pending, sending, sent (Vier-Augen-Freigabe,
+    # M20). ``sending`` ist der eigene Schritt zwischen Freigabe und Versandnachweis (Review
+    # 26.09.2026, M1): die Message-ID ist bereits gespeichert und dient als Idempotenzschlüssel.
     from_address: Mapped[str | None] = mapped_column(String(320))
     to_addresses: Mapped[list[str]] = mapped_column(
         ARRAY(String(320)), nullable=False, default=list
@@ -137,7 +147,17 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     rejection_note: Mapped[str | None] = mapped_column(Text)
+    # M20-03: Kennzeichen des Verfassers zum Zeitpunkt der Vorformulierung (Ticketantwort):
+    # bei true braucht der Entwurf die Freigabe einer zweiten Person, Grund wie an der
+    # Mitgliedschaft (``azubi``, ``neuer_mitarbeiter``). Nachvollziehbar am Ticket.
+    author_approval_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    author_approval_reason: Mapped[str | None] = mapped_column(String(32))
     gmail_message_id: Mapped[str | None] = mapped_column(String(64))
+    # Gmail-Thread der eingehenden Mail (Review 26.09.2026, M7): Rückfall für die Zuordnung,
+    # wenn weder ``In-Reply-To`` noch ``References`` eine bekannte Nachricht treffen.
+    gmail_thread_id: Mapped[str | None] = mapped_column(String(64))
     # Letzter Versandfehler bei der Freigabe (Status ``pending`` bleibt, Anzeige
     # "fehlgeschlagen" im Ticket); wird beim erfolgreichen Versand geleert.
     send_error: Mapped[str | None] = mapped_column(Text)

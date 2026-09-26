@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { TenantAdmin } from "@/components/platform/TenantAdmin";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -20,7 +21,7 @@ type Readiness = {
 export default async function PlatformPage() {
   const t = await getTranslations("Platform");
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   if (!me.data?.is_platform_admin) return <p className={ui.alert}>{t("forbidden")}</p>;
   const tenants = await api.GET("/api/v1/platform/tenants");

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
+import { TicketsPagination } from "@/components/tickets/TicketsPagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
@@ -10,14 +11,26 @@ import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
+// Journal page size; GET /entries reports the total in X-Total-Count (performance review
+// 26.09.2026), the page comes from ?page=.
+const PAGE_SIZE = 100;
+
 type TrialRow = { account_id: string; number: string; name: string; debit: string; credit: string; balance: string };
 
-export default async function LedgerPage({ params }: { params: Promise<{ id: string }> }) {
-  const [t, tr, { id }] = await Promise.all([
+export default async function LedgerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const [t, tr, { id }, sp] = await Promise.all([
     getTranslations("Accounting"),
     getTranslations("Receivables"),
     params,
+    searchParams,
   ]);
+  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
   const today = new Date().toISOString().slice(0, 10);
   const api = serverApi();
   const [ledger, journal, trial, open] = await Promise.all([
@@ -35,6 +48,10 @@ export default async function LedgerPage({ params }: { params: Promise<{ id: str
     );
   }
   const rows = ((trial.data?.accounts ?? []) as TrialRow[]);
+  const journalRows = journal.data ?? [];
+  const journalTotal = Number.parseInt(journal.response.headers.get("x-total-count") ?? "", 10);
+  const journalCount = Number.isFinite(journalTotal) ? journalTotal : journalRows.length;
+  const pageHref = (target: number) => `/buchhaltung/${id}${target > 1 ? `?page=${String(target)}` : ""}`;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -92,7 +109,7 @@ export default async function LedgerPage({ params }: { params: Promise<{ id: str
             </tr>
           </thead>
           <tbody>
-            {(journal.data ?? []).map((e) => (
+            {journalRows.map((e) => (
               <tr key={e.id}>
                 <td className="tabular-nums">{e.number ? `${e.fiscal_year}-${e.number}` : ""}</td>
                 <td>{formatDate(e.booking_date)}</td>
@@ -106,6 +123,7 @@ export default async function LedgerPage({ params }: { params: Promise<{ id: str
           </tbody>
         </table>
 </div>
+        <TicketsPagination page={page} pageSize={PAGE_SIZE} total={journalCount} shown={journalRows.length} buildHref={pageHref} />
       </section>
     </div>
   );

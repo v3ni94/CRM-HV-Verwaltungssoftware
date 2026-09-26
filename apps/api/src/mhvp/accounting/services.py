@@ -2,6 +2,7 @@
 a business transaction is complete or not at all (B02)."""
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -278,6 +279,23 @@ async def entry_lines(session: AsyncSession, entry_id: uuid.UUID) -> list[Journa
                 select(JournalLine)
                 .where(JournalLine.journal_entry_id == entry_id)
                 .order_by(JournalLine.line_no)
+            )
+        ).all()
+    )
+
+
+async def entry_lines_of(
+    session: AsyncSession, entry_ids: Sequence[uuid.UUID]
+) -> list[JournalLine]:
+    """Lines of several entries in one query, ordered by entry and line number."""
+    if not entry_ids:
+        return []
+    return list(
+        (
+            await session.scalars(
+                select(JournalLine)
+                .where(JournalLine.journal_entry_id.in_(entry_ids))
+                .order_by(JournalLine.journal_entry_id, JournalLine.line_no)
             )
         ).all()
     )

@@ -999,3 +999,186 @@ Alle Fälle: fachliche Bestätigung offen (V16).
 4. D41: der Lauf gegen den KoSIT-Validator im CI ist nicht Teil dieses Protokolls; A12 verlangt ihn zusätzlich.
 5. Weiterhin ohne Test mit Fallkennung: D09, D11, D24 bis D27 (Heizkosten, Verbrauchsinformation, CO2-Sonderfälle, B10 und B11), D34 (A53), D47 (A44).
 6. Die Regelversionsangabe bleibt wie in Abschnitt 1 eine Registerangabe ohne formale Versionsnummer je Regel (Auffälligkeit 1 in Abschnitt 1 gilt fort).
+
+## Nachtrag 26.09.2026 Welle 6: die 15 verbleibenden Fälle
+
+Aufgabe: Für die 15 Fälle, die nach Abschnitt 1 und 2 nicht technisch bestanden waren (teilweise: D02, D06, D13, D14, D15, D55, D56; ohne Test: D09, D11, D24, D25, D26, D27, D34, D47), wurde geprüft, ob sie mit den Funktionen der Wellen 5 und 6 technisch prüfbar sind. Softwarestand: Commit 41ec2d3 (Version 1.22.1) mit nicht committeten Arbeitsständen paralleler Sitzungen, Migrationskette linear bis 0127. Datenbank PostgreSQL und Redis lokal, Tests mit `--no-cov -p no:cacheprovider`. Geltung wie in Abschnitt 1: technische Ausführung, keine fachliche Abnahme, alle Gates G1 bis G5 geschlossen (G1, G2 und G4 nur über den Test-Resolver des zweiten Clients geöffnet), kein Sollwert an das Ist-Ergebnis angepasst, nur synthetische Modellwerte, Rechenweg je Test im Docstring vorgerechnet (Regel 0.1.8).
+
+Neue Testdateien: `apps/api/tests/integration/test_annex_d_hoa.py` (D02, D09, D13, D14, D15) und `apps/api/tests/integration/test_annex_d_money.py` (D06, D11, D56). Bestehende Tests mit Fallkennung, die im Abschnitt 2 nicht enthalten oder fehlgeschlagen waren, wurden erneut ausgeführt (D34, D47, D55).
+
+Gesamtergebnis: 14 Tests ausgeführt, 14 bestanden (`14 passed in 123.84s`); ruff check und format sowie mypy strict für die beiden neuen Dateien ohne Befund. Fachliche Bewertung: 11 Fälle jetzt technisch bestanden (D02, D06, D09, D11, D13, D14, D15, D34, D47, D55, D56), 4 Fälle weiterhin offen (D24, D25, D26, D27). Damit sind 54 von 58 Fällen technisch bestanden; die fachliche Bestätigung nach D.3 (V16) ist für alle Fälle offen.
+
+Sammelbefehl:
+
+```
+cd apps/api && uv run pytest \
+  tests/integration/test_annex_d_hoa.py \
+  tests/integration/test_annex_d_money.py \
+  tests/integration/test_m9_restore_replay.py \
+  tests/integration/test_m21_read_receipts.py \
+  tests/integration/test_m18_audit_export.py \
+  -k "annex_d or d47 or d34 or d55" -q --no-cov -p no:cacheprovider
+```
+
+### Übersicht Nachtrag
+
+| Kennung | Status | Test | Befund |
+| --- | --- | --- | --- |
+| D02 | technisch bestanden | `test_annex_d_hoa.py::test_d02_credit_result_is_neither_paid_out_nor_offset_against_arrears` | Ergebnis -300,00, Rückstand 300,00, Information 0,00. Nach Buchung: Altforderung bleibt offener Posten 300,00 (Betrag 2.800,00, nicht ausgebucht), Debitorensaldo 0,00 nur rechnerisch, kein Verbindlichkeitsposten, keine erwartete Auszahlung in der Liquidität, kein Zahlungsauftrag; erneute Buchung ohne zweite Wirkung. Zulässigkeit der Verrechnung bleibt P01 (fachlich). |
+| D06 | technisch bestanden | `test_annex_d_money.py::test_d06_export_and_submission_leave_bank_and_payable_untouched` | Eingabe jetzt wie Anhang D (1.190,00 ohne Skonto). Nach Export und nach Einreichung: Verbindlichkeit 1.190,00 offen, Bankkonto 001210 Saldo 0,00. Ausführung ohne Nachweis 422. Ausführung mit Bankumsatz: Verbindlichkeit leer, Bank -1.190,00, kein Skontoposten. Zweite Rückmeldung liefert denselben Buchungssatz, Bank bleibt -1.190,00. Konsistenzprüfung ok. |
+| D09 | technisch bestanden, Freigabe P02 offen | `test_annex_d_hoa.py::test_d09_fuel_payment_and_consumption_differ_and_the_bridge_explains_it` | Gesamtgeldfluss (W04) zeigt Abfluss 10.000,00; verteilt 8.000,00; unerklärte Differenz -2.000,00 sperrt das Paket. Erklärung `heating_accrual` -2.000,00 schließt die Überleitung (0,00), die Zahlung bleibt mit 10.000,00 sichtbar, die 2.000,00 stehen als erklärte Zeile. Falsches Vorzeichen (+2.000,00) ergibt -4.000,00 und sperrt weiter. Keine universelle Heizkostenformel behauptet; Regelstand P02 bleibt Betreiberentscheidung, deshalb G4 weiter geschlossen. |
+| D11 | technisch bestanden | `test_annex_d_money.py::test_d11_mid_year_takeover_year_costs_complete_with_documents` | Anfangsbestand 5.000,00 (Vier-Augen, 01.07.2025) auf 009000 und Bank; Ausgaben 400,00 (15.03.2025) und 600,00 (15.09.2025) je mit Beleg. Saldenliste 2025: 043000 = 1.000,00, Bank 4.000,00, 009000 -5.000,00; Kontenblatt 043000 enthält genau die zwei belegten Buchungen; Konsistenzprüfung ok. Fachlich freigegebene Zuordnung (E10) ist Annahme des Falls. |
+| D13 | technisch bestanden | `test_annex_d_hoa.py::test_d13_no_resolution_means_no_result_claim_and_no_direct_debit` | Abrechnung berechnet und intern freigegeben, kein Beschluss: Buchung 409 (auch mit G4), Übergang resolved ohne Beschluss 422, issued und due 409. Offene Posten nur die Vorschussrückstände 2 x 300,00 (Sollstellung 2.800,00), keine 200,00; Lastschriftvorschau enthält genau diese zwei Posten. Lücke aus Abschnitt 1 (Sollstellung und Lastschrift) geschlossen. |
+| D14 | technisch bestanden | `test_annex_d_hoa.py::test_d14_new_result_version_after_resolution_keeps_the_resolution_on_the_old_one` | Version 2 mit 5.600,00: Anteile 3.054,55 und 2.545,45, Ergebnis 254,55 und -254,55 (Differenz zu Version 1: 54,55). Neuer Hash, kein Beschluss an Version 2; alter Beschluss an Version 2 wird abgelehnt (409); Version 1 bleibt resolved mit Beschluss; Paket der Version 2 zeigt unerklärte Differenz 100,00 zu den gebuchten Kosten und sperrt interne Freigabe; Buchung 409. Eine Gegenüberstellung der Versionen als eigene Ansicht gibt es nicht (Auffälligkeit 3). |
+| D15 | technisch bestanden (Regel owner-at-resolution-v1, M24-01 fachlich offen) | `test_annex_d_hoa.py::test_d15_owner_change_arrears_stay_with_seller_result_goes_to_owner_at_resolution` | Eigentümerwechsel 01.04.2026, Beschluss 10.05.2026: Ergebnis 200,00 wird auf den Vertrag des Erwerbers gebucht (Buchungsdatum 10.05.2026), der Rückstand 300,00 (fällig 03.01.2025) bleibt offener Posten des Verkäufers, Erwerber hat genau einen Posten 200,00; Eigentumszeitraum 2025 zeigt nur den Verkäufer. Kaufvertragsausgleich erzeugt keine Buchung. Produktbefund: Debitorenkonto des Erwerbers wird bei der Ergebnisbuchung nicht selbst angelegt (Auffälligkeit 1). |
+| D24 | offen | kein Test | Die Abrechnung weist fällige, gezahlte und offene Vorauszahlungen getrennt aus und rechnet den Saldo gegen gezahlte Vorauszahlungen (`mhvp/billing/services.py`). Welche Behandlung noch offener Vorauszahlungen nach Abrechnungsreife fachlich richtig ist (Saldo gegen Soll oder gegen Ist, Fortbestand der Vorschussforderung), ist die Betreiberentscheidung M17-03 (Lückenliste B11). Ein Sollwert kann vor dieser Entscheidung nicht unabhängig vorgegeben werden (Regel 0.1.3, 0.1.8). |
+| D25 | offen | kein Test | Es gibt keine HeizkostenV-Berechnung im Produkt; Heizkosten werden nur als externe Einzelbeträge je Nutzer übernommen (H01, `item.heating`, `mhvp/billing/services.py`). Nutzerwechsel mit Zwischenablesung braucht Regelstand M17-02 und Messdienstformat P05 (Lückenliste B10). |
+| D26 | offen | kein Test | Die Portale Eigentümer und Beirat sind vorhanden, eine Funktion Verbrauchsinformation (unterjährig, pflichtig) existiert weder im Portal noch als Ersatzprozess (kein Treffer `consumption_info` oder `Verbrauchsinformation` in `apps/api/src/mhvp`). Nachweis eines funktionierenden Ersatzprozesses (H03) ist Betreiberentscheidung und nicht durch Code belegbar (Lückenliste B10). |
+| D27 | offen | kein Test | `co2_split` deckt nur die Stufentabelle Wohngebäude ab (H04, `CO2_RULE_VERSION`, D10). Gemischte Sachverhalte, Selbstversorgung und fehlende Lieferangaben haben weder Regelgruppe noch Prüfstatus im Code; Emissionswerte dürfen nicht erfunden werden (Regel 0.1.3). Regelstand M17-02, H04 nicht freigegeben (Lückenliste B10). |
+| D34 | technisch bestanden | `test_m21_read_receipts.py::test_d34_read_receipt_is_an_indication_apart_from_delivery`, `test_m21_read_receipts.py::test_d34_expired_invitation_triggers_no_legal_consequence` | Lauf 26.09.2026: 2 bestanden. Lesebestätigung mit Zeitpunkt und Konto als Indiz, getrennt von Zustellung und Zugang; Ablauf der Einladung löst kein Anerkenntnis, keinen Verzicht, keine Frist, keinen Zugang und keinen Versandstatus aus (A53). |
+| D47 | technisch bestanden | `test_m9_restore_replay.py::test_d47_replay_deletion_journal_after_restore`, `test_m9_restore_replay.py::test_d47_replay_never_deletes_a_document_with_another_content` | Lauf 26.09.2026: 2 bestanden. Löschjournal wird nach simuliertem Restore erneut angewendet: rechtmäßig gelöschtes Dokument wird erneut gelöscht und protokolliert, Dokument mit Löschsperre bleibt mit protokollierter Verweigerung erhalten, Dokument mit anderem Inhalt (Hash) wird nicht gelöscht (A44, M9-03). Wiederherstellung einer echten Sicherung ist Runbook-Schritt des Betreibers. |
+| D55 | technisch bestanden | `test_m18_audit_export.py::test_d55_audit_export_zip_contents_hashes_and_reversal`, `test_m18_audit_export.py::test_d55_audit_export_on_worker` | Lauf 26.09.2026: 2 bestanden. Der in Abschnitt 2 fehlgeschlagene Worker-Pfad läuft mit linearer Migrationskette: Lauf `queued`, Download vorher 409, Worker-Stub führt aus, erneute Zustellung `skipped`, Ergebnis `done` mit Dokument und Hash; Belege enthalten. |
+| D56 | technisch bestanden (Verzinsung B15 offen) | `test_annex_d_money.py::test_d56_deposit_funds_are_neither_free_liquidity_nor_a_payment_source` | Mietobjekt mit Eigentümer als Rechtsträger: Mietkonto 2.000,00, getrenntes Kautionskonto 1.500,00 gegen Verbindlichkeit 070000. Liquidität: freie Mittel 2.000,00, getrennte Kautionen 1.500,00 (nicht 3.500,00). Zahlungsauftrag vom Kautionskonto 422, vom Mietkonto 500,00 möglich; Lastschriftlauf auf das Kautionskonto 422. Zinszuordnung und Abrechnung der Kaution bleiben Betreiberentscheidung (B15, M5-02). |
+
+Alle Fälle: fachliche Bestätigung offen (V16).
+
+### Einzelprotokolle Nachtrag
+
+Format nach Anhang D.3. Softwarestand für alle Einträge: Commit 41ec2d3 (Version 1.22.1) mit nicht committeten Arbeitsständen paralleler Sitzungen. Prüfer: Coding-Agent (technische Ausführung); fachliche Bestätigung offen (V16). Datum: 26.09.2026.
+
+#### D02
+
+| Feld | Eintrag |
+| --- | --- |
+| Geprüfte Regelversion | W05 (`docs/rules/W05-hoa-result.md`), 7.3 Abrechnungsergebnis; keine Regelversionsnummer im Code |
+| Fachliche Annahmen | Wie D01. Nur das beschlossene Ergebnis je Einheit wird gebucht; Rückstände bleiben eigene Posten. Verrechnung ist rechtlich zu prüfen (P01), hier nur die Zusicherung, dass nichts automatisch ausgezahlt oder gelöscht wird. |
+| Anonymisierte Eingaben | Objekt 902, Einheit 02: Kostenanteil 2.500,00, Soll 2.800,00, gezahlt 2.500,00; G4 über Test-Resolver; Zahlungsart statement_result auf 060100. |
+| Erwartetes Ergebnis | Ergebnis -300,00; Rückstand 300,00 getrennt; Information 0,00; nach Buchung: offener Posten 300,00 bleibt, kein Verbindlichkeitsposten, keine erwartete Auszahlung, kein Zahlungsauftrag. |
+| Tatsächlich beobachtetes Ergebnis | Wie erwartet; Debitorenkonto Einheit 02 Saldo 0,00; expected_outflows 0,00; Liste der Zahlungsaufträge leer; zweite Buchung liefert dieselben Buchungssätze. |
+| Differenz | Keine. |
+| Ausgeführter Testbefehl | `cd apps/api && uv run pytest tests/integration/test_annex_d_hoa.py -k d02 -q --no-cov -p no:cacheprovider` |
+| Status | technisch bestanden, fachliche Bestätigung offen (V16) |
+
+#### D06
+
+| Feld | Eintrag |
+| --- | --- |
+| Geprüfte Regelversion | M11-06 (`docs/rules/M11-06-payment-proposal-only-until-g2.md`), B08, E09; keine Regelversionsnummer |
+| Fachliche Annahmen | G1 und G2 nur über Test-Resolver offen; nur das führende System zahlt. Eingabe jetzt exakt wie Anhang D (kein Skonto). |
+| Anonymisierte Eingaben | Objekt 906, Rechnung D06-1 über 1.190,00, Zahlungsauftrag mit Vier-Augen-Freigabe, Sammler pain.001.001.09, Status submitted, executed ohne Nachweis, executed mit Bankumsatz D06-D1 (1.190,00), executed ein zweites Mal. |
+| Erwartetes Ergebnis | Export und Einreichung: Verbindlichkeit 1.190,00 offen, Bank 001210 Saldo 0,00; Ausführung einmalig 1.190,00; zweite Rückmeldung kein zweiter Ausgleich. |
+| Tatsächlich beobachtetes Ergebnis | Wie erwartet; nach Ausführung Bank -1.190,00, 040300 1.190,00, kein 027000; zweite Rückmeldung dieselbe journal_entry_id, Bank unverändert; Konsistenzprüfung ok. |
+| Differenz | Keine. Die Lücken aus Abschnitt 1 (Skontovariante, Bankbestand bei Export) sind geschlossen. |
+| Ausgeführter Testbefehl | `cd apps/api && uv run pytest tests/integration/test_annex_d_money.py -k d06 -q --no-cov -p no:cacheprovider` |
+| Status | technisch bestanden, fachliche Bestätigung offen (V16) |
+
+#### D09
+
+| Feld | Eintrag |
+| --- | --- |
+| Geprüfte Regelversion | W04 Gesamtgeldfluss und Überleitung (`mhvp/hoa/calc.py::cash_flow_reconciliation`, A60), Erklärungscodes `heating_accrual`, `creditor_timing`, `prior_year`, `other`; Rechtsstand P02 offen (`docs/OPEN_QUESTIONS.md`), M24-03 |
+| Fachliche Annahmen | Modellfall eines rechtlich freigegebenen Brennstoffbestandsverfahrens (Annahme des Falls). Die Differenz wird durch den Verwalter erklärt, nie automatisch verteilt oder weggerechnet. Keine universelle Formel. |
+| Anonymisierte Eingaben | Objekt 909: Zahlung 10.000,00 vom Bankkonto auf 041000 Brennstoffkosten (10.02.2025); Kostenposition „Brennstoff verbraucht“ 8.000,00 nach MEA; Erklärung heating_accrual -2.000,00; Gegenprobe +2.000,00. |
+| Erwartetes Ergebnis | Geldfluss zeigt 10.000,00; Verteilung 8.000,00; unerklärt -2.000,00 sperrt; mit Erklärung 0,00, Zahlung bleibt 10.000,00, erklärte Zeile -2.000,00 sichtbar; falsches Vorzeichen -4.000,00 sperrt weiter. |
+| Tatsächlich beobachtetes Ergebnis | Wie erwartet (Brücke: outflows 10.000,00, cost_paid 10.000,00, cost_booked 10.000,00, cost_distributed 8.000,00; Paketbefund reconciliation_unexplained mit -2.000,00). |
+| Differenz | Keine technische. Der Fall bleibt bis zur Freigabe P02 fachlich offen; G4 geschlossen. |
+| Ausgeführter Testbefehl | `cd apps/api && uv run pytest tests/integration/test_annex_d_hoa.py -k d09 -q --no-cov -p no:cacheprovider` |
+| Status | technisch bestanden, Freigabe P02 und fachliche Bestätigung offen (V16) |
+
+#### D11
+
+| Feld | Eintrag |
+| --- | --- |
+| Geprüfte Regelversion | B03 Belegkette, 7.2 Anfangsbestand mit Vier-Augen-Freigabe (`mhvp/accounting/services.py`), E10; keine Regelversionsnummer |
+| Fachliche Annahmen | Beide Ausgaben sind nach fachlich freigegebener Zuordnung abrechnungsrelevant (Annahme des Falls). Der Anfangsbestand wird als eigener Buchungssatz (opening_balance) erfasst und durch eine zweite Person freigegeben. |
+| Anonymisierte Eingaben | Objekt 911: Anfangsbestand 01.07.2025 Bank 5.000,00 an 009000; Buchung 400,00 (15.03.2025) und 600,00 (15.09.2025) auf 043000, je mit hochgeladenem Beleg. |
+| Erwartetes Ergebnis | Jahresausgaben 1.000,00; Anfangsbestand keine Ausgabe; Belege für beide Buchungen verknüpft. |
+| Tatsächlich beobachtetes Ergebnis | Saldenliste 2025: 043000 1.000,00, Bank 4.000,00, 009000 -5.000,00, Summe Kostenkonten 1.000,00; Kontenblatt 043000 genau zwei Buchungen mit Datum und Kennung; document_id je Buchung gesetzt; Buchung des Anfangsbestands ohne Freigabe 403; Konsistenzprüfung ok. |
+| Differenz | Keine. Der Massenimport von Altdaten (M8) ist nicht Gegenstand des Tests; der Fall ist über die Buchungs-API abgebildet. |
+| Ausgeführter Testbefehl | `cd apps/api && uv run pytest tests/integration/test_annex_d_money.py -k d11 -q --no-cov -p no:cacheprovider` |
+| Status | technisch bestanden, fachliche Bestätigung offen (V16) |
+
+#### D13
+
+| Feld | Eintrag |
+| --- | --- |
+| Geprüfte Regelversion | W06 (`docs/rules/W06-resolution.md`), Statusmodell 6.9.3 (`mhvp/billing/status.py`), Lastschriftauswahl `mhvp/accounting/direct_debit.py::select_due`; keine Regelversionsnummer |
+| Fachliche Annahmen | Ohne wirksamen Beschluss entsteht keine beschlussabhängige Forderung; Lastschriften ziehen nur bestehende offene Posten ein. |
+| Anonymisierte Eingaben | Objekt 913: Abrechnung berechnet (Ergebnis 200,00 und -300,00), interne Freigabe durch zweite Person, kein Beschluss; Buchungsversuch mit G4; Lastschriftvorschau zum 31.12.2026 mit Gläubiger-ID. |
+| Erwartetes Ergebnis | Buchung abgelehnt; keine 200,00 in den offenen Posten; Lastschriftvorschau nur die Vorschussrückstände 2 x 300,00. |
+| Tatsächlich beobachtetes Ergebnis | Buchung 409 (calculated und internally_approved), resolved ohne Beschluss 422, issued und due 409; offene Posten 300,00 und 300,00 mit Betrag 2.800,00; Vorschau enthält genau diese zwei Posten. |
+| Differenz | Keine. Hinweis: die Fehlermeldung nennt D13 nur beim Übergang due nach posted; vorher lautet sie „internally_approved -> posted is not allowed“ (Auffälligkeit 2). |
+| Ausgeführter Testbefehl | `cd apps/api && uv run pytest tests/integration/test_annex_d_hoa.py -k d13 -q --no-cov -p no:cacheprovider` |
+| Status | technisch bestanden, fachliche Bestätigung offen (V16) |
+
+#### D14
+
+| Feld | Eintrag |
+| --- | --- |
+| Geprüfte Regelversion | W06 Beschluss nur mit Snapshot-Hash; neue Version über `POST /hoa/statements/{id}/new-version`; W04 Paketprüfung; keine Regelversionsnummer |
+| Fachliche Annahmen | Eine neue Ergebnisversion nach Beschluss ist ein neuer Entscheidungsschritt; der alte Beschluss bleibt an der alten Version. |
+| Anonymisierte Eingaben | Objekt 914: Version 1 (5.500,00) beschlossen; Version 2 mit Nachtrag 100,00 (5.600,00) berechnet; alter Beschluss an Version 2; interne Freigabe und Buchung der Version 2. |
+| Erwartetes Ergebnis | Version 2: Anteile 3.054,55 und 2.545,45, Ergebnis 254,55 und -254,55, Differenz 54,55 zu Version 1; neuer Hash, kein Beschluss; alter Beschluss abgelehnt; Version 1 unverändert resolved; Paket Version 2 zeigt Differenz 100,00 und sperrt. |
+| Tatsächlich beobachtetes Ergebnis | Wie erwartet (409 beim Anhängen des alten Beschlusses, 409 bei interner Freigabe wegen reconciliation_unexplained 100,00, 409 bei Buchung; Liste zeigt Version 1 mit Beschluss, Version 2 ohne). |
+| Differenz | Keine technische. Eine Gegenüberstellung der Versionen je Einheit (Differenz 54,55) gibt es nicht als eigene Ansicht; sie ist aus beiden Snapshots berechenbar (Auffälligkeit 3). |
+| Ausgeführter Testbefehl | `cd apps/api && uv run pytest tests/integration/test_annex_d_hoa.py -k d14 -q --no-cov -p no:cacheprovider` |
+| Status | technisch bestanden, fachliche Bestätigung offen (V16) |
+
+#### D15
+
+| Feld | Eintrag |
+| --- | --- |
+| Geprüfte Regelversion | Regel owner-at-resolution-v1 (`mhvp/hoa/calc.py::owner_at`, Entscheidung M24-01 vom 24.09.2026), B01 Personenkonto je Vertrag, W07 im Register offen; Quelle P01 offen |
+| Fachliche Annahmen | Gewöhnlicher Erwerb ohne Sonderhaftung; Ergebnis beim Eigentümer zum Beschlussdatum, Rückstände beim bisherigen Schuldner; Kaufvertragsausgleich außerhalb der Buchhaltung. Sonderfälle ausdrücklich nicht abgedeckt. |
+| Anonymisierte Eingaben | Objekt 915: Verkäufer Einheit 01 mit Rückstand 300,00 (2025); Eigentumsumschreibung und Nutzen-Lasten-Wechsel 01.04.2026; Beschluss 10.05.2026; Buchung mit G4. |
+| Erwartetes Ergebnis | Ergebnis 200,00 auf Vertrag des Erwerbers (Buchungsdatum 10.05.2026); Verkäufer behält offenen Posten 300,00; Erwerber genau ein Posten 200,00; Eigentumszeitraum 2025 nur Verkäufer (365 Tage). |
+| Tatsächlich beobachtetes Ergebnis | Wie erwartet, jedoch erst nach `POST /accounting/ledgers/{id}/sync-debtors`: die erste Buchung wurde mit 409 „Kein Eigentümer oder Debitor für Einheit 01“ abgelehnt, weil das Debitorenkonto des Erwerbers im bestehenden Buchungskreis noch nicht angelegt war. |
+| Differenz | Produktbefund (Auffälligkeit 1): `post_statement` legt fehlende Debitorenkonten nicht selbst an, der Sollstellungslauf tut dies. Die Ablehnung ist fachlich sicher (keine Buchung auf den falschen Eigentümer), aber ein manueller Zwischenschritt. Fachliche Zuordnung nach M24-01 bleibt bestätigungspflichtig. |
+| Ausgeführter Testbefehl | `cd apps/api && uv run pytest tests/integration/test_annex_d_hoa.py -k d15 -q --no-cov -p no:cacheprovider` |
+| Status | technisch bestanden, fachliche Bestätigung offen (V16, M24-01) |
+
+#### D34, D47, D55
+
+| Feld | Eintrag |
+| --- | --- |
+| Geprüfte Regelversion | D34: A53, 11.3 (`mhvp/portal`); D47: M9-03 Löschjournal (`mhvp/documents/deletion_journal.py`, `export_deletions`, `replay_deletions`); D55: M18-02 Prüfexport (`docs/rules/M18-02-pruefexport.md`) |
+| Fachliche Annahmen | Wie in den Docstrings der Tests; für D47 wird der Restore durch Wiedereinfügen von Zeile und Blob simuliert, die Sicherung selbst ist nicht Gegenstand. |
+| Anonymisierte Eingaben | Bestehende Tests mit Fallkennung, unverändert. |
+| Erwartetes Ergebnis | D34: Indiz statt Zustellung, Ablauf ohne Rechtsfolge. D47: erneute Löschung nur bei gleichem Inhalt und ohne Sperre, Verweigerung protokolliert. D55: Worker-Lauf queued, ausgeführt, idempotent, Ergebnis mit Hash. |
+| Tatsächlich beobachtetes Ergebnis | 6 Tests bestanden (D34 2, D47 2, D55 2). Der in Abschnitt 2 gemeldete Fehler des Worker-Pfads (Celery-Broker statt Stub) tritt mit der linearisierten Migrationskette nicht mehr auf. |
+| Differenz | Keine. |
+| Ausgeführter Testbefehl | `cd apps/api && uv run pytest tests/integration/test_m21_read_receipts.py tests/integration/test_m9_restore_replay.py tests/integration/test_m18_audit_export.py -k "d34 or d47 or d55" -q --no-cov -p no:cacheprovider` |
+| Status | technisch bestanden, fachliche Bestätigung offen (V16) |
+
+#### D56
+
+| Feld | Eintrag |
+| --- | --- |
+| Geprüfte Regelversion | B01 (`docs/rules/B01.md`), 7.5 Liquidität (`mhvp/accounting/reports.py::liquidity`), Zahlungsauftrag (`mhvp/banking/payments.py`), Lastschriftlauf (`mhvp/accounting/direct_debit.py::create_run`); Annahme `docs/ASSUMPTIONS.md` (Zahlungsauftrag nie vom Kautionskonto) |
+| Fachliche Annahmen | Kautionskonto ist segregiertes Konto des Vermieters; Kautionsmittel sind keine freie Liquidität und keine Zahlungsquelle. Verzinsung und Abrechnung der Kaution sind Betreiberentscheidung (B15, M5-02) und nicht Gegenstand. |
+| Anonymisierte Eingaben | Mietobjekt 956 mit Eigentümer als Rechtsträger; Mietkonto 2.000,00; Kautionskonto 1.500,00 gegen Verbindlichkeit 070000; Rechnung 500,00; Zahlungsauftrag vom Kautionskonto und vom Mietkonto; Lastschriftlauf auf das Kautionskonto (führendes System über Test-Resolver G1, Gläubiger-ID gesetzt). |
+| Erwartetes Ergebnis | Liquidität: freie Mittel 2.000,00, getrennte Kautionen 1.500,00; Zahlungsauftrag vom Kautionskonto 422, vom Mietkonto 500,00; Lastschriftlauf auf Kautionskonto 422; Kaution bleibt 1.500,00 gegen -1.500,00 gebucht. |
+| Tatsächlich beobachtetes Ergebnis | Wie erwartet; Kontoart in der Liquidität: 001210 free, 001220 deposit. |
+| Differenz | Keine technische. Zinszuordnung bleibt offen (B15). |
+| Ausgeführter Testbefehl | `cd apps/api && uv run pytest tests/integration/test_annex_d_money.py -k d56 -q --no-cov -p no:cacheprovider` |
+| Status | technisch bestanden, fachliche Bestätigung offen (V16, B15) |
+
+### Auffälligkeiten Nachtrag
+
+1. Produktbefund D15: `apps/api/src/mhvp/hoa/routers.py`, `post_statement` (Abschnitt „Abrechnungsergebnis buchen“, Ermittlung `debtor` über `DebtorAccountReservation`): fehlt das Debitorenkonto eines nach Anlage des Buchungskreises entstandenen Vertrags (Eigentümerwechsel), antwortet die Buchung mit 409 „Kein Eigentümer oder Debitor für Einheit 01“. `mhvp/accounting/receivables.py` ruft in derselben Lage `acc.sync_debtor_accounts` auf. Empfehlung: gleicher Aufruf in `post_statement` (und in `mhvp/hoa/levies.py` ist er bereits vorhanden). Nicht behoben, Modul hoa wird parallel bearbeitet. Der Test dokumentiert die Ablehnung und den Umweg über `POST /accounting/ledgers/{id}/sync-debtors`.
+2. Hinweis D13: `apps/api/src/mhvp/billing/status.py`, `check_transition`: die Kennung D13 erscheint nur in der Meldung des Übergangs due nach posted; die früheren Ablehnungen (calculated oder internally_approved nach posted) tragen die allgemeine Meldung. Fachlich korrekt, nur die Nachvollziehbarkeit der Meldung ist geringer.
+3. Hinweis D14: eine Gegenüberstellung zweier Abrechnungsversionen je Einheit (Differenz der Ergebnisse) gibt es nicht als Endpunkt oder Ansicht; die Differenz ist aus beiden Snapshots berechenbar. Empfehlung: Vergleich im Paket der Folgeversion ausweisen (Betreiberentscheidung, ob erforderlich).
+4. Weiterhin offen ohne Test: D24 (M17-03, B11), D25 bis D27 (M17-02, P05, H04, B10). Alle vier brauchen Betreiberentscheidungen zu Regelständen, die nicht durch Code oder Annahme ersetzt werden dürfen (Regel 0.1.3).
+5. Die Regelversionsangabe bleibt wie in Abschnitt 1 eine Registerangabe ohne formale Versionsnummer je Regel.
+
+#### Status der Auffälligkeiten (Nachtrag, Bearbeitung 26.09.2026)
+
+| Nr. | Befund | Status | Umsetzung | Nachweis |
+| --- | --- | --- | --- | --- |
+| 1 | D15: Ergebnisbuchung antwortet 409, wenn das Debitorenkonto eines nach Anlage des Buchungskreises entstandenen Vertrags fehlt | behoben | `apps/api/src/mhvp/hoa/routers.py`, `post_statement`: Aufruf `acc.sync_debtor_accounts(session, ledger)` vor der Ermittlung der Debitoren, wie in `accounting/receivables.py` und `hoa/levies.py`. Der Umweg über `POST /accounting/ledgers/{id}/sync-debtors` ist aus dem Test D15 entfernt. | `tests/integration/test_annex_d_hoa.py::test_d15_...` bestanden |
+| 2 | D13: Ablehnungsmeldungen früherer Übergänge ohne Regelkennung | behoben | `apps/api/src/mhvp/billing/status.py`, `check_transition`: jede Ablehnung nennt die verletzte Regel in Klammern; für WEG-Abrechnungen tragen alle Ablehnungen des Ziels posted vor due die Kennung D13 (Meldung `... is not allowed (D13, 6.9.3)`), übrige Ablehnungen 6.9.3, W06, D14 oder D13. Verhalten unverändert (gleiche Übergänge erlaubt und abgelehnt). | `tests/integration/test_m24_hoa.py::test_check_transition_messages_carry_the_rule_id` bestanden |
+| 3 | D14: keine Gegenüberstellung zweier Abrechnungsversionen | umgesetzt | Endpunkt `GET /api/v1/hoa/statements/{id}/diff?against={other_id}` (accounting:read): Vergleich je Einheit (Kostenanteil, Vorschüsse Soll und Ist, Spitze, Rückstand, Information) und je Kostenposition (Betrag und Split je Einheit) mit Werten alt, neu, Differenz (Decimal, neu abzüglich alt); 422 bei anderer Gemeinschaft, anderer Periode oder Vergleich mit sich selbst, 409 ohne berechneten Snapshot. CRM: Abschnitt Versionsvergleich an der Abrechnung (`components/hoa/StatementVersionDiff.tsx`), angezeigt bei Folgeversionen gegen die abgelöste Fassung. OpenAPI und API-Client regeneriert. | `tests/integration/test_m24_hoa.py::test_d14_statement_version_diff` mit den Werten aus D14 (5.600,00: 3.054,55 / 2.545,45, Differenz 54,55 / 45,45) bestanden; Vitest `StatementVersionDiff.test.tsx` bestanden |
+| 4 | D24 bis D27 ohne Test | offen | Betreiberentscheidungen erforderlich (M17-02, M17-03, P05, H04, B10, B11). | keine Änderung |
+| 5 | Regelversionsangabe | offen | keine Änderung | keine Änderung |
+
+Ausgeführte Prüfungen zu Nr. 1 bis 3: `cd apps/api && uv run pytest tests/integration/test_annex_d_hoa.py tests/integration/test_m24_hoa.py -q --no-cov -p no:cacheprovider`, ruff check und format, mypy für die geänderten Module, `python3 scripts/check_i18n.py`, Vitest je Datei, `tsc --noEmit` im CRM. Ergebnisse siehe Ergebnisbericht der Bearbeitung; nicht ausgeführt: Playwright, vollständige Testsuite.

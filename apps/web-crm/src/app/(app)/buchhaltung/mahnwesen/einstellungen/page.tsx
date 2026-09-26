@@ -6,6 +6,7 @@ import { DunningScopePicker, type DunningScopeProperty } from "@/components/acco
 import { DunningSettingsForm, type DunningSettings } from "@/components/accounting/DunningSettingsForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export default async function DunningSettingsPage({
   const propertyId = objekt || null;
   const t = await getTranslations("Dunning");
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
   if (!can("accounting:read")) notFound();

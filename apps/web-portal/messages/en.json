@@ -52,7 +52,10 @@
       "contacts": "Contacts",
       "hoaAccount": "HOA fee account",
       "notices": "Notices",
-      "forms": "Forms"
+      "forms": "Forms",
+      "open": "Open menu",
+      "close": "Close menu",
+      "label": "Main navigation"
     },
     "start": {
       "title": "Overview",
@@ -74,7 +77,14 @@
       "newNotices": "{count, plural, one {One new notice} other {# new notices}} on the notice board.",
       "forms": "Fill in forms of the management"
     },
-    "proposalNotice": "Proposal, will be reviewed by the management."
+    "proposalNotice": "Proposal, will be reviewed by the management.",
+    "errorTitle": "The page could not be loaded.",
+    "errorHint": "Please try again. If the error persists, contact your property management.",
+    "retry": "Try again",
+    "loading": "Loading content",
+    "notFoundTitle": "Page not found",
+    "notFoundHint": "The requested page does not exist or is not available to your account.",
+    "toStart": "To the overview"
   },
   "Documents": {
     "title": "Documents",
@@ -117,7 +127,8 @@
     "appointmentAccept": "Confirm this appointment",
     "appointmentAccepted": "The appointment has been confirmed.",
     "appointmentConfirmed": "Confirmed appointment",
-    "appointmentsOpen": "Appointment proposal available"
+    "appointmentsOpen": "Appointment proposal available",
+    "attachmentsList": "Attachments of the report"
   },
   "Account": {
     "title": "Account statement",
@@ -214,7 +225,12 @@
       "accepted": "Confirmed",
       "declined": "Not chosen",
       "superseded": "Replaced"
-    }
+    },
+    "quoteAmountRequired": "Please enter the quote amount.",
+    "appointmentRequired": "Please select an appointment.",
+    "reportRequired": "Please enter the completion report.",
+    "invoiceFieldsRequired": "Please enter invoice number, invoice date and invoice amount.",
+    "orderTitle": "Work order"
   },
   "Handover": {
     "title": "Handover protocols",
@@ -543,7 +559,10 @@
     "balance": "Balance",
     "balanceOwed": "(amount due)",
     "balanceCredit": "(credit)",
-    "balanceEven": "(settled)"
+    "balanceEven": "(settled)",
+    "reversed": "reversed",
+    "runningBalance": "Balance after",
+    "tableCaption": "Posted charges and payments"
   },
   "Notices": {
     "title": "Notices",
@@ -600,7 +619,45 @@
     "textLabel": "Text",
     "submit": "Send",
     "questionSent": "The question was sent to the management.",
-    "noteSaved": "The note was saved."
+    "noteSaved": "The note was saved.",
+    "periodRange": "{from} to {to}",
+    "filter": {
+      "label": "Filter positions",
+      "account": "Account",
+      "vendor": "Vendor",
+      "dateFrom": "Booking date from",
+      "dateTo": "Booking date to",
+      "text": "Booking text",
+      "all": "All",
+      "apply": "Apply filter",
+      "reset": "Reset filter",
+      "result": "{shown} of {total} positions shown.",
+      "unfiltered": "{total, plural, one {# position} other {# positions}}, unfiltered.",
+      "noMatch": "No position matches the filter.",
+      "invalid": "The filter is invalid, for example the end date is before the start date. All positions are shown."
+    },
+    "reports": {
+      "title": "Audit reports and board statement",
+      "notice": "The audit report is created by the management per version. The board statement is a separate text with time and author. It has no release effect and changes neither the report nor the statement.",
+      "empty": "No audit report created yet.",
+      "version": "Audit report version {n}",
+      "figures": "{checked} checked ({checkedValue}), {unchecked} unchecked ({uncheckedValue})",
+      "findings": "Findings",
+      "recommendation": "Recommendation",
+      "statement": "Board statement",
+      "noStatement": "No statement recorded yet.",
+      "recordedAt": "Recorded on {at}",
+      "sourcePortal": "via the portal",
+      "sourceCrm": "recorded by the management",
+      "history": "{count, plural, one {one earlier version} other {# earlier versions}}",
+      "statementLabel": "Statement text",
+      "statementHint": "A new statement replaces the previous text; earlier versions remain traceable in the report.",
+      "saveStatement": "Save statement",
+      "replaceStatement": "Change statement",
+      "cancel": "Cancel",
+      "statementSaved": "The statement has been saved."
+    },
+    "costTableCaption": "Cost items of the audit engagement"
   },
   "Forms": {
     "title": "Forms",
@@ -611,7 +668,8 @@
     "submitting": "Sending",
     "submitted": "{name} has been submitted. You can find the case under Reports.",
     "requiredMissing": "Please fill in the field {label}.",
-    "proposalNote": "The entries are sent to the management and reviewed there."
+    "proposalNote": "The entries are sent to the management and reviewed there.",
+    "requiredHint": "Fields marked with * are required."
   },
   "Invitation": {
     "title": "Accept invitation",

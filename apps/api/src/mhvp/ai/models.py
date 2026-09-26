@@ -171,6 +171,16 @@ class ImportRunItem(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class AiProposal(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "ai_proposal"
+    __table_args__ = (
+        # Intake list and start page: pending proposals per entity type, newest first.
+        Index(
+            "ix_ai_proposal_tenant_entity_decision",
+            "tenant_id",
+            "entity_type",
+            "decision",
+            "created_at",
+        ),
+    )
 
     task_run_id: Mapped[uuid.UUID] = _fk("ai_task_run.id")
     entity_type: Mapped[str] = mapped_column(String(63), nullable=False)

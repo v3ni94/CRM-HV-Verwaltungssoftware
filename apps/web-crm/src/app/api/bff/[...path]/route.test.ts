@@ -83,6 +83,13 @@ describe("BFF proxy", () => {
     ["POST", `banking/transactions/${ID}/book`],
     ["POST", `banking/transactions/${ID}/ignore`],
     ["POST", `banking/payment-orders/${ID}/approve`],
+    // Bankabgleich-Kennzahlen (A45) und Lastschriftläufe (M15): der Download der pain.008
+    // bleibt hinter G2 und ist nicht freigeschaltet (kein GET .../file).
+    ["GET", "banking/matching-metrics"],
+    ["GET", "accounting/direct-debits"],
+    ["POST", `accounting/direct-debits/${ID}/approve`],
+    ["POST", `accounting/direct-debits/${ID}/cancel`],
+    ["POST", `accounting/direct-debits/${ID}/file`],
     ["POST", "statements"],
     ["POST", `statements/${ID}/calculate`],
     ["POST", `hoa/statements/${ID}/post`],

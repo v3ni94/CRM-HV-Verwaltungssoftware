@@ -36,6 +36,8 @@ type Report = {
   apply: boolean;
   import_run_id?: string;
   counts: Record<string, number>;
+  /** What the reader tolerated: encoding, delimiter, skipped or repeated lines. */
+  datei_hinweise?: string[];
   objekte?: PropertyEntry[];
   kontakte?: ContactEntry[];
 };
@@ -48,6 +50,13 @@ function ReportHead({ report, prefix, testId }: { report: Report; prefix: "objek
       <p className={report.apply ? ui.success : ui.notice} data-testid={`${testId}-mode`}>
         {report.apply ? t("resultApplied") : t("resultTest")}
       </p>
+      {report.datei_hinweise && report.datei_hinweise.length > 0 ? (
+        <ul className="list-disc pl-4 text-sm text-muted" data-testid={`${testId}-file-notes`} aria-label={t("fileNotes")}>
+          {report.datei_hinweise.map((note, i) => (
+            <li key={i}>{note}</li>
+          ))}
+        </ul>
+      ) : null}
       <dl className="flex flex-wrap gap-4 text-sm">
         {Object.entries(report.counts).map(([key, value]) => (
           <div key={key} className="flex flex-col">

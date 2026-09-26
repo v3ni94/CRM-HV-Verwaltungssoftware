@@ -17,6 +17,24 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.23.0",
+    date: "26.09.2026",
+    title:
+      "Fix- und Abschlusswelle: Vier-Augen nach Betreiberentscheidung, Review-Befunde Tickets und Mail, Sicherheit, Performance, Bedienbarkeit, Vertragsformular, Import-Robustheit, Anhang D 54 von 58",
+    changes: [
+      "Tickets und Mail: Betreiberentscheidung M20-03 umgesetzt: Vier-Augen-Freigabe nur für Mitarbeiter mit Kennzeichen Azubi oder neuer Mitarbeiter (Einstellungen, Benutzer, optional befristet), alle anderen senden Ticketantworten direkt; Verfasser und Freigeber mit Zeitpunkt als Ticketereignisse und im Mailverlauf sichtbar; Notbremse alle Antworten mit Freigabe (Standard aus); Freigabeberechtigte werden benachrichtigt (Migration 0129, Regel M20-06)",
+      "Prüfung Tickets und Mail: 31 von 34 Befunden behoben, darunter Doppelversand bei Verbindungsfehler ausgeschlossen (zweiphasiger Versand mit Nachweis), Rechnungsweiterleitung nach Commit, Postfach löschen als Deaktivierung ohne Sichtbarkeitsverlust, Mailliste mit Vorschau statt Volltext, Thread-Zuordnung über References und Gmail-Thread, abgewiesene Anhänge sichtbar, Kommentare mit Autor, interne Beschreibung, Zuweisungsereignis, Archivierung nach Commit, Arbeitsaufträge mit Terminvorschlägen im Ticket (Migration 0126)",
+      "Sicherheit: Review 1.22 ohne hohe Befunde, 5 mittlere und 12 niedrige behoben (Ratenbegrenzung bei gefälschtem API-Key, Größenlimit Paperless-Webhook, Rechtsträgerbereich in WEG-Finanzen, Prüfung, Beirat und Mehrheitsregeln, Aushang-Sichtbarkeit je Zielgruppe, Webhook-Ziel mit gebundener Adresse gegen DNS-Umlenkung, Geheimnisse nur serverseitig, Paketgröße Einsicht, Telefonie-Antwort ohne Trefferstatus)",
+      "Performance: Listen Verträge, Einheiten, Parteien, Journal, Rechnungen, Lastschriftläufe, Dokumenteingang und Startseite ohne N+1 (bis zu 57 auf 11 Abfragen), 18 neue Indizes (Migration 0127), Paginierung Verträge, Mandate, Journal, Rechnungen, Berechtigungskontext je Prozess 30 Sekunden zwischengespeichert mit sofortiger Wirkung von Sperre und Rollenentzug im selben Prozess",
+      "Bedienbarkeit CRM und Portal: 63 Befunde behoben, darunter zwei Seitenabstürze (WEG Prüfauftrag, Objektseite), Kennzahlenkarte Bankabgleich lud im Betrieb nie, Lastschriftläufe haben jetzt eine Seite mit Vier-Augen-Freigabe hinter G2, Rohwerte statt Beträge und Daten in Exposé, Belegeingang und Automatisierung, Fehler- und Ladezustände, mobile Kartenansicht Hausgeldkonto, einklappbares Portalmenü, deutsche Fehler- und 404-Seiten im Portal",
+      "Neue Funktionen: Vertragsformular im CRM für Miet-, Eigentums- und SEV-Verträge mit Zahlungsplan und Kaution; Webhook-Abonnements unter Einstellungen mit Zustellprotokoll; Prüfauftrag Beirat im CRM anlegen mit Positionsfilter und Beiratsstellungnahme (CRM und Portal); Formular-Einreichungen je Vorlage; Terminvorschläge der Dienstleister im CRM; Ratenplan Darlehen als Orientierung, Beschlussbezug am Versicherungsfall, Überleitung im Übernahmejahr (Migration 0128); Regel-Engine mit Bedingungen auf Objekt, Einheit, Kontakt und Vertrag, automatisch erzeugte Briefe als Entwurf gekennzeichnet; OpenImmo-Schemaprüfung mit hinterlegter XSD; Namensmaskierung im Belegeingang für Einzelunternehmer",
+      "Import Immoware24: Listenimport liest Windows-1252, BOM, Semikolon, Komma, Tab, eingebettete Trennzeichen, wiederholte Kopfzeilen und Spalten in beliebiger Reihenfolge; Pflichtspalten mit klarer Meldung; Duplikate gemeldet statt still übernommen; Nummernzuordnung mit führenden Nullen; Telefon und E-Mail in allen Schreibweisen; IBAN nur als maskierter Hinweis; Checkliste im Handbuch",
+      "Abnahme und Tests: Anhang D jetzt 54 von 58 technisch bestanden (offen nur D24 bis D27 wegen fehlender Betreiberregeln); Playwright gegen den Stack 12 CRM und 11 Portal grün inklusive Fototest; 66 neue Abdeckungstests; Ergebnisbuchung nach Eigentümerwechsel repariert, Versionsvergleich der WEG-Abrechnung als Endpunkt und Anzeige; Seed-Skript und Test-Datenbankaufbau stabil",
+      "Dokumentation: Entscheidungsvorlage für den Betreiber (docs/reviews/2026-09-26-entscheidungsvorlage-betreiber.md), Handbuchkapitel für alle Funktionen seit 1.20, Lückenliste konsolidiert (A72 bis A89), Plan-Dokumente mit Stand 26.09.2026, Reviews Performance, Sicherheit 1.22, Bedienbarkeit CRM und Portal",
+      "Offen (Betreiber): OpenImmo-XSD beschaffen (M26-02), Zins und Tilgung in der Jahresabrechnung (M24-03), Heizkosten und Verbrauchsinformation (D24 bis D27), Freigabestufen G1 bis G5 mit Steuerberatung, Rechtsberatung und Bank, Serverhärtung (M9-05)",
+    ],
+  },
+  {
     version: "1.22.1",
     date: "26.09.2026",
     title: "SSH-Härtung: Passwortanmeldung bleibt aktiv",

@@ -340,7 +340,13 @@ def test_preview_and_reply_requires_confirmation_and_uses_ticket_mailbox(
     )
 
     # Mit Bestätigung: Nachricht am Ticket, Postfach des Tickets, eingereicht (pending), nicht
-    # gesendet. Der Versand bleibt dem bestehenden Antwortweg (Freigabe) vorbehalten.
+    # gesendet. Der Verfasser trägt das Kennzeichen Freigabepflicht (M20-03, Betreiber-
+    # entscheidung 26.09.2026); ohne Kennzeichen würde der Administrator direkt versenden
+    # (siehe test_m20_ticket_reply_direct_send).
+    members = _ok(client.get("/api/v1/tenant/members", headers=admin))
+    own_membership = next(m for m in members if m["user_id"] == str(world.users["rtadmin"]))
+    flag_url = f"/api/v1/tenant/members/{own_membership['membership_id']}/reply-approval"
+    _ok(client.put(flag_url, json={"required": True, "reason": "azubi"}, headers=admin))
     sent_req = _ok(
         client.post(
             f"{T}/{ticket_id}/reply",
@@ -379,6 +385,7 @@ def test_preview_and_reply_requires_confirmation_and_uses_ticket_mailbox(
         e["kind"] == "mail_sent"
         for e in _ok(client.get(f"{T}/{ticket_id}", headers=admin))["events"]
     )
+    _ok(client.put(flag_url, json={"required": False}, headers=admin))
 
 
 def test_reply_rejects_invalid_addresses_and_foreign_mailbox(

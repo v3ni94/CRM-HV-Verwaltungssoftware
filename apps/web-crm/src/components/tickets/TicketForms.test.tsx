@@ -43,4 +43,18 @@ describe("Tickets", () => {
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("PATCH");
     expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toEqual({ body: "Techniker beauftragt", internal: false });
   });
+
+  it("saves the internal description via PATCH", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({}));
+    renderIntl(<TicketEdit id={ID} status="new" priority="normal" internalDescription="alt" />);
+    const button = screen.getByText("Interne Beschreibung speichern");
+    expect(button).toBeDisabled();
+    await userEvent.clear(screen.getByLabelText("Interne Beschreibung"));
+    await userEvent.type(screen.getByLabelText("Interne Beschreibung"), "Schlüssel beim Hausmeister");
+    await userEvent.click(button);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("PATCH");
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ internal_description: "Schlüssel beim Hausmeister" });
+    expect(await screen.findByText("Gespeichert.")).toBeInTheDocument();
+  });
 });

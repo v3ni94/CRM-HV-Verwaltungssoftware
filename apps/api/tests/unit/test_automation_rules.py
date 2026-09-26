@@ -166,3 +166,52 @@ def test_rule_schema_accepts_only_stage_one_actions() -> None:
             trigger_event_type="ticket",
             actions=[{"type": "notify", "user_ids": [tpl], "title": "t"}],
         )
+
+
+def test_related_fields_catalogue_and_groups() -> None:
+    """A81: conditions may read the closed catalogue of related master data only."""
+    from mhvp.automation.rules import RELATED_FIELDS, related_groups
+
+    tree = {
+        "op": "and",
+        "conditions": [
+            leaf("property.management_type", "eq", "hoa"),
+            leaf("contact.roles", "contains", "eigentuemer"),
+            leaf("entity.category", "eq", "Wasserschaden"),
+        ],
+    }
+    assert validate_conditions(tree) == 3
+    assert related_groups(tree) == {"property", "contact"}
+    assert related_groups(leaf("entity.category", "eq", "x")) == set()
+    assert related_groups(None) == set()
+    for group, fields in RELATED_FIELDS.items():
+        assert not {"amount", "balance", "iban", "rent"} & set(fields), group
+    with pytest.raises(RuleDefinitionError, match=r"nicht verfügbar"):
+        validate_conditions(leaf("property.iban", "eq", "DE"))
+    with pytest.raises(RuleDefinitionError, match=r"nicht verfügbar"):
+        validate_conditions(leaf("contract.rent", "gt", 1))
+    ctx = dict(CTX) | {
+        "property": {"management_type": "hoa", "number": "001"},
+        "contact": {"roles": ["mieter"], "tags": ["VIP"]},
+        "contract": {},
+    }
+    assert evaluate(leaf("property.management_type", "eq", "hoa"), ctx)
+    assert not evaluate(leaf("property.management_type", "eq", "rental"), ctx)
+    assert evaluate(leaf("contact.tags", "contains", "VIP"), ctx)
+    # Missing related data (no property linked) never matches an equality.
+    assert not evaluate(leaf("contract.kind", "eq", "tenancy"), ctx)
+    assert evaluate(leaf("contract.kind", "ne", "tenancy"), ctx)
+
+
+def test_contract_status_is_derived_from_dates() -> None:
+    from datetime import date
+
+    from mhvp.automation.services import contract_status
+
+    today = date(2026, 9, 26)
+    assert contract_status(date(2026, 10, 1), None, None, today) == "future"
+    assert contract_status(date(2020, 1, 1), None, None, today) == "active"
+    assert contract_status(date(2020, 1, 1), date(2026, 12, 31), date(2026, 9, 1), today) == (
+        "terminated"
+    )
+    assert contract_status(date(2020, 1, 1), date(2026, 9, 25), date(2026, 6, 1), today) == "ended"

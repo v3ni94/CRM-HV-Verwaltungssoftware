@@ -170,38 +170,38 @@ async def dashboard(
 
     today = services.local_today()
     async with tenant_tx(request, principal) as session:
+        # All tiles in one statement (scalar subqueries) instead of one count per tile
+        # (performance review 26.09.2026): one round trip regardless of the permissions.
+        def count(model: Any, *where: Any) -> Any:
+            return select(func.count()).select_from(model).where(*where).scalar_subquery()
 
-        async def count(model: Any, *where: Any) -> int:
-            query = select(func.count()).select_from(model).where(*where)
-            return int(await session.scalar(query) or 0)
-
-        tiles: dict[str, int] = {}
+        wanted: dict[str, Any] = {}
         if principal.has("properties:read"):
-            tiles["properties"] = await count(Property)
-            tiles["units"] = await count(Unit)
-            tiles["maintenance_due_30d"] = await count(
+            wanted["properties"] = count(Property)
+            wanted["units"] = count(Unit)
+            wanted["maintenance_due_30d"] = count(
                 MaintenanceItem,
                 MaintenanceItem.status == "open",
                 MaintenanceItem.due_date <= today + timedelta(days=30),
             )
         if principal.has("contacts:read"):
-            tiles["contacts"] = await count(Contact, Contact.deleted_at.is_(None))
+            wanted["contacts"] = count(Contact, Contact.deleted_at.is_(None))
         if principal.has("contracts:read"):
-            tiles["active_contracts"] = await count(
+            wanted["active_contracts"] = count(
                 Contract, or_(Contract.end_date.is_(None), Contract.end_date >= today)
             )
-            tiles["contracts_ending_90d"] = await count(
+            wanted["contracts_ending_90d"] = count(
                 Contract, Contract.end_date.between(today, today + timedelta(days=90))
             )
         if principal.has("documents:read"):
-            tiles["documents"] = await count(Document)
+            wanted["documents"] = count(Document)
         if principal.has("ai:read"):
-            tiles["open_ai_proposals"] = await count(
-                AiProposal, AiProposal.decision == Decision.PENDING
-            )
-        tiles["unread_notifications"] = await count(
+            wanted["open_ai_proposals"] = count(AiProposal, AiProposal.decision == Decision.PENDING)
+        wanted["unread_notifications"] = count(
             Notification, Notification.user_id == principal.user_id, Notification.read_at.is_(None)
         )
+        row = (await session.execute(select(*(q.label(k) for k, q in wanted.items())))).one()
+        tiles: dict[str, int] = {k: int(v or 0) for k, v in zip(wanted, row, strict=True)}
         # Includes the last 30 days so that overdue open items stay visible.
         upcoming = await services.derived_dates(
             session,

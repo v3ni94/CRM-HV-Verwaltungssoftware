@@ -283,7 +283,11 @@ def test_ticket_to_order_to_invoice(client: TestClient, world: World) -> None:
     assert [o["status"] for o in full["work_orders"]] == ["quoted", "accepted"] or sorted(
         o["status"] for o in full["work_orders"]
     ) == ["accepted", "quoted"]
-    assert [e["kind"] for e in full["events"]][:2] == ["created", "status"]
+    # Template routing assigns the default assignee through the service layer (review M14).
+    assert [e["kind"] for e in full["events"]][:3] == ["created", "assigned", "status"]
+    assigned = next(e for e in full["events"] if e["kind"] == "assigned")
+    assert assigned["data"]["reason"] == "Vorlage"
+    assert assigned["data"]["to"] == str(world.users["m19tech"])
 
 
 def test_every_closing_status_triggers_mail_archiving(

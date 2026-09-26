@@ -41,3 +41,10 @@ POST   /api/v1/immoware/contacts/{id}/match
 POST   /api/v1/immoware/contacts/{id}/create-contact
 GET    /api/v1/immoware/events
 ```
+
+## Weitere Dateien (Nachtrag 26.09.2026)
+
+Im Abgleich mit dem Ordnerinhalt am 26.09.2026 fehlten oben:
+
+* `discovery.py`: standardbasierte Discovery der DAV-Endpunkte (RFC 6764) und Diagnose-Endpunkt (Folgeauftrag 25.09.2026)
+* `learning.py`: Lernphase (M33): rein lesende Auswertung der gespiegelten Zeilen je Art, Vergleich mit dem letzten Lauf

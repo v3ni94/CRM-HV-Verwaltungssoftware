@@ -12,6 +12,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -140,6 +141,11 @@ class Contract(IdMixin, TimestampMixin, TenantMixin, Base):
             name="ownership_title_transfer",
         ),
         CheckConstraint("kind = 'ownership' OR NOT sev_enabled", name="sev_only_ownership"),
+        # Start page tiles and derived dates filter by end and termination date, lists by kind
+        # (performance review 26.09.2026).
+        Index("ix_contract_tenant_end_date", "tenant_id", "end_date"),
+        Index("ix_contract_tenant_termination_date", "tenant_id", "termination_date"),
+        Index("ix_contract_tenant_kind", "tenant_id", "kind"),
     )
 
     kind: Mapped[ContractKind] = mapped_column(_enum(ContractKind, "contract_kind"), nullable=False)
@@ -256,7 +262,10 @@ class SepaMandate(IdMixin, TimestampMixin, TenantMixin, Base):
     """Recorded mandate with evidence. Collecting is locked until release gate G2."""
 
     __tablename__ = "sepa_mandate"
-    __table_args__ = (UniqueConstraint("tenant_id", "creditor_id", "reference"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "creditor_id", "reference"),
+        Index("ix_sepa_mandate_tenant_status", "tenant_id", "status"),
+    )
 
     party_id: Mapped[uuid.UUID] = _fk("party.id")
     legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")

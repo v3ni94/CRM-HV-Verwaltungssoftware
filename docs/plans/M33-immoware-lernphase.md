@@ -56,3 +56,10 @@ Problem-Code `MHVP-IMW-0004` (Lernlauf nicht gefunden), Fortführung der bestehe
   ausschließlich bereits gespiegelte Zeilen, kein PROPFIND außerhalb des laufenden Syncs.
 - Kein Schreibpfad Richtung Immoware24.
 - Keine Anbindung an den Immoware Hub; eigenständige Re-Implementierung im CRM.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: `immoware_learning_run` (Migration 0045), Scanner `mhvp.immoware.learning` mit reinen Funktionen je Art, Endpunkte unter `/api/v1/immoware/learning/runs`, Celery-Task `mhvp.immoware.learning_run`, CRM-Seite `/immoware/lernphase`.
+* Tests: `tests/unit/test_immoware_dav.py`, `test_m32_immoware.py`. Keine offenen Punkte in diesem Plan; die Erkenntnisse fließen in M32 ein.

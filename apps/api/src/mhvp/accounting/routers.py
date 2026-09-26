@@ -5,6 +5,7 @@ Declaring the platform as leading system requires release gate G1 (18.0, 6.9.10)
 """
 
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
@@ -73,6 +74,7 @@ from mhvp.core.auth.scope import (
     session_allowed_legal_entity_ids,
 )
 from mhvp.core.events import emit
+from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ReleaseGateResolver, ensure_release_gate_open
 from mhvp.workspace.services import local_today
@@ -118,8 +120,21 @@ async def _entry(
 
 
 async def _out(session: Any, entry: JournalEntry) -> EntryOut:
-    out = EntryOut.model_validate(entry)
-    out.lines = [LineOut.model_validate(line) for line in await svc.entry_lines(session, entry.id)]
+    return (await _outs(session, [entry]))[0]
+
+
+async def _outs(session: Any, entries: Sequence[JournalEntry]) -> list[EntryOut]:
+    """Lines of all entries in one query (performance review 26.09.2026)."""
+    if not entries:
+        return []
+    lines: dict[uuid.UUID, list[LineOut]] = {}
+    for line in await svc.entry_lines_of(session, [e.id for e in entries]):
+        lines.setdefault(line.journal_entry_id, []).append(LineOut.model_validate(line))
+    out = []
+    for entry in entries:
+        row = EntryOut.model_validate(entry)
+        row.lines = lines.get(entry.id, [])
+        out.append(row)
     return out
 
 
@@ -492,17 +507,28 @@ async def delete_entry(
         await session.delete(entry)
 
 
-@router.get("/ledgers/{ledger_id}/entries", summary="Journal")
+@router.get("/ledgers/{ledger_id}/entries", summary="Journal", responses=PAGE_HEADERS)
 async def journal(
     ledger_id: uuid.UUID,
     request: Request,
+    response: Response,
     status: EntryStatus | None = None,
     start: date | None = None,
     end: date | None = None,
     limit: int = Query(default=100, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
+    page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
+    page_size: int | None = Query(
+        default=None,
+        ge=1,
+        le=1000,
+        description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[EntryOut]:
+    """Journal des Buchungskreises. Paginierung wie ``GET /tickets``: die Antwort bleibt eine
+    Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page`` und ``X-Page-Size``;
+    ``offset`` bleibt für bestehende Aufrufer erhalten."""
     async with tenant_tx(request, principal) as session:
         await _ledger(session, ledger_id)
         query = select(JournalEntry).where(JournalEntry.ledger_id == ledger_id)
@@ -517,8 +543,10 @@ async def journal(
             JournalEntry.number.nulls_last(),
             JournalEntry.created_at,
         )
-        rows = (await session.scalars(query.offset(offset).limit(limit))).all()
-        return [await _out(session, e) for e in rows]
+        rows = await paginate(
+            session, query, response, page=page, page_size=page_size, limit=limit, offset=offset
+        )
+        return await _outs(session, rows)
 
 
 @router.get("/ledgers/{ledger_id}/entries/{entry_id}", summary="Buchungssatz")
@@ -1046,19 +1074,31 @@ def _invoice_out(
 
 
 async def _invoice_full(session: AsyncSession, inv: Invoice) -> dict[str, Any]:
-    lines = list(
-        (await session.scalars(select(InvoiceLine).where(InvoiceLine.invoice_id == inv.id))).all()
-    )
-    reviews = list(
-        (
-            await session.scalars(
-                select(InvoiceReview)
-                .where(InvoiceReview.invoice_id == inv.id)
-                .order_by(InvoiceReview.decided_at)
-            )
-        ).all()
-    )
-    return _invoice_out(inv, lines, reviews)
+    return (await _invoices_full(session, [inv]))[0]
+
+
+async def _invoices_full(session: AsyncSession, rows: Sequence[Invoice]) -> list[dict[str, Any]]:
+    """Lines and reviews of all invoices in two queries (performance review 26.09.2026)."""
+    if not rows:
+        return []
+    ids = [i.id for i in rows]
+    lines: dict[uuid.UUID, list[InvoiceLine]] = {}
+    for ln in (
+        await session.scalars(
+            select(InvoiceLine).where(InvoiceLine.invoice_id.in_(ids)).order_by(InvoiceLine.id)
+        )
+    ).all():
+        lines.setdefault(ln.invoice_id, []).append(ln)
+    reviews: dict[uuid.UUID, list[InvoiceReview]] = {}
+    for r in (
+        await session.scalars(
+            select(InvoiceReview)
+            .where(InvoiceReview.invoice_id.in_(ids))
+            .order_by(InvoiceReview.decided_at)
+        )
+    ).all():
+        reviews.setdefault(r.invoice_id, []).append(r)
+    return [_invoice_out(i, lines.get(i.id, []), reviews.get(i.id, [])) for i in rows]
 
 
 async def _invoice(session: AsyncSession, invoice_id: uuid.UUID) -> Invoice:
@@ -1121,22 +1161,32 @@ async def get_invoice(
         return await _invoice_full(session, inv)
 
 
-@router.get("/invoices", summary="Rechnungseingang")
+@router.get("/invoices", summary="Rechnungseingang", responses=PAGE_HEADERS)
 async def list_invoices(
     request: Request,
+    response: Response,
     ledger_id: uuid.UUID | None = None,
     review_status: ReviewStatus | None = None,
+    limit: int = Query(default=500, ge=1, le=1000),
+    page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
+    page_size: int | None = Query(
+        default=None,
+        ge=1,
+        le=1000,
+        description="Einträge je Seite; ohne Angabe gilt limit (erste Seite)",
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
+    """Rechnungen, neueste zuerst. Paginierung wie ``GET /tickets`` (Kopfzeilen
+    ``X-Total-Count``, ``X-Page``, ``X-Page-Size``), Antwort bleibt eine Liste."""
     async with tenant_tx(request, principal) as session:
-        query = select(Invoice).order_by(Invoice.invoice_date.desc())
+        query = select(Invoice).order_by(Invoice.invoice_date.desc(), Invoice.id.desc())
         if ledger_id:
             query = query.where(Invoice.ledger_id == ledger_id)
         if review_status:
             query = query.where(Invoice.review_status == review_status)
-        return [
-            await _invoice_full(session, i) for i in (await session.scalars(query.limit(500))).all()
-        ]
+        rows = await paginate(session, query, response, page=page, page_size=page_size, limit=limit)
+        return await _invoices_full(session, rows)
 
 
 @router.post(

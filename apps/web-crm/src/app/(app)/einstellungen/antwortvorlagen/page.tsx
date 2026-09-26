@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { ReplyTemplatesAdmin, type ReplyTemplate } from "@/components/settings/ReplyTemplatesAdmin";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,7 @@ type DocumentHit = { id: string; title: string; filename: string };
 export default async function ReplyTemplatesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const t = await getTranslations("ReplyTemplates");
   const params = await searchParams;
-  const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("tickets:read")) notFound();

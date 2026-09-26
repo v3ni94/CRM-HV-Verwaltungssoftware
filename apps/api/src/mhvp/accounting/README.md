@@ -78,3 +78,26 @@ Ledger per legal entity, accounts, journal, open items (MASTER-PROMPT 6.4, 6.9, 
   `409 MHVP-BILL-0008` and the list of missing accounts (`missing`) when a posted line in the
   period has no mapping; raw CRM numbers are never written. Tests:
   `tests/integration/test_m18_datev_mapping.py`.
+
+## Further files (addendum 26.09.2026)
+
+Checked against the folder contents on 26.09.2026, the following files were not listed above:
+
+* `defaults.py`: draft chart of accounts from annex A.1 (HVM convention excerpt), created unreleased (V8)
+* `numbering.py`: outgoing invoice numbering, gapless `PREFIX-JJJJ-000001` under a locked counter row (M13-04)
+* `schemas.py`: API schemas of the ledger (6.4), money as decimal strings, never float (6.9.8)
+* `tasks.py`: Celery job `accounting.dunning_run` (15.1, monthly on the 5th), preview runs only, never sent
+
+## Performance (Review 26.09.2026)
+
+Journal (`GET /ledgers/{id}/entries`), invoices (`GET /invoices`) and direct debit runs
+(`GET /direct-debits`) build their output in batches (`_outs` with `services.entry_lines_of`,
+`_invoices_full`, `_runs_out` with `direct_debit.orders_of_runs` and
+`valid_approvals_of_runs`). Journal and invoices paginate in the pattern of `GET /tickets`
+(`page`, `page_size`, headers `X-Total-Count`, `X-Page`, `X-Page-Size`; the journal keeps
+`limit`/`offset`). New indexes (migration 0127): `journal_entry(tenant_id, ledger_id, status |
+booking_date)`, `journal_line(journal_entry_id)`, `journal_line(account_id)`,
+`invoice(tenant_id, ledger_id)`, `invoice(tenant_id, review_status, invoice_date)`,
+`invoice_line(invoice_id)`, `invoice_review(invoice_id)`,
+`direct_debit_run(tenant_id, status, collection_date)`. See
+`docs/reviews/2026-09-26-performance.md`.

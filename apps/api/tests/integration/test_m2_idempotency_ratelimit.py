@@ -227,3 +227,25 @@ def test_rate_limit_exceeded_returns_429(database: Database, redis_url: str, wor
         assert 1 <= int(blocked.headers["Retry-After"]) <= 60
         # Health stays reachable while the user is limited.
         assert strict.get("/api/v1/health/live").status_code == 200
+
+
+def test_forged_api_key_does_not_widen_the_limit(
+    database: Database, redis_url: str, world: World
+) -> None:
+    """Sicherheitsreview 1.22, Befund 1: an API key is only parsed by the middleware, so a
+    forged key must not open a fresh counter per prefix. Requests with any key are counted per
+    client address; the fourth one is refused although every key differs."""
+    settings = _settings(database, redis_url, rate_limit_enabled=True, rate_limit_per_minute_user=3)
+    with TestClient(create_app(settings)) as strict:
+        seen: list[tuple[int, str]] = []
+        for index in range(3):
+            key = f"mhvp_{world.tenant_a.hex}_forged{RUN}{index}_not-a-secret"
+            answer = strict.get(CONTACTS, headers={"X-API-Key": key})
+            seen.append((answer.status_code, answer.headers["X-RateLimit-Remaining"]))
+        assert [status for status, _ in seen] == [401, 401, 401], seen
+        assert [remaining for _, remaining in seen] == ["2", "1", "0"], seen
+        blocked = strict.get(
+            CONTACTS, headers={"X-API-Key": f"mhvp_{world.tenant_a.hex}_forged{RUN}x_not-a-secret"}
+        )
+        assert blocked.status_code == 429, blocked.text
+        assert blocked.json()["code"] == "MHVP-CORE-0006"

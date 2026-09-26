@@ -44,3 +44,9 @@ default 05:30). Read and compare only, nothing is posted. Column defaults are an
 (docs/ASSUMPTIONS.md A-047), configurable per tenant. Handbook:
 `docs/handbuch/import-abgleichbericht.md`. Tests: `tests/unit/test_m8_reconciliation_report.py`,
 `tests/integration/test_m8_reconciliation.py`.
+
+## Further files (addendum 26.09.2026)
+
+Checked against the folder contents on 26.09.2026, the following files were not listed above:
+
+* `list_import_routers.py`: Immoware24 list imports over the API (`/api/v1/imports/immoware24/lists`); router registered in `main.py`

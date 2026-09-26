@@ -55,4 +55,27 @@ describe("InvoiceActions", () => {
     const { container } = renderIntl(<InvoiceActions id={ID} reviewStatus="closed_ok" postingStatus="posted" released ibanOpen={false} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("names the next step so no missing button stays unexplained", () => {
+    const open = renderIntl(<InvoiceActions id={ID} reviewStatus="open" postingStatus="unposted" released={false} ibanOpen={false} />);
+    expect(screen.getByTestId("invoice-next-step")).toHaveTextContent("alle drei Prüfschritte erfassen");
+    open.unmount();
+    const iban = renderIntl(<InvoiceActions id={ID} reviewStatus="open" postingStatus="unposted" released={false} ibanOpen />);
+    expect(screen.getByTestId("invoice-next-step")).toHaveTextContent("abweichende IBAN");
+    iban.unmount();
+    const closed = renderIntl(<InvoiceActions id={ID} reviewStatus="closed_with_reservation" postingStatus="unposted" released={false} ibanOpen={false} />);
+    expect(screen.getByTestId("invoice-next-step")).toHaveTextContent("Freigabe durch eine zweite Person");
+    closed.unmount();
+    renderIntl(<InvoiceActions id={ID} reviewStatus="closed_ok" postingStatus="unposted" released ibanOpen={false} />);
+    expect(screen.getByTestId("invoice-next-step")).toHaveTextContent("Freigabestufe G1");
+    expect(screen.getByText("Buchen")).toBeInTheDocument();
+  });
+});
+
+describe("InvoiceCreate gross preview", () => {
+  it("formats thousands with a dot and decimals with a comma", async () => {
+    renderIntl(<InvoiceCreate ledgers={[{ id: "l1", label: "WEG" }]} accounts={{ l1: [] }} />);
+    await userEvent.type(screen.getByLabelText("Netto"), "1234.56");
+    expect(screen.getByTestId("gross")).toHaveTextContent("Brutto 1.469,13 EUR (Steuer 234,57 EUR)");
+  });
 });

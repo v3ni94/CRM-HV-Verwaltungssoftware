@@ -33,6 +33,16 @@ im CRM (Stufe 2 und folgende) ist noch nicht freigegeben; Mitarbeiter arbeiten b
 weiterhin direkt in objektakte unter uebernahme.muellerhv.de für die dort geführten
 Dokumente.
 
+## Immoware24-Listen und Abgleichbericht
+
+Die Exportlisten aus Immoware24 (Objektdaten, Kontaktlisten je Gruppe) werden im CRM unter
+Importe, Importassistent, Abschnitt Immoware24-Listen als CSV (UTF-8, Semikolon, höchstens
+20 MB) mit Testlauf und Übernahme angelegt; vorhandene Datensätze werden nie überschrieben,
+jeder Lauf erscheint unter Importe und lässt sich zurücknehmen. Einzelheiten in den Kapiteln
+Objekte und Einheiten aus der Objektliste und Kontakte aus den Kontaktlisten. Solange
+Immoware24 führt, vergleicht der Abgleichbericht Parallelbetrieb täglich Journal- und
+Bankumsatzexporte mit der Plattform (Kapitel Abgleichbericht im Parallelbetrieb).
+
 ## Immoware24-Spiegel
 
 Immoware24 bleibt in jeder Stufe Master der Stammdaten. Die Plattform hält lediglich einen

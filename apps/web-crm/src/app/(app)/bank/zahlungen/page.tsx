@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 
 import { OrderActions } from "@/components/banking/OrderActions";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -30,8 +31,11 @@ export default async function PaymentOrdersPage() {
   redirectIfUnauthenticated(response);
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("title")} />
+      <PageHeader breadcrumb={[{ href: "/bank", label: t("bank") }]} title={t("title")} />
       <p className={ui.notice}>{t("notice")}</p>
+      <Link href="/bank/lastschriften" className="text-sm font-medium hover:underline">
+        {t("directDebitsLink")}
+      </Link>
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}
@@ -40,7 +44,7 @@ export default async function PaymentOrdersPage() {
         <EmptyState title={t("empty")} />
       ) : (
         <div className="overflow-x-auto">
-<table className="mhvp-table">
+<table className="mhvp-table mhvp-table--sticky-col">
           <thead>
             <tr>
               <th>{t("execution")}</th>
@@ -63,7 +67,12 @@ export default async function PaymentOrdersPage() {
                 <td className="num">{formatEur(String(o.amount))}</td>
                 <td>
                   <StatusPill variant={STATUS_VARIANT[o.status] ?? "neutral"} label={t(`status_${o.status}`)} />
-                  {o.status === "draft" ? <span className="ml-1 text-xs text-muted">({t("approvals", { n: o.approvals ?? 0 })})</span> : null}
+                  {o.status === "draft" ? <span className="block text-xs text-muted">{t("approvals", { n: o.approvals ?? 0 })}</span> : null}
+                  {o.status === "approved" ? (
+                    <span className="block max-w-xs text-xs text-muted" data-testid="gate-g2-hint">
+                      {t("fileLocked")}
+                    </span>
+                  ) : null}
                 </td>
                 <td>
                   <OrderActions id={o.id} status={o.status} />

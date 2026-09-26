@@ -12,14 +12,15 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.ai import schemas as ai_s
-from mhvp.communication import attachments, mail, transport
+from mhvp.communication import attachments, mail, services, transport
 from mhvp.communication.models import Mailbox, MailboxUser, Message, Playbook
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.db.tenancy import tenant_transaction
+from mhvp.core.escaping import LIKE_ESCAPE, escape_like
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.tickets import tnr
@@ -126,46 +127,66 @@ def _mailbox_out(m: Mailbox, user_ids: list[uuid.UUID] | None = None) -> dict[st
     }
 
 
+PREVIEW_CHARS = 200
+_LIST_FIELDS = (
+    "id",
+    "channel",
+    "direction",
+    "status",
+    "from_address",
+    "to_addresses",
+    "cc_addresses",
+    "subject",
+    "header_message_id",
+    "in_reply_to",
+    "references_header",
+    "send_error",
+    "received_at",
+    "sent_at",
+    "contact_id",
+    "property_id",
+    "ticket_id",
+    "thread_id",
+    "document_id",
+    "attachment_document_ids",
+    "classification",
+    "appointment_suggestions",
+    "created_by",
+    "updated_by",
+    "mailbox_id",
+    "submitted_by",
+    "submitted_at",
+    "approved_by",
+    "approved_at",
+    "author_approval_required",
+    "author_approval_reason",
+    "rejection_note",
+    "gmail_message_id",
+    "suggestion",
+    "suggestion_status",
+)
+
+
+def _preview(body: str | None) -> str | None:
+    if not body:
+        return None
+    text = " ".join(body.split())
+    return text[:PREVIEW_CHARS] + ("…" if len(text) > PREVIEW_CHARS else "")
+
+
+def _list_out(m: Message) -> dict[str, Any]:
+    """List row (Review 26.09.2026, M3): every field of the detail except ``body`` and
+    ``body_html``; ``body_preview`` holds the first 200 characters. The detail endpoint
+    (``GET /mail/messages/{id}``) and the thread deliver the full text."""
+    out = {k: getattr(m, k) for k in _LIST_FIELDS}
+    out["body_preview"] = _preview(m.body)
+    return out
+
+
 def _out(m: Message) -> dict[str, Any]:
-    return {
-        k: getattr(m, k)
-        for k in (
-            "id",
-            "channel",
-            "direction",
-            "status",
-            "from_address",
-            "to_addresses",
-            "cc_addresses",
-            "subject",
-            "body",
-            "body_html",
-            "header_message_id",
-            "in_reply_to",
-            "references_header",
-            "send_error",
-            "received_at",
-            "sent_at",
-            "contact_id",
-            "property_id",
-            "ticket_id",
-            "thread_id",
-            "document_id",
-            "attachment_document_ids",
-            "classification",
-            "appointment_suggestions",
-            "created_by",
-            "mailbox_id",
-            "submitted_by",
-            "submitted_at",
-            "approved_by",
-            "approved_at",
-            "rejection_note",
-            "gmail_message_id",
-            "suggestion",
-            "suggestion_status",
-        )
-    }
+    out = _list_out(m)
+    out["body"], out["body_html"] = m.body, m.body_html
+    return out
 
 
 def _playbook_out(p: Playbook) -> dict[str, Any]:
@@ -284,12 +305,24 @@ async def mailbox_accessible(
     return grant is not None
 
 
+async def _live_mailbox(
+    session: AsyncSession, mailbox_id: uuid.UUID, *, lock: bool = False
+) -> Mailbox:
+    """Mailbox that is not soft deleted (Review 26.09.2026, M12); 404 otherwise."""
+    row = await session.get(Mailbox, mailbox_id, with_for_update=lock)
+    if row is None or row.deleted_at is not None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    return row
+
+
 @router.get("/mailboxes", summary="Postfächer (ohne Zugangsdaten)")
 async def list_mailboxes(
     request: Request, principal: TenantPrincipal = Depends(ADMIN)
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
-        rows = await session.scalars(select(Mailbox).order_by(Mailbox.address))
+        rows = await session.scalars(
+            select(Mailbox).where(Mailbox.deleted_at.is_(None)).order_by(Mailbox.address)
+        )
         grants = await _mailbox_users(session)
         return [_mailbox_out(m, grants.get(m.id)) for m in rows]
 
@@ -302,9 +335,7 @@ async def patch_mailbox(
     principal: TenantPrincipal = Depends(ADMIN),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        row = await session.get(Mailbox, mailbox_id, with_for_update=True)
-        if row is None:
-            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row = await _live_mailbox(session, mailbox_id, lock=True)
         for key, value in body.model_dump(exclude_none=True).items():
             setattr(row, key, value)
         await session.flush()
@@ -320,9 +351,7 @@ async def put_mailbox_users(
 ) -> dict[str, Any]:
     """Replaces the explicit grants. A default mailbox is visible to every member anyway."""
     async with tenant_tx(request, principal) as session:
-        row = await session.get(Mailbox, mailbox_id, with_for_update=True)
-        if row is None:
-            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row = await _live_mailbox(session, mailbox_id, lock=True)
         await session.execute(delete(MailboxUser).where(MailboxUser.mailbox_id == mailbox_id))
         wanted = sorted(set(body.user_ids), key=str)
         session.add_all(
@@ -339,15 +368,27 @@ async def put_mailbox_users(
 async def delete_mailbox(
     mailbox_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(ADMIN)
 ) -> None:
+    """Soft delete (Review 26.09.2026, M12): the mailbox is deactivated (no sync, no send,
+    credentials removed, no longer a default mailbox) and disappears from the settings; its
+    messages keep the mailbox binding, so they stay visible only to administrators and the
+    users the mailbox was shared with, never to every member."""
     async with tenant_tx(request, principal) as session:
-        row = await session.get(Mailbox, mailbox_id, with_for_update=True)
-        if row is None:
-            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        # Messages stay (audit trail); they just lose the mailbox link.
-        await session.execute(
-            update(Message).where(Message.mailbox_id == mailbox_id).values(mailbox_id=None)
+        row = await _live_mailbox(session, mailbox_id, lock=True)
+        row.deleted_at = datetime.now(UTC)
+        row.enabled = False
+        row.is_default = False
+        row.secret = None
+        row.calendar_enabled = False
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="mailbox.deleted",
+            entity_type="mailbox",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"address": row.address},
         )
-        await session.delete(row)
 
 
 # Google OAuth (M20-01): client per tenant, consent flow creates the mailbox --------------
@@ -470,6 +511,7 @@ async def oauth_callback(
                     session.add(box)
                 box.kind, box.secret, box.enabled, box.last_error = "gmail", refresh, True, None
                 box.gmail_history_id = None
+                box.deleted_at = None  # reconnecting a removed address revives it (M12)
             await session.flush()
     except gmail.GmailError as exc:
         return _oauth_result(settings, error=str(exc), purpose=purpose)
@@ -541,31 +583,34 @@ async def sync_mailbox_now(
     mailbox_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(ADMIN)
 ) -> dict[str, Any]:
     from mhvp.communication.gmail import GmailError, sync_one
+    from mhvp.communication.services import dispatch_forward_queue
 
     try:
         async with tenant_tx(request, principal) as session:
-            box = await session.get(Mailbox, mailbox_id)
-            if box is None:
-                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+            box = await _live_mailbox(session, mailbox_id)
             if box.kind != "gmail":
                 raise ProblemError(
                     ErrorCodes.CONFLICT, detail="Nur Gmail-Postfächer werden abgerufen."
                 )
-            return await sync_one(session, request.app.state.settings, mailbox_id)
+            result = await sync_one(session, request.app.state.settings, mailbox_id)
     except GmailError as exc:
         # The failed sync rolled back; keep the reason visible on the mailbox.
         async with tenant_tx(request, principal) as session:
-            box = await session.get(Mailbox, mailbox_id, with_for_update=True)
-            if box is not None:
-                box.last_error = str(exc)[:1000]
+            failed = await session.get(Mailbox, mailbox_id, with_for_update=True)
+            if failed is not None:
+                failed.last_error = str(exc)[:1000]
         raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+    if result["created"]:
+        # Rechnungs-Weiterleitung erst nach dem Commit des Abrufs (M13).
+        await dispatch_forward_queue(request.app.state.settings, principal.tenant_id)
+    return result
 
 
 @router.post("/ingest", status_code=201, summary="E-Mail (.eml) aufnehmen und zuordnen")
 async def ingest(
     body: MailIngestIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
-    from mhvp.communication.services import ingest_parsed
+    from mhvp.communication.services import dispatch_forward_queue, ingest_parsed
     from mhvp.documents.blobs import BlobStore
     from mhvp.documents.models import Document
 
@@ -591,10 +636,60 @@ async def ingest(
             mailbox_id=body.mailbox_id,
             auto_ticket=body.auto_ticket,
         )
-        return _out(row)
+        result = _out(row)
+        queued = (row.classification.get("invoice_forward") or {}).get("status") == "queued"
+    if queued:
+        # Versand der Weiterleitung erst nach dem Commit (Review 26.09.2026, M13).
+        await dispatch_forward_queue(request.app.state.settings, principal.tenant_id)
+        async with tenant_tx(request, principal) as session:
+            refreshed = await session.get(Message, row.id)
+            if refreshed is not None:
+                result = _out(refreshed)
+    return result
 
 
-@router.get("/messages", summary="Vorgangsliste")
+def _messages_query(
+    principal: TenantPrincipal,
+    *,
+    status: str | None,
+    contact_id: uuid.UUID | None,
+    direction: str | None,
+    ticket_id: uuid.UUID | None,
+    mailbox_id: uuid.UUID | None,
+    q: str | None,
+) -> Any:
+    """Filter of the mail list and its count. Members see messages without mailbox, of the
+    default mailboxes and of mailboxes shared with them; administrators every message."""
+    query = select(Message)
+    if not principal.has("tenant_settings:update"):  # admins see every mailbox
+        granted = select(MailboxUser.mailbox_id).where(MailboxUser.user_id == principal.user_id)
+        allowed = select(Mailbox.id).where(
+            or_(Mailbox.is_default.is_(True), Mailbox.id.in_(granted))
+        )
+        query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
+    if status:
+        query = query.where(Message.status == status)
+    if contact_id:
+        query = query.where(Message.contact_id == contact_id)
+    if direction:
+        query = query.where(Message.direction == direction)
+    if ticket_id:
+        query = query.where(Message.ticket_id == ticket_id)
+    if mailbox_id:
+        query = query.where(Message.mailbox_id == mailbox_id)
+    if q:
+        like = f"%{escape_like(q)}%"  # literal search term (M3)
+        query = query.where(
+            or_(
+                Message.subject.ilike(like, escape=LIKE_ESCAPE),
+                Message.from_address.ilike(like, escape=LIKE_ESCAPE),
+                Message.body.ilike(like, escape=LIKE_ESCAPE),
+            )
+        )
+    return query
+
+
+@router.get("/messages", summary="Vorgangsliste (ohne Text, mit Vorschau)")
 async def messages(
     request: Request,
     status: str | None = None,
@@ -606,31 +701,45 @@ async def messages(
     limit: int = Query(default=100, ge=1, le=500),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
+    """Rows carry ``body_preview`` (200 characters) instead of ``body`` and ``body_html``
+    (Review 26.09.2026, M3); ``GET /mail/messages/{id}`` delivers the full text."""
     async with tenant_tx(request, principal) as session:
-        query = select(Message).order_by(Message.created_at.desc())
-        if not principal.has("tenant_settings:update"):  # admins see every mailbox
-            allowed = await _accessible_mailboxes(session, principal.user_id)
-            query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
-        if status:
-            query = query.where(Message.status == status)
-        if contact_id:
-            query = query.where(Message.contact_id == contact_id)
-        if direction:
-            query = query.where(Message.direction == direction)
-        if ticket_id:
-            query = query.where(Message.ticket_id == ticket_id)
-        if mailbox_id:
-            query = query.where(Message.mailbox_id == mailbox_id)
-        if q:
-            like = f"%{q}%"
-            query = query.where(
-                or_(
-                    Message.subject.ilike(like),
-                    Message.from_address.ilike(like),
-                    Message.body.ilike(like),
-                )
-            )
-        return [_out(m) for m in (await session.scalars(query.limit(limit))).all()]
+        query = _messages_query(
+            principal,
+            status=status,
+            contact_id=contact_id,
+            direction=direction,
+            ticket_id=ticket_id,
+            mailbox_id=mailbox_id,
+            q=q,
+        ).order_by(Message.created_at.desc())
+        return [_list_out(m) for m in (await session.scalars(query.limit(limit))).all()]
+
+
+@router.get("/messages/count", summary="Anzahl der Nachrichten je Filter")
+async def messages_count(
+    request: Request,
+    status: str | None = None,
+    contact_id: uuid.UUID | None = None,
+    direction: str | None = Query(default=None, pattern="^(in|out)$"),
+    ticket_id: uuid.UUID | None = None,
+    mailbox_id: uuid.UUID | None = None,
+    q: str | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, int]:
+    """Count with the same filters and visibility as the list (badge "Freigaben", M3)."""
+    async with tenant_tx(request, principal) as session:
+        query = _messages_query(
+            principal,
+            status=status,
+            contact_id=contact_id,
+            direction=direction,
+            ticket_id=ticket_id,
+            mailbox_id=mailbox_id,
+            q=q,
+        )
+        total = await session.scalar(select(func.count()).select_from(query.subquery()))
+        return {"count": int(total or 0)}
 
 
 @router.get("/messages/{message_id}", summary="Einzelne Nachricht")
@@ -649,8 +758,6 @@ async def get_message(
 async def message_thread(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
-    from sqlalchemy import func
-
     async with tenant_tx(request, principal) as session:
         row = await session.get(Message, message_id)
         if row is None:
@@ -838,6 +945,11 @@ async def forward_invoice(
         settings_row.invoice_forwarding = register_confirmation(
             settings_row.invoice_forwarding, row.from_address or ""
         )
+        classification = dict(row.classification)
+        forward = dict(classification.get("invoice_forward") or {})
+        forward["status"], forward["forwarded_to"] = "sent", forward_address
+        classification["invoice_forward"] = forward
+        row.classification = classification
         await session.flush()
         return {"forwarded_to": forward_address}
 
@@ -904,6 +1016,8 @@ async def patch_draft(
             raise ProblemError(ErrorCodes.CONFLICT, detail="Nur Entwürfe können bearbeitet werden.")
         for key, value in body.model_dump(exclude_none=True).items():
             setattr(row, key, value)
+        # Wer den Text zuletzt geändert hat, zählt im Vier-Augen-Prinzip (M16).
+        row.updated_by = principal.user_id
         await session.flush()
         return _out(row)
 
@@ -934,98 +1048,281 @@ def tnr_references(parent: Message) -> str | None:
     return " ".join(ids)[:20000] or None
 
 
+async def _find_sent_gmail_id(
+    session: AsyncSession, settings: Any, box: Mailbox, header_message_id: str | None
+) -> str | None:
+    """Versandnachweis aus Gmail für die gespeicherte Message-ID (M1)."""
+    from mhvp.communication import gmail
+
+    if not header_message_id:
+        return None
+    try:
+        client_id, client_secret = await gmail.oauth_client(session, settings)
+        client = gmail.make_client(client_id, client_secret, box)
+        try:
+            return await client.find_by_rfc822_msgid(header_message_id)
+        finally:
+            await client.aclose()
+    except gmail.GmailError as exc:
+        raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+
+
+async def _record_sent(
+    session: AsyncSession,
+    row: Message,
+    principal: TenantPrincipal,
+    gmail_message_id: str | None,
+) -> None:
+    """Statuswechsel auf ``sent`` mit Ticket-Ereignis, SLA-Erstreaktion und Domänenereignis."""
+    from mhvp.tickets.models import TicketEvent
+
+    if gmail_message_id is not None:
+        row.gmail_message_id = gmail_message_id
+    row.send_error = None
+    row.status, row.sent_at = "sent", datetime.now(UTC)
+    await session.flush()
+    if row.ticket_id:
+        session.add(
+            TicketEvent(
+                tenant_id=row.tenant_id,
+                ticket_id=row.ticket_id,
+                kind="mail_sent",
+                data={"message_id": str(row.id), "to": row.to_addresses},
+                user_id=principal.user_id,
+            )
+        )
+        # M20-03 Nachvollziehbarkeit: wer vorformuliert und wer freigegeben hat.
+        session.add(
+            TicketEvent(
+                tenant_id=row.tenant_id,
+                ticket_id=row.ticket_id,
+                kind="reply_sent",
+                data={
+                    "message_id": str(row.id),
+                    "to": row.to_addresses,
+                    "drafted_by": str(row.created_by) if row.created_by else None,
+                    "approved_by": str(row.approved_by) if row.approved_by else None,
+                    "approved_at": row.approved_at.isoformat() if row.approved_at else None,
+                    "sent_at": row.sent_at.isoformat() if row.sent_at else None,
+                    "self_approved": row.approved_by == row.created_by,
+                    "author_approval_required": row.author_approval_required,
+                    "author_approval_reason": row.author_approval_reason,
+                },
+                user_id=principal.user_id,
+            )
+        )
+        from mhvp.sla.models import SlaClock
+        from mhvp.sla.service import mark_first_response
+
+        clock = await session.scalar(select(SlaClock).where(SlaClock.ticket_id == row.ticket_id))
+        if clock is not None:
+            await mark_first_response(session, clock)
+        await session.flush()
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type="mail.sent",
+        entity_type="message",
+        entity_id=row.id,
+        actor_user_id=principal.user_id,
+        payload={"ticket_id": str(row.ticket_id) if row.ticket_id else None},
+    )
+
+
+def _assert_sendable_box(box: Mailbox | None) -> Mailbox:
+    if box is None or box.deleted_at is not None or not box.enabled or not box.secret:
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Kein eingerichtetes Postfach für den Versand (M20-01)."
+        )
+    return box
+
+
 @router.post("/messages/{message_id}/approve", summary="Entwurf freigeben und senden")
 async def approve(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
-    from mhvp.tickets.models import TicketEvent
+    """Freigabe und Versand über ``approve_and_send`` (Vier-Augen oder Direktversand nach
+    Regel M20-03, siehe dort)."""
+    return await approve_and_send(message_id, request, principal)
 
-    send_failure: str | None = None
+
+async def _self_approval_allowed(
+    session: AsyncSession, row: Message, principal: TenantPrincipal
+) -> bool:
+    """M20-03 (Betreiberentscheidung 26.09.2026): eine dem Ticket zugeordnete Antwort darf der
+    Verfasser selbst freigeben, wenn er ``communication:approve`` hat, zum Zeitpunkt der
+    Vorformulierung kein Kennzeichen (Azubi, neuer Mitarbeiter) trug, aktuell keines trägt
+    und die Notbremse des Mandanten (alle Antworten mit Freigabe) aus ist. Nachrichten ohne
+    Ticket (Postfach frei, Playbook, Weiterleitung) bleiben immer beim Vier-Augen-Prinzip."""
+    if row.ticket_id is None or row.author_approval_required:
+        return False
+    if not principal.has("communication:approve"):
+        return False
+    flagged, _ = await services.author_reply_approval(session, row.tenant_id, principal.user_id)
+    if flagged:
+        return False
+    return not await services.reply_approval_all(session, row.tenant_id)
+
+
+async def approve_and_send(
+    message_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal,
+    *,
+    direct_send: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Zweiphasiger Versand (Review 26.09.2026, M1), damit ein Fehler nach ``send_raw`` nie
+    zu einem zweiten Versand führt.
+
+    M20-03: ist der Freigebende zugleich Verfasser, entscheidet ``_self_approval_allowed``
+    (Ticketantwort, Recht ``communication:approve``, kein Kennzeichen, keine Notbremse), sonst
+    Vier-Augen. ``direct_send`` liefert der Aufrufer ``POST /tickets/{id}/reply`` mit
+    Kontext; jede Selbstfreigabe wird als ``message.direct_sent`` (Nutzer, Ticket, Kennzeichen)
+    und am Ticket als ``reply_approved`` und ``reply_sent`` protokolliert.
+    Der Versandweg selbst ist unverändert:
+
+    1. Eigene Transaktion: Prüfungen (Vier-Augen, Postfachzugriff), Status ``sending`` und
+       die Message-ID als Idempotenzschlüssel werden gespeichert.
+    2. Zweite Transaktion mit Zeilensperre: Versand, dann ``sent`` mit Gmail-ID, Ereignisse.
+
+    Scheitert Schritt 2 nach dem Versand (Verbindungsabbruch, Fehler beim Ereignis), bleibt
+    die Nachricht ``sending`` mit ihrer Message-ID. Die nächste Freigabe sucht bei Gmail nach
+    dieser Message-ID: gefunden heißt gesendet (kein zweiter Versand), sonst wird mit
+    derselben Message-ID gesendet. Ohne Nachweismöglichkeit (SMTP) wird nicht erneut
+    gesendet; eine Person löst den Fall über Zurückweisen (neuer Entwurf) auf."""
+    settings = request.app.state.settings
+
     async with tenant_tx(request, principal) as session:
         row = await _message(session, message_id, principal)
-        if row.direction != "out" or row.status != "pending":
+        resume = row.status == "sending"
+        if row.direction != "out" or row.status not in ("pending", "sending"):
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Nur eingereichte Entwürfe können freigegeben werden."
             )
-        if principal.user_id in (row.submitted_by, row.created_by):
+        self_approval = principal.user_id in (row.submitted_by, row.created_by, row.updated_by)
+        if self_approval and not await _self_approval_allowed(session, row, principal):
             raise ProblemError(
                 ErrorCodes.CONFLICT,
-                detail="Vier-Augen-Prinzip: eigene Entwürfe können nicht freigegeben werden.",
+                detail="Vier-Augen-Prinzip: eigene oder selbst bearbeitete Entwürfe können "
+                "nicht freigegeben werden.",
             )
-        box = await session.get(Mailbox, row.mailbox_id) if row.mailbox_id else None
-        if box is None or not box.enabled or not box.secret:
-            raise ProblemError(
-                ErrorCodes.CONFLICT, detail="Kein eingerichtetes Postfach für den Versand (M20-01)."
-            )
-        msg = EmailMessage()
-        msg["From"], msg["To"], msg["Subject"] = (
-            box.address,
-            ", ".join(row.to_addresses),
-            row.subject or "",
+        box = _assert_sendable_box(
+            await session.get(Mailbox, row.mailbox_id) if row.mailbox_id else None
         )
-        if row.cc_addresses:
-            msg["Cc"] = ", ".join(row.cc_addresses)
-        if row.in_reply_to:
-            msg["In-Reply-To"] = row.in_reply_to
-            msg["References"] = row.references_header or row.in_reply_to
-        msg.set_content(row.body or "")
-        # Standardanhänge aus Antwortvorlagen (operator 26.09.2026): Dokumentverweise der
-        # ausgehenden Nachricht werden beim Versand beigefügt.
-        await attachments.attach_documents(session, request, msg, row.attachment_document_ids)
-        domain = box.address.rsplit("@", 1)[-1] or None
-        msg["Message-ID"] = make_msgid(domain=domain)
-
-        try:
-            gmail_message_id = await transport.send_message(
-                session, request.app.state.settings, box, msg
+        if not await mailbox_accessible(session, principal, box):
+            # Freigabe nur über ein Postfach, das der Freigebende selbst nutzen darf (M16).
+            raise ProblemError(
+                ErrorCodes.FORBIDDEN,
+                detail="Keine Berechtigung für das Postfach dieses Entwurfs.",
+                developer_message="Mailbox not granted to the approver.",
             )
-        except transport.MailTransportError as exc:
-            # Bis hierher wurde nur gelesen: der Fehler wird am Entwurf vermerkt und die
-            # Transaktion regulär beendet (Anzeige "fehlgeschlagen" im Ticket); der Entwurf
-            # bleibt eingereicht, der Freigeber erhält den Konflikt nach dem Commit.
-            row.send_error = str(exc)[:2000]
-            await session.flush()
-            send_failure = str(exc)
-            gmail_message_id = None
-        if send_failure is not None:
-            # Fehler ist vermerkt; die Transaktion wird regulär beendet, der Konflikt folgt.
-            await session.flush()
-        else:
-            if gmail_message_id is not None:
-                row.gmail_message_id = gmail_message_id
+        if not row.to_addresses:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Der Entwurf hat keinen Empfänger.")
+        if not resume:
+            domain = box.address.rsplit("@", 1)[-1] or None
+            row.header_message_id = make_msgid(domain=domain)
+            row.status = "sending"
             row.send_error = None
-            row.status, row.sent_at = "sent", datetime.now(UTC)
             row.approved_by, row.approved_at = principal.user_id, datetime.now(UTC)
-            row.header_message_id = msg["Message-ID"]
-            await session.flush()
             if row.ticket_id:
+                from mhvp.tickets.models import TicketEvent
+
                 session.add(
                     TicketEvent(
                         tenant_id=row.tenant_id,
                         ticket_id=row.ticket_id,
-                        kind="mail_sent",
-                        data={"message_id": str(row.id), "to": row.to_addresses},
+                        kind="reply_approved",
+                        data={
+                            "message_id": str(row.id),
+                            "approved_by": str(principal.user_id),
+                            "approved_at": row.approved_at.isoformat(),
+                            "self_approved": self_approval,
+                            "drafted_by": str(row.created_by) if row.created_by else None,
+                            "author_approval_required": row.author_approval_required,
+                            "author_approval_reason": row.author_approval_reason,
+                        },
                         user_id=principal.user_id,
                     )
                 )
-                from mhvp.sla.models import SlaClock
-                from mhvp.sla.service import mark_first_response
+        await session.flush()
 
-                clock = await session.scalar(
-                    select(SlaClock).where(SlaClock.ticket_id == row.ticket_id)
-                )
-                if clock is not None:
-                    await mark_first_response(session, clock)
-                await session.flush()
-            await emit(
-                session,
-                tenant_id=principal.tenant_id,
-                type="mail.sent",
-                entity_type="message",
-                entity_id=row.id,
-                actor_user_id=principal.user_id,
-                payload={"ticket_id": str(row.ticket_id) if row.ticket_id else None},
+    send_failure: str | None = None
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id)  # Zeilensperre für die Dauer des Versands
+        if row.status == "sent":
+            return _out(row)  # parallel bereits abgeschlossen
+        if row.status != "sending":
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Die Freigabe wurde zwischenzeitlich zurückgenommen."
             )
+        box = _assert_sendable_box(await session.get(Mailbox, row.mailbox_id))
+        gmail_message_id: str | None = None
+        proven = False
+        if resume:
+            if box.kind != "gmail":
+                raise ProblemError(
+                    ErrorCodes.CONFLICT,
+                    detail="Versandnachweis fehlt: der Entwurf wurde bereits zum Versand "
+                    "freigegeben, das Ergebnis ist unbekannt (SMTP). Bitte im Postausgang "
+                    "des Postfachs prüfen und den Entwurf zurückweisen, um neu zu senden.",
+                )
+            gmail_message_id = await _find_sent_gmail_id(
+                session, settings, box, row.header_message_id
+            )
+            proven = gmail_message_id is not None
+        if not proven:
+            msg = EmailMessage()
+            msg["From"], msg["To"], msg["Subject"] = (
+                box.address,
+                ", ".join(row.to_addresses),
+                row.subject or "",
+            )
+            if row.cc_addresses:
+                msg["Cc"] = ", ".join(row.cc_addresses)
+            if row.in_reply_to:
+                msg["In-Reply-To"] = row.in_reply_to
+                msg["References"] = row.references_header or row.in_reply_to
+            msg.set_content(row.body or "")
+            # Standardanhänge aus Antwortvorlagen (operator 26.09.2026): Dokumentverweise der
+            # ausgehenden Nachricht werden beim Versand beigefügt.
+            await attachments.attach_documents(session, request, msg, row.attachment_document_ids)
+            msg["Message-ID"] = row.header_message_id  # Idempotenzschlüssel des Versands
+            try:
+                gmail_message_id = await transport.send_message(session, settings, box, msg)
+            except transport.MailTransportUncertainError as exc:
+                # Antwort des Transports fehlt: Versand offen lassen; die nächste Freigabe
+                # prüft per Message-ID (Gmail) oder eine Person weist zurück (SMTP).
+                row.send_error = str(exc)[:2000]
+                if box.kind != "gmail":
+                    row.status = "pending"
+                await session.flush()
+                send_failure = str(exc)
+            except transport.MailTransportError as exc:
+                # Der Transport hat den Versand abgelehnt: nichts ist raus, der Entwurf
+                # bleibt eingereicht (Anzeige "fehlgeschlagen" im Ticket).
+                row.send_error = str(exc)[:2000]
+                row.status = "pending"
+                await session.flush()
+                send_failure = str(exc)
+        if send_failure is None:
+            await _record_sent(session, row, principal, gmail_message_id)
+            if self_approval:
+                await emit(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    type="message.direct_sent",
+                    entity_type="message",
+                    entity_id=row.id,
+                    actor_user_id=principal.user_id,
+                    payload={
+                        "user_id": str(principal.user_id),
+                        "ticket_id": str(row.ticket_id) if row.ticket_id else None,
+                        "author_approval_required": row.author_approval_required,
+                        "author_approval_reason": row.author_approval_reason,
+                        "template_id": (direct_send or {}).get("template_id"),
+                        "origin": (direct_send or {}).get("origin", "mailbox"),
+                    },
+                )
             result = _out(row)
     if send_failure is not None:
         raise ProblemError(ErrorCodes.CONFLICT, detail=send_failure)
@@ -1041,7 +1338,9 @@ async def reject(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await _message(session, message_id, principal)
-        if row.direction != "out" or row.status != "pending":
+        # ``sending`` ohne Versandnachweis (SMTP, Review 26.09.2026, M1) wird hier von einer
+        # Person aufgelöst: zurück zum Entwurf, neuer Versuch mit neuer Message-ID.
+        if row.direction != "out" or row.status not in ("pending", "sending"):
             raise ProblemError(
                 ErrorCodes.CONFLICT,
                 detail="Nur eingereichte Entwürfe können zurückgewiesen werden.",

@@ -52,8 +52,9 @@ test.describe("Immoware24 import assistant against the API @backend", () => {
     // Value map for the choice field: WEG -> hoa, Miete -> rental.
     const valueMap = page.getByTestId("value-map-management_type");
     await expect(valueMap).toBeVisible();
-    await valueMap.getByLabel("WEG", { exact: true }).selectOption("hoa");
-    await valueMap.getByLabel("Miete", { exact: true }).selectOption("rental");
+    // The wrapping label's text includes the option texts, so the accessible name is used.
+    await valueMap.getByRole("combobox", { name: "WEG" }).selectOption("hoa");
+    await valueMap.getByRole("combobox", { name: "Miete" }).selectOption("rental");
     await page.getByLabel("Name der Vorlage").fill(`E2E Objekte ${run}`);
     await page.getByRole("button", { name: "Als neue Vorlagenversion speichern und prüfen" }).click();
 
@@ -68,7 +69,9 @@ test.describe("Immoware24 import assistant against the API @backend", () => {
     await expect(page.getByTestId("test-run-notice")).toContainText("Es wurde nichts gespeichert");
     await expect(page.getByTestId("test-run-report")).toContainText("angelegt");
     await expect(page.getByTestId("test-run-report")).toContainText("2");
-    await expect(page.getByRole("button", { name: "Übernehmen" })).toBeEnabled();
+    // The wizard's own button; the list imports on the same page have their own (disabled) ones.
+    const wizard = page.locator("section", { has: page.getByRole("heading", { name: "Prüfbericht" }) });
+    await expect(wizard.getByRole("button", { name: "Übernehmen" }).first()).toBeEnabled();
 
     // The portfolio count is unchanged after the test run.
     await page.goto("/importe/immoware24");

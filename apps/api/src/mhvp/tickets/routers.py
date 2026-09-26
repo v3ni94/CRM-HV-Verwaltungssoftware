@@ -35,10 +35,7 @@ from mhvp.tickets.models import (
     WorkOrder,
     WorkOrderEvent,
 )
-from mhvp.tickets.status import (
-    transition_status,
-)
-from mhvp.workspace.services import notify
+from mhvp.tickets.status import assign_ticket, transition_status
 
 router = APIRouter(tags=["Tickets und Aufträge"])
 READ = require_permission("tickets:read")
@@ -175,6 +172,8 @@ class TicketPatch(_In):
     contact_id: uuid.UUID | None = None
     property_id: uuid.UUID | None = None
     unit_id: uuid.UUID | None = None
+    # 6.6: internal description, never shown to portal users (review 26.09.2026, M6).
+    internal_description: str | None = Field(default=None, max_length=20000)
 
 
 class AssigneeIn(_In):
@@ -250,6 +249,7 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             "topic",
             "title",
             "public_description",
+            "internal_description",
             "status",
             "priority",
             "assignee_user_id",
@@ -537,6 +537,16 @@ class TicketReplyIn(_In):
     attachment_document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
     confirm: bool = False
 
+    @field_validator("subject")
+    @classmethod
+    def _single_line_subject(cls, value: str) -> str:
+        """Header values may not contain line breaks (review 26.09.2026, N1): the subject is
+        folded to one line and rejected when nothing remains."""
+        cleaned = " ".join(value.replace("\r", " ").replace("\n", " ").split())
+        if not cleaned:
+            raise ValueError("Betreff darf nicht leer sein.")
+        return cleaned
+
 
 def _reply_template_out(tpl: TicketReplyTemplate) -> dict[str, Any]:
     return {
@@ -595,6 +605,30 @@ async def _assert_documents_exist(session: AsyncSession, ids: list[uuid.UUID]) -
             raise ProblemError(
                 ErrorCodes.RESOURCE_NOT_FOUND,
                 detail=f"Anhang nicht gefunden: {entry['document_id']}",
+            )
+
+
+async def _assert_references_exist(
+    session: AsyncSession,
+    *,
+    contact_id: uuid.UUID | None = None,
+    property_id: uuid.UUID | None = None,
+    unit_id: uuid.UUID | None = None,
+) -> None:
+    """Contact, property and unit references must exist in the tenant (review 26.09.2026,
+    N4): a dangling id is answered with 404 instead of a foreign key error. RLS already hides
+    rows of other tenants, so a foreign id counts as missing."""
+    from mhvp.contacts.models import Contact
+    from mhvp.properties.models import Property, Unit
+
+    for model, value, label in (
+        (Contact, contact_id, "Kontakt"),
+        (Property, property_id, "Objekt"),
+        (Unit, unit_id, "Einheit"),
+    ):
+        if value is not None and await session.get(model, value) is None:
+            raise ProblemError(
+                ErrorCodes.RESOURCE_NOT_FOUND, detail=f"{label} nicht gefunden: {value}"
             )
 
 
@@ -908,10 +942,24 @@ async def reply_to_ticket(
     """Legt die ausgehende Nachricht am Ticket an und reicht sie sofort zur Freigabe ein
     (Status ``pending``). Der Versand selbst erfolgt wie bei jeder Antwort über
     ``POST /mail/messages/{id}/approve`` (Vier-Augen-Prinzip, Postfach des Tickets). Ohne
-    ``confirm`` wird nichts angelegt; ein Versand ohne ausdrücklichen Klick ist ausgeschlossen."""
+    ``confirm`` wird nichts angelegt; ein Versand ohne ausdrücklichen Klick ist ausgeschlossen.
+
+    M20-03 (Betreiberentscheidung 26.09.2026, docs/rules/M20-06, Abschnitt Direktversand):
+    trägt der Verfasser das Kennzeichen Freigabepflicht (Azubi, neuer Mitarbeiter) oder ist
+    die Notbremse des Mandanten an, bleibt die Antwort ``pending`` und geht als Vorlage per
+    Benachrichtigung an alle Freigabeberechtigten. Sonst wird der Entwurf eines Nutzers mit
+    ``communication:approve`` sofort über den zweiphasigen Versandpfad (``approve_and_send``,
+    Regel M20-06) durch denselben Nutzer freigegeben und versendet. Die Antwort enthält
+    ``direct_send`` mit ``attempted``, ``reason`` (``author_flagged``, ``tenant_all``,
+    ``no_permission`` oder ``None``) und ``error``."""
     from mhvp.communication.models import Message
     from mhvp.communication.routers import _out as message_out
-    from mhvp.communication.routers import mailbox_accessible, tnr_references
+    from mhvp.communication.routers import approve_and_send, mailbox_accessible, tnr_references
+    from mhvp.communication.services import (
+        author_reply_approval,
+        notify_reply_approvers,
+        reply_approval_all,
+    )
 
     if not principal.has("communication:update"):
         raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Missing communication:update.")
@@ -952,6 +1000,9 @@ async def reply_to_ticket(
         cc_addresses = [a.strip() for a in body.cc_addresses if a.strip()]
         inbound = ctx["inbound"]
         now = datetime.now(UTC)
+        flagged, flag_reason = await author_reply_approval(
+            session, principal.tenant_id, principal.user_id
+        )
         draft = Message(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -972,9 +1023,34 @@ async def reply_to_ticket(
             attachment_document_ids=list(body.attachment_document_ids),
             submitted_by=principal.user_id,
             submitted_at=now,
+            author_approval_required=flagged,
+            author_approval_reason=flag_reason,
         )
         session.add(draft)
         await session.flush()
+        block_reason: str | None = None
+        if flagged:
+            block_reason = "author_flagged"
+        elif await reply_approval_all(session, principal.tenant_id):
+            block_reason = "tenant_all"
+        elif not principal.has("communication:approve"):
+            block_reason = "no_permission"
+        direct = block_reason is None
+        await _event(
+            session,
+            ticket,
+            "reply_drafted",
+            principal.user_id,
+            {
+                "message_id": str(draft.id),
+                "drafted_by": str(principal.user_id),
+                "drafted_at": now.isoformat(),
+                "author_approval_required": flagged,
+                "author_approval_reason": flag_reason,
+                "direct_send": direct,
+                "block_reason": block_reason,
+            },
+        )
         await _event(
             session,
             ticket,
@@ -987,10 +1063,35 @@ async def reply_to_ticket(
                 "to": to_addresses,
                 "cc": cc_addresses,
                 "attachments": len(body.attachment_document_ids),
+                "direct_send": direct,
             },
         )
+        if not direct:
+            # Vorlage an die Freigabeberechtigten (ohne Verfasser), Regel M20-03.
+            await notify_reply_approvers(
+                session, draft, ticket_number=ticket.number, exclude=principal.user_id
+            )
         await session.flush()
-        return message_out(draft)
+        message_id = draft.id
+        pending = message_out(draft)
+    direct_info: dict[str, Any] = {"attempted": direct, "reason": block_reason, "error": None}
+    if not direct:
+        return pending | {"direct_send": direct_info}
+    try:
+        sent = await approve_and_send(
+            message_id,
+            request,
+            principal,
+            direct_send={"template_id": str(tpl.id) if tpl else None, "origin": "ticket"},
+        )
+    except ProblemError as exc:
+        # Versand abgelehnt oder unsicher: der Entwurf bleibt eingereicht (pending oder
+        # sending mit Nachweis beim nächsten Versuch, Regel M20-06); keine zweite Anlage.
+        direct_info["error"] = exc.detail or exc.developer_message
+        async with tenant_tx(request, principal) as session:
+            row = await session.get(Message, message_id)
+            return (message_out(row) if row else pending) | {"direct_send": direct_info}
+    return sent | {"direct_send": direct_info}
 
 
 async def _ticket_messages(
@@ -1077,11 +1178,17 @@ async def ticket_messages(
             if mailbox_ids
             else {}
         )
+        # M20-03 Nachvollziehbarkeit: Namen von Verfasser und Freigebendem je Ausgangsmail.
+        names = await _user_names(
+            session, [u for m in rows for u in (m.created_by, m.approved_by) if u is not None]
+        )
         out = []
         for m in rows:
             data = message_out(m)
             data["mailbox_address"] = boxes.get(m.mailbox_id) if m.mailbox_id else None
             data["attachments"] = await _attachment_rows(session, list(m.attachment_document_ids))
+            data["created_by_name"] = names.get(m.created_by) if m.created_by else None
+            data["approved_by_name"] = names.get(m.approved_by) if m.approved_by else None
             out.append(data)
         return out
 
@@ -1208,6 +1315,12 @@ async def create_ticket(
         if not title:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Titel fehlt.")
         await _assert_known_topic(session, principal.tenant_id, body.topic)
+        await _assert_references_exist(
+            session,
+            contact_id=body.contact_id,
+            property_id=body.property_id,
+            unit_id=body.unit_id,
+        )
         priority = body.priority or (tpl.default_priority if tpl else Priority.NORMAL)
         hours = tpl.sla_hours if tpl and tpl.sla_hours else SLA_HOURS[priority]
         checklist = (
@@ -1233,7 +1346,6 @@ async def create_ticket(
             title=title,
             priority=priority,
             team_id=tpl.default_team_id if tpl else None,
-            assignee_user_id=tpl.default_assignee_user_id if tpl else None,
             checklist=checklist,
             sla_due_at=datetime.now(UTC) + timedelta(hours=hours),
             **body.model_dump(exclude={"title", "priority", "template_id", "topic"}),
@@ -1251,15 +1363,13 @@ async def create_ticket(
             principal.user_id,
             {"routing": "template" if tpl else "manual"},
         )
-        if ticket.assignee_user_id:
-            await notify(
+        if tpl and tpl.default_assignee_user_id:
+            await assign_ticket(
                 session,
-                tenant_id=principal.tenant_id,
-                user_id=ticket.assignee_user_id,
-                kind="ticket_assigned",
-                title=f"Ticket {ticket.number}: {ticket.title}",
-                entity_type="ticket",
-                entity_id=ticket.id,
+                ticket,
+                tpl.default_assignee_user_id,
+                principal.user_id,
+                reason="Vorlage",
             )
         await emit(
             session,
@@ -1619,7 +1729,15 @@ async def list_tickets(
         if created_to:
             query = query.where(Ticket.created_at <= created_to)
         if mine:
-            query = query.where(Ticket.assignee_user_id == principal.user_id)
+            # Same rule as assignee_user_id: primary or additional assignee (review N8).
+            query = query.where(
+                (Ticket.assignee_user_id == principal.user_id)
+                | Ticket.id.in_(
+                    select(TicketAssignee.ticket_id).where(
+                        TicketAssignee.user_id == principal.user_id
+                    )
+                )
+            )
         size = page_size or limit
         total = (
             await session.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
@@ -1661,9 +1779,12 @@ async def add_assignee_endpoint(
         if ticket is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         _assert_not_merged(ticket)
-        await add_assignee(session, ticket, body.user_id, body.reason, primary=body.primary)
         if body.primary:
-            ticket.assignee_user_id = body.user_id
+            await assign_ticket(
+                session, ticket, body.user_id, principal.user_id, reason=body.reason
+            )
+        else:
+            await add_assignee(session, ticket, body.user_id, body.reason)
         await session.flush()
         row = await session.scalar(
             select(TicketAssignee).where(
@@ -1724,24 +1845,8 @@ async def patch_ticket(
             await transition_status(
                 session, request.app.state.settings, ticket, body.status, principal.user_id
             )
-        if body.assignee_user_id and body.assignee_user_id != ticket.assignee_user_id:
-            ticket.assignee_user_id = body.assignee_user_id
-            await _event(
-                session,
-                ticket,
-                "assigned",
-                principal.user_id,
-                {"user_id": str(body.assignee_user_id)},
-            )
-            await notify(
-                session,
-                tenant_id=principal.tenant_id,
-                user_id=body.assignee_user_id,
-                kind="ticket_assigned",
-                title=f"Ticket {ticket.number}: {ticket.title}",
-                entity_type="ticket",
-                entity_id=ticket.id,
-            )
+        if body.assignee_user_id:
+            await assign_ticket(session, ticket, body.assignee_user_id, principal.user_id)
         if body.priority:
             ticket.priority = body.priority
         if body.team_id:
@@ -1751,6 +1856,14 @@ async def patch_ticket(
         if body.topic is not None:
             await _assert_known_topic(session, principal.tenant_id, body.topic)
             ticket.topic = body.topic
+        await _assert_references_exist(
+            session,
+            contact_id=body.contact_id,
+            property_id=body.property_id,
+            unit_id=body.unit_id,
+        )
+        if body.internal_description is not None:
+            ticket.internal_description = body.internal_description or None
         if body.contact_id is not None:
             ticket.contact_id = body.contact_id
         if body.property_id is not None:
@@ -1949,6 +2062,7 @@ async def comment(
         if ticket is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         _assert_not_merged(ticket)
+        await _assert_documents_exist(session, body.document_ids)
         row = TicketComment(
             tenant_id=principal.tenant_id,
             ticket_id=ticket.id,
@@ -2003,18 +2117,104 @@ async def get_ticket(
             )
             or 0
         )
+        names = await _user_names(
+            session,
+            [c.author_user_id for c in comments]
+            + [e.user_id for e in events]
+            + [_assignee_of(e) for e in events],
+        )
         return _ticket_out(ticket) | {
             "comments": [
-                {"body": c.body, "internal": c.internal, "created_at": c.created_at}
+                {
+                    "id": c.id,
+                    "body": c.body,
+                    "internal": c.internal,
+                    "created_at": c.created_at,
+                    "author_user_id": c.author_user_id,
+                    "author_name": names.get(c.author_user_id) if c.author_user_id else None,
+                    "author_contact_id": c.author_contact_id,
+                    "document_ids": list(c.document_ids or []),
+                }
                 for c in comments
             ],
-            "events": [{"kind": e.kind, "data": e.data, "at": e.created_at} for e in events],
+            "events": [
+                {
+                    "id": e.id,
+                    "kind": e.kind,
+                    "data": e.data,
+                    "user_id": e.user_id,
+                    "user_name": names.get(e.user_id) if e.user_id else None,
+                    "assignee_name": names.get(_assignee_of(e) or uuid.UUID(int=0)),
+                    "at": e.created_at,
+                }
+                for e in events
+            ],
             "work_orders": [_order_out(o) for o in orders],
             "assignees": [_assignee_out(a) for a in assignees],
             "message_count": message_count,
             # A55: documents linked to the ticket as attachments (portal photos, PDFs).
             "attachments": await ticket_attachments(session, ticket.id),
+            # Attachments of the inbound mails with document metadata, one bundled query
+            # (review 26.09.2026, M5); mailbox rights apply as in the mail view.
+            "mail_attachments": await _mail_attachments(session, principal, ticket),
         }
+
+
+def _assignee_of(event: TicketEvent) -> uuid.UUID | None:
+    """User id an ``assigned`` event points to (``to`` or older ``user_id`` payloads)."""
+    if event.kind != "assigned":
+        return None
+    raw = event.data.get("to") or event.data.get("user_id")
+    try:
+        return uuid.UUID(str(raw)) if raw else None
+    except ValueError:
+        return None
+
+
+async def _user_names(session: AsyncSession, ids: list[uuid.UUID | None]) -> dict[uuid.UUID, str]:
+    from mhvp.platform.models import User
+
+    wanted = {i for i in ids if i is not None}
+    if not wanted:
+        return {}
+    rows = await session.execute(select(User.id, User.display_name).where(User.id.in_(wanted)))
+    return {r.id: r.display_name for r in rows.all()}
+
+
+async def _mail_attachments(
+    session: AsyncSession, principal: TenantPrincipal, ticket: Ticket
+) -> list[dict[str, Any]]:
+    """Attachments of the ticket's inbound mails, newest mail first, with filename and mime
+    type from a single ``document`` query. Missing documents are skipped."""
+    from mhvp.documents.models import Document
+
+    messages = [
+        m for m in await _ticket_messages(session, principal, ticket) if m.direction == "in"
+    ]
+    ids = {d for m in messages for d in (m.attachment_document_ids or [])}
+    if not ids:
+        return []
+    docs = {
+        d.id: d for d in (await session.scalars(select(Document).where(Document.id.in_(ids)))).all()
+    }
+    out: list[dict[str, Any]] = []
+    for m in reversed(messages):
+        for document_id in m.attachment_document_ids or []:
+            doc = docs.get(document_id)
+            if doc is None:
+                continue
+            out.append(
+                {
+                    "message_id": m.id,
+                    "document_id": doc.id,
+                    "filename": doc.filename or doc.title,
+                    "mime_type": doc.mime_type,
+                    "size": doc.size,
+                    "received_at": m.received_at,
+                    "subject": m.subject,
+                }
+            )
+    return out
 
 
 @router.post("/work-orders", status_code=201, summary="Auftrag anlegen")

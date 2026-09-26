@@ -4,6 +4,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -19,7 +20,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
   const params = await searchParams;
   const t = await getTranslations("Ai");
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const canAudit = me.data?.permissions.includes("audit:read") ?? false;
   const scope: "all" | "own" = canAudit && params.scope !== "own" ? "all" : "own";

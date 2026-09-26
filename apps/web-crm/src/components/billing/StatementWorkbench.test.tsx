@@ -37,9 +37,18 @@ describe("StatementWorkbench", () => {
     );
     renderIntl(<StatementWorkbench id={ID} status="internally_approved" keys={KEYS} />);
     expect(screen.getByText("Ausgeben")).toBeDisabled();
+    expect(screen.getByTestId("gate-g3-hint")).toHaveTextContent("Freigabestufe G3");
     await userEvent.type(screen.getByLabelText("Zugang beim Mieter"), "2026-09-30");
     await userEvent.click(screen.getByText("Ausgeben"));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+});
+
+describe("StatementWorkbench hints", () => {
+  it("explains that a second person approves internally", () => {
+    renderIntl(<StatementWorkbench id={ID} status="calculated" keys={KEYS} />);
+    expect(screen.getByText("Intern freigeben")).toBeInTheDocument();
+    expect(screen.getByText(/zweite Person/)).toBeInTheDocument();
   });
 });
 

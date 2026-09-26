@@ -7,6 +7,7 @@ have no CRM access."""
 
 import asyncio
 import json
+import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
@@ -395,6 +396,15 @@ def test_portal_access_matrix(client: TestClient, world: World) -> None:
             headers=pv,
         ),
         201,
+    )
+    # Review 1.22 Nr. 16: only an own upload may be referenced as the quote document.
+    assert (
+        client.post(
+            f"{P}/work-orders/{order['id']}/quote",
+            json={"amount": "350.00", "document_id": str(uuid.uuid4())},
+            headers=pv,
+        ).status_code
+        == 404
     )
     _ok(
         client.post(

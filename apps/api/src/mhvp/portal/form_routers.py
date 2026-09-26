@@ -1,7 +1,8 @@
-"""Portal forms (A56): management of form templates (/api/v1/portal-admin/forms) and the portal
-side (/api/v1/portal/forms, submissions). A submission creates a ticket of the template's
-category with the values as structured text and uploaded files as attachments; the portal user
-sees the ticket under "Meldungen" like a damage report (visible_for initiator)."""
+"""Portal forms (A56, A73): management of form templates (/api/v1/portal-admin/forms, with the
+list of submissions per template) and the portal side (/api/v1/portal/forms, submissions). A
+submission creates a ticket of the template's category with the values as structured text and
+uploaded files as attachments; the portal user sees the ticket under "Meldungen" like a damage
+report (visible_for initiator)."""
 
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -170,6 +171,50 @@ async def delete_template(
                 detail="Zu dieser Vorlage liegen Einreichungen vor. Bitte deaktivieren.",
             )
         await session.delete(t)
+
+
+@admin.get("/forms/{template_id}/submissions", summary="Einreichungen einer Formularvorlage")
+async def list_submissions(
+    template_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    """A73: submissions per template for the CRM (newest first) with the portal account, the
+    contact name and the ticket created from it. The values themselves are on the ticket
+    (public description); only the identification is listed here (data minimisation)."""
+    from mhvp.contacts.models import Contact
+    from mhvp.portal.models import PortalAccount
+    from mhvp.tickets.models import Ticket
+
+    async with tenant_tx(request, principal) as session:
+        t = await session.get(PortalFormTemplate, template_id)
+        if t is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        rows = (
+            await session.execute(
+                select(PortalFormSubmission, PortalAccount, Contact, Ticket)
+                .join(PortalAccount, PortalAccount.id == PortalFormSubmission.account_id)
+                .join(Contact, Contact.id == PortalAccount.contact_id)
+                .join(Ticket, Ticket.id == PortalFormSubmission.ticket_id)
+                .where(PortalFormSubmission.template_id == t.id)
+                .order_by(PortalFormSubmission.created_at.desc(), PortalFormSubmission.id.desc())
+                .limit(500)
+            )
+        ).all()
+        return [
+            {
+                "id": s.id,
+                "template_id": s.template_id,
+                "account_id": account.id,
+                "account_status": account.status,
+                "contact_id": contact.id,
+                "contact_name": contact.display_name,
+                "created_at": s.created_at,
+                "unit_id": ticket.unit_id,
+                "ticket_id": ticket.id,
+                "ticket_number": ticket.number,
+                "ticket_status": ticket.status.value,
+            }
+            for s, account, contact, ticket in rows
+        ]
 
 
 # Portal ---------------------------------------------------------------------------------

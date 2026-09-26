@@ -2,10 +2,10 @@
 
 import re
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 _HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
@@ -76,6 +76,8 @@ class TenantSettingsOut(BaseModel):
     branding: Branding
     sources: dict[str, str]
     auto_posting_enabled: bool
+    # M20-03 Notbremse: alle Ticketantworten mit Freigabe durch eine zweite Person (Standard aus).
+    ticket_reply_approval_all: bool = False
     version: int
 
 
@@ -84,6 +86,7 @@ class TenantSettingsPatch(BaseModel):
 
     company: CompanyData | None = None
     branding: Branding | None = None
+    ticket_reply_approval_all: bool | None = None
 
 
 def _mask(value: str | None) -> str | None:
@@ -199,6 +202,10 @@ class MemberOut(BaseModel):
     mobile_phone: str | None = None
     portal_access: str | None = None
     portal_access_reason: str | None = None
+    # M20-03: Ticketantworten dieses Mitglieds brauchen die Freigabe einer zweiten Person.
+    reply_approval_required: bool = False
+    reply_approval_reason: str | None = None
+    reply_approval_until: date | None = None
     # A37: legal entity scope (only effective for scoped roles, see mhvp.core.auth.scope).
     legal_entity_ids: list[uuid.UUID] = Field(default_factory=list)
 
@@ -226,6 +233,26 @@ class MemberMobilePhone(BaseModel):
     mobile_phone: str | None = Field(
         default=None, min_length=3, max_length=40, pattern=r"^\+?[0-9 ()/-]+$"
     )
+
+
+class MemberReplyApproval(BaseModel):
+    """M20-03 Kennzeichen je Mitglied (Betreiberentscheidung 26.09.2026): Ticketantworten
+    brauchen die Freigabe einer zweiten Person. ``reason`` ist bei ``required`` Pflicht;
+    ``until`` (einschließlich) befristet das Kennzeichen, danach gilt es nicht mehr."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    required: bool
+    reason: Literal["azubi", "neuer_mitarbeiter"] | None = None
+    until: date | None = None
+
+    @model_validator(mode="after")
+    def _reason_when_required(self) -> "MemberReplyApproval":
+        if self.required and self.reason is None:
+            raise ValueError("Grund ist bei gesetztem Kennzeichen erforderlich.")
+        if not self.required:
+            self.reason, self.until = None, None
+        return self
 
 
 class MemberCompetences(BaseModel):
@@ -316,6 +343,17 @@ class WebhookOut(BaseModel):
     event_types: list[str]
     active: bool
     description: str | None
+    created_at: datetime | None = None
+    # Latest delivery of the subscription (CRM settings page): status, response code and
+    # time of the last attempt; None while nothing has been delivered yet.
+    last_delivery_status: str | None = None
+    last_delivery_status_code: int | None = None
+    last_delivery_at: datetime | None = None
+
+
+class WebhookEventTypeOut(BaseModel):
+    type: str
+    description: str
 
 
 class WebhookCreated(WebhookOut):

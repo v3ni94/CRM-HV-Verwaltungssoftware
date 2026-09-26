@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { CapAreas, RentLawRules, type CapArea, type RentLawRule } from "@/components/letting/RentLawAdmin";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function RentLawPage() {
   const t = await getTranslations("RentLaw");
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   if (!me.data?.is_platform_admin) return <p className={ui.alert}>{t("forbidden")}</p>;
   const [rules, areas] = await Promise.all([

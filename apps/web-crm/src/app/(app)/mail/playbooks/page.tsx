@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { PlaybookManager, type Playbook } from "@/components/mail/PlaybookManager";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function MailPlaybooksPage() {
   const t = await getTranslations("MailPlaybooks");
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("communication:read")) notFound();

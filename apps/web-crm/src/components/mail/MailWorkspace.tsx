@@ -19,7 +19,11 @@ export type Message = {
   from_address: string | null;
   to_addresses: string[];
   subject: string | null;
-  body: string | null;
+  // The list delivers only `body_preview` (200 characters, review 26.09.2026, M3); the
+  // detail endpoint fills `body` and `body_html`.
+  body?: string | null;
+  body_html?: string | null;
+  body_preview?: string | null;
   received_at: string | null;
   sent_at: string | null;
   contact_id: string | null;
@@ -92,6 +96,7 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
     typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("message"),
   );
   const [pendingCount, setPendingCount] = useState(0);
+  const [detail, setDetail] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -128,27 +133,46 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
     load(tab, status, mailboxId, q);
   }, [tab, status, mailboxId, q, load]);
 
-  useEffect(() => {
+  // Badge "Freigaben": count endpoint instead of loading the whole pending list (M3).
+  const loadPendingCount = useCallback(() => {
     if (!canApprove) return;
-    void bff<Message[]>(`/api/bff/mail/messages?${queryFor("pending", "", "", "")}`).then((res) => {
-      if (res.ok) setPendingCount(res.data.length);
+    void bff<{ count: number }>(`/api/bff/mail/messages/count?${queryFor("pending", "", "", "")}`).then((res) => {
+      if (res.ok) setPendingCount(res.data.count);
     });
-  }, [canApprove, tab, status, q]);
+  }, [canApprove]);
+
+  useEffect(() => {
+    loadPendingCount();
+  }, [loadPendingCount, tab, status, q]);
+
+  // The list carries only a preview; the selected message is loaded with its full text.
+  useEffect(() => {
+    setDetail(null);
+    if (!selectedId) return;
+    let active = true;
+    void bff<Message>(`/api/bff/mail/messages/${selectedId}`).then((res) => {
+      if (active && res.ok) setDetail(res.data);
+    });
+    return () => {
+      active = false;
+    };
+  }, [selectedId]);
 
   const refresh = () => load(tab, status, mailboxId, q);
 
-  const selected = useMemo(() => messages?.find((m) => m.id === selectedId) ?? null, [messages, selectedId]);
+  const selected = useMemo(() => {
+    if (!selectedId) return null;
+    if (detail && detail.id === selectedId) return detail;
+    return messages?.find((m) => m.id === selectedId) ?? null;
+  }, [messages, selectedId, detail]);
 
   const onUpdated = (next: Message) => {
     setMessages((prev) => (prev ? prev.map((m) => (m.id === next.id ? next : m)) : prev));
+    if (next.id === selectedId) setDetail(next);
     // A status change can move the message out of the current tab's filter (e.g. submit,
     // approve, mark done); the list is reloaded so it reflects that.
     refresh();
-    if (canApprove) {
-      void bff<Message[]>(`/api/bff/mail/messages?${queryFor("pending", "", "", "")}`).then((res) => {
-        if (res.ok) setPendingCount(res.data.length);
-      });
-    }
+    loadPendingCount();
   };
 
   const tabs: { key: Tab; label: string; badge?: number }[] = [

@@ -122,3 +122,109 @@ def test_issuer_person_name_is_masked_in_text() -> None:
     assert issuer
     out = mask_text("Rechnungssteller: Max Mustermann, Hauptstraße 1", [issuer])
     assert out == f"Rechnungssteller: {NAME_PLACEHOLDER}, Hauptstraße 1"
+
+
+# A84: heuristic names of a sole trader neither in the contacts nor in an XML issuer -------
+
+from mhvp.receipts.masking import header_person_names, numbered_placeholder  # noqa: E402
+
+SOLE_TRADER = """Max Mustermann, Malermeister
+Hauptstraße 1
+40789 Monheim am Rhein
+Telefon 02173 123456
+
+Rechnung Nr. 2026-0815
+An: Hausverwaltung Müller GmbH
+Leistung: Malerarbeiten Treppenhaus, Objekt Rheinpromenade 13
+Kontoinhaber: MUSTERMANN, MAX
+IBAN DE02 1203 0000 0000 2020 51
+
+Mit freundlichen Grüßen
+Erika Musterfrau
+Bürokauffrau"""
+
+
+def test_header_name_before_address_is_found_and_masked_with_stable_placeholder() -> None:
+    names = header_person_names(SOLE_TRADER)
+    assert names == ["Max Mustermann", "Erika Musterfrau"]
+    out = mask_text(SOLE_TRADER, header_names=names)
+    assert out.startswith(f"{numbered_placeholder(1)}, Malermeister")
+    assert f"Kontoinhaber: {numbered_placeholder(1)}" in out  # second spelling, same number
+    assert f"Mit freundlichen Grüßen\n{numbered_placeholder(2)}" in out
+    assert "Mustermann" not in out
+    assert "Musterfrau" not in out
+    assert "Hausverwaltung Müller GmbH" in out
+    assert "Rheinpromenade 13" in out
+    assert "[IBAN]" in out
+    assert "[TELEFON]" in out
+
+
+def test_header_names_are_deterministic_and_never_raise() -> None:
+    assert header_person_names(SOLE_TRADER) == header_person_names(SOLE_TRADER)
+    assert header_person_names(None) == []
+    assert header_person_names("") == []
+    assert mask_text(SOLE_TRADER, header_names=[]) == mask_text(SOLE_TRADER)
+    assert mask_text("x", header_names=["", "  "]) == "x"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        # positive: profession before or after the name, academic title, hyphenated name
+        ("Malermeister Max Mustermann\nHauptstr. 1\n40789 Monheim", ["Max Mustermann"]),
+        (
+            "Elektromeister Hans-Peter Meier-Lüdenscheid\nAm Markt 3\n40789 Monheim",
+            ["Hans-Peter Meier-Lüdenscheid"],
+        ),
+        ("Dipl.-Ing. Anna Maria Schmidt\nRingstraße 12\n50667 Köln", ["Anna Maria Schmidt"]),
+        ("Max Mustermann | Malerbetrieb\nHauptstraße 1\n40789 Monheim", ["Max Mustermann"]),
+        # positive: OCR blanks inside the line and between name and profession
+        (
+            "Max   Mustermann   ,   Malermeister\nHauptstraße   1\n40789   Monheim",
+            ["Max Mustermann"],
+        ),
+        # positive: signature block only
+        (
+            "Rechnung Nr. 1\nBetrag 100,00 EUR\nMit freundlichen Grüßen\nErika Musterfrau",
+            ["Erika Musterfrau"],
+        ),
+        ("Rechnung\nHochachtungsvoll\n\nErika Musterfrau\nInhaberin", ["Erika Musterfrau"]),
+        # negative: company names and legal forms stay
+        ("Elektro Müller GmbH\nHauptstraße 1\n40789 Monheim", []),
+        ("Max Mustermann e.K.\nHauptstraße 1\n40789 Monheim", []),
+        ("Müller & Söhne KG\nHauptstraße 1\n40789 Monheim", []),
+        ("Stadtwerke Monheim AG\nRheinallee 5\n40789 Monheim", []),
+        ("Verband Deutscher Grundstücksnutzer\nPostfach 1\n40789 Monheim", []),
+        ("Malerbetrieb Mustermann\nHauptstraße 1\n40789 Monheim", []),  # surname alone
+        # negative: document words, digits, single word, lower case, recipient block
+        ("Rechnung Nr. 2026-0815\nRechnungsdatum 01.09.2026", []),
+        ("Objekt Rheinpromenade\nMalerarbeiten Treppenhaus", []),
+        ("Mustermann\nHauptstraße 1\n40789 Monheim", []),
+        ("max mustermann\nHauptstraße 1\n40789 Monheim", []),
+        ("Sehr geehrte Damen und Herren\nvielen Dank für Ihren Auftrag", []),
+        # doubtful: header name without address, kept only when it occurs twice
+        ("Max Mustermann\nRechnung Nr. 1\nBetrag 100,00 EUR", []),
+        ("Max Mustermann\nRechnung Nr. 1\nKontoinhaber: Mustermann, Max", ["Max Mustermann"]),
+        # name deep in the text without greeting or header position is not guessed
+        (
+            "Rechnung Nr. 1\nPos 1\nPos 2\nPos 3\nPos 4\nPos 5\nPos 6\nPos 7\nPos 8\n"
+            "Max Mustermann\nHauptstraße 1\n40789 Monheim",
+            [],
+        ),
+    ],
+)
+def test_header_person_names(text: str, expected: list[str]) -> None:
+    assert header_person_names(text) == expected
+
+
+def test_two_header_names_get_two_stable_placeholders() -> None:
+    text = "Max Mustermann und Erika Musterfrau, Max Mustermann"
+    out = mask_text(text, header_names=["Max Mustermann", "Erika Musterfrau"])
+    assert (
+        out == f"{numbered_placeholder(1)} und {numbered_placeholder(2)}, {numbered_placeholder(1)}"
+    )
+
+
+def test_known_name_takes_precedence_over_header_placeholder() -> None:
+    out = mask_text("Max Mustermann", ["Max Mustermann"], header_names=["Max Mustermann"])
+    assert out == NAME_PLACEHOLDER

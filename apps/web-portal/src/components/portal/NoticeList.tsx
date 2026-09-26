@@ -31,7 +31,7 @@ export function NoticeList({ notices }: { notices: PortalNotice[] }) {
         <li key={n.id} className={`${ui.card} flex flex-col gap-1`}>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <span className="flex flex-col gap-0.5">
-              <span className="font-medium">{n.title}</span>
+              <span className="font-medium break-words">{n.title}</span>
               <span className="text-xs text-subtle">
                 {n.property_number} {n.property_name}
                 {" · "}
@@ -40,7 +40,7 @@ export function NoticeList({ notices }: { notices: PortalNotice[] }) {
             </span>
             {n.is_new ? <span className={ui.badgeGold}>{t("new")}</span> : null}
           </div>
-          <p className="whitespace-pre-wrap text-sm">{n.body}</p>
+          <p className="whitespace-pre-wrap break-words text-sm">{n.body}</p>
           {n.has_document ? (
             <a href={`/api/portal-files/portal/notices/${n.id}/document`} className={`${ui.buttonSm} self-start`}>
               {t("download")}

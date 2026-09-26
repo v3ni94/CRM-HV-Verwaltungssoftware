@@ -28,7 +28,7 @@ Zuordnung und die Startvorschläge für Reaktions- und Lösungsfristen stehen in
 - Migration `0042_sla_module.py` (RLS auf allen sieben Tabellen).
 - BFF-Allowlist (`apps/web-crm/src/app/api/bff/[...path]/route.ts`) für die SLA-Endpunkte.
 
-## Nicht umgesetzt (offene Punkte)
+## Frühere offene Punkte (Stand 26.09.2026: umgesetzt, siehe Zeilen)
 
 - Stand 26.09.2026: umgesetzt in `apps/web-crm/src/app/(app)/einstellungen/sla/page.tsx`
   (Einstellungsseite, Tabs Regeln, Bereitschaft, Kalender) und
@@ -46,3 +46,11 @@ Zuordnung und die Startvorschläge für Reaktions- und Lösungsfristen stehen in
 
 E-Mail- und SMS-Versand der Eskalation, Kanäle je Stufe und SMS-Gateway: siehe
 `docs/plans/M35-sla-eskalation-kanaele.md` (dort auch die Beispiel-Vorlage für seven.io).
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: Modelle, Geschäftszeiten, Uhrensteuerung, Eskalation alle fünf Minuten, Bereitschaft, Router `/api/v1/sla`, Einstellungsseite und SLA-Badge im CRM, E-Mail und SMS je Stufe (`docs/plans/M35-sla-eskalation-kanaele.md`, Migration 0055), SLA-Uhr auch für Tickets aus Mail und Portal, Wiederaufnahme der Uhr bei Wiedereröffnung (`sla.service.reopen_clock`), Merge erledigt die Uhren der Quellen (M36).
+* Tests: `tests/unit/test_sla_escalation_channels.py`, `test_m21_sla.py`, Vitest `SlaBadge`.
+* Offen: Bestätigung der Startwerte `DEFAULT_RULES` durch die Geschäftsführung, M35-08 (SMS-Anbieter).

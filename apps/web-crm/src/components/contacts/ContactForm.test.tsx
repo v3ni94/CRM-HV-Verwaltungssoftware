@@ -7,7 +7,9 @@ import { jsonResponse, renderIntl } from "@/test/intl";
 import { ContactForm } from "./ContactForm";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn(), back: vi.fn() }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, refresh: vi.fn(), back: vi.fn() }),
+}));
 
 const ID = "01920000-0000-7000-8000-00000000000a";
 
@@ -58,23 +60,36 @@ describe("ContactForm", () => {
   it("requires a name for persons and a company name for companies", async () => {
     renderIntl(<ContactForm mode="create" />);
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    expect(await screen.findByText("Personen benötigen Vor- oder Nachname.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Personen benötigen Vor- oder Nachname."),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText("Firma"));
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    expect(await screen.findByText("Firmen benötigen einen Firmennamen.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Firmen benötigen einen Firmennamen."),
+    ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("validates e-mail and IBAN in the repeatable groups", async () => {
     renderIntl(<ContactForm mode="create" />);
     await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
-    await userEvent.click(screen.getByRole("button", { name: "E-Mail-Adressen: Hinzufügen" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "E-Mail-Adressen: Hinzufügen" }),
+    );
     await userEvent.type(screen.getByLabelText("E-Mail"), "falsch@");
-    await userEvent.click(screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }));
-    await userEvent.type(screen.getByLabelText("IBAN"), "DE89370400440532013001");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }),
+    );
+    await userEvent.type(
+      screen.getByLabelText("IBAN"),
+      "DE89370400440532013001",
+    );
     await userEvent.type(screen.getByLabelText("BIC"), "XYZ");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    expect(await screen.findByText("Bitte eine gültige E-Mail-Adresse eingeben.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Bitte eine gültige E-Mail-Adresse eingeben."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Die IBAN ist ungültig.")).toBeInTheDocument();
     expect(screen.getByText("Die BIC ist ungültig.")).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -85,7 +100,13 @@ describe("ContactForm", () => {
       .mockResolvedValueOnce(
         jsonResponse([
           {
-            contact: { ...contact(), city: null, primary_email: null, primary_phone: null, deleted: false },
+            contact: {
+              ...contact(),
+              city: null,
+              primary_email: null,
+              primary_phone: null,
+              deleted: false,
+            },
             score: 0.8,
             reasons: ["ähnlicher Name"],
           },
@@ -101,12 +122,18 @@ describe("ContactForm", () => {
       "/api/bff/contacts/duplicates?first_name=Erika&last_name=Mustermann",
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    await userEvent.click(screen.getByRole("button", { name: "Trotzdem speichern" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Trotzdem speichern" }),
+    );
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/kontakte/${ID}`));
     const [url, init] = fetchMock.mock.calls[1]!;
     expect(url).toBe("/api/bff/contacts");
     expect(init?.method).toBe("POST");
-    expect(JSON.parse(String(init?.body))).toMatchObject({ kind: "person", first_name: "Erika", last_name: "Mustermann" });
+    expect(JSON.parse(String(init?.body))).toMatchObject({
+      kind: "person",
+      first_name: "Erika",
+      last_name: "Mustermann",
+    });
   });
 
   it("maps API field errors to the form fields", async () => {
@@ -116,23 +143,39 @@ describe("ContactForm", () => {
           title: "Eingaben ungültig",
           status: 422,
           detail: "Bitte die markierten Angaben prüfen.",
-          errors: [{ location: ["body", "phones", 0, "number"], field: "number", code: "value_error", message: "Telefonnummer ist ungültig." }],
+          errors: [
+            {
+              location: ["body", "phones", 0, "number"],
+              field: "number",
+              code: "value_error",
+              message: "Telefonnummer ist ungültig.",
+            },
+          ],
         },
         422,
       ),
     );
     renderIntl(<ContactForm mode="create" />);
     await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
-    await userEvent.click(screen.getByRole("button", { name: "Telefonnummern: Hinzufügen" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Telefonnummern: Hinzufügen" }),
+    );
     await userEvent.type(screen.getByLabelText("Nummer"), "0211 1234");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    expect(await screen.findByText("Telefonnummer ist ungültig.")).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("Bitte die markierten Angaben prüfen.");
+    expect(
+      await screen.findByText("Telefonnummer ist ungültig."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Bitte die markierten Angaben prüfen.",
+    );
   });
 
   it("sends If-Match on edit and explains a version conflict (412)", async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse({ title: "Datensatz wurde zwischenzeitlich geändert", status: 412 }, 412),
+      jsonResponse(
+        { title: "Datensatz wurde zwischenzeitlich geändert", status: 412 },
+        412,
+      ),
     );
     renderIntl(<ContactForm mode="edit" contact={contact()} />);
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -189,27 +232,59 @@ describe("ContactForm", () => {
   it("requires signing date, granted via and a document or note when SEPA is enabled", async () => {
     renderIntl(<ContactForm mode="create" />);
     await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
-    await userEvent.click(screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }));
-    await userEvent.type(screen.getByLabelText("IBAN"), "DE89370400440532013000");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }),
+    );
+    await userEvent.type(
+      screen.getByLabelText("IBAN"),
+      "DE89370400440532013000",
+    );
     await userEvent.click(screen.getByLabelText("SEPA-Lastschrift aktiv"));
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    expect(await screen.findByText("Bitte das Datum der Erteilung angeben.")).toBeInTheDocument();
-    expect(screen.getByText("Bitte die Erteilungsart angeben.")).toBeInTheDocument();
-    expect(screen.getByText("Bitte das Mandat als PDF hinterlegen oder einen Vermerk eintragen.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Bitte das Datum der Erteilung angeben."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Bitte die Erteilungsart angeben."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Bitte das Mandat als PDF hinterlegen oder einen Vermerk eintragen.",
+      ),
+    ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("submits the SEPA mandate fields for a new bank account", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse([])).mockResolvedValueOnce(jsonResponse(contact(), 201));
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse(contact(), 201));
     renderIntl(<ContactForm mode="create" />);
     await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
-    await userEvent.click(screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }));
-    await userEvent.type(screen.getByLabelText("IBAN"), "DE89370400440532013000");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }),
+    );
+    await userEvent.type(
+      screen.getByLabelText("IBAN"),
+      "DE89370400440532013000",
+    );
     await userEvent.click(screen.getByLabelText("SEPA-Lastschrift aktiv"));
-    await userEvent.type(screen.getByLabelText("Mandatsreferenz"), "M-2026-001");
-    await userEvent.type(screen.getByLabelText("Datum der Erteilung"), "2026-09-01");
-    await userEvent.selectOptions(screen.getByLabelText("Erteilungsart"), "email");
-    await userEvent.type(screen.getByLabelText("Vermerk"), "Per E-Mail bestätigt");
+    await userEvent.type(
+      screen.getByLabelText("Mandatsreferenz"),
+      "M-2026-001",
+    );
+    await userEvent.type(
+      screen.getByLabelText("Datum der Erteilung"),
+      "2026-09-01",
+    );
+    await userEvent.selectOptions(
+      screen.getByLabelText("Erteilungsart"),
+      "email",
+    );
+    await userEvent.type(
+      screen.getByLabelText("Vermerk"),
+      "Per E-Mail bestätigt",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     const body = JSON.parse(String(fetchMock.mock.calls[1]![1]!.body));
@@ -227,7 +302,9 @@ describe("ContactForm", () => {
   });
 
   it("submits the selected roles", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse([])).mockResolvedValueOnce(jsonResponse(contact(), 201));
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse(contact(), 201));
     renderIntl(<ContactForm mode="create" />);
     await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
     const rolesGroup = screen.getByRole("group", { name: "Klassifizierung" });

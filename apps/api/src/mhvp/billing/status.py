@@ -54,12 +54,17 @@ def check_transition(
 ) -> None:
     """Raise :class:`TransitionError` unless ``current -> target`` is allowed (6.9.3, D13, D14)."""
     if target not in _NEXT[current]:
-        raise TransitionError(f"{current.value} -> {target.value} is not allowed")
+        # Posting is only reachable from due; for WEG statements the rule D13 (no result claim
+        # without a resolution) is named on every earlier refusal as well.
+        rule = "D13, 6.9.3" if is_hoa and target is StatementStatus.POSTED else "6.9.3"
+        raise TransitionError(f"{current.value} -> {target.value} is not allowed ({rule})")
     if is_hoa:
         if target is StatementStatus.ISSUED and current is not StatementStatus.RESOLVED:
             # A WEG result only becomes a claim through the resolution (W06); issuing before is
             # allowed only as draft information, which is not this status.
-            raise TransitionError("WEG statements are issued as result only after the resolution")
+            raise TransitionError(
+                "WEG statements are issued as result only after the resolution (W06)"
+            )
         if target is StatementStatus.RESOLVED and not resolution_snapshot_matches:
             raise TransitionError("the resolution must refer to this snapshot version (D14)")
         if (
@@ -70,4 +75,4 @@ def check_transition(
                 "posting needs a positive, final or legally binding resolution (D13)"
             )
     elif target is StatementStatus.RESOLVED:
-        raise TransitionError("only WEG statements are resolved by the owners")
+        raise TransitionError("only WEG statements are resolved by the owners (6.9.3)")

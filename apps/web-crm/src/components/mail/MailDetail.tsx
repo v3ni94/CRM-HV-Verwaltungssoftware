@@ -35,9 +35,16 @@ function ThreadEntry({ message }: { message: Message }) {
         <span>{formatDateTime(message.direction === "in" ? message.received_at : message.sent_at)}</span>
       </div>
       <p className="min-w-0 break-words text-sm font-medium [overflow-wrap:anywhere]">{message.subject || t("noSubject")}</p>
-      <SafeText className="text-sm">{message.body}</SafeText>
+      <SafeText className="text-sm">{message.body ?? message.body_preview}</SafeText>
     </li>
   );
+}
+
+type RejectedAttachment = { filename: string; mime: string; size: number; reason: string };
+
+function rejectedAttachments(message: Message): RejectedAttachment[] {
+  const value = message.classification?.attachments_rejected;
+  return Array.isArray(value) ? (value as RejectedAttachment[]) : [];
 }
 
 export function MailDetail({
@@ -85,6 +92,10 @@ export function MailDetail({
   }, [canReadMembers, members]);
 
   if (!message) return <p className="text-sm text-muted">{t("selectMessage")}</p>;
+  // List rows carry only a preview until the detail arrives (M3).
+  const bodyLoaded = message.body !== undefined;
+  const bodyText = bodyLoaded ? message.body : null;
+  const rejected = rejectedAttachments(message);
 
   const act = async (path: string, method: string, body?: unknown) => {
     setBusy(true);
@@ -174,6 +185,11 @@ export function MailDetail({
           ) : null}
           {message.attachment_document_ids.length > 0 ? <span>{t("attachments", { count: message.attachment_document_ids.length })}</span> : null}
         </div>
+        {rejected.length > 0 ? (
+          <p className="text-xs text-warning-fg" data-testid="mail-attachments-rejected">
+            {t("attachmentsRejected", { list: rejected.map((r) => `${r.filename} (${r.reason})`).join(", ") })}
+          </p>
+        ) : null}
         {message.direction === "in" && message.attachment_document_ids.length > 0 ? (
           <ul className="flex flex-wrap gap-2">
             {message.attachment_document_ids.map((attachmentId, i) => (
@@ -206,12 +222,42 @@ export function MailDetail({
       ) : null}
       {forwarded ? <p className="text-xs text-success-fg">{ts("forwardInvoiceDone")}</p> : null}
 
-      {message.status === "draft" ? (
+      {!bodyLoaded ? (
+        <p className="text-sm text-muted">{t("loadingDetail")}</p>
+      ) : message.status === "draft" ? (
         <DraftEditor message={message} onUpdated={onUpdated} />
+      ) : message.status === "sending" ? (
+        <div className="flex flex-col gap-3">
+          <p className={ui.notice} data-testid="mail-sending-hint">
+            {t("sendingHint")}
+          </p>
+          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
+          {canApprove ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className={ui.primary} disabled={busy} onClick={() => void approve()}>
+                {t("approveAndSend")}
+              </button>
+              <button type="button" className={ui.danger} disabled={busy} onClick={() => setShowReject((v) => !v)}>
+                {t("reject")}
+              </button>
+            </div>
+          ) : null}
+          {showReject ? (
+            <div className="flex flex-col gap-2">
+              <label className="flex flex-col gap-1">
+                <span className={ui.label}>{t("rejectionNoteLabel")}</span>
+                <textarea className={ui.input} rows={3} value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} />
+              </label>
+              <button type="button" className={ui.button} disabled={busy || !rejectNote.trim()} onClick={() => void reject()}>
+                {t("confirmReject")}
+              </button>
+            </div>
+          ) : null}
+        </div>
       ) : message.status === "pending" ? (
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted">{submitterLabel(message, members, t)}</p>
-          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{message.body}</SafeText>
+          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
           {canApprove ? (
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className={ui.primary} disabled={busy} onClick={() => void approve()}>
@@ -239,11 +285,11 @@ export function MailDetail({
       ) : message.status === "sent" ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-muted">{message.sent_at ? t("sentAt", { at: formatDateTime(message.sent_at) }) : ""}</p>
-          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{message.body}</SafeText>
+          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{message.body}</SafeText>
+          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className={ui.button} disabled={busy} onClick={() => void reply()}>
               {t("reply")}

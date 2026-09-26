@@ -9,6 +9,7 @@ import sys
 
 from sqlalchemy import select
 
+from mhvp.core.auth.permission_cache import invalidate_permissions
 from mhvp.core.config import get_settings
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -30,6 +31,7 @@ async def run() -> int:
             async with tenant_transaction(factory, tenant_id) as session:
                 await ensure_system_roles(session, tenant_id)
                 await ensure_tenant_defaults(session, tenant_id)
+            invalidate_permissions(tenant_id)
         get_logger("mhvp.sync_roles").info("system_roles_synced", tenants=len(tenant_ids))
         return 0
     finally:

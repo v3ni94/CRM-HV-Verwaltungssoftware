@@ -89,21 +89,27 @@ export function StatementWorkbench({ id, status, keys }: { id: string; status: s
         </button>
       ) : null}
       {status === "internally_approved" ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-col gap-1">
-            <span className={ui.label}>{t("deliveredAt")}</span>
-            <input type="date" className={ui.input} value={delivered} onChange={(e) => setDelivered(e.target.value)} />
-          </label>
-          <button
-            type="button"
-            className={ui.primary}
-            onClick={() => call("transition", { target: "issued", delivered_at: delivered })}
-            disabled={busy || !delivered}
->
-            {t("issue")}
-          </button>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("deliveredAt")}</span>
+              <input type="date" className={ui.input} value={delivered} onChange={(e) => setDelivered(e.target.value)} />
+            </label>
+            <button
+              type="button"
+              className={ui.primary}
+              onClick={() => call("transition", { target: "issued", delivered_at: delivered })}
+              disabled={busy || !delivered}
+            >
+              {t("issue")}
+            </button>
+          </div>
+          <p className={ui.help} data-testid="gate-g3-hint">
+            {t("issueGateHint")}
+          </p>
         </div>
       ) : null}
+      {status === "calculated" ? <p className={ui.help}>{t("approveInternalHint")}</p> : null}
       {status !== "draft" ? (
         <button type="button" className={ui.button} onClick={() => call("new-version")} disabled={busy}>
           {t("newVersion")}

@@ -33,6 +33,7 @@ export default async function InspectionListPage({ params }: { params: Promise<{
         title={t("title")}
       />
       <p className={ui.notice}>{t("notice")}</p>
+      <div className="overflow-x-auto">
       <table className={ui.table}>
         <thead>
           <tr>
@@ -64,6 +65,7 @@ export default async function InspectionListPage({ params }: { params: Promise<{
           ) : null}
         </tbody>
       </table>
+      </div>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("create")}</h2>
         <InspectionRequestCreate legalEntityId={ctx.entity.id} basePath={base} />

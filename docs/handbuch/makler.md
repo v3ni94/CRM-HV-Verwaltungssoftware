@@ -17,11 +17,51 @@ außer die Heizkosten sind bereits Teil der Nebenkosten); der angezeigte Wert vo
 Speichern ist nur eine Vorschau. Die Übergabe an FLOWFACT selbst folgt erst, sobald die
 Schnittstellendokumentation vorliegt.
 
+## Energieausweis und Angebotsmiete
+
+Energieausweisdaten werden am Objekt gepflegt (Objektseite, Karte Energieausweis, Recht
+Objekte ändern): Art des Ausweises (Verbrauchsausweis, Bedarfsausweis), Kennwert in
+kWh/(m²a), Energieträger, Baujahr laut Ausweis, Ausstellungsdatum, Gültig bis,
+Effizienzklasse. Eine neue Anzeige übernimmt diese Werte bei der Anlage in den Abschnitt
+Energieausweis (Status Liegt vor, Nicht erforderlich, Wird erstellt; Typ, Kennwert,
+Klasse, Baujahr Heizanlage, Gültig bis, Warmwasser enthalten, Ausstellungsdatum, Baujahr
+laut Energieausweis, Hinweis). Eine Anzeige mit Status Liegt vor lässt sich nur mit
+Energieausweistyp, Energiekennwert und Energieeffizienzklasse aktiv schalten.
+
+Die Angebotsmiete steht an der Anzeige: Preis (Kaltmiete), Nebenkosten, Heizkosten,
+Kaution; die Warmmiete wird daraus berechnet. Der Exposé-Entwurf einer Einheit (Bereich
+Vermietung) übernimmt Energieausweis vom Objekt und Angebotsmiete aus der neuesten
+Vermietungsanzeige der Einheit und listet fehlende Angaben unter Fehlend; nichts wird
+geschätzt. Welche Angaben in einer Immobilienanzeige rechtlich Pflicht sind, ist vor
+Veröffentlichung zu prüfen (offener Punkt M26-03); die Vollständigkeitsprüfung ist
+Produktschutz, keine Rechtsprüfung.
+
 ## OpenImmo-Export
 
 Je Anzeige und als Sammelexport lässt sich eine OpenImmo-1.2.7-Datei erzeugen, mit
-vorheriger Vollständigkeitsprüfung. Die Adresse erscheint im Export nur entsprechend der
-gesetzten Adressfreigabe; ein Portalupload findet nicht statt.
+vorheriger Vollständigkeitsprüfung (Vollständigkeit prüfen; fehlende Pflichtfelder,
+darunter Energieausweis und Angebotsmiete, sperren den Export, bis sie ergänzt sind oder
+der Export ausdrücklich trotzdem ausgelöst wird). Die Adresse erscheint im Export nur
+entsprechend der gesetzten Adressfreigabe; ein Portalupload findet nicht statt.
+
+### Schemaprüfung
+
+Die Prüfung auf der Anzeigendetailseite (Vollständigkeit prüfen) prüft die erzeugte Datei
+zusätzlich gegen das OpenImmo-Schema. Das amtliche Schema (XSD 1.2.7) ist urheberrechtlich
+beim OpenImmo e.V. und nicht Teil der Software. Solange der Betreiber keine XSD hinterlegt
+hat, erscheint der Hinweis "XSD nicht hinterlegt" und es läuft nur eine Strukturprüfung der
+dokumentierten Elemente. Diese Strukturprüfung ersetzt nicht die Prüfung gegen das amtliche
+Schema.
+
+Betreiber: XSD beim OpenImmo e.V. beziehen (Mitgliedschaft oder Lizenz), auf dem API-Server
+ablegen und in der Umgebung `MHVP_OPENIMMO_XSD_PATH` mit dem Dateipfad setzen. Die Prüfung
+gegen die XSD braucht zusätzlich die Bibliothek `xmlschema` oder `lxml` im API-Container;
+ohne sie bleibt es bei der Strukturprüfung, was im Ergebnis angezeigt wird.
+
+Ergebnis: Modus (Schema oder Struktur), Fehlerliste und Hinweis stehen im Abschnitt
+OpenImmo-Export. Bei Schemafehlern ist der Download gesperrt, bis die Fehler behoben sind
+oder das Kästchen "Trotzdem exportieren" gesetzt wird. Fehlende Werte werden dabei nie
+ergänzt oder erfunden.
 
 ## FLOW-Import
 

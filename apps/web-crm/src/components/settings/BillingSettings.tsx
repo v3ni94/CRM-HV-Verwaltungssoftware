@@ -57,11 +57,27 @@ export function BillingSettingsForm({
     setPatch((prev) => ({ ...prev, [field]: value }));
   }
 
+  function invalidFields(): string[] {
+    const out: string[] = [];
+    const prefix = patch.invoice_prefix;
+    if (prefix && !/^[A-Z0-9]{2,16}$/.test(prefix)) out.push(t("validation.invoice_prefix"));
+    const length = patch.datev_account_length;
+    if (typeof length === "number" && (!Number.isInteger(length) || length < 4 || length > 8)) out.push(t("validation.datev_account_length"));
+    const month = patch.datev_fiscal_year_start_month;
+    if (typeof month === "number" && (!Number.isInteger(month) || month < 1 || month > 12)) out.push(t("validation.datev_fiscal_year_start_month"));
+    return out;
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    setBusy(true);
     setMessage(null);
     setError(null);
+    const invalid = invalidFields();
+    if (invalid.length) {
+      setError(t("invalid", { fields: invalid.join(" ") }));
+      return;
+    }
+    setBusy(true);
     const res = await bff<BillingSettings>("/api/bff/tenant/billing-settings", {
       method: "PATCH",
       body: JSON.stringify(patch),
@@ -188,12 +204,22 @@ export function BillingSettingsForm({
         <span className="text-xs text-muted">{t("validation.datev_fiscal_year_start_month")}</span>
       </label>
       {canUpdate ? (
-        <div className="sm:col-span-2 flex items-center gap-2">
-          <button type="submit" className={ui.primary} disabled={busy}>
-            {t("save")}
-          </button>
-          {message ? <span className="text-xs text-success-fg">{message}</span> : null}
-          {error ? <span className={ui.error}>{error}</span> : null}
+        <div className="sm:col-span-2 flex flex-col gap-2">
+          <div className={ui.formActions}>
+            <button type="submit" className={`${ui.primary} ${ui.actionFull}`} disabled={busy}>
+              {t("save")}
+            </button>
+          </div>
+          {message ? (
+            <p role="status" className={ui.success}>
+              {message}
+            </p>
+          ) : null}
+          {error ? (
+            <p role="alert" className={ui.alert}>
+              {error}
+            </p>
+          ) : null}
         </div>
       ) : (
         <p className="sm:col-span-2 text-xs text-muted">{t("readOnly")}</p>

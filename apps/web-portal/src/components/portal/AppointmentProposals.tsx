@@ -45,7 +45,11 @@ export function AppointmentProposals({ proposals }: { proposals: AppointmentProp
           {error}
         </p>
       ) : null}
-      {accepted ? <p className={ui.success}>{t("appointmentAccepted")}</p> : null}
+      {accepted ? (
+        <p role="status" className={ui.success}>
+          {t("appointmentAccepted")}
+        </p>
+      ) : null}
       {confirmed ? (
         <p className="text-sm">
           <span className="font-medium">{t("appointmentConfirmed")}:</span> {formatDateTime(confirmed.starts_at)}
@@ -57,11 +61,17 @@ export function AppointmentProposals({ proposals }: { proposals: AppointmentProp
           <ul className="flex flex-col gap-2">
             {open.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm">
-                <span>
+                <span id={`proposal-${p.id}`}>
                   <span className="font-medium">{formatDateTime(p.starts_at)}</span>
                   {p.note ? <span className="text-muted"> ({p.note})</span> : null}
                 </span>
-                <button type="button" className={ui.button} disabled={busy} onClick={() => void accept(p)}>
+                <button
+                  type="button"
+                  className={ui.button}
+                  disabled={busy}
+                  aria-describedby={`proposal-${p.id}`}
+                  onClick={() => void accept(p)}
+                >
                   {t("appointmentAccept")}
                 </button>
               </li>

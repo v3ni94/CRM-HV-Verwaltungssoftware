@@ -43,6 +43,7 @@ from mhvp.accounting.models import (
 from mhvp.ai.models import ImportRun, ImportStatus
 from mhvp.banking.models import BankStatement, BankTransaction
 from mhvp.core import crypto
+from mhvp.core.escaping import csv_safe_cell
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports.fields import parse_date, parse_decimal
 from mhvp.imports.models import ImportMapping, ImportSourceFile, ReportType, StagingRow
@@ -846,16 +847,18 @@ def report_csv(report: dict[str, Any]) -> str:
     writer = csv.writer(buffer, delimiter=";", lineterminator="\r\n")
     writer.writerow(CSV_HEADER)
     for line in report.get("lines", []):
+        # Text cells come from the imported lists; neutralise spreadsheet formulas
+        # (Sicherheitsreview 1.22, Befund 6). Amounts keep their sign.
         writer.writerow(
             [
-                line["property_number"],
-                line["metric"],
-                line.get("key") or "",
+                csv_safe_cell(line["property_number"]),
+                csv_safe_cell(line["metric"]),
+                csv_safe_cell(line.get("key") or ""),
                 format_eur(line.get("source")),
                 format_eur(line.get("platform")),
                 format_eur(line.get("difference")),
                 "ja" if line["deviates"] else "nein",
-                line.get("hint") or "",
+                csv_safe_cell(line.get("hint") or ""),
             ]
         )
     return buffer.getvalue()

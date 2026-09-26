@@ -12,9 +12,11 @@ import json
 import socket
 import time
 import uuid
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
-from urllib.parse import urlsplit
+from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 from sqlalchemy import (
@@ -135,23 +137,67 @@ def _is_public(address: str) -> bool:
     )
 
 
-def check_target(url: str, *, allow_private: bool) -> None:
-    """Reject non-HTTP(S) URLs and, unless allowed, targets resolving to non-public addresses."""
+@dataclass(frozen=True)
+class PinnedTarget:
+    """A checked webhook target: ``url`` is what the HTTP client connects to, ``headers`` and
+    ``extensions`` restore the original host for the ``Host`` header and the TLS name check.
+    When the target is pinned, ``url`` carries the checked IP address instead of the host name,
+    so the client cannot resolve the name a second time (DNS rebinding between check and
+    call, Review 1.22 Nr. 12). Unpinned (private targets allowed) all three are pass-through."""
+
+    url: str
+    headers: dict[str, str] = field(default_factory=dict)
+    extensions: dict[str, Any] = field(default_factory=dict)
+
+
+def _syntax(url: str, *, allow_private: bool) -> Any:
     parts = urlsplit(url)
     if parts.scheme not in {"https", "http"} or not parts.hostname:
         raise UnsafeWebhookTargetError("URL must be http(s) with a host")
     if parts.username or parts.password:
         raise UnsafeWebhookTargetError("credentials in the URL are not allowed")
-    if allow_private:
-        return
-    if parts.scheme != "https":
+    if not allow_private and parts.scheme != "https":
         raise UnsafeWebhookTargetError("only https targets are allowed")
+    return parts
+
+
+def _resolve_public(hostname: str, port: int) -> list[str]:
     try:
-        infos = socket.getaddrinfo(parts.hostname, parts.port or 443, proto=socket.IPPROTO_TCP)
+        infos = socket.getaddrinfo(hostname, port, proto=socket.IPPROTO_TCP)
     except socket.gaierror as exc:
         raise UnsafeWebhookTargetError("host cannot be resolved") from exc
-    if not infos or not all(_is_public(str(info[4][0])) for info in infos):
+    addresses = list(dict.fromkeys(str(info[4][0]) for info in infos))
+    if not addresses or not all(_is_public(a) for a in addresses):
         raise UnsafeWebhookTargetError("target resolves to a non-public address")
+    return addresses
+
+
+def check_target(url: str, *, allow_private: bool, resolve: bool = True) -> None:
+    """Reject non-HTTP(S) URLs and, unless allowed, targets resolving to non-public addresses.
+    ``resolve=False`` keeps the check to the URL itself (no DNS query, e.g. for a dry run whose
+    host name is chosen freely by the caller, Review 1.22 Nr. 13)."""
+    parts = _syntax(url, allow_private=allow_private)
+    if allow_private or not resolve:
+        return
+    _resolve_public(parts.hostname, parts.port or 443)
+
+
+def pin_target(url: str, *, allow_private: bool) -> PinnedTarget:
+    """``check_target`` plus pinning: the call goes to the first checked address with the
+    original host in ``Host`` and as TLS server name (``sni_hostname`` extension of httpx)."""
+    parts = _syntax(url, allow_private=allow_private)
+    if allow_private:
+        return PinnedTarget(url=url)
+    hostname = parts.hostname
+    port = parts.port or 443
+    address = _resolve_public(hostname, port)[0]
+    literal = f"[{address}]" if ":" in address else address
+    netloc = f"{literal}:{port}" if parts.port else literal
+    pinned = urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+    host_header = f"{hostname}:{parts.port}" if parts.port else hostname
+    return PinnedTarget(
+        url=pinned, headers={"Host": host_header}, extensions={"sni_hostname": hostname}
+    )
 
 
 def matches(subscription: WebhookSubscription, event_type: str) -> bool:
@@ -236,9 +282,13 @@ async def attempt_delivery(
     }
     delivery.attempts += 1
     try:
-        check_target(subscription.url, allow_private=allow_private)
+        target = pin_target(subscription.url, allow_private=allow_private)
         response = await client.post(
-            subscription.url, content=body, headers=headers, follow_redirects=False
+            target.url,
+            content=body,
+            headers=headers | target.headers,
+            extensions=target.extensions,
+            follow_redirects=False,
         )
         delivery.last_status_code = response.status_code
         ok = 200 <= response.status_code < 300

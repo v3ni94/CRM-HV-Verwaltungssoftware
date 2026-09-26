@@ -54,16 +54,42 @@ export function EnergyCertificateForm({ property }: { property: Record<string, u
     setForm((f) => ({ ...f, [key]: e.target.value }));
   };
 
+  const validate = (): string | null => {
+    const value = form.energy_certificate_value.trim();
+    if (value && !/^\d+([.,]\d{1,2})?$/.test(value)) return t("errors.value");
+    const year = form.energy_certificate_construction_year.trim();
+    if (year && !/^\d{4}$/.test(year)) return t("errors.year");
+    const issued = form.energy_certificate_issued_on;
+    const until = form.energy_certificate_valid_until;
+    if (issued && until && until < issued) return t("errors.validUntil");
+    return null;
+  };
+
   const save = async () => {
-    setBusy(true);
     setError(null);
+    setSaved(false);
+    const problem = validate();
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setBusy(true);
     const body: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(property)) {
       if (!["id", "status", "version", "legal_entities"].includes(key)) body[key] = value;
     }
     for (const key of KEYS) {
       const value = form[key].trim();
-      body[key] = value === "" ? null : key === "energy_certificate_construction_year" ? Number(value) : value;
+      body[key] =
+        value === ""
+          ? null
+          : key === "energy_certificate_construction_year"
+            ? Number(value)
+            : key === "energy_certificate_value"
+              ? value.replace(",", ".")
+              : key === "energy_certificate_class"
+                ? value.toUpperCase()
+                : value;
     }
     const res = await bff(`/api/bff/properties/${property.id}`, {
       method: "PUT",
@@ -120,7 +146,11 @@ export function EnergyCertificateForm({ property }: { property: Record<string, u
           <button type="button" className={ui.primary} disabled={busy} onClick={save}>
             {t("save")}
           </button>
-          {saved ? <span className="text-sm text-muted">{t("saved")}</span> : null}
+          {saved ? (
+            <span role="status" className="text-sm text-success-fg">
+              {t("saved")}
+            </span>
+          ) : null}
         </div>
       </div>
       {error ? (

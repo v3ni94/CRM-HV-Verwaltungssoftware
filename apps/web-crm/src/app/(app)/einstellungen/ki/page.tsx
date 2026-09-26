@@ -6,6 +6,7 @@ import { ProviderSettings } from "@/components/ai/ProviderSettings";
 import { RoutingSettings, type Strategy } from "@/components/ai/RoutingSettings";
 import { UsagePanel } from "@/components/ai/UsagePanel";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function AiSettingsPage() {
   const t = await getTranslations("AiSettings");
   const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
   const [providers, usage, routing, knowledge, properties] = await Promise.all([

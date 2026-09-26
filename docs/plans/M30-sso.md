@@ -50,3 +50,10 @@ Autorisierungsanfrage (API) zu ergänzen, nicht in der Brücke.
 
 - M30-01: Betrieb der Relying Party Statusseite (Client anlegen, Secrets, Traefik-Profil) liegt
   beim Betreiber, siehe Runbook.
+
+## Stand 26.09.2026
+
+Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis 1.22.1) und der Lückenliste `docs/plans/LUECKENLISTE-2026-09-26.md`; keine neuen Sachverhalte.
+
+* Im Code: Browserbrücke `apps/web-crm/src/app/oidc/authorize/route.ts`, Discovery mit `MHVP_WEB_CRM_URL`, CLI `python -m mhvp.core.auth.oidc_clients`, Runbook `docs/runbooks/oidc-relying-parties.md`.
+* Tests wie oben; unverändert offen: M30-01 (Betrieb der Relying Party Statusseite beim Betreiber), keine Freigabe je Benutzer oder Rolle (Annahme A-039).

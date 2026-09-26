@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 
 import { MailWorkspace } from "@/components/mail/MailWorkspace";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function MailPage() {
   const t = await getTranslations("Mail");
   const tPlaybooks = await getTranslations("MailPlaybooks");
-  const api = serverApi();
-  const me = await api.GET("/api/v1/auth/me");
+  const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("communication:read")) notFound();

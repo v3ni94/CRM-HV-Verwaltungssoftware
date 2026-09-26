@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { InvoiceActions } from "@/components/invoices/InvoiceForms";
 import { InvoiceMatchPanel } from "@/components/invoices/InvoiceMatchPanel";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatDateTime, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -26,9 +27,10 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
   const lines = (d.lines ?? []) as Line[];
   return (
     <div className="flex flex-col gap-4">
-      <h1 className={ui.title}>
-        {t("invoice")} {String(d.number)} · V{String(d.version)}
-      </h1>
+      <PageHeader
+        breadcrumb={[{ href: "/rechnungen", label: t("title") }]}
+        title={`${t("invoice")} ${String(d.number)} · V${String(d.version)}`}
+      />
       <p className="text-sm text-muted">
         {formatDate(String(d.invoice_date))} · {formatEur(String(d.gross))} · {t(`reviewStatus.${String(d.review_status)}`)} ·{" "}
         {t(`postingStatus.${String(d.posting_status)}`)}
@@ -43,20 +45,28 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
         </section>
       ) : null}
       <div className="overflow-x-auto">
-<table className="mhvp-table">
-        <tbody>
-          {lines.map((l, i) => (
-            <tr key={i}>
-              <td>{l.text}</td>
-              <td className="num">{formatEur(l.net)}</td>
-              <td className="num">{formatEur(l.vat)}</td>
+        <table className="mhvp-table">
+          <thead>
+            <tr>
+              <th>{t("lineText")}</th>
+              <th className="num">{t("fields.net")}</th>
+              <th className="num">{t("lineVat")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-</div>
+          </thead>
+          <tbody>
+            {lines.map((l, i) => (
+              <tr key={i}>
+                <td>{l.text}</td>
+                <td className="num">{formatEur(l.net)}</td>
+                <td className="num">{formatEur(l.vat)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <section className="flex flex-col gap-1">
         <h2 className={ui.h2}>{t("reviews")}</h2>
+        {reviews.length === 0 ? <p className={ui.help}>{t("noReviews")}</p> : null}
         <ul className="text-sm">
           {reviews.map((r, i) => (
             <li key={i}>

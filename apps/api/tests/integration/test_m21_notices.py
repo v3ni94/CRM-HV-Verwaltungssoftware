@@ -184,7 +184,8 @@ def test_notices_maintenance_and_portal_visibility(client: TestClient, world: Wo
     )
 
     # Maintenance at the WEG: all, owner only, tenant only, future, expired, with document.
-    attachment = _doc(client, h, "Hausordnung", "property", weg["id"], ["tenant"])
+    # Review 1.22 Nr. 10: the attachment of a notice for all must be released for both groups.
+    attachment = _doc(client, h, "Hausordnung", "property", weg["id"], ["tenant", "owner"])
     _notice(client, h, weg["id"], "WEG alle")
     _notice(client, h, weg["id"], "WEG Eigentuemer", audience="owner")
     _notice(client, h, weg["id"], "WEG Mieter", audience="tenant")

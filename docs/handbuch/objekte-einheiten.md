@@ -60,6 +60,9 @@ Weitere Abschnitte der Detailseite:
 - Vollständigkeit der Objektakte: Pflichtunterlagen und ein Nachforderungsschreiben als
   Entwurf (Kapitel Dokumente und DMS).
 - Tickets zum Objekt (Kapitel Tickets).
+- Energieausweis: Art, Kennwert, Energieträger, Baujahr laut Ausweis, Ausstellungsdatum,
+  Gültig bis und Effizienzklasse; Anzeigen und Exposé übernehmen die Werte (Kapitel Makler).
+- Schwarzes Brett: Aushänge für das Portal mit Gültigkeit und Zielgruppe (Kapitel Portal).
 
 ## Einheiten, Gebäude und Umlageschlüssel
 

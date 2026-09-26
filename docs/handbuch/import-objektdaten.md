@@ -31,13 +31,63 @@ Importassistent, Abschnitt "Immoware24-Listen" ohne Serverzugang zur Verfügung.
   den Status "in Übernahme".
 * Vorhandene Objekte und Einheiten (gleiche Nummer) werden nie überschrieben. Stimmen die Angaben
   überein, meldet der Bericht "unchanged", sonst "conflict" zur manuellen Prüfung.
+* Überzählige führende Nullen (0081) werden entfernt, die Nummer wird als 081 angelegt. Die
+  Zuordnung greift auch, wenn die Nummer in der Datei mit führenden Nullen steht (010012 findet
+  `10012=012`); ein- und zweistellige Zielnummern der Zuordnung werden aufgefüllt (`10012=12`
+  ergibt 012).
+
+## Welche Exportvarianten gelesen werden
+
+Der Import liest die Datei so, wie Immoware24 oder Excel sie liefern, und weist im Bericht unter
+"Hinweise zur Datei" aus, was er dabei angeglichen hat:
+
+* Zeichensatz UTF-8 mit und ohne BOM, Windows-1252 (ANSI, Excel) und Latin-1; Umlaute bleiben
+  in jedem Fall erhalten.
+* Trennzeichen Semikolon, Komma oder Tabulator werden an der Kopfzeile erkannt. Anführungszeichen
+  mit eingeschlossenen Trennzeichen ("Müller, Jörg", "250,00") und Zeilenumbrüchen werden korrekt
+  gelesen; die Zeilennummern im Bericht sind die der Datei.
+* Leerzeichen am Anfang und Ende jeder Zelle, leere Zeilen und wiederholte Kopfzeilen (etwa nach
+  dem Zusammenfügen mehrerer Exporte) werden übersprungen und gezählt.
+* Die Reihenfolge der Spalten ist beliebig, zusätzliche Spalten werden ignoriert. Kopfzeilen
+  werden ohne Rücksicht auf Groß- und Kleinschreibung, Leerzeichen, Bindestriche und
+  Umlautschreibweise erkannt (Objekt-Nummer, Objektnummer, Gebäude, Gebaeude). Die beiden
+  Spalten "vereinbarter Zahlbetrag" werden in Dateireihenfolge dem Eigentümer und dem Mieter
+  zugeordnet.
+* Fehlt eine Pflichtspalte (Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer), bricht der
+  Import mit einer Meldung ab, die die fehlende Spalte und die gefundenen Spalten nennt.
+* Zeilen ohne Objekt-Nummer oder VE-Nummer werden übersprungen und im Bericht genannt.
+* Exakt doppelte Zeilen werden nur einmal übernommen (Hinweis am Objekt). Dieselbe VE-Nummer
+  mit abweichenden Angaben bleibt ein Problem, das Objekt wird bis zur Klärung übersprungen.
+* Die Verwaltungsart wird in üblichen Schreibweisen erkannt (WEG-Verwaltung, WEG,
+  Mietverwaltung, WEG mit SE-Verwaltung, Sondereigentumsverwaltung, SEV).
+
+## Vor dem Import prüfen
+
+Checkliste für den Betreiber, bevor der Testlauf gestartet wird:
+
+1. Richtigen Mandanten wählen (Hausverwaltung Müller GmbH oder Timo Müller); ein Import lässt
+   sich nur über die Rücknahme des Importlaufs zurückholen.
+2. Export in Immoware24 vollständig ziehen (alle Objekte, auch abgegebene) und die Datei einmal
+   in einem Texteditor öffnen: Kopfzeile mit Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer
+   vorhanden, keine leeren Spalten in der Kopfzeile, keine Vorschau- oder Summenzeilen.
+3. Objektnummern mit mehr als drei Stellen (10012, 2911, 999999) vorab in der Nummernzuordnung
+   festlegen; die Zielnummer darf nicht bereits belegt sein.
+4. Entscheiden, ob abgegebene Objekte (Präfix Z ABGEGEBEN) mit angelegt werden sollen.
+5. Testlauf ausführen und im Bericht prüfen: Hinweise zur Datei (Zeichensatz, Trennzeichen,
+   übersprungene und doppelte Zeilen), übersprungene Objekte, Einheitenart "Sonstiges",
+   Konflikte mit vorhandenen Objekten.
+6. Zählung des Testlaufs mit dem Export vergleichen (Anzahl Objekte und Einheiten). Die Übernahme
+   liefert dieselbe Zählung wie der Testlauf.
+7. Nach der Übernahme einen zweiten Testlauf mit derselben Datei starten: alle Datensätze müssen
+   als unverändert gemeldet werden.
 
 ## Ablauf über die Oberfläche
 
 1. Im CRM Importe, Importassistent öffnen und im Abschnitt "Immoware24-Listen" die Karte
    "Objektdaten" verwenden. Erforderlich sind die Rechte des Importassistenten (KI anlegen sowie
    Objekte, Kontakte und Verträge anlegen); Nur-Lese-Benutzer erhalten eine Ablehnung.
-2. CSV-Datei wählen (UTF-8, Semikolon, wie exportiert, höchstens 20 MB). Im Feld
+2. CSV-Datei wählen (wie exportiert, höchstens 20 MB; Zeichensatz und Trennzeichen werden
+   erkannt). Im Feld
    Nummernzuordnung die Paare `ALT=NEU` je Zeile oder durch Komma getrennt eintragen, zum
    Beispiel `10012=012`. Häkchen "Abgegebene Objekte überspringen" entspricht
    `--skip-handed-over`.
@@ -57,7 +107,8 @@ false). Die Antwort ist der Bericht des Befehls, bei Übernahme zusätzlich `imp
 
 ## Ablauf auf dem Server
 
-1. Datei nach `/opt/mhvp/import/objektdaten.csv` legen (UTF-8, Semikolon, wie exportiert).
+1. Datei nach `/opt/mhvp/import/objektdaten.csv` legen (wie exportiert; Zeichensatz und
+   Trennzeichen werden erkannt).
 2. Testlauf, es wird nichts gespeichert:
 
        cd /opt/mhvp

@@ -37,7 +37,7 @@ describe("BoardAuditPanel", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(jsonResponse({ id: "a1", account_id: "acc", contact_id: CONTACT, invitation_token: "tok.secret" }, 201));
     renderIntl(
-      <BoardAuditPanel auditId={AUDIT} section={section} items={[{ id: "i1", label: "Position 1" }]} contactNames={{ [CONTACT]: "Erika Beirat" }} formatDate={(v) => v ?? ""} />,
+      <BoardAuditPanel auditId={AUDIT} section={section} items={[{ id: "i1", label: "Position 1" }]} contactNames={{ [CONTACT]: "Erika Beirat" }} />,
     );
     await userEvent.type(screen.getByLabelText("E-Mail (nur für neuen Portalzugang)"), "erika@example.org");
     await userEvent.type(screen.getByLabelText("Anzeigename (nur für neuen Portalzugang)"), "Erika Beirat");
@@ -57,7 +57,7 @@ describe("BoardAuditPanel", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(jsonResponse({ id: NOTE, kind: "answered", answer: "Unter der Wertgrenze." }));
     renderIntl(
-      <BoardAuditPanel auditId={AUDIT} section={section} items={[{ id: "i1", label: "Position 1" }]} contactNames={{}} formatDate={(v) => v ?? ""} />,
+      <BoardAuditPanel auditId={AUDIT} section={section} items={[{ id: "i1", label: "Position 1" }]} contactNames={{}} />,
     );
     expect(screen.getByText("Warum ohne Angebot?")).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("Antwort der Verwaltung"), "Unter der Wertgrenze.");
@@ -65,5 +65,14 @@ describe("BoardAuditPanel", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`/api/bff/hoa/audit-engagements/${AUDIT}/notes/${NOTE}/answer`);
     expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({ answer: "Unter der Wertgrenze." });
+  });
+
+  it("formats the dates itself and confirms an answer (review 26.09.2026)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ id: "n1" }));
+    renderIntl(<BoardAuditPanel auditId={AUDIT} section={section} items={[]} contactNames={{}} />);
+    expect(screen.getByText("01.09.2026")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Antwort der Verwaltung"), "Beleg liegt in der Akte.");
+    await userEvent.click(screen.getByRole("button", { name: "Antwort senden" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Gespeichert.");
   });
 });

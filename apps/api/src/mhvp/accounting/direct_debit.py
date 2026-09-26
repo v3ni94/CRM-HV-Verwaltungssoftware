@@ -15,7 +15,7 @@ document; the download requires release gate G2 and nothing is ever sent to a ba
 import hashlib
 import json
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -419,6 +419,24 @@ async def orders_of(session: AsyncSession, run: DirectDebitRun) -> list[DirectDe
     )
 
 
+async def orders_of_runs(
+    session: AsyncSession, run_ids: Sequence[uuid.UUID]
+) -> dict[uuid.UUID, list[DirectDebitOrder]]:
+    """Orders of several runs in one query, grouped by run."""
+    grouped: dict[uuid.UUID, list[DirectDebitOrder]] = {}
+    if not run_ids:
+        return grouped
+    for o in (
+        await session.scalars(
+            select(DirectDebitOrder)
+            .where(DirectDebitOrder.run_id.in_(run_ids))
+            .order_by(DirectDebitOrder.sequence_type, DirectDebitOrder.id)
+        )
+    ).all():
+        grouped.setdefault(o.run_id, []).append(o)
+    return grouped
+
+
 def snapshot(run: DirectDebitRun, orders: list[DirectDebitOrder]) -> str:
     fields = {
         "creditor_id": run.creditor_id,
@@ -450,6 +468,30 @@ async def valid_approvals(
     ).all()
     current = snapshot(run, orders)
     return [a for a in rows if a.snapshot_hash == current]
+
+
+async def valid_approvals_of_runs(
+    session: AsyncSession,
+    runs: Sequence[DirectDebitRun],
+    orders: dict[uuid.UUID, list[DirectDebitOrder]],
+) -> dict[uuid.UUID, list[DirectDebitApproval]]:
+    """Valid approvals (current snapshot) of several runs in one query, grouped by run."""
+    grouped: dict[uuid.UUID, list[DirectDebitApproval]] = {}
+    if not runs:
+        return grouped
+    current = {run.id: snapshot(run, orders.get(run.id, [])) for run in runs}
+    rows = (
+        await session.scalars(
+            select(DirectDebitApproval).where(
+                DirectDebitApproval.run_id.in_(list(current)),
+                DirectDebitApproval.invalidated_at.is_(None),
+            )
+        )
+    ).all()
+    for a in rows:
+        if a.snapshot_hash == current.get(a.run_id):
+            grouped.setdefault(a.run_id, []).append(a)
+    return grouped
 
 
 async def invalidate(session: AsyncSession, run: DirectDebitRun) -> None:
