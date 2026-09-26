@@ -1052,6 +1052,18 @@
               }
             ],
             "title": "Snapshot Hash"
+          },
+          "subject_kind": {
+            "anyOf": [
+              {
+                "pattern": "^(economic_plan|annual_statement|maintenance|structural_change|manager_appointment|other)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Kind"
           }
         },
         "required": [
@@ -11104,6 +11116,18 @@
             ],
             "title": "Subject Id"
           },
+          "subject_kind": {
+            "anyOf": [
+              {
+                "pattern": "^(economic_plan|annual_statement|maintenance|structural_change|manager_appointment|other)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Kind"
+          },
           "subject_type": {
             "anyOf": [
               {
@@ -11115,6 +11139,16 @@
               }
             ],
             "title": "Subject Type"
+          },
+          "votes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoaVotesIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "wording": {
             "maxLength": 20000,
@@ -11210,6 +11244,78 @@
         "title": "HoaStatementIn",
         "type": "object"
       },
+      "HoaSubjectRuleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "counting_basis": {
+            "pattern": "^(heads|shares|units)$",
+            "title": "Counting Basis",
+            "type": "string"
+          },
+          "custom_denominator": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Denominator"
+          },
+          "custom_numerator": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Numerator"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "majority_type": {
+            "pattern": "^(simple|qualified_2_3|qualified_3_4|unanimous|custom)$",
+            "title": "Majority Type",
+            "type": "string"
+          },
+          "source": {
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Source",
+            "type": "string"
+          },
+          "subject_kind": {
+            "pattern": "^(economic_plan|annual_statement|maintenance|structural_change|manager_appointment|other)$",
+            "title": "Subject Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_kind",
+          "majority_type",
+          "counting_basis",
+          "source"
+        ],
+        "title": "HoaSubjectRuleIn",
+        "type": "object"
+      },
       "HoaTransitionIn": {
         "additionalProperties": false,
         "properties": {
@@ -11245,6 +11351,80 @@
           "target"
         ],
         "title": "HoaTransitionIn",
+        "type": "object"
+      },
+      "HoaVotesIn": {
+        "additionalProperties": false,
+        "description": "Recorded tally of an external meeting for the majority check (M25-01).",
+        "properties": {
+          "abstain": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Abstain"
+          },
+          "eligible": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligible"
+          },
+          "no": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "No"
+          },
+          "principle": {
+            "pattern": "^(head|mea|unit)$",
+            "title": "Principle",
+            "type": "string"
+          },
+          "yes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Yes"
+          }
+        },
+        "required": [
+          "principle",
+          "yes",
+          "no"
+        ],
+        "title": "HoaVotesIn",
         "type": "object"
       },
       "HoldIn": {
@@ -43541,6 +43721,236 @@
         ]
       }
     },
+    "/api/v1/hoa/majority-rules/subject-rules": {
+      "get": {
+        "operationId": "list_subject_rules_api_v1_hoa_majority_rules_subject_rules_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "legal_entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legal Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Subject Rules Api V1 Hoa Majority Rules Subject Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregeln je Beschlussgegenstand",
+        "tags": [
+          "WEG"
+        ]
+      },
+      "post": {
+        "operationId": "create_subject_rule_api_v1_hoa_majority_rules_subject_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaSubjectRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Subject Rule Api V1 Hoa Majority Rules Subject Rules Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregel je Beschlussgegenstand anlegen",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/majority-rules/subject-rules/{rule_id}": {
+      "delete": {
+        "operationId": "delete_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregel deaktivieren (bleibt nachvollziehbar)",
+        "tags": [
+          "WEG"
+        ]
+      },
+      "put": {
+        "operationId": "update_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaSubjectRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Subject Rule Api V1 Hoa Majority Rules Subject Rules  Rule Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregel ändern (Freigabe entfällt)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/majority-rules/subject-rules/{rule_id}/approve": {
+      "post": {
+        "operationId": "approve_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve Subject Rule Api V1 Hoa Majority Rules Subject Rules  Rule Id  Approve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregel fachlich freigeben (zweite Person)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
     "/api/v1/hoa/meetings": {
       "get": {
         "operationId": "list_meetings_api_v1_hoa_meetings_get",
@@ -44419,6 +44829,51 @@
           }
         },
         "summary": "Wirksamkeitsstatus ändern (z. B. bestandskräftig, angefochten)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/resolutions/{resolution_id}/majority-check": {
+      "get": {
+        "operationId": "resolution_majority_check_api_v1_hoa_resolutions__resolution_id__majority_check_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "resolution_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Resolution Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resolution Majority Check Api V1 Hoa Resolutions  Resolution Id  Majority Check Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsprüfung eines Beschlusses (nur Anzeige, keine Statusänderung)",
         "tags": [
           "WEG"
         ]

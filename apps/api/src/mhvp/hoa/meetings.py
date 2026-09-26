@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.hoa.majority import SUBJECT_PATTERN, check_resolution
 from mhvp.hoa.models import (
     AgendaItem,
     Attendance,
@@ -111,6 +112,7 @@ class AnnounceIn(MeetingBaseIn):
     outcome: str = Field(pattern="^(positive|negative)$")
     majority_basis: str = Field(min_length=3, max_length=4000)
     snapshot_hash: str | None = Field(default=None, max_length=64)
+    subject_kind: str | None = Field(default=None, pattern=SUBJECT_PATTERN)
 
 
 class CircularIn(MeetingBaseIn):
@@ -614,10 +616,18 @@ async def announce(
             subject_id=item.id,
             majority_basis=body.majority_basis,
             votes=result,
+            subject_kind=body.subject_kind,
         )
         session.add(row)
         await session.flush()
-        return {"id": row.id, "number": row.number, "status": row.status, "votes": result}
+        check = await check_resolution(session, principal, row) if body.subject_kind else None
+        return {
+            "id": row.id,
+            "number": row.number,
+            "status": row.status,
+            "votes": result,
+            "majority_check": check,
+        }
 
 
 @router.post("/circular-resolutions", status_code=201, summary="Umlaufbeschluss (Textform)")

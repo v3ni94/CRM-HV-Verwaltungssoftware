@@ -17,6 +17,7 @@ from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.hoa import calc
+from mhvp.hoa.majority import SUBJECT_PATTERN, check_resolution
 from mhvp.hoa.models import EconomicPlan, HoaCostItem, HoaStatement, PlanItem, Resolution
 
 router = APIRouter(prefix="/hoa", tags=["WEG"])
@@ -44,6 +45,16 @@ class HoaPlanItemIn(HoaBaseIn):
     account_id: uuid.UUID | None = None
 
 
+class HoaVotesIn(HoaBaseIn):
+    """Recorded tally of an external meeting for the majority check (M25-01)."""
+
+    principle: str = Field(pattern="^(head|mea|unit)$")
+    yes: Decimal = Field(ge=0)
+    no: Decimal = Field(ge=0)
+    abstain: Decimal = Field(default=Decimal("0"), ge=0)
+    eligible: Decimal | None = Field(default=None, gt=0)
+
+
 class HoaResolutionIn(HoaBaseIn):
     legal_entity_id: uuid.UUID
     decided_on: date
@@ -59,6 +70,8 @@ class HoaResolutionIn(HoaBaseIn):
     )
     subject_id: uuid.UUID | None = None
     majority_basis: str | None = Field(default=None, max_length=4000)
+    subject_kind: str | None = Field(default=None, pattern=SUBJECT_PATTERN)
+    votes: HoaVotesIn | None = None
 
 
 class HoaResolutionPatch(HoaBaseIn):
@@ -198,15 +211,19 @@ async def create_resolution(
             )
             + 1
         )
+        data = body.model_dump(exclude={"votes"})
+        votes = body.votes.model_dump(mode="json") if body.votes else {}
         row = Resolution(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
             number=number,
-            **body.model_dump(),
+            votes=votes,
+            **data,
         )
         session.add(row)
         await session.flush()
-        return {"id": row.id, "number": row.number, "status": row.status}
+        check = await check_resolution(session, principal, row) if body.subject_kind else None
+        return {"id": row.id, "number": row.number, "status": row.status, "majority_check": check}
 
 
 @router.patch(
@@ -258,6 +275,8 @@ async def list_resolutions(
                 "kind": r.kind,
                 "votes": r.votes,
                 "majority_basis": r.majority_basis,
+                "subject_kind": r.subject_kind,
+                "majority_check": r.majority_check,
             }
             for r in rows.all()
         ]

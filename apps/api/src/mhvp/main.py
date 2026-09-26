@@ -54,6 +54,7 @@ from mhvp.handover.portal import router as handover_portal_router
 from mhvp.handover.portal import staff_router as handover_staff_portal_router
 from mhvp.handover.routers import router as handover_router
 from mhvp.hoa.levies import router as hoa_levies_router
+from mhvp.hoa.majority import router as hoa_majority_router
 from mhvp.hoa.meetings import router as hoa_meetings_router
 from mhvp.hoa.package import router as hoa_package_router
 from mhvp.hoa.routers import router as hoa_router
@@ -201,6 +202,7 @@ def create_app(
     app.include_router(hoa_router, prefix=API_PREFIX)
     app.include_router(hoa_meetings_router, prefix=API_PREFIX)
     app.include_router(hoa_levies_router, prefix=API_PREFIX)
+    app.include_router(hoa_majority_router, prefix=API_PREFIX)
     app.include_router(hoa_package_router, prefix=API_PREFIX)
     app.include_router(letting_router, prefix=API_PREFIX)
     app.include_router(rentlaw_router, prefix=API_PREFIX)

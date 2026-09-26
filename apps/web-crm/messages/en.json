@@ -1733,7 +1733,9 @@
       "moreThan": "more than {p} %",
       "atLeast": "at least {p} %",
       "meaMin": "at least {p} % of all MEA"
-    }
+    },
+    "subjectKind": "Resolution subject",
+    "subjectKindNone": "not specified"
   },
   "RentIncrease": {
     "title": "Rent increases",
@@ -2724,6 +2726,10 @@
     "datev": {
       "title": "Accounting, DATEV",
       "description": "CRM account to DATEV account mapping, CSV import and check report for the batch export."
+    },
+    "weg": {
+      "title": "Owners' associations",
+      "description": "Majority rules per resolution subject with source and release."
     }
   },
   "Members": {
@@ -4448,6 +4454,58 @@
     "hint": "When the Gmail mailboxes are synced, exactly one AI extraction is started for each new PDF attachment whose subject, sender or file name indicates an invoice (Rechnung, Invoice, Beleg, RE-). The result is a proposal under incoming invoices, nothing is posted.",
     "costHint": "Every automatic extraction incurs AI costs and uses the monthly AI provider budget. Budget and release checks apply unchanged. Default: off.",
     "saved": "Setting saved."
+  },
+  "MajorityRules": {
+    "title": "Majority rules per resolution subject",
+    "intro": "Rules from the community regulations, agreements or statute with their source. The tally is checked against them; the announcement stays with the chair.",
+    "notice": "Rules must be reviewed and released by a second person. Without a rule the default applies: simple majority by heads, not functionally released. The check never changes a resolution status.",
+    "empty": "No rules yet. The default rule applies.",
+    "subjectKind": "Resolution subject",
+    "scope": "Scope",
+    "tenantWide": "All communities",
+    "majorityType": "Majority",
+    "countingBasis": "Counting basis",
+    "source": "Source",
+    "sourcePlaceholder": "e.g. community regulations section 7, to be checked",
+    "approval": "Release",
+    "approved": "released",
+    "notApproved": "not released",
+    "approve": "Release",
+    "edit": "Edit",
+    "delete": "Deactivate",
+    "confirmDelete": "Deactivate the rule? It stays traceable in the history.",
+    "create": "Create rule",
+    "update": "Save rule",
+    "cancel": "Cancel",
+    "numerator": "Numerator",
+    "denominator": "Denominator",
+    "customValue": "at least {n}/{d}",
+    "check": "Majority check",
+    "subjectKinds": {
+      "economic_plan": "Economic plan",
+      "annual_statement": "Annual statement",
+      "maintenance": "Maintenance",
+      "structural_change": "Structural change",
+      "manager_appointment": "Manager appointment",
+      "other": "Other"
+    },
+    "types": {
+      "simple": "simple majority",
+      "qualified_2_3": "qualified 2/3",
+      "qualified_3_4": "qualified 3/4",
+      "unanimous": "unanimous",
+      "custom": "custom fraction"
+    },
+    "bases": {
+      "heads": "Heads",
+      "shares": "Co-ownership shares",
+      "units": "Units"
+    },
+    "results": {
+      "reached": "reached",
+      "notReached": "not reached",
+      "notCheckable": "not checkable"
+    }
   }
 ,
   "ServiceContracts": {

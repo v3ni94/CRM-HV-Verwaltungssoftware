@@ -1589,6 +1589,8 @@
     }
   },
   "HoaWork": {
+    "subjectKind": "Beschlussgegenstand",
+    "subjectKindNone": "nicht angegeben",
     "noLedger": "Für die Gemeinschaft ist noch kein Buchungskreis angelegt.",
     "plans": "Wirtschaftspläne",
     "statements": "Hausgeldabrechnungen",
@@ -2660,6 +2662,7 @@
     "disclaimer": "Vorschläge der KI. Es wird nichts angelegt, bevor Sie zustimmen."
   },
   "Settings": {
+    "weg": {"title": "WEG", "description": "Mehrheitsregeln je Beschlussgegenstand mit Fundstelle und Freigabe."},
     "title": "Einstellungen",
     "members": {
       "title": "Benutzer und Rollen",
@@ -4448,6 +4451,58 @@
     "hint": "Beim Abruf der Gmail-Postfächer wird für jeden neuen PDF-Anhang, dessen Betreff, Absender oder Dateiname auf eine Rechnung hindeutet (Rechnung, Invoice, Beleg, RE-), genau eine KI-Extraktion gestartet. Das Ergebnis ist ein Vorschlag unter Rechnungseingang, gebucht wird nichts.",
     "costHint": "Jede automatische Extraktion verursacht KI-Kosten und belastet das Monatsbudget der KI-Anbieter. Budget- und Freigabeprüfungen gelten unverändert. Standard: aus.",
     "saved": "Einstellung gespeichert."
+  },
+  "MajorityRules": {
+    "title": "Mehrheitsregeln je Beschlussgegenstand",
+    "intro": "Regeln aus Gemeinschaftsordnung, Vereinbarungen oder Gesetz mit Fundstelle. Die Auszählung wird danach geprüft, die Verkündung bleibt bei der Versammlungsleitung.",
+    "notice": "Die Regeln sind fachlich zu prüfen und durch eine zweite Person freizugeben. Fehlt eine Regel, gilt die Standardregel einfache Mehrheit nach Köpfen, nicht fachlich freigegeben. Das Prüfergebnis ändert keinen Beschlussstatus.",
+    "empty": "Noch keine Regeln hinterlegt. Es gilt die Standardregel.",
+    "subjectKind": "Beschlussgegenstand",
+    "scope": "Geltung",
+    "tenantWide": "Alle Gemeinschaften",
+    "majorityType": "Mehrheit",
+    "countingBasis": "Zählbasis",
+    "source": "Fundstelle",
+    "sourcePlaceholder": "z. B. Gemeinschaftsordnung § 7 oder § 25 Abs. 1 WEG, zu prüfen",
+    "approval": "Freigabe",
+    "approved": "freigegeben",
+    "notApproved": "nicht freigegeben",
+    "approve": "Freigeben",
+    "edit": "Bearbeiten",
+    "delete": "Deaktivieren",
+    "confirmDelete": "Regel deaktivieren? Sie bleibt im Verlauf nachvollziehbar.",
+    "create": "Regel anlegen",
+    "update": "Regel speichern",
+    "cancel": "Abbrechen",
+    "numerator": "Zähler",
+    "denominator": "Nenner",
+    "customValue": "mindestens {n}/{d}",
+    "check": "Mehrheitsprüfung",
+    "subjectKinds": {
+      "economic_plan": "Wirtschaftsplan",
+      "annual_statement": "Jahresabrechnung",
+      "maintenance": "Erhaltung",
+      "structural_change": "Bauliche Veränderung",
+      "manager_appointment": "Verwalterbestellung",
+      "other": "Sonstiges"
+    },
+    "types": {
+      "simple": "einfache Mehrheit",
+      "qualified_2_3": "qualifiziert 2/3",
+      "qualified_3_4": "qualifiziert 3/4",
+      "unanimous": "allstimmig",
+      "custom": "eigener Bruch"
+    },
+    "bases": {
+      "heads": "Köpfe",
+      "shares": "Miteigentumsanteile",
+      "units": "Einheiten"
+    },
+    "results": {
+      "reached": "erreicht",
+      "notReached": "nicht erreicht",
+      "notCheckable": "nicht prüfbar"
+    }
   }
 ,
   "ServiceContracts": {
