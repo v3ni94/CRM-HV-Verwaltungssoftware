@@ -677,7 +677,8 @@
           "summarize",
           "classify_document",
           "contact_master_data_change",
-          "ticket_resolution"
+          "ticket_resolution",
+          "call_summary"
         ],
         "title": "AiTask",
         "type": "string"
@@ -4151,6 +4152,63 @@
         "title": "CallAssignIn",
         "type": "object"
       },
+      "CallAssistantSettingsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Keywords",
+            "type": "array"
+          },
+          "sender_patterns": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Sender Patterns",
+            "type": "array"
+          }
+        },
+        "title": "CallAssistantSettingsIn",
+        "type": "object"
+      },
+      "CallAssistantSettingsOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "sender_patterns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sender Patterns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "sender_patterns",
+          "keywords"
+        ],
+        "title": "CallAssistantSettingsOut",
+        "type": "object"
+      },
       "CallNoteIn": {
         "additionalProperties": false,
         "properties": {
@@ -4659,6 +4717,24 @@
             "maxLength": 64,
             "title": "Field",
             "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "enum": [
+                  "work",
+                  "mobile",
+                  "private",
+                  "fax",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
           },
           "new": {
             "anyOf": [
@@ -54519,6 +54595,67 @@
         ]
       }
     },
+    "/api/v1/mail/call-assistant": {
+      "get": {
+        "operationId": "get_call_assistant_api_v1_mail_call_assistant_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallAssistantSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Telefonassistenz (Hallo Heidi): Erkennungsmuster der Protokoll-Mails",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "put": {
+        "description": "Absendermuster (Teil der Absenderadresse) und Kennwörter (Betreff, im Text nur mit\nbeschrifteter Rufnummer). Leere Listen nutzen die eingebauten Muster.",
+        "operationId": "put_call_assistant_api_v1_mail_call_assistant_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallAssistantSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallAssistantSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Telefonassistenz (Hallo Heidi): Erkennungsmuster speichern",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/ingest": {
       "post": {
         "operationId": "ingest_api_v1_mail_ingest_post",
@@ -69095,6 +69232,61 @@
           }
         },
         "summary": "Vorschlag akzeptieren",
+        "tags": [
+          "Tickets und Aufträge",
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/proposals/{proposal_id}/accept-and-reply": {
+      "post": {
+        "description": "Hallo-Heidi-Anruf: übernimmt die Stammdaten wie ``accept`` und legt den vorbereiteten\nAntwortentwurf als ausgehende Nachricht am Ticket an. Der Versand läuft über den\nbestehenden Freigabepfad in ``/mail/messages`` (Einreichen, Vier-Augen-Freigabe).",
+        "operationId": "accept_and_reply_api_v1_tickets__ticket_id__proposals__proposal_id__accept_and_reply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlag freigeben und Antwortentwurf am Ticket anlegen (kein Versand)",
         "tags": [
           "Tickets und Aufträge",
           "Tickets und Aufträge"

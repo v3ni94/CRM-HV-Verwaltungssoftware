@@ -34,6 +34,23 @@ Accept and correct write the contact through the same path as `PUT /contacts/{id
 and IBANs never proposed (docs/rules/M19-05.md).
 
 
+## Hallo-Heidi-Anrufe (`call_assistant.py`, 26.09.2026)
+
+Protokoll-Mails der KI-Telefonassistenz werden in `propose_contact_change` erkannt (Absendermuster
+wie `hallo-heidi`, Kennwort `hallo heidi` im Betreff, im Text nur mit beschrifteter Rufnummer;
+je Mandant über `GET/PUT /mail/call-assistant`, Spalte `tenant_settings.call_assistant`,
+Migration 0127). Regex liefert Anrufernummer (E.164, Label `mobile` bei +4915/16/17, sonst
+`other`), Anrufername, Objekt (Nummer oder Anschrift), Einheit (Whg., WE, Etage) und Anliegen;
+der KI-Task `call_summary` ergänzt nur Lücken, die Nummer sieht er maskiert. Zuordnung: Objekt,
+dann Personen mit laufendem Miet- oder Eigentumsvertrag dort per Namensabgleich, sonst Name im
+Mandanten (nur eindeutig, sonst Kandidaten), sonst eindeutige Rufnummer. Ticket erhält
+`contact_id`, `property_id`, `unit_id` (nur wenn leer), das Ergebnis steht als Ereignis
+`call_summary` am Ticket. Ist die Nummer neu, entsteht ein Vorschlag (`proposed.kind = "call"`,
+Feld `phone` mit `label`) mit Antwortentwurf (Playbook, sonst generischer Text).
+`POST /tickets/{id}/proposals/{pid}/accept-and-reply` übernimmt die Nummer und legt den Entwurf
+an die E-Mail-Adresse des Kontakts am Ticket an; versendet wird nur über den Freigabepfad des
+Mailmoduls.
+
 ## Antwortvorlagen (`reply_templates.py`, model `TicketReplyTemplate`, 26.09.2026)
 
 Vorgefertigte Antworten je Mandant (Betreiberrückmeldung 26.09.2026): Name, Betreff und Text

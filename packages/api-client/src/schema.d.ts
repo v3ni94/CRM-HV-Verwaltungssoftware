@@ -6789,6 +6789,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/call-assistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Telefonassistenz (Hallo Heidi): Erkennungsmuster der Protokoll-Mails */
+        get: operations["get_call_assistant_api_v1_mail_call_assistant_get"];
+        /**
+         * Telefonassistenz (Hallo Heidi): Erkennungsmuster speichern
+         * @description Absendermuster (Teil der Absenderadresse) und Kennwörter (Betreff, im Text nur mit
+         *     beschrifteter Rufnummer). Leere Listen nutzen die eingebauten Muster.
+         */
+        put: operations["put_call_assistant_api_v1_mail_call_assistant_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/ingest": {
         parameters: {
             query?: never;
@@ -11148,6 +11170,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tickets/{ticket_id}/proposals/{proposal_id}/accept-and-reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vorschlag freigeben und Antwortentwurf am Ticket anlegen (kein Versand)
+         * @description Hallo-Heidi-Anruf: übernimmt die Stammdaten wie ``accept`` und legt den vorbereiteten
+         *     Antwortentwurf als ausgehende Nachricht am Ticket an. Der Versand läuft über den
+         *     bestehenden Freigabepfad in ``/mail/messages`` (Einreichen, Vier-Augen-Freigabe).
+         */
+        post: operations["accept_and_reply_api_v1_tickets__ticket_id__proposals__proposal_id__accept_and_reply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tickets/{ticket_id}/proposals/{proposal_id}/correct": {
         parameters: {
             query?: never;
@@ -11925,7 +11969,7 @@ export interface components {
          * AiTask
          * @enum {string}
          */
-        AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change" | "ticket_resolution";
+        AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change" | "ticket_resolution" | "call_summary";
         /**
          * AlertChannel
          * @enum {string}
@@ -13006,6 +13050,27 @@ export interface components {
              */
             contact_id: string;
         };
+        /** CallAssistantSettingsIn */
+        CallAssistantSettingsIn: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Keywords */
+            keywords?: string[];
+            /** Sender Patterns */
+            sender_patterns?: string[];
+        };
+        /** CallAssistantSettingsOut */
+        CallAssistantSettingsOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Keywords */
+            keywords: string[];
+            /** Sender Patterns */
+            sender_patterns: string[];
+        };
         /** CallNoteIn */
         CallNoteIn: {
             /** Note */
@@ -13181,6 +13246,8 @@ export interface components {
         ChangeIn: {
             /** Field */
             field: string;
+            /** Label */
+            label?: ("work" | "mobile" | "private" | "fax" | "other") | null;
             /** New */
             new?: string | null;
             /** Old */
@@ -36927,6 +36994,59 @@ export interface operations {
             };
         };
     };
+    get_call_assistant_api_v1_mail_call_assistant_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAssistantSettingsOut"];
+                };
+            };
+        };
+    };
+    put_call_assistant_api_v1_mail_call_assistant_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CallAssistantSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallAssistantSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ingest_api_v1_mail_ingest_post: {
         parameters: {
             query?: never;
@@ -46700,6 +46820,38 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_and_reply_api_v1_tickets__ticket_id__proposals__proposal_id__accept_and_reply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -29,6 +29,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/attachments/${ID}/invoice-extraction$`) },
   { method: "GET", pattern: /^mail\/invoice-forwarding$/ },
   { method: "PUT", pattern: /^mail\/invoice-forwarding$/ },
+  { method: "GET", pattern: /^mail\/call-assistant$/ },
+  { method: "PUT", pattern: /^mail\/call-assistant$/ },
   // KI-Vorschläge und Playbooks (M20 Übernahme aus dem Immoware Hub).
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/suggest$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/apply-playbook$`) },
@@ -369,7 +371,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^tickets/${ID}$`) },
   // Stammdatenänderung aus der Ticket-Mail (Vorschlag, Entscheidung, Antwortentwurf; 26.09.2026).
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/proposals$`) },
-  { method: "POST", pattern: new RegExp(`^tickets/${ID}/proposals/(contact-change|${ID}/(accept|correct|reject|reply-draft))$`) },
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/proposals/(contact-change|${ID}/(accept|accept-and-reply|correct|reject|reply-draft))$`) },
   { method: "POST", pattern: /^tickets\/merge$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}$`) },
   // Energieausweis am Objekt (A63): Objektstammdaten vollständig speichern.

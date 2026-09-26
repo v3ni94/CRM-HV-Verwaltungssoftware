@@ -201,3 +201,46 @@ test("address proposal: accept shows the reply draft with the new address and it
   expect(screen.getByText("Akzeptiert")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Akzeptieren" })).not.toBeInTheDocument();
 });
+
+test("call proposal shows caller number, property and unit and approves with reply", async () => {
+  const calls: { url: string; method: string; body: string | null }[] = [];
+  const base = proposal();
+  const call = {
+    ...base,
+    proposed: {
+      ...base.proposed,
+      kind: "call",
+      title: "Stammdaten ergänzen: Telefonnummer für Schneider, Petra (Anruf über Hallo Heidi)",
+      changes: [{ field: "phone", old: null, new: "+491712345678", label: "mobile", confidence: 0.9 }],
+      call: {
+        caller_phone: "+491712345678",
+        caller_phone_raw: "0171 2345678",
+        caller_phone_label: "mobile",
+        caller_name: "Petra Schneider",
+        property_hint: "Lindenstr. 12",
+        property_label: "104 WEG Lindenstraße",
+        unit_hint: "Whg. 3",
+        unit_label: "WE 3",
+        concern: "Heizung kalt.",
+        callback_requested: true,
+      },
+    },
+  };
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const url = String(input);
+    calls.push({ url, method: init?.method ?? "GET", body: null });
+    if (url.endsWith("/accept-and-reply")) return jsonResponse({ ...call, decision: "accepted" }, 201);
+    return jsonResponse([call]);
+  });
+  renderIntl(<TicketProposals ticketId={TICKET} />);
+  await screen.findByText(/Anruf über Hallo Heidi/);
+  const info = screen.getByTestId("call-info");
+  expect(info).toHaveTextContent("+491712345678 (Mobil)");
+  expect(info).toHaveTextContent("104 WEG Lindenstraße");
+  expect(info).toHaveTextContent("WE 3");
+  expect(info).toHaveTextContent("Heizung kalt.");
+  await userEvent.click(screen.getByRole("button", { name: "Freigeben und antworten" }));
+  await waitFor(() =>
+    expect(calls.some((c) => c.method === "POST" && c.url.endsWith(`/proposals/${PROPOSAL}/accept-and-reply`))).toBe(true),
+  );
+});
