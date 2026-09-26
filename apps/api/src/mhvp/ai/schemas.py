@@ -109,6 +109,15 @@ class InvoiceIntakeAutoOut(BaseModel):
     enabled: bool
 
 
+class PostingEnabledIn(_In):
+    enabled: bool
+
+
+class PostingEnabledOut(BaseModel):
+    enabled: bool
+    blocked_reason: str | None = None
+
+
 class UsageOut(BaseModel):
     month: str
     spent_eur: Decimal

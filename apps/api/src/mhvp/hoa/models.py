@@ -72,6 +72,10 @@ class Resolution(IdMixin, TimestampMixin, TenantMixin, Base):
     votes: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     majority_basis: Mapped[str | None] = mapped_column(Text)
     document_id: Mapped[uuid.UUID | None] = _fk("document.id")
+    # Beschlussgegenstand für die Mehrheitsprüfung (M25-01, migration 0125); the stored check is
+    # a protocol note only and never changes the status.
+    subject_kind: Mapped[str | None] = mapped_column(String(32))
+    majority_check: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class EconomicPlan(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -165,6 +169,10 @@ class Meeting(IdMixin, TimestampMixin, TenantMixin, Base):
     # A62: generated draft of the minutes (PDF on the tenant letterhead); never replaces the
     # signed minutes linked in minutes_document_id.
     minutes_draft_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
+    # Resolution deadline of a virtual meeting (M9-07): entered with its source (resolution
+    # or community rules with reference); never computed, shown in the deadline list (A41).
+    resolution_deadline_at: Mapped[date | None] = mapped_column(Date)
+    resolution_deadline_source: Mapped[str | None] = mapped_column(Text)
 
 
 class AgendaItem(IdMixin, TenantMixin, Base):
@@ -434,3 +442,22 @@ class HoaInsuranceClaimItem(IdMixin, TenantMixin, Base):
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class HoaMajorityRule(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Majority rule per subject kind (M25-01, migration 0125): tenant default with optional
+    override for one community (legal_entity_id). Values need a source and a functional release
+    (approved_by); the system only evaluates them and never treats them as legal advice."""
+
+    __tablename__ = "hoa_majority_rule"
+
+    legal_entity_id: Mapped[uuid.UUID | None] = _fk("legal_entity.id")
+    subject_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    majority_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    custom_numerator: Mapped[int | None] = mapped_column(Integer)
+    custom_denominator: Mapped[int | None] = mapped_column(Integer)
+    counting_basis: Mapped[str] = mapped_column(String(8), nullable=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

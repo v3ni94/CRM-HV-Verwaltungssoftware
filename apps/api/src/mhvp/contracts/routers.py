@@ -10,6 +10,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.contacts.models import ContactBankAccount, Party, PartyMember
+from mhvp.contacts.services import approval_block_reason
 from mhvp.contacts.validation import mask_iban
 from mhvp.contracts import schemas as s
 from mhvp.contracts import services as svc
@@ -434,6 +435,8 @@ async def create_mandate(
         )
         if member is None:
             raise svc.invalid("Das Konto gehört keinem Beteiligten der Vertragspartei.")
+        if (unreleased := approval_block_reason(account)) is not None:
+            raise svc.invalid(f"{unreleased}: kein Mandat auf nicht freigegebener IBAN (M5-01).")
         await svc.check_b2b(session, body.party_id, body.type)
         if body.valid_until is not None and body.valid_until < body.signed_at:
             raise svc.invalid("Das Mandat endet vor der Unterschrift.")

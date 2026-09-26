@@ -227,6 +227,41 @@ def test_dunning_preview_and_locks(
     assert asyncio.run(dunning_previews(_settings(database, redis_url)))["runs"] >= 1
 
 
+def _fee_level_case(
+    gated: TestClient,
+    h: dict[str, str],
+    acc_user: dict[str, str],
+    contract_id: str,
+    first_date: str,
+    second_date: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Two level flow (M16-14): the first run proposes the Zahlungserinnerung (level 1) without
+    fee and interest; it is approved by a second person without any side claim and marked as
+    sent, so the next run proposes level 2, where the configured fee applies. Returns the second
+    run and the case of ``contract_id`` in it."""
+    first = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": first_date}, headers=h), 201)
+    reminder = next(c for c in first["cases"] if c["contract_id"] == contract_id)
+    assert reminder["level"] == 1
+    assert reminder["fee_amount"] == "0.00"
+    assert reminder["interest_amount"] == "0.00"
+    approved = _ok(gated.post(f"{A}/dunning-runs/{first['id']}/approve", headers=acc_user))
+    approved_reminder = next(c for c in approved["cases"] if c["contract_id"] == contract_id)
+    assert approved_reminder["fee_entry_id"] is None
+    assert approved_reminder["fee_invoice_draft_id"] is None
+    sent = _ok(
+        gated.post(
+            f"{A}/dunning-cases/{approved_reminder['id']}/mark-sent",
+            json={"channel": "post"},
+            headers=h,
+        )
+    )
+    assert sent["status"] == "sent"
+    second = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": second_date}, headers=h), 201)
+    case = next(c for c in second["cases"] if c["contract_id"] == contract_id)
+    assert case["level"] == 2
+    return second, case
+
+
 def test_dunning_presets_fee_and_mahnbescheid(
     clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
 ) -> None:
@@ -298,21 +333,19 @@ def test_dunning_presets_fee_and_mahnbescheid(
     )
     assert bad_interest.status_code == 422
 
-    # A level only ever reaches "sent" once letters and delivery are built (M16-02, still
-    # open); until then the preview always proposes level 1. This test therefore configures a
-    # single-level ladder (fee_from_level 1) to exercise the fee and Mahnbescheid mechanics on
-    # that first, reachable level; the multi level ladder itself is covered by the presets
-    # assertions above and by ``test_dunning_preview_and_locks`` (level stays 1 without fees).
+    # Two level ladder: the Zahlungserinnerung (level 1) never carries a fee (M16-14), the
+    # fee of 5,00 applies from level 2, which is also the highest level (Mahnbescheid).
     settings = _ok(
         gated.put(
             f"{A}/dunning-settings",
             json={
                 "property_id": prop["id"],
                 "levels": [
-                    {"level": 1, "min_days_overdue": 10, "text": "Mahnung", "fee_amount": "5.00"}
+                    {"level": 1, "min_days_overdue": 10, "text": "Zahlungserinnerung"},
+                    {"level": 2, "min_days_overdue": 10, "text": "Mahnung", "fee_amount": "5.00"},
                 ],
                 "threshold_amount": "20.00",
-                "fee_from_level": 1,
+                "fee_from_level": 2,
             },
             headers=h,
         )
@@ -325,9 +358,7 @@ def test_dunning_presets_fee_and_mahnbescheid(
     # a real MANAGER ledger, matching how the operator will eventually set this up once.
     asyncio.run(_seed_manager_ledger(_settings(database, redis_url), world.tenant_a))
 
-    lead = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-03-25"}, headers=h), 201)
-    case = next(c for c in lead["cases"] if c["contract_id"] == c1["id"])
-    assert case["level"] == 1
+    lead, case = _fee_level_case(gated, h, acc_user, c1["id"], "2026-03-25", "2026-04-10")
     assert case["fee_amount"] == "5.00"
     approved = _ok(gated.post(f"{A}/dunning-runs/{lead['id']}/approve", headers=acc_user))
     approved_case = next(c for c in approved["cases"] if c["contract_id"] == c1["id"])
@@ -339,7 +370,7 @@ def test_dunning_presets_fee_and_mahnbescheid(
     )
     assert entry["status"] == "draft"  # posting itself needs a further, separate release
 
-    # A single-level ladder means level 1 is already the highest configured level.
+    # Level 2 is the highest configured level, so the Mahnbescheid can be prepared.
     prep = _ok(
         gated.post(f"{A}/dunning-cases/{case['id']}/mahnbescheid-vorbereitung", headers=h),
         201,
@@ -453,8 +484,8 @@ def test_d40_dunning_without_fee_amount_and_base_rate_creates_no_side_claim(
 ) -> None:
     """D40 (annex D, 7.5 Mahnwesen, docs/rules/M16-01.md): a dunning proposal without a
     maintained fee amount and without a Basiszinssatz creates no side claim. Expected: the
-    V7 presets carry no amounts; the Zahlungserinnerung (level 1) is 0,00 even when an amount
-    is entered for it, because fees start at ``fee_from_level`` 2; enabling interest without
+    V7 presets carry no amounts; an amount for the Zahlungserinnerung (level 1) or a fee start
+    below level 2 is refused with MHVP-CORE-0004 (M16-14); enabling interest without
     ``interest_base_rate`` is refused with problem code MHVP-CORE-0004; the proposed case
     shows fee 0,00 and interest 0,00, approval creates neither a fee entry nor an HVM invoice
     draft, and the open items stay at the main claim of 350,00."""
@@ -525,16 +556,20 @@ def test_d40_dunning_without_fee_amount_and_base_rate_creates_no_side_claim(
         is False
     )
 
-    # An amount entered for level 1 does not make the Zahlungserinnerung chargeable.
+    # An amount for level 1 is refused: the Zahlungserinnerung is never chargeable (M16-14),
+    # and neither is a fee start below level 2; the stored settings stay unchanged.
     levels = [{**lv, "fee_amount": "5.00"} if lv["level"] == 1 else lv for lv in preset["levels"]]
-    saved = _ok(
-        gated.put(
-            f"{A}/dunning-settings",
-            json={"property_id": prop["id"], "levels": levels, "fee_from_level": 2},
-            headers=h,
-        )
-    )
+    for body in (
+        {"property_id": prop["id"], "levels": levels, "fee_from_level": 2},
+        {"property_id": prop["id"], "levels": preset["levels"], "fee_from_level": 1},
+    ):
+        chargeable = gated.put(f"{A}/dunning-settings", json=body, headers=h)
+        assert chargeable.status_code == 422, chargeable.text
+        assert chargeable.json()["code"] == "MHVP-CORE-0004"
+        assert "Stufe 1" in chargeable.json()["detail"]
+    saved = _ok(gated.get(f"{A}/dunning-settings", params={"property_id": prop["id"]}, headers=h))
     assert saved["fee_from_level"] == 2
+    assert all(lv["fee_amount"] is None for lv in saved["levels"])
 
     lead = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-03-25"}, headers=h), 201)
     case = next(c for c in lead["cases"] if c["contract_id"] == c1["id"])
@@ -829,14 +864,18 @@ def test_a32_manager_entity_setup_and_tenancy_fee(
         201,
     )
     _ok(gated.post(f"{A}/receivable-runs/{run['id']}/post", headers=h))
-    # Tenant default (needed once) and the object override with the fee for the rent case.
+    # Tenant default (needed once) and the object override with the fee for the rent case:
+    # the Zahlungserinnerung (level 1) stays free of charge, the fee applies from level 2.
     _ok(
         gated.put(
             f"{A}/dunning-settings",
             json={
-                "levels": [{"level": 1, "min_days_overdue": 10, "text": "Mahnung"}],
+                "levels": [
+                    {"level": 1, "min_days_overdue": 10, "text": "Zahlungserinnerung"},
+                    {"level": 2, "min_days_overdue": 10, "text": "Mahnung"},
+                ],
                 "threshold_amount": "20.00",
-                "fee_from_level": 1,
+                "fee_from_level": 2,
             },
             headers=h,
         )
@@ -847,16 +886,16 @@ def test_a32_manager_entity_setup_and_tenancy_fee(
             json={
                 "property_id": prop["id"],
                 "levels": [
-                    {"level": 1, "min_days_overdue": 10, "text": "Mahnung", "fee_amount": "7.50"}
+                    {"level": 1, "min_days_overdue": 10, "text": "Zahlungserinnerung"},
+                    {"level": 2, "min_days_overdue": 10, "text": "Mahnung", "fee_amount": "7.50"},
                 ],
                 "threshold_amount": "20.00",
-                "fee_from_level": 1,
+                "fee_from_level": 2,
             },
             headers=h,
         )
     )
-    lead = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-03-25"}, headers=h), 201)
-    case = next(c for c in lead["cases"] if c["contract_id"] == lease["id"])
+    lead, case = _fee_level_case(gated, h, acc_user, lease["id"], "2026-03-25", "2026-04-10")
     assert case["fee_amount"] == "7.50"
     approved = _ok(gated.post(f"{A}/dunning-runs/{lead['id']}/approve", headers=acc_user))
     approved_case = next(c for c in approved["cases"] if c["contract_id"] == lease["id"])

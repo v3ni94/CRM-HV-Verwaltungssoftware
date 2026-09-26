@@ -104,6 +104,14 @@ class ContactMandateStatus(StrEnum):
     REVOKED = "revoked"
 
 
+class BankAccountApproval(StrEnum):
+    """Four eyes release of a new or changed contact IBAN (M5-01)."""
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class ContactTypeCode(StrEnum):
     TENANT = "tenant"
     PROSPECT = "prospect"
@@ -312,6 +320,17 @@ class ContactBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
         server_default="active",
     )
     mandate_revoked_on: Mapped[date | None] = mapped_column(Date)
+    # Four eyes release (M5-01): a new or changed IBAN stays pending until a second person
+    # with contacts:approve releases it; only approved accounts feed mandates and payments.
+    approval_status: Mapped[BankAccountApproval] = mapped_column(
+        _enum(BankAccountApproval, "bank_account_approval_status"),
+        nullable=False,
+        default=BankAccountApproval.PENDING,
+        server_default="pending",
+    )
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ContactType(IdMixin, TimestampMixin, TenantMixin, Base):

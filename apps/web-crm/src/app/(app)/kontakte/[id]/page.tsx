@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { CallsPanel, type CallOut } from "@/components/contacts/CallsPanel";
+import { BankAccountApproval } from "@/components/contacts/BankAccountApproval";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
@@ -55,6 +56,8 @@ export default async function ContactDetailPage({
   const api = serverApi();
   const me = await api.GET("/api/v1/auth/me");
   const canDelete = me.data?.permissions.includes("contacts:delete") ?? false;
+  const canApproveBank = me.data?.permissions.includes("contacts:approve") ?? false;
+  const currentUserId = me.data?.user_id ?? null;
   const notes =
     tab === "notizen"
       ? ((await api.GET("/api/v1/contacts/{contact_id}/notes", { params: { path: { contact_id: id } } })).data ?? [])
@@ -209,6 +212,7 @@ export default async function ContactDetailPage({
       {tab === "bankverbindungen" ? (
         contact.bank_accounts.length ? (
           <div className="overflow-x-auto">
+            <p className="mb-2 text-xs text-muted">{t("bankApproval.hint")}</p>
 <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs text-muted">
               <tr>
@@ -217,7 +221,8 @@ export default async function ContactDetailPage({
                 <th className="py-1 pr-3 font-medium">{tf("bankName")}</th>
                 <th className="py-1 pr-3 font-medium">{tf("holder")}</th>
                 <th className="py-1 pr-3 font-medium">{tf("validFrom")}</th>
-                <th className="py-1 font-medium">{tf("validTo")}</th>
+                <th className="py-1 pr-3 font-medium">{tf("validTo")}</th>
+                <th className="py-1 font-medium">{t("bankApproval.title")}</th>
               </tr>
             </thead>
             <tbody>
@@ -228,7 +233,15 @@ export default async function ContactDetailPage({
                   <td className="py-1 pr-3">{b.bank_name ?? ""}</td>
                   <td className="py-1 pr-3">{b.holder ?? ""}</td>
                   <td className="py-1 pr-3">{formatDate(b.valid_from)}</td>
-                  <td className="py-1">{formatDate(b.valid_to)}</td>
+                  <td className="py-1 pr-3">{formatDate(b.valid_to)}</td>
+                  <td className="py-1">
+                    <BankAccountApproval
+                      contactId={contact.id}
+                      account={b}
+                      canApprove={canApproveBank}
+                      currentUserId={currentUserId}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>

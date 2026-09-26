@@ -17,7 +17,7 @@ from moto import mock_aws
 from mhvp.core.release_gates import ReleaseGate
 from mhvp.main import create_app
 from mhvp.platform import services
-from tests.integration.conftest import Database
+from tests.integration.conftest import Database, approve_bank_accounts
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m8_import import BUCKET, _settings
 from tests.integration.test_m11_banking import _camt, _upload
@@ -44,7 +44,11 @@ async def _world(settings: Any) -> World:
     try:
         a, _ = await services.provision_tenant(factory, slug=f"pay-{RUN}", name=f"Zahl {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        for name, role in [("m15admin", "tenant_admin"), ("m15acc", "accountant_banking")]:
+        for name, role in [
+            ("m15admin", "tenant_admin"),
+            ("m15acc", "accountant_banking"),
+            ("m15approver", "tenant_admin"),
+        ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -149,6 +153,7 @@ def test_payment_run(clients: tuple[TestClient, TestClient], world: World) -> No
         ),
         201,
     )["id"]
+    approve_bank_accounts(client, bearer(login(client, world, "m15approver")), provider)
 
     def invoice(number: str, gross: str, discount: bool = False) -> str:
         body = {
@@ -513,6 +518,7 @@ def test_d35_to_d38_payment_release_and_bank_feedback(
         ),
         201,
     )["id"]
+    approve_bank_accounts(client, bearer(login(client, world, "m15approver")), provider)
 
     def invoice(number: str, gross: str) -> str:
         body = {
@@ -878,6 +884,7 @@ def test_d52_payment_batch_only_from_leading_system(
         ),
         201,
     )["id"]
+    approve_bank_accounts(client, bearer(login(client, world, "m15approver")), provider)
 
     def order(number: str) -> str:
         inv = _ok(

@@ -12,6 +12,7 @@ from defusedxml import ElementTree as SafeElementTree  # type: ignore[import-unt
 from mhvp.accounting import direct_debit as dd
 from mhvp.accounting.direct_debit_models import DirectDebitOrder, DirectDebitRun, SequenceType
 from mhvp.contacts.models import (
+    BankAccountApproval,
     ContactBankAccount,
     ContactMandateStatus,
     MandateGrantedVia,
@@ -160,6 +161,7 @@ def _account(**overrides: object) -> ContactBankAccount:
         "mandate_scheme": MandateScheme.CORE,
         "mandate_status": ContactMandateStatus.ACTIVE,
         "mandate_revoked_on": None,
+        "approval_status": BankAccountApproval.APPROVED,
     }
     values.update(overrides)
     return ContactBankAccount(**values)

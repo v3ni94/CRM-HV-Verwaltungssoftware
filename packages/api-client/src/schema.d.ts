@@ -1511,6 +1511,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/posting-enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * KI-Kontierung (Einstellung)
+         * @description M7-09, M12-01: tenant switch plus the reason why ``propose_posting`` would be blocked
+         *     (switch off, no released provider with DPA evidence).
+         */
+        get: operations["get_posting_enabled_api_v1_ai_posting_enabled_get"];
+        /**
+         * KI-Kontierung ein- oder ausschalten
+         * @description Default off. Even when on, a run needs a released provider with DPA evidence; the
+         *     result is a proposal of entity type ``posting`` and is never posted (rule 0.1.6).
+         */
+        put: operations["put_posting_enabled_api_v1_ai_posting_enabled_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/proposals/{proposal_id}": {
         parameters: {
             query?: never;
@@ -2662,6 +2688,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/transactions/{tx_id}/ai-posting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KI-Kontierungsvorschläge lesen */
+        get: operations["get_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_get"];
+        put?: never;
+        /**
+         * KI-Kontierungsvorschlag anstoßen (nur Vorschlag, deaktiviert bis Freigabe)
+         * @description M7-09, M12-01: only with the tenant switch ``ai_posting_enabled`` and a released AI
+         *     provider with DPA evidence, otherwise ``MHVP-AI-0001``. The result is an ``AiProposal``
+         *     of entity type ``posting``; nothing is posted and the transaction is not changed.
+         */
+        post: operations["start_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/transactions/{tx_id}/book": {
         parameters: {
             query?: never;
@@ -3065,6 +3114,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bankverbindung freigeben (Vier-Augen-Prinzip, zweite Person) */
+        post: operations["approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/mandate/revoke": {
         parameters: {
             query?: never;
@@ -3076,6 +3142,23 @@ export interface paths {
         put?: never;
         /** SEPA-Mandat widerrufen */
         post: operations["revoke_mandate_api_v1_contacts__contact_id__bank_accounts__account_id__mandate_revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person) */
+        post: operations["reject_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__reject_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4763,6 +4846,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/majority-rules/subject-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mehrheitsregeln je Beschlussgegenstand */
+        get: operations["list_subject_rules_api_v1_hoa_majority_rules_subject_rules_get"];
+        put?: never;
+        /** Mehrheitsregel je Beschlussgegenstand anlegen */
+        post: operations["create_subject_rule_api_v1_hoa_majority_rules_subject_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/majority-rules/subject-rules/{rule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Mehrheitsregel ändern (Freigabe entfällt) */
+        put: operations["update_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__put"];
+        post?: never;
+        /** Mehrheitsregel deaktivieren (bleibt nachvollziehbar) */
+        delete: operations["delete_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/majority-rules/subject-rules/{rule_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mehrheitsregel fachlich freigeben (zweite Person) */
+        post: operations["approve_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/measures": {
         parameters: {
             query?: never;
@@ -4848,7 +4984,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Beschlussfrist der Versammlung (M9-07) */
+        patch: operations["patch_meeting_api_v1_hoa_meetings__meeting_id__patch"];
         trace?: never;
     };
     "/api/v1/hoa/meetings/{meeting_id}/agenda": {
@@ -5107,6 +5244,23 @@ export interface paths {
         head?: never;
         /** Wirksamkeitsstatus ändern (z. B. bestandskräftig, angefochten) */
         patch: operations["patch_resolution_api_v1_hoa_resolutions__resolution_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/hoa/resolutions/{resolution_id}/majority-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mehrheitsprüfung eines Beschlusses (nur Anzeige, keine Statusänderung) */
+        get: operations["resolution_majority_check_api_v1_hoa_resolutions__resolution_id__majority_check_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/hoa/special-levies": {
@@ -9394,6 +9548,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/service-contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dienstleisterverträge */
+        get: operations["list_service_contracts_api_v1_service_contracts_get"];
+        put?: never;
+        /** Dienstleistervertrag anlegen */
+        post: operations["create_service_contract_api_v1_service_contracts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service-contracts/{contract_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dienstleistervertrag lesen */
+        get: operations["get_service_contract_api_v1_service_contracts__contract_id__get"];
+        put?: never;
+        post?: never;
+        /** Dienstleistervertrag löschen */
+        delete: operations["delete_service_contract_api_v1_service_contracts__contract_id__delete"];
+        options?: never;
+        head?: never;
+        /** Dienstleistervertrag ändern */
+        patch: operations["update_service_contract_api_v1_service_contracts__contract_id__patch"];
+        trace?: never;
+    };
     "/api/v1/sla/alerts": {
         parameters: {
             query?: never;
@@ -11787,6 +11978,8 @@ export interface components {
             outcome: string;
             /** Snapshot Hash */
             snapshot_hash?: string | null;
+            /** Subject Kind */
+            subject_kind?: string | null;
         };
         /** ApiKeyCreate */
         ApiKeyCreate: {
@@ -12090,6 +12283,17 @@ export interface components {
             from: number;
             /** To */
             to: number;
+        };
+        /**
+         * BankAccountApproval
+         * @description Four eyes release of a new or changed contact IBAN (M5-01).
+         * @enum {string}
+         */
+        BankAccountApproval: "pending" | "approved" | "rejected";
+        /** BankAccountDecisionIn */
+        BankAccountDecisionIn: {
+            /** Reason */
+            reason?: string | null;
         };
         /**
          * BankAccountKind
@@ -15348,8 +15552,11 @@ export interface components {
             subject: string;
             /** Subject Id */
             subject_id?: string | null;
+            /** Subject Kind */
+            subject_kind?: string | null;
             /** Subject Type */
             subject_type?: string | null;
+            votes?: components["schemas"]["HoaVotesIn"] | null;
             /** Wording */
             wording: string;
         };
@@ -15383,6 +15590,23 @@ export interface components {
             /** Year */
             year: number;
         };
+        /** HoaSubjectRuleIn */
+        HoaSubjectRuleIn: {
+            /** Counting Basis */
+            counting_basis: string;
+            /** Custom Denominator */
+            custom_denominator?: number | null;
+            /** Custom Numerator */
+            custom_numerator?: number | null;
+            /** Legal Entity Id */
+            legal_entity_id?: string | null;
+            /** Majority Type */
+            majority_type: string;
+            /** Source */
+            source: string;
+            /** Subject Kind */
+            subject_kind: string;
+        };
         /** HoaTransitionIn */
         HoaTransitionIn: {
             /** Note */
@@ -15390,6 +15614,25 @@ export interface components {
             /** Resolution Id */
             resolution_id?: string | null;
             target: components["schemas"]["StatementStatus"];
+        };
+        /**
+         * HoaVotesIn
+         * @description Recorded tally of an external meeting for the majority check (M25-01).
+         */
+        HoaVotesIn: {
+            /**
+             * Abstain
+             * @default 0
+             */
+            abstain: number | string;
+            /** Eligible */
+            eligible?: number | string | null;
+            /** No */
+            no: number | string;
+            /** Principle */
+            principle: string;
+            /** Yes */
+            yes: number | string;
         };
         /** HoldIn */
         HoldIn: {
@@ -17156,6 +17399,10 @@ export interface components {
              * @default presence
              */
             mode: string;
+            /** Resolution Deadline At */
+            resolution_deadline_at?: string | null;
+            /** Resolution Deadline Source */
+            resolution_deadline_source?: string | null;
             /**
              * Scheduled At
              * Format: date-time
@@ -17170,6 +17417,16 @@ export interface components {
             voting_principle: string;
             /** Voting Principle Basis */
             voting_principle_basis?: string | null;
+        };
+        /**
+         * MeetingPatch
+         * @description Resolution deadline of a virtual meeting (M9-07). ``null`` clears both fields.
+         */
+        MeetingPatch: {
+            /** Resolution Deadline At */
+            resolution_deadline_at?: string | null;
+            /** Resolution Deadline Source */
+            resolution_deadline_source?: string | null;
         };
         /**
          * MemberCompetences
@@ -18234,6 +18491,18 @@ export interface components {
             title: string;
             /** Unit Id */
             unit_id?: string | null;
+        };
+        /** PostingEnabledIn */
+        PostingEnabledIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** PostingEnabledOut */
+        PostingEnabledOut: {
+            /** Blocked Reason */
+            blocked_reason?: string | null;
+            /** Enabled */
+            enabled: boolean;
         };
         /**
          * PreferredChannel
@@ -19797,6 +20066,106 @@ export interface components {
             /** Documents */
             documents: components["schemas"]["DocumentOut"][];
         };
+        /** ServiceContractIn */
+        ServiceContractIn: {
+            /** Auto Renewal Months */
+            auto_renewal_months?: number | null;
+            /** Cancelled At */
+            cancelled_at?: string | null;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Notice Period Days */
+            notice_period_days: number;
+            /**
+             * Notice Period Unit
+             * @default months
+             */
+            notice_period_unit: string;
+            /** Property Id */
+            property_id?: string | null;
+            /**
+             * Provider Contact Id
+             * Format: uuid
+             */
+            provider_contact_id: string;
+            /**
+             * Starts At
+             * Format: date
+             */
+            starts_at: string;
+            /** Title */
+            title: string;
+        };
+        /** ServiceContractOut */
+        ServiceContractOut: {
+            /** Auto Renewal Months */
+            auto_renewal_months: number | null;
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /** Ends At */
+            ends_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Latest Notice Date */
+            latest_notice_date: string | null;
+            /** Next Possible End */
+            next_possible_end: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Notice Period Days */
+            notice_period_days: number;
+            /** Notice Period Unit */
+            notice_period_unit: string;
+            /**
+             * Orientation Only
+             * @default true
+             */
+            orientation_only: boolean;
+            /** Property Id */
+            property_id: string | null;
+            /**
+             * Provider Contact Id
+             * Format: uuid
+             */
+            provider_contact_id: string;
+            /**
+             * Starts At
+             * Format: date
+             */
+            starts_at: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+        };
+        /** ServiceContractPatch */
+        ServiceContractPatch: {
+            /** Auto Renewal Months */
+            auto_renewal_months?: number | null;
+            /** Cancelled At */
+            cancelled_at?: string | null;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Notice Period Days */
+            notice_period_days?: number | null;
+            /** Notice Period Unit */
+            notice_period_unit?: string | null;
+            /** Property Id */
+            property_id?: string | null;
+            /** Provider Contact Id */
+            provider_contact_id?: string | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Title */
+            title?: string | null;
+        };
         /** SessionOut */
         SessionOut: {
             /**
@@ -21085,10 +21454,16 @@ export interface components {
         };
         /** BankAccountOut */
         mhvp__contacts__schemas__BankAccountOut: {
+            /** @description Vier-Augen-Freigabe der IBAN (M5-01): nur approved wird verwendet. */
+            approval_status: components["schemas"]["BankAccountApproval"];
             /** Bank Name */
             bank_name: string | null;
             /** Bic */
             bic: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decided By */
+            decided_by?: string | null;
             /** Holder */
             holder: string | null;
             /** Iban Masked */
@@ -21113,6 +21488,8 @@ export interface components {
             /** Mandate Signed On */
             mandate_signed_on: string | null;
             mandate_status: components["schemas"]["ContactMandateStatus"];
+            /** Requested By */
+            requested_by?: string | null;
             /** Sepa Enabled */
             sepa_enabled: boolean;
             /**
@@ -24753,6 +25130,59 @@ export interface operations {
             };
         };
     };
+    get_posting_enabled_api_v1_ai_posting_enabled_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostingEnabledOut"];
+                };
+            };
+        };
+    };
+    put_posting_enabled_api_v1_ai_posting_enabled_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostingEnabledIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostingEnabledOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_proposal_api_v1_ai_proposals__proposal_id__get: {
         parameters: {
             query?: never;
@@ -26944,6 +27374,72 @@ export interface operations {
             };
         };
     };
+    get_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     book_api_v1_banking_transactions__tx_id__book_post: {
         parameters: {
             query?: never;
@@ -27894,6 +28390,42 @@ export interface operations {
             };
         };
     };
+    approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BankAccountDecisionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     revoke_mandate_api_v1_contacts__contact_id__bank_accounts__account_id__mandate_revoke_post: {
         parameters: {
             query?: never;
@@ -27913,6 +28445,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SepaMandateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BankAccountDecisionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
                 };
             };
             /** @description Validation Error */
@@ -31891,6 +32459,173 @@ export interface operations {
             };
         };
     };
+    list_subject_rules_api_v1_hoa_majority_rules_subject_rules_get: {
+        parameters: {
+            query?: {
+                legal_entity_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_subject_rule_api_v1_hoa_majority_rules_subject_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaSubjectRuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaSubjectRuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_measures_api_v1_hoa_measures_get: {
         parameters: {
             query: {
@@ -32144,6 +32879,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_meeting_api_v1_hoa_meetings__meeting_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingPatch"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -32704,6 +33476,39 @@ export interface operations {
                 "application/json": components["schemas"]["HoaResolutionPatch"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolution_majority_check_api_v1_hoa_resolutions__resolution_id__majority_check_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resolution_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -42036,6 +42841,166 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MandateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_service_contracts_api_v1_service_contracts_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+                provider_contact_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceContractOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_service_contract_api_v1_service_contracts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceContractIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceContractOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_service_contract_api_v1_service_contracts__contract_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceContractOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_service_contract_api_v1_service_contracts__contract_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_service_contract_api_v1_service_contracts__contract_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceContractPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceContractOut"];
                 };
             };
             /** @description Validation Error */

@@ -177,7 +177,7 @@ async def change_order(session: AsyncSession, order: PaymentOrder, changes: dict
     snapshot changed (then approvals are void, D35). An amount must stay within the open item;
     the cash discount survives only while amount plus discount still equal the open amount. A
     new IBAN must be a released bank account of the payee (no unconfirmed IBAN, PÜ04)."""
-    from mhvp.contacts.models import ContactBankAccount
+    from mhvp.contacts.models import BankAccountApproval, ContactBankAccount
     from mhvp.contacts.validation import InvalidValueError, normalise_iban
 
     if order.status not in (OrderStatus.DRAFT, OrderStatus.APPROVED):
@@ -207,6 +207,7 @@ async def change_order(session: AsyncSession, order: PaymentOrder, changes: dict
                 select(ContactBankAccount.id).where(
                     ContactBankAccount.contact_id == invoice.provider_contact_id,
                     ContactBankAccount.iban_fingerprint == fingerprint,
+                    ContactBankAccount.approval_status == BankAccountApproval.APPROVED,
                 )
             )
             if invoice is not None

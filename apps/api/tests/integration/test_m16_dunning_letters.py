@@ -6,6 +6,7 @@ Tenant separation: an override of tenant A is invisible to tenant B."""
 
 import asyncio
 import io
+import re
 from collections.abc import Iterator
 from typing import Any
 from uuid import UUID
@@ -25,6 +26,7 @@ from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, log
 from tests.integration.test_m2_platform import _settings as base_settings
 from tests.integration.test_m5_contracts import _unit
 from tests.integration.test_m6_documents import COMPANY
+from tests.integration.test_m16_dunning import _fee_level_case
 
 pytestmark = pytest.mark.integration
 A = "/api/v1/accounting"
@@ -380,10 +382,11 @@ def test_override_is_tenant_separated(clients: tuple[TestClient, TestClient], wo
 def test_letter_pdf_draft_and_send_locked(
     clients: tuple[TestClient, TestClient], world: World
 ) -> None:
-    """A dunning letter is generated as a PDF draft on the tenant letterhead (sender: the
-    managing company), with the object's effective level text, configured fee and payment
-    deadline, and is filed as a document linked to the case. Sending is refused with G1
-    closed (gate) and with G1 open (dispatch not released, M16-02)."""
+    """A dunning letter (level 2, after the Zahlungserinnerung without fee was approved and
+    sent) is generated as a PDF draft on the tenant letterhead (sender: the managing company),
+    with the object's effective level text, configured fee and payment deadline, and is filed
+    as a document linked to the case. Sending is refused with G1 closed (gate) and with G1 open
+    (dispatch not released, M16-02)."""
     client, gated = clients
     h = bearer(login(client, world, "dladmin"))
     gh = bearer(login(gated, world, "dladmin"))
@@ -401,35 +404,37 @@ def test_letter_pdf_draft_and_send_locked(
             json={
                 "levels": [
                     {"level": 1, "min_days_overdue": 5, "text": "Zahlungserinnerung"},
+                    {"level": 2, "min_days_overdue": 5, "text": "Mahnung"},
                 ],
                 "threshold_amount": "20.00",
-                "fee_from_level": 1,
+                "fee_from_level": 2,
                 "interest_enabled": False,
             },
             headers=gh,
         )
     )
-    # Object override: own text, a configured fee and a payment deadline of 14 days.
+    # Object override: own level 2 text, a configured fee and a payment deadline of 14 days;
+    # the Zahlungserinnerung (level 1) stays free of charge (M16-14).
     _ok(
         gated.put(
             f"{A}/dunning-settings",
             json={
                 "property_id": prop,
                 "levels": [
+                    {"level": 1, "min_days_overdue": 5, "text": "Zahlungserinnerung"},
                     {
-                        "level": 1,
+                        "level": 2,
                         "min_days_overdue": 5,
-                        "text": "Erinnerung Objekt 773",
+                        "text": "Mahnung Objekt 773",
                         "fee_amount": "2.50",
                         "payment_days": 14,
-                    }
+                    },
                 ],
             },
             headers=gh,
         )
     )
-    preview = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-03-20"}, headers=gh), 201)
-    case = next(c for c in preview["cases"] if c["contract_id"] == contract["id"])
+    preview, case = _fee_level_case(gated, gh, acc_user, contract["id"], "2026-03-20", "2026-04-10")
     assert case["status"] == "proposed"
     assert case["fee_amount"] == "2.50"
 
@@ -441,19 +446,19 @@ def test_letter_pdf_draft_and_send_locked(
 
     pdf = gated.post(
         f"{A}/dunning-cases/{case['id']}/letter-preview",
-        json={"letter_date": "2026-03-21"},
+        json={"letter_date": "2026-04-11"},
         headers=gh,
     )
     assert pdf.status_code == 200, pdf.text
     assert pdf.headers["content-type"] == "application/pdf"
     text = "\n".join(page.extract_text() for page in PdfReader(io.BytesIO(pdf.content)).pages)
     assert "Hausverwaltung Müller GmbH" in text  # sender: managing company of the tenant
-    assert "Erinnerung Objekt 773" in text  # effective level text from the object override
+    assert "Mahnung Objekt 773" in text  # effective level text from the object override
     assert "Entwurf" in text
     assert "350,00 EUR" in text
     assert "2,50 EUR" in text  # configured fee only
     assert "352,50 EUR" in text
-    assert "04.04.2026" in text  # letter date plus configured payment_days
+    assert "25.04.2026" in text  # letter date plus configured payment_days
     assert "Verzugszinsen" not in text  # interest not configured, no line
     assert f"Sehr geehrte Frau Schuldner{RUN}" in text
 
@@ -636,17 +641,18 @@ def test_mahnbescheid_pdf_export(clients: tuple[TestClient, TestClient], world: 
             f"{A}/dunning-settings",
             json={
                 "levels": [
-                    {"level": 1, "min_days_overdue": 5, "text": "Mahnung", "fee_amount": "5.00"}
+                    {"level": 1, "min_days_overdue": 5, "text": "Zahlungserinnerung"},
+                    {"level": 2, "min_days_overdue": 5, "text": "Mahnung", "fee_amount": "5.00"},
                 ],
                 "threshold_amount": "20.00",
-                "fee_from_level": 1,
+                "fee_from_level": 2,
                 "interest_enabled": False,
             },
             headers=gh,
         )
     )
-    preview = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-03-20"}, headers=gh), 201)
-    case = next(c for c in preview["cases"] if c["contract_id"] == contract["id"])
+    # Level 1 (Zahlungserinnerung, no fee) is approved and sent; level 2 carries the fee.
+    preview, case = _fee_level_case(gated, gh, acc_user, contract["id"], "2026-03-20", "2026-04-10")
     assert case["fee_amount"] == "5.00"
 
     # No export before the preparation record exists.
@@ -687,10 +693,12 @@ def test_mahnbescheid_pdf_export(clients: tuple[TestClient, TestClient], world: 
     assert "355,00 EUR" in flat  # Summe: main claim plus the posted fee
     assert "Verzugszinsen sind nicht aufgenommen" in flat
     assert "Mahnhistorie" in flat
-    assert "20.03.2026" in flat
+    assert "20.03.2026" in flat  # Zahlungserinnerung
+    assert "10.04.2026" in flat  # Mahnung with fee
     assert "versandt" in flat
     assert prep["aktenzeichen_intern"] in flat
-    assert "Verzug wird nicht behauptet" in flat
+    # With two history rows the notice breaks onto page 2 (footer in between).
+    assert re.search(r"Verzug wird .*nicht behauptet\.", flat)
 
     stored = _ok(gated.post(f"{A}/dunning-cases/{case['id']}/mahnbescheid", headers=gh), 201)
     assert stored["document_id"] is not None

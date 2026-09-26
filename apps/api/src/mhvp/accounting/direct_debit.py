@@ -66,7 +66,10 @@ def sequence_type(previous_uses: int) -> SequenceType:
 def mandate_block_reason(account: Any, collection_date: date) -> str | None:
     """Why the contact bank account cannot be debited on ``collection_date`` (rule M3-02)."""
     from mhvp.contacts.models import ContactMandateStatus, MandateScheme
+    from mhvp.contacts.services import approval_block_reason
 
+    if (unreleased := approval_block_reason(account)) is not None:
+        return unreleased  # four eyes release of the IBAN (M5-01)
     if not account.sepa_enabled:
         return "kein SEPA-Mandat auf der Bankverbindung"
     if account.mandate_status is ContactMandateStatus.REVOKED or account.mandate_revoked_on:

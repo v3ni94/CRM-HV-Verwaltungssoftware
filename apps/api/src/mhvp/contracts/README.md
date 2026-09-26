@@ -9,3 +9,10 @@ debtor account reservation.
   plausibility), `validation.py` (SEPA creditor id, mandate reference), `routers.py`.
 * Tests: `apps/api/tests/integration/test_m5_contracts.py`, `apps/api/tests/unit/test_m5_rules.py`.
 * Locks: no postings (M10, G1), no direct debit collection (G2).
+
+## Dienstleisterverträge (M9-06)
+
+`service_contracts.py` (model `ServiceContract`, orientation calculation of next possible end and
+latest notice date), `service_contract_routers.py` (`/api/v1/service-contracts`). The notice
+date feeds the deadline list (`mhvp.workspace.jobs`, kind `service_contract_notice`, 14 days
+lead time). Plan: `docs/plans/M9-06-dienstleistervertraege.md`.

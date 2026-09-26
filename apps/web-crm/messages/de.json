@@ -98,7 +98,8 @@
     "immoware": "Immoware24",
     "immowareLearning": "Lernphase",
     "objektakte": "Objektakte",
-    "immoware24:reconciliation": "Immoware24: Abgleichbericht Parallelbetrieb"
+    "immoware24:reconciliation": "Immoware24: Abgleichbericht Parallelbetrieb",
+    "serviceContracts": "Dienstleisterverträge"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -182,6 +183,17 @@
       "revoke": "Widerrufen",
       "revokeConfirm": "SEPA-Mandat für {iban} wirklich widerrufen?",
       "revokedOn": "Widerrufen am"
+    },
+    "bankApproval": {
+      "title": "Freigabe",
+      "pending": "zur Freigabe",
+      "approved": "freigegeben",
+      "rejected": "abgelehnt",
+      "approve": "Freigeben",
+      "reject": "Ablehnen",
+      "rejectConfirm": "IBAN {iban} wirklich ablehnen?",
+      "ownRequest": "selbst erfasst, Freigabe durch eine andere Person",
+      "hint": "Neue und geänderte IBAN gelten erst nach Freigabe durch eine zweite Person (Vier-Augen-Prinzip). Bis dahin werden sie in Lastschrift- und Zahlungsläufen nicht verwendet."
     }
   },
   "ContactForm": {
@@ -990,7 +1002,9 @@
       "contract_termination": "Kündigung",
       "meter_calibration": "Eichfrist Zähler",
       "bank_consent": "Ablauf Bankzustimmung",
-      "document_retention_end": "Ende Aufbewahrung"
+      "document_retention_end": "Ende Aufbewahrung",
+      "service_contract_notice": "Kündigungsfrist Dienstleistervertrag",
+      "meeting_resolution_deadline": "Beschlussfrist virtuelle Versammlung"
     },
     "status": {
       "open": "offen",
@@ -1514,7 +1528,10 @@
     "letterPreviewAmount": "Betrag",
     "mahnbescheidPdf": "Vorbereitung als PDF (kein Antrag)",
     "mahnbescheidPdfFile": "PDF ablegen",
-    "mahnbescheidPdfFiled": "PDF abgelegt"
+    "mahnbescheidPdfFiled": "PDF abgelegt",
+    "paymentDaysHint": "Zahlungsfrist je Stufe in Tagen: Das Mahnschreiben berechnet das Zahlungsdatum aus Briefdatum plus diesen Tagen. Standardwerte: Stufe 1 14 Tage, Stufe 2 10 Tage, Stufe 3 7 Tage. Ohne Wert bittet das Schreiben ohne Datum um Ausgleich.",
+    "reminderNoFee": "Die Zahlungserinnerung (Stufe 1) ist immer ohne Gebühr und ohne Zinsen: Gebühr ab Stufe muss mindestens 2 sein, die Gebühr der Stufe 1 muss leer oder 0,00 EUR sein.",
+    "reminderNoFeeHint": "Stufe 1 (Zahlungserinnerung) trägt nie Gebühr oder Verzugszins; Gebühren sind frühestens ab Stufe 2 möglich."
   },
   "Billing": {
     "title": "Betriebskostenabrechnung",
@@ -1792,6 +1809,17 @@
       "download": "Entwurf herunterladen",
       "signedLinked": "Das unterschriebene Protokoll bleibt verknüpft.",
       "missing": "Nicht erfasst"
+    },
+    "subjectKind": "Beschlussgegenstand",
+    "subjectKindNone": "nicht angegeben",
+    "resolutionDeadline": {
+      "title": "Beschlussfrist der virtuellen Versammlung",
+      "date": "Beschlussfrist",
+      "source": "Quelle (Beschluss oder Gemeinschaftsordnung mit Fundstelle)",
+      "hint": "Die Frist wird eingetragen, nicht berechnet. Sie erscheint in der Fristenliste mit 7 Tagen Vorfrist und ist Orientierung, zu prüfen.",
+      "sourceRequired": "Bitte die Quelle der Frist angeben.",
+      "save": "Frist speichern",
+      "saved": "Frist gespeichert."
     }
   },
   "RentIncrease": {
@@ -2993,6 +3021,10 @@
     "portalForms": {
       "title": "Portalformulare",
       "description": "Formularvorlagen für Mieter und Eigentümer im Portal."
+    },
+    "weg": {
+      "title": "WEG",
+      "description": "Mehrheitsregeln je Beschlussgegenstand mit Fundstelle und Freigabe."
     }
   },
   "Members": {
@@ -5110,5 +5142,106 @@
       "document": "Die Dokument-ID ist ungültig."
     },
     "endConfirm": "Aushang \"{title}\" beenden? Er ist danach im Portal nicht mehr sichtbar."
+  },
+  "MajorityRules": {
+    "title": "Mehrheitsregeln je Beschlussgegenstand",
+    "intro": "Regeln aus Gemeinschaftsordnung, Vereinbarungen oder Gesetz mit Fundstelle. Die Auszählung wird danach geprüft, die Verkündung bleibt bei der Versammlungsleitung.",
+    "notice": "Die Regeln sind fachlich zu prüfen und durch eine zweite Person freizugeben. Fehlt eine Regel, gilt die Standardregel einfache Mehrheit nach Köpfen, nicht fachlich freigegeben. Das Prüfergebnis ändert keinen Beschlussstatus.",
+    "empty": "Noch keine Regeln hinterlegt. Es gilt die Standardregel.",
+    "subjectKind": "Beschlussgegenstand",
+    "scope": "Geltung",
+    "tenantWide": "Alle Gemeinschaften",
+    "majorityType": "Mehrheit",
+    "countingBasis": "Zählbasis",
+    "source": "Fundstelle",
+    "sourcePlaceholder": "z. B. Gemeinschaftsordnung § 7 oder § 25 Abs. 1 WEG, zu prüfen",
+    "approval": "Freigabe",
+    "approved": "freigegeben",
+    "notApproved": "nicht freigegeben",
+    "approve": "Freigeben",
+    "edit": "Bearbeiten",
+    "delete": "Deaktivieren",
+    "confirmDelete": "Regel deaktivieren? Sie bleibt im Verlauf nachvollziehbar.",
+    "create": "Regel anlegen",
+    "update": "Regel speichern",
+    "cancel": "Abbrechen",
+    "numerator": "Zähler",
+    "denominator": "Nenner",
+    "customValue": "mindestens {n}/{d}",
+    "check": "Mehrheitsprüfung",
+    "subjectKinds": {
+      "economic_plan": "Wirtschaftsplan",
+      "annual_statement": "Jahresabrechnung",
+      "maintenance": "Erhaltung",
+      "structural_change": "Bauliche Veränderung",
+      "manager_appointment": "Verwalterbestellung",
+      "other": "Sonstiges"
+    },
+    "types": {
+      "simple": "einfache Mehrheit",
+      "qualified_2_3": "qualifiziert 2/3",
+      "qualified_3_4": "qualifiziert 3/4",
+      "unanimous": "allstimmig",
+      "custom": "eigener Bruch"
+    },
+    "bases": {
+      "heads": "Köpfe",
+      "shares": "Miteigentumsanteile",
+      "units": "Einheiten"
+    },
+    "results": {
+      "reached": "erreicht",
+      "notReached": "nicht erreicht",
+      "notCheckable": "nicht prüfbar"
+    }
+  },
+  "ServiceContracts": {
+    "title": "Dienstleisterverträge",
+    "description": "Verträge mit Dienstleistern mit Laufzeit, Kündigungsfrist und automatischer Verlängerung. Der späteste Kündigungstermin erscheint in der Fristenliste mit 14 Tagen Vorfrist. Berechnete Termine sind Orientierung und anhand des Vertrags zu prüfen.",
+    "toCheck": "Orientierung, zu prüfen",
+    "loadError": "Die Dienstleisterverträge konnten nicht geladen werden.",
+    "empty": "Noch keine Dienstleisterverträge erfasst.",
+    "createTitle": "Dienstleistervertrag anlegen",
+    "editTitle": "Dienstleistervertrag ändern",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "actions": "Aktionen",
+    "confirmDelete": "Diesen Dienstleistervertrag wirklich löschen?",
+    "saveError": "Speichern fehlgeschlagen.",
+    "choose": "Bitte wählen",
+    "noProperty": "Kein Objekt",
+    "unknown": "Unbekannt",
+    "openEnded": "unbefristet",
+    "until": "bis",
+    "renewal": "Verlängerung um {count} Monate",
+    "hint": "Monatsfristen enden am Monatsende, wenn das Vertragsende ein Monatsletzter ist. Die Berechnung ersetzt keine rechtliche Prüfung.",
+    "field": {
+      "title": "Bezeichnung",
+      "provider": "Dienstleister",
+      "property": "Objekt",
+      "term": "Laufzeit",
+      "startsAt": "Beginn",
+      "endsAt": "Ende (optional)",
+      "notice": "Kündigungsfrist",
+      "unit": "Einheit",
+      "autoRenewal": "Automatische Verlängerung in Monaten (optional)",
+      "cancelledAt": "Gekündigt am (optional)",
+      "notes": "Notizen",
+      "nextEnd": "Nächstmögliches Vertragsende",
+      "noticeDate": "Spätester Kündigungstermin",
+      "status": "Status"
+    },
+    "unit": {
+      "days": "Tage",
+      "months": "Monate"
+    },
+    "status": {
+      "running": "Laufend",
+      "open_ended": "Unbefristet",
+      "cancelled": "Gekündigt",
+      "expired": "Beendet"
+    }
   }
 }

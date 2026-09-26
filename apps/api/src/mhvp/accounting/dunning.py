@@ -175,9 +175,18 @@ async def last_level(session: AsyncSession, account_id: uuid.UUID) -> int:
     return int(level or 0)
 
 
+REMINDER_LEVEL = 1
+"""Zahlungserinnerung: always without fee and interest (M16-14, V7, D40)."""
+
+DEFAULT_PAYMENT_DAYS: dict[int, int] = {1: 14, 2: 10, 3: 7}
+"""Default payment deadline per level in days after the letter date (M16-12). Levels
+without an entry get no default; the letter then asks for payment without a date."""
+
+
 def preset_levels() -> list[dict[str, Any]]:
-    """V7 Vorschlagswerte (Betreiberentscheidung 25.09.2026): Tage entschieden, Beträge offen."""
-    return [
+    """V7 Vorschlagswerte (Betreiberentscheidung 25.09.2026): Tage entschieden, Beträge offen.
+    Zahlungsfristen nach M16-12 (14, 10, 7 Tage), Stufe 4 ohne Vorgabewert."""
+    levels: list[dict[str, Any]] = [
         {"level": 1, "min_days_overdue": 7, "text": "Zahlungserinnerung", "fee_amount": None},
         {"level": 2, "min_days_overdue": 14, "text": "1. Mahnung", "fee_amount": None},
         {"level": 3, "min_days_overdue": 28, "text": "2. Mahnung", "fee_amount": None},
@@ -188,6 +197,9 @@ def preset_levels() -> list[dict[str, Any]]:
             "fee_amount": None,
         },
     ]
+    for lv in levels:
+        lv["payment_days"] = DEFAULT_PAYMENT_DAYS.get(int(lv["level"]))
+    return levels
 
 
 def interest_spread_presets() -> dict[str, str]:
@@ -217,6 +229,21 @@ def interest_amount_for(settings: EffectiveSettings, total: Decimal, days: int) 
     rate = settings.interest_base_rate + (settings.interest_spread or Decimal("0"))
     amount = total * rate / Decimal("100") * Decimal(days) / Decimal("365")
     return amount.quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def reminder_guard(
+    level: int, fee_amount: Decimal, interest_amount: Decimal
+) -> tuple[Decimal, Decimal, str | None]:
+    """Second line of defence (M16-14): whatever the configuration says, a
+    Zahlungserinnerung carries neither fee nor interest. Returns the amounts to use and a
+    note for the case protocol when something had to be reset."""
+    if level != REMINDER_LEVEL or (fee_amount == 0 and interest_amount == 0):
+        return fee_amount, interest_amount, None
+    note = (
+        "Zahlungserinnerung ohne Gebühr und Zinsen: Konfiguration ergab Gebühr "
+        f"{fee_amount} EUR und Zinsen {interest_amount} EUR, beides auf 0,00 EUR gesetzt"
+    )
+    return Decimal("0.00"), Decimal("0.00"), note
 
 
 async def preview(
@@ -268,7 +295,22 @@ async def preview(
             interest_amount = Decimal("0.00")
             if reason is None and settings is not None:
                 fee_amount = fee_amount_for(settings, level) or Decimal("0.00")
-                interest_amount = interest_amount_for(settings, total, days)
+                # Interest is configured per ladder, not per level; the Zahlungserinnerung
+                # never carries it (M16-14), so it starts at level 2.
+                if level > REMINDER_LEVEL:
+                    interest_amount = interest_amount_for(settings, total, days)
+            fee_amount, interest_amount, guard_note = reminder_guard(
+                level, fee_amount, interest_amount
+            )
+            if guard_note:
+                counts["reminder_guard"] = counts.get("reminder_guard", 0) + 1
+            case_reason = (
+                reason
+                if reason
+                else f"{days} Tage seit Fälligkeit, Konto {account.number if account else ''}"
+            )
+            if guard_note:
+                case_reason = f"{case_reason}. {guard_note}"
             session.add(
                 DunningCase(
                     tenant_id=tenant_id,
@@ -289,9 +331,7 @@ async def preview(
                     fee_amount=fee_amount,
                     interest_amount=interest_amount,
                     status="excluded" if reason else "proposed",
-                    reason=reason
-                    if reason
-                    else f"{days} Tage seit Fälligkeit, Konto {account.number if account else ''}",
+                    reason=case_reason,
                 )
             )
             counts["excluded" if reason else "proposed"] += 1

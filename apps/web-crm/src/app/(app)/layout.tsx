@@ -44,6 +44,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can("accounting:read") ? [{ href: "/weg", label: t("hoa"), icon: "hoa" }] : []),
         ...(can("properties:read") ? [{ href: "/objekte?art=sev", label: t("sev"), icon: "sev" }] : []),
         ...(can("contracts:read") ? [{ href: "/vermietung", label: t("letting"), icon: "letting" }] : []),
+        ...(can("contracts:read")
+          ? [{ href: "/dienstleistervertraege", label: t("serviceContracts"), icon: "letting" }]
+          : []),
         ...(can("documents:read") ? [{ href: "/dms", label: t("dms"), icon: "dms" }] : []),
         ...(can("objektakte:read")
           ? [{ href: "/objektakte", label: t("objektakte"), icon: "dms" }]
@@ -102,7 +105,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         />
       </Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-bg/80 px-4 py-2.5 backdrop-blur-md md:px-6">
+        <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-bg px-4 py-2.5 md:px-6">
           <MobileNav
             groups={groups}
             label={t("nav")}

@@ -28,7 +28,15 @@ DEADLINE_KINDS: tuple[str, ...] = (
     "meter_calibration",
     "bank_consent",
     "document_retention_end",
+    "service_contract_notice",
+    "meeting_resolution_deadline",
 )
+# Fixed lead time per kind; overrides the tenant setting (M9-06: 14 days for the notice date
+# of service provider contracts).
+DEADLINE_LEAD_DAYS: dict[str, int] = {
+    "service_contract_notice": 14,
+    "meeting_resolution_deadline": 7,
+}
 # Read permission needed to see a kind (endpoint) and update permission of the recipients of
 # the "lead time reached" notification (job). Bank consents are additionally covered by the
 # ten day reminder of A29 (``mhvp.banking.tasks``); this list is the long range view.
@@ -38,6 +46,9 @@ DEADLINE_PERMISSIONS: dict[str, tuple[str, str]] = {
     "meter_calibration": ("properties:read", "properties:update"),
     "bank_consent": ("accounting:read", "accounting:update"),
     "document_retention_end": ("documents:read", "documents:update"),
+    "service_contract_notice": ("contracts:read", "contracts:update"),
+    # Same permissions as the owners' meeting endpoints of the HOA module (M9-07).
+    "meeting_resolution_deadline": ("accounting:read", "accounting:update"),
 }
 DEADLINE_NOTIFICATION_KIND = "compliance_deadline"
 DIGEST_NOTIFICATION_KIND = "daily_digest"
@@ -91,13 +102,15 @@ async def deadline_candidates(
 ) -> list[dict[str, Any]]:
     """Every future dated obligation known to the data model, keyed by (kind, source, date).
 
-    Not covered (documented in docs/plans/M9.md): service provider contracts (no contract
-    model for them yet), resolution deadlines of virtual owners' meetings (``owners_meeting``
-    has no such field).
+    Resolution deadlines of virtual owners' meetings come from the entered field with its
+    source (M9-07), never from a computation. Service provider contracts are covered by
+    ``service_contract_notice`` (M9-06).
     """
     from mhvp.banking.models import BankConnection, ConnectionStatus, FinApiConnection
     from mhvp.contracts.models import Contract
+    from mhvp.contracts.service_contracts import ServiceContract, terms_of
     from mhvp.documents.models import Document
+    from mhvp.hoa.models import Meeting
     from mhvp.properties.models import Meter, Property
 
     out: list[dict[str, Any]] = []
@@ -188,7 +201,55 @@ async def deadline_candidates(
     ).all()
     for doc_id, title, until in documents:
         add("document_retention_end", "document", doc_id, f"Aufbewahrung {title}", until)
+
+    service_contracts = (
+        await session.scalars(select(ServiceContract).where(ServiceContract.cancelled_at.is_(None)))
+    ).all()
+    for sc in service_contracts:
+        add(
+            "service_contract_notice",
+            "service_contract",
+            sc.id,
+            f"Kündigungsfrist Dienstleistervertrag {sc.title}",
+            terms_of(sc, today).notice_deadline,
+            sc.property_id,
+        )
+
+    meetings = (
+        await session.scalars(
+            select(Meeting).where(
+                Meeting.mode == "virtual", Meeting.resolution_deadline_at >= today
+            )
+        )
+    ).all()
+    for m in meetings:
+        add(
+            MEETING_RESOLUTION_KIND,
+            "owners_meeting",
+            m.id,
+            meeting_deadline_reference(m.scheduled_at.date(), m.resolution_deadline_source),
+            m.resolution_deadline_at,
+        )
     return out
+
+
+MEETING_RESOLUTION_KIND = "meeting_resolution_deadline"
+# Fixed lead time of the resolution deadline (M9-07, Produktschutz), independent of the
+# tenant switch: the entered date is orientation only and must be verified.
+MEETING_RESOLUTION_LEAD_DAYS = 7
+
+
+def meeting_deadline_reference(held_on: date, source: str | None) -> str:
+    """Reference text of the deadline list entry, marked as orientation (M1-09)."""
+    return (
+        f"Beschlussfrist virtuelle Versammlung vom {held_on:%d.%m.%Y} "
+        f"(Orientierung, zu prüfen; Quelle: {source or 'fehlt'})"
+    )
+
+
+def lead_days_for(kind: str, tenant_lead_days: int) -> int:
+    """Fixed lead time per kind (``DEADLINE_LEAD_DAYS``), otherwise the tenant setting."""
+    return DEADLINE_LEAD_DAYS.get(kind, tenant_lead_days)
 
 
 async def refresh_deadlines(
@@ -226,7 +287,7 @@ async def refresh_deadlines(
                 session.add(
                     ComplianceDeadline(
                         tenant_id=tenant_id,
-                        lead_days=lead_days,
+                        lead_days=lead_days_for(cand["kind"], lead_days),
                         status="open",
                         **cand,
                     )
@@ -240,8 +301,9 @@ async def refresh_deadlines(
             if getattr(row, field) != cand[field]:
                 setattr(row, field, cand[field])
                 changed = True
-        if row.lead_days != lead_days:
-            row.lead_days, changed = lead_days, True
+        wanted_lead = lead_days_for(cand["kind"], lead_days)
+        if row.lead_days != wanted_lead:
+            row.lead_days, changed = wanted_lead, True
         counts["updated"] += int(changed)
     for key, row in existing.items():
         if key not in seen:

@@ -12,6 +12,7 @@ from mhvp.communication import sync_retry as communication_sync_retry
 from mhvp.communication import telephony as communication_telephony
 from mhvp.contacts import models as contact_models
 from mhvp.contracts import models as contract_models
+from mhvp.contracts import service_contracts as service_contract_models
 from mhvp.core import events, numbering, webhooks
 from mhvp.documents import models as document_models
 from mhvp.handover import models as handover_models
@@ -66,6 +67,7 @@ __all__ = [
     "property_models",
     "receipt_models",
     "rentlaw_models",
+    "service_contract_models",
     "sla_models",
     "ticket_models",
     "webhooks",

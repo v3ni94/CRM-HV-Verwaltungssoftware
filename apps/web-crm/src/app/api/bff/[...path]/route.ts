@@ -42,6 +42,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Tagesübersicht, Fristenliste und Schalter der Tagesjobs (A40, A41).
   { method: "GET", pattern: /^workspace\/(digest|deadlines|job-settings)$/ },
   { method: "PUT", pattern: /^workspace\/job-settings$/ },
+  // Dienstleisterverträge (M9-06): Liste, Anlegen, Ändern, Löschen (contracts:*).
+  { method: "GET", pattern: /^service-contracts$/ },
+  { method: "POST", pattern: /^service-contracts$/ },
+  { method: "GET", pattern: new RegExp(`^service-contracts/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^service-contracts/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^service-contracts/${ID}$`) },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
   // Google-Kalender-Termine (M23-02 bidirektional): ändern/löschen des verknüpften Google-Events
   // und, nur nach ausdrücklicher Bestätigung, Einladung an externe Teilnehmer (M23-05).
@@ -64,6 +70,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   {
     method: "POST",
     pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/mandate/revoke$`),
+  },
+  // Four eyes release of contact IBANs (M5-01).
+  {
+    method: "POST",
+    pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/(approve|reject)$`),
   },
   // AI assistant (M7): conversations, runs, proposals, import runs, provider settings.
   { method: "GET", pattern: /^ai\/conversations$/ },
@@ -192,6 +203,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // only active once the operator has entered them (V7).
   { method: "GET", pattern: /^accounting\/dunning-settings$/ },
   { method: "PUT", pattern: /^accounting\/dunning-settings$/ },
+  // Remove an object override (M16-10); the object inherits the tenant default again.
+  { method: "DELETE", pattern: /^accounting\/dunning-settings$/ },
   { method: "POST", pattern: /^accounting\/dunning-settings\/presets$/ },
   { method: "POST", pattern: /^accounting\/dunning-runs$/ },
   { method: "POST", pattern: new RegExp(`^accounting/dunning-runs/${ID}/approve$`) },
@@ -241,6 +254,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
   // Protokollentwurf der Versammlung als PDF (A62); Download über /api/handover-files.
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/protocol-draft$`) },
+  // Mehrheitsregeln je Beschlussgegenstand (M25-01): Prüfung nur als Anzeige, keine Statusänderung.
+  { method: "GET", pattern: /^hoa\/majority-rules\/subject-rules$/ },
+  { method: "POST", pattern: /^hoa\/majority-rules\/subject-rules$/ },
+  { method: "PUT", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}/approve$`) },
+  { method: "GET", pattern: new RegExp(`^hoa/resolutions/${ID}/majority-check$`) },
+  // Beschlussfrist der virtuellen Versammlung (M9-07).
+  { method: "PATCH", pattern: new RegExp(`^hoa/meetings/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/votes$`) },
   { method: "GET", pattern: new RegExp(`^hoa/agenda/${ID}/tally$`) },
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/announce$`) },

@@ -9,7 +9,7 @@ import { ui } from "@/lib/ui";
 export const dynamic = "force-dynamic";
 
 type SearchParams = Record<string, string | undefined>;
-const KINDS = ["contract_end", "contract_termination", "meter_calibration", "bank_consent", "document_retention_end"];
+const KINDS = ["contract_end", "contract_termination", "meter_calibration", "bank_consent", "document_retention_end", "service_contract_notice", "meeting_resolution_deadline"];
 const STATUSES = ["open", "done", "all"];
 
 /** Fristenliste (A41): GET /api/v1/workspace/deadlines mit Filter Typ, Status, Zeitraum.

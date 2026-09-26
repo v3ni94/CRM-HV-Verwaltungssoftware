@@ -495,8 +495,15 @@ def test_d39_payment_determination_is_not_overridden_by_account_priority(
     assert determined["unambiguous_open_item_id"] is None  # review, no silent priority
     assert {c["open_item_id"] for c in determined["candidates"]} == {january["id"], february["id"]}
     assert len({c["score"] for c in determined["candidates"]}) == 1  # equal evidence, no ranking
+    # M12-03: the named February item is suggested first with the determination as reason.
+    assert determined["candidates"][0]["open_item_id"] == february["id"]
+    assert [c["allocation_reason"] for c in determined["candidates"]] == [
+        "Bestimmung aus Verwendungszweck",
+        "Regel ohne Bestimmung",
+    ]
     undetermined = _ok(client.get(f"{B}/transactions/{txs['D39-2']['id']}/candidates", headers=h))
     assert undetermined["unambiguous_open_item_id"] is None  # M10-03: no oldest first by default
+    assert {c["allocation_reason"] for c in undetermined["candidates"]} == {"Regel ohne Bestimmung"}
 
     # Even an active rule does not pick an item by priority for either payment.
     _ok(client.put(f"{B}/automation", json={"enabled": True, "reason": "Test D39"}, headers=h))

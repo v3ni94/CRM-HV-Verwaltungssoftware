@@ -34,6 +34,7 @@ CREATE = require_permission("contacts:create")
 UPDATE = require_permission("contacts:update")
 DELETE = require_permission("contacts:delete")
 EXPORT = require_permission("contacts:export")
+APPROVE = require_permission("contacts:approve")
 
 
 def _not_found() -> ProblemError:
@@ -110,7 +111,9 @@ async def create_contact(
         services.apply_fields(contact, body)
         session.add(contact)
         await session.flush()
-        await services.write_children(session, principal.tenant_id, contact.id, body)
+        await services.write_children(
+            session, principal.tenant_id, contact.id, body, actor_user_id=principal.user_id
+        )
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -205,7 +208,7 @@ async def replace_contact(
         before = await services.load(session, contact_id)
         services.apply_fields(contact, body, await services.iban_suffixes(session, contact_id))
         changed_mandate_references = await services.write_children(
-            session, principal.tenant_id, contact.id, body
+            session, principal.tenant_id, contact.id, body, actor_user_id=principal.user_id
         )
         for reference in changed_mandate_references:
             session.add(
@@ -391,6 +394,67 @@ async def revoke_mandate(
             mandate_status=account.mandate_status,
             mandate_revoked_on=account.mandate_revoked_on,
         )
+
+
+async def _decide_bank_account(
+    contact_id: uuid.UUID,
+    account_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal,
+    *,
+    approve: bool,
+    body: schemas.BankAccountDecisionIn | None,
+) -> schemas.BankAccountOut:
+    async with tenant_tx(request, principal) as session:
+        await _active(session, contact_id)
+        account = await session.get(ContactBankAccount, account_id)
+        if account is None or account.contact_id != contact_id:
+            raise _not_found()
+        await services.decide_bank_account(
+            session,
+            account,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            approve=approve,
+            is_platform_admin=principal.is_platform_admin,
+            reason=body.reason if body else None,
+        )
+        loaded = await services.load(session, contact_id)
+        if loaded is None:
+            raise _not_found()
+        return next(b for b in loaded.bank_accounts if b.id == account_id)
+
+
+@router.post(
+    "/contacts/{contact_id}/bank-accounts/{account_id}/approve",
+    summary="Bankverbindung freigeben (Vier-Augen-Prinzip, zweite Person)",
+)
+async def approve_bank_account(
+    contact_id: uuid.UUID,
+    account_id: uuid.UUID,
+    request: Request,
+    body: schemas.BankAccountDecisionIn | None = None,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.BankAccountOut:
+    return await _decide_bank_account(
+        contact_id, account_id, request, principal, approve=True, body=body
+    )
+
+
+@router.post(
+    "/contacts/{contact_id}/bank-accounts/{account_id}/reject",
+    summary="Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person)",
+)
+async def reject_bank_account(
+    contact_id: uuid.UUID,
+    account_id: uuid.UUID,
+    request: Request,
+    body: schemas.BankAccountDecisionIn | None = None,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.BankAccountOut:
+    return await _decide_bank_account(
+        contact_id, account_id, request, principal, approve=False, body=body
+    )
 
 
 # Notes, relations, consents ------------------------------------------------------------

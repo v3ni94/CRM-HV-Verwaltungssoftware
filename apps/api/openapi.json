@@ -1052,6 +1052,18 @@
               }
             ],
             "title": "Snapshot Hash"
+          },
+          "subject_kind": {
+            "anyOf": [
+              {
+                "pattern": "^(economic_plan|annual_statement|maintenance|structural_change|manager_appointment|other)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Kind"
           }
         },
         "required": [
@@ -1914,6 +1926,35 @@
           "to"
         ],
         "title": "BandSegment",
+        "type": "object"
+      },
+      "BankAccountApproval": {
+        "description": "Four eyes release of a new or changed contact IBAN (M5-01).",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected"
+        ],
+        "title": "BankAccountApproval",
+        "type": "string"
+      },
+      "BankAccountDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "BankAccountDecisionIn",
         "type": "object"
       },
       "BankAccountKind": {
@@ -12085,6 +12126,18 @@
             ],
             "title": "Subject Id"
           },
+          "subject_kind": {
+            "anyOf": [
+              {
+                "pattern": "^(economic_plan|annual_statement|maintenance|structural_change|manager_appointment|other)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Kind"
+          },
           "subject_type": {
             "anyOf": [
               {
@@ -12096,6 +12149,16 @@
               }
             ],
             "title": "Subject Type"
+          },
+          "votes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoaVotesIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "wording": {
             "maxLength": 20000,
@@ -12191,6 +12254,78 @@
         "title": "HoaStatementIn",
         "type": "object"
       },
+      "HoaSubjectRuleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "counting_basis": {
+            "pattern": "^(heads|shares|units)$",
+            "title": "Counting Basis",
+            "type": "string"
+          },
+          "custom_denominator": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Denominator"
+          },
+          "custom_numerator": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Numerator"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "majority_type": {
+            "pattern": "^(simple|qualified_2_3|qualified_3_4|unanimous|custom)$",
+            "title": "Majority Type",
+            "type": "string"
+          },
+          "source": {
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Source",
+            "type": "string"
+          },
+          "subject_kind": {
+            "pattern": "^(economic_plan|annual_statement|maintenance|structural_change|manager_appointment|other)$",
+            "title": "Subject Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_kind",
+          "majority_type",
+          "counting_basis",
+          "source"
+        ],
+        "title": "HoaSubjectRuleIn",
+        "type": "object"
+      },
       "HoaTransitionIn": {
         "additionalProperties": false,
         "properties": {
@@ -12226,6 +12361,80 @@
           "target"
         ],
         "title": "HoaTransitionIn",
+        "type": "object"
+      },
+      "HoaVotesIn": {
+        "additionalProperties": false,
+        "description": "Recorded tally of an external meeting for the majority check (M25-01).",
+        "properties": {
+          "abstain": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Abstain"
+          },
+          "eligible": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligible"
+          },
+          "no": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "No"
+          },
+          "principle": {
+            "pattern": "^(head|mea|unit)$",
+            "title": "Principle",
+            "type": "string"
+          },
+          "yes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Yes"
+          }
+        },
+        "required": [
+          "principle",
+          "yes",
+          "no"
+        ],
+        "title": "HoaVotesIn",
         "type": "object"
       },
       "HoldIn": {
@@ -18041,6 +18250,30 @@
             "title": "Mode",
             "type": "string"
           },
+          "resolution_deadline_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Deadline At"
+          },
+          "resolution_deadline_source": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Deadline Source"
+          },
           "scheduled_at": {
             "format": "date-time",
             "title": "Scheduled At",
@@ -18082,6 +18315,38 @@
           "scheduled_at"
         ],
         "title": "MeetingIn",
+        "type": "object"
+      },
+      "MeetingPatch": {
+        "additionalProperties": false,
+        "description": "Resolution deadline of a virtual meeting (M9-07). ``null`` clears both fields.",
+        "properties": {
+          "resolution_deadline_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Deadline At"
+          },
+          "resolution_deadline_source": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Deadline Source"
+          }
+        },
+        "title": "MeetingPatch",
         "type": "object"
       },
       "MemberCompetences": {
@@ -21110,6 +21375,44 @@
           "description"
         ],
         "title": "PortalTicketIn",
+        "type": "object"
+      },
+      "PostingEnabledIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "PostingEnabledIn",
+        "type": "object"
+      },
+      "PostingEnabledOut": {
+        "properties": {
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "PostingEnabledOut",
         "type": "object"
       },
       "PreferredChannel": {
@@ -26280,6 +26583,378 @@
         "title": "SerialLetterOut",
         "type": "object"
       },
+      "ServiceContractIn": {
+        "additionalProperties": false,
+        "properties": {
+          "auto_renewal_months": {
+            "anyOf": [
+              {
+                "maximum": 120.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Renewal Months"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "notice_period_days": {
+            "maximum": 3650.0,
+            "minimum": 0.0,
+            "title": "Notice Period Days",
+            "type": "integer"
+          },
+          "notice_period_unit": {
+            "default": "months",
+            "pattern": "^(days|months)$",
+            "title": "Notice Period Unit",
+            "type": "string"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "provider_contact_id": {
+            "format": "uuid",
+            "title": "Provider Contact Id",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_contact_id",
+          "title",
+          "starts_at",
+          "notice_period_days"
+        ],
+        "title": "ServiceContractIn",
+        "type": "object"
+      },
+      "ServiceContractOut": {
+        "properties": {
+          "auto_renewal_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Renewal Months"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_notice_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Notice Date"
+          },
+          "next_possible_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Possible End"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "notice_period_days": {
+            "title": "Notice Period Days",
+            "type": "integer"
+          },
+          "notice_period_unit": {
+            "title": "Notice Period Unit",
+            "type": "string"
+          },
+          "orientation_only": {
+            "default": true,
+            "title": "Orientation Only",
+            "type": "boolean"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "provider_contact_id": {
+            "format": "uuid",
+            "title": "Provider Contact Id",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider_contact_id",
+          "property_id",
+          "title",
+          "starts_at",
+          "ends_at",
+          "notice_period_days",
+          "notice_period_unit",
+          "auto_renewal_months",
+          "cancelled_at",
+          "notes",
+          "status",
+          "next_possible_end",
+          "latest_notice_date"
+        ],
+        "title": "ServiceContractOut",
+        "type": "object"
+      },
+      "ServiceContractPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "auto_renewal_months": {
+            "anyOf": [
+              {
+                "maximum": 120.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Renewal Months"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "notice_period_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Period Days"
+          },
+          "notice_period_unit": {
+            "anyOf": [
+              {
+                "pattern": "^(days|months)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Period Unit"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "provider_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Contact Id"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ServiceContractPatch",
+        "type": "object"
+      },
       "SessionOut": {
         "properties": {
           "family_id": {
@@ -30457,6 +31132,10 @@
       },
       "mhvp__contacts__schemas__BankAccountOut": {
         "properties": {
+          "approval_status": {
+            "$ref": "#/components/schemas/BankAccountApproval",
+            "description": "Vier-Augen-Freigabe der IBAN (M5-01): nur approved wird verwendet."
+          },
           "bank_name": {
             "anyOf": [
               {
@@ -30478,6 +31157,30 @@
               }
             ],
             "title": "Bic"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
           },
           "holder": {
             "anyOf": [
@@ -30584,6 +31287,18 @@
           "mandate_status": {
             "$ref": "#/components/schemas/ContactMandateStatus"
           },
+          "requested_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
           "sepa_enabled": {
             "title": "Sepa Enabled",
             "type": "boolean"
@@ -30623,7 +31338,8 @@
           "mandate_document_id",
           "mandate_scheme",
           "mandate_status",
-          "mandate_revoked_on"
+          "mandate_revoked_on",
+          "approval_status"
         ],
         "title": "BankAccountOut",
         "type": "object"
@@ -36312,6 +37028,68 @@
         ]
       }
     },
+    "/api/v1/ai/posting-enabled": {
+      "get": {
+        "description": "M7-09, M12-01: tenant switch plus the reason why ``propose_posting`` would be blocked\n(switch off, no released provider with DPA evidence).",
+        "operationId": "get_posting_enabled_api_v1_ai_posting_enabled_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostingEnabledOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "KI-Kontierung (Einstellung)",
+        "tags": [
+          "KI-Assistent"
+        ]
+      },
+      "put": {
+        "description": "Default off. Even when on, a run needs a released provider with DPA evidence; the\nresult is a proposal of entity type ``posting`` and is never posted (rule 0.1.6).",
+        "operationId": "put_posting_enabled_api_v1_ai_posting_enabled_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostingEnabledIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostingEnabledOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Kontierung ein- oder ausschalten",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
     "/api/v1/ai/proposals/{proposal_id}": {
       "get": {
         "operationId": "get_proposal_api_v1_ai_proposals__proposal_id__get",
@@ -39467,6 +40245,95 @@
         ]
       }
     },
+    "/api/v1/banking/transactions/{tx_id}/ai-posting": {
+      "get": {
+        "operationId": "get_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Ai Posting Api V1 Banking Transactions  Tx Id  Ai Posting Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Kontierungsvorschläge lesen",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "post": {
+        "description": "M7-09, M12-01: only with the tenant switch ``ai_posting_enabled`` and a released AI\nprovider with DPA evidence, otherwise ``MHVP-AI-0001``. The result is an ``AiProposal``\nof entity type ``posting``; nothing is posted and the transaction is not changed.",
+        "operationId": "start_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Ai Posting Api V1 Banking Transactions  Tx Id  Ai Posting Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "KI-Kontierungsvorschlag anstoßen (nur Vorschlag, deaktiviert bis Freigabe)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
     "/api/v1/banking/transactions/{tx_id}/book": {
       "post": {
         "operationId": "book_api_v1_banking_transactions__tx_id__book_post",
@@ -41009,6 +41876,76 @@
         ]
       }
     },
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/approve": {
+      "post": {
+        "operationId": "approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/BankAccountDecisionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankverbindung freigeben (Vier-Augen-Prinzip, zweite Person)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
     "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/mandate/revoke": {
       "post": {
         "operationId": "revoke_mandate_api_v1_contacts__contact_id__bank_accounts__account_id__mandate_revoke_post",
@@ -41057,6 +41994,76 @@
           }
         },
         "summary": "SEPA-Mandat widerrufen",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/reject": {
+      "post": {
+        "operationId": "reject_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/BankAccountDecisionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person)",
         "tags": [
           "Kontakte"
         ]
@@ -47073,6 +48080,236 @@
         ]
       }
     },
+    "/api/v1/hoa/majority-rules/subject-rules": {
+      "get": {
+        "operationId": "list_subject_rules_api_v1_hoa_majority_rules_subject_rules_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "legal_entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legal Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Subject Rules Api V1 Hoa Majority Rules Subject Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregeln je Beschlussgegenstand",
+        "tags": [
+          "WEG"
+        ]
+      },
+      "post": {
+        "operationId": "create_subject_rule_api_v1_hoa_majority_rules_subject_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaSubjectRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Subject Rule Api V1 Hoa Majority Rules Subject Rules Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregel je Beschlussgegenstand anlegen",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/majority-rules/subject-rules/{rule_id}": {
+      "delete": {
+        "operationId": "delete_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregel deaktivieren (bleibt nachvollziehbar)",
+        "tags": [
+          "WEG"
+        ]
+      },
+      "put": {
+        "operationId": "update_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaSubjectRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Subject Rule Api V1 Hoa Majority Rules Subject Rules  Rule Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregel ändern (Freigabe entfällt)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/majority-rules/subject-rules/{rule_id}/approve": {
+      "post": {
+        "operationId": "approve_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve Subject Rule Api V1 Hoa Majority Rules Subject Rules  Rule Id  Approve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsregel fachlich freigeben (zweite Person)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
     "/api/v1/hoa/measures": {
       "get": {
         "operationId": "list_measures_api_v1_hoa_measures_get",
@@ -47444,6 +48681,59 @@
           }
         },
         "summary": "Versammlung mit Tagesordnung und Anwesenheit",
+        "tags": [
+          "hoa"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_meeting_api_v1_hoa_meetings__meeting_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Meeting Api V1 Hoa Meetings  Meeting Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Beschlussfrist der Versammlung (M9-07)",
         "tags": [
           "hoa"
         ]
@@ -48239,6 +49529,51 @@
           }
         },
         "summary": "Wirksamkeitsstatus ändern (z. B. bestandskräftig, angefochten)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/resolutions/{resolution_id}/majority-check": {
+      "get": {
+        "operationId": "resolution_majority_check_api_v1_hoa_resolutions__resolution_id__majority_check_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "resolution_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Resolution Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resolution Majority Check Api V1 Hoa Resolutions  Resolution Id  Majority Check Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mehrheitsprüfung eines Beschlusses (nur Anzeige, keine Statusänderung)",
         "tags": [
           "WEG"
         ]
@@ -61951,6 +63286,244 @@
         ]
       }
     },
+    "/api/v1/service-contracts": {
+      "get": {
+        "operationId": "list_service_contracts_api_v1_service_contracts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "provider_contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider Contact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceContractOut"
+                  },
+                  "title": "Response List Service Contracts Api V1 Service Contracts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dienstleisterverträge",
+        "tags": [
+          "Dienstleisterverträge"
+        ]
+      },
+      "post": {
+        "operationId": "create_service_contract_api_v1_service_contracts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceContractIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceContractOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dienstleistervertrag anlegen",
+        "tags": [
+          "Dienstleisterverträge"
+        ]
+      }
+    },
+    "/api/v1/service-contracts/{contract_id}": {
+      "delete": {
+        "operationId": "delete_service_contract_api_v1_service_contracts__contract_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dienstleistervertrag löschen",
+        "tags": [
+          "Dienstleisterverträge"
+        ]
+      },
+      "get": {
+        "operationId": "get_service_contract_api_v1_service_contracts__contract_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceContractOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dienstleistervertrag lesen",
+        "tags": [
+          "Dienstleisterverträge"
+        ]
+      },
+      "patch": {
+        "operationId": "update_service_contract_api_v1_service_contracts__contract_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceContractPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceContractOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dienstleistervertrag ändern",
+        "tags": [
+          "Dienstleisterverträge"
+        ]
+      }
+    },
     "/api/v1/sla/alerts": {
       "get": {
         "operationId": "list_alerts_api_v1_sla_alerts_get",
@@ -68297,7 +69870,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end)$",
+                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end|service_contract_notice|meeting_resolution_deadline)$",
                   "type": "string"
                 },
                 {

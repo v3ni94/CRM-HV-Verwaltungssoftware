@@ -118,7 +118,7 @@ async def creditor_account(
 
 async def evaluate(session: AsyncSession, invoice: Invoice) -> None:
     """Automatic findings: completeness, arithmetic, duplicates, unverified IBAN (hints only)."""
-    from mhvp.contacts.models import ContactBankAccount
+    from mhvp.contacts.models import BankAccountApproval, ContactBankAccount
 
     lines = list(
         (
@@ -148,6 +148,7 @@ async def evaluate(session: AsyncSession, invoice: Invoice) -> None:
             select(ContactBankAccount.id).where(
                 ContactBankAccount.contact_id == invoice.provider_contact_id,
                 ContactBankAccount.iban_fingerprint == invoice.payee_iban_fingerprint,
+                ContactBankAccount.approval_status == BankAccountApproval.APPROVED,
             )
         )
         if known is None and invoice.iban_confirmed_by is None:

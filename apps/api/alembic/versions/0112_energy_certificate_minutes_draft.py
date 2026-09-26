@@ -60,7 +60,9 @@ def downgrade() -> None:
     # Values longer than 16 characters could not exist before 0112; they fall back to the
     # previous default so the narrower column accepts them (RLS is forced, ADR 0002).
     op.execute("ALTER TABLE listing NO FORCE ROW LEVEL SECURITY")
-    op.execute("UPDATE listing SET energy_status = 'in_erstellung' WHERE length(energy_status) > 16")
+    op.execute(
+        "UPDATE listing SET energy_status = 'in_erstellung' WHERE length(energy_status) > 16"
+    )
     op.execute("ALTER TABLE listing FORCE ROW LEVEL SECURITY")
     op.alter_column(
         "listing",

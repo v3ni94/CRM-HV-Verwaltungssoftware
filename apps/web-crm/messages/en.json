@@ -98,7 +98,8 @@
     "immoware": "Immoware24",
     "immowareLearning": "Learning phase",
     "objektakte": "Objektakte (Records)",
-    "immoware24:reconciliation": "Immoware24: parallel operation reconciliation"
+    "immoware24:reconciliation": "Immoware24: parallel operation reconciliation",
+    "serviceContracts": "Service contracts"
   },
   "Contacts": {
     "title": "Contacts",
@@ -182,6 +183,17 @@
       "revoke": "Revoke",
       "revokeConfirm": "Really revoke the SEPA mandate for {iban}?",
       "revokedOn": "Revoked on"
+    },
+    "bankApproval": {
+      "title": "Release",
+      "pending": "awaiting release",
+      "approved": "released",
+      "rejected": "rejected",
+      "approve": "Release",
+      "reject": "Reject",
+      "rejectConfirm": "Really reject IBAN {iban}?",
+      "ownRequest": "entered by you, release by another person",
+      "hint": "New and changed IBANs take effect only after release by a second person (four eyes principle). Until then they are not used in direct debit or payment runs."
     }
   },
   "ContactForm": {
@@ -990,7 +1002,9 @@
       "contract_termination": "Termination",
       "meter_calibration": "Meter calibration",
       "bank_consent": "Bank consent expiry",
-      "document_retention_end": "Retention end"
+      "document_retention_end": "Retention end",
+      "service_contract_notice": "Notice date service contract",
+      "meeting_resolution_deadline": "Resolution deadline virtual meeting"
     },
     "status": {
       "open": "open",
@@ -1514,7 +1528,10 @@
     "letterPreviewAmount": "Amount",
     "mahnbescheidPdf": "Preparation as PDF (no application)",
     "mahnbescheidPdfFile": "File PDF",
-    "mahnbescheidPdfFiled": "PDF filed"
+    "mahnbescheidPdfFiled": "PDF filed",
+    "paymentDaysHint": "Payment deadline per level in days: the dunning letter computes the payment date as letter date plus these days. Defaults: level 1 14 days, level 2 10 days, level 3 7 days. Without a value the letter asks for payment without a date.",
+    "reminderNoFee": "The payment reminder (level 1) never carries a fee or interest: fee from level must be at least 2 and the level 1 fee must be empty or 0.00 EUR.",
+    "reminderNoFeeHint": "Level 1 (payment reminder) never carries a fee or statutory interest; fees apply from level 2 at the earliest."
   },
   "Billing": {
     "title": "Operating cost statement",
@@ -1792,7 +1809,18 @@
       "download": "Download draft",
       "signedLinked": "The signed minutes stay linked.",
       "missing": "Not recorded"
-    }
+    },
+    "resolutionDeadline": {
+      "title": "Resolution deadline of the virtual meeting",
+      "date": "Resolution deadline",
+      "source": "Source (resolution or community rules with reference)",
+      "hint": "The deadline is entered, not computed. It appears in the deadline list with a 7 day lead time and is orientation only, to be verified.",
+      "sourceRequired": "Please state the source of the deadline.",
+      "save": "Save deadline",
+      "saved": "Deadline saved."
+    },
+    "subjectKind": "Resolution subject",
+    "subjectKindNone": "not specified"
   },
   "RentIncrease": {
     "title": "Rent increases",
@@ -2993,6 +3021,10 @@
     "portalForms": {
       "title": "Portal forms",
       "description": "Form templates for tenants and owners in the portal."
+    },
+    "weg": {
+      "title": "Owners' associations",
+      "description": "Majority rules per resolution subject with source and release."
     }
   },
   "Members": {
@@ -5110,5 +5142,106 @@
       "document": "The document ID is invalid."
     },
     "endConfirm": "End the notice \"{title}\"? It will no longer be shown in the portal."
+  },
+  "MajorityRules": {
+    "title": "Majority rules per resolution subject",
+    "intro": "Rules from the community regulations, agreements or statute with their source. The tally is checked against them; the announcement stays with the chair.",
+    "notice": "Rules must be reviewed and released by a second person. Without a rule the default applies: simple majority by heads, not functionally released. The check never changes a resolution status.",
+    "empty": "No rules yet. The default rule applies.",
+    "subjectKind": "Resolution subject",
+    "scope": "Scope",
+    "tenantWide": "All communities",
+    "majorityType": "Majority",
+    "countingBasis": "Counting basis",
+    "source": "Source",
+    "sourcePlaceholder": "e.g. community regulations section 7, to be checked",
+    "approval": "Release",
+    "approved": "released",
+    "notApproved": "not released",
+    "approve": "Release",
+    "edit": "Edit",
+    "delete": "Deactivate",
+    "confirmDelete": "Deactivate the rule? It stays traceable in the history.",
+    "create": "Create rule",
+    "update": "Save rule",
+    "cancel": "Cancel",
+    "numerator": "Numerator",
+    "denominator": "Denominator",
+    "customValue": "at least {n}/{d}",
+    "check": "Majority check",
+    "subjectKinds": {
+      "economic_plan": "Economic plan",
+      "annual_statement": "Annual statement",
+      "maintenance": "Maintenance",
+      "structural_change": "Structural change",
+      "manager_appointment": "Manager appointment",
+      "other": "Other"
+    },
+    "types": {
+      "simple": "simple majority",
+      "qualified_2_3": "qualified 2/3",
+      "qualified_3_4": "qualified 3/4",
+      "unanimous": "unanimous",
+      "custom": "custom fraction"
+    },
+    "bases": {
+      "heads": "Heads",
+      "shares": "Co-ownership shares",
+      "units": "Units"
+    },
+    "results": {
+      "reached": "reached",
+      "notReached": "not reached",
+      "notCheckable": "not checkable"
+    }
+  },
+  "ServiceContracts": {
+    "title": "Service contracts",
+    "description": "Contracts with service providers with term, notice period and automatic renewal. The latest notice date appears in the deadline list with a 14 day lead time. Computed dates are for orientation and must be checked against the contract.",
+    "toCheck": "Orientation, to be verified",
+    "loadError": "The service contracts could not be loaded.",
+    "empty": "No service contracts recorded yet.",
+    "createTitle": "Create service contract",
+    "editTitle": "Edit service contract",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "actions": "Actions",
+    "confirmDelete": "Really delete this service contract?",
+    "saveError": "Saving failed.",
+    "choose": "Please choose",
+    "noProperty": "No property",
+    "unknown": "Unknown",
+    "openEnded": "open ended",
+    "until": "until",
+    "renewal": "renewal by {count} months",
+    "hint": "Notice periods in months end at the month end if the contract end is the last day of a month. The calculation does not replace a legal review.",
+    "field": {
+      "title": "Title",
+      "provider": "Service provider",
+      "property": "Property",
+      "term": "Term",
+      "startsAt": "Start",
+      "endsAt": "End (optional)",
+      "notice": "Notice period",
+      "unit": "Unit",
+      "autoRenewal": "Automatic renewal in months (optional)",
+      "cancelledAt": "Cancelled on (optional)",
+      "notes": "Notes",
+      "nextEnd": "Next possible end",
+      "noticeDate": "Latest notice date",
+      "status": "Status"
+    },
+    "unit": {
+      "days": "days",
+      "months": "months"
+    },
+    "status": {
+      "running": "Running",
+      "open_ended": "Open ended",
+      "cancelled": "Cancelled",
+      "expired": "Ended"
+    }
   }
 }

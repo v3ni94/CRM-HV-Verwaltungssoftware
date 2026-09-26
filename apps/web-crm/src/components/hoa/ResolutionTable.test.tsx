@@ -19,6 +19,26 @@ describe("ResolutionTable", () => {
     expect(screen.getByText("Umlaufbeschluss")).toBeInTheDocument();
   });
 
+  it("shows the majority check with the applied rule", () => {
+    renderIntl(
+      <ResolutionTable
+        rows={[
+          {
+            id: "c",
+            number: 3,
+            decided_on: "2026-08-01",
+            subject: "Wirtschaftsplan 2027",
+            status: "positive",
+            kind: "meeting",
+            majority_check: { result: "nicht prüfbar", rule_text: "Wirtschaftsplan: einfache Mehrheit", reason: "Keine Auszählung erfasst." },
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId("majority-check")).toHaveTextContent("Mehrheitsprüfung: nicht prüfbar");
+    expect(screen.getByTestId("majority-check")).toHaveTextContent("Keine Auszählung erfasst.");
+  });
+
   it("shows an empty state", () => {
     renderIntl(<ResolutionTable rows={[]} />);
     expect(screen.getByText("Noch keine Beschlüsse erfasst.")).toBeInTheDocument();

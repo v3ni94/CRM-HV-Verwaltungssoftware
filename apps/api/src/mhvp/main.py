@@ -32,6 +32,7 @@ from mhvp.communication.routers import router as mail_router
 from mhvp.communication.telephony import router as telephony_router
 from mhvp.contacts.routers import router as contacts_router
 from mhvp.contracts.routers import router as contracts_router
+from mhvp.contracts.service_contract_routers import router as service_contracts_router
 from mhvp.core import crypto, health
 from mhvp.core.auth import oidc
 from mhvp.core.auth.routers import router as auth_router
@@ -57,6 +58,7 @@ from mhvp.hoa.board import router as hoa_board_router
 from mhvp.hoa.finance import router as hoa_finance_router
 from mhvp.hoa.inspection import router as hoa_inspection_router
 from mhvp.hoa.levies import router as hoa_levies_router
+from mhvp.hoa.majority import router as hoa_majority_router
 from mhvp.hoa.meetings import router as hoa_meetings_router
 from mhvp.hoa.package import router as hoa_package_router
 from mhvp.hoa.routers import router as hoa_router
@@ -184,6 +186,7 @@ def create_app(
     app.include_router(notice_crm_router, prefix=API_PREFIX)
     app.include_router(notice_portal_router, prefix=API_PREFIX)
     app.include_router(contracts_router, prefix=API_PREFIX)
+    app.include_router(service_contracts_router, prefix=API_PREFIX)
     # Static intake paths must be registered before /documents/{document_id} (A42).
     app.include_router(documents_intake_router, prefix=API_PREFIX)
     app.include_router(documents_router, prefix=API_PREFIX)
@@ -214,6 +217,7 @@ def create_app(
     app.include_router(hoa_meetings_router, prefix=API_PREFIX)
     app.include_router(hoa_levies_router, prefix=API_PREFIX)
     app.include_router(hoa_board_router, prefix=API_PREFIX)
+    app.include_router(hoa_majority_router, prefix=API_PREFIX)
     app.include_router(hoa_package_router, prefix=API_PREFIX)
     app.include_router(hoa_finance_router, prefix=API_PREFIX)
     app.include_router(hoa_inspection_router, prefix=API_PREFIX)

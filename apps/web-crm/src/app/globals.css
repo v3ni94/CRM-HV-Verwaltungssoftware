@@ -105,7 +105,8 @@ body {
   color: var(--mhvp-color-subtle);
 }
 
-/* Data tables: airy rows, beige header, no vertical rules, sticky head. */
+/* Data tables: airy rows, beige header, no vertical rules, sticky head. The head stays below
+ * the app header (z-30, opaque) and never above menus or dialogs. */
 .mhvp-table {
   width: 100%;
   border-collapse: collapse;

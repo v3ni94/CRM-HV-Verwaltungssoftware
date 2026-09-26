@@ -311,6 +311,46 @@ class CheckStatementResult(_Out):
     summary: str = Field(max_length=1000, description="ein bis drei Sätze, ohne Beträge")
 
 
+class PostingSplit(_Out):
+    """Ein Teilbetrag eines Kontierungsvorschlags (Splitbuchung, 9.2 ``propose_posting``)."""
+
+    account_number: str = Field(description="Kontonummer aus der übergebenen Kontenliste")
+    amount: str = Field(description="Teilbetrag in EUR, Punkt als Dezimaltrenner, ohne Vorzeichen")
+    cost_object: str | None = Field(
+        description="Objekt- oder Einheitsnummer aus der übergebenen Liste, sonst null"
+    )
+    open_item_ref: str | None = Field(
+        description="Kennung eines offenen Postens (O1, O2, ...) aus den Daten, sonst null"
+    )
+
+
+class PostingProposal(_Out):
+    """Kontierungsvorschlag je Bankumsatz (M12 KI-Kontierung, M7-09). Nur Vorschlag; die
+    Plattform bucht nie aus diesem Ergebnis (rule 0.1.6, 7.4)."""
+
+    transaction_ref: str = Field(description="Kennung des Umsatzes aus den Daten, z. B. T1")
+    ledger_ref: str | None = Field(description="Kennung des Buchungskreises (B1), sonst null")
+    account_number: str | None = Field(
+        description="Gegenkonto aus der Kontenliste; bei Splitbuchung das Konto des größten Teils"
+    )
+    counterpart_role: Literal["debtor", "creditor", "none"] | None = Field(
+        description="Debitor (Forderung), Kreditor (Verbindlichkeit) oder kein Personenkonto"
+    )
+    cost_object: str | None = Field(
+        description="Objektnummer oder Einheitsnummer (Kostenstelle) aus den Daten, sonst null"
+    )
+    splits: list[PostingSplit] = Field(
+        description="Aufteilung; leer, wenn der ganze Betrag auf account_number geht"
+    )
+    reasoning: str = Field(max_length=600, description="kurze Begründung auf Deutsch")
+    confidence: float = Confidence
+
+
+class PostingProposalResult(_Out):
+    proposals: list[PostingProposal]
+    questions: list[str] = Field(description="offene Fragen, wenn kein sicherer Vorschlag möglich")
+
+
 SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.CHECK_STATEMENT: CheckStatementResult,
     AiTask.EXTRACT_CONTACTS: ContactsResult,
@@ -323,6 +363,7 @@ SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.MAP_COLUMNS: ColumnMappingResult,
     AiTask.CLASSIFY_DOCUMENT: ClassifyDocumentResult,
     AiTask.CONTACT_MASTER_DATA_CHANGE: ContactChangeResult,
+    AiTask.PROPOSE_POSTING: PostingProposalResult,
 }
 DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.CHECK_STATEMENT: "large",
@@ -336,6 +377,7 @@ DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.MAP_COLUMNS: "small",
     AiTask.CLASSIFY_DOCUMENT: "small",
     AiTask.CONTACT_MASTER_DATA_CHANGE: "small",
+    AiTask.PROPOSE_POSTING: "large",
 }
 
 
