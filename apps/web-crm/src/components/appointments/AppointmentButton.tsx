@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { CreateEventInput } from "@/components/calendar/CreateEventDialog";
+import type { Attendee, CreateEventInput } from "@/components/calendar/CreateEventDialog";
 import { CreateEventDialog } from "@/components/calendar/CreateEventDialog";
 import type { CalendarNotice } from "@/components/workspace/CalendarView";
 import { bff } from "@/lib/bff";
@@ -24,6 +24,9 @@ export function AppointmentButton({
   label,
   defaultDate,
   buttonClassName,
+  location,
+  attendees,
+  createdLinkLabel,
 }: {
   sourceType: "ticket" | "handover";
   sourceId: string;
@@ -34,8 +37,15 @@ export function AppointmentButton({
   defaultDate?: string | null;
   /** Button style; defaults to the regular button used on the ticket detail page. */
   buttonClassName?: string;
+  /** Prefilled location and prospective attendees (stored as draft only, rule M23-05). */
+  location?: string | null;
+  attendees?: Attendee[];
+  /** When given, a link to the created appointment on /kalender is shown after creating;
+   *  receives the appointment date formatted as TT.MM.JJJJ. */
+  createdLinkLabel?: (date: string) => string;
 }) {
   const [open, setOpen] = useState(false);
+  const [created, setCreated] = useState<string | null>(null);
   const [notices, setNotices] = useState<CalendarNotice[]>([]);
 
   useEffect(() => {
@@ -61,8 +71,13 @@ export function AppointmentButton({
       source_type: sourceType,
       source_id: sourceId,
     };
-    const result = await bff("/api/bff/workspace/calendar", { method: "POST", body: JSON.stringify(body) });
-    return result.ok ? null : result.message;
+    const result = await bff<{ date?: string }>("/api/bff/workspace/calendar", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    if (!result.ok) return result.message;
+    setCreated(result.data?.date ?? input.starts_on);
+    return null;
   }
 
   return (
@@ -70,6 +85,11 @@ export function AppointmentButton({
       <button type="button" className={buttonClassName ?? ui.button} onClick={() => setOpen(true)}>
         {label}
       </button>
+      {created && createdLinkLabel ? (
+        <a className={ui.buttonSm} href={`/kalender?datum=${encodeURIComponent(created)}`}>
+          {createdLinkLabel(created.split("-").reverse().join("."))}
+        </a>
+      ) : null}
       {open ? (
         <CreateEventDialog
           defaultTarget={hasOwnMailbox ? "own" : "default"}
@@ -82,6 +102,8 @@ export function AppointmentButton({
             source_type: sourceType,
             source_id: sourceId,
             starts_on: defaultDate ?? undefined,
+            location: location ?? undefined,
+            attendees,
           }}
         />
       ) : null}

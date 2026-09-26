@@ -2959,6 +2959,7 @@
     "broker": "Makler",
     "createAppointment": "Termin anlegen",
     "appointmentTitle": "Übergabe",
+    "appointmentCreatedLink": "Termin am {date} im Kalender öffnen",
     "new": "Neues Übergabeprotokoll",
     "search": "Suchen",
     "searchPlaceholder": "Nummer, Ticket, Adresse, Objekt",

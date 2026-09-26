@@ -50,6 +50,8 @@ export function CreateEventDialog({
     source_type: "ticket" | "handover";
     source_id: string;
     starts_on?: string;
+    location?: string;
+    attendees?: Attendee[];
   };
 }) {
   const t = useTranslations("Workspace");
@@ -58,11 +60,11 @@ export function CreateEventDialog({
   const [allDay, setAllDay] = useState(true);
   const [shared, setShared] = useState(false);
   const [notes, setNotes] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState(prefill?.location ?? "");
   const [target, setTarget] = useState<CalendarTarget>(defaultTarget);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [attendees, setAttendees] = useState<Attendee[]>(prefill?.attendees ?? []);
   const [contactQuery, setContactQuery] = useState("");
   const [contactHits, setContactHits] = useState<ContactHit[]>([]);
 
