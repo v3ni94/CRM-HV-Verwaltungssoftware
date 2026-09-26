@@ -40,3 +40,26 @@
   davon, für welchen Vertrag oder Rechtsträger das Mandat später tatsächlich verwendet
   wird. Eine spätere Verknüpfung oder Konsolidierung beider Konzepte ist eine offene
   Entscheidung (siehe `docs/OPEN_QUESTIONS.md`, Eigentümer Betreiber, betroffenes Tor G2).
+
+## Vier-Augen-Freigabe der Bankverbindung (M5-01)
+
+Typ: Produktschutz (Regel 0.1.6, Rechnungseingang PÜ04 als Vorbild). Änderungsgrund: offene
+Frage M5-01, Umsetzung vor G2.
+
+- Jede neue oder geänderte IBAN eines Kontakts (`contact_bank_account`) erhält beim Anlegen
+  oder vollständigen Ändern den Status `pending` (zur Freigabe) mit der erfassenden Person in
+  `requested_by` und löst `bank_account.pending` aus. Eine IBAN, die unverändert erneut
+  gespeichert wird (gleicher Fingerabdruck), behält ihren bisherigen Freigabestand.
+- `POST /contacts/{id}/bank-accounts/{account_id}/approve` und `/reject` (Recht
+  `contacts:approve`) setzen `approved` oder `rejected` samt `decided_by` und `decided_at`
+  und lösen `bank_account.approved` oder `bank_account.rejected` aus. Die erfassende Person,
+  ein Plattformzugriff und ein Aufruf ohne Benutzer dürfen nicht entscheiden
+  (`GATE_FOUR_EYES`); entschieden werden kann nur ein Konto im Status `pending` (409).
+- Nur `approved` Konten werden verwendet: Lastschriftlauf (`mandate_block_reason`),
+  Erfassung eines SEPA-Mandats (`POST /sepa-mandates`), IBAN-Änderung eines Zahlungsauftrags
+  (PÜ04) und der Stammdatenabgleich im Rechnungseingang.
+- Bestandskonten aus der Zeit vor Migration 0109 stehen ebenfalls auf `pending` und müssen
+  einmalig freigegeben werden.
+- Die KI darf keine Freigabe erteilen; KI-Importe und Ticketvorschläge legen Konten nur als
+  `pending` an.
+

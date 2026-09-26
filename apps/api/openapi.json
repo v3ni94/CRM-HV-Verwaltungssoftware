@@ -1870,6 +1870,35 @@
         "title": "BandSegment",
         "type": "object"
       },
+      "BankAccountApproval": {
+        "description": "Four eyes release of a new or changed contact IBAN (M5-01).",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected"
+        ],
+        "title": "BankAccountApproval",
+        "type": "string"
+      },
+      "BankAccountDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "BankAccountDecisionIn",
+        "type": "object"
+      },
       "BankAccountKind": {
         "enum": [
           "rent",
@@ -27785,6 +27814,10 @@
       },
       "mhvp__contacts__schemas__BankAccountOut": {
         "properties": {
+          "approval_status": {
+            "$ref": "#/components/schemas/BankAccountApproval",
+            "description": "Vier-Augen-Freigabe der IBAN (M5-01): nur approved wird verwendet."
+          },
           "bank_name": {
             "anyOf": [
               {
@@ -27806,6 +27839,30 @@
               }
             ],
             "title": "Bic"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
           },
           "holder": {
             "anyOf": [
@@ -27912,6 +27969,18 @@
           "mandate_status": {
             "$ref": "#/components/schemas/ContactMandateStatus"
           },
+          "requested_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
           "sepa_enabled": {
             "title": "Sepa Enabled",
             "type": "boolean"
@@ -27951,7 +28020,8 @@
           "mandate_document_id",
           "mandate_scheme",
           "mandate_status",
-          "mandate_revoked_on"
+          "mandate_revoked_on",
+          "approval_status"
         ],
         "title": "BankAccountOut",
         "type": "object"
@@ -37906,6 +37976,76 @@
         ]
       }
     },
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/approve": {
+      "post": {
+        "operationId": "approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/BankAccountDecisionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankverbindung freigeben (Vier-Augen-Prinzip, zweite Person)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
     "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/mandate/revoke": {
       "post": {
         "operationId": "revoke_mandate_api_v1_contacts__contact_id__bank_accounts__account_id__mandate_revoke_post",
@@ -37954,6 +38094,76 @@
           }
         },
         "summary": "SEPA-Mandat widerrufen",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/reject": {
+      "post": {
+        "operationId": "reject_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/BankAccountDecisionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person)",
         "tags": [
           "Kontakte"
         ]

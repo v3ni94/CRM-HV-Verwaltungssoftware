@@ -178,6 +178,17 @@
       "revoke": "Revoke",
       "revokeConfirm": "Really revoke the SEPA mandate for {iban}?",
       "revokedOn": "Revoked on"
+    },
+    "bankApproval": {
+      "title": "Release",
+      "pending": "awaiting release",
+      "approved": "released",
+      "rejected": "rejected",
+      "approve": "Release",
+      "reject": "Reject",
+      "rejectConfirm": "Really reject IBAN {iban}?",
+      "ownRequest": "entered by you, release by another person",
+      "hint": "New and changed IBANs take effect only after release by a second person (four eyes principle). Until then they are not used in direct debit or payment runs."
     }
   },
   "ContactForm": {

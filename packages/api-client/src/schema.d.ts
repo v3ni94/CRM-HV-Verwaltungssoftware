@@ -2928,6 +2928,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bankverbindung freigeben (Vier-Augen-Prinzip, zweite Person) */
+        post: operations["approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/mandate/revoke": {
         parameters: {
             query?: never;
@@ -2939,6 +2956,23 @@ export interface paths {
         put?: never;
         /** SEPA-Mandat widerrufen */
         post: operations["revoke_mandate_api_v1_contacts__contact_id__bank_accounts__account_id__mandate_revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person) */
+        post: operations["reject_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__reject_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11021,6 +11055,17 @@ export interface components {
             from: number;
             /** To */
             to: number;
+        };
+        /**
+         * BankAccountApproval
+         * @description Four eyes release of a new or changed contact IBAN (M5-01).
+         * @enum {string}
+         */
+        BankAccountApproval: "pending" | "approved" | "rejected";
+        /** BankAccountDecisionIn */
+        BankAccountDecisionIn: {
+            /** Reason */
+            reason?: string | null;
         };
         /**
          * BankAccountKind
@@ -19233,10 +19278,16 @@ export interface components {
         };
         /** BankAccountOut */
         mhvp__contacts__schemas__BankAccountOut: {
+            /** @description Vier-Augen-Freigabe der IBAN (M5-01): nur approved wird verwendet. */
+            approval_status: components["schemas"]["BankAccountApproval"];
             /** Bank Name */
             bank_name: string | null;
             /** Bic */
             bic: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decided By */
+            decided_by?: string | null;
             /** Holder */
             holder: string | null;
             /** Iban Masked */
@@ -19261,6 +19312,8 @@ export interface components {
             /** Mandate Signed On */
             mandate_signed_on: string | null;
             mandate_status: components["schemas"]["ContactMandateStatus"];
+            /** Requested By */
+            requested_by?: string | null;
             /** Sepa Enabled */
             sepa_enabled: boolean;
             /**
@@ -25762,6 +25815,42 @@ export interface operations {
             };
         };
     };
+    approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BankAccountDecisionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     revoke_mandate_api_v1_contacts__contact_id__bank_accounts__account_id__mandate_revoke_post: {
         parameters: {
             query?: never;
@@ -25781,6 +25870,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SepaMandateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BankAccountDecisionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
                 };
             };
             /** @description Validation Error */

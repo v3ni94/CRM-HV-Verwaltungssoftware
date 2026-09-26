@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts import schemas
 from mhvp.contacts.models import (
+    BankAccountApproval,
     Consent,
     Contact,
     ContactAddress,
@@ -29,7 +30,7 @@ from mhvp.contacts.models import (
 )
 from mhvp.contacts.validation import mask_iban, normalise_iban, normalise_phone
 from mhvp.core import crypto
-from mhvp.core.events import DomainEvent
+from mhvp.core.events import DomainEvent, emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 _CHILDREN = (
@@ -92,11 +93,35 @@ def _single_primary(items: list[Any]) -> None:
 
 
 async def write_children(
-    session: AsyncSession, tenant_id: uuid.UUID, contact_id: uuid.UUID, data: schemas.ContactIn
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    contact_id: uuid.UUID,
+    data: schemas.ContactIn,
+    *,
+    actor_user_id: uuid.UUID | None = None,
 ) -> list[str]:
     """Returns mandate reference values for which the IBAN changed while the mandate was
-    still active, so the caller can add a note and emit an event (M3-02)."""
+    still active, so the caller can add a note and emit an event (M3-02).
+
+    Bank accounts are rewritten as a whole. An IBAN that already existed on the contact keeps
+    its release state; every new or changed IBAN starts as pending with ``actor_user_id`` as
+    requester and needs a second person's release (M5-01, ``bank_account.pending``)."""
     changed_mandate_references: list[str] = []
+    # fingerprint -> (approval_status, requested_by, decided_by, decided_at) before rewrite
+    carried: dict[str, tuple[Any, ...]] = {}
+    if data.bank_accounts is not None:
+        for old in (
+            await session.execute(
+                select(
+                    ContactBankAccount.iban_fingerprint,
+                    ContactBankAccount.approval_status,
+                    ContactBankAccount.requested_by,
+                    ContactBankAccount.decided_by,
+                    ContactBankAccount.decided_at,
+                ).where(ContactBankAccount.contact_id == contact_id)
+            )
+        ).all():
+            carried.setdefault(old[0], tuple(old[1:]))
     if data.bank_accounts is not None:
         previous = (
             await session.execute(
@@ -137,22 +162,94 @@ async def write_children(
         session.add(ContactEmail(**common, **email.model_dump()))
     for identifier in data.identifiers:
         session.add(ContactIdentifier(**common, **identifier.model_dump()))
+    pending: list[ContactBankAccount] = []
     for account in data.bank_accounts or []:
         values = account.model_dump()
-        session.add(
-            ContactBankAccount(
-                **common,
-                **values,
-                iban_suffix=account.iban[-4:],
-                iban_fingerprint=crypto.fingerprint(account.iban),
-            )
+        fingerprint = crypto.fingerprint(account.iban)
+        row = ContactBankAccount(
+            **common,
+            **values,
+            iban_suffix=account.iban[-4:],
+            iban_fingerprint=fingerprint,
         )
+        previous_state = carried.get(fingerprint)
+        if previous_state is not None:
+            row.approval_status, row.requested_by, row.decided_by, row.decided_at = previous_state
+        else:
+            row.approval_status = BankAccountApproval.PENDING
+            row.requested_by = actor_user_id
+            pending.append(row)
+        session.add(row)
     for type_code in sorted(set(data.types)):
         session.add(ContactType(**common, type=type_code, source="manual"))
     for tag_id in await _tag_ids(session, tenant_id, data.tags):
         session.add(ContactTagLink(**common, tag_id=tag_id))
     await session.flush()
+    for row in pending:
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type="bank_account.pending",
+            entity_type="contact",
+            entity_id=contact_id,
+            actor_user_id=actor_user_id,
+            payload={"bank_account_id": str(row.id), "iban_suffix": row.iban_suffix},
+        )
     return changed_mandate_references
+
+
+def approval_block_reason(account: Any) -> str | None:
+    """Why a contact bank account may not be used for mandates or payments yet (M5-01)."""
+    status = getattr(account, "approval_status", None)
+    if status == BankAccountApproval.APPROVED:
+        return None
+    if status == BankAccountApproval.REJECTED:
+        return "Bankverbindung abgelehnt (Vier-Augen-Freigabe)"
+    return "Bankverbindung noch nicht freigegeben (Vier-Augen-Freigabe)"
+
+
+async def decide_bank_account(
+    session: AsyncSession,
+    account: ContactBankAccount,
+    *,
+    tenant_id: uuid.UUID,
+    actor_user_id: uuid.UUID | None,
+    approve: bool,
+    is_platform_admin: bool = False,
+    reason: str | None = None,
+) -> None:
+    """Second person releases or rejects a pending IBAN; the requester never decides (M5-01)."""
+    if account.approval_status != BankAccountApproval.PENDING:
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Die Bankverbindung wartet nicht auf eine Freigabe."
+        )
+    if actor_user_id is None or is_platform_admin or account.requested_by == actor_user_id:
+        raise ProblemError(
+            ErrorCodes.GATE_FOUR_EYES,
+            detail="Die Freigabe muss eine andere Person als die erfassende vornehmen.",
+        )
+    account.approval_status = (
+        BankAccountApproval.APPROVED if approve else BankAccountApproval.REJECTED
+    )
+    account.decided_by = actor_user_id
+    account.decided_at = datetime.now(UTC)
+    payload: dict[str, Any] = {
+        "bank_account_id": str(account.id),
+        "iban_suffix": account.iban_suffix,
+        "requested_by": str(account.requested_by) if account.requested_by else None,
+    }
+    if reason:
+        payload["reason"] = reason
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="bank_account.approved" if approve else "bank_account.rejected",
+        entity_type="contact",
+        entity_id=account.contact_id,
+        actor_user_id=actor_user_id,
+        payload=payload,
+    )
+    await session.flush()
 
 
 async def _check_accounts_unreferenced(session: AsyncSession, contact_id: uuid.UUID) -> None:
@@ -293,6 +390,10 @@ async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactO
                 mandate_scheme=b.mandate_scheme,
                 mandate_status=b.mandate_status,
                 mandate_revoked_on=b.mandate_revoked_on,
+                approval_status=b.approval_status,
+                requested_by=b.requested_by,
+                decided_by=b.decided_by,
+                decided_at=b.decided_at,
             )
             for b in await rows(ContactBankAccount)
         ],

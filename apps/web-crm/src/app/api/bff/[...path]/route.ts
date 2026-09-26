@@ -65,6 +65,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
     method: "POST",
     pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/mandate/revoke$`),
   },
+  // Four eyes release of contact IBANs (M5-01).
+  {
+    method: "POST",
+    pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/(approve|reject)$`),
+  },
   // AI assistant (M7): conversations, runs, proposals, import runs, provider settings.
   { method: "GET", pattern: /^ai\/conversations$/ },
   // Tenant members, roles and settings (settings area).

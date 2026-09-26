@@ -1086,7 +1086,9 @@ async def apply_changes(
     contact_services.apply_fields(
         contact, body, await contact_services.iban_suffixes(session, contact_id)
     )
-    await contact_services.write_children(session, principal.tenant_id, contact.id, body)
+    await contact_services.write_children(
+        session, principal.tenant_id, contact.id, body, actor_user_id=principal.user_id
+    )
     contact.version += 1
     contact.updated_by = principal.user_id
     after = await contact_services.load(session, contact_id)
