@@ -6,6 +6,7 @@ import io
 from openpyxl import Workbook
 
 from mhvp.ai import table_mapper
+from mhvp.ai.tasks import TargetField
 
 
 def test_parse_name_person_with_salutation_and_title() -> None:
@@ -118,7 +119,7 @@ def test_apply_mapping_splits_and_flags_empty_cells_as_incomplete_not_residual()
         rows=[["Muster", "Max", "Hauptstr. 12a", "40789 Monheim am Rhein", "0171 1", "a@x.org"]],
         raw_chars=100,
     )
-    mapping = {
+    mapping: dict[str, TargetField] = {
         "Name": "last_name",
         "Vorname": "first_name",
         "Adresse": "address_full",

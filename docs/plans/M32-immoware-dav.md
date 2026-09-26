@@ -73,10 +73,11 @@ Migration `alembic/versions/0044_immoware_dav.py` (RLS ueber `tenant_rls_stateme
 
 ## Offene Punkte
 
-- Frontend (Einstellungsseite `einstellungen/immoware`, Uebersichtsseite `immoware` mit den
-  drei Reitern Dokumente/Kontakte/Termine, Navigationseintrag, Uebersetzungen) ist mit diesem
-  Meilenstein noch nicht umgesetzt; das Backend ist vollstaendig und ueber die BFF-Allowlist
-  erreichbar, siehe Bericht des Auftrags fuer den Stand.
+- Stand 26.09.2026: Frontend umgesetzt in
+  `apps/web-crm/src/app/(app)/einstellungen/immoware/page.tsx` (Einstellungsseite) und
+  `apps/web-crm/src/app/(app)/immoware/page.tsx` (Uebersichtsseite mit den Reitern
+  Dokumente/Kontakte/Termine). Siehe auch `docs/plans/M33-immoware-lernphase.md` fuer die
+  Lernphase-Seite `apps/web-crm/src/app/(app)/immoware/lernphase/page.tsx`.
 - Integrationstest (`tests/integration/test_m32_immoware.py`) liegt inzwischen vor: WebDAV/
   CardDAV/CalDAV per `httpx.MockTransport` gefakt, Happy Path (Sync, Dokument-/Kontakt-/
   Termin-Listen, Datei-Proxy), Berechtigung, Mandantentrennung, Validierung sowie die

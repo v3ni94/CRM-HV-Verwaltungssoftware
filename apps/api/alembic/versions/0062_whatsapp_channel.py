@@ -74,9 +74,7 @@ def upgrade() -> None:
             "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenant.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(
-            ["alert_id"], ["sla_emergency_alert.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["alert_id"], ["sla_emergency_alert.id"], ondelete="CASCADE"),
     )
     op.create_index(
         "ix_sla_whatsapp_delivery_wa_message_id", "sla_whatsapp_delivery", ["wa_message_id"]

@@ -29,7 +29,7 @@ class FakeContact:
     org: str | None = None
     emails: list[str] = field(default_factory=list)
     phones: list[str] = field(default_factory=list)
-    addresses: list[dict] = field(default_factory=list)
+    addresses: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass

@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -10,7 +11,7 @@ from mhvp.objektakte.tasks import DumpUnreadableError, read_dump_file
 
 
 def test_filter_since_keeps_newer_rows_and_catalog_rows() -> None:
-    tables = {
+    tables: dict[str, list[dict[str, Any]]] = {
         "objects_unit": [
             {"id": 1, "updated_at": "2026-09-01 08:00:00"},
             {"id": 2, "updated_at": "2026-09-10 12:00:00"},

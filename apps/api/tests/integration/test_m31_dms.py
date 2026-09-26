@@ -41,7 +41,7 @@ class FakePaperless:
         self.token = "ppl-token-secret"
         self.object_number = object_number
         self.requests: list[httpx.Request] = []
-        self.docs = [
+        self.docs: list[dict[str, Any]] = [
             {
                 "id": 101,
                 "title": "Rechnung Heizung",
@@ -82,7 +82,7 @@ class FakePaperless:
         ]
 
     def _auth_ok(self, request: httpx.Request) -> bool:
-        return request.headers.get("Authorization") == f"Token {self.token}"
+        return str(request.headers.get("Authorization")) == f"Token {self.token}"
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
@@ -193,7 +193,7 @@ def client(
 
     original = PaperlessSearch
 
-    class Patched(PaperlessSearch):  # type: ignore[misc]
+    class Patched(PaperlessSearch):
         def __init__(self, base_url: str, token: str, **kwargs: Any) -> None:
             super().__init__(
                 base_url,
@@ -217,19 +217,21 @@ def _ok(response: Any, status: int = 200) -> Any:
 
 
 def _property(client: TestClient, h: dict[str, str], number: str) -> str:
-    return _ok(
-        client.post(
-            "/api/v1/properties",
-            json={
-                "number": number,
-                "name": f"Objekt {number}",
-                "management_type": "hoa",
-                "city": f"Teststadt {RUN}",
-            },
-            headers=h,
-        ),
-        201,
-    )["id"]
+    return str(
+        _ok(
+            client.post(
+                "/api/v1/properties",
+                json={
+                    "number": number,
+                    "name": f"Objekt {number}",
+                    "management_type": "hoa",
+                    "city": f"Teststadt {RUN}",
+                },
+                headers=h,
+            ),
+            201,
+        )["id"]
+    )
 
 
 def _configure_paperless(

@@ -235,9 +235,13 @@ def test_accept_candidate_files_document_and_writes_audit_decision(
     )
     assert len(rows) == 1
     assert rows[0].decided_by == world.users["revadmin"]
-    assert rows[0].before_state["status"] == "open"
-    assert rows[0].after_state["status"] == "resolved"
-    assert rows[0].after_state["applied_category_id"] == str(ids["category_a"])
+    before_state = rows[0].before_state
+    after_state = rows[0].after_state
+    assert before_state is not None
+    assert after_state is not None
+    assert before_state["status"] == "open"
+    assert after_state["status"] == "resolved"
+    assert after_state["applied_category_id"] == str(ids["category_a"])
 
 
 def test_bulk_decide_applies_same_class_and_skips_already_decided(

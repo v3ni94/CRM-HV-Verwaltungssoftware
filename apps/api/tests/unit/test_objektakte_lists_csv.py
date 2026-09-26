@@ -1,11 +1,13 @@
 """M35 Stufe 4 Listengenerierung: CSV shape of the Anforderungsliste and Dokumentenübersicht
 (semicolon, CRLF, UTF-8 BOM, quoting of separators in values), without a database."""
 
+from typing import Any
+
 from mhvp.objektakte import lists
 
 
 def test_missing_documents_csv_one_row_per_missing_class() -> None:
-    entries = [
+    entries: list[dict[str, Any]] = [
         {
             "property_number": "801",
             "property_name": "Haus; Listenweg",

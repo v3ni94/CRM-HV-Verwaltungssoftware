@@ -19,9 +19,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "handover_protocol", sa.Column("external_object_number", sa.String(length=100))
-    )
+    op.add_column("handover_protocol", sa.Column("external_object_number", sa.String(length=100)))
     op.add_column("handover_protocol", sa.Column("owner_name", sa.String(length=200)))
 
 

@@ -4,7 +4,7 @@ legal entity. Tenant separation, legal entity separation and permissions. No pay
 
 import asyncio
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import boto3
 import pytest
@@ -82,13 +82,16 @@ def _ok(response: Any, status: int = 200) -> Any:
 
 
 def _property(c: TestClient, h: dict[str, str], number: str, kind: str) -> dict[str, Any]:
-    return _ok(
-        c.post(
-            P,
-            json={"number": number, "name": f"Objekt {number}", "management_type": kind},
-            headers=h,
+    return cast(
+        dict[str, Any],
+        _ok(
+            c.post(
+                P,
+                json={"number": number, "name": f"Objekt {number}", "management_type": kind},
+                headers=h,
+            ),
+            201,
         ),
-        201,
     )
 
 

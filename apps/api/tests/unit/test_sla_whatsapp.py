@@ -170,7 +170,7 @@ def test_whatsapp_channel_falls_back_to_sms_on_failure(monkeypatch: pytest.Monke
     alerts = asyncio.run(
         escalation.escalate_level(
             _FakeSession(),  # type: ignore[arg-type]
-            SimpleNamespace(web_crm_url=None),
+            cast(Settings, SimpleNamespace(web_crm_url=None)),
             _ticket(),
             SlaClock(tenant_id=TENANT),
             rule,
@@ -206,7 +206,7 @@ def test_whatsapp_channel_reports_error_without_fallback(monkeypatch: pytest.Mon
     alerts = asyncio.run(
         escalation.escalate_level(
             _FakeSession(),  # type: ignore[arg-type]
-            SimpleNamespace(web_crm_url=None),
+            cast(Settings, SimpleNamespace(web_crm_url=None)),
             _ticket(),
             SlaClock(tenant_id=TENANT),
             rule,
@@ -237,7 +237,7 @@ def test_whatsapp_not_configured_reports_error(monkeypatch: pytest.MonkeyPatch) 
     alerts = asyncio.run(
         escalation.escalate_level(
             _FakeSession(),  # type: ignore[arg-type]
-            SimpleNamespace(web_crm_url=None),
+            cast(Settings, SimpleNamespace(web_crm_url=None)),
             _ticket(),
             SlaClock(tenant_id=TENANT),
             rule,

@@ -7,7 +7,7 @@ Tenant separation: an override of tenant A is invisible to tenant B."""
 import asyncio
 import io
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import boto3
@@ -170,7 +170,7 @@ def _debtor_contract(c: TestClient, h: dict[str, str], prop: str, unit_no: str) 
         ),
         201,
     )
-    return contract
+    return cast(dict[str, Any], contract)
 
 
 def _hoa_property(c: TestClient, h: dict[str, str], number: str, name: str) -> tuple[str, str]:

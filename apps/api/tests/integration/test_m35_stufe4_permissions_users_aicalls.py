@@ -304,10 +304,14 @@ def test_decided_by_resolves_only_existing_members(
         for r in asyncio.run(_decisions(_settings(database, redis_url), world.tenant_a))
     }
     assert rows["3101"].decided_by == world.users["s4clerk"]
-    assert rows["3101"].before_state["source_decided_by"] == "502"
-    assert rows["3101"].before_state["status"] == "open"
+    before_state_3101 = rows["3101"].before_state
+    assert before_state_3101 is not None
+    assert before_state_3101["source_decided_by"] == "502"
+    assert before_state_3101["status"] == "open"
     assert rows["3102"].decided_by is None
-    assert rows["3102"].before_state["source_decided_by"] == "501"
+    before_state_3102 = rows["3102"].before_state
+    assert before_state_3102 is not None
+    assert before_state_3102["source_decided_by"] == "501"
 
 
 # --- (3) AI call protocol, read-only per document ------------------------------------------

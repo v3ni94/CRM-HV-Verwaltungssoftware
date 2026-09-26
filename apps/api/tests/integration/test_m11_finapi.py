@@ -10,7 +10,7 @@ partial failure and not a full success (case 8), dedup keeps two real 700 EUR pa
 import asyncio
 import concurrent.futures
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import pytest
@@ -213,7 +213,7 @@ def _connect_and_check(client: TestClient, h: dict[str, str]) -> dict[str, Any]:
     assert created["status"] == "web_form_pending"
     assert created["web_form_url"]
     checked = _ok(client.post(f"{B}/connections/{created['id']}/check", headers=h))
-    return checked
+    return cast(dict[str, Any], checked)
 
 
 def test_connect_multiple_accounts_assign_and_partial_failure(

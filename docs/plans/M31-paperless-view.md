@@ -53,10 +53,12 @@ Fehlermeldungen aus `paperless_search.py` enthalten nie den Token (getestet in
 ## Stand und offene Punkte
 
 Aus Zeit-/Umgebungsgründen in dieser Sitzung umgesetzt: Backend-Service, Endpunkte, BFF-Allowlist,
-Unit-Tests für `PaperlessSearch`, Doku. **Nicht umgesetzt** (siehe Bericht des Agenten): die
-Frontend-Komponente `DmsDocumentsPanel.tsx`, die Einbindung in Ticket- und Objektseite, die
-Pflege der Feld-IDs in der DMS-Einstellungsseite, sowie Übersetzungen de/en. Das sollte in einem
-Folgeschritt nachgezogen werden.
+Unit-Tests für `PaperlessSearch`, Doku.
+
+Stand 26.09.2026: umgesetzt in `apps/web-crm/src/components/documents/DmsDocumentsPanel.tsx`
+(Frontend-Komponente), eingebunden in `apps/web-crm/src/app/(app)/tickets/[ticketId]/page.tsx`
+und `apps/web-crm/src/app/(app)/objekte/[propertyId]/page.tsx`, sowie in
+`apps/web-crm/src/app/(app)/einstellungen/dms/page.tsx` (Pflege der Feld-IDs).
 
 Integrationstests für die Router-Endpunkte liegen inzwischen vor: `tests/integration/
 test_m31_dms.py` (Paperless per `httpx.MockTransport` gefakt; Happy Path Objekt- und

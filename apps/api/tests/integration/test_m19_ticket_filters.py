@@ -4,7 +4,7 @@ address, date range, and tenant separation. Additive to GET /tickets (docs/plans
 
 import asyncio
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -77,7 +77,7 @@ def _property(
         "postal_code": "40789",
         "city": city,
     }
-    return _ok(c.post("/api/v1/properties", json=body, headers=h), 201)
+    return cast(dict[str, Any], _ok(c.post("/api/v1/properties", json=body, headers=h), 201))
 
 
 def _unit(c: TestClient, h: dict[str, str], prop_id: str, number: str) -> str:
@@ -118,7 +118,7 @@ def _contact_and_party(c: TestClient, h: dict[str, str], first: str, last: str) 
 
 def _ticket(c: TestClient, h: dict[str, str], **overrides: Any) -> dict[str, Any]:
     body: dict[str, Any] = {"title": "Testfall"} | overrides
-    return _ok(c.post("/api/v1/tickets", json=body, headers=h), 201)
+    return cast(dict[str, Any], _ok(c.post("/api/v1/tickets", json=body, headers=h), 201))
 
 
 def test_filter_by_assignee_primary_and_secondary(client: TestClient, world: World) -> None:

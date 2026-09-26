@@ -76,7 +76,7 @@ class FakeDav:
         self._locked_paths.add(path)
 
     def _auth_ok(self, request: httpx.Request) -> bool:
-        auth = request.headers.get("Authorization", "")
+        auth = str(request.headers.get("Authorization", ""))
         return auth.startswith("Basic ")  # httpx.BasicAuth already encoded correctly on send
 
     def handler(self, request: httpx.Request) -> httpx.Response:
