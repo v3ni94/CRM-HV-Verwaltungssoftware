@@ -66,6 +66,12 @@ def _blobs(request: Request) -> BlobStore:
     return BlobStore(request.app.state.settings)
 
 
+def _draft_marker() -> Any:
+    """SQL expression of the draft flag: ``source_meta->>'is_draft'`` as boolean, missing
+    key or missing metadata counts as not a draft."""
+    return func.coalesce(Document.source_meta["is_draft"].as_boolean(), False)
+
+
 def _scope_filter(session: Any) -> Any:
     """A37 (docs/rules/M18-05-steuerberaterzugang.md): for a scoped membership (tax advisor)
     only documents linked to one of its legal entities exist; returns the subquery of allowed
@@ -199,12 +205,20 @@ async def list_documents(
     entity_type: str | None = Query(default=None, max_length=63),
     entity_id: uuid.UUID | None = None,
     category_id: uuid.UUID | None = None,
+    is_draft: bool | None = Query(
+        default=None,
+        description="true: nur Entwürfe (z. B. automatisch erzeugte Briefe), false: ohne "
+        "Entwürfe, leer: kein Filter",
+    ),
     page: Page = 1,
     page_size: PageSize = 50,
     principal: TenantPrincipal = Depends(READ),
 ) -> s.DocumentPage:
     async with tenant_tx(request, principal) as session:
         query = select(Document)
+        if is_draft is not None:
+            # A83: a draft is marked with ``source_meta["is_draft"] = true`` (automation letters).
+            query = query.where(_draft_marker() == is_draft)
         snippet: Any = None
         if q:
             ts = func.websearch_to_tsquery("german", q)
@@ -244,6 +258,7 @@ async def list_documents(
         items = []
         for row in rows:
             hit = s.DocumentHit.model_validate(row[0])
+            hit.is_draft = bool((row[0].source_meta or {}).get("is_draft"))
             hit.snippet = row[1] if len(row) > 1 else None
             items.append(hit)
         return s.DocumentPage(items=items, total=total, page=page, page_size=page_size)

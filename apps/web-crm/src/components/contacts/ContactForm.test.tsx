@@ -106,6 +106,7 @@ describe("ContactForm", () => {
               primary_email: null,
               primary_phone: null,
               deleted: false,
+              iban_pending: false,
             },
             score: 0.8,
             reasons: ["ähnlicher Name"],

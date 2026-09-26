@@ -63,6 +63,13 @@ Standardpostfach sehen alle Benutzer des Mandanten, auch neu angelegte. Kalender
 je Postfach verlangt nach der ersten Aktivierung ein erneutes Verbinden mit Google, damit
 der Kalender-Scope erteilt wird (siehe Kapitel Kalender).
 
+Telefonassistenz (Hallo Heidi): Auf derselben Seite wird je Mandant eingestellt, ob
+Gesprächsprotokolle der KI-Telefonassistenz als Anruf erkannt werden, mit welchen
+Absendermustern (Teil der Absenderadresse, durch Komma getrennt; Standard hallo-heidi,
+halloheidi, hallo.heidi) und mit welchen Kennwörtern im Betreff (Standard hallo heidi). Leere
+Felder bedeuten die Standardwerte. Die Wirkung im Ticket beschreibt das Kapitel Tickets,
+Abschnitt Anrufe über die Telefonassistenz.
+
 ## DMS und Google-Verbindung
 
 Unter DMS-Anbindung werden Paperless-Zugangsdaten (Basis-URL, API-Token, Feld-IDs für
@@ -118,6 +125,18 @@ Die KI-Wissensbasis (Kapitel
 Mail, Abschnitt Vorbereitung) wird je Mandant und optional je Objekt unter KI,
 Wissensbasis gepflegt: Ablageregeln, Arbeitsweisen, Fakten und aus Korrekturen gelernte
 Einträge, filterbar je Objekt.
+
+## Wissen (gelernte Playbooks und Lernbeispiele)
+
+Die Seite Einstellungen, Wissen (seit 1.24.0, Recht Mandanteneinstellungen lesen) zeigt in
+zwei Reitern, was die Plattform aus abgeschlossenen Vorgängen gelernt hat. Reiter Playbooks:
+gelernte Playbooks mit Trefferzahl und Letzte Nutzung; Deaktivieren (Recht Kommunikation
+ändern) nimmt ein Playbook aus den Vorschlägen, ohne es zu löschen; die Bearbeitung des Textes
+erfolgt weiterhin unter Mail, Playbooks. Reiter Lernbeispiele: die gespeicherten Beispiele mit
+Filter nach Aufgabe (zum Beispiel Erledigung eines Tickets oder bestätigte Vorschläge), jeweils
+mit Eingabe und Ergebnis. Lernbeispiele werden nicht von Hand angelegt; sie entstehen beim
+Abschluss eines Tickets (Kapitel Tickets, Lernen aus Erledigungen). Alles auf dieser Seite ist
+Vorschlagsgrundlage, keine Freigabe und keine Buchung.
 
 ## Automatischer Belegeingang
 

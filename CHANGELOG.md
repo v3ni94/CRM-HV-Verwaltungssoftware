@@ -5,22 +5,46 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
-## 1.27.0 (26.09.2026) Upload im CRM mit Ablage über objektakte in Drive und Paperless
+## 1.28.0 (26.09.2026) Upload im CRM mit Ablage über objektakte in Drive und Paperless
 
 - Dokumente: Ein im CRM hochgeladenes oder gescanntes Dokument, das genau einem Objekt zugeordnet ist (direkt, über eine Einheit oder über ein Ticket), geht an objektakte und wird dort verarbeitet und abgelegt: Drive-Struktur des Objekts mit Eigentümer- und Mieterakten und Paperless. Das CRM spiegelt solche Dokumente nicht mehr selbst nach Paperless oder Drive, damit jedes System das Dokument genau einmal hält; Original und Index bleiben im CRM. Schalter OBJEKTAKTE_UPLOAD_ENABLED (Vorgabe aus), in objektakte zusätzlich Token mit documents:write und Schalter sync.crm_uploads_enabled.
-- Dokumente: Job mhvp.objektakte.upload (jede Minute) mit den Zuständen pending, submitted, done und failed, Abfrage des Ablagestands alle 5 Minuten, Dublette in objektakte wird mit der Ablage des Originals verknüpft, 503 verschiebt ohne Fehlerzählung, "Spiegelung erneut anstoßen" setzt einen fehlgeschlagenen Upload zurück (Migration 0133).
+- Dokumente: Job mhvp.objektakte.upload (jede Minute) mit den Zuständen pending, submitted, done und failed, Abfrage des Ablagestands alle 5 Minuten, Dublette in objektakte wird mit der Ablage des Originals verknüpft, 503 verschiebt ohne Fehlerzählung, "Spiegelung erneut anstoßen" setzt einen fehlgeschlagenen Upload zurück (Migration 0134).
 - DMS und Objektübernahme: Webhook document.filed mit crm_document_id verknüpft das vorhandene CRM-Dokument statt ein neues anzulegen; Drive-Datei und Paperless-ID stehen im Vermerk objektakte des Dokuments. Neuer Endpunkt GET /integrations/objektakte/documents/{id}/filing, Status meldet upload_enabled.
 - DMS: neue Seite Dokumentsuche (/dms/suche) mit Suche im Paperless-Archiv nach Volltext, Objekt und Gesellschaft, Vorschaubildern, Vorschau und Download über den Proxy der API sowie Upload mit Objekt und Einheit; die Dokumentansicht zeigt den Ablagestand über objektakte mit Sprung nach Drive und in die Paperless-Vorschau. Die Oberfläche von Paperless (dms.muellerhv.de) wird damit nur noch für die Administration gebraucht.
 - Hinweise an objektakte tragen nur Kennungen und Bezeichnungen (Titel, Einheit, Kontakt-ID, Ticketnummer, Kategorie), keine Namen und keine Kontaktdaten.
 
-## 1.26.0 (26.09.2026) DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter
+## 1.27.0 (26.09.2026) DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter
 
 - DMS und Objektübernahme (M29 Stufe 4): Anbindung an die Lese-API von objektakte über die neuen Einstellungen OBJEKTAKTE_API_URL, OBJEKTAKTE_API_TOKEN, OBJEKTAKTE_WEBHOOK_SECRET und OBJEKTAKTE_TENANT (auch mit Präfix MHVP_, leer bedeutet aus). Die Seite /dms zeigt je Objekt eine Kachel mit Übernahmestatus, offenen Prüffällen, Vollständigkeit und fehlenden Dokumenten; /dms/{Nummer} zeigt fehlende Dokumente, die Dokumentliste mit Sprung nach Google Drive und in das CRM sowie das Nachholen der Dokumentverknüpfung. Neue Endpunkte unter /integrations/objektakte.
 - DMS und Objektübernahme: Webhook POST /integrations/objektakte/webhook mit HMAC-Prüfung und Idempotenz; abgelegte Dokumente werden als Dokument am Objekt angelegt und über objektakte-Kennung, Drive-Datei und Prüfsumme abgeglichen.
-- DMS und Objektübernahme: Eigentümer- und Mieterlisten aus objektakte werden als Importvorschlag mit Testlauf, Abgleich und Freigabe geführt und nie ungeprüft in die Stammdaten geschrieben (Migration 0132).
+- DMS und Objektübernahme: Eigentümer- und Mieterlisten aus objektakte werden als Importvorschlag mit Testlauf, Abgleich und Freigabe geführt und nie ungeprüft in die Stammdaten geschrieben (Migration 0133).
 - Dokumente (Übernahme aus dem Immoware Hub, 7.2): Paperless-Suche nach Objektnummer (genau die Nummer oder "Nummer, Zusatz", nie Teiltreffer), Gesellschaftsfilter über ein konfigurierbares Auswahlfeld in Paperless, neue Endpunkte GET /dms-documents und GET /dms-documents/companies, Filter company an den Dokumentlisten von Objekt und Ticket. Im CRM Auswahl und Spalte Gesellschaft im Dokumentbereich sowie Zuordnung der Gesellschaftsoptionen in den DMS-Einstellungen. Nur lesend, Annahme A-048.
 - Dokumente: vertauschte Fehlertexte für 502 und 503 im Dokumentbereich korrigiert.
-- Technik: Zusammenführung der Zweige claude/m29-dms-daten und claude/hub-paperless-suche auf den Stand 1.25.0, Migration der DMS-Anbindung als 0132_objektakte_dms hinter 0131 eingereiht (Migrationskette linear), fehlende Typangabe in einem Gmail-Unit-Test ergänzt (mypy strict).
+- Technik: Zusammenführung der Zweige claude/m29-dms-daten und claude/hub-paperless-suche auf den Stand 1.26.1, Migration der DMS-Anbindung als 0133_objektakte_dms hinter 0132 eingereiht (Migrationskette linear), fehlende Typangabe in einem Gmail-Unit-Test ergänzt (mypy strict).
+
+## 1.26.1 (26.09.2026) Mail: Aktionen oben, Mehrfachauswahl, Erledigt archiviert
+
+- Mail: Die Aktionen Antworten, Ticket anlegen und Erledigt stehen zusätzlich als feste Leiste oberhalb der Nachricht.
+- Mail: Mehrfachauswahl in der Liste (Kontrollkästchen, Strg bzw. Cmd plus Klick, Shift für Bereiche, Alle auswählen, Escape hebt auf) mit Sammelaktion "Als erledigt markieren" (POST /mail/messages/bulk, bis 200 Nachrichten, Postfachzugriff je Nachricht geprüft).
+- Mail: "Erledigt" in der Mailansicht archiviert die Gmail-Nachricht wie der Ticketabschluss (Postfacheinstellung "Erledigt archiviert Mail"), einzeln und als Sammelaktion.
+
+## 1.26.0 (26.09.2026) Portalzugang am Kontakt, IBAN-Ablehnungsgrund, Importereignisse, Dokumentliste, Telefonassistenz-Korrekturen
+
+- Kontakte: Abschnitt Portalzugang auf der Kontaktakte mit Status (kein Zugang, eingeladen, aktiv, gesperrt), Einladung mit QR-Code und neuem Leseendpunkt GET /portal-admin/accounts?contact_id (A86, CRM-Teil)
+- Kontakte: Ablehnungsgrund der IBAN-Freigabe wird gespeichert und angezeigt (rejected_reason, rejected_by, rejected_at, Migration 0132), Kontaktliste zeigt den Hinweis IBAN wartet auf Freigabe ohne N+1
+- Importe: Listen- und Zuordnungsimporte lösen dieselben Ereignisse contact.created und contact.updated aus wie die manuelle Pflege (Regelwerk und Webhooks greifen, A87 teilweise)
+- Dienstleisterverträge: Anzeigename des Dienstleisters in Liste und Detail statt Kennung
+- Dokumente: neue Dokumentliste im CRM mit Volltextsuche und Entwurfsfilter (is_draft), Upload bei fehlendem oder nicht erreichbarem Dokumentenspeicher antwortet mit 503 MHVP-DOC-0007 statt 500, keine halben Dokumentzeilen
+- Tickets: Freigeben und antworten der Telefonassistenz legt keinen Entwurf ohne Empfänger mehr an (422 mit Hinweis), Zusammenführen protokolliert je Quellticket Statusereignis mit Erledigungsnotiz und Lernbeispiel
+- Abnahme: Playwright gegen den Stack 12 CRM und 11 Portal grün, zwei Specs an die neue Anzeige angepasst (Bruttobetrag formatiert, Anhangsliste der Meldung), spezifische Spec-Läufe über MHVP_E2E_PW_ARGS
+- Dokumentation: Handbuch für Erledigungsnotiz, Telefonassistenz, ausgeblendete erledigte Vorgänge, Objektbezüge und Wissen; Regeln M19-07 bis M19-09, ADR 0010 Lernbeispiele (Betreiberentscheidung), offene Fragen M19-03 und M19-04, Lückenliste A90 bis A99
+- Offen (Betreiber): Datenschutzregel für Lernbeispiele (M7-04, ADR 0010), AVV und Anbieterfreigabe Telefonassistenz (M19-03), Erledigungsartenliste (M19-04), QR-Code im Einladungs-PDF (M21-08)
+
+## 1.25.1 (26.09.2026) Adressen nachtragen, Einheitenliste und Einheitenseite
+
+- Importe: Abschnitt "1a. Adressen nachtragen" auf der Listenimport-Seite: Straße und Hausnummer aus den Objektnamen ableiten oder eine Adressliste (Objektnummer, Straße, Hausnummer, PLZ, Ort; CSV oder XLSX) hochladen. Füllt nur leere Felder, meldet Abweichungen als Konflikt.
+- Objekte: Einheiten natürlich sortiert (1, 2, 10 statt 1, 10, 2), bei rein numerischen Nummern dreistellige Anzeige. Nummer und Bezeichnung verlinken auf die Einheitenseite. Neue Spalten Eigentümer, Mieter ("kein Mieter") und Fläche.
+- Einheitenseite: alle Stammdaten (Typ, Lage, Fläche, Miteigentumsanteile, Umlageschlüssel, Zusatzfelder, Altsystem-Notizen), Karten Eigentümer und Mieter mit Kontaktlink, seit, Anteil und Miete, beendete Verträge aufklappbar. Neue Endpunkte GET /units/{id}/occupants und /properties/{id}/units?with_occupants=true.
 
 ## 1.25.0 (26.09.2026) Zusammenführung mit 1.24.0 und Fix- und Abschlusswelle: Vier-Augen nach Betreiberentscheidung, Review-Befunde Tickets und Mail, Sicherheit, Performance, Bedienbarkeit, Vertragsformular, Import-Robustheit, Anhang D 54 von 58
 

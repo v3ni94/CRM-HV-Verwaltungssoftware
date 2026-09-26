@@ -1,6 +1,6 @@
 # Annahmen
 
-Stand: 23.09.2026. Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
+Stand: 26.09.2026 (A-048 und A-049 ergänzt). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
 
 Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Keine dieser Annahmen berührt Geld, Forderungsbestand, Datenschutz, gesetzliche Fristen oder Beweiserhalt. Solche Punkte wären nach Regel 3 offene Fragen und stehen in `docs/OPEN_QUESTIONS.md`. Jede Annahme wird spätestens beim genannten Meilenstein überprüft und bei Bestätigung oder Widerlegung hier fortgeschrieben.
 
@@ -522,6 +522,28 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Datum | 26.09.2026 |
 
 ## A-048
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Anruf-Mails der Telefonassistenz Hallo Heidi (`mhvp.tickets.call_assistant`) werden ohne Mandanteneinstellung an den Absendermustern `hallo-heidi`, `halloheidi`, `hallo.heidi` und am Kennwort `hallo heidi` im Betreff erkannt. Deutsche Rufnummern mit +4915, +4916 und +4917 gelten als Mobilnummern (Label `mobile`), alle übrigen als `other`. Eine Objektnummer im Protokoll ist dreistellig wie im Immoware24-Bestand. |
+| Begründung | Das Mailformat der Telefonassistenz ist nicht spezifiziert; die Muster stammen aus dem Betreiberauftrag vom 26.09.2026 und sind je Mandant unter Einstellungen, Postfächer änderbar (`tenant_settings.call_assistant`). Das Label steuert nur die Anzeige der Rufnummer am Kontakt, keine Kommunikation. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb; Datenschutzfragen stehen unter M19-03 |
+| Betroffene Bereiche | Ticketvorschläge aus Anruf-Mails, Einstellungen Postfächer, Regel M19-08 |
+| Überprüfung spätestens bei Meilenstein | Abnahme M20 mit echten Protokollmails des Anbieters |
+| Datum | 26.09.2026 |
+
+## A-049
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Der Vertragsbeginn der aus der Immoware24-Objektliste erzeugten Miet- und Eigentumsverträge (`mhvp.imports.zuordnung`, Listenimport Zuordnung) ist der 1. Januar des laufenden Jahres, wenn im Aufruf oder auf der Importseite kein Datum angegeben wird. Der Bericht kennzeichnet das Datum als angenommen (`start_date_assumed`). |
+| Begründung | Die Objektliste enthält den aktuellen Eigentümer und Mieter mit vereinbartem Zahlbetrag, aber keinen Vertragsbeginn. Ein Datum im laufenden Jahr erzeugt keine rückwirkenden Sollstellungen über den Übernahmezeitraum hinaus; produktive Sollstellungen bleiben hinter G1 gesperrt. Der wahre Beginn ist je Vertrag im CRM nachzutragen. |
+| Kennzeichnung | unkritisch, ermöglicht Entwurfsbetrieb; vor G1 mit dem Migrationsstichtag je Objekt (V9) abzugleichen |
+| Betroffene Bereiche | `POST /imports/immoware24/lists/zuordnung`, CLI `python -m mhvp.imports.zuordnung`, Verträge und Zahlungspläne aus der Übernahme |
+| Überprüfung spätestens bei Meilenstein | Abnahme M8 mit echten Exporten (M8-01), spätestens G1 |
+| Datum | 26.09.2026 |
+
+## A-050
 
 | Feld | Inhalt |
 | --- | --- |

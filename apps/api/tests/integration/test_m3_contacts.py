@@ -307,6 +307,48 @@ def test_parties_notes_consents_relations_and_export(client: TestClient, world: 
     assert any(e["type"] == "contact.created" for e in data["processing_log"])
 
 
+def test_list_flags_pending_iban_and_reject_reason_is_exposed(
+    client: TestClient, world: World
+) -> None:
+    """M5-01 addendum: the list carries ``iban_pending`` (one aggregated query) and a rejected
+    account exposes ``rejected_reason``, ``rejected_by`` and ``rejected_at``."""
+    clerk = bearer(login(client, world, "m3clerk"))
+    boss = bearer(login(client, world, "m3boss"))
+    person = {
+        **PERSON,
+        "last_name": f"Pending{RUN}",
+        "emails": [{"email": f"pending.{RUN}@example.org"}],
+        "bank_accounts": [{"iban": "DE02120300000000202051", "valid_from": "2026-01-01"}],
+    }
+    created = client.post("/api/v1/contacts", json=person, headers=clerk)
+    assert created.status_code == 201, created.text
+    contact_id = created.json()["id"]
+    account = created.json()["bank_accounts"][0]
+    assert account["approval_status"] == "pending"
+    assert account["rejected_reason"] is None
+
+    listed = client.get("/api/v1/contacts", params={"q": f"Pending{RUN}"}, headers=clerk)
+    assert listed.status_code == 200, listed.text
+    row = next(i for i in listed.json()["items"] if i["id"] == contact_id)
+    assert row["iban_pending"] is True
+
+    rejected = client.post(
+        f"/api/v1/contacts/{contact_id}/bank-accounts/{account['id']}/reject",
+        json={"reason": "Kontoinhaber weicht ab"},
+        headers=boss,
+    )
+    assert rejected.status_code == 200, rejected.text
+    body = rejected.json()
+    assert body["approval_status"] == "rejected"
+    assert body["rejected_reason"] == "Kontoinhaber weicht ab"
+    assert body["rejected_by"] == str(world.users["m3boss"])
+    assert body["rejected_at"] is not None
+
+    listed = client.get("/api/v1/contacts", params={"q": f"Pending{RUN}"}, headers=clerk)
+    row = next(i for i in listed.json()["items"] if i["id"] == contact_id)
+    assert row["iban_pending"] is False
+
+
 def test_iban_encrypted_at_rest(client: TestClient, world: World, migrator_engine: Engine) -> None:
     created = client.post(
         "/api/v1/contacts",

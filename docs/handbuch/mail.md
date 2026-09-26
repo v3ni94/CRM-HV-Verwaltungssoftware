@@ -9,7 +9,29 @@ als Entwurf über eine Vier-Augen-Freigabe, bevor tatsächlich versendet wird.
 ## Reiter
 
 Posteingang, Entwürfe, Freigaben (wartende Vier-Augen-Freigaben) und Gesendet. Filter
-nach Status und Postfach stehen oben in der Liste zur Verfügung.
+nach Status und Postfach stehen oben in der Liste zur Verfügung. Die Liste zeigt je Mail
+eine Vorschau statt des Volltexts. Mails, deren Ticket erledigt, abgeschlossen oder abgelehnt
+ist, sind standardmäßig ausgeblendet; der Umschalter Erledigte anzeigen blendet sie ein
+(seit 1.23.0). Ein gesetzter Statusfilter zeigt immer genau die gewählten Mails.
+
+## Archivierung bei Ticketabschluss
+
+Ist am Postfach die Einstellung Erledigt archiviert Mail aktiv, archiviert die Plattform die
+zum Ticket gehörenden Mails im Gmail-Postfach, sobald das Ticket erledigt, abgeschlossen oder
+abgelehnt ist. Dazu speichert der Abruf seit 1.23.0 die Gmail-Kennung jeder Nachricht;
+fehlende Kennungen der Eingangsmails der letzten 90 Tage werden beim nächsten Abruf
+nachgetragen, damit die Archivierung auch für ältere Mails greift. Die Archivierung läuft erst
+nach dem gespeicherten Statuswechsel; schlägt sie fehl, bleibt die Mail im Posteingang und der
+Abschluss des Tickets bleibt bestehen.
+
+## Telefonassistenz (Hallo Heidi)
+
+Gesprächsprotokolle der KI-Telefonassistenz kommen als Mail ins Postfach und werden als
+Anruf erkannt (Absendermuster, Kennwort im Betreff oder Kennwort im Text mit beschrifteter
+Rufnummer). Die Erkennung und die Muster sind je Mandant unter Einstellungen, Postfächer,
+Telefonassistenz einstellbar. Was aus dem Protokoll wird (Zuordnung von Anrufer, Objekt und
+Einheit, Vorschlag Telefonnummer ergänzen mit Antwortentwurf), beschreibt das Kapitel
+Tickets, Abschnitt Anrufe über die Telefonassistenz.
 
 ## Vorbereitung
 

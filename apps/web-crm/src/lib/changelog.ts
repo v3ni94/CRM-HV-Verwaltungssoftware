@@ -17,7 +17,7 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.27.0",
+    version: "1.28.0",
     date: "26.09.2026",
     title: "Upload im CRM mit Ablage über objektakte in Drive und Paperless",
     changes: [
@@ -28,7 +28,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: "1.26.0",
+    version: "1.27.0",
     date: "26.09.2026",
     title: "DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter",
     changes: [
@@ -37,6 +37,42 @@ export const CHANGELOG: ChangelogEntry[] = [
       "DMS: Eigentümer- und Mieterlisten aus der Objektübernahme als Importvorschlag mit Testlauf und Freigabe",
       "Dokumente: Paperless-Suche nach Objektnummer ohne Teiltreffer und Filter nach Gesellschaft, Gesellschaftsoptionen in den DMS-Einstellungen",
       "Dokumente: vertauschte Fehlertexte bei nicht erreichbarem oder nicht eingerichtetem Paperless korrigiert",
+    ],
+  },
+  {
+    version: "1.26.1",
+    date: "26.09.2026",
+    title: "Mail: Aktionen oben, Mehrfachauswahl, Erledigt archiviert",
+    changes: [
+      "Mail: Antworten, Ticket anlegen und Erledigt auch oberhalb der Nachricht",
+      "Mail: Mehrfachauswahl mit Strg, Shift und Alle auswählen, Sammelaktion Als erledigt markieren",
+      "Mail: Erledigt archiviert die Nachricht in Gmail, einzeln und als Sammelaktion",
+    ],
+  },
+  {
+    version: "1.26.0",
+    date: "26.09.2026",
+    title: "Portalzugang am Kontakt, IBAN-Ablehnungsgrund, Importereignisse, Dokumentliste, Telefonassistenz-Korrekturen",
+    changes: [
+      "Kontakte: Abschnitt Portalzugang auf der Kontaktakte mit Status (kein Zugang, eingeladen, aktiv, gesperrt), Einladung mit QR-Code und neuem Leseendpunkt GET /portal-admin/accounts?contact_id (A86, CRM-Teil)",
+      "Kontakte: Ablehnungsgrund der IBAN-Freigabe wird gespeichert und angezeigt (rejected_reason, rejected_by, rejected_at, Migration 0132), Kontaktliste zeigt den Hinweis IBAN wartet auf Freigabe ohne N+1",
+      "Importe: Listen- und Zuordnungsimporte lösen dieselben Ereignisse contact.created und contact.updated aus wie die manuelle Pflege (Regelwerk und Webhooks greifen, A87 teilweise)",
+      "Dienstleisterverträge: Anzeigename des Dienstleisters in Liste und Detail statt Kennung",
+      "Dokumente: neue Dokumentliste im CRM mit Volltextsuche und Entwurfsfilter (is_draft), Upload bei fehlendem oder nicht erreichbarem Dokumentenspeicher antwortet mit 503 MHVP-DOC-0007 statt 500, keine halben Dokumentzeilen",
+      "Tickets: Freigeben und antworten der Telefonassistenz legt keinen Entwurf ohne Empfänger mehr an (422 mit Hinweis), Zusammenführen protokolliert je Quellticket Statusereignis mit Erledigungsnotiz und Lernbeispiel",
+      "Abnahme: Playwright gegen den Stack 12 CRM und 11 Portal grün, zwei Specs an die neue Anzeige angepasst (Bruttobetrag formatiert, Anhangsliste der Meldung), spezifische Spec-Läufe über MHVP_E2E_PW_ARGS",
+      "Dokumentation: Handbuch für Erledigungsnotiz, Telefonassistenz, ausgeblendete erledigte Vorgänge, Objektbezüge und Wissen; Regeln M19-07 bis M19-09, ADR 0010 Lernbeispiele (Betreiberentscheidung), offene Fragen M19-03 und M19-04, Lückenliste A90 bis A99",
+      "Offen (Betreiber): Datenschutzregel für Lernbeispiele (M7-04, ADR 0010), AVV und Anbieterfreigabe Telefonassistenz (M19-03), Erledigungsartenliste (M19-04), QR-Code im Einladungs-PDF (M21-08)",
+    ],
+  },
+  {
+    version: "1.25.1",
+    date: "26.09.2026",
+    title: "Adressen nachtragen, Einheitenliste und Einheitenseite",
+    changes: [
+      "Importe: Adressen der Objekte aus den Namen ableiten oder per Adressliste nachtragen",
+      "Objekte: Einheiten natürlich sortiert, Nummer und Bezeichnung verlinkt, Spalten Eigentümer, Mieter und Fläche",
+      "Einheitenseite: alle Stammdaten, Umlageschlüssel, Eigentümer und Mieter mit Namen, beendete Verträge",
     ],
   },
   {

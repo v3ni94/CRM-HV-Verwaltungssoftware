@@ -206,6 +206,15 @@ class BankAccountOut(BaseModel):
     requested_by: uuid.UUID | None = None
     decided_by: uuid.UUID | None = None
     decided_at: datetime | None = None
+    rejected_reason: str | None = Field(
+        default=None, description="Begründung der zweiten Person bei Ablehnung (M5-01)."
+    )
+    rejected_by: uuid.UUID | None = Field(
+        default=None, description="Ablehnende Person; nur bei approval_status rejected gesetzt."
+    )
+    rejected_at: datetime | None = Field(
+        default=None, description="Zeitpunkt der Ablehnung; nur bei approval_status rejected."
+    )
 
 
 class BankAccountDecisionIn(_Strict):
@@ -244,6 +253,10 @@ class ContactSummary(BaseModel):
     types: list[ContactTypeCode]
     roles: list[ContactRoleCode]
     deleted: bool
+    iban_pending: bool = Field(
+        default=False,
+        description="Mindestens eine Bankverbindung wartet auf die Vier-Augen-Freigabe (M5-01).",
+    )
 
 
 class ContactOut(BaseModel):

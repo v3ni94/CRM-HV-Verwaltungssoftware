@@ -986,6 +986,17 @@
             ],
             "title": "Key Code"
           },
+          "key_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Name"
+          },
           "source": {
             "$ref": "#/components/schemas/ValueSource"
           },
@@ -2447,6 +2458,20 @@
           "file"
         ],
         "title": "Body_flow_import_preview_api_v1_letting_flow_import_preview_post",
+        "type": "object"
+      },
+      "Body_import_adressen_api_v1_imports_immoware24_lists_adressen_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_adressen_api_v1_imports_immoware24_lists_adressen_post",
         "type": "object"
       },
       "Body_import_kontakte_api_v1_imports_immoware24_lists_kontakte_post": {
@@ -6888,6 +6913,12 @@
             "title": "Display Name",
             "type": "string"
           },
+          "iban_pending": {
+            "default": false,
+            "description": "Mindestens eine Bankverbindung wartet auf die Vier-Augen-Freigabe (M5-01).",
+            "title": "Iban Pending",
+            "type": "boolean"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -9488,6 +9519,11 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "is_draft": {
+            "default": false,
+            "title": "Is Draft",
+            "type": "boolean"
           },
           "mime_type": {
             "title": "Mime Type",
@@ -17109,6 +17145,32 @@
         "title": "MailAssignIn",
         "type": "object"
       },
+      "MailBulkIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "pattern": "^done$",
+            "title": "Action",
+            "type": "string"
+          },
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids",
+          "action"
+        ],
+        "title": "MailBulkIn",
+        "type": "object"
+      },
       "MailDraftPatchIn": {
         "additionalProperties": false,
         "properties": {
@@ -19974,6 +20036,111 @@
         "title": "Occupant",
         "type": "string"
       },
+      "OccupantMemberOut": {
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "share_percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Percent"
+          }
+        },
+        "required": [
+          "contact_id",
+          "display_name"
+        ],
+        "title": "OccupantMemberOut",
+        "type": "object"
+      },
+      "OccupantOut": {
+        "description": "One ownership or tenancy contract of a unit with its party, for display.",
+        "properties": {
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "contract_number": {
+            "title": "Contract Number",
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/OccupantMemberOut"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "party_name": {
+            "title": "Party Name",
+            "type": "string"
+          },
+          "rent_gross": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Gross"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_id",
+          "contract_number",
+          "kind",
+          "party_id",
+          "party_name",
+          "start_date",
+          "end_date"
+        ],
+        "title": "OccupantOut",
+        "type": "object"
+      },
       "OidcTokenResponse": {
         "properties": {
           "access_token": {
@@ -21491,6 +21658,87 @@
           }
         },
         "title": "PortalAccessIn",
+        "type": "object"
+      },
+      "PortalAccountOut": {
+        "description": "Portal account of a contact as the CRM sees it (A86). Never carries the invitation\nhash, a password hash or a token; ``status`` is the account status of the model\n(``invited`` until the invitation is accepted, then ``active``), ``locked`` mirrors a\ntemporary login lock of the platform user.",
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "invitation_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitation Expires At"
+          },
+          "invited_at": {
+            "format": "date-time",
+            "title": "Invited At",
+            "type": "string"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contact_id",
+          "email",
+          "status",
+          "locked",
+          "invited_at",
+          "invitation_expires_at",
+          "activated_at",
+          "last_login_at"
+        ],
+        "title": "PortalAccountOut",
         "type": "object"
       },
       "PortalAppointmentIn": {
@@ -25795,7 +26043,7 @@
         "type": "object"
       },
       "ResolutionKind": {
-        "description": "Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``\nsetzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt.",
+        "description": "Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``\nsetzt die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt; das\nStatusereignis und das Lernbeispiel entstehen dabei wie bei jedem anderen Abschluss.",
         "enum": [
           "stammdaten_ergaenzt",
           "handwerker_beauftragt",
@@ -27325,6 +27573,10 @@
             "title": "Provider Contact Id",
             "type": "string"
           },
+          "provider_name": {
+            "title": "Provider Name",
+            "type": "string"
+          },
           "starts_at": {
             "format": "date",
             "title": "Starts At",
@@ -27342,6 +27594,7 @@
         "required": [
           "id",
           "provider_contact_id",
+          "provider_name",
           "property_id",
           "title",
           "starts_at",
@@ -30432,6 +30685,39 @@
         "title": "UnitIn",
         "type": "object"
       },
+      "UnitOccupantsOut": {
+        "properties": {
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/OccupantOut"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OccupantOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OccupantOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "UnitOccupantsOut",
+        "type": "object"
+      },
       "UnitOut": {
         "properties": {
           "allocation_values": {
@@ -30606,6 +30892,16 @@
             "title": "Number",
             "type": "string"
           },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OccupantOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "postal_code": {
             "anyOf": [
               {
@@ -30644,6 +30940,16 @@
               }
             ],
             "title": "Street"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OccupantOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "total_area_sqm": {
             "anyOf": [
@@ -31977,6 +32283,44 @@
           },
           "mandate_status": {
             "$ref": "#/components/schemas/ContactMandateStatus"
+          },
+          "rejected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Zeitpunkt der Ablehnung; nur bei approval_status rejected.",
+            "title": "Rejected At"
+          },
+          "rejected_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ablehnende Person; nur bei approval_status rejected gesetzt.",
+            "title": "Rejected By"
+          },
+          "rejected_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Begründung der zweiten Person bei Ablehnung (M5-01).",
+            "title": "Rejected Reason"
           },
           "requested_by": {
             "anyOf": [
@@ -45069,6 +45413,24 @@
             }
           },
           {
+            "description": "true: nur Entwürfe (z. B. automatisch erzeugte Briefe), false: ohne Entwürfe, leer: kein Filter",
+            "in": "query",
+            "name": "is_draft",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "true: nur Entwürfe (z. B. automatisch erzeugte Briefe), false: ohne Entwürfe, leer: kein Filter",
+              "title": "Is Draft"
+            }
+          },
+          {
             "in": "query",
             "name": "page",
             "required": false,
@@ -53340,6 +53702,110 @@
         ]
       }
     },
+    "/api/v1/imports/immoware24/lists/adressen": {
+      "post": {
+        "description": "CSV or XLSX with object number and street, house number, postal code, city. Fills only\nempty fields; differences to filled fields are reported as conflicts, never overwritten.",
+        "operationId": "import_adressen_api_v1_imports_immoware24_lists_adressen_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "preview",
+              "pattern": "^(preview|apply)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_adressen_api_v1_imports_immoware24_lists_adressen_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Adressen Api V1 Imports Immoware24 Lists Adressen Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Adressen der Objekte aus einer Adressliste (Testlauf oder Übernahme)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/immoware24/lists/adressen-ableiten": {
+      "post": {
+        "description": "Only objects with an empty street; only empty fields are filled\n(handbuch/import-objektdaten.md).",
+        "operationId": "derive_adressen_api_v1_imports_immoware24_lists_adressen_ableiten_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "preview",
+              "pattern": "^(preview|apply)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Derive Adressen Api V1 Imports Immoware24 Lists Adressen Ableiten Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Straße und Hausnummer der Objekte aus dem Objektnamen (Testlauf oder Übernahme)",
+        "tags": [
+          "Import Immoware24"
+        ]
+      }
+    },
     "/api/v1/imports/immoware24/lists/kontakte": {
       "post": {
         "description": "One role (eigentuemer, mieter, bank, sonstige) per file, in the same order as ``files``.",
@@ -56864,6 +57330,50 @@
           }
         },
         "summary": "Vorgangsliste (ohne Text, mit Vorschau)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/bulk": {
+      "post": {
+        "description": "Wie ``PATCH /messages/{id}`` mit ``status=done`` je Nachricht. Nicht vorhandene oder\nnicht zugängliche Nachrichten landen ohne Unterscheidung in ``failed`` (kein Rückschluss).",
+        "operationId": "bulk_messages_api_v1_mail_messages_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailBulkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Bulk Messages Api V1 Mail Messages Bulk Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sammelaktion: mehrere Nachrichten erledigen",
         "tags": [
           "Postfach"
         ]
@@ -61122,6 +61632,52 @@
       }
     },
     "/api/v1/portal-admin/accounts": {
+      "get": {
+        "description": "Portal accounts of one contact of the own tenant (RLS); an unknown or foreign contact\nyields an empty list, never 404, so the CRM can show \"kein Zugang\" without a probe.",
+        "operationId": "list_accounts_api_v1_portal_admin_accounts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PortalAccountOut"
+                  },
+                  "title": "Response List Accounts Api V1 Portal Admin Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portalzugänge eines Kontakts",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      },
       "post": {
         "operationId": "invite_api_v1_portal_admin_accounts_post",
         "requestBody": {
@@ -65334,6 +65890,7 @@
     },
     "/api/v1/properties/{property_id}/units": {
       "get": {
+        "description": "Units in natural order of their number (\"1\" < \"2\" < \"10\", \"WE1\" < \"WE10\").\n\nWith ``with_occupants=true`` each unit carries its current owner and tenant (at ``as_of``,\ndefault today), loaded in one batch for the whole property.",
         "operationId": "list_units_api_v1_properties__property_id__units_get",
         "parameters": [
           {
@@ -65361,6 +65918,16 @@
                 }
               ],
               "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "with_occupants",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "With Occupants",
+              "type": "boolean"
             }
           }
         ],
@@ -72236,6 +72803,66 @@
           }
         },
         "summary": "Schlüsselwert mit Zeitraum erfassen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/units/{unit_id}/occupants": {
+      "get": {
+        "operationId": "get_unit_occupants_api_v1_units__unit_id__occupants_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitOccupantsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümer, Mieter und Vertragshistorie",
         "tags": [
           "Objekte"
         ]

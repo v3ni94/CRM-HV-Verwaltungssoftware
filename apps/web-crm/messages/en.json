@@ -94,6 +94,7 @@
     "navCollapse": "Collapse sidebar",
     "navExpand": "Expand sidebar",
     "dms": "DMS",
+    "documents": "Documents",
     "openNav": "Open navigation",
     "immoware": "Immoware24",
     "immowareLearning": "Learning phase",
@@ -126,6 +127,7 @@
     "next": "Next",
     "blocked": "blocked",
     "incomplete": "incomplete",
+    "ibanPending": "IBAN awaiting release",
     "edit": "Edit",
     "delete": "Delete",
     "export": "GDPR disclosure",
@@ -199,6 +201,7 @@
       "decidedAt": "on {date}",
       "approvedNotice": "IBAN {iban} released.",
       "rejectedNotice": "IBAN {iban} rejected.",
+      "rejectedReason": "Reason: {reason}",
       "rejectTitle": "Reject IBAN {iban}",
       "rejectReason": "Reason for rejection",
       "rejectReasonHelp": "Required, at most {max} characters. The reason is stored in the audit log.",
@@ -218,6 +221,32 @@
       "active": "active",
       "ended": "ended",
       "since": "since {date}"
+    },
+    "portalAccess": {
+      "title": "Portal access",
+      "email": "E-mail address for the invitation",
+      "emailRequired": "Please enter an e-mail address.",
+      "invite": "Invite",
+      "noPermission": "Inviting requires the permission contacts:update.",
+      "status": {
+        "loading": "Loading",
+        "none": "No portal access",
+        "invited": "Invited, password not yet set",
+        "active": "Access active",
+        "locked": "locked",
+        "exists": "Portal access already exists",
+        "loadError": "Status not available"
+      },
+      "tokenTitle": "Invitation (shown only once)",
+      "tokenHelp": "Pass the invitation code together with the portal address to the contact. The code is valid for 14 days; in the portal the contact sets a password and the second factor.",
+      "linkTitle": "Invitation link (text and QR code)",
+      "qrAlt": "QR code of the invitation link",
+      "noPortalUrl": "No public portal address is configured, so only the invitation code is shown.",
+      "help": "Portal rights derive from the contracts of the contact. The status comes from the portal account of the contact; the invitation code is shown only once on inviting.",
+      "accountEmail": "Login: {email}",
+      "invitedAt": "Invited on {date}, code valid until {until}",
+      "activatedAt": "Activated on {date}",
+      "lastLogin": "Last login {date}"
     }
   },
   "ContactForm": {
@@ -766,6 +795,34 @@
     "busy": "Processing",
     "colCount": "Counter",
     "colValue": "Value",
+    "adressen": {
+      "title": "1a. Add addresses",
+      "help": "The object list has no addresses. Street, house number, postal code and city are added here. Only empty fields are filled, existing values are never overwritten.",
+      "deriveTitle": "Derive from object names",
+      "deriveHelp": "For objects without a street, street and house number are taken from the name, for example Shalomweg 3. Markers such as Z ABGEGEBEN, Y ABRECHNUNG and WEG are removed first.",
+      "listTitle": "Address list",
+      "listHelp": "CSV or Excel with object number and the columns street, house number, postal code, city. Street and house number may share one column. Differences to filled fields are reported as conflicts.",
+      "file": "Address list (csv or xlsx)",
+      "filledTitle": "Filled",
+      "unrecognisedTitle": "Names not recognised",
+      "conflictsTitle": "Conflicts",
+      "problemsTitle": "Not assigned",
+      "unknownObject": "Line {line}: object {number} not found",
+      "colStreet": "Street",
+      "colHouseNumber": "House number",
+      "colPostalCode": "Postal code",
+      "colCity": "City",
+      "colField": "Field",
+      "colCurrent": "Current",
+      "colList": "In list",
+      "count": {
+        "filled": "Objects filled",
+        "skipped": "Skipped",
+        "unrecognised": "Names not recognised",
+        "conflicts": "Conflicts",
+        "unknown": "Unknown objects"
+      }
+    },
     "zuordnung": {
       "title": "3. Owner and tenant assignment",
       "help": "Object list as in step 1. Owners and tenants are matched by name to the imported contacts and created as contracts with a monthly payment. Existing contracts are never overwritten, ambiguous names are only reported.",
@@ -2148,6 +2205,23 @@
       "sendHint": "Creates the draft on the ticket and submits it for approval (four eyes). It is sent only after approval.",
       "submitted": "Reply draft created and submitted for approval.",
       "replyStatus": "Reply in the mail module, status: {status}",
+      "acceptAndReply": "Approve and reply",
+      "acceptAndReplyHint": "Applies the master data and creates the reply draft on the ticket. Sending happens only after approval in the mail module.",
+      "call": {
+        "phone": "Caller number",
+        "name": "Caller",
+        "property": "Property",
+        "unit": "Unit",
+        "concern": "Concern",
+        "unknown": "not recognised",
+        "label": {
+          "mobile": "Mobile",
+          "other": "Landline or unknown",
+          "work": "Work",
+          "private": "Private",
+          "fax": "Fax"
+        }
+      },
       "decision": {
         "pending": "Pending",
         "accepted": "Accepted",
@@ -2166,23 +2240,6 @@
         "city": "City",
         "phone": "Phone",
         "email": "E-mail"
-      },
-      "acceptAndReply": "Approve and reply",
-      "acceptAndReplyHint": "Applies the master data and creates the reply draft on the ticket. Sending happens only after approval in the mail module.",
-      "call": {
-        "phone": "Caller number",
-        "name": "Caller",
-        "property": "Property",
-        "unit": "Unit",
-        "concern": "Concern",
-        "unknown": "not recognised",
-        "label": {
-          "mobile": "Mobile",
-          "other": "Landline or unknown",
-          "work": "Work",
-          "private": "Private",
-          "fax": "Fax"
-        }
       }
     },
     "title": "Tickets",
@@ -2900,7 +2957,15 @@
     "sendingHint": "Approved, dispatch not yet confirmed. Approving again verifies the dispatch by Message-ID and only sends when the message did not go out.",
     "attachmentsRejected": "Attachments not stored: {list}",
     "loadingDetail": "Loading message...",
-    "showClosed": "Show completed"
+    "showClosed": "Show completed",
+    "actionsLabel": "Message actions",
+    "selectAll": "Select all",
+    "bulkToolbar": "Bulk actions",
+    "selectedCount": "{count} selected",
+    "bulkMarkDone": "Mark as done",
+    "clearSelection": "Clear selection",
+    "bulkFailed": "{count, plural, one {# message could not be changed.} other {# messages could not be changed.}}",
+    "selectMessageRow": "Select message: {subject}"
   },
   "Platform": {
     "title": "Platform",
@@ -4000,9 +4065,9 @@
       "date": "Date",
       "correspondent": "Correspondent",
       "documentType": "Document type",
-      "company": "Company",
       "tags": "Tags",
-      "actions": "Actions"
+      "actions": "Actions",
+      "company": "Company"
     },
     "actions": {
       "preview": "Preview",
@@ -4013,13 +4078,13 @@
       "next": "Next",
       "page": "Page {page}"
     },
-    "company": {
-      "label": "Company",
-      "all": "All companies"
-    },
     "errors": {
       "unreachable": "Paperless unreachable",
       "notConfigured": "Paperless not configured"
+    },
+    "company": {
+      "label": "Company",
+      "all": "All companies"
     }
   },
   "BankSettings": {
@@ -4155,10 +4220,6 @@
     "tokenHint": "The token is write only and never shown again. Leave empty to keep the stored token.",
     "objectFieldId": "Field ID property number",
     "companyFieldId": "Field ID company",
-    "fieldIdsHint": "Paperless shows the field IDs in its custom field administration and in the response of /api/custom_fields/ (key id). The property search only matches values that equal the property number or start with the number, a comma and a space, e.g. 523 or 523, Musterstraße 1, but not 5230.",
-    "companyOptions": "Company options",
-    "companyOptionsPlaceholder": "Option-ID=Company",
-    "companyOptionsHint": "One line per option of the company select field as Option-ID=Company. The option IDs are shown in Paperless on the select field (via /api/custom_fields/ under extra_data, select_options). Leave empty if no company filter is wanted. The filter only works together with the company field ID.",
     "save": "Save",
     "saved": "Saved.",
     "yes": "Yes",
@@ -4190,7 +4251,11 @@
     "webhookSecretHint": "At least 16 characters. Write only, never shown again. Leave empty to keep the stored secret. Without a secret every delivery is refused.",
     "autoIntake": "Automatic receipt intake from Paperless",
     "autoIntakeHint": "Default off. When active, a receipt draft for review is queued for every reported document. A draft is neither an invoice nor a posting.",
-    "rootFolderIdBeforeConnectHint": "Save this before connecting so the connection can activate right after the OAuth flow."
+    "rootFolderIdBeforeConnectHint": "Save this before connecting so the connection can activate right after the OAuth flow.",
+    "fieldIdsHint": "Paperless shows the field IDs in its custom field administration and in the response of /api/custom_fields/ (key id). The property search only matches values that equal the property number or start with the number, a comma and a space, e.g. 523 or 523, Musterstraße 1, but not 5230.",
+    "companyOptions": "Company options",
+    "companyOptionsPlaceholder": "Option-ID=Company",
+    "companyOptionsHint": "One line per option of the company select field as Option-ID=Company. The option IDs are shown in Paperless on the select field (via /api/custom_fields/ under extra_data, select_options). Leave empty if no company filter is wanted. The filter only works together with the company field ID."
   },
   "Handover": {
     "title": "Handover protocols",
@@ -5612,6 +5677,28 @@
       "downloaded": "downloaded"
     }
   },
+  "DocumentList": {
+    "area": "Management",
+    "title": "Documents",
+    "intro": "Stored documents of the tenant with full text search. Automatically generated letters are marked as drafts and are never sent.",
+    "draftFilter": "Drafts",
+    "draftAll": "All",
+    "draftOnly": "drafts only",
+    "draftNone": "without drafts",
+    "search": "Search",
+    "searchPlaceholder": "Title or content, at least two characters",
+    "empty": "No documents found.",
+    "emptyDrafts": "No drafts available.",
+    "colTitle": "Title",
+    "colFilename": "File",
+    "colCreated": "Stored on",
+    "colStatus": "Status",
+    "draftBadge": "Draft",
+    "pagination": "Pages",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {pages}, {total} documents"
+  },
   "DocumentDetail": {
     "area": "Documents",
     "created": "Provided on",
@@ -6170,6 +6257,51 @@
       "answer_question": "Questions",
       "summarize": "Summary"
     }
+  },
+  "Units": {
+    "number": "Number",
+    "label": "Label",
+    "type": "Type",
+    "owner": "Owner",
+    "tenant": "Tenant",
+    "area": "Area",
+    "noTenant": "no tenant",
+    "noOwner": "no owner",
+    "parameters": "Unit master data",
+    "location": "Location",
+    "floor": "Floor",
+    "livingArea": "Living area",
+    "totalArea": "Total area",
+    "rooms": "Rooms",
+    "bedrooms": "Bedrooms",
+    "bathrooms": "Bathrooms",
+    "cellar": "Cellar number",
+    "internalName": "Internal name",
+    "modernization": "Last modernisation",
+    "features": "Features",
+    "address": "Address",
+    "vatOption": "VAT option",
+    "mea": "Co-ownership shares",
+    "allocationKeys": "Allocation keys",
+    "noAllocation": "No allocation key values recorded.",
+    "key": "Key",
+    "value": "Value",
+    "validFrom": "valid from",
+    "validTo": "valid to",
+    "customFields": "Custom fields",
+    "legacy": "Notes from the legacy system",
+    "since": "since",
+    "until": "until",
+    "share": "Share",
+    "rent": "Rent (gross, monthly)",
+    "contract": "Contract",
+    "history": "Ended contracts",
+    "noHistory": "No ended contracts.",
+    "kind": {
+      "ownership": "Ownership",
+      "tenancy": "Tenancy"
+    },
+    "toProperty": "Properties"
   },
   "DmsSearch": {
     "area": "DMS",

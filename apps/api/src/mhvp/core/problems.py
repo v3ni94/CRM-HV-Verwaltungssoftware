@@ -195,6 +195,12 @@ class ErrorCodes:
         "Importvorschlag bereits entschieden",
         "The person list proposal is approved or rejected; start a new proposal instead.",
     )
+    STORAGE_UNAVAILABLE = ErrorCode(
+        "MHVP-DOC-0007",
+        503,
+        "Dokumentenspeicher nicht verfügbar",
+        "Object storage (S3 API) is not configured or the request failed; nothing was stored.",
+    )
     ACC_UNBALANCED = ErrorCode(
         "MHVP-ACC-0001",
         422,

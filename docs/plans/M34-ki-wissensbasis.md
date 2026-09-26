@@ -55,3 +55,7 @@ Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis
 * Im Code: `ai_knowledge_entry` (Migration 0051), API `/api/v1/ai/knowledge`, Mail-Vorbereitung `mhvp.communication.preparation` mit Dokumentsuche strikt je Objekt (Regel M20-05), Korrektur als gelernter Eintrag, CRM-Abschnitt Wissensbasis und Panel Vorbereitung.
 * Tests: `test_m34_ai_knowledge.py`.
 * Offen: M34-01 bis M34-03 wie oben.
+
+## Nachtrag 26.09.2026 (1.25.0): Seite Wissen
+
+* Übernommen aus der Parallelsitzung (1.24.0): Seite `/einstellungen/wissen` mit gelernten Playbooks (Trefferzahl, letzte Nutzung aus `playbook.last_used_at`, Deaktivieren mit `communication:update`) und Lernbeispielen (`GET /ai/examples`, Filter nach Aufgabe, `tenant_settings:read`). Die Wissenseinträge (`ai_knowledge_entry`) bleiben unverändert; die Seite zeigt gelernte Artefakte, keine Freigabe. Handbuch `docs/handbuch/einstellungen.md`, Abschnitt Wissen; Datenschutz der Lernbeispiele in ADR 0010 und M7-04.

@@ -332,6 +332,8 @@ class ContactBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     requested_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Reason given by the second person on rejection (migration 0132); None when approved.
+    rejected_reason: Mapped[str | None] = mapped_column(String(500))
 
 
 class ContactType(IdMixin, TimestampMixin, TenantMixin, Base):

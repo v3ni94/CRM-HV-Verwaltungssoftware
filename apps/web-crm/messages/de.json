@@ -94,6 +94,7 @@
     "navCollapse": "Leiste einklappen",
     "navExpand": "Leiste ausklappen",
     "dms": "DMS",
+    "documents": "Dokumente",
     "openNav": "Navigation öffnen",
     "immoware": "Immoware24",
     "immowareLearning": "Lernphase",
@@ -126,6 +127,7 @@
     "next": "Weiter",
     "blocked": "gesperrt",
     "incomplete": "unvollständig",
+    "ibanPending": "IBAN wartet auf Freigabe",
     "edit": "Bearbeiten",
     "delete": "Löschen",
     "export": "DSGVO-Auskunft",
@@ -199,6 +201,7 @@
       "decidedAt": "am {date}",
       "approvedNotice": "IBAN {iban} freigegeben.",
       "rejectedNotice": "IBAN {iban} abgelehnt.",
+      "rejectedReason": "Begründung: {reason}",
       "rejectTitle": "IBAN {iban} ablehnen",
       "rejectReason": "Begründung der Ablehnung",
       "rejectReasonHelp": "Pflichtangabe, höchstens {max} Zeichen. Die Begründung wird im Protokoll gespeichert.",
@@ -218,6 +221,32 @@
       "active": "aktiv",
       "ended": "beendet",
       "since": "seit {date}"
+    },
+    "portalAccess": {
+      "title": "Portalzugang",
+      "email": "E-Mail-Adresse für die Einladung",
+      "emailRequired": "Bitte eine E-Mail-Adresse angeben.",
+      "invite": "Einladen",
+      "noPermission": "Einladen nur mit dem Recht contacts:update.",
+      "status": {
+        "loading": "Wird geladen",
+        "none": "Kein Portalzugang",
+        "invited": "Eingeladen, Passwort noch nicht gesetzt",
+        "active": "Zugang aktiv",
+        "locked": "gesperrt",
+        "exists": "Portalzugang besteht bereits",
+        "loadError": "Status nicht abrufbar"
+      },
+      "tokenTitle": "Einladung (wird nur einmal angezeigt)",
+      "tokenHelp": "Bitte den Einladungscode zusammen mit der Portaladresse an den Kontakt weitergeben. Der Code gilt 14 Tage; im Portal setzt der Kontakt sein Passwort und richtet den zweiten Faktor ein.",
+      "linkTitle": "Einladungslink (Text und QR-Code)",
+      "qrAlt": "QR-Code des Einladungslinks",
+      "noPortalUrl": "Keine öffentliche Portaladresse konfiguriert, daher nur der Einladungscode.",
+      "help": "Die Portalrechte leiten sich aus den Verträgen des Kontakts ab. Der Status stammt aus dem Portalkonto des Kontakts; der Einladungscode wird nur einmal beim Einladen angezeigt.",
+      "accountEmail": "Anmeldung: {email}",
+      "invitedAt": "Eingeladen am {date}, Code gültig bis {until}",
+      "activatedAt": "Aktiviert am {date}",
+      "lastLogin": "Letzte Anmeldung {date}"
     }
   },
   "ContactForm": {
@@ -690,7 +719,7 @@
   },
   "ImmowareLists": {
     "title": "Immoware24 Listenimport",
-    "intro": "Reihenfolge einhalten: 1. Objekte und Einheiten, 2. Kontakte, 3. Zuordnung Eigentümer und Mieter. Je Abschnitt erst Testlauf, dann Übernehmen. Dateien als CSV aus Immoware24 (UTF-8 oder Windows-1252; Semikolon, Komma oder Tabulator werden erkannt). Bankverbindungen und Buchungen entstehen nicht.",
+    "intro": "Reihenfolge einhalten: 1. Objekte und Einheiten, 1a. Adressen, 2. Kontakte, 3. Zuordnung Eigentümer und Mieter. Je Abschnitt erst Testlauf, dann Übernehmen. Dateien als CSV aus Immoware24 (UTF-8 oder Windows-1252; Semikolon, Komma oder Tabulator werden erkannt). Bankverbindungen und Buchungen entstehen nicht.",
     "objektdaten": {
       "title": "1. Objekte und Einheiten",
       "help": "Export Objektdaten mit den Spalten Objekt-Nummer, Objekt, Verwaltungsart, VE-Nummer. Eigentümer, Mieter und Beträge werden nur als Herkunftsnotiz an der Einheit gespeichert.",
@@ -766,6 +795,34 @@
     "busy": "Wird verarbeitet",
     "colCount": "Zähler",
     "colValue": "Anzahl",
+    "adressen": {
+      "title": "1a. Adressen nachtragen",
+      "help": "Die Objektliste enthält keine Adressen. Straße, Hausnummer, PLZ und Ort werden hier ergänzt. Es werden nur leere Felder gefüllt, vorhandene Angaben werden nie überschrieben.",
+      "deriveTitle": "Aus Objektnamen ableiten",
+      "deriveHelp": "Für Objekte ohne Straße werden Straße und Hausnummer aus der Bezeichnung übernommen, zum Beispiel Shalomweg 3. Kennzeichen wie Z ABGEGEBEN, Y ABRECHNUNG und WEG werden vorher entfernt.",
+      "listTitle": "Adressliste",
+      "listHelp": "CSV oder Excel mit Objektnummer und den Spalten Straße, Hausnummer, PLZ, Ort. Straße und Hausnummer dürfen in einer Spalte stehen. Abweichungen zu bereits gefüllten Feldern werden als Konflikt gemeldet.",
+      "file": "Adressliste (csv oder xlsx)",
+      "filledTitle": "Gefüllt",
+      "unrecognisedTitle": "Nicht erkennbare Namen",
+      "conflictsTitle": "Konflikte",
+      "problemsTitle": "Nicht zugeordnet",
+      "unknownObject": "Zeile {line}: Objekt {number} nicht vorhanden",
+      "colStreet": "Straße",
+      "colHouseNumber": "Hausnummer",
+      "colPostalCode": "PLZ",
+      "colCity": "Ort",
+      "colField": "Feld",
+      "colCurrent": "Vorhanden",
+      "colList": "Laut Liste",
+      "count": {
+        "filled": "Objekte gefüllt",
+        "skipped": "Übersprungen",
+        "unrecognised": "Namen nicht erkennbar",
+        "conflicts": "Konflikte",
+        "unknown": "Objekte unbekannt"
+      }
+    },
     "zuordnung": {
       "title": "3. Zuordnung Eigentümer und Mieter",
       "help": "Objektliste wie in Schritt 1. Eigentümer und Mieter werden über den Namen den importierten Kontakten zugeordnet und als Verträge mit monatlicher Zahlung angelegt. Vorhandene Verträge werden nicht überschrieben, mehrdeutige Namen werden nur gemeldet.",
@@ -2148,6 +2205,23 @@
       "sendHint": "Legt den Entwurf am Ticket an und reicht ihn zur Freigabe ein (Vier-Augen-Prinzip). Der Versand erfolgt erst nach Freigabe.",
       "submitted": "Antwortentwurf angelegt und zur Freigabe eingereicht.",
       "replyStatus": "Antwort im Mailmodul, Status: {status}",
+      "acceptAndReply": "Freigeben und antworten",
+      "acceptAndReplyHint": "Übernimmt die Stammdaten und legt den Antwortentwurf am Ticket an. Der Versand erfolgt erst nach Freigabe im Mailmodul.",
+      "call": {
+        "phone": "Anrufernummer",
+        "name": "Anrufer",
+        "property": "Objekt",
+        "unit": "Einheit",
+        "concern": "Anliegen",
+        "unknown": "nicht erkannt",
+        "label": {
+          "mobile": "Mobil",
+          "other": "Festnetz oder unbekannt",
+          "work": "Geschäftlich",
+          "private": "Privat",
+          "fax": "Fax"
+        }
+      },
       "decision": {
         "pending": "Offen",
         "accepted": "Akzeptiert",
@@ -2166,23 +2240,6 @@
         "city": "Ort",
         "phone": "Telefon",
         "email": "E-Mail"
-      },
-      "acceptAndReply": "Freigeben und antworten",
-      "acceptAndReplyHint": "Übernimmt die Stammdaten und legt den Antwortentwurf am Ticket an. Der Versand erfolgt erst nach Freigabe im Mailmodul.",
-      "call": {
-        "phone": "Anrufernummer",
-        "name": "Anrufer",
-        "property": "Objekt",
-        "unit": "Einheit",
-        "concern": "Anliegen",
-        "unknown": "nicht erkannt",
-        "label": {
-          "mobile": "Mobil",
-          "other": "Festnetz oder unbekannt",
-          "work": "Geschäftlich",
-          "private": "Privat",
-          "fax": "Fax"
-        }
       }
     },
     "title": "Tickets",
@@ -2900,7 +2957,15 @@
     "sendingHint": "Freigegeben, Versand noch ohne Nachweis. Eine erneute Freigabe prüft den Versand anhand der Message-ID und sendet nur, wenn die Nachricht nicht angekommen ist.",
     "attachmentsRejected": "Nicht übernommene Anhänge: {list}",
     "loadingDetail": "Nachricht wird geladen...",
-    "showClosed": "Erledigte anzeigen"
+    "showClosed": "Erledigte anzeigen",
+    "actionsLabel": "Aktionen zur Nachricht",
+    "selectAll": "Alle auswählen",
+    "bulkToolbar": "Sammelaktionen",
+    "selectedCount": "{count} ausgewählt",
+    "bulkMarkDone": "Als erledigt markieren",
+    "clearSelection": "Auswahl aufheben",
+    "bulkFailed": "{count, plural, one {# Nachricht konnte nicht geändert werden.} other {# Nachrichten konnten nicht geändert werden.}}",
+    "selectMessageRow": "Nachricht auswählen: {subject}"
   },
   "Platform": {
     "title": "Plattform",
@@ -4000,9 +4065,9 @@
       "date": "Datum",
       "correspondent": "Korrespondent",
       "documentType": "Dokumenttyp",
-      "company": "Gesellschaft",
       "tags": "Tags",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "company": "Gesellschaft"
     },
     "actions": {
       "preview": "Vorschau",
@@ -4013,13 +4078,13 @@
       "next": "Weiter",
       "page": "Seite {page}"
     },
-    "company": {
-      "label": "Gesellschaft",
-      "all": "Alle Gesellschaften"
-    },
     "errors": {
       "unreachable": "Paperless nicht erreichbar",
       "notConfigured": "Paperless nicht eingerichtet"
+    },
+    "company": {
+      "label": "Gesellschaft",
+      "all": "Alle Gesellschaften"
     }
   },
   "BankSettings": {
@@ -4155,10 +4220,6 @@
     "tokenHint": "Der Token wird nur geschrieben und nie wieder angezeigt. Leer lassen, um den hinterlegten Token zu behalten.",
     "objectFieldId": "Feld-ID Objektnummer",
     "companyFieldId": "Feld-ID Gesellschaft",
-    "fieldIdsHint": "Die Feld-IDs zeigt Paperless in der Verwaltung der benutzerdefinierten Felder und in der Antwort von /api/custom_fields/ (Angabe id). Die Objektsuche trifft nur Werte, die genau der Objektnummer entsprechen oder mit Objektnummer, Komma und Leerzeichen beginnen, zum Beispiel 523 oder 523, Musterstraße 1, nicht aber 5230.",
-    "companyOptions": "Gesellschaftsoptionen",
-    "companyOptionsPlaceholder": "Options-ID=Gesellschaft",
-    "companyOptionsHint": "Eine Zeile je Option des Auswahlfelds Gesellschaft in der Form Options-ID=Gesellschaft. Die Options-IDs stehen in Paperless am Auswahlfeld (über /api/custom_fields/ unter extra_data, select_options). Leer lassen, wenn kein Gesellschaftsfilter gewünscht ist. Der Filter wirkt nur mit Feld-ID Gesellschaft.",
     "save": "Speichern",
     "saved": "Gespeichert.",
     "yes": "Ja",
@@ -4190,7 +4251,11 @@
     "webhookSecretHint": "Mindestens 16 Zeichen. Wird nur geschrieben und nie wieder angezeigt. Leer lassen, um das hinterlegte Geheimnis zu behalten. Ohne Geheimnis werden alle Meldungen abgewiesen.",
     "autoIntake": "Belegeingang aus Paperless automatisch",
     "autoIntakeHint": "Standard aus. Wenn aktiv, wird für jedes gemeldete Dokument ein Belegentwurf zur Prüfung erzeugt (Warteschlange). Ein Entwurf ist keine Rechnung und keine Buchung.",
-    "rootFolderIdBeforeConnectHint": "Vor dem Verbinden speichern, damit die Anbindung nach dem OAuth-Vorgang sofort aktiv werden kann."
+    "rootFolderIdBeforeConnectHint": "Vor dem Verbinden speichern, damit die Anbindung nach dem OAuth-Vorgang sofort aktiv werden kann.",
+    "fieldIdsHint": "Die Feld-IDs zeigt Paperless in der Verwaltung der benutzerdefinierten Felder und in der Antwort von /api/custom_fields/ (Angabe id). Die Objektsuche trifft nur Werte, die genau der Objektnummer entsprechen oder mit Objektnummer, Komma und Leerzeichen beginnen, zum Beispiel 523 oder 523, Musterstraße 1, nicht aber 5230.",
+    "companyOptions": "Gesellschaftsoptionen",
+    "companyOptionsPlaceholder": "Options-ID=Gesellschaft",
+    "companyOptionsHint": "Eine Zeile je Option des Auswahlfelds Gesellschaft in der Form Options-ID=Gesellschaft. Die Options-IDs stehen in Paperless am Auswahlfeld (über /api/custom_fields/ unter extra_data, select_options). Leer lassen, wenn kein Gesellschaftsfilter gewünscht ist. Der Filter wirkt nur mit Feld-ID Gesellschaft."
   },
   "Handover": {
     "title": "Übergabeprotokolle",
@@ -5612,6 +5677,28 @@
       "downloaded": "heruntergeladen"
     }
   },
+  "DocumentList": {
+    "area": "Verwaltung",
+    "title": "Dokumente",
+    "intro": "Abgelegte Dokumente des Mandanten mit Volltextsuche. Automatisch erzeugte Briefe sind als Entwurf gekennzeichnet und werden nicht versendet.",
+    "draftFilter": "Entwürfe",
+    "draftAll": "Alle",
+    "draftOnly": "nur Entwürfe",
+    "draftNone": "ohne Entwürfe",
+    "search": "Suche",
+    "searchPlaceholder": "Titel oder Inhalt, mindestens zwei Zeichen",
+    "empty": "Keine Dokumente gefunden.",
+    "emptyDrafts": "Keine Entwürfe vorhanden.",
+    "colTitle": "Titel",
+    "colFilename": "Datei",
+    "colCreated": "Abgelegt am",
+    "colStatus": "Status",
+    "draftBadge": "Entwurf",
+    "pagination": "Seiten",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "pageOf": "Seite {page} von {pages}, {total} Dokumente"
+  },
   "DocumentDetail": {
     "area": "Dokumente",
     "created": "Bereitgestellt am",
@@ -6170,6 +6257,51 @@
       "answer_question": "Fragen",
       "summarize": "Zusammenfassung"
     }
+  },
+  "Units": {
+    "number": "Nummer",
+    "label": "Bezeichnung",
+    "type": "Typ",
+    "owner": "Eigentümer",
+    "tenant": "Mieter",
+    "area": "Fläche",
+    "noTenant": "kein Mieter",
+    "noOwner": "kein Eigentümer",
+    "parameters": "Stammdaten der Einheit",
+    "location": "Lage",
+    "floor": "Etage",
+    "livingArea": "Wohnfläche",
+    "totalArea": "Gesamtfläche",
+    "rooms": "Zimmer",
+    "bedrooms": "Schlafzimmer",
+    "bathrooms": "Badezimmer",
+    "cellar": "Kellernummer",
+    "internalName": "Interne Bezeichnung",
+    "modernization": "Letzte Modernisierung",
+    "features": "Ausstattung",
+    "address": "Anschrift",
+    "vatOption": "Umsatzsteueroption",
+    "mea": "Miteigentumsanteile",
+    "allocationKeys": "Umlageschlüssel",
+    "noAllocation": "Keine Umlageschlüsselwerte hinterlegt.",
+    "key": "Schlüssel",
+    "value": "Wert",
+    "validFrom": "gültig ab",
+    "validTo": "gültig bis",
+    "customFields": "Zusatzfelder",
+    "legacy": "Notizen aus dem Altsystem",
+    "since": "seit",
+    "until": "bis",
+    "share": "Anteil",
+    "rent": "Miete (brutto, monatlich)",
+    "contract": "Vertrag",
+    "history": "Beendete Verträge",
+    "noHistory": "Keine beendeten Verträge.",
+    "kind": {
+      "ownership": "Eigentum",
+      "tenancy": "Mietvertrag"
+    },
+    "toProperty": "Objekte"
   },
   "DmsSearch": {
     "area": "DMS",

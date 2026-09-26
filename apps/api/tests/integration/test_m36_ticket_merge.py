@@ -187,7 +187,8 @@ def test_merge_into_existing_target(client: TestClient, world: World, app_engine
         src = _ok(client.get(f"{T}/{sid}", headers=h))
         assert src["status"] == "closed"
         assert src["merged_into_ticket_id"] == target["id"]
-        assert [e["kind"] for e in src["events"]] == ["merged_into"]
+        # Since 1.26.0 the merge also records the closing status with its resolution (M19-07).
+        assert sorted(e["kind"] for e in src["events"]) == ["merged_into", "status"]
         assert src["comments"] == []
         assert src["message_count"] == 0
         clock = _clock_state(app_engine, world, sid)

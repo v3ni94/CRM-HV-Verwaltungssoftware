@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { renderIntl } from "@/test/intl";
+import { jsonResponse, renderIntl } from "@/test/intl";
 
 import { MailList } from "./MailList";
 import type { Message } from "./MailWorkspace";
@@ -63,5 +63,64 @@ describe("MailList", () => {
     expect(screen.getByText("Ticket")).toBeInTheDocument();
     await userEvent.click(screen.getByText("Kautionsrückzahlung"));
     expect(onSelect).toHaveBeenCalledWith("m2");
+  });
+
+  const three = () => [
+    makeMessage({ id: "m1", subject: "Erste" }),
+    makeMessage({ id: "m2", subject: "Zweite" }),
+    makeMessage({ id: "m3", subject: "Dritte" }),
+  ];
+
+  it("toggles rows with Ctrl or Cmd click without opening them and clears on Escape", async () => {
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
+    renderIntl(<MailList messages={three()} selectedId={null} onSelect={onSelect} loading={false} />);
+    await user.keyboard("{Control>}");
+    await user.click(screen.getByText("Erste"));
+    await user.click(screen.getByText("Dritte"));
+    await user.keyboard("{/Control}");
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByTestId("mail-bulk-bar")).toHaveTextContent("2 ausgewählt");
+    await user.keyboard("{Meta>}");
+    await user.click(screen.getByText("Erste"));
+    await user.keyboard("{/Meta}");
+    expect(screen.getByTestId("mail-bulk-bar")).toHaveTextContent("1 ausgewählt");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByTestId("mail-bulk-bar")).not.toBeInTheDocument();
+  });
+
+  it("selects a range with Shift click from the last clicked row", async () => {
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
+    renderIntl(<MailList messages={three()} selectedId={null} onSelect={onSelect} loading={false} />);
+    await user.click(screen.getByText("Erste"));
+    expect(onSelect).toHaveBeenCalledWith("m1");
+    await user.keyboard("{Shift>}");
+    await user.click(screen.getByText("Dritte"));
+    await user.keyboard("{/Shift}");
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("mail-bulk-bar")).toHaveTextContent("3 ausgewählt");
+  });
+
+  it("selects all via the header checkbox and marks the selection done in one bulk call", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => jsonResponse({ changed: ["m1", "m2", "m3"], failed: [] }, 200));
+    const onBulkChanged = vi.fn();
+    const user = userEvent.setup();
+    renderIntl(
+      <MailList messages={three()} selectedId={null} onSelect={() => {}} loading={false} onBulkChanged={onBulkChanged} />,
+    );
+    await user.click(screen.getByRole("checkbox", { name: "Alle auswählen" }));
+    expect(screen.getByTestId("mail-bulk-bar")).toHaveTextContent("3 ausgewählt");
+    await user.click(screen.getByRole("button", { name: "Als erledigt markieren" }));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0]!;
+    expect(String(url)).toContain("/api/bff/mail/messages/bulk");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({ ids: ["m1", "m2", "m3"], action: "done" });
+    expect(onBulkChanged).toHaveBeenCalledWith(["m1", "m2", "m3"]);
+    expect(screen.queryByTestId("mail-bulk-bar")).not.toBeInTheDocument();
+    fetchSpy.mockRestore();
   });
 });

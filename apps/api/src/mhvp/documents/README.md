@@ -11,6 +11,13 @@ letter templates, PDF letters and serial letters.
   PDF), `defaults.py` (categories, free letter).
 * Tests: `apps/api/tests/integration/test_m6_documents.py`, `apps/api/tests/unit/test_m6_documents.py`.
 * Locks: deletion only with a released retention profile; nothing is sent from here.
+* Storage errors: `blobs.BlobStore` answers a missing configuration (`MHVP_S3_*`) or an
+  unreachable store with `MHVP-DOC-0007` (503, `application/problem+json`, ADR 0004); the
+  underlying boto error is logged, the upload aborts before an index row exists
+  (`services.store_document` writes the object first, then the row).
+* Drafts: an automatically generated letter (A83, `mhvp.automation`) is marked with
+  `Document.source_meta["is_draft"] = true`; `GET /documents?is_draft=true|false` filters on
+  that marker (missing key counts as not a draft) and `DocumentHit.is_draft` exposes it.
 
 ## M31: Paperless-Dokumente in Ticket- und Objektansicht
 
@@ -48,7 +55,7 @@ the select field `company_field_id`; the mapping option id to company is the tex
 `PUT /dms-connections/paperless`). Endpoints: `GET /dms-documents` (object number, company, full
 text; at least one criterion; 403 for legal-entity scoped memberships),
 `GET /dms-documents/companies`, query parameter `company` on the property and ticket lists.
-Unknown company or unconfigured field: 422. Assumption A-048.
+Unknown company or unconfigured field: 422. Assumption A-050.
 
 ## A30: Paperless post-consume webhook
 

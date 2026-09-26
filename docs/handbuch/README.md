@@ -1,8 +1,11 @@
 # Handbuch
 
-Stand: 26.09.2026, Version 1.22.1, Kapitel zu den Versionen 1.20 bis 1.22 ergänzt am
+Stand: 26.09.2026, Version 1.25.0. Kapitel zu den Versionen 1.20 bis 1.22 ergänzt am
 26.09.2026 (Tickets mit Mailverlauf und TNR#, Automatisierung, Portal, WEG, Kommunikation,
-Dienstleisterverträge, IBAN-Freigabe, Energieausweis, Belegeingang, Einstellungen).
+Dienstleisterverträge, IBAN-Freigabe, Energieausweis, Belegeingang, Einstellungen); Abschnitte
+zu 1.23.0 bis 1.25.0 ergänzt am 26.09.2026 (Erledigte ausblenden, Statusauswahl nach Rolle,
+Erledigungsnotiz und Lernen, Telefonassistenz Hallo Heidi, Wissen, Objektbezüge im Kontakt,
+Gmail-Archivierung, Listenimport mit Zuordnung, Rolle aus der Chatanweisung).
 Produktive Buchführung, Zahlungen und Abrechnungen sind gesperrt (Freigabestufen G1 bis G5,
 Abschnitt 18.0). Die Plattform zeigt keine Geldkennzahlen, solange G1 nicht freigegeben ist.
 
@@ -19,13 +22,13 @@ Grundlagen
 - [Start und Auswertungen](start-auswertungen.md)
 - [Objekte und Einheiten](objekte-einheiten.md) (mit Energieausweis und Schwarzem Brett)
 - [Verträge (Miete, WEG, SEV, Dienstleisterverträge mit Kündigungsfristen)](vertraege.md)
-- [Kontakte (mit IBAN-Freigabe im Vier-Augen-Prinzip)](kontakte.md)
+- [Kontakte (mit IBAN-Freigabe im Vier-Augen-Prinzip, Beziehungen zu Objekten und Einheiten)](kontakte.md)
 - [Kalender](kalender.md)
 
 Vorgänge und Kommunikation
 
-- [Tickets (Mailverlauf, Antworten mit TNR#, Anhänge, Wiedereröffnung, Terminvorschläge)](tickets.md)
-- [Mail](mail.md)
+- [Tickets (Mailverlauf, Antworten mit TNR#, Anhänge, Wiedereröffnung, Terminvorschläge, Erledigungsnotiz, Telefonassistenz)](tickets.md)
+- [Mail (Vorbereitung, Freigabe, Archivierung bei Abschluss, Telefonassistenz)](mail.md)
 - [Kommunikation (Telefonie-Anrufliste, Zustellungen, ausgehende Webhooks)](kommunikation.md)
 - [Automatisierung (Regeln Stufe 1 und 2, Zeitpläne, Testlauf, Protokoll)](automatisierung.md)
 - [Portal (Mieter, Eigentümer, Beirat, Dienstleister, Formulare, Schwarzes Brett, PWA)](portal.md)
@@ -51,11 +54,12 @@ Datenübernahme und Importe
 - [Datenübernahmen](datenuebernahmen.md)
 - [Objekte und Einheiten aus der Immoware24-Objektliste](import-objektdaten.md)
 - [Kontakte aus den Immoware24-Kontaktlisten](import-kontakte.md)
+- [Eigentümer und Mieter den Einheiten zuordnen (Listenimport, Zuordnung)](import-zuordnung.md)
 - [Abgleichbericht im Parallelbetrieb](import-abgleichbericht.md)
 
 System
 
-- [Einstellungen (Benutzer, Rollen, Postfächer, DMS, SLA, KI, Telefonie, Portalformulare, Automatisierung, WEG, DATEV)](einstellungen.md)
+- [Einstellungen (Benutzer, Rollen, Postfächer mit Telefonassistenz, DMS, SLA, KI, Wissen, Telefonie, Portalformulare, Automatisierung, WEG, DATEV)](einstellungen.md)
 
 Die folgenden Abschnitte fassen die Grundfunktionen der Startseite zusammen; Einzelheiten zu
 Auswertungen stehen im verlinkten Kapitel.
@@ -94,4 +98,4 @@ Die Schaltfläche Darstellung wechselt zwischen System, Hell und Dunkel. Die Wah
 
 ## Assistent und Importe
 
-Der Assistent schlägt aus Listen Kontakte, Objekte und Verträge vor; nichts wird ohne Bestätigung übernommen, jeder Import lässt sich rückgängig machen. Der Immoware24-Import führt durch Hochladen, Zuordnen der Spalten, Prüfen, Testlauf und Übernahme; die Immoware24-Listen (Objektdaten, Kontakte) werden mit Testlauf und Übernahme direkt angelegt. Vorhandene Daten werden nie überschrieben.
+Der Assistent schlägt aus Listen Kontakte, Objekte und Verträge vor; nichts wird ohne Bestätigung übernommen, jeder Import lässt sich rückgängig machen. Eine Rolle aus der Chatanweisung (zum Beispiel "Rolle bank hinterlegen", "als Mieter anlegen") wird beim Tabellenimport auf alle Kontakte gesetzt, zusätzlich zu einer Rolle aus der Tabelle; die Werte Bank und Verwalter sind seit 1.24.0 möglich. Ohne erkennbare Rolle fragt der Assistent nach (Welche Rolle sollen die Kontakte erhalten?). Für einen bereits gelaufenen Import lässt sich die Rolle im Importverlauf über Rolle nachträglich setzen ergänzen. Der Immoware24-Import führt durch Hochladen, Zuordnen der Spalten, Prüfen, Testlauf und Übernahme; die Immoware24-Listen (Objektdaten, Kontakte) werden mit Testlauf und Übernahme direkt angelegt. Vorhandene Daten werden nie überschrieben.

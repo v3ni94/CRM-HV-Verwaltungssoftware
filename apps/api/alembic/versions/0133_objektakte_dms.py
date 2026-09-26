@@ -2,8 +2,8 @@
 ``document.filed`` / ``object.taken_over``) and owner/tenant list import proposals. Tenant
 tables with RLS (ADR 0002). Filed documents themselves use the existing ``document`` table (M6).
 
-Revision ID: 0132
-Revises: 0131
+Revision ID: 0133
+Revises: 0132
 """
 
 from collections.abc import Sequence
@@ -14,8 +14,8 @@ from sqlalchemy.dialects import postgresql
 
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
-revision: str = "0132"
-down_revision: str | None = "0131"
+revision: str = "0133"
+down_revision: str | None = "0132"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

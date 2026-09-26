@@ -6215,6 +6215,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/imports/immoware24/lists/adressen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adressen der Objekte aus einer Adressliste (Testlauf oder Übernahme)
+         * @description CSV or XLSX with object number and street, house number, postal code, city. Fills only
+         *     empty fields; differences to filled fields are reported as conflicts, never overwritten.
+         */
+        post: operations["import_adressen_api_v1_imports_immoware24_lists_adressen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/lists/adressen-ableiten": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Straße und Hausnummer der Objekte aus dem Objektnamen (Testlauf oder Übernahme)
+         * @description Only objects with an empty street; only empty fields are filled
+         *     (handbuch/import-objektdaten.md).
+         */
+        post: operations["derive_adressen_api_v1_imports_immoware24_lists_adressen_ableiten_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/imports/immoware24/lists/kontakte": {
         parameters: {
             query?: never;
@@ -7329,6 +7371,27 @@ export interface paths {
         get: operations["messages_api_v1_mail_messages_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sammelaktion: mehrere Nachrichten erledigen
+         * @description Wie ``PATCH /messages/{id}`` mit ``status=done`` je Nachricht. Nicht vorhandene oder
+         *     nicht zugängliche Nachrichten landen ohne Unterscheidung in ``failed`` (kein Rückschluss).
+         */
+        post: operations["bulk_messages_api_v1_mail_messages_bulk_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8648,7 +8711,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Portalzugänge eines Kontakts
+         * @description Portal accounts of one contact of the own tenant (RLS); an unknown or foreign contact
+         *     yields an empty list, never 404, so the CRM can show "kein Zugang" without a probe.
+         */
+        get: operations["list_accounts_api_v1_portal_admin_accounts_get"];
         put?: never;
         /** Portalzugang einladen */
         post: operations["invite_api_v1_portal_admin_accounts_post"];
@@ -9943,7 +10011,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Einheiten, optional zum Stichtag */
+        /**
+         * Einheiten, optional zum Stichtag
+         * @description Units in natural order of their number ("1" < "2" < "10", "WE1" < "WE10").
+         *
+         *     With ``with_occupants=true`` each unit carries its current owner and tenant (at ``as_of``,
+         *     default today), loaded in one batch for the whole property.
+         */
         get: operations["list_units_api_v1_properties__property_id__units_get"];
         put?: never;
         /** Einheit anlegen */
@@ -11919,6 +11993,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/units/{unit_id}/occupants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eigentümer, Mieter und Vertragshistorie */
+        get: operations["get_unit_occupants_api_v1_units__unit_id__occupants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/units/{unit_id}/vat-options": {
         parameters: {
             query?: never;
@@ -12651,6 +12742,8 @@ export interface components {
             id: string;
             /** Key Code */
             key_code?: string | null;
+            /** Key Name */
+            key_name?: string | null;
             source: components["schemas"]["ValueSource"];
             /**
              * Unit Id
@@ -13139,6 +13232,11 @@ export interface components {
         };
         /** Body_flow_import_preview_api_v1_letting_flow_import_preview_post */
         Body_flow_import_preview_api_v1_letting_flow_import_preview_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_import_adressen_api_v1_imports_immoware24_lists_adressen_post */
+        Body_import_adressen_api_v1_imports_immoware24_lists_adressen_post: {
             /** File */
             file: string;
         };
@@ -14497,6 +14595,12 @@ export interface components {
             /** Display Name */
             display_name: string;
             /**
+             * Iban Pending
+             * @description Mindestens eine Bankverbindung wartet auf die Vier-Augen-Freigabe (M5-01).
+             * @default false
+             */
+            iban_pending: boolean;
+            /**
              * Id
              * Format: uuid
              */
@@ -15430,6 +15534,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Is Draft
+             * @default false
+             */
+            is_draft: boolean;
             /** Mime Type */
             mime_type: string;
             /** Snippet */
@@ -17724,6 +17833,13 @@ export interface components {
             /** Status */
             status?: string | null;
         };
+        /** MailBulkIn */
+        MailBulkIn: {
+            /** Action */
+            action: string;
+            /** Ids */
+            ids: string[];
+        };
         /** MailDraftPatchIn */
         MailDraftPatchIn: {
             /** Body */
@@ -18670,6 +18786,51 @@ export interface components {
          * @enum {string}
          */
         Occupant: "vacancy" | "contract";
+        /** OccupantMemberOut */
+        OccupantMemberOut: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Display Name */
+            display_name: string;
+            /** Share Percent */
+            share_percent?: string | null;
+        };
+        /**
+         * OccupantOut
+         * @description One ownership or tenancy contract of a unit with its party, for display.
+         */
+        OccupantOut: {
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /** Contract Number */
+            contract_number: string;
+            /** End Date */
+            end_date: string | null;
+            /** Kind */
+            kind: string;
+            /** Members */
+            members?: components["schemas"]["OccupantMemberOut"][];
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Party Name */
+            party_name: string;
+            /** Rent Gross */
+            rent_gross?: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
         /** OidcTokenResponse */
         OidcTokenResponse: {
             /** Access Token */
@@ -19217,6 +19378,42 @@ export interface components {
         PortalAccessIn: {
             /** Email */
             email?: string | null;
+        };
+        /**
+         * PortalAccountOut
+         * @description Portal account of a contact as the CRM sees it (A86). Never carries the invitation
+         *     hash, a password hash or a token; ``status`` is the account status of the model
+         *     (``invited`` until the invitation is accepted, then ``active``), ``locked`` mirrors a
+         *     temporary login lock of the platform user.
+         */
+        PortalAccountOut: {
+            /** Activated At */
+            activated_at: string | null;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Email */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invitation Expires At */
+            invitation_expires_at: string | null;
+            /**
+             * Invited At
+             * Format: date-time
+             */
+            invited_at: string;
+            /** Last Login At */
+            last_login_at: string | null;
+            /** Locked */
+            locked: boolean;
+            /** Status */
+            status: string;
         };
         /** PortalAppointmentIn */
         PortalAppointmentIn: {
@@ -20528,7 +20725,8 @@ export interface components {
         /**
          * ResolutionKind
          * @description Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``
-         *     setzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt.
+         *     setzt die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt; das
+         *     Statusereignis und das Lernbeispiel entstehen dabei wie bei jedem anderen Abschluss.
          * @enum {string}
          */
         ResolutionKind: "stammdaten_ergaenzt" | "handwerker_beauftragt" | "auskunft_erteilt" | "weitergeleitet" | "kein_handlungsbedarf" | "abgelehnt" | "zusammengefuehrt" | "sonstiges";
@@ -21008,6 +21206,8 @@ export interface components {
              * Format: uuid
              */
             provider_contact_id: string;
+            /** Provider Name */
+            provider_name: string;
             /**
              * Starts At
              * Format: date
@@ -21908,6 +22108,13 @@ export interface components {
             total_area_sqm?: number | string | null;
             unit_type: components["schemas"]["UnitType"];
         };
+        /** UnitOccupantsOut */
+        UnitOccupantsOut: {
+            /** History */
+            history?: components["schemas"]["OccupantOut"][];
+            owner?: components["schemas"]["OccupantOut"] | null;
+            tenant?: components["schemas"]["OccupantOut"] | null;
+        };
         /** UnitOut */
         UnitOut: {
             /** Allocation Values */
@@ -21957,6 +22164,7 @@ export interface components {
             location?: string | null;
             /** Number */
             number: string;
+            owner?: components["schemas"]["OccupantOut"] | null;
             /** Postal Code */
             postal_code?: string | null;
             /**
@@ -21968,6 +22176,7 @@ export interface components {
             rooms?: string | null;
             /** Street */
             street?: string | null;
+            tenant?: components["schemas"]["OccupantOut"] | null;
             /** Total Area Sqm */
             total_area_sqm?: string | null;
             unit_type: components["schemas"]["UnitType"];
@@ -22397,6 +22606,21 @@ export interface components {
             /** Mandate Signed On */
             mandate_signed_on: string | null;
             mandate_status: components["schemas"]["ContactMandateStatus"];
+            /**
+             * Rejected At
+             * @description Zeitpunkt der Ablehnung; nur bei approval_status rejected.
+             */
+            rejected_at?: string | null;
+            /**
+             * Rejected By
+             * @description Ablehnende Person; nur bei approval_status rejected gesetzt.
+             */
+            rejected_by?: string | null;
+            /**
+             * Rejected Reason
+             * @description Begründung der zweiten Person bei Ablehnung (M5-01).
+             */
+            rejected_reason?: string | null;
             /** Requested By */
             requested_by?: string | null;
             /** Sepa Enabled */
@@ -30771,6 +30995,8 @@ export interface operations {
                 entity_type?: string | null;
                 entity_id?: string | null;
                 category_id?: string | null;
+                /** @description true: nur Entwürfe (z. B. automatisch erzeugte Briefe), false: ohne Entwürfe, leer: kein Filter */
+                is_draft?: boolean | null;
                 page?: number;
                 page_size?: number;
             };
@@ -36333,6 +36559,76 @@ export interface operations {
             };
         };
     };
+    import_adressen_api_v1_imports_immoware24_lists_adressen_post: {
+        parameters: {
+            query?: {
+                mode?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_adressen_api_v1_imports_immoware24_lists_adressen_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    derive_adressen_api_v1_imports_immoware24_lists_adressen_ableiten_post: {
+        parameters: {
+            query?: {
+                mode?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     import_kontakte_api_v1_imports_immoware24_lists_kontakte_post: {
         parameters: {
             query?: {
@@ -38740,6 +39036,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_messages_api_v1_mail_messages_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailBulkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -41570,6 +41901,37 @@ export interface operations {
             };
         };
     };
+    list_accounts_api_v1_portal_admin_accounts_get: {
+        parameters: {
+            query: {
+                contact_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalAccountOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     invite_api_v1_portal_admin_accounts_post: {
         parameters: {
             query?: never;
@@ -44365,6 +44727,7 @@ export interface operations {
         parameters: {
             query?: {
                 as_of?: string | null;
+                with_occupants?: boolean;
             };
             header?: never;
             path: {
@@ -48867,6 +49230,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AllocationValueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_unit_occupants_api_v1_units__unit_id__occupants_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOccupantsOut"];
                 };
             };
             /** @description Validation Error */

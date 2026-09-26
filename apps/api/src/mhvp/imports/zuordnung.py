@@ -49,6 +49,7 @@ from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.logging import configure_logging, get_logger
 from mhvp.core.problems import ProblemError
+from mhvp.imports.kontakte import emit_roles_updated
 from mhvp.imports.objektdaten import (
     SOURCE_SYSTEM,
     PropertyRow,
@@ -63,6 +64,7 @@ OWNERSHIP_MANAGEMENT = frozenset({"WEG-Verwaltung", "WEG mit SE-Verwaltung"})
 TENANCY_MANAGEMENT = frozenset({"Mietverwaltung", "WEG mit SE-Verwaltung"})
 SEV_MANAGEMENT = "WEG mit SE-Verwaltung"
 VACANT = "leerstand"
+EVENT_SOURCE = "import.zuordnung"
 PAYMENT_TYPE = {ContractKind.OWNERSHIP: "hoa_fee", ContractKind.TENANCY: "rent"}
 ROLE = {
     ContractKind.OWNERSHIP: ContactRoleCode.EIGENTUEMER,
@@ -284,6 +286,7 @@ class _Ctx:
     index: ContactIndex
     report: Report
     touched_contacts: set[uuid.UUID] = field(default_factory=set)
+    roles_before: dict[uuid.UUID, list[str]] = field(default_factory=dict)
 
 
 def _where(prop: PropertyRow, unit: UnitRow) -> dict[str, Any]:
@@ -428,6 +431,7 @@ async def assign(
         report.counts[f"zahlungen_cent_{PAYMENT_TYPE[kind]}"] += amount_cents(amount)
     contact = await session.get(Contact, entry.contact_id)
     role = ROLE[kind].value
+    ctx.roles_before.setdefault(entry.contact_id, sorted(contact.roles or []))
     if role not in (contact.roles or []):
         contact.roles = sorted({*(contact.roles or []), role})
     ctx.touched_contacts.add(entry.contact_id)
@@ -501,6 +505,17 @@ async def apply_rows(
     for contact_id in sorted(ctx.touched_contacts):
         contact = await session.get(Contact, contact_id)
         await recompute_derived_roles(session, contact)
+        # A87: one ``contact.updated`` per contact whose roles changed in this run (same event
+        # as the manual path); the outbox row is rolled back with a test run.
+        if await emit_roles_updated(
+            session,
+            tenant_id,
+            user_id,
+            contact,
+            ctx.roles_before.get(contact_id, []),
+            source=EVENT_SOURCE,
+        ):
+            report.counts["kontakte_aktualisiert"] += 1
     await session.flush()
     return report
 

@@ -128,7 +128,8 @@ test.describe("portal damage report @backend", () => {
     await link.click();
     await expect(page).toHaveURL(/\/meldungen\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(title);
-    await expect(page.getByText(`Anhänge: fenster-${run}.png`)).toBeVisible();
+    // Attachments are listed under the heading "Anhänge" as a list (one item per file).
+    await expect(page.getByRole("list", { name: "Anhänge der Meldung" }).getByText(`fenster-${run}.png`)).toBeVisible();
 
     // The CRM ticket carries the photo as an attachment document.
     const tickets = await call<{ id: string; title: string }[]>("GET", `/tickets?q=${encodeURIComponent(run)}`);

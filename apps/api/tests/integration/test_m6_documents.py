@@ -4,6 +4,7 @@ serial letters, mirroring to Paperless and Google Drive (6.7, 6.9.5, 11)."""
 import asyncio
 import io
 import json
+import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -636,3 +637,92 @@ def test_d43_original_locked_while_only_ocr_text_exists(client: TestClient, worl
     assert logged, "refusal must be logged (D46)"
     assert "Aufbewahrungsprofil" in logged[0]["payload"]["reason"]
     assert logged[0]["actor_user_id"] == str(world.users["m6admin"])
+
+
+def test_is_draft_filter_and_tenant_separation(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """A83: drafts are marked in ``source_meta["is_draft"]``; ``is_draft`` filters on it and
+    another tenant never sees them."""
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.documents.models import Document
+
+    h = bearer(login(client, world, "m6admin"))
+    draft = _ok(_upload(client, h, "entwurf.txt", b"Entwurf", "text/plain", title="Entwurf X"))
+    final = _ok(_upload(client, h, "brief.txt", b"Brief", "text/plain", title="Brief X"))
+
+    async def mark() -> None:
+        engine = create_app_engine(_settings(database, redis_url))
+        try:
+            async with tenant_transaction(create_session_factory(engine), world.tenant_a) as tx:
+                row = await tx.get(Document, uuid.UUID(draft["id"]))
+                assert row is not None
+                row.source_meta = {"is_draft": True, "automation_rule_name": "Test"}
+        finally:
+            await engine.dispose()
+
+    asyncio.run(mark())
+
+    def ids(headers: dict[str, str], **query: Any) -> set[str]:
+        page = _ok(client.get("/api/v1/documents", params=query, headers=headers), 200)
+        return {item["id"] for item in page["items"]}
+
+    assert {draft["id"], final["id"]} <= ids(h, page_size=200)
+    only_drafts = ids(h, is_draft="true", page_size=200)
+    assert draft["id"] in only_drafts
+    assert final["id"] not in only_drafts
+    without = ids(h, is_draft="false", page_size=200)
+    assert final["id"] in without
+    assert draft["id"] not in without
+    hits = _ok(client.get("/api/v1/documents", params={"is_draft": "true"}, headers=h), 200)
+    assert all(item["is_draft"] is True for item in hits["items"])
+    assert client.get("/api/v1/documents", params={"is_draft": "x"}, headers=h).status_code == 422
+    other = bearer(login(client, world, "m6other"))
+    assert not ids(other, is_draft="true", page_size=200) & {draft["id"]}
+    assert not ids(other, page_size=200) & {draft["id"], final["id"]}
+
+
+def _document_total(client: TestClient, h: dict[str, str]) -> int:
+    return int(_ok(client.get("/api/v1/documents", headers=h), 200)["total"])
+
+
+def test_upload_answers_503_when_bucket_is_missing(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """ADR 0004: an unreachable object store answers MHVP-DOC-0007 and leaves no document row."""
+    h = bearer(login(client, world, "m6admin"))
+    before = _document_total(client, h)
+    boto3.client("s3", region_name="us-east-1").delete_bucket(Bucket=BUCKET)
+    try:
+        response = _upload(client, h, "beleg.txt", b"Beleg", "text/plain", title="Speicher weg")
+    finally:
+        boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
+    assert response.status_code == 503, response.text
+    assert response.headers["content-type"].startswith("application/problem+json")
+    body = response.json()
+    assert body["code"] == "MHVP-DOC-0007"
+    assert body["status"] == 503
+    assert "nicht erreichbar" in body["detail"]
+    assert "testing" not in response.text  # no credentials in the problem
+    assert _document_total(client, h) == before
+    assert not _ok(client.get("/api/v1/documents", params={"q": "Speicher weg"}, headers=h), 200)[
+        "items"
+    ]
+
+
+def test_upload_answers_503_when_storage_is_not_configured(
+    world: World, database: Database, redis_url: str
+) -> None:
+    """Without MHVP_S3_* the upload is refused cleanly (503, MHVP-DOC-0007), no row written."""
+    settings = base_settings(database, redis_url, document_max_bytes=200_000)
+    assert not settings.s3_configured
+    with TestClient(create_app(settings)) as c:
+        h = bearer(login(c, world, "m6admin"))
+        before = _document_total(c, h)
+        response = _upload(c, h, "beleg.txt", b"Beleg", "text/plain", title="Kein Speicher")
+        assert response.status_code == 503, response.text
+        body = response.json()
+        assert body["code"] == "MHVP-DOC-0007"
+        assert "nicht eingerichtet" in body["detail"]
+        assert _document_total(c, h) == before

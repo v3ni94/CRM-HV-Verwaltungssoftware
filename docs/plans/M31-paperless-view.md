@@ -87,7 +87,7 @@ lesend (Frage 8.3 offen, kein Upload).
   1523, Filteraufbau, Nachprüfung, Konfigurationsprüfung), `tests/integration/test_m31_dms.py`
   (Gesellschaftsfilter an Objekt und Ticket, Suche, Validierung, Berechtigung),
   `DmsDocumentsPanel.test.tsx`.
-* Annahme A-048 (`docs/ASSUMPTIONS.md`): Vergleich der Options-ID mit `exact`, Gesamtzahl nach
+* Annahme A-050 (`docs/ASSUMPTIONS.md`): Vergleich der Options-ID mit `exact`, Gesamtzahl nach
   lokaler Nachprüfung nur für die aktuelle Seite korrigiert.
 
 ## Stand 26.09.2026

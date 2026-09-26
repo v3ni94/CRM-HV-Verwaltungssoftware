@@ -117,6 +117,9 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M9-06](M9-06-tagesjobs.md) | Tagesjobs Tagesübersicht und Fristenliste: Orientierung, Vorfrist aus Einstellungen, keine Rechtsfristen | M9, 15.1 | implemented, not accepted |
 | [A61](A61-einsicht.md) | Einsichtsanfragen außerhalb des Portals protokollieren | 14, M25 (PÜ12, PÜ13) | implemented, not accepted |
 | [M19-06](M19-06-tnr.md) | Ticketnummer im Betreff (TNR#<nummer>), Zuordnung eingehender Mails nur bei bekanntem Absender, Wiedereröffnung, Postfachzugriff je Mail | M19, M20, 6.6 | implemented, not accepted |
+| [M19-07](M19-07-erledigungsnotiz.md) | Erledigungsnotiz beim Abschluss (feste Artenliste plus Freitext, auch Bulk und Zusammenführen), Lernbeispiel je Abschluss ohne KI-Lauf, Hinweis "Bei ähnlichen Vorgängen wurde" | M19, M20, 6.6, 9.1 | implemented, not accepted (1.24.0, Migration 0130; Datenschutz M7-04 offen) |
+| [M19-08](M19-08-anrufassistenz.md) | Anruf-Mails der Telefonassistenz (Hallo Heidi): deterministische Erkennung und Zuordnung, KI füllt nur Lücken, neue Rufnummer nur als Vorschlag mit Antwortentwurf, kein Versand | M19, M20, 9.1, 13.5 | implemented, not accepted (1.24.0, Migration 0131; M19-03 offen) |
+| [M19-09](M19-09-erledigte-ausgeblendet.md) | Erledigte Vorgänge in Ticket- und Mailübersicht standardmäßig ausgeblendet (`include_closed`), Administratoren setzen jeden Status (`admin_override`), Abschlussprüfungen bleiben | M19, M20, 6.6 | implemented, not accepted (1.23.0 und 1.24.0) |
 | [M20-06](M20-06-mail-versand-nachweis.md) | Mailversand nur mit Nachweis: Idempotenzschlüssel je Versand, kein zweiter Versand, Weiterleitung erst nach Commit, Postfach-Soft-Delete | M20, 6.6 | implemented, not accepted |
 
 Index checked against the files in this folder on 26.09.2026: every rule file has one row above (`M19-02` and `M25-01` were added, `M9-02` and `W13` updated).

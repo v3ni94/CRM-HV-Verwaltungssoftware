@@ -21,3 +21,12 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 UNION ALL statement; `GET /parties` loads the members of all parties in one query
 (`_parties_out`). Index `contact(tenant_id, display_name)` for the list ordering (migration
 0127). Measurements in `docs/reviews/2026-09-26-performance.md`.
+
+## Four eyes release of IBANs (M5-01, addendum 26.09.2026)
+
+`decide_bank_account` stores the rejection reason on the row (`rejected_reason`, migration
+0132) in addition to the audit event. `bank_account_out` builds `BankAccountOut` and mirrors
+`decided_by` and `decided_at` of a rejected row as `rejected_by` and `rejected_at`.
+`summaries` marks contacts with at least one pending bank account (`iban_pending`) inside the
+existing UNION ALL statement, so the contacts list shows "IBAN wartet auf Freigabe" without a
+query per contact. Rule addendum in `docs/rules/M19-05.md`.

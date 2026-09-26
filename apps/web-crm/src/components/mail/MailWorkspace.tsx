@@ -190,6 +190,13 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
     loadPendingCount();
   };
 
+  const onBulkChanged = (changed: string[]) => {
+    if (changed.length === 0) return;
+    if (selectedId && changed.includes(selectedId)) setDetail(null);
+    refresh();
+    loadPendingCount();
+  };
+
   const tabs: { key: Tab; label: string; badge?: number }[] = [
     { key: "inbox", label: t("tabs.inbox") },
     { key: "drafts", label: t("tabs.drafts") },
@@ -266,7 +273,7 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
       ) : null}
       <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className={`min-w-0 ${selectedId ? "hidden md:block" : ""}`}>
-          <MailList messages={messages} selectedId={selectedId} onSelect={setSelectedId} loading={busy && messages === null} />
+          <MailList messages={messages} selectedId={selectedId} onSelect={setSelectedId} loading={busy && messages === null} onBulkChanged={onBulkChanged} />
         </div>
         <div className={`min-w-0 ${selectedId ? "" : "hidden md:block"}`}>
           {selectedId ? (

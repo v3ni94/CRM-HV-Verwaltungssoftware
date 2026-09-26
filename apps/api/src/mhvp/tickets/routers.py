@@ -1543,22 +1543,39 @@ async def merge_tickets(
                 principal.user_id,
                 {"ticket_id": str(target.id), "number": target.number},
             )
-            t.status = TicketStatus.CLOSED
-            t.resolved_at = datetime.now(UTC)
-            t.merged_into_ticket_id = target.id
-            t.resolution_kind = (
+            # Same recording as transition_status (M19-07): status event with the resolution
+            # and a learning example, also for the default "zusammengefuehrt" resolution, so
+            # the audit trail of a merged source reads like any other closed ticket.
+            previous_status = t.status
+            resolution_kind = (
                 body.resolution.kind.value
                 if body.resolution
                 else ResolutionKind.ZUSAMMENGEFUEHRT.value
             )
-            t.resolution_note = (
+            resolution_note = (
                 body.resolution.note
                 if body.resolution
                 else f"Zusammengeführt in Ticket {target.number}."
             )
+            await _event(
+                session,
+                t,
+                "status",
+                principal.user_id,
+                {
+                    "from": previous_status.value,
+                    "to": TicketStatus.CLOSED.value,
+                    "merge": True,
+                    "resolution": {"kind": resolution_kind, "note": resolution_note},
+                },
+            )
+            t.status = TicketStatus.CLOSED
+            t.resolved_at = datetime.now(UTC)
+            t.merged_into_ticket_id = target.id
+            t.resolution_kind = resolution_kind
+            t.resolution_note = resolution_note
             t.resolved_by = principal.user_id
-            if body.resolution:
-                await record_resolution_example(session, t)
+            await record_resolution_example(session, t)
             clock = await session.scalar(select(SlaClock).where(SlaClock.ticket_id == t.id))
             if clock is not None:
                 await mark_resolved(session, clock)
