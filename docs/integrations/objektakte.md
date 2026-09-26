@@ -172,6 +172,8 @@ Einrichtung:
    API und Worker neu starten.
 
 Grenzen: Die Zuordnung zu Eigentümer- und Mieterakten in objektakte setzt voraus, dass dort
-Einheiten und Personen des Objekts bekannt sind; die Hinweise des Uploads werden gespeichert
-und in einem folgenden Schritt für diese Zuordnung genutzt. Bis dahin entscheidet die
-Klassifikation von objektakte allein.
+Einheiten und Personen des Objekts bekannt sind. Die Einheit aus dem Upload (`unit_labels`)
+wirkt, wenn objektakte die Einheit unter demselben Bezeichner führt und der Text selbst keine
+Einheit nennt. Kontakt-IDs werden gespeichert, wirken aber noch nicht, weil objektakte die
+Personen nicht mit ihrer CRM-Kennung führt; die Eigentümer und Mieter kommen dort bisher über
+den Listenimport (Immoware24-Export) hinein.
