@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 
+import { MajorityCheckLine, type MajorityCheck } from "@/components/hoa/MajorityCheckLine";
 import { formatDate } from "@/lib/format";
 
 export type ResolutionRow = {
@@ -10,6 +11,7 @@ export type ResolutionRow = {
   status: string;
   kind: string;
   majority_basis?: string | null;
+  majority_check?: MajorityCheck | null;
 };
 
 /** Beschluss-Sammlung (M24, M25): number, date, subject, status; read only. */
@@ -33,7 +35,10 @@ export function ResolutionTable({ rows }: { rows: ResolutionRow[] }) {
           <tr key={r.id}>
             <td className="tabular-nums">{r.number}</td>
             <td>{formatDate(r.decided_on)}</td>
-            <td>{r.subject}</td>
+            <td>
+              {r.subject}
+              {r.majority_check ? <MajorityCheckLine check={r.majority_check} /> : null}
+            </td>
             <td>{t(`kinds.${r.kind}`)}</td>
             <td>{t(`statuses.${r.status}`)}</td>
           </tr>

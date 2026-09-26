@@ -215,6 +215,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^hoa\/(plans|statements|meetings|resolutions|special-levies)$/ },
   { method: "POST", pattern: new RegExp(`^hoa/special-levies/${ID}/(calculate|resolve|apply|amend)$`) },
   { method: "POST", pattern: /^hoa\/majority-rules$/ },
+  // Mehrheitsregeln je Beschlussgegenstand (M25-01): Prüfung nur als Anzeige, keine Statusänderung.
+  { method: "GET", pattern: /^hoa\/majority-rules\/subject-rules$/ },
+  { method: "POST", pattern: /^hoa\/majority-rules\/subject-rules$/ },
+  { method: "PUT", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/majority-rules/subject-rules/${ID}/approve$`) },
+  { method: "GET", pattern: new RegExp(`^hoa/resolutions/${ID}/majority-check$`) },
   { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/(items|calculate|transition|apply)$`) },
   { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(costs|calculate|transition|post|new-version)$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },

@@ -4310,6 +4310,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/majority-rules/subject-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mehrheitsregeln je Beschlussgegenstand */
+        get: operations["list_subject_rules_api_v1_hoa_majority_rules_subject_rules_get"];
+        put?: never;
+        /** Mehrheitsregel je Beschlussgegenstand anlegen */
+        post: operations["create_subject_rule_api_v1_hoa_majority_rules_subject_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/majority-rules/subject-rules/{rule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Mehrheitsregel ändern (Freigabe entfällt) */
+        put: operations["update_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__put"];
+        post?: never;
+        /** Mehrheitsregel deaktivieren (bleibt nachvollziehbar) */
+        delete: operations["delete_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/majority-rules/subject-rules/{rule_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mehrheitsregel fachlich freigeben (zweite Person) */
+        post: operations["approve_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/meetings": {
         parameters: {
             query?: never;
@@ -4577,6 +4630,23 @@ export interface paths {
         head?: never;
         /** Wirksamkeitsstatus ändern (z. B. bestandskräftig, angefochten) */
         patch: operations["patch_resolution_api_v1_hoa_resolutions__resolution_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/hoa/resolutions/{resolution_id}/majority-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mehrheitsprüfung eines Beschlusses (nur Anzeige, keine Statusänderung) */
+        get: operations["resolution_majority_check_api_v1_hoa_resolutions__resolution_id__majority_check_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/hoa/special-levies": {
@@ -10733,6 +10803,8 @@ export interface components {
             outcome: string;
             /** Snapshot Hash */
             snapshot_hash?: string | null;
+            /** Subject Kind */
+            subject_kind?: string | null;
         };
         /** ApiKeyCreate */
         ApiKeyCreate: {
@@ -13982,8 +14054,11 @@ export interface components {
             subject: string;
             /** Subject Id */
             subject_id?: string | null;
+            /** Subject Kind */
+            subject_kind?: string | null;
             /** Subject Type */
             subject_type?: string | null;
+            votes?: components["schemas"]["HoaVotesIn"] | null;
             /** Wording */
             wording: string;
         };
@@ -14017,6 +14092,23 @@ export interface components {
             /** Year */
             year: number;
         };
+        /** HoaSubjectRuleIn */
+        HoaSubjectRuleIn: {
+            /** Counting Basis */
+            counting_basis: string;
+            /** Custom Denominator */
+            custom_denominator?: number | null;
+            /** Custom Numerator */
+            custom_numerator?: number | null;
+            /** Legal Entity Id */
+            legal_entity_id?: string | null;
+            /** Majority Type */
+            majority_type: string;
+            /** Source */
+            source: string;
+            /** Subject Kind */
+            subject_kind: string;
+        };
         /** HoaTransitionIn */
         HoaTransitionIn: {
             /** Note */
@@ -14024,6 +14116,25 @@ export interface components {
             /** Resolution Id */
             resolution_id?: string | null;
             target: components["schemas"]["StatementStatus"];
+        };
+        /**
+         * HoaVotesIn
+         * @description Recorded tally of an external meeting for the majority check (M25-01).
+         */
+        HoaVotesIn: {
+            /**
+             * Abstain
+             * @default 0
+             */
+            abstain: number | string;
+            /** Eligible */
+            eligible?: number | string | null;
+            /** No */
+            no: number | string;
+            /** Principle */
+            principle: string;
+            /** Yes */
+            yes: number | string;
         };
         /** HoldIn */
         HoldIn: {
@@ -28942,6 +29053,173 @@ export interface operations {
             };
         };
     };
+    list_subject_rules_api_v1_hoa_majority_rules_subject_rules_get: {
+        parameters: {
+            query?: {
+                legal_entity_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_subject_rule_api_v1_hoa_majority_rules_subject_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaSubjectRuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaSubjectRuleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_subject_rule_api_v1_hoa_majority_rules_subject_rules__rule_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_meetings_api_v1_hoa_meetings_get: {
         parameters: {
             query: {
@@ -29547,6 +29825,39 @@ export interface operations {
                 "application/json": components["schemas"]["HoaResolutionPatch"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolution_majority_check_api_v1_hoa_resolutions__resolution_id__majority_check_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resolution_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

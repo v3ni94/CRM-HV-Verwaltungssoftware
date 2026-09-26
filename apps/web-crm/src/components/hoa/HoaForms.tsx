@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { MajorityCheckLine, type MajorityCheck } from "@/components/hoa/MajorityCheckLine";
+import { SUBJECT_KINDS } from "@/components/settings/MajorityRulesAdmin";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
@@ -402,6 +404,7 @@ export function MeetingPanel({
   agenda: { id: string; position: number; title: string; majority: string; resolution: { number: number; status: string } | null }[];
 }) {
   const t = useTranslations("HoaWork");
+  const tr = useTranslations("MajorityRules");
   const { busy, error, call } = useCall();
   const [title, setTitle] = useState("");
   const [proposal, setProposal] = useState("");
@@ -410,6 +413,16 @@ export function MeetingPanel({
   const [urgency, setUrgency] = useState("");
   const [tallies, setTallies] = useState<Record<string, { yes: string; no: string; abstain: string; proposal: string | null; manual_check: boolean }>>({});
   const [basis, setBasis] = useState(t("simpleMajority"));
+  const [subjectKinds, setSubjectKinds] = useState<Record<string, string>>({});
+  const [checks, setChecks] = useState<Record<string, MajorityCheck | null>>({});
+  const announce = async (itemId: string, outcome: string) => {
+    const res = await call<{ majority_check: MajorityCheck | null }>(
+      `agenda/${itemId}/announce`,
+      { outcome, majority_basis: basis, ...(subjectKinds[itemId] ? { subject_kind: subjectKinds[itemId] } : {}) },
+      t("confirmAnnounce"),
+    );
+    if (res) setChecks((prev) => ({ ...prev, [itemId]: res.majority_check }));
+  };
   const tally = async (itemId: string) => {
     const res = await bff<{ yes: string; no: string; abstain: string; proposal: string | null; manual_check: boolean }>(
       `/api/bff/hoa/agenda/${itemId}/tally`,
@@ -427,7 +440,10 @@ export function MeetingPanel({
                 TOP {a.position}: {a.title}
               </div>
               {a.resolution ? (
-                <div className="text-muted">{t("announced", { number: a.resolution.number, status: t(`resolutionStatus.${a.resolution.status}`) })}</div>
+                <div className="text-muted">
+                  {t("announced", { number: a.resolution.number, status: t(`resolutionStatus.${a.resolution.status}`) })}
+                  {checks[a.id] ? <MajorityCheckLine check={checks[a.id] as MajorityCheck} /> : null}
+                </div>
               ) : status === "held" ? (
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <button type="button" className={ui.button} onClick={() => tally(a.id)}>
@@ -439,12 +455,28 @@ export function MeetingPanel({
                       {r.manual_check ? ` · ${t("manualCheck")}` : ""}
                     </span>
                   ) : null}
+                  <label className="flex items-center gap-1">
+                    <span className={ui.label}>{t("subjectKind")}</span>
+                    <select
+                      className={ui.input}
+                      aria-label={t("subjectKind")}
+                      value={subjectKinds[a.id] ?? ""}
+                      onChange={(e) => setSubjectKinds((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                    >
+                      <option value="">{t("subjectKindNone")}</option>
+                      {SUBJECT_KINDS.map((k) => (
+                        <option key={k} value={k}>
+                          {tr(`subjectKinds.${k}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   {r?.proposal ? (
                     <button
                       type="button"
                       className={ui.primary}
                       disabled={busy}
-                      onClick={() => call(`agenda/${a.id}/announce`, { outcome: r.proposal, majority_basis: basis }, t("confirmAnnounce"))}
+                      onClick={() => announce(a.id, r.proposal as string)}
                     >
                       {t("announce", { outcome: t(`resolutionStatus.${r.proposal}`) })}
                     </button>

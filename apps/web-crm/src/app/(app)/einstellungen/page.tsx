@@ -24,6 +24,7 @@ export default async function SettingsPage() {
     { href: "/einstellungen/postfaecher", title: t("mail.title"), description: t("mail.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/dms", title: t("dms.title"), description: t("dms.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/bank", title: t("bank.title"), description: t("bank.description"), show: can("tenant_settings:update") },
+    { href: "/einstellungen/weg", title: t("weg.title"), description: t("weg.description"), show: can("accounting:read") },
     { href: "/einstellungen/sla", title: t("sla.title"), description: t("sla.description"), show: can("sla:read") },
     {
       href: "/einstellungen/ticketvorlagen",
