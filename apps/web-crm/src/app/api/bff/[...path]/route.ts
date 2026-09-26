@@ -325,6 +325,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(participants|meters|rooms|defects|keys|items|notes)/${ID}$`) },
   { method: "GET", pattern: /^properties$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/units$`) },
+  { method: "GET", pattern: new RegExp(`^units/${ID}(/occupants|/allocation-values)?$`) },
   // Makler (M28 stage 4, docs/rules/M28-01.md): FLOW SQL dump import preview and apply.
   { method: "POST", pattern: /^letting\/flow-import\/preview$/ },
   { method: "GET", pattern: new RegExp(`^letting/flow-import/${ID}$`) },

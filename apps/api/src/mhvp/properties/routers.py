@@ -1,8 +1,10 @@
 """Property endpoints (/api/v1/properties, units, buildings, meters, catalogues)."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Annotated, Any
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from sqlalchemy import func, or_, select
@@ -10,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from mhvp.banking import account_selection
 from mhvp.banking.routers import BankAccountListOut, account_list_out
-from mhvp.contacts.models import Contact, ContactBankAccount, Party
+from mhvp.contacts.models import Contact, ContactBankAccount, Party, PartyMember
 from mhvp.contacts.services import recompute_for_party
 from mhvp.contacts.validation import mask_iban
 from mhvp.core import crypto
@@ -310,7 +312,7 @@ async def _unit_out(session: Any, unit: Unit, as_of: date | None) -> s.UnitOut:
     await session.refresh(unit)
     out = s.UnitOut.model_validate(unit)
     query = (
-        select(UnitAllocationValue, AllocationKey.code)
+        select(UnitAllocationValue, AllocationKey.code, AllocationKey.name)
         .join(AllocationKey, AllocationKey.id == UnitAllocationValue.allocation_key_id)
         .where(UnitAllocationValue.unit_id == unit.id)
     )
@@ -324,11 +326,87 @@ async def _unit_out(session: Any, unit: Unit, as_of: date | None) -> s.UnitOut:
         )
     ).all()
     out.allocation_values = [
-        s.AllocationValueOut.model_validate(v).model_copy(update={"key_code": code})
-        for v, code in rows
+        s.AllocationValueOut.model_validate(v).model_copy(
+            update={"key_code": code, "key_name": name}
+        )
+        for v, code, name in rows
     ]
     out.vat_option = await session.scalar(vat.order_by(UnitVatOption.valid_from.desc()).limit(1))
     return out
+
+
+async def _occupants(
+    session: Any, unit_ids: list[uuid.UUID], as_of: date
+) -> dict[uuid.UUID, list[tuple[s.OccupantOut, bool]]]:
+    """All contracts of the given units with party members and current rent.
+
+    One query for contracts, one for members and one for payments, independent of the number
+    of units. Returns per unit a list of (occupant, is_current_at_as_of), newest first.
+    """
+    from mhvp.contracts.models import Contract, ContractPayment
+
+    result: dict[uuid.UUID, list[tuple[s.OccupantOut, bool]]] = {u: [] for u in unit_ids}
+    if not unit_ids:
+        return result
+    rows = (
+        await session.execute(
+            select(Contract, Party.name)
+            .join(Party, Party.id == Contract.party_id)
+            .where(Contract.unit_id.in_(unit_ids))
+            .order_by(Contract.start_date.desc())
+        )
+    ).all()
+    party_ids = {c.party_id for c, _ in rows}
+    members: dict[uuid.UUID, list[s.OccupantMemberOut]] = {}
+    if party_ids:
+        for m, name in (
+            await session.execute(
+                select(PartyMember, Contact.display_name)
+                .join(Contact, Contact.id == PartyMember.contact_id)
+                .where(PartyMember.party_id.in_(party_ids))
+                .order_by(Contact.display_name)
+            )
+        ).all():
+            members.setdefault(m.party_id, []).append(
+                s.OccupantMemberOut(
+                    contact_id=m.contact_id, display_name=name, share_percent=m.share_percent
+                )
+            )
+    rent: dict[uuid.UUID, Decimal] = {}
+    tenancy_ids = [c.id for c, _ in rows if str(c.kind) == "tenancy"]
+    if tenancy_ids:
+        for p in (
+            await session.scalars(
+                select(ContractPayment).where(
+                    ContractPayment.contract_id.in_(tenancy_ids),
+                    svc.valid_at(ContractPayment, as_of),
+                )
+            )
+        ).all():
+            rent[p.contract_id] = rent.get(p.contract_id, Decimal(0)) + p.gross
+    for c, party_name in rows:
+        current = c.start_date <= as_of and (c.end_date is None or c.end_date >= as_of)
+        occ = s.OccupantOut(
+            contract_id=c.id,
+            contract_number=c.number,
+            kind=str(c.kind),
+            party_id=c.party_id,
+            party_name=party_name,
+            start_date=c.start_date,
+            end_date=c.end_date,
+            members=members.get(c.party_id, []),
+            rent_gross=rent.get(c.id),
+        )
+        result[c.unit_id].append((occ, current))
+    return result
+
+
+def _today() -> date:
+    return datetime.now(ZoneInfo("Europe/Berlin")).date()
+
+
+def _current(entries: list[tuple[s.OccupantOut, bool]], kind: str) -> s.OccupantOut | None:
+    return next((o for o, cur in entries if cur and o.kind == kind), None)
 
 
 @router.get("/properties/{property_id}/units", summary="Einheiten, optional zum Stichtag")
@@ -336,15 +414,44 @@ async def list_units(
     property_id: uuid.UUID,
     request: Request,
     as_of: date | None = None,
+    with_occupants: bool = False,
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.UnitOut]:
+    """Units in natural order of their number ("1" < "2" < "10", "WE1" < "WE10").
+
+    With ``with_occupants=true`` each unit carries its current owner and tenant (at ``as_of``,
+    default today), loaded in one batch for the whole property.
+    """
     async with tenant_tx(request, principal) as session:
-        units = (
-            await session.scalars(
-                select(Unit).where(Unit.property_id == property_id).order_by(Unit.number)
-            )
-        ).all()
-        return [await _unit_out(session, u, as_of) for u in units]
+        units = sorted(
+            (await session.scalars(select(Unit).where(Unit.property_id == property_id))).all(),
+            key=lambda u: svc.natural_key(u.number),
+        )
+        out = [await _unit_out(session, u, as_of) for u in units]
+        if with_occupants:
+            occ = await _occupants(session, [u.id for u in units], as_of or _today())
+            for o in out:
+                o.owner = _current(occ[o.id], "ownership")
+                o.tenant = _current(occ[o.id], "tenancy")
+        return out
+
+
+@router.get("/units/{unit_id}/occupants", summary="Eigentümer, Mieter und Vertragshistorie")
+async def get_unit_occupants(
+    unit_id: uuid.UUID,
+    request: Request,
+    as_of: date | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> s.UnitOccupantsOut:
+    async with tenant_tx(request, principal) as session:
+        await _get(session, Unit, unit_id)
+        day = as_of or _today()
+        entries = (await _occupants(session, [unit_id], day))[unit_id]
+        return s.UnitOccupantsOut(
+            owner=_current(entries, "ownership"),
+            tenant=_current(entries, "tenancy"),
+            history=[o for o, cur in entries if not cur and o.start_date <= day],
+        )
 
 
 @router.post("/properties/{property_id}/units", status_code=201, summary="Einheit anlegen")
