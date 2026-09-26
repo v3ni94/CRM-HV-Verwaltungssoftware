@@ -274,27 +274,70 @@ def learn_playbook(tenant_id: str, ticket_id: str) -> str:
     )
 
 
+async def _archive_messages(
+    settings: Settings, session: Any, messages: list[Any]
+) -> dict[str, int]:
+    """Entfernt fuer jede Gmail-Nachricht das Label INBOX, sofern das Postfach das wuenscht
+    (``archive_on_ticket_done``). Fehlt dem Postfach ``gmail.modify``, wird das vermerkt."""
+    from mhvp.communication.gmail import GmailScopeMissingError, make_client, oauth_client
+    from mhvp.communication.models import Mailbox
+
+    counts = {"archived": 0, "skipped": 0, "failed": 0}
+    if not messages:
+        return counts
+    client_id, client_secret = await oauth_client(session, settings)
+    mailboxes: dict[uuid.UUID, Mailbox] = {}
+    for message in messages:
+        if message.mailbox_id is None or message.gmail_message_id is None:
+            counts["skipped"] += 1
+            continue
+        mailbox = mailboxes.get(message.mailbox_id)
+        if mailbox is None:
+            mailbox = await session.get(Mailbox, message.mailbox_id)
+            if mailbox is not None:
+                mailboxes[message.mailbox_id] = mailbox
+        if mailbox is None or not mailbox.archive_on_ticket_done:
+            counts["skipped"] += 1
+            continue
+        try:
+            client = make_client(client_id, client_secret, mailbox)
+        except GmailError:
+            counts["skipped"] += 1
+            continue
+        try:
+            await client.archive(message.gmail_message_id)
+            counts["archived"] += 1
+        except GmailScopeMissingError as exc:
+            mailbox.archive_scope_missing = True
+            mailbox.last_error = str(exc)[:1000]
+            counts["failed"] += 1
+        except GmailError as exc:
+            counts["failed"] += 1
+            log.warning(
+                "gmail archive failed",
+                extra={"message_id": str(message.id), "reason": str(exc)},
+            )
+        finally:
+            await client.aclose()
+    return counts
+
+
 async def archive_ticket_messages_once(
     settings: Settings, tenant_id: uuid.UUID, ticket_id: uuid.UUID
 ) -> dict[str, int]:
-    """ "Erledigt archiviert Mail" (M20-03, operator 25.09.2026): entfernt für jede Gmail-Nachricht
-    des Tickets das Label INBOX, sofern das jeweilige Postfach das wünscht. Fehlt dem Postfach die
-    Berechtigung ``gmail.modify`` (ältere Verbindung), wird das auf dem Postfach vermerkt statt
-    den Job scheitern zu lassen."""
-    from mhvp.communication.gmail import GmailScopeMissingError, make_client, oauth_client
-    from mhvp.communication.models import Mailbox, Message
+    """ "Erledigt archiviert Mail" (M20-03, operator 25.09.2026): archiviert alle Gmail-
+    Eingangsnachrichten des Tickets."""
+    from mhvp.communication.models import Message
     from mhvp.tickets.models import Ticket
 
-    counts = {"archived": 0, "skipped": 0, "failed": 0}
     engine = create_async_engine(
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
     )
     try:
         factory = create_session_factory(engine)
         async with tenant_transaction(factory, tenant_id) as session:
-            ticket = await session.get(Ticket, ticket_id)
-            if ticket is None:
-                return counts
+            if await session.get(Ticket, ticket_id) is None:
+                return {"archived": 0, "skipped": 0, "failed": 0}
             messages = list(
                 await session.scalars(
                     select(Message).where(
@@ -304,48 +347,45 @@ async def archive_ticket_messages_once(
                     )
                 )
             )
-            if not messages:
-                return counts
-            client_id, client_secret = await oauth_client(session, settings)
-            mailboxes: dict[uuid.UUID, Mailbox] = {}
-            for message in messages:
-                if message.mailbox_id is None:
-                    counts["skipped"] += 1
-                    continue
-                mailbox = mailboxes.get(message.mailbox_id)
-                if mailbox is None:
-                    mailbox = await session.get(Mailbox, message.mailbox_id)
-                    if mailbox is not None:
-                        mailboxes[message.mailbox_id] = mailbox
-                if mailbox is None or not mailbox.archive_on_ticket_done:
-                    counts["skipped"] += 1
-                    continue
-                try:
-                    client = make_client(client_id, client_secret, mailbox)
-                except GmailError:
-                    counts["skipped"] += 1
-                    continue
-                try:
-                    if message.gmail_message_id is None:
-                        counts["skipped"] += 1
-                        continue
-                    await client.archive(message.gmail_message_id)
-                    counts["archived"] += 1
-                except GmailScopeMissingError as exc:
-                    mailbox.archive_scope_missing = True
-                    mailbox.last_error = str(exc)[:1000]
-                    counts["failed"] += 1
-                except GmailError as exc:
-                    counts["failed"] += 1
-                    log.warning(
-                        "gmail archive failed",
-                        extra={"message_id": str(message.id), "reason": str(exc)},
-                    )
-                finally:
-                    await client.aclose()
+            return await _archive_messages(settings, session, messages)
     finally:
         await engine.dispose()
-    return counts
+
+
+async def archive_messages_once(
+    settings: Settings, tenant_id: uuid.UUID, message_ids: list[uuid.UUID]
+) -> dict[str, int]:
+    """Archiviert einzelne, im CRM als erledigt markierte Eingangsnachrichten in Gmail
+    (Betreiberauftrag 26.09.2026: Erledigt in der Mailansicht, einzeln oder als Sammelaktion)."""
+    from mhvp.communication.models import Message
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    try:
+        factory = create_session_factory(engine)
+        async with tenant_transaction(factory, tenant_id) as session:
+            messages = list(
+                await session.scalars(
+                    select(Message).where(
+                        Message.id.in_(message_ids),
+                        Message.gmail_message_id.is_not(None),
+                        Message.direction == "in",
+                    )
+                )
+            )
+            return await _archive_messages(settings, session, messages)
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.communication.archive_messages")
+def archive_messages(tenant_id: str, message_ids: list[str]) -> dict[str, int]:
+    return asyncio.run(
+        archive_messages_once(
+            get_settings(), uuid.UUID(tenant_id), [uuid.UUID(m) for m in message_ids]
+        )
+    )
 
 
 @shared_task(name="mhvp.communication.archive_ticket_messages")

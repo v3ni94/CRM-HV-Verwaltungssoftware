@@ -816,6 +816,12 @@ async def assign(
         if body.status is None and (body.contact_id or body.property_id) and row.status == "new":
             row.status = "assigned"
         await session.flush()
+        if body.status == "done":
+            from mhvp.communication.services import enqueue_archive_for_messages
+
+            await enqueue_archive_for_messages(
+                session, request.app.state.settings, principal.tenant_id, [row.id]
+            )
         return _out(row)
 
 
@@ -840,6 +846,15 @@ async def bulk_messages(
             row.status = "done"
             changed.append(str(message_id))
         await session.flush()
+        if changed:
+            from mhvp.communication.services import enqueue_archive_for_messages
+
+            await enqueue_archive_for_messages(
+                session,
+                request.app.state.settings,
+                principal.tenant_id,
+                [uuid.UUID(m) for m in changed],
+            )
     return {"changed": changed, "failed": failed}
 
 
