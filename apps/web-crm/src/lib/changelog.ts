@@ -17,7 +17,7 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.28.0",
+    version: "1.29.0",
     date: "26.09.2026",
     title: "Upload im CRM mit Ablage über objektakte in Drive und Paperless",
     changes: [
@@ -28,7 +28,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: "1.27.0",
+    version: "1.28.0",
     date: "26.09.2026",
     title: "DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter",
     changes: [
@@ -37,6 +37,22 @@ export const CHANGELOG: ChangelogEntry[] = [
       "DMS: Eigentümer- und Mieterlisten aus der Objektübernahme als Importvorschlag mit Testlauf und Freigabe",
       "Dokumente: Paperless-Suche nach Objektnummer ohne Teiltreffer und Filter nach Gesellschaft, Gesellschaftsoptionen in den DMS-Einstellungen",
       "Dokumente: vertauschte Fehlertexte bei nicht erreichbarem oder nicht eingerichtetem Paperless korrigiert",
+    ],
+  },
+  {
+    version: "1.27.1",
+    date: "26.09.2026",
+    title: "Erledigungsnotiz für Administratoren optional",
+    changes: ["Tickets: Administratoren schließen ohne Erledigungsnotiz, für alle anderen bleibt sie Pflicht"],
+  },
+  {
+    version: "1.27.0",
+    date: "26.09.2026",
+    title: "Zuordnung im Bericht, Objekteigentümer, Freigabe der Importverträge",
+    changes: [
+      "Import: offene Zuordnungen direkt im Bericht per Kontaktauswahl abschließen, Vermieter dabei festlegen",
+      "Objekte: Eigentümer festlegen auf der Objektseite, Reiter Ohne Eigentümer",
+      "Verträge: Freigabe der Importverträge vor der Sollstellung, Seite Verträge, Freigabe mit Sammelfreigabe und Ablehnen",
     ],
   },
   {

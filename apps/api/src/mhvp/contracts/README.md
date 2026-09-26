@@ -26,3 +26,36 @@ pattern of `GET /tickets` (`page`, `page_size`, headers `X-Total-Count`, `X-Page
 `X-Page-Size`; default `limit=200`). Indexes on `contract(tenant_id, end_date |
 termination_date | kind)` and `sepa_mandate(tenant_id, status)` (migration 0127). See
 `docs/reviews/2026-09-26-performance.md`.
+
+## Freigabe der Importverträge (Betreiberauftrag 26.09.2026)
+
+Verträge aus der Immoware24 Zuordnung (`mhvp.imports.zuordnung`) haben einen angenommenen
+Vertragsbeginn und übernommene Beträge. Sie müssen vor der ersten Sollstellung durch die
+Geschäftsführung freigegeben werden.
+
+* Felder am Vertrag (Migration 0133): `source` (z. B. `immoware24:zuordnung`, leer bei manueller
+  Anlage), `approval_status` (`pending`, `approved`, `rejected`; Standard `approved` für Bestand
+  und manuell angelegte Verträge), `approved_by`, `approved_at` (Entscheidung, auch bei
+  Ablehnung). Die Zuordnung setzt `source = immoware24:zuordnung` und `pending`. Bereits vor der
+  Migration importierte Verträge bleiben `approved`.
+* Sollstellung: Es gibt keinen automatischen Sollstellungslauf, der Lauf wird manuell über
+  `POST /accounting/receivable-runs` (Vorschau) und `.../post` gestartet. `receivables.compute`
+  liest nur Verträge mit `approved`; die Vorschau zählt übersprungene ausstehende Verträge in
+  `totals.skipped_pending_approval`, die CRM-Ansicht zeigt den Hinweis. Eine Freigabe nach der
+  Vorschau ändert die Grundlage, die alte Vorschau wird beim Buchen abgewiesen (409).
+* API: `GET /contracts/pending-approval` (Filter `source`, `property_id`, `kind`; Objekt,
+  Einheit, Partei, Art, Beginn, Monatsbetrag als Summe der am Beginn gültigen Zahlungen, Quelle),
+  `POST /contracts/approve` mit `{ids}` oder `{all: true, source?}`, je Vertrag Ereignis
+  `contract.approved` mit Nutzer und Zeit; wiederholte Freigabe ohne Wirkung.
+  `POST /contracts/{id}/reject-import` beendet einen ausstehenden Vertrag zum Beginn
+  (`end_date = start_date`, Zahlungen und Zahlungspläne ebenso), markiert ihn `rejected` und
+  schreibt `contract.import_rejected`. Freigeben und Ablehnen verlangen `contracts:approve`
+  (nur `tenant_admin` und `administrator`), die Liste `contracts:read`.
+* CRM: Seite `/vertraege/freigabe` (Link auf der Vertragsliste) mit Filtern Quelle, Objekt,
+  Art, Summen je Art, Mehrfachauswahl, "Ausgewählte freigeben", "Alle freigeben" mit
+  Bestätigung und Hinweis auf die Annahme des Vertragsbeginns, "Ablehnen" je Zeile. Kennzeichen
+  "Freigabe ausstehend" in Vertragsliste und Vertragsdetail; die Einheitenansicht listet keine
+  Verträge, dort gibt es daher kein Kennzeichen.
+* Tests: `tests/integration/test_contract_import_approval.py`,
+  `tests/integration/test_zuordnung_import.py`,
+  `apps/web-crm/src/components/contracts/ContractApprovalPanel.test.tsx`.

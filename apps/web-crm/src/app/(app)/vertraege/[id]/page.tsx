@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 /** Vertragsdetail (A88): feste Daten, aktuelle Version, Zahlungspläne, Link zum Bearbeiten. */
 export default async function ContractDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ hinweis?: string }> }) {
   const t = await getTranslations("ContractForm");
+  const ta = await getTranslations("ContractApproval");
   const { id } = await params;
   const { hinweis } = await searchParams;
   const [me, ctx] = await Promise.all([getMe(), loadContractContext(id)]);
@@ -46,6 +47,18 @@ export default async function ContractDetailPage({ params, searchParams }: { par
           ) : null
         }
       />
+      {contract.approval_status === "pending" ? (
+        <p role="status" className={ui.notice} data-testid="approval-pending">
+          <span className={ui.badgeWarning}>{ta("pendingBadge")}</span>{" "}
+          <Link href="/vertraege/freigabe" className="hover:underline">
+            {ta("link")}
+          </Link>
+        </p>
+      ) : contract.approval_status === "rejected" ? (
+        <p role="status" className={ui.notice}>
+          <span className={ui.badgeDanger}>{ta("rejectedBadge")}</span>
+        </p>
+      ) : null}
       {hinweis ? (
         <p role="status" className={ui.notice}>
           {t("page.notice")}: {hinweis}

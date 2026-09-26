@@ -134,6 +134,9 @@ class FakeSession:
     async def execute(self, _stmt: Any) -> _Result:
         return _Result(self.units)
 
+    async def scalars(self, _stmt: Any) -> _Result:
+        return _Result([])  # candidate addresses
+
     async def flush(self) -> None:
         self.flushed += 1
 

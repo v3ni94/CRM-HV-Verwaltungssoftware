@@ -36,6 +36,13 @@ async def _world(settings: Any) -> World:
         await services.add_member(
             factory, tenant_id=a, user_id=uid, role_codes=["tenant_admin"], actor_user_id=None
         )
+        std = await services.create_user(
+            factory, email=world.email("rsstd"), display_name="rsstd", password=PASSWORD
+        )
+        world.users["rsstd"] = std
+        await services.add_member(
+            factory, tenant_id=a, user_id=std, role_codes=["standard"], actor_user_id=None
+        )
         return world
     finally:
         await engine.dispose()
@@ -75,7 +82,10 @@ def test_close_requires_resolution_and_stores_it(client: TestClient, world: Worl
     )
     ticket = _ticket(client, h, title)
 
-    missing = client.patch(f"{T}/{ticket['id']}", json={"status": "done"}, headers=h)
+    # Regular users must give a resolution; administrators may close without one
+    # (Betreiber 26.09.2026).
+    hs = bearer(login(client, world, "rsstd"))
+    missing = client.patch(f"{T}/{ticket['id']}", json={"status": "done"}, headers=hs)
     assert missing.status_code == 422
     other = client.patch(
         f"{T}/{ticket['id']}",
@@ -129,8 +139,10 @@ def test_bulk_with_shared_resolution(client: TestClient, world: World) -> None:
     first = _ticket(client, h, f"Bulk Erledigung 1 {RUN}")
     second = _ticket(client, h, f"Bulk Erledigung 2 {RUN}")
     ids = [first["id"], second["id"]]
+    # Without a resolution a regular user is refused; administrators are exempt.
+    hs = bearer(login(client, world, "rsstd"))
     refused = _ok(
-        client.post(f"{T}/bulk-status", json={"ticket_ids": ids, "status": "done"}, headers=h)
+        client.post(f"{T}/bulk-status", json={"ticket_ids": ids, "status": "done"}, headers=hs)
     )
     assert refused["changed"] == []
     assert len(refused["failed"]) == 2

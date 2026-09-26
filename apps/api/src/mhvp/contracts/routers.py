@@ -37,6 +37,8 @@ router = APIRouter(tags=["Verträge"])
 READ = require_permission("contracts:read")
 CREATE = require_permission("contracts:create")
 UPDATE = require_permission("contracts:update")
+# Management approval of imported contracts (tenant_admin and administrator only).
+APPROVE = require_permission("contracts:approve")
 
 
 def _nf() -> ProblemError:
@@ -232,6 +234,174 @@ async def create_contract(
         contract = await _create(session, principal, body)
         await _event(session, principal, "contract.created", contract.id, kind=body.kind.value)
         return await _out(session, contract)
+
+
+# Approval of imported contracts (Betreiberauftrag 26.09.2026, migration 0133) --------------
+
+
+async def _pending_out(session: Any, rows: Sequence[Contract]) -> list[s.PendingContractOut]:
+    if not rows:
+        return []
+    props = {
+        p.id: p
+        for p in (
+            await session.scalars(
+                select(Property).where(Property.id.in_({c.property_id for c in rows}))
+            )
+        ).all()
+    }
+    units = {
+        u.id: u
+        for u in (
+            await session.scalars(select(Unit).where(Unit.id.in_({c.unit_id for c in rows})))
+        ).all()
+    }
+    parties = {
+        p.id: p
+        for p in (
+            await session.scalars(select(Party).where(Party.id.in_({c.party_id for c in rows})))
+        ).all()
+    }
+    amounts: dict[uuid.UUID, Decimal] = {}
+    starts = {c.id: c.start_date for c in rows}
+    for p in (
+        await session.scalars(
+            select(ContractPayment).where(ContractPayment.contract_id.in_(list(starts)))
+        )
+    ).all():
+        start = starts[p.contract_id]
+        if p.valid_from <= start and (p.valid_to is None or p.valid_to >= start):
+            amounts[p.contract_id] = amounts.get(p.contract_id, Decimal("0.00")) + p.gross
+    return [
+        s.PendingContractOut(
+            id=c.id,
+            number=c.number,
+            kind=c.kind,
+            property_id=c.property_id,
+            property_number=props[c.property_id].number,
+            property_name=props[c.property_id].name,
+            unit_id=c.unit_id,
+            unit_number=units[c.unit_id].number,
+            party_id=c.party_id,
+            party_name=parties[c.party_id].name,
+            start_date=c.start_date,
+            monthly_amount=amounts.get(c.id, Decimal("0.00")),
+            source=c.source,
+            notes=c.notes,
+        )
+        for c in rows
+    ]
+
+
+@router.get(
+    "/contracts/pending-approval",
+    summary="Importverträge mit ausstehender Freigabe",
+    responses=PAGE_HEADERS,
+)
+async def pending_approval(
+    request: Request,
+    response: Response,
+    source: str | None = None,
+    property_id: uuid.UUID | None = None,
+    kind: ContractKind | None = None,
+    limit: int = Query(default=1000, ge=1, le=5000),
+    page: int = Query(default=1, ge=1),
+    page_size: int | None = Query(default=None, ge=1, le=5000),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[s.PendingContractOut]:
+    """Verträge mit ``approval_status = pending``. Ihre Zahlungspläne erzeugen im
+    Sollstellungslauf keine Forderungen, bis die Geschäftsführung sie freigibt."""
+    async with tenant_tx(request, principal) as session:
+        query = select(Contract).where(Contract.approval_status == "pending")
+        for column, value in (
+            (Contract.source, source),
+            (Contract.property_id, property_id),
+            (Contract.kind, kind),
+        ):
+            if value is not None:
+                query = query.where(column == value)
+        rows = await paginate(
+            session,
+            query.order_by(Contract.number, Contract.version),
+            response,
+            page=page,
+            page_size=page_size,
+            limit=limit,
+        )
+        return await _pending_out(session, rows)
+
+
+@router.post("/contracts/approve", summary="Importverträge freigeben")
+async def approve_contracts(
+    body: s.ApproveIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> s.ApproveOut:
+    """Gibt ausstehende Verträge frei (``ids`` oder ``all`` mit optionaler ``source``). Jeder
+    Vertrag erhält ``approved_by``/``approved_at`` und ein Ereignis ``contract.approved``.
+    Bereits entschiedene Verträge werden übergangen (wiederholter Klick ohne Wirkung)."""
+    async with tenant_tx(request, principal) as session:
+        query = select(Contract).where(Contract.approval_status == "pending")
+        if body.all:
+            if body.source is not None:
+                query = query.where(Contract.source == body.source)
+        else:
+            query = query.where(Contract.id.in_(body.ids))
+        rows = (await session.scalars(query.order_by(Contract.number).with_for_update())).all()
+        now = datetime.now(UTC)
+        for contract in rows:
+            contract.approval_status = "approved"
+            contract.approved_by = principal.user_id
+            contract.approved_at = now
+            contract.updated_by = principal.user_id
+            await _event(
+                session,
+                principal,
+                "contract.approved",
+                contract.id,
+                source=contract.source,
+                approved_by=principal.user_id,
+                approved_at=now.isoformat(),
+            )
+        await session.flush()
+        return s.ApproveOut(approved=len(rows), ids=[c.id for c in rows])
+
+
+@router.post("/contracts/{contract_id}/reject-import", summary="Importvertrag ablehnen")
+async def reject_import(
+    contract_id: uuid.UUID,
+    body: s.RejectImportIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> s.RejectImportOut:
+    """Fehlzuordnung: beendet den ausstehenden Vertrag zum Beginn (``end_date = start_date``,
+    Zahlungen und Zahlungspläne ebenso) und markiert ihn ``rejected``. Er erzeugt keine
+    Sollstellung; die Einheit ist ab dem Folgetag für die richtige Zuordnung frei."""
+    async with tenant_tx(request, principal) as session:
+        contract = await session.get(Contract, contract_id, with_for_update=True)
+        if contract is None:
+            raise _nf()
+        if contract.approval_status != "pending":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Der Vertrag wartet nicht auf Freigabe.")
+        await svc.end_contract(session, contract, contract.start_date)
+        now = datetime.now(UTC)
+        contract.approval_status = "rejected"
+        contract.approved_by = principal.user_id
+        contract.approved_at = now
+        contract.termination_reason = body.reason or "Fehlzuordnung aus dem Import abgelehnt"
+        contract.updated_by = principal.user_id
+        await session.flush()
+        await recompute_for_party(session, contract.party_id)
+        await _event(
+            session,
+            principal,
+            "contract.import_rejected",
+            contract.id,
+            source=contract.source,
+            end_date=contract.end_date,
+            reason=body.reason,
+        )
+        return s.RejectImportOut(
+            id=contract.id, approval_status="rejected", end_date=contract.start_date
+        )
 
 
 @router.get("/contracts/{contract_id}", summary="Vertrag lesen")

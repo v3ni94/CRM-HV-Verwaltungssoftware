@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
+import { ContactPicker, type PickedContact } from "@/components/hoa/ContactPicker";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -33,6 +34,22 @@ type ContactEntry = {
   probleme?: string[];
 };
 type AssignmentEntry = { objekt: string; ve: string; zeile: number; rolle?: string; name?: string; grund?: string; hinweis?: string; kandidaten?: string[] };
+/** Open item of the Zuordnung report, finished with POST .../zuordnung/manuell. */
+export type OpenAssignment = {
+  objekt: string;
+  ve: string;
+  zeile: number | null;
+  rolle: string;
+  name: string;
+  unit_id: string;
+  role: "eigentuemer" | "mieter";
+  grund: "nicht_gefunden" | "mehrdeutig" | "vermieter_fehlt";
+  zahlbetrag: string | null;
+  amount_cents: number | null;
+  kandidaten: { contact_id: string; display_name: string; address: string | null }[];
+  /** Matched tenant when only the landlord is missing. */
+  contact_id?: string;
+};
 type Report = {
   mode: "preview" | "apply";
   apply: boolean;
@@ -52,6 +69,7 @@ type Report = {
   mehrdeutig?: AssignmentEntry[];
   konflikte?: AssignmentEntry[];
   hinweise?: AssignmentEntry[];
+  offen?: OpenAssignment[];
   filled?: AddressEntry[];
   unrecognised?: { number: string; name: string }[];
   conflicts?: { line: number; number: string; field: string; current: string; list: string }[];
@@ -267,7 +285,137 @@ function AssignmentList({ title, items, testId }: { title: string; items: Assign
   );
 }
 
-function ZuordnungReport({ report }: { report: Report }) {
+const openKey = (item: OpenAssignment) => `${item.unit_id}:${item.role}`;
+
+function OpenAssignmentRow({ item, startDate, onDone }: { item: OpenAssignment; startDate?: string; onDone: () => void }) {
+  const t = useTranslations("ImmowareLists");
+  const [contact, setContact] = useState<PickedContact | null>(item.contact_id ? { id: item.contact_id, display_name: item.name } : null);
+  const [landlord, setLandlord] = useState<PickedContact | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const needsLandlord = item.grund === "vermieter_fehlt";
+  const ready = !!contact && (!needsLandlord || !!landlord);
+
+  const submit = async () => {
+    if (!contact) return;
+    setBusy(true);
+    setError(null);
+    const body: Record<string, unknown> = { unit_id: item.unit_id, role: item.role, contact_id: contact.id };
+    if (item.amount_cents !== null) body.amount_cents = item.amount_cents;
+    if (startDate) body.start_date = startDate;
+    if (landlord) body.landlord_contact_id = landlord.id;
+    const res = await bff<Report>(`${API}/zuordnung/manuell`, { method: "POST", body: JSON.stringify(body) });
+    setBusy(false);
+    if (!res.ok) return setError(res.message);
+    onDone();
+  };
+
+  return (
+    <tr data-testid="zuordnung-open-row">
+      <td>{item.objekt}</td>
+      <td>{item.ve}</td>
+      <td>{item.rolle}</td>
+      <td>{item.name}</td>
+      <td>{item.amount_cents !== null ? formatCents(item.amount_cents) : (item.zahlbetrag ?? "")}</td>
+      <td>{t(`zuordnung.reason.${item.grund}`)}</td>
+      <td>
+        <div className="flex flex-col gap-2">
+          {item.kandidaten.length > 0 ? (
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("zuordnung.chooseCandidate")}</span>
+              <select
+                className={ui.input}
+                value={contact?.id ?? ""}
+                onChange={(e) => {
+                  const c = item.kandidaten.find((k) => k.contact_id === e.target.value);
+                  setContact(c ? { id: c.contact_id, display_name: c.display_name } : null);
+                }}
+              >
+                <option value="" />
+                {item.kandidaten.map((c) => (
+                  <option key={c.contact_id} value={c.contact_id}>
+                    {c.address ? `${c.display_name}, ${c.address}` : c.display_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : needsLandlord ? null : (
+            <ContactPicker label={t("zuordnung.searchContact")} onPick={setContact} />
+          )}
+          {needsLandlord ? <ContactPicker label={t("zuordnung.searchLandlord")} onPick={setLandlord} /> : null}
+          {contact && item.kandidaten.length === 0 && !needsLandlord ? <span className="text-sm">{t("zuordnung.chosen", { name: contact.display_name })}</span> : null}
+          {landlord ? <span className="text-sm">{t("zuordnung.chosen", { name: landlord.display_name })}</span> : null}
+          <button type="button" className={ui.buttonSm} disabled={busy || !ready} onClick={() => void submit()}>
+            {t("zuordnung.assign")}
+          </button>
+          {error ? (
+            <p role="alert" className={ui.error}>
+              {error}
+            </p>
+          ) : null}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+/** Open items of the report as a table; each row is finished with a chosen contact and then
+ *  disappears, the counter "zugeordnet" rises. ``onChange`` keeps the stored report in step. */
+export function OpenAssignments({
+  items,
+  assigned,
+  startDate,
+  onChange,
+}: {
+  items: OpenAssignment[];
+  assigned: number;
+  startDate?: string;
+  onChange: (items: OpenAssignment[], assigned: number) => void;
+}) {
+  const t = useTranslations("ImmowareLists");
+  return (
+    <section className="flex flex-col gap-2" data-testid="zuordnung-open">
+      <h4 className="text-sm font-semibold">
+        {t("zuordnung.openTitle")} ({items.length})
+      </h4>
+      <p className={ui.help}>{t("zuordnung.openHelp")}</p>
+      <p className="text-sm font-medium" data-testid="zuordnung-open-assigned">
+        {t("zuordnung.openAssigned", { count: assigned })}
+      </p>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted">{t("zuordnung.openNone")}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className={ui.table} data-testid="zuordnung-open-table">
+            <thead>
+              <tr>
+                <th>{t("objektdaten.colObject")}</th>
+                <th>{t("zuordnung.colUnit")}</th>
+                <th>{t("kontakte.colRole")}</th>
+                <th>{t("kontakte.colName")}</th>
+                <th>{t("zuordnung.colAmount")}</th>
+                <th>{t("zuordnung.colReason")}</th>
+                <th>{t("zuordnung.colContact")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <OpenAssignmentRow
+                  key={openKey(item)}
+                  item={item}
+                  startDate={startDate}
+                  onDone={() => onChange(items.filter((x) => openKey(x) !== openKey(item)), assigned + 1)}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ZuordnungReport({ report, onOpenChange }: { report: Report; onOpenChange?: (items: OpenAssignment[], assigned: number) => void }) {
   const t = useTranslations("ImmowareLists");
   const extra: [string, number][] = [
     ["einheiten_gesamt", report.einheiten_gesamt ?? 0],
@@ -283,6 +431,9 @@ function ZuordnungReport({ report }: { report: Report }) {
           {t("zuordnung.startUsed", { date: formatDate(report.start_date) })}
           {report.start_date_assumed ? ` ${t("zuordnung.startAssumed")}` : ""}
         </p>
+      ) : null}
+      {report.apply && report.offen ? (
+        <OpenAssignments items={report.offen} assigned={report.counts.manuell_zugeordnet ?? 0} startDate={report.start_date} onChange={(items, assigned) => onOpenChange?.(items, assigned)} />
       ) : null}
       <AssignmentList title={t("zuordnung.notFoundTitle")} items={report.nicht_gefunden ?? []} testId="zuordnung-not-found" />
       <AssignmentList title={t("zuordnung.ambiguousTitle")} items={report.mehrdeutig ?? []} testId="zuordnung-ambiguous" />
@@ -660,6 +811,25 @@ export function AdressenCard() {
   );
 }
 
+export const ZUORDNUNG_STORAGE_KEY = "mhvp.immoware24.zuordnung.report";
+
+function loadStoredReport(): Report | null {
+  try {
+    const raw = window.localStorage.getItem(ZUORDNUNG_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Report) : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeReport(report: Report) {
+  try {
+    window.localStorage.setItem(ZUORDNUNG_STORAGE_KEY, JSON.stringify(report));
+  } catch {
+    // Storage unavailable (private mode): the report stays for this page view only.
+  }
+}
+
 function defaultStart(today = new Date()) {
   return `${today.getFullYear()}-01-01`;
 }
@@ -669,8 +839,33 @@ export function ZuordnungCard() {
   const [file, setFile] = useState<File | null>(null);
   const [startDate, setStartDate] = useState(defaultStart());
   const [skipHandedOver, setSkipHandedOver] = useState(false);
-  const { report, testedFor, busy, error, run } = useListRun("zuordnung");
+  const { report: fresh, testedFor, busy, error, run } = useListRun("zuordnung");
+  const [report, setReport] = useState<Report | null>(null);
+  const [restored, setRestored] = useState(false);
   const signature = `${fileKey(file)}|${startDate}|${skipHandedOver}`;
+
+  // The last applied report survives a reload (client state), so open items can be finished later.
+  useEffect(() => {
+    const saved = loadStoredReport();
+    if (saved) {
+      setReport(saved);
+      setRestored(true);
+    }
+  }, []);
+  useEffect(() => {
+    if (!fresh) return;
+    setReport(fresh);
+    setRestored(false);
+    if (fresh.apply) storeReport(fresh);
+  }, [fresh]);
+  const onOpenChange = (items: OpenAssignment[], assigned: number) => {
+    setReport((current) => {
+      if (!current) return current;
+      const next = { ...current, offen: items, counts: { ...current.counts, manuell_zugeordnet: assigned } };
+      storeReport(next);
+      return next;
+    });
+  };
   const canApply = testedFor !== null && testedFor === signature;
 
   const start = (mode: "preview" | "apply") => {
@@ -709,7 +904,8 @@ export function ZuordnungCard() {
           {error}
         </p>
       ) : null}
-      {report ? <ZuordnungReport report={report} /> : null}
+      {restored ? <p className={ui.help}>{t("zuordnung.restored")}</p> : null}
+      {report ? <ZuordnungReport report={report} onOpenChange={onOpenChange} /> : null}
     </section>
   );
 }

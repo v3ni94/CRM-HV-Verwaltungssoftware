@@ -68,7 +68,13 @@ async def compute(
         query = query.where(Contract.property_id == scope_id)
     elif scope == "contract" and scope_id:
         query = query.where(Contract.id == scope_id)
-    contracts = (await session.scalars(query.order_by(Contract.number))).all()
+    # Contracts not approved by management (imported with an assumed start and amount,
+    # migration 0133) create no receivables; ``skipped_pending_approval`` counts them.
+    contracts = (
+        await session.scalars(
+            query.where(Contract.approval_status == "approved").order_by(Contract.number)
+        )
+    ).all()
     ledgers = {x.legal_entity_id: x for x in (await session.scalars(select(Ledger))).all()}
     mapping = {
         (m.ledger_id, m.payment_type_code): m.account_id
@@ -155,6 +161,29 @@ async def compute(
     return items
 
 
+async def pending_approval_count(
+    session: AsyncSession, period: date, scope: str, scope_id: uuid.UUID | None
+) -> int:
+    """Contracts active in the period that the run skipped for missing approval."""
+    from mhvp.contracts.models import Contract
+
+    first, last = month_bounds(period)
+    query = (
+        select(func.count())
+        .select_from(Contract)
+        .where(
+            Contract.approval_status == "pending",
+            Contract.start_date <= last,
+            or_(Contract.end_date.is_(None), Contract.end_date >= first),
+        )
+    )
+    if scope == "property" and scope_id:
+        query = query.where(Contract.property_id == scope_id)
+    elif scope == "contract" and scope_id:
+        query = query.where(Contract.id == scope_id)
+    return int(await session.scalar(query) or 0)
+
+
 def digest(items: list[dict[str, Any]]) -> str:
     stable = [
         {
@@ -190,6 +219,10 @@ async def create_preview(
 ) -> ReceivableRun:
     first, _ = month_bounds(period)
     items = await compute(session, first, scope, scope_id)
+    summary = totals(items)
+    summary["skipped_pending_approval"] = await pending_approval_count(
+        session, first, scope, scope_id
+    )
     run = ReceivableRun(
         tenant_id=tenant_id,
         created_by=user_id,
@@ -197,7 +230,7 @@ async def create_preview(
         scope=scope,
         scope_id=scope_id,
         preview_hash=digest(items),
-        totals=totals(items),
+        totals=summary,
     )
     session.add(run)
     await session.flush()
