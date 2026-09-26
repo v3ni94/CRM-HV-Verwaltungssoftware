@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { Prospects } from "@/components/letting/Prospects";
+import { UnitDetails } from "@/components/properties/UnitDetails";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -13,14 +14,21 @@ export const dynamic = "force-dynamic";
 export default async function LettingUnitPage({ params }: { params: Promise<{ unitId: string }> }) {
   const { unitId } = await params;
   const t = await getTranslations("Prospects");
+  const tu = await getTranslations("Units");
   const api = serverApi();
-  const [expose, prospects, tickets] = await Promise.all([
-    api.GET("/api/v1/letting/units/{unit_id}/expose", { params: { path: { unit_id: unitId } } }),
+  const unitPath = { params: { path: { unit_id: unitId } } };
+  const [unit, occupants, expose, prospects, tickets] = await Promise.all([
+    api.GET("/api/v1/units/{unit_id}", unitPath),
+    api.GET("/api/v1/units/{unit_id}/occupants", unitPath),
+    api.GET("/api/v1/letting/units/{unit_id}/expose", unitPath),
     api.GET("/api/v1/letting/prospects", { params: { query: { unit_id: unitId } } }),
     api.GET("/api/v1/tickets", { params: { query: { unit_id: unitId, limit: 50, include_closed: true } } }),
   ]);
-  redirectIfUnauthenticated(expose.response);
+  redirectIfUnauthenticated(unit.response);
+  if (!unit.data) return <p role="alert" className={ui.alert}>{problemMessage(unit.error as Problem | undefined, unit.response.status)}</p>;
   if (!expose.data) return <p role="alert" className={ui.alert}>{problemMessage(expose.error as Problem | undefined, expose.response.status)}</p>;
+  const property = await api.GET("/api/v1/properties/{property_id}", { params: { path: { property_id: unit.data.property_id } } });
+  const unitTitle = [unit.data.number, unit.data.label].filter(Boolean).join(" ");
   const rows = (prospects.data ?? []) as { id: string; contact_id: string; status: string; delete_after: string; notes: string | null }[];
   const names: Record<string, string> = {};
   await Promise.all(
@@ -40,7 +48,15 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
   const show = (v: unknown) => (v === null || v === undefined || v === "" ? t("none") : String(v));
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader breadcrumb={[{ href: "/vermietung", label: t("title") }]} title={String(fields.title ?? "")} />
+      <PageHeader
+        breadcrumb={[
+          { href: "/objekte", label: tu("toProperty") },
+          ...(property.data ? [{ href: `/objekte/${unit.data.property_id}`, label: `${property.data.number} ${property.data.name}` }] : []),
+          { label: unitTitle },
+        ]}
+        title={String(fields.title ?? "") || unitTitle}
+      />
+      <UnitDetails unit={unit.data} occupants={occupants.data ?? null} />
       <section className={ui.card}>
         <h2 className={ui.h2}>{t("expose")}</h2>
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">

@@ -2049,7 +2049,13 @@
         "unit": "Unit",
         "concern": "Concern",
         "unknown": "not recognised",
-        "label": { "mobile": "Mobile", "other": "Landline or unknown", "work": "Work", "private": "Private", "fax": "Fax" }
+        "label": {
+          "mobile": "Mobile",
+          "other": "Landline or unknown",
+          "work": "Work",
+          "private": "Private",
+          "fax": "Fax"
+        }
       },
       "decision": {
         "pending": "Pending",
@@ -5401,5 +5407,50 @@
       "answer_question": "Questions",
       "summarize": "Summary"
     }
+  },
+  "Units": {
+    "number": "Number",
+    "label": "Label",
+    "type": "Type",
+    "owner": "Owner",
+    "tenant": "Tenant",
+    "area": "Area",
+    "noTenant": "no tenant",
+    "noOwner": "no owner",
+    "parameters": "Unit master data",
+    "location": "Location",
+    "floor": "Floor",
+    "livingArea": "Living area",
+    "totalArea": "Total area",
+    "rooms": "Rooms",
+    "bedrooms": "Bedrooms",
+    "bathrooms": "Bathrooms",
+    "cellar": "Cellar number",
+    "internalName": "Internal name",
+    "modernization": "Last modernisation",
+    "features": "Features",
+    "address": "Address",
+    "vatOption": "VAT option",
+    "mea": "Co-ownership shares",
+    "allocationKeys": "Allocation keys",
+    "noAllocation": "No allocation key values recorded.",
+    "key": "Key",
+    "value": "Value",
+    "validFrom": "valid from",
+    "validTo": "valid to",
+    "customFields": "Custom fields",
+    "legacy": "Notes from the legacy system",
+    "since": "since",
+    "until": "until",
+    "share": "Share",
+    "rent": "Rent (gross, monthly)",
+    "contract": "Contract",
+    "history": "Ended contracts",
+    "noHistory": "No ended contracts.",
+    "kind": {
+      "ownership": "Ownership",
+      "tenancy": "Tenancy"
+    },
+    "toProperty": "Properties"
   }
 }

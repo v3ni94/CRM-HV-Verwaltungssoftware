@@ -203,10 +203,37 @@ class AllocationValueOut(_Out):
     unit_id: uuid.UUID
     allocation_key_id: uuid.UUID
     key_code: str | None = None
+    key_name: str | None = None
     value: Qty
     valid_from: date
     valid_to: date | None
     source: ValueSource
+
+
+class OccupantMemberOut(BaseModel):
+    contact_id: uuid.UUID
+    display_name: str
+    share_percent: Decimal | None = None
+
+
+class OccupantOut(BaseModel):
+    """One ownership or tenancy contract of a unit with its party, for display."""
+
+    contract_id: uuid.UUID
+    contract_number: str
+    kind: str
+    party_id: uuid.UUID
+    party_name: str
+    start_date: date
+    end_date: date | None
+    members: list[OccupantMemberOut] = Field(default_factory=list)
+    rent_gross: Decimal | None = None
+
+
+class UnitOccupantsOut(BaseModel):
+    owner: OccupantOut | None = None
+    tenant: OccupantOut | None = None
+    history: list[OccupantOut] = Field(default_factory=list)
 
 
 class UnitOut(UnitIn):
@@ -215,6 +242,9 @@ class UnitOut(UnitIn):
     property_id: uuid.UUID
     allocation_values: list[AllocationValueOut] = Field(default_factory=list)
     vat_option: VatOption | None = None
+    # Only filled with ?with_occupants=true: current owner and tenant at the reference date.
+    owner: OccupantOut | None = None
+    tenant: OccupantOut | None = None
 
 
 class AllocationKeyIn(_In):

@@ -9451,7 +9451,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Einheiten, optional zum Stichtag */
+        /**
+         * Einheiten, optional zum Stichtag
+         * @description Units in natural order of their number ("1" < "2" < "10", "WE1" < "WE10").
+         *
+         *     With ``with_occupants=true`` each unit carries its current owner and tenant (at ``as_of``,
+         *     default today), loaded in one batch for the whole property.
+         */
         get: operations["list_units_api_v1_properties__property_id__units_get"];
         put?: never;
         /** Einheit anlegen */
@@ -11367,6 +11373,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/units/{unit_id}/occupants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eigentümer, Mieter und Vertragshistorie */
+        get: operations["get_unit_occupants_api_v1_units__unit_id__occupants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/units/{unit_id}/vat-options": {
         parameters: {
             query?: never;
@@ -12082,6 +12105,8 @@ export interface components {
             id: string;
             /** Key Code */
             key_code?: string | null;
+            /** Key Name */
+            key_name?: string | null;
             source: components["schemas"]["ValueSource"];
             /**
              * Unit Id
@@ -18057,6 +18082,51 @@ export interface components {
          * @enum {string}
          */
         Occupant: "vacancy" | "contract";
+        /** OccupantMemberOut */
+        OccupantMemberOut: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Display Name */
+            display_name: string;
+            /** Share Percent */
+            share_percent?: string | null;
+        };
+        /**
+         * OccupantOut
+         * @description One ownership or tenancy contract of a unit with its party, for display.
+         */
+        OccupantOut: {
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /** Contract Number */
+            contract_number: string;
+            /** End Date */
+            end_date: string | null;
+            /** Kind */
+            kind: string;
+            /** Members */
+            members?: components["schemas"]["OccupantMemberOut"][];
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Party Name */
+            party_name: string;
+            /** Rent Gross */
+            rent_gross?: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
         /** OidcTokenResponse */
         OidcTokenResponse: {
             /** Access Token */
@@ -21265,6 +21335,13 @@ export interface components {
             total_area_sqm?: number | string | null;
             unit_type: components["schemas"]["UnitType"];
         };
+        /** UnitOccupantsOut */
+        UnitOccupantsOut: {
+            /** History */
+            history?: components["schemas"]["OccupantOut"][];
+            owner?: components["schemas"]["OccupantOut"] | null;
+            tenant?: components["schemas"]["OccupantOut"] | null;
+        };
         /** UnitOut */
         UnitOut: {
             /** Allocation Values */
@@ -21314,6 +21391,7 @@ export interface components {
             location?: string | null;
             /** Number */
             number: string;
+            owner?: components["schemas"]["OccupantOut"] | null;
             /** Postal Code */
             postal_code?: string | null;
             /**
@@ -21325,6 +21403,7 @@ export interface components {
             rooms?: string | null;
             /** Street */
             street?: string | null;
+            tenant?: components["schemas"]["OccupantOut"] | null;
             /** Total Area Sqm */
             total_area_sqm?: string | null;
             unit_type: components["schemas"]["UnitType"];
@@ -42835,6 +42914,7 @@ export interface operations {
         parameters: {
             query?: {
                 as_of?: string | null;
+                with_occupants?: boolean;
             };
             header?: never;
             path: {
@@ -47240,6 +47320,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AllocationValueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_unit_occupants_api_v1_units__unit_id__occupants_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOccupantsOut"];
                 };
             };
             /** @description Validation Error */

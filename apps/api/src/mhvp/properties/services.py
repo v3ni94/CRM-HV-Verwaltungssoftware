@@ -1,5 +1,6 @@
 """Property services: legal entities, templates, custom fields, periods, plausibility."""
 
+import re
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
@@ -175,6 +176,15 @@ def _is_date(value: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+_NUM_CHUNK = re.compile(r"(\d+)")
+
+
+def natural_key(number: str) -> tuple[tuple[int, int | str], ...]:
+    """Sort key so that "1" < "2" < "10" and "WE1" < "WE2" < "WE10"."""
+    parts = _NUM_CHUNK.split(number.strip())
+    return tuple((0, int(p)) if p.isdigit() else (1, p.casefold()) for p in parts if p != "")
 
 
 def valid_at(model: Any, as_of: date) -> Any:

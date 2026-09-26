@@ -2049,7 +2049,13 @@
         "unit": "Einheit",
         "concern": "Anliegen",
         "unknown": "nicht erkannt",
-        "label": { "mobile": "Mobil", "other": "Festnetz oder unbekannt", "work": "Geschäftlich", "private": "Privat", "fax": "Fax" }
+        "label": {
+          "mobile": "Mobil",
+          "other": "Festnetz oder unbekannt",
+          "work": "Geschäftlich",
+          "private": "Privat",
+          "fax": "Fax"
+        }
       },
       "decision": {
         "pending": "Offen",
@@ -5401,5 +5407,50 @@
       "answer_question": "Fragen",
       "summarize": "Zusammenfassung"
     }
+  },
+  "Units": {
+    "number": "Nummer",
+    "label": "Bezeichnung",
+    "type": "Typ",
+    "owner": "Eigentümer",
+    "tenant": "Mieter",
+    "area": "Fläche",
+    "noTenant": "kein Mieter",
+    "noOwner": "kein Eigentümer",
+    "parameters": "Stammdaten der Einheit",
+    "location": "Lage",
+    "floor": "Etage",
+    "livingArea": "Wohnfläche",
+    "totalArea": "Gesamtfläche",
+    "rooms": "Zimmer",
+    "bedrooms": "Schlafzimmer",
+    "bathrooms": "Badezimmer",
+    "cellar": "Kellernummer",
+    "internalName": "Interne Bezeichnung",
+    "modernization": "Letzte Modernisierung",
+    "features": "Ausstattung",
+    "address": "Anschrift",
+    "vatOption": "Umsatzsteueroption",
+    "mea": "Miteigentumsanteile",
+    "allocationKeys": "Umlageschlüssel",
+    "noAllocation": "Keine Umlageschlüsselwerte hinterlegt.",
+    "key": "Schlüssel",
+    "value": "Wert",
+    "validFrom": "gültig ab",
+    "validTo": "gültig bis",
+    "customFields": "Zusatzfelder",
+    "legacy": "Notizen aus dem Altsystem",
+    "since": "seit",
+    "until": "bis",
+    "share": "Anteil",
+    "rent": "Miete (brutto, monatlich)",
+    "contract": "Vertrag",
+    "history": "Beendete Verträge",
+    "noHistory": "Keine beendeten Verträge.",
+    "kind": {
+      "ownership": "Eigentum",
+      "tenancy": "Mietvertrag"
+    },
+    "toProperty": "Objekte"
   }
 }
