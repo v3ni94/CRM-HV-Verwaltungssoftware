@@ -22,7 +22,7 @@ from mhvp.core.release_gates import ReleaseGate
 from mhvp.main import create_app
 from mhvp.platform import services
 from mhvp.workspace.services import local_today
-from tests.integration.conftest import Database
+from tests.integration.conftest import Database, approve_bank_accounts
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m5_contracts import _unit
 from tests.integration.test_m8_import import BUCKET, _settings
@@ -61,6 +61,7 @@ async def _world(settings: Any) -> World:
         for name, tenant, role in [
             ("ddadmin", a, "tenant_admin"),
             ("ddacc", a, "accountant_banking"),
+            ("ddapprover", a, "tenant_admin"),
             ("ddother", b, "tenant_admin"),
         ]:
             uid = await services.create_user(
@@ -98,7 +99,12 @@ def _ok(response: Any, status: int = 200) -> Any:
 
 
 def _payer(
-    c: TestClient, h: dict[str, str], name: str, iban: str, mandate: dict[str, Any] | None
+    c: TestClient,
+    h: dict[str, str],
+    name: str,
+    iban: str,
+    mandate: dict[str, Any] | None,
+    approver: dict[str, str],
 ) -> tuple[str, dict[str, Any]]:
     account: dict[str, Any] = {"iban": iban, "valid_from": "2020-01-01", "holder": f"{name} Test"}
     if mandate is not None:
@@ -126,6 +132,8 @@ def _payer(
         ),
         201,
     )
+    # M5-01: only an IBAN released by a second person carries a mandate for collection.
+    contact = approve_bank_accounts(c, approver, contact)
     party = _ok(
         c.post("/api/v1/parties", json={"members": [{"contact_id": contact["id"]}]}, headers=h),
         201,
@@ -207,14 +215,16 @@ def test_direct_debit_run(clients: tuple[TestClient, TestClient], world: World) 
         ),
         201,
     )["id"]
-    party_a, contact_a = _payer(client, h, "Anna", PAYER_A, {})
-    party_b, _ = _payer(client, h, "Bernd", PAYER_B, None)  # no mandate
+    approver = bearer(login(client, world, "ddapprover"))
+    party_a, contact_a = _payer(client, h, "Anna", PAYER_A, {}, approver)
+    party_b, _ = _payer(client, h, "Bernd", PAYER_B, None, approver)  # no mandate
     party_c, _ = _payer(
         client,
         h,
         "Carla",
         PAYER_C,
         {"mandate_status": "revoked", "mandate_revoked_on": "2026-01-15"},
+        approver,
     )
     c_a = _contract(client, h, prop["id"], "01", party_a)
     c_b = _contract(client, h, prop["id"], "02", party_b)

@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from mhvp.main import create_app
 from mhvp.platform import services
-from tests.integration.conftest import Database
+from tests.integration.conftest import Database, approve_bank_accounts
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
 
 pytestmark = pytest.mark.integration
@@ -27,7 +27,11 @@ async def _world(settings: Any) -> World:
     try:
         a, _ = await services.provision_tenant(factory, slug=f"c-{RUN}", name=f"Verträge {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        for name, role in [("m5admin", "tenant_admin"), ("m5caretaker", "caretaker")]:
+        for name, role in [
+            ("m5admin", "tenant_admin"),
+            ("m5caretaker", "caretaker"),
+            ("m5approver", "tenant_admin"),
+        ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -387,6 +391,28 @@ def test_mandates_direct_debit_and_deposits(client: TestClient, world: World) ->
     )["legal_entity_id"]
     tenant, contact = _party(client, h, "Zahler", iban=IBAN)
     account_id = contact["bank_accounts"][0]["id"]
+    # M5-01: no mandate on an IBAN before the four eyes release by a second person.
+    assert contact["bank_accounts"][0]["approval_status"] == "pending"
+    unreleased = client.post(
+        "/api/v1/sepa-mandates",
+        json={
+            "party_id": tenant,
+            "legal_entity_id": entity,
+            "contact_bank_account_id": account_id,
+            "reference": f"P{RUN}"[:35],
+            "creditor_id": "DE98ZZZ09999999999",
+            "signed_at": "2026-01-01",
+            "document_id": "0190a000-0000-7000-8000-000000000001",
+        },
+        headers=h,
+    )
+    assert unreleased.status_code == 422, unreleased.text
+    assert "nicht freigegeben" in unreleased.json()["detail"]
+    own = client.post(
+        f"/api/v1/contacts/{contact['id']}/bank-accounts/{account_id}/approve", headers=h
+    )
+    assert own.status_code == 403, own.text  # the creator never releases the own entry
+    approve_bank_accounts(client, bearer(login(client, world, "m5approver")), contact["id"])
     mandate = {
         "party_id": tenant,
         "legal_entity_id": entity,

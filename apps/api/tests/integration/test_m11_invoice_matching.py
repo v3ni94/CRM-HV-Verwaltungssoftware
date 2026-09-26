@@ -14,7 +14,7 @@ from moto import mock_aws
 
 from mhvp.main import create_app
 from mhvp.platform import services
-from tests.integration.conftest import Database
+from tests.integration.conftest import Database, approve_bank_accounts
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m8_import import BUCKET, _settings
 
@@ -35,7 +35,11 @@ async def _world(settings: Any) -> World:
     try:
         a, _ = await services.provision_tenant(factory, slug=f"im-{RUN}", name=f"Match {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        for name, role in [("im-admin", "tenant_admin"), ("im-acc", "accountant_no_banking")]:
+        for name, role in [
+            ("im-admin", "tenant_admin"),
+            ("im-acc", "accountant_no_banking"),
+            ("im-approver", "tenant_admin"),
+        ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -168,6 +172,7 @@ def _post_invoice(
     h_releaser: dict[str, str],
     ledger: str,
     number: str,
+    h_approver: dict[str, str],
 ) -> dict[str, Any]:
     """Full M14 flow (see test_m14_invoices): create, review, release (by a second person),
     post -- so the resulting invoice is `PostingStatus.POSTED`, the precondition for
@@ -188,6 +193,8 @@ def _post_invoice(
         ),
         201,
     )["id"]
+    # M5-01: the provider IBAN counts as master data only after a second person released it.
+    approve_bank_accounts(client, h_approver, provider)
     body = {
         "ledger_id": ledger,
         "provider_contact_id": provider,
@@ -223,7 +230,9 @@ def test_match_by_amount_and_invoice_number(client: TestClient, world: World) ->
     h = bearer(login(client, world, "im-admin"))
     acc = bearer(login(client, world, "im-acc"))
     setup = _setup_property_and_ledger(client, h, "901")
-    inv = _post_invoice(client, h, acc, setup["ledger"], "R-900")
+    inv = _post_invoice(
+        client, h, acc, setup["ledger"], "R-900", bearer(login(client, world, "im-approver"))
+    )
 
     camt = _camt(
         "S-INV-1",
@@ -255,7 +264,9 @@ def test_match_by_amount_and_iban_without_number_in_purpose(
     h = bearer(login(client, world, "im-admin"))
     acc = bearer(login(client, world, "im-acc"))
     setup = _setup_property_and_ledger(client, h, "905")
-    inv = _post_invoice(client, h, acc, setup["ledger"], "R-904")
+    inv = _post_invoice(
+        client, h, acc, setup["ledger"], "R-904", bearer(login(client, world, "im-approver"))
+    )
 
     camt = _camt(
         "S-INV-2",
@@ -282,7 +293,9 @@ def test_unmatched_invoice_creates_draft_proposal_never_initiates(
     h = bearer(login(client, world, "im-admin"))
     acc = bearer(login(client, world, "im-acc"))
     setup = _setup_property_and_ledger(client, h, "902")
-    inv = _post_invoice(client, h, acc, setup["ledger"], "R-901")
+    inv = _post_invoice(
+        client, h, acc, setup["ledger"], "R-901", bearer(login(client, world, "im-approver"))
+    )
 
     without_body = _ok(client.post(f"{B}/invoice-matching/{inv['id']}/match", headers=h))
     assert without_body["matches"] == []
@@ -314,7 +327,9 @@ def test_get_invoice_matches_starts_empty(client: TestClient, world: World) -> N
     h = bearer(login(client, world, "im-admin"))
     acc = bearer(login(client, world, "im-acc"))
     setup = _setup_property_and_ledger(client, h, "903")
-    inv = _post_invoice(client, h, acc, setup["ledger"], "R-902")
+    inv = _post_invoice(
+        client, h, acc, setup["ledger"], "R-902", bearer(login(client, world, "im-approver"))
+    )
     matches = _ok(client.get(f"{B}/invoice-matching/{inv['id']}", headers=h))
     assert matches == []
 
@@ -366,6 +381,7 @@ def test_attach_invoice_to_ticket_files_into_drive_year_folder(
         ),
         201,
     )["id"]
+    approve_bank_accounts(client, bearer(login(client, world, "im-approver")), provider)
     body = {
         "ledger_id": setup["ledger"],
         "provider_contact_id": provider,

@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from mhvp.main import create_app
 from mhvp.platform import services
-from tests.integration.conftest import Database
+from tests.integration.conftest import Database, approve_bank_accounts
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
 
 pytestmark = pytest.mark.integration
@@ -33,7 +33,11 @@ async def _world(settings: Any) -> World:
     try:
         a, _ = await services.provision_tenant(factory, slug=f"iv-{RUN}", name=f"Beleg {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        for name, role in [("m14admin", "tenant_admin"), ("m14acc", "accountant_no_banking")]:
+        for name, role in [
+            ("m14admin", "tenant_admin"),
+            ("m14acc", "accountant_no_banking"),
+            ("m14approver", "tenant_admin"),
+        ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -110,6 +114,7 @@ def test_invoice_review_release_post_and_d12(client: TestClient, world: World) -
         ),
         201,
     )["id"]
+    approve_bank_accounts(client, bearer(login(client, world, "m14approver")), provider)
 
     base = {
         "ledger_id": ledger,
@@ -395,6 +400,7 @@ def test_d45_invoice_with_vat_on_option_ledger_is_not_posted(
         ),
         201,
     )["id"]
+    approve_bank_accounts(client, bearer(login(client, world, "m14approver")), provider)
     base = {
         "ledger_id": ledger,
         "provider_contact_id": provider,

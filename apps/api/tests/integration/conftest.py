@@ -95,3 +95,24 @@ def world(database: Database, redis_url: str) -> Any:
     from tests.integration.test_m2_platform import _build_world, _settings
 
     return asyncio.run(_build_world(_settings(database, redis_url)))
+
+
+def approve_bank_accounts(client: Any, approver: dict[str, str], contact: Any) -> dict[str, Any]:
+    """Four eyes release (M5-01): a second person with ``contacts:approve`` releases every
+    pending bank account of ``contact`` (a contact id or the contact JSON). The creator may
+    not release their own entry; the release is asserted here. Returns the reloaded contact."""
+    contact_id = contact if isinstance(contact, str) else str(contact["id"])
+    current = client.get(f"/api/v1/contacts/{contact_id}", headers=approver)
+    assert current.status_code == 200, current.text
+    for account in current.json()["bank_accounts"]:
+        if account["approval_status"] != "pending":
+            continue
+        released = client.post(
+            f"/api/v1/contacts/{contact_id}/bank-accounts/{account['id']}/approve",
+            headers=approver,
+        )
+        assert released.status_code == 200, released.text
+        assert released.json()["approval_status"] == "approved"
+    reloaded = client.get(f"/api/v1/contacts/{contact_id}", headers=approver)
+    assert reloaded.status_code == 200, reloaded.text
+    return dict(reloaded.json())
