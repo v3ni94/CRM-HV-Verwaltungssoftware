@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
+import { ResolutionDialog, isClosingStatus } from "@/components/tickets/ResolutionDialog";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
@@ -148,6 +149,7 @@ export function TicketEdit({
   const [internal, setInternal] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [closing, setClosing] = useState<string | null>(null);
   const send = async (path: string, method: string, body: unknown) => {
     setBusy(true);
     setError(null);
@@ -162,7 +164,12 @@ export function TicketEdit({
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("status")}</span>
-          <select className={ui.input} value={status} disabled={busy} onChange={(e) => send("", "PATCH", { status: e.target.value })}>
+          <select className={ui.input} value={status} disabled={busy} onChange={(e) => {
+              const next = e.target.value;
+              if (isClosingStatus(next)) setClosing(next);
+              else void send("", "PATCH", { status: next });
+            }}
+          >
             {allowedStatuses(status, canChangeAnyStatus).map((s) => (
               <option key={s} value={s}>
                 {t(`statuses.${s}`)}
@@ -181,6 +188,16 @@ export function TicketEdit({
           </select>
         </label>
       </div>
+      {closing ? (
+        <ResolutionDialog
+          status={closing}
+          busy={busy}
+          onCancel={() => setClosing(null)}
+          onConfirm={async (resolution) => {
+            if (await send("", "PATCH", { status: closing, resolution })) setClosing(null);
+          }}
+        />
+      ) : null}
       <div className="flex flex-col gap-1">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("comment")}</span>

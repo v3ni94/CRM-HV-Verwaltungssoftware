@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from mhvp.ai import gateway
-from mhvp.ai.models import AiTask, AiTaskRun, RunStatus
+from mhvp.ai.models import AiExample, AiTask, AiTaskRun, RunStatus
 from mhvp.communication import mail
 from mhvp.communication.models import Message, Playbook
 from mhvp.core.config import Settings
@@ -107,6 +107,114 @@ def playbook_fields(output: dict[str, Any], ticket_title: str) -> dict[str, Any]
     }
 
 
+RESOLUTION_HISTORY = 200
+RESOLUTION_HINTS = 3
+MAX_STEPS = 20
+
+
+def resolution_features(ticket: Any) -> dict[str, Any]:
+    """Eingabe eines Lernbeispiels aus einer Erledigung: Betreff, Anliegen (Auszug),
+    Kategorie, Thema und die erkannten Entitäten (Objekt, Einheit, Kontakt)."""
+    return {
+        "betreff": str(ticket.title or "")[:300],
+        "anliegen": str(ticket.public_description or "")[:1000],
+        "kategorie": ticket.category,
+        "thema": ticket.topic,
+        "entitaeten": {
+            key: str(value)
+            for key in ("property_id", "unit_id", "contact_id")
+            if (value := getattr(ticket, key, None)) is not None
+        },
+    }
+
+
+def resolution_step(kind: str | None, note: str | None) -> str | None:
+    """Schritt "was wurde gemacht" für ein gelerntes Playbook."""
+    from mhvp.tickets.status import resolution_text
+
+    text = resolution_text(kind, note)
+    return f"Erledigung: {text}" if text else None
+
+
+def with_resolution_step(steps: list[str], kind: str | None, note: str | None) -> list[str]:
+    step = resolution_step(kind, note)
+    if step is None or step in steps or len(steps) >= MAX_STEPS:
+        return list(steps)
+    return [*steps, step]
+
+
+def resolution_hint(text: str, examples: list[dict[str, Any]]) -> str | None:
+    """Vorschlagstext aus der Erledigungshistorie ähnlicher Tickets: Schlagwortüberlappung
+    zwischen ``text`` und Betreff plus Anliegen je Beispiel (``features``/``result`` eines
+    ``AiExample``), die besten drei unterschiedlichen Erledigungen. Rein, ohne Datenbank."""
+    from mhvp.tickets.status import resolution_text
+
+    words = {w.lower() for w in WORD_RE.findall(text)}
+    if not words:
+        return None
+    scored: list[tuple[float, str]] = []
+    for example in examples:
+        features = example.get("features") or {}
+        result = example.get("result") or {}
+        source = f"{features.get('betreff', '')} {features.get('anliegen', '')}"
+        keys = {w.lower() for w in WORD_RE.findall(source)}
+        if not keys:
+            continue
+        score = len(words & keys) / len(keys)
+        entry = resolution_text(result.get("kind"), result.get("note"))
+        if score >= MIN_PLAYBOOK_SCORE and entry:
+            scored.append((score, entry))
+    seen: list[str] = []
+    for _, entry in sorted(scored, key=lambda item: -item[0]):
+        if entry not in seen:
+            seen.append(entry)
+        if len(seen) == RESOLUTION_HINTS:
+            break
+    if not seen:
+        return None
+    return "Bei ähnlichen Vorgängen wurde: " + "; ".join(seen)
+
+
+async def resolution_examples(session: AsyncSession) -> list[dict[str, Any]]:
+    rows = (
+        await session.scalars(
+            select(AiExample)
+            .where(AiExample.task == AiTask.TICKET_RESOLUTION)
+            .order_by(AiExample.created_at.desc())
+            .limit(RESOLUTION_HISTORY)
+        )
+    ).all()
+    return [{"features": r.features, "result": r.result} for r in rows]
+
+
+async def resolution_example(session: AsyncSession, ticket: Any) -> AiExample:
+    """Lernbeispiel je Abschluss: Ausgabe ist Erledigungsart, Notiz, Status und die zuletzt
+    versendete Antwort (Auszug), sofern vorhanden."""
+    reply = await session.scalar(
+        select(Message.body)
+        .where(
+            Message.ticket_id == ticket.id,
+            Message.direction == "out",
+            Message.status == "sent",
+        )
+        .order_by(Message.sent_at.desc())
+        .limit(1)
+    )
+    status = getattr(ticket.status, "value", ticket.status)
+    return AiExample(
+        tenant_id=ticket.tenant_id,
+        created_by=ticket.resolved_by,
+        task=AiTask.TICKET_RESOLUTION,
+        features={**resolution_features(ticket), "ticket_id": str(ticket.id)},
+        result={
+            "kind": ticket.resolution_kind,
+            "note": ticket.resolution_note,
+            "status": status,
+            "antwort": (reply or "")[:2000] or None,
+        },
+    )
+
+
 async def _run_gateway_task(
     settings: Settings,
     tenant_id: uuid.UUID,
@@ -159,6 +267,7 @@ async def suggest_for_message(
     body_excerpt = (message.body or "")[:MAX_EXCERPT]
     match_text = f"{message.subject or ''}\n{body_excerpt}"
     playbook, playbook_score = await best_playbook(session, match_text)
+    hint = resolution_hint(match_text, await resolution_examples(session))
 
     # An IBAN never reaches the provider (rule 0.1.13); the classification does not need it.
     from mhvp.objektakte.masking import mask_ibans
@@ -171,6 +280,7 @@ async def suggest_for_message(
         "Bekannte Playbooks (Titel, Schlagwörter): "
         + ("; ".join(f"{p.title} ({', '.join(p.keywords)})" for p in playbooks) or "-")
         + "\nObjektnummern stehen meist als dreistellige Zahl nach 'Objekt' oder 'Objekt Nr.'."
+        + (f"\n{hint}" if hint else "")
     )
     context = {"context_type": "message", "context_id": str(message.id)}
 
@@ -193,6 +303,8 @@ async def suggest_for_message(
         result = {"reason": run.error or "KI-Lauf fehlgeschlagen."}
         status = "failed"
 
+    if hint:
+        result["resolution_hint"] = hint
     if playbook is not None:
         result["playbook_id"] = str(playbook.id)
         result["playbook_score"] = playbook_score
@@ -203,7 +315,10 @@ async def learn_playbook_from_ticket(
     session: AsyncSession, settings: Settings, ticket: Any
 ) -> Playbook | None:
     """Erzeugt aus einem geschlossenen Ticket einen Playbook-Entwurf (Status draft), sofern
-    noch kein ähnlich betiteltes Playbook existiert und ein KI-Anbieter freigegeben ist."""
+    noch kein ähnlich betiteltes Playbook existiert und ein KI-Anbieter freigegeben ist. Die
+    Erledigungsnotiz (``resolution_kind``, ``resolution_note``) geht in den Prompt und als
+    Schritt "Erledigung: ..." in die Schritte ein; ein bestehendes ähnliches Playbook erhält
+    den Schritt ergänzt, ohne neuen KI-Lauf."""
     from mhvp.tickets.models import TicketComment
 
     comments = list(
@@ -224,16 +339,25 @@ async def learn_playbook_from_ticket(
             .order_by(Message.sent_at)
         )
     )
-    if not comments and not sent_replies:
+    step = resolution_step(ticket.resolution_kind, ticket.resolution_note)
+    if not comments and not sent_replies and step is None:
         return None
 
     existing = await session.scalar(
         select(Playbook).where(Playbook.title.ilike(f"%{ticket.title[:60]}%"))
     )
     if existing is not None:
+        steps = with_resolution_step(
+            list(existing.steps or []), ticket.resolution_kind, ticket.resolution_note
+        )
+        if steps != list(existing.steps or []):
+            existing.steps = steps
+            await session.flush()
         return None
 
     body = [f"Titel: {ticket.title}", f"Kategorie: {ticket.category or '-'}"]
+    if step is not None:
+        body.append(f"Was wurde gemacht ({step})")
     for comment in comments:
         body.append(f"Kommentar ({'intern' if comment.internal else 'extern'}): {comment.body}")
     for reply in sent_replies:
@@ -251,6 +375,9 @@ async def learn_playbook_from_ticket(
         return None
 
     fields = playbook_fields(run.output, ticket.title)
+    fields["steps"] = with_resolution_step(
+        fields["steps"], ticket.resolution_kind, ticket.resolution_note
+    )
     duplicate = await session.scalar(select(Playbook).where(Playbook.title == fields["title"]))
     if duplicate is not None:
         return None

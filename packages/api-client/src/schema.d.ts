@@ -1430,6 +1430,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/examples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lernbeispiele (Wissensdatenbank)
+         * @description Bestätigte Lernbeispiele des Mandanten, neueste zuerst, optional nach Aufgabe gefiltert
+         *     (unter anderem ``ticket_resolution`` aus Erledigungsnotizen).
+         */
+        get: operations["list_examples_api_v1_ai_examples_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/fast-table-import": {
         parameters: {
             query?: never;
@@ -11904,7 +11925,7 @@ export interface components {
          * AiTask
          * @enum {string}
          */
-        AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change";
+        AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change" | "ticket_resolution";
         /**
          * AlertChannel
          * @enum {string}
@@ -12829,6 +12850,7 @@ export interface components {
         };
         /** BulkStatusIn */
         BulkStatusIn: {
+            resolution?: components["schemas"]["ResolutionIn"] | null;
             status: components["schemas"]["TicketStatus"];
             /** Ticket Ids */
             ticket_ids: string[];
@@ -19792,6 +19814,23 @@ export interface components {
              */
             mandatory: boolean;
         };
+        /**
+         * ResolutionIn
+         * @description Erledigungsnotiz beim Setzen auf done, closed oder rejected: Art plus Freitext, der
+         *     Freitext ist bei ``sonstiges`` Pflicht.
+         */
+        ResolutionIn: {
+            kind: components["schemas"]["ResolutionKind"];
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * ResolutionKind
+         * @description Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``
+         *     setzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt.
+         * @enum {string}
+         */
+        ResolutionKind: "stammdaten_ergaenzt" | "handwerker_beauftragt" | "auskunft_erteilt" | "weitergeleitet" | "kein_handlungsbedarf" | "abgelehnt" | "zusammengefuehrt" | "sonstiges";
         /** RetentionProfileIn */
         RetentionProfileIn: {
             /** Document Class */
@@ -20838,6 +20877,7 @@ export interface components {
         };
         /** TicketMergeIn */
         TicketMergeIn: {
+            resolution?: components["schemas"]["ResolutionIn"] | null;
             /** Target Ticket Id */
             target_ticket_id?: string | null;
             /** Ticket Ids */
@@ -20860,6 +20900,7 @@ export interface components {
             priority?: components["schemas"]["Priority"] | null;
             /** Property Id */
             property_id?: string | null;
+            resolution?: components["schemas"]["ResolutionIn"] | null;
             status?: components["schemas"]["TicketStatus"] | null;
             /** Team Id */
             team_id?: string | null;
@@ -25017,6 +25058,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_examples_api_v1_ai_examples_get: {
+        parameters: {
+            query?: {
+                task?: components["schemas"]["AiTask"] | null;
+                page?: number;
+                per_page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

@@ -676,7 +676,8 @@
           "answer_question",
           "summarize",
           "classify_document",
-          "contact_master_data_change"
+          "contact_master_data_change",
+          "ticket_resolution"
         ],
         "title": "AiTask",
         "type": "string"
@@ -3716,6 +3717,16 @@
       "BulkStatusIn": {
         "additionalProperties": false,
         "properties": {
+          "resolution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolutionIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "status": {
             "$ref": "#/components/schemas/TicketStatus"
           },
@@ -25483,6 +25494,47 @@
         "title": "RequiredDocumentIn",
         "type": "object"
       },
+      "ResolutionIn": {
+        "additionalProperties": false,
+        "description": "Erledigungsnotiz beim Setzen auf done, closed oder rejected: Art plus Freitext, der\nFreitext ist bei ``sonstiges`` Pflicht.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ResolutionKind"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "ResolutionIn",
+        "type": "object"
+      },
+      "ResolutionKind": {
+        "description": "Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``\nsetzt nur die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt.",
+        "enum": [
+          "stammdaten_ergaenzt",
+          "handwerker_beauftragt",
+          "auskunft_erteilt",
+          "weitergeleitet",
+          "kein_handlungsbedarf",
+          "abgelehnt",
+          "zusammengefuehrt",
+          "sonstiges"
+        ],
+        "title": "ResolutionKind",
+        "type": "string"
+      },
       "RetentionProfileIn": {
         "additionalProperties": false,
         "properties": {
@@ -28841,6 +28893,16 @@
       "TicketMergeIn": {
         "additionalProperties": false,
         "properties": {
+          "resolution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolutionIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "target_ticket_id": {
             "anyOf": [
               {
@@ -28955,6 +29017,16 @@
               }
             ],
             "title": "Property Id"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolutionIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "status": {
             "anyOf": [
@@ -36912,6 +36984,81 @@
           }
         },
         "summary": "Nachricht senden",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/examples": {
+      "get": {
+        "description": "Bestätigte Lernbeispiele des Mandanten, neueste zuerst, optional nach Aufgabe gefiltert\n(unter anderem ``ticket_resolution`` aus Erledigungsnotizen).",
+        "operationId": "list_examples_api_v1_ai_examples_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "task",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AiTask"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Task"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Per Page",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Examples Api V1 Ai Examples Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lernbeispiele (Wissensdatenbank)",
         "tags": [
           "KI-Assistent"
         ]

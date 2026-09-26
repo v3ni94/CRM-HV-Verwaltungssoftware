@@ -2237,7 +2237,29 @@
       "download": "Herunterladen",
       "replyTo": "Auf diese Mail antworten",
       "openMail": "Im Postfach öffnen"
-    }
+    },
+    "resolution": {
+      "title": "Erledigung: {status}",
+      "hint": "Kurz beschreiben, was gemacht wurde. Das System lernt daraus für ähnliche Vorgänge.",
+      "hintBulk": "Gilt für alle {count} ausgewählten Tickets. Kurz beschreiben, was gemacht wurde.",
+      "kind": "Was wurde gemacht",
+      "choose": "Bitte wählen",
+      "note": "Notiz (optional)",
+      "noteRequired": "Beschreibung (Pflicht bei Sonstiges)",
+      "confirm": "Abschließen",
+      "cancel": "Abbrechen",
+      "kinds": {
+        "stammdaten_ergaenzt": "Stammdaten ergänzt",
+        "handwerker_beauftragt": "Handwerker beauftragt",
+        "auskunft_erteilt": "Auskunft erteilt",
+        "weitergeleitet": "Weitergeleitet",
+        "kein_handlungsbedarf": "Kein Handlungsbedarf",
+        "abgelehnt": "Abgelehnt",
+        "zusammengefuehrt": "Zusammengeführt",
+        "sonstiges": "Sonstiges"
+      }
+    },
+    "resolutionLabel": "Erledigung"
   },
   "Automation": {
     "title": "Automatisierung",
@@ -3088,6 +3110,10 @@
     "weg": {
       "title": "WEG",
       "description": "Mehrheitsregeln je Beschlussgegenstand mit Fundstelle und Freigabe."
+    },
+    "knowledge": {
+      "title": "Wissensdatenbank",
+      "description": "Gelernte Playbooks und Lernbeispiele aus Erledigungen ansehen."
     }
   },
   "Members": {
@@ -5305,6 +5331,58 @@
       "open_ended": "Unbefristet",
       "cancelled": "Gekündigt",
       "expired": "Beendet"
+    }
+  },
+  "Knowledge": {
+    "title": "Wissensdatenbank",
+    "description": "Gelernte Playbooks und Lernbeispiele aus Erledigungen und bestätigten Vorschlägen.",
+    "tabs": {
+      "playbooks": "Playbooks",
+      "examples": "Lernbeispiele"
+    },
+    "playbooks": {
+      "empty": "Noch keine Playbooks gelernt.",
+      "title": "Titel",
+      "trigger": "Auslöser",
+      "steps": "Schritte",
+      "usage": "Treffer",
+      "lastUsed": "Letzte Nutzung",
+      "status": "Status",
+      "actions": "Aktionen",
+      "never": "nie",
+      "deactivate": "Deaktivieren",
+      "edit": "Bearbeiten",
+      "statuses": {
+        "draft": "Entwurf",
+        "active": "aktiv",
+        "archived": "deaktiviert"
+      }
+    },
+    "examples": {
+      "empty": "Keine Lernbeispiele.",
+      "date": "Datum",
+      "task": "Aufgabe",
+      "decision": "Entscheidung",
+      "text": "Kurztext",
+      "filter": "Aufgabe filtern",
+      "all": "Alle Aufgaben",
+      "more": "Weitere laden",
+      "total": "{total} Einträge"
+    },
+    "tasks": {
+      "ticket_resolution": "Ticketerledigung",
+      "contact_master_data_change": "Stammdatenänderung",
+      "classify_document": "Dokumentklassifizierung",
+      "classify_email": "Mailklassifizierung",
+      "draft_reply": "Antwortentwurf",
+      "propose_posting": "Kontierung",
+      "extract_invoice": "Rechnungserkennung",
+      "extract_contacts": "Kontakterkennung",
+      "extract_property": "Objekterkennung",
+      "map_columns": "Spaltenzuordnung",
+      "check_statement": "Abrechnungsprüfung",
+      "answer_question": "Fragen",
+      "summarize": "Zusammenfassung"
     }
   }
 }

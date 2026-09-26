@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
+import { ResolutionDialog, isClosingStatus, type Resolution } from "@/components/tickets/ResolutionDialog";
 import { STATUSES } from "@/components/tickets/TicketForms";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
@@ -47,6 +48,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string>("in_progress");
   const [busy, setBusy] = useState(false);
+  const [askResolution, setAskResolution] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ changed: number; failed: { id: string; reason: string }[] } | null>(null);
 
@@ -66,13 +68,18 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
     setSelected((prev) => (prev.size === tickets.length ? new Set() : new Set(tickets.map((tk) => tk.id))));
   }
 
-  async function applyBulk() {
+  async function applyBulk(resolution?: Resolution) {
+    if (isClosingStatus(bulkStatus) && !resolution) {
+      setAskResolution(true);
+      return;
+    }
+    setAskResolution(false);
     setBusy(true);
     setError(null);
     setResult(null);
     const res = await bff<{ changed: { id: string }[]; failed: { id: string; reason: string }[] }>("/api/bff/tickets/bulk-status", {
       method: "POST",
-      body: JSON.stringify({ ticket_ids: selectedIds, status: bulkStatus }),
+      body: JSON.stringify({ ticket_ids: selectedIds, status: bulkStatus, ...(resolution ? { resolution } : {}) }),
     });
     setBusy(false);
     if (res.ok) {
@@ -171,7 +178,11 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
           <span className="font-medium">
             {selectedIds.length} {t("selected")}
           </span>
-          <select className={ui.input} value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}>
+          <select className={ui.input} value={bulkStatus} onChange={(e) => {
+              setBulkStatus(e.target.value);
+              setAskResolution(false);
+            }}
+          >
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {t(`statuses.${s}`)}
@@ -187,6 +198,17 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
               {t("bulkLimitHint")}
             </span>
           ) : null}
+        </div>
+      ) : null}
+      {askResolution && selectedIds.length > 0 ? (
+        <div className="fixed inset-x-0 bottom-28 z-20 mx-auto w-full max-w-lg px-3 sm:bottom-20">
+          <ResolutionDialog
+            status={bulkStatus}
+            count={selectedIds.length}
+            busy={busy}
+            onCancel={() => setAskResolution(false)}
+            onConfirm={(resolution) => void applyBulk(resolution)}
+          />
         </div>
       ) : null}
       {error ? (

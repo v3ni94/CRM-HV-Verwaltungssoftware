@@ -66,3 +66,36 @@ restart on reopening), domain event `ticket.status_changed` (payload `from`, `to
 playbook learning and mail archiving. `PATCH /tickets/{id}` and `POST /tickets/bulk-status`
 call it; new entry points (mail, portal) must too. `GET /tickets` paginates with `page` and
 `page_size` (the body stays a list); the total is in the `X-Total-Count` header.
+
+## Erledigungsnotiz und Lernen aus Erledigungen (Betreiberauftrag 26.09.2026)
+
+Beim Setzen auf `done`, `closed` oder `rejected` verlangt `transition_status` ein Feld
+`resolution` (`ResolutionIn`): `kind` aus `ResolutionKind` (`stammdaten_ergaenzt`,
+`handwerker_beauftragt`, `auskunft_erteilt`, `weitergeleitet`, `kein_handlungsbedarf`,
+`abgelehnt`, `sonstiges`; `zusammengefuehrt` nur für Quelltickets einer Zusammenführung) und
+`note` (Freitext, Pflicht bei `sonstiges`). Ohne `resolution` antwortet die API mit 422, auch
+beim Admin-Bypass (`skip_flow`); die Flussprüfung (409) kommt zuerst. Gespeichert werden
+`ticket.resolution_kind`, `resolution_note`, `resolved_by` (Migration 0126) und die Notiz im
+`TicketEvent` `status` (`data.resolution`); Wiedereröffnen leert die Felder.
+
+* `PATCH /tickets/{id}` und `POST /tickets/bulk-status` nehmen `resolution` an, Bulk als
+  gemeinsame Notiz aller Tickets. `POST /tickets/merge` nimmt eine optionale gemeinsame
+  `resolution`; ohne sie erhalten die Quelltickets `zusammengefuehrt` mit Verweis auf das Ziel.
+* Lernen: je Abschluss ein `AiExample` (Aufgabe `ticket_resolution`, kein KI-Lauf) mit Eingabe
+  Betreff, Anliegen, Kategorie, Thema, erkannte Entitäten (Objekt, Einheit, Kontakt) und Ausgabe
+  Art, Notiz, Status, zuletzt versendete Antwort. `learn_playbook_from_ticket` nimmt die
+  Erledigung in den Prompt und als Schritt `Erledigung: ...` in das gelernte Playbook auf; ein
+  bestehendes ähnliches Playbook erhält den Schritt ergänzt (höchstens 20 Schritte).
+* Vorschläge (`communication/suggest.py`, `resolution_hint`): aus den letzten 200
+  Erledigungsbeispielen werden die drei ähnlichsten (Schlagwortüberlappung mit Betreff und
+  Anliegen) als "Bei ähnlichen Vorgängen wurde: ..." in Prompt und `suggestion.resolution_hint`
+  übernommen.
+* Wissensdatenbank: `GET /ai/examples` (`tenant_settings:read`, `task`, `page`, `per_page`,
+  Antwort `data` plus `meta`), Playbooks über `GET /mail/playbooks` (jetzt mit
+  `last_used_at`, gesetzt beim Anwenden). Seite `/einstellungen/wissen` mit den Reitern
+  Playbooks (Deaktivieren mit `communication:update`, Bearbeiten unter `/mail/playbooks`) und
+  Lernbeispiele (Filter nach Aufgabe).
+* Frontend: Abschlussdialog `ResolutionDialog` im Ticket und in der Bulk-Aktion.
+* Tests: `tests/integration/test_ticket_resolution.py`,
+  `tests/unit/test_ticket_resolution_learning.py`, Vitest `ResolutionDialog.test.tsx` und
+  `KnowledgeBase.test.tsx`.

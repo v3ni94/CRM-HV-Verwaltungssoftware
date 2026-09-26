@@ -144,7 +144,13 @@ def test_dashboard_stats(
     # t1: resolved today after 5 hours -> counted in "done_in_range" and average resolution.
     _force_dates(settings, world.tenant_a, t1["id"], created_at=now)
     _ok(client.patch(f"/api/v1/tickets/{t1['id']}", json={"status": "in_progress"}, headers=h))
-    _ok(client.patch(f"/api/v1/tickets/{t1['id']}", json={"status": "done"}, headers=h))
+    _ok(
+        client.patch(
+            f"/api/v1/tickets/{t1['id']}",
+            json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=h,
+        )
+    )
     _force_dates(settings, world.tenant_a, t1["id"], resolved_at=now.replace(hour=5))
 
     # t2: stays open, in progress.
