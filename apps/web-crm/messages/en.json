@@ -97,7 +97,8 @@
     "openNav": "Open navigation",
     "immoware": "Immoware24",
     "immowareLearning": "Learning phase",
-    "objektakte": "Objektakte (Records)"
+    "objektakte": "Objektakte (Records)",
+    "immoware24:reconciliation": "Immoware24: parallel operation reconciliation"
   },
   "Contacts": {
     "title": "Contacts",
@@ -136,6 +137,9 @@
       "bank": "Bank accounts",
       "notes": "Notes",
       "consents": "Consents"
+    },
+    "calls": {
+      "title": "Calls"
     },
     "created": "Created on",
     "updated": "Changed on",
@@ -526,7 +530,8 @@
     "undo": "Undo",
     "undoConfirm": "Really undo the import? Records that later data builds on are kept.",
     "undoneAt": "Undone on {at}",
-    "immoware24Link": "Open import assistant"
+    "immoware24Link": "Open import assistant",
+    "reconciliationLink": "Parallel operation reconciliation"
   },
   "AiSettings": {
     "title": "AI settings",
@@ -1239,7 +1244,9 @@
         "moebliert": "Furnished",
         "wg_geeignet": "Suitable for shared flat",
         "haustiere_erlaubt": "Pets allowed"
-      }
+      },
+      "energyIssuedOn": "Energy certificate issue date",
+      "energyBuildingYear": "Construction year per certificate"
     },
     "detail": {
       "back": "To the unit",
@@ -1576,7 +1583,63 @@
     }
   },
   "HoaWork": {
+    "audits": "Board audits",
+    "audit": {
+      "title": "Board audit",
+      "notFound": "Audit engagement not found.",
+      "none": "No audit engagements created.",
+      "status": {
+        "open": "open",
+        "closed": "closed"
+      },
+      "sampling": {
+        "sample": "Sample",
+        "full": "Full audit"
+      },
+      "overallStatus": "Overall status",
+      "items": "Audit positions",
+      "noItems": "No positions selected.",
+      "item": "Position",
+      "itemNumber": "Position {n}",
+      "note": "Note, question, answer",
+      "itemStatus": {
+        "open": "open",
+        "checked": "checked",
+        "query": "query",
+        "objection": "objected",
+        "outdated": "outdated"
+      },
+      "wholeEngagement": "Whole engagement",
+      "board": "Board access and questions",
+      "boardHint": "In the portal the board sees only this engagement, the selected positions and the receipts released for them. It does not post, release or change any statement.",
+      "accessRevoked": "ended",
+      "accountStatus": {
+        "invited": "invited",
+        "active": "active",
+        "locked": "locked",
+        "unknown": "unknown"
+      },
+      "revoke": "End access",
+      "revokeConfirm": "End the board access to this engagement? Notes and questions are kept.",
+      "auditor": "Auditor",
+      "email": "E-mail (new portal account only)",
+      "displayName": "Display name (new portal account only)",
+      "grant": "Create board access",
+      "grantHint": "If the contact already has a portal account (for example as an owner), the board role is added to it. Otherwise an invitation is issued like for owners.",
+      "invitationToken": "Invitation code (shown once, for the invitation letter)",
+      "notes": "Notes and questions of the board",
+      "noNotes": "No notes or questions.",
+      "noteKind": {
+        "note": "Note",
+        "question": "Question",
+        "answered": "answered"
+      },
+      "answer": "Answer of the management",
+      "sendAnswer": "Send answer"
+    },
     "noLedger": "No ledger exists for this community yet.",
+    "inspection": "Inspection requests",
+    "inspectionLink": "Record inspection requests outside the portal",
     "plans": "Economic plans",
     "statements": "HOA statements",
     "meetings": "Meetings",
@@ -1720,6 +1783,15 @@
       "moreThan": "more than {p} %",
       "atLeast": "at least {p} %",
       "meaMin": "at least {p} % of all MEA"
+    },
+    "protocol": {
+      "title": "Minutes draft",
+      "notice": "The draft is generated from agenda, attendance, resolution texts and voting results. It has no legal effect and does not replace the signed minutes.",
+      "create": "Generate minutes draft",
+      "recreate": "Regenerate minutes draft",
+      "download": "Download draft",
+      "signedLinked": "The signed minutes stay linked.",
+      "missing": "Not recorded"
     }
   },
   "RentIncrease": {
@@ -1817,8 +1889,23 @@
       "floor": "Floor",
       "features": "Features",
       "last_modernization_year": "Last modernisation",
-      "energy_certificate": "Energy certificate",
-      "asking_rent": "Asking rent"
+      "energy_certificate": {
+        "title": "Energy certificate",
+        "type": "Certificate type",
+        "value": "Value in kWh/(m²a)",
+        "source": "Energy source",
+        "construction_year": "Construction year",
+        "issued_on": "Issue date",
+        "valid_until": "Valid until",
+        "class": "Efficiency class"
+      },
+      "asking_rent": {
+        "title": "Asking rent",
+        "net_rent": "Net rent",
+        "additional_costs": "Service charges",
+        "heating_costs": "Heating costs",
+        "deposit": "Deposit"
+      }
     },
     "statuses": {
       "new": "new",
@@ -1827,13 +1914,16 @@
       "accepted": "accepted",
       "rejected": "rejected",
       "withdrawn": "withdrawn"
-    }
+    },
+    "noListing": "No rental listing exists; the asking rent is recorded on the listing.",
+    "toListing": "Open listing"
   },
   "Tickets": {
     "mailAttachments": {
       "title": "Attachments from e-mails",
       "hint": "PDF and image attachments can be captured as receipts. The AI proposes the values; review and confirmation happen in the receipt intake. Nothing is posted.",
-      "unsupported": "not a receipt (file type)"
+      "unsupported": "not a receipt (file type)",
+      "receipt": "Record as receipt"
     },
     "proposals": {
       "title": "Proposals from the e-mail",
@@ -1975,7 +2065,7 @@
       "reset": "Reset"
     },
     "reply": {
-      "title": "Antwortvorlage",
+      "title": "Reply",
       "select": "Antwortvorlage wählen",
       "none": "Keine Vorlage gewählt",
       "emptyTemplates": "Keine aktiven Antwortvorlagen. Vorlagen werden unter Einstellungen, Antwortvorlagen gepflegt.",
@@ -1996,22 +2086,79 @@
       "send": "Antwort senden",
       "sendHint": "Der Versand erfolgt erst nach Klick auf Antwort senden über das Postfach des Tickets und den bestehenden Freigabeweg. Es wird nichts automatisch gesendet.",
       "sent": "Antwort eingereicht. Sie wird nach Freigabe über das Postfach des Tickets versendet.",
-      "openMail": "Im Postfach öffnen"
+      "openMail": "Im Postfach öffnen",
+      "cc": "Cc",
+      "replyingTo": "Reply to the mail of {at}",
+      "replyingToLatest": "Reply to the latest inbound mail",
+      "tnrHint": "The subject automatically carries the tag {tnr} so replies are assigned to the ticket.",
+      "unverifiedSender": "The sender {address} is not a participant of this ticket and was not taken over as recipient.",
+      "useSender": "Use as recipient",
+      "addAttachment": "Add attachment",
+      "upload": "Upload file",
+      "uploading": "Uploading...",
+      "uploadFailed": "The file could not be uploaded.",
+      "searchDocuments": "Search document",
+      "searchPlaceholder": "Title or file name",
+      "noDocumentsFound": "No documents found.",
+      "addDocument": "Add",
+      "invalidAddress": "Invalid e-mail address: {address}",
+      "approvalHint": "Sending happens after the four-eyes approval in the mailbox, through the ticket's mailbox.",
+      "reset": "Discard"
     },
     "openTicket": "Ticket öffnen",
-    "messages": "Nachrichten"
+    "messages": "Nachrichten",
+    "pagination": {
+      "label": "Pagination",
+      "range": "{from} to {to} of {total}",
+      "page": "Page {page} of {pages}",
+      "prev": "Back",
+      "next": "Next"
+    },
+    "mailThread": {
+      "title": "Mail history",
+      "empty": "No e-mails for this ticket.",
+      "loadFailed": "The mail history could not be loaded.",
+      "directionIn": "Inbound",
+      "directionOut": "Outbound",
+      "from": "From",
+      "to": "To",
+      "cc": "Cc",
+      "mailbox": "Mailbox",
+      "noSubject": "no subject",
+      "status": {
+        "new": "new",
+        "assigned": "assigned",
+        "done": "done",
+        "draft": "Draft",
+        "pending": "awaiting approval",
+        "sent": "sent",
+        "failed": "failed"
+      },
+      "sendError": "Last send error",
+      "rejected": "Rejected",
+      "showQuote": "Show quoted text",
+      "hideQuote": "Hide quoted text",
+      "showHtml": "Show as HTML",
+      "showText": "Show as text",
+      "attachments": "Attachments",
+      "attachmentMissing": "Document no longer available",
+      "preview": "Preview",
+      "closePreview": "Close preview",
+      "download": "Download",
+      "replyTo": "Reply to this mail",
+      "openMail": "Open in mailbox"
+    }
   },
   "Automation": {
     "title": "Automation",
-    "pageDescription": "Rule engine stage 1: trigger, conditions and actions. Rules never post, pay or approve.",
+    "pageDescription": "Rule engine: trigger (event or schedule), conditions and actions. Rules never post, pay, approve or send.",
     "empty": "No rules yet.",
     "newRule": "New rule",
     "name": "Name",
     "description": "Description",
-    "trigger": "Trigger (event type)",
+    "trigger": "Event type",
     "triggerHelp": "For example ticket.created. The list shows known event types.",
     "conditions": "Conditions",
-    "conditionsJson": "Conditions (JSON, nested)",
     "combinator": "Combination",
     "and": "all apply (and)",
     "or": "any applies (or)",
@@ -2034,7 +2181,11 @@
     "actions": {
       "set_ticket_field": "Set ticket field",
       "notify": "Internal notification",
-      "create_ticket": "Create ticket from template"
+      "create_ticket": "Create ticket from template",
+      "webhook": "Send webhook",
+      "mail_draft": "E-mail draft from reply template",
+      "letter_draft": "Letter draft from letter template",
+      "ai_task": "Start AI task"
     },
     "actionValue": "Action value",
     "ticketField": "Ticket field",
@@ -2044,7 +2195,6 @@
       "category": "Category",
       "assignee_user_id": "Assignee"
     },
-    "teamIdHelp": "Team ID (UUID)",
     "priorities": {
       "low": "Low",
       "normal": "Normal",
@@ -2066,7 +2216,7 @@
       "unit_id": "Copy unit from event",
       "contact_id": "Copy contact from event"
     },
-    "noMoneyHint": "Stage 1: rules create tickets, notify internally and set ticket fields. No posting, no payment, no approval.",
+    "noMoneyHint": "Rules create tickets, notify internally, set ticket fields, send webhooks, create e-mail and letter drafts and start AI proposals. No posting, no payment, no approval, no sending.",
     "invalidJson": "Invalid JSON.",
     "save": "Save",
     "cancel": "Cancel",
@@ -2087,9 +2237,13 @@
     "notMatched": "Conditions do not match.",
     "triggerMismatch": "The event type does not match the rule trigger.",
     "summary": {
-      "setField": "Set ticket field {field} to {value}",
-      "notify": "Notify {count} recipients or roles",
-      "createTicket": "Create ticket from template {title}"
+      "setField": "{field} {value}",
+      "notify": "Notification to {count} recipients or roles",
+      "createTicket": "Create ticket from template {title}",
+      "webhook": "Webhook to {url}",
+      "mailDraft": "E-mail draft from {template}",
+      "letterDraft": "Letter draft from {template}",
+      "aiTask": "AI task {task}"
     },
     "log": "Log",
     "filterRule": "Filter rule",
@@ -2104,7 +2258,108 @@
       "executed": "executed",
       "failed": "failed",
       "dry_run": "test run"
-    }
+    },
+    "triggerKind": "Trigger kind",
+    "triggerKinds": {
+      "event": "Event",
+      "schedule": "Schedule"
+    },
+    "customEvent": "Other event type",
+    "eventTypeCode": "Event type (code)",
+    "events": {
+      "ticket_created": "Ticket created",
+      "ticket_merged": "Ticket merged",
+      "sla_escalated": "SLA escalated",
+      "contact_updated": "Contact updated",
+      "document_created": "Document created",
+      "property_created": "Property created",
+      "unit_created": "Unit created",
+      "listing_created": "Listing created",
+      "import_run_applied": "Import applied",
+      "payment_order_returned": "Payment order returned",
+      "portal_account_invited": "Portal account invited"
+    },
+    "frequency": "Frequency",
+    "frequencies": {
+      "daily": "daily",
+      "weekly": "weekly",
+      "monthly": "monthly"
+    },
+    "weekday": "Weekday",
+    "weekdays": {
+      "0": "Monday",
+      "1": "Tuesday",
+      "2": "Wednesday",
+      "3": "Thursday",
+      "4": "Friday",
+      "5": "Saturday",
+      "6": "Sunday"
+    },
+    "dayOfMonth": "Day of month",
+    "scheduleHelp": "Time in Europe/Berlin. The rule runs exactly once per due moment; moments before activation are not caught up.",
+    "chooseField": "Choose field",
+    "customField": "Other field",
+    "fieldPath": "Field path",
+    "choose": "Please choose",
+    "fields": {
+      "entity": {
+        "category": "Ticket category",
+        "priority": "Ticket priority",
+        "topic": "Ticket topic",
+        "title": "Ticket title",
+        "team_id": "Ticket team",
+        "source": "Ticket source",
+        "status": "Ticket status"
+      },
+      "payload": {
+        "source": "Event source",
+        "number": "Event number"
+      }
+    },
+    "webhookUrl": "Target URL (https)",
+    "webhookSecret": "Signing secret (at least 16 characters)",
+    "webhookSecretKeep": "New secret (leave empty to keep the stored one)",
+    "webhookExtra": "Extra fields in the call",
+    "webhookHelp": "Signed call (HMAC SHA-256) with rule, event and ticket fields. Only https targets; private networks only with operator approval. The secret is stored encrypted and never shown.",
+    "placeholderName": "Field name",
+    "placeholderValue": "Field value",
+    "addField": "Add field",
+    "replyTemplate": "Reply template",
+    "noReplyTemplates": "No reply template available",
+    "mailDraftHelp": "Only creates a draft in the ticket mailbox. Approval and sending stay manual (four eyes).",
+    "letterTemplate": "Letter template",
+    "noLetterTemplates": "No letter template available",
+    "letterContact": "Recipient (contact ID, empty = contact of the ticket)",
+    "letterContactRequired": "Recipient (contact ID, required on a schedule)",
+    "contactIdHelp": "Contact ID",
+    "letterReference": "Our reference",
+    "letterFields": "Placeholder fields of the template (felder.*)",
+    "letterDraftHelp": "Renders the letter on the letterhead and stores it as a document. Nothing is sent.",
+    "aiTask": "AI task",
+    "aiTasks": {
+      "summarize": "Summarise",
+      "draft_reply": "Draft reply",
+      "answer_question": "Answer question",
+      "classify_email": "Classify e-mail"
+    },
+    "aiInstruction": "Instruction (placeholders allowed)",
+    "aiTaskHelp": "Starts an AI run through the gateway. The result is a proposal only; no posting, no approval.",
+    "expertView": "Expert view (JSON)",
+    "formView": "Form view",
+    "expertJson": "Rule core as JSON (trigger, schedule, conditions, actions)",
+    "expertHelp": "Nested conditions are only possible here. Returning to the form requires a flat list of conditions.",
+    "nestedConditions": "Nested conditions cannot be shown in the form. Please edit them in the expert view.",
+    "sentence": {
+      "frame": "When {when}, then {then}.",
+      "with": "with",
+      "and": "and",
+      "or": "or",
+      "nothing": "no action",
+      "daily": "daily at {time}",
+      "weekly": "weekly on {weekday} at {time}",
+      "monthly": "monthly on day {day} at {time}"
+    },
+    "testRunSchedule": "Schedule rule: the test run checks the actions for the next due moment without creating anything."
   },
   "TicketTemplates": {
     "title": "Ticket templates",
@@ -2288,7 +2543,8 @@
       "correctionNote": "What was wrong, what is right?",
       "correctionSave": "Save correction",
       "correctionRecorded": "Last corrected"
-    }
+    },
+    "tnrSuggestion": "Possible assignment to TNR#{number}: the sender is not a participant of the ticket, so the mail was not assigned automatically."
   },
   "Platform": {
     "title": "Platform",
@@ -2552,7 +2808,25 @@
       "hoa": "No HOA properties.",
       "sev": "No HOA properties with SEV and tenancy contracts."
     },
-    "sevHint": "HOA properties with SEV that have at least one tenancy contract."
+    "sevHint": "HOA properties with SEV that have at least one tenancy contract.",
+    "energyCertificate": {
+      "title": "Energy certificate",
+      "help": "Values as shown on the building's energy certificate. Listings copy them on creation; the exposé and the OpenImmo export check them.",
+      "type": "Certificate type",
+      "none": "not specified",
+      "types": {
+        "verbrauch": "Consumption certificate",
+        "bedarf": "Demand certificate"
+      },
+      "value": "Value in kWh/(m²a)",
+      "source": "Energy source",
+      "constructionYear": "Construction year per certificate",
+      "issuedOn": "Issue date",
+      "validUntil": "Valid until",
+      "class": "Efficiency class",
+      "save": "Save energy certificate",
+      "saved": "Saved."
+    }
   },
   "AiChat": {
     "title": "AI assistant",
@@ -2684,6 +2958,10 @@
       "title": "DMS connection",
       "description": "Manage Paperless credentials and field IDs, view Google Drive."
     },
+    "telephony": {
+      "title": "Telephony",
+      "description": "Set up the phone system webhook, caller recognition and call list."
+    },
     "bank": {
       "title": "Bank",
       "description": "finAPI credentials for the read-only online banking connection."
@@ -2711,6 +2989,10 @@
     "datev": {
       "title": "Accounting, DATEV",
       "description": "CRM account to DATEV account mapping, CSV import and check report for the batch export."
+    },
+    "portalForms": {
+      "title": "Portal forms",
+      "description": "Form templates for tenants and owners in the portal."
     }
   },
   "Members": {
@@ -3760,7 +4042,9 @@
       "invitationLetter": "Download letter",
       "mailDraftOption": "Create the invitation as an email draft",
       "tokenHelpManual": "No email draft was created. The code is shown only now; alternatively download a letter later.",
-      "confirmNewCode": "A new invitation code will be generated and any code sent so far becomes invalid. Continue?"
+      "confirmNewCode": "A new invitation code will be generated and any code sent so far becomes invalid. Continue?",
+      "linkTitle": "Invitation link (text and QR code)",
+      "qrAlt": "QR code of the invitation link"
     },
     "dispatch": {
       "title": "Delivery to the participants",
@@ -3802,7 +4086,9 @@
       },
       "tokenTitle": "Invitation (shown only once)",
       "tokenHelp": "Please pass the invitation code together with the portal address to the participant. The code is valid for 14 days; in the portal the participant sets the password and configures the second factor.",
-      "done": "Portal access set up."
+      "done": "Portal access set up.",
+      "linkTitle": "Invitation link (text and QR code)",
+      "qrAlt": "QR code of the invitation link"
     },
     "appointmentCreatedLink": "Open appointment on {date} in calendar"
   },
@@ -4435,5 +4721,394 @@
     "hint": "When the Gmail mailboxes are synced, exactly one AI extraction is started for each new PDF attachment whose subject, sender or file name indicates an invoice (Rechnung, Invoice, Beleg, RE-). The result is a proposal under incoming invoices, nothing is posted.",
     "costHint": "Every automatic extraction incurs AI costs and uses the monthly AI provider budget. Budget and release checks apply unchanged. Default: off.",
     "saved": "Setting saved."
+  },
+  "HoaInspection": {
+    "title": "Inspection requests",
+    "hoa": "HOA",
+    "request": "Inspection request",
+    "create": "Record inspection request",
+    "applicant": "Applicant",
+    "applicantSearch": "Search contact (at least 2 characters)",
+    "requestedOn": "Request date",
+    "scope": "Scope",
+    "scopeText": "Scope as free text",
+    "scopeKinds": {
+      "statement": "Statement",
+      "receipts": "Receipts",
+      "contracts": "Contracts",
+      "resolutions": "Resolutions"
+    },
+    "statusHeading": "Status",
+    "status": {
+      "requested": "requested",
+      "released": "released",
+      "provided": "provided",
+      "retrieved": "retrieved",
+      "closed": "closed",
+      "rejected": "rejected"
+    },
+    "action": {
+      "released": "Release",
+      "provided": "Provide",
+      "retrieved": "Mark as retrieved",
+      "closed": "Close",
+      "rejected": "Reject"
+    },
+    "deliveryKind": "Delivery",
+    "delivery": {
+      "portal": "Portal",
+      "data_medium": "Data medium",
+      "on_site": "Inspection on site"
+    },
+    "note": "Question or note",
+    "addNote": "Add note",
+    "packageHeading": "Delivery package",
+    "packageHelp": "Only documents of the property released for owners can be selected. The package holds an index with file name, category, date and SHA-256 per document; the same selection gives the same checksum.",
+    "buildPackage": "Build package",
+    "download": "Download package",
+    "packageOf": "Package of {date},",
+    "notReleased": "not released",
+    "noDocuments": "No documents on the property.",
+    "trail": "Trail",
+    "kind": {
+      "status": "Status change",
+      "note": "Note",
+      "package": "Package built",
+      "retrieval": "Package retrieved"
+    },
+    "empty": "No inspection requests.",
+    "notFound": "Inspection request not found.",
+    "notice": "Record of inspection outside the portal. Periods and scope of inspection are the manager's decision; the software derives no claim from it. Every download of the package is logged."
+  },
+  "PortalForms": {
+    "title": "Portal forms",
+    "description": "Forms for tenants and owners in the portal. Every submission becomes a case with a ticket in the chosen category.",
+    "intro": "A template defines name, fields and audience. When a tenant or owner submits the form in the portal, a ticket is created with the entries as text and the files as attachments. Nothing is decided or posted.",
+    "newTemplate": "New form",
+    "empty": "No forms yet.",
+    "name": "Name",
+    "description2": "Hint shown in the portal (optional)",
+    "category": "Ticket category",
+    "categoryHelp": "Category of the ticket created from a submission.",
+    "audience": "Audience",
+    "audiences": {
+      "all": "Tenants and owners",
+      "tenant": "Tenants only",
+      "owner": "Owners only"
+    },
+    "fields": "Fields",
+    "noFields": "No fields, submit only.",
+    "required": "Required",
+    "remove": "Remove",
+    "add": "Add",
+    "newFieldLabel": "New field",
+    "fieldType": "Field type",
+    "options": "Options",
+    "optionsPlaceholder": "Options, comma separated",
+    "fieldTypes": {
+      "text": "Text",
+      "number": "Number",
+      "date": "Date",
+      "select": "Choice",
+      "file": "File"
+    },
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "delete": "Delete",
+    "confirmDelete": "Delete form \"{name}\"? Templates with submissions can only be deactivated.",
+    "activeState": "active",
+    "inactiveState": "inactive",
+    "errors": {
+      "name": "Please enter a name.",
+      "category": "Please enter a ticket category."
+    }
+  },
+  "ReconciliationReports": {
+    "title": "Parallel operation reconciliation",
+    "intro": "Compares the staged Immoware24 raw rows (journal, bank transactions) per property with the platform figures: account balances, open receivables and payables, reserve, bank balance and payments.",
+    "backToImports": "Back to imports",
+    "readOnlyNote": "The report only reads and compares. Nothing is posted, corrected or applied. The daily run happens automatically (default 05:30).",
+    "asOf": "As of",
+    "asOfHelp": "Without a date the newest booking date of the raw rows is used.",
+    "create": "Create report now",
+    "creating": "Creating report",
+    "loading": "Loading reports.",
+    "empty": "No reconciliation report yet. Staged raw rows of the report types journal or bank transactions in the import assistant are required.",
+    "colCreated": "Created",
+    "colAsOf": "As of",
+    "colTrigger": "Trigger",
+    "colProperties": "Properties",
+    "colDeviations": "Deviations",
+    "colActions": "Actions",
+    "downloadCsv": "Download CSV",
+    "triggerBeat": "daily run",
+    "triggerManual": "manual",
+    "detailTitle": "Reconciliation as of",
+    "totals": {
+      "properties": "Properties",
+      "compared": "Figures",
+      "deviations": "Deviations",
+      "missing_on_platform": "Properties missing on the platform"
+    },
+    "warnings": "{count, plural, one {# raw row could not be read} other {# raw rows could not be read}}",
+    "onlyDeviations": "Show deviations only",
+    "noLines": "No rows.",
+    "colProperty": "Property",
+    "colMetric": "Figure",
+    "colKey": "Account / IBAN",
+    "colSource": "Source",
+    "colPlatform": "Platform",
+    "colDifference": "Difference",
+    "colHint": "Hint",
+    "missing": "missing",
+    "metric": {
+      "kontosaldo": "Account balance",
+      "debitoren_op": "Open receivables",
+      "kreditoren_op": "Open payables",
+      "ruecklage": "Reserve",
+      "bankstand": "Bank balance",
+      "zahlungen": "Incoming payments"
+    }
+  },
+  "TelephonySettings": {
+    "title": "Telephony webhook",
+    "pageIntro": "Provider neutral inbound endpoint for call events of the phone system. The provider is still open at the operator, the message format is described in docs/integrations/telefonie.md.",
+    "intro": "The phone system signs every delivery with the secret stored here (HMAC-SHA256, five minute window). Events: call started, ended, missed, each with number, direction, duration and an optional provider reference.",
+    "endpoint": "Endpoint:",
+    "enabled": "Webhook active",
+    "providerLabel": "Provider or system (label)",
+    "providerHint": "Free label for orientation, for example the name of the phone system.",
+    "secret": "Secret (HMAC)",
+    "secretHint": "At least 16 characters. Stored once and never shown again; leave empty to keep the existing secret.",
+    "secretStored": "Secret is stored and not shown.",
+    "secretMissing": "No secret stored yet.",
+    "privacyHint": "No conversation content is accepted or stored. Numbers appear unmasked in lists only with the permission to read contacts.",
+    "save": "Save",
+    "saved": "Settings saved.",
+    "readOnly": "Read only, changes need the permission to edit tenant settings."
+  },
+  "Calls": {
+    "none": "No calls yet.",
+    "masked": "Number masked",
+    "duration": "Duration {value}",
+    "event": {
+      "started": "Started",
+      "ended": "Ended",
+      "missed": "Missed"
+    },
+    "direction": {
+      "inbound": "inbound",
+      "outbound": "outbound"
+    },
+    "proposal": {
+      "callback": "Proposal callback",
+      "accept": "Create callback ticket",
+      "dismiss": "Dismiss",
+      "accepted": "Callback created as ticket.",
+      "created": "Ticket {number} created.",
+      "dismissed": "Proposal dismissed."
+    }
+  },
+  "HoaFinance": {
+    "loans": "Loans",
+    "claims": "Insurance claims",
+    "measures": "Larger measures",
+    "notice": "Recording and evidence. Amounts count only with a reference to a posted journal entry. Tax and allocation treatment and the resolution basis are released per case (W10).",
+    "create": {
+      "loan": "Add loan",
+      "claim": "Add insurance claim",
+      "measure": "Add measure"
+    },
+    "lender": "Lender",
+    "principal": "Principal",
+    "rate": "Interest rate in percent",
+    "termMonths": "Term in months",
+    "instalment": "Instalment",
+    "startDate": "Start",
+    "purpose": "Purpose",
+    "loanAccount": "Loan account",
+    "title": "Title",
+    "damageDate": "Damage date",
+    "insurer": "Insurer",
+    "policy": "Policy",
+    "claimNumber": "Claim number",
+    "deductible": "Deductible",
+    "costFrame": "Cost frame",
+    "kind": "Classification",
+    "kinds": {
+      "undecided": "open",
+      "maintenance": "maintenance",
+      "structural_change": "structural change"
+    },
+    "kindBasis": "Facts and legal basis",
+    "items": "Items",
+    "itemKind": "Kind",
+    "bookingDate": "Date",
+    "amount": "Amount",
+    "journalEntry": "Journal entry (ID)",
+    "note": "Note",
+    "addItem": "Add item",
+    "loanKinds": {
+      "disbursement": "Disbursement",
+      "repayment": "Repayment",
+      "interest": "Interest",
+      "fee": "Fee"
+    },
+    "claimKinds": {
+      "damage_cost": "Damage cost",
+      "benefit": "Insurance benefit",
+      "deductible": "Deductible",
+      "regress": "Recourse",
+      "owner_payment": "Payment to owner"
+    },
+    "contract": "Ownership contract (ID)",
+    "booked": "posted",
+    "planned": "not posted",
+    "balanceBooked": "Balance from posted items",
+    "accountBalance": "Loan account balance",
+    "accountDifference": "Difference",
+    "netBurden": "Net burden of the community (posted)",
+    "financing": "Financing",
+    "source": "Source",
+    "sources": {
+      "reserve": "Maintenance reserve",
+      "special_levy": "Special levy",
+      "loan": "Loan",
+      "other": "Other"
+    },
+    "financedTotal": "financed",
+    "financingGap": "open",
+    "addFinancing": "Add financing share",
+    "reference": "Reference (ID)",
+    "documents": "{n} linked documents",
+    "status": "Status",
+    "loanStatus": {
+      "draft": "draft",
+      "active": "active",
+      "repaid": "repaid",
+      "closed": "closed"
+    },
+    "claimStatus": {
+      "reported": "reported",
+      "accepted": "accepted",
+      "rejected": "rejected",
+      "settled": "settled",
+      "closed": "closed"
+    },
+    "measureStatus": {
+      "planned": "planned",
+      "resolved": "resolved",
+      "in_progress": "in progress",
+      "completed": "completed",
+      "cancelled": "cancelled"
+    },
+    "setStatus": "Set status",
+    "reconciliation": "Cash flow reconciliation (W04)",
+    "cash": "Bank and cash",
+    "opening": "Opening balance",
+    "inflows": "Inflows",
+    "outflows": "Outflows",
+    "closing": "Closing balance",
+    "account": "Account",
+    "bridge": {
+      "outflows": "Payments out",
+      "reserve": "of which reserve",
+      "loan": "of which loan positions",
+      "owner_refund": "of which refunds to owners",
+      "other_non_cost": "of which transit and other",
+      "cost_refunds": "less refunds on costs",
+      "cost_paid": "Costs paid",
+      "creditor_timing": "Timing of creditor booking against payment",
+      "structure_residual": "Unassignable entry structure",
+      "cost_booked": "Costs booked",
+      "heating_accrual": "Heating cost accrual",
+      "prior_year": "Prior year",
+      "other": "Other explained difference",
+      "cost_distributed": "Distribution relevant costs",
+      "unexplained": "Unexplained difference"
+    },
+    "notes": "Explained differences",
+    "noteCode": "Kind",
+    "noteAmount": "Signed amount",
+    "noteText": "Reason",
+    "saveNotes": "Save explanations",
+    "addNote": "Add row",
+    "removeNote": "Remove"
+  },
+  "ReadReceipts": {
+    "title": "Portal accesses",
+    "legalNote": "Indication only, no delivery, no legal effect.",
+    "empty": "No accesses through the portal.",
+    "columns": {
+      "at": "Time",
+      "kind": "Kind",
+      "account": "Account"
+    },
+    "kind": {
+      "opened": "viewed",
+      "downloaded": "downloaded"
+    }
+  },
+  "DocumentDetail": {
+    "area": "Documents",
+    "created": "Provided on",
+    "mimeType": "File type",
+    "visibility": "Portal visibility",
+    "visibilityNone": "not released",
+    "visibilityValues": {
+      "tenant": "Tenants",
+      "owner": "Owners",
+      "provider": "Providers",
+      "board": "Board",
+      "all": "all"
+    },
+    "links": "Links",
+    "linksNone": "none",
+    "receiptsUnavailable": "Read receipts could not be loaded."
+  },
+  "Notices": {
+    "title": "Notice board",
+    "intro": "Notices of the management with validity and audience, shown in the portal to tenants and owners of the property.",
+    "create": "Create notice",
+    "edit": "Edit",
+    "end": "End",
+    "save": "Create",
+    "saveChanges": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading notices.",
+    "empty": "No notices available.",
+    "openEnd": "further notice",
+    "withDocument": "with attachment",
+    "validity": "Valid {from} until {to}",
+    "fields": {
+      "title": "Title",
+      "body": "Text",
+      "validFrom": "Valid from",
+      "validTo": "Valid until",
+      "audience": "Audience",
+      "document": "Document ID (optional)",
+      "documentHint": "ID of a document of the property shown as attachment."
+    },
+    "audience": {
+      "all": "Tenants and owners",
+      "tenant": "Tenants",
+      "owner": "Owners"
+    },
+    "status": {
+      "current": "visible",
+      "ended": "ended",
+      "inactive": "not valid"
+    },
+    "errors": {
+      "title": "Please enter a title.",
+      "body": "Please enter a text.",
+      "validFrom": "Please enter a start date.",
+      "validTo": "The end date lies before the start.",
+      "document": "The document ID is invalid."
+    },
+    "endConfirm": "End the notice \"{title}\"? It will no longer be shown in the portal."
   }
 }

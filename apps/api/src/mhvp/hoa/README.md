@@ -16,5 +16,14 @@ Layout once implemented: `models.py`, `schemas.py`, `services.py`, `routers.py`,
   check (D18) and the resolution validity block (D54).
 * `levies.py`: special levies with instalments, amendments and earmarked report (W09, D20).
 * `meetings.py`: owners' meeting, circular resolutions, board audit (M25).
+* `protocol.py`: minutes draft of a meeting from a placeholder template as PDF on the tenant
+  letterhead (A62); a draft without legal effect, the signed minutes stay linked separately.
 * Reserve block of the statement: Soll, Ist, open contributions, bank balance and explained
   difference, never a settlement entry (W08, D19).
+* `board.py`: board access per audit engagement, revocation and the management answer to a
+  board question (A52, docs/rules/M21-07.md); the board itself works in `mhvp.portal.board`.
+* `finance.py`: loans, insurance claims and larger measures (W10, A59); items count only with
+  a posted journal entry, documents via DocumentLink, no posting.
+* `calc.cash_flow_reconciliation`: Gesamtgeldfluss and Überleitung of the statement year (W04,
+  A60); an unexplained difference blocks the package.
+

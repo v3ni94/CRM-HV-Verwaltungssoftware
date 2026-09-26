@@ -57,3 +57,12 @@ Standardanhänge als Dokumentverweise (`attachment_document_ids`, Dokumentenmodu
   (`mhvp.communication.attachments`). Kein automatischer Versand, keine KI.
 * Tests: `tests/unit/test_ticket_reply_templates.py`,
   `tests/integration/test_m19_ticket_reply_templates.py`.
+
+## Status transitions (review 26.09.2026)
+
+`status.py` is the single service for status changes (`transition_status`): allowed flow,
+completion checks, `TicketEvent` `status`, `resolved_at`, SLA clock (stop on done/closed/rejected,
+restart on reopening), domain event `ticket.status_changed` (payload `from`, `to`, `number`),
+playbook learning and mail archiving. `PATCH /tickets/{id}` and `POST /tickets/bulk-status`
+call it; new entry points (mail, portal) must too. `GET /tickets` paginates with `page` and
+`page_size` (the body stays a list); the total is in the `X-Total-Count` header.

@@ -78,6 +78,7 @@ REQUIRED_FIELDS: tuple[tuple[str, str, str], ...] = (
     ("address.house_number", "Hausnummer des Objekts", "geo/hausnummer"),
     ("object_type", "Objektart", "objektkategorie/objektart"),
     ("price", "Kaltmiete bzw. Kaufpreis", "preise/kaltmiete bzw. preise/kaufpreis"),
+    ("additional_costs", "Nebenkosten (Vermietung)", "preise/nebenkosten"),
     ("living_area_sqm", "Wohnfläche", "flaechen/wohnflaeche"),
     ("rooms", "Zimmerzahl", "flaechen/anzahl_zimmer"),
     ("title", "Objekttitel", "freitexte/objekttitel"),
@@ -98,6 +99,62 @@ REQUIRED_FIELDS: tuple[tuple[str, str, str], ...] = (
 
 _LABELS = {key: label for key, label, _path in REQUIRED_FIELDS}
 _PATHS = {key: path for key, _label, path in REQUIRED_FIELDS}
+
+# Energieausweis fields of the property (A63) and their listing counterparts. The property
+# holds the certificate of the building, the listing the values as advertised.
+ENERGY_FIELD_MAP: tuple[tuple[str, str], ...] = (
+    ("energy_certificate_type", "energy_type"),
+    ("energy_certificate_value", "energy_value"),
+    ("energy_certificate_source", "energy_source"),
+    ("energy_certificate_construction_year", "energy_building_year"),
+    ("energy_certificate_issued_on", "energy_issued_on"),
+    ("energy_certificate_valid_until", "energy_valid_until"),
+    ("energy_certificate_class", "energy_class"),
+)
+# Exposé keys (German UI labels live in the CRM catalogue) for the energy certificate and the
+# asking rent; both blocks are reported field by field instead of one free text marker.
+EXPOSE_ENERGY_KEYS = (
+    "type",
+    "value",
+    "source",
+    "construction_year",
+    "issued_on",
+    "valid_until",
+    "class",
+)
+EXPOSE_RENT_KEYS = ("net_rent", "additional_costs", "heating_costs", "deposit")
+
+
+def property_energy_prefill(prop: Property) -> dict[str, Any]:
+    """Listing values copied from the property's energy certificate (A63). Without any
+    certificate value the status stays `in_erstellung`; with values it becomes `liegt_vor`."""
+    values = {listing_key: getattr(prop, prop_key) for prop_key, listing_key in ENERGY_FIELD_MAP}
+    status = "liegt_vor" if any(v is not None for v in values.values()) else "in_erstellung"
+    return {"energy_status": status, **values}
+
+
+def expose_energy_fields(prop: Property) -> dict[str, Any]:
+    """Energy certificate block of the exposé draft, read from the property only."""
+    return dict(
+        zip(
+            EXPOSE_ENERGY_KEYS,
+            (getattr(prop, prop_key) for prop_key, _listing_key in ENERGY_FIELD_MAP),
+            strict=True,
+        )
+    )
+
+
+def expose_rent_fields(listing: Listing | None) -> dict[str, Any]:
+    """Asking rent block of the exposé draft from the unit's rental listing (None when no
+    listing exists; nothing is estimated)."""
+    if listing is None:
+        return dict.fromkeys(EXPOSE_RENT_KEYS)
+    return {
+        "net_rent": listing.price,
+        "additional_costs": listing.additional_costs,
+        "heating_costs": listing.heating_costs,
+        "deposit": listing.deposit,
+    }
 
 
 @dataclass(frozen=True)
@@ -232,6 +289,13 @@ def build_openimmo_xml(
     if listing.kind == "rental":
         _text(preise, "kaltmiete", _money(listing.price))
         _text(preise, "nebenkosten", _money(listing.additional_costs))
+        _text(preise, "heizkosten", _money(listing.heating_costs))
+        if listing.price is not None:
+            _text(
+                preise,
+                "heizkosten_enthalten",
+                "true" if listing.heating_in_additional_costs else "false",
+            )
         _text(preise, "warmmiete", _money(listing.warm_rent))
         _text(preise, "kaution", _money(listing.deposit))
     else:
@@ -271,6 +335,12 @@ def build_openimmo_xml(
         if epart is not None and listing.energy_value is not None:
             _text(energiepass, epart, listing.energy_value)
         _text(energiepass, "primaerenergietraeger", listing.energy_source)
+        _text(energiepass, "baujahr", listing.energy_building_year)
+        _text(
+            energiepass,
+            "ausstelldatum",
+            listing.energy_issued_on.isoformat() if listing.energy_issued_on else None,
+        )
     if len(zustand) == 0:
         immobilie.remove(zustand)
 
@@ -356,6 +426,14 @@ def check_completeness(
             )
         )
 
+    if listing.kind == "rental":
+        if listing.additional_costs is None:
+            add(_missing("additional_costs", "Nebenkosten fehlen (preise/nebenkosten)."))
+        if listing.heating_costs is None and not listing.heating_in_additional_costs:
+            result.hints.append("Heizkosten sind nicht angegeben (preise/heizkosten).")
+        if listing.deposit is None:
+            result.hints.append("Kaution ist nicht angegeben (preise/kaution).")
+
     # Flächen
     if listing.living_area_sqm is None:
         add(_missing("living_area_sqm", "Wohnfläche fehlt (flaechen/wohnflaeche)."))
@@ -412,6 +490,15 @@ def check_completeness(
         if not listing.energy_source:
             result.hints.append(
                 "Energieträger ist nicht angegeben (energiepass/primaerenergietraeger)."
+            )
+        if listing.energy_building_year is None:
+            result.hints.append(
+                "Baujahr laut Energieausweis ist nicht angegeben (energiepass/baujahr)."
+            )
+        if listing.energy_issued_on is None:
+            result.hints.append(
+                "Ausstellungsdatum des Energieausweises ist nicht angegeben "
+                "(energiepass/ausstelldatum)."
             )
     # energy_status == "nicht_erforderlich": zulässig, kein Hinweis nötig
 

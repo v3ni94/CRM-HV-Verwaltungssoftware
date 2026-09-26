@@ -226,6 +226,8 @@ def _meeting_out(m: Meeting) -> dict[str, Any]:
         "invited_at": m.invited_at,
         "voting_principle": m.voting_principle,
         "status": m.status,
+        "minutes_document_id": m.minutes_document_id,
+        "minutes_draft_document_id": m.minutes_draft_document_id,
     }
 
 
@@ -1029,6 +1031,68 @@ async def meeting_members(
                 }
             )
         return out
+
+
+@router.post(
+    "/meetings/{meeting_id}/protocol-draft",
+    status_code=201,
+    summary="Protokollentwurf als PDF (A62, Entwurf ohne Rechtsfolge)",
+)
+async def protocol_draft(
+    meeting_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    """Renders the minutes template (agenda, attendance with voting rights, resolution text,
+    tally, announcement, signature lines) on the tenant letterhead and files it as a draft
+    document linked to the meeting (`minutes_draft_document_id`). The signed minutes in
+    `minutes_document_id` are never replaced. Permission: the write right of the HOA module
+    (accounting:create, as for every other meeting action)."""
+    from mhvp.documents import services as docs
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.documents.models import DocumentSource, LinkRole
+    from mhvp.hoa import protocol
+
+    async with tenant_tx(request, principal) as session:
+        meeting = await _get(session, Meeting, meeting_id)
+        blobs = BlobStore(request.app.state.settings)
+        head = await docs.letterhead(session, blobs)
+        context, missing = await protocol.build_context(session, meeting)
+        draft = protocol.compose(context, missing, datetime.now(UTC).date())
+        pdf = protocol.render(head, draft)
+        document = await docs.store_document(
+            session,
+            blobs,
+            tenant_id=principal.tenant_id,
+            data=pdf,
+            title=draft.title,
+            filename=draft.filename,
+            mime_type="application/pdf",
+            source=DocumentSource.GENERATED,
+            category_id=None,
+            links=[("legal_entity", meeting.legal_entity_id, LinkRole.GENERATED)],
+            created_by=principal.user_id,
+        )
+        meeting.minutes_draft_document_id = document.id
+        meeting.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="hoa.meeting.protocol_draft",
+            entity_type="owners_meeting",
+            entity_id=meeting.id,
+            actor_user_id=principal.user_id,
+            changes={"document_id": str(document.id)},
+        )
+        return {
+            "meeting_id": meeting.id,
+            "document_id": document.id,
+            "minutes_document_id": meeting.minutes_document_id,
+            "title": draft.title,
+            "filename": draft.filename,
+            "status": "draft",
+            "missing": draft.missing,
+            "note": protocol.DRAFT_NOTICE,
+        }
 
 
 @router.post("/majority-rules", status_code=201, summary="Mehrheitsregel mit Fundstelle (M25-01)")

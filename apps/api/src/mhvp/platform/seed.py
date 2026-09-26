@@ -9,6 +9,7 @@ import asyncio
 import os
 import sys
 
+import mhvp.models  # noqa: F401  (registers every mapped table so cross-module FKs resolve)
 from mhvp.core.config import get_settings
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.logging import configure_logging, get_logger

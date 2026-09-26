@@ -8,14 +8,20 @@ once (``automation_run`` unique constraint) and inside a savepoint, so one faili
 neither blocks the others nor the watermark. Events written by rule actions carry the
 ``automation`` marker and never trigger a rule again (depth 1).
 
-Stage 1 actions never post, pay, approve or send anything (rules 0.1.6, 0.1.7).
+Rule actions never post, pay, approve or send mail (rules 0.1.6, 0.1.7). Stage 2 (A39) adds
+a signed outbound webhook, e-mail and letter drafts and AI tasks (proposal only), plus the
+schedule trigger (``process_schedules``: one run per rule and due moment).
 """
 
+import base64
+import json
 import logging
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +30,8 @@ from mhvp.automation.models import (
     RUN_STATUS_DRY_RUN,
     RUN_STATUS_EXECUTED,
     RUN_STATUS_FAILED,
+    SCHEDULE_EVENT_TYPE,
+    TRIGGER_SCHEDULE,
     AutomationRule,
     AutomationRun,
     AutomationWatermark,
@@ -36,13 +44,20 @@ from mhvp.automation.rules import (
     render,
     resolve_value,
 )
+from mhvp.automation.schedule import previous_due, window_event_id
 from mhvp.automation.schemas import (
     Action,
+    AiTaskAction,
     CreateTicketAction,
+    LetterDraftAction,
+    MailDraftAction,
     NotifyAction,
     SetTicketFieldAction,
+    WebhookAction,
     parse_actions,
 )
+from mhvp.core import crypto
+from mhvp.core.config import Settings, get_settings
 from mhvp.core.events import DomainEvent, emit
 from mhvp.core.numbering import next_number
 from mhvp.tickets.models import (
@@ -62,6 +77,7 @@ log = logging.getLogger(__name__)
 PROCESS_LAG = timedelta(seconds=5)
 BATCH_LIMIT = 500
 NOTIFICATION_KIND = "automation"
+WEBHOOK_TIMEOUT_SECONDS = 10.0
 TICKET_CONTEXT_FIELDS: tuple[str, ...] = (
     "id",
     "number",
@@ -427,6 +443,365 @@ async def _set_ticket_field(
     return preview | {"ok": True, "detail": f"{action.field} gesetzt."}
 
 
+# --- stage 2 actions (A39) ---------------------------------------------------------------
+
+
+def seal_actions(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Encrypt a freshly given webhook secret (tenant scope of the open transaction) and drop
+    the plaintext; actions without a new secret keep their stored ``secret_enc``."""
+    sealed: list[dict[str, Any]] = []
+    for action in actions:
+        secret = action.get("secret") if action.get("type") == "webhook" else None
+        if secret:
+            action = {k: v for k, v in action.items() if k != "secret"}
+            action["secret_enc"] = base64.b64encode(crypto.encrypt(str(secret))).decode()
+        sealed.append(action)
+    return sealed
+
+
+def carry_secrets(new: list[dict[str, Any]], old: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """On a patch without a new secret, keep the stored secret of the webhook with the same
+    position and URL (the API never returns ``secret_enc``, so the client cannot send it)."""
+    out: list[dict[str, Any]] = []
+    for index, action in enumerate(new):
+        if (
+            action.get("type") == "webhook"
+            and not action.get("secret")
+            and not action.get("secret_enc")
+            and index < len(old)
+            and old[index].get("type") == "webhook"
+            and old[index].get("url") == action.get("url")
+            and old[index].get("secret_enc")
+        ):
+            action = action | {"secret_enc": old[index]["secret_enc"]}
+        out.append(action)
+    return out
+
+
+def public_actions(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Actions as returned by the API: the webhook secret is replaced by ``has_secret``."""
+    out: list[dict[str, Any]] = []
+    for action in actions:
+        if action.get("type") == "webhook":
+            action = {k: v for k, v in action.items() if k not in ("secret", "secret_enc")}
+            action["has_secret"] = True
+        out.append(action)
+    return out
+
+
+def webhook_body(rule: AutomationRule, context: dict[str, Any], extra: dict[str, str]) -> bytes:
+    document = {
+        "rule": {"id": str(rule.id), "name": rule.name},
+        "tenant_id": str(rule.tenant_id),
+        "event": {
+            "type": context.get("type"),
+            "entity_type": context.get("entity_type"),
+            "entity_id": context.get("entity_id"),
+            "payload": context.get("payload"),
+        },
+        "entity": context.get("entity"),
+        "sent_at": datetime.now(UTC).isoformat(),
+        **{k: render(v, context) for k, v in extra.items()},
+    }
+    return json.dumps(document, sort_keys=True, separators=(",", ":"), default=str).encode()
+
+
+async def _webhook(
+    *,
+    rule: AutomationRule,
+    action: WebhookAction,
+    context: dict[str, Any],
+    dry_run: bool,
+    settings: Settings,
+) -> dict[str, Any]:
+    from mhvp.core.webhooks import (
+        SIGNATURE_HEADER,
+        UnsafeWebhookTargetError,
+        check_target,
+        sign,
+    )
+
+    preview = {"type": "webhook", "url": action.url}
+    try:
+        check_target(action.url, allow_private=settings.webhook_allow_private_targets)
+    except UnsafeWebhookTargetError as exc:
+        raise ActionError(f"Webhook-Ziel nicht zulässig: {exc}.") from exc
+    if dry_run:
+        return preview | {"ok": True, "detail": "Testlauf: Webhook würde gesendet."}
+    if not action.secret_enc:
+        raise ActionError("Webhook ohne gespeichertes Geheimnis.")
+    try:
+        secret = crypto.decrypt(base64.b64decode(action.secret_enc))
+    except (crypto.CryptoError, ValueError) as exc:
+        raise ActionError("Webhook-Geheimnis kann nicht gelesen werden.") from exc
+    body = webhook_body(rule, context, action.extra)
+    headers = {
+        "Content-Type": "application/json",
+        "X-MHVP-Event": str(context.get("type") or ""),
+        "X-MHVP-Rule": str(rule.id),
+        SIGNATURE_HEADER: sign(secret, body, int(time.time())),
+    }
+    try:
+        async with httpx.AsyncClient(timeout=WEBHOOK_TIMEOUT_SECONDS) as client:
+            response = await client.post(
+                action.url, content=body, headers=headers, follow_redirects=False
+            )
+    except httpx.HTTPError as exc:
+        raise ActionError(f"Webhook fehlgeschlagen: {type(exc).__name__}.") from exc
+    if not 200 <= response.status_code < 300:
+        raise ActionError(f"Webhook fehlgeschlagen: HTTP {response.status_code}.")
+    return preview | {
+        "ok": True,
+        "status_code": response.status_code,
+        "detail": "Webhook gesendet.",
+    }
+
+
+async def _ticket_of(context: dict[str, Any], session: AsyncSession, what: str) -> Ticket:
+    if context.get("entity_type") != "ticket" or not context.get("entity_id"):
+        raise ActionError(f"{what} braucht ein Ereignis zu einem Ticket.")
+    ticket = await session.get(Ticket, uuid.UUID(str(context["entity_id"])))
+    if ticket is None:
+        raise ActionError("Ticket nicht gefunden.")
+    return ticket
+
+
+async def _mail_draft(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    action: MailDraftAction,
+    context: dict[str, Any],
+    dry_run: bool,
+) -> dict[str, Any]:
+    from mhvp.communication.models import Message
+    from mhvp.tickets import reply_templates
+    from mhvp.tickets.models import TicketReplyTemplate
+    from mhvp.tickets.routers import _reply_context
+
+    tpl = await session.get(TicketReplyTemplate, action.reply_template_id)
+    if tpl is None:
+        raise ActionError("Antwortvorlage nicht gefunden.")
+    preview: dict[str, Any] = {"type": "mail_draft", "template_name": tpl.name}
+    if dry_run and not context.get("entity_id"):
+        return preview | {"ok": True, "detail": "Testlauf: E-Mail-Entwurf würde angelegt."}
+    ticket = await _ticket_of(context, session, "E-Mail-Entwurf")
+    ctx = await _reply_context(session, ticket)
+    if not ctx["to_addresses"]:
+        raise ActionError("Kein Empfänger: das Ticket hat keinen Kontakt mit E-Mail-Adresse.")
+    subject = reply_templates.render(tpl.subject, ctx["values"])[:998]
+    body = reply_templates.render(tpl.body, ctx["values"])
+    preview |= {"subject": subject, "to_addresses": ctx["to_addresses"]}
+    if dry_run:
+        return preview | {"ok": True, "detail": "Testlauf: E-Mail-Entwurf würde angelegt."}
+    inbound = ctx["inbound"]
+    mailbox = ctx["mailbox"]
+    draft = Message(
+        tenant_id=tenant_id,
+        created_by=None,
+        direction="out",
+        status="draft",
+        mailbox_id=mailbox.id if mailbox else None,
+        to_addresses=ctx["to_addresses"],
+        subject=subject,
+        body=body,
+        in_reply_to=inbound.header_message_id if inbound else None,
+        thread_id=(inbound.thread_id or inbound.id) if inbound else None,
+        contact_id=ctx["contact"].id if ctx["contact"] else None,
+        property_id=ticket.property_id,
+        ticket_id=ticket.id,
+        attachment_document_ids=list(tpl.attachment_document_ids),
+    )
+    session.add(draft)
+    await session.flush()
+    session.add(
+        TicketEvent(
+            tenant_id=tenant_id,
+            ticket_id=ticket.id,
+            kind="automation",
+            user_id=None,
+            data={
+                "rule_id": str(rule.id),
+                "rule_name": rule.name,
+                "action": "mail_draft",
+                "message_id": str(draft.id),
+                "template_id": str(tpl.id),
+            },
+        )
+    )
+    return preview | {
+        "ok": True,
+        "entity_type": "message",
+        "entity_id": str(draft.id),
+        "detail": "E-Mail-Entwurf angelegt (Freigabe und Versand bleiben manuell).",
+    }
+
+
+async def _letter_draft(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    event_id: uuid.UUID,
+    action: LetterDraftAction,
+    context: dict[str, Any],
+    dry_run: bool,
+    settings: Settings,
+) -> dict[str, Any]:
+    import html
+
+    from mhvp.core.problems import ProblemError
+    from mhvp.documents import letters
+    from mhvp.documents import services as docs
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.documents.models import DocumentSource, DocumentTemplate, LinkRole
+
+    tpl = await session.get(DocumentTemplate, action.template_id)
+    if tpl is None or not tpl.active:
+        raise ActionError("Briefvorlage nicht gefunden oder nicht aktiv.")
+    ticket: Ticket | None = None
+    if context.get("entity_type") == "ticket" and context.get("entity_id"):
+        ticket = await session.get(Ticket, uuid.UUID(str(context["entity_id"])))
+    contact_id = action.contact_id or (
+        (ticket.contact_id or ticket.initiator_contact_id) if ticket else None
+    )
+    preview: dict[str, Any] = {"type": "letter_draft", "template_code": tpl.code}
+    if contact_id is None:
+        if dry_run and context.get("entity_type") == "ticket" and not context.get("entity_id"):
+            return preview | {"ok": True, "detail": "Testlauf: Brief würde als Dokument abgelegt."}
+        raise ActionError("Kein Empfänger: weder fester Kontakt noch Kontakt am Ticket.")
+    blobs = BlobStore(settings)
+    try:
+        head = await docs.letterhead(session, blobs)
+        contact, lines, recipient = await docs.recipient(session, contact_id)
+        letter_context, info, links = await docs.entity_context(
+            session,
+            ticket.property_id if ticket else None,
+            ticket.unit_id if ticket else None,
+            None,
+        )
+    except ProblemError as exc:
+        raise ActionError(exc.detail or exc.error.title) from exc
+    letter_date = datetime.now(UTC).astimezone().date()
+    letter_context.update(
+        empfaenger=recipient,
+        felder={k: render(v, context) or "" for k, v in action.fields.items()},
+        datum=letter_date.strftime("%d.%m.%Y"),
+        gesellschaft={"name": head.company.get("name", "")},
+    )
+    try:
+        subject = letters.render_text(tpl.subject, letter_context)
+        body = letters.render_text(tpl.body, letter_context)
+    except letters.PlaceholderError as exc:
+        raise ActionError(f"Platzhalter: {exc}") from exc
+    preview |= {"subject": html.unescape(subject), "contact_id": str(contact.id)}
+    if dry_run:
+        return preview | {"ok": True, "detail": "Testlauf: Brief würde als Dokument abgelegt."}
+    reference = render(action.reference, context)
+    if reference:
+        info.insert(0, ("Unser Zeichen", reference))
+    pdf = letters.render_pdf(
+        head,
+        letters.Letter(lines, subject, body, letter_date, info, signatory=action.signatory),
+    )
+    document = await docs.store_document(
+        session,
+        blobs,
+        tenant_id=tenant_id,
+        data=pdf,
+        title=html.unescape(subject),
+        filename=f"{letter_date.isoformat()}_{tpl.code}_{contact.display_name}.pdf"[:255],
+        mime_type="application/pdf",
+        source=DocumentSource.GENERATED,
+        category_id=tpl.category_id,
+        links=[("contact", contact.id, LinkRole.GENERATED)]
+        + [(t, i, LinkRole.GENERATED) for t, i in links]
+        + ([("ticket", ticket.id, LinkRole.GENERATED)] if ticket else []),
+        created_by=None,
+    )
+    if ticket is not None:
+        session.add(
+            TicketEvent(
+                tenant_id=tenant_id,
+                ticket_id=ticket.id,
+                kind="automation",
+                user_id=None,
+                data={
+                    "rule_id": str(rule.id),
+                    "rule_name": rule.name,
+                    "action": "letter_draft",
+                    "document_id": str(document.id),
+                },
+            )
+        )
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="document.generated",
+        entity_type="document",
+        entity_id=document.id,
+        actor_user_id=None,
+        payload={"template": tpl.code, "template_version": tpl.version}
+        | automation_marker(rule.id, event_id),
+    )
+    return preview | {
+        "ok": True,
+        "entity_type": "document",
+        "entity_id": str(document.id),
+        "detail": "Brief als Dokument abgelegt (nicht versendet).",
+    }
+
+
+async def _ai_task(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    action: AiTaskAction,
+    context: dict[str, Any],
+    dry_run: bool,
+    settings: Settings,
+) -> dict[str, Any]:
+    from mhvp.ai.models import AiTask
+    from mhvp.ai.routers import create_extraction_run
+
+    instruction = render(action.instruction, context) or action.instruction
+    preview = {"type": "ai_task", "task": action.task, "instruction": instruction[:200]}
+    if dry_run:
+        return preview | {"ok": True, "detail": "Testlauf: KI-Aufgabe würde gestartet."}
+    entity_id = _uuid_or_none(context.get("entity_id"), "entity_id")
+    run_id = await create_extraction_run(
+        session,
+        tenant_id,
+        None,
+        AiTask(action.task),
+        [],
+        instruction,
+        str(context.get("entity_type") or "automation"),
+        entity_id,
+        trigger=f"automation:{rule.id}",
+    )
+    queued = False
+    if not settings.ai_inline:
+        try:
+            from mhvp.worker import get_celery
+
+            get_celery().send_task(
+                "mhvp.ai.run", args=[str(tenant_id), str(run_id), None], queue="io"
+            )
+            queued = True
+        except Exception:
+            log.warning("could not queue automation ai task", extra={"run_id": str(run_id)})
+    return preview | {
+        "ok": True,
+        "entity_type": "ai_task_run",
+        "entity_id": str(run_id),
+        "queued": queued,
+        "detail": "KI-Aufgabe angelegt (nur Vorschlag).",
+    }
+
+
 async def execute_actions(
     session: AsyncSession,
     *,
@@ -435,9 +810,11 @@ async def execute_actions(
     event_id: uuid.UUID,
     context: dict[str, Any],
     dry_run: bool,
+    settings: Settings | None = None,
 ) -> list[dict[str, Any]]:
     """Run the rule's actions in order. Raises ``ActionError`` on the first failing action
     (the caller rolls back the savepoint and records the failure)."""
+    settings = settings or get_settings()
     results: list[dict[str, Any]] = []
     for action in parse_actions(rule.actions):
         results.append(
@@ -449,6 +826,7 @@ async def execute_actions(
                 action=action,
                 context=context,
                 dry_run=dry_run,
+                settings=settings,
             )
         )
     return results
@@ -463,6 +841,7 @@ async def _execute_one(
     action: Action,
     context: dict[str, Any],
     dry_run: bool,
+    settings: Settings,
 ) -> dict[str, Any]:
     if isinstance(action, CreateTicketAction):
         return await _create_ticket(
@@ -477,6 +856,35 @@ async def _execute_one(
     if isinstance(action, NotifyAction):
         return await _notify(
             session, tenant_id=tenant_id, rule=rule, action=action, context=context, dry_run=dry_run
+        )
+    if isinstance(action, WebhookAction):
+        return await _webhook(
+            rule=rule, action=action, context=context, dry_run=dry_run, settings=settings
+        )
+    if isinstance(action, MailDraftAction):
+        return await _mail_draft(
+            session, tenant_id=tenant_id, rule=rule, action=action, context=context, dry_run=dry_run
+        )
+    if isinstance(action, LetterDraftAction):
+        return await _letter_draft(
+            session,
+            tenant_id=tenant_id,
+            rule=rule,
+            event_id=event_id,
+            action=action,
+            context=context,
+            dry_run=dry_run,
+            settings=settings,
+        )
+    if isinstance(action, AiTaskAction):
+        return await _ai_task(
+            session,
+            tenant_id=tenant_id,
+            rule=rule,
+            action=action,
+            context=context,
+            dry_run=dry_run,
+            settings=settings,
         )
     return await _set_ticket_field(
         session,
@@ -493,10 +901,18 @@ async def _execute_one(
 
 
 async def dry_run(
-    session: AsyncSession, *, tenant_id: uuid.UUID, rule: AutomationRule, context: dict[str, Any]
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    context: dict[str, Any],
+    settings: Settings | None = None,
 ) -> dict[str, Any]:
     """Evaluate a rule against a sample context without any effect (no run is recorded)."""
-    trigger_matches = context.get("type") == rule.trigger_event_type
+    if rule.trigger_kind == TRIGGER_SCHEDULE:
+        trigger_matches = context.get("type") == SCHEDULE_EVENT_TYPE
+    else:
+        trigger_matches = context.get("type") == rule.trigger_event_type
     matched = trigger_matches and evaluate(rule.conditions, context)
     actions: list[dict[str, Any]] = []
     error: str | None = None
@@ -510,6 +926,7 @@ async def dry_run(
                 event_id=uuid.uuid4(),
                 context=context,
                 dry_run=True,
+                settings=settings,
             )
         except ActionError as exc:
             error = str(exc)
@@ -523,13 +940,97 @@ async def dry_run(
     }
 
 
+# --- schedules (A39) ----------------------------------------------------------------------
+
+
+def schedule_context(rule: AutomationRule, due: datetime) -> dict[str, Any]:
+    return {
+        "type": SCHEDULE_EVENT_TYPE,
+        "entity_type": "schedule",
+        "entity_id": None,
+        "actor_user_id": None,
+        "payload": {
+            "due_at": due.astimezone(UTC).isoformat(),
+            "frequency": (rule.schedule or {}).get("frequency"),
+            "rule_name": rule.name,
+        },
+        "entity": {},
+    }
+
+
+async def process_schedules(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    now: datetime,
+    settings: Settings | None = None,
+) -> dict[str, int]:
+    """Run every active schedule rule whose latest due moment is newer than its watermark.
+    The first pass of a rule only positions the watermark (moments before activation are
+    history); the run id is derived from rule and due moment, so a concurrent worker cannot
+    run the same window twice."""
+    totals = {"runs": 0, "failed": 0}
+    rules = list(
+        await session.scalars(
+            select(AutomationRule)
+            .where(
+                AutomationRule.tenant_id == tenant_id,
+                AutomationRule.active.is_(True),
+                AutomationRule.trigger_kind == TRIGGER_SCHEDULE,
+            )
+            .order_by(AutomationRule.created_at, AutomationRule.id)
+        )
+    )
+    for rule in rules:
+        if not rule.schedule:
+            continue
+        if rule.last_scheduled_at is None:
+            rule.last_scheduled_at = now
+            continue
+        due = previous_due(rule.schedule, now)
+        if due <= rule.last_scheduled_at:
+            continue
+        event = DomainEvent(
+            id=window_event_id(rule.id, due),
+            tenant_id=tenant_id,
+            type=SCHEDULE_EVENT_TYPE,
+            entity_type="schedule",
+            entity_id=None,
+            actor_user_id=None,
+            occurred_at=due,
+            payload={},
+        )
+        run = await _run_rule(
+            session,
+            tenant_id=tenant_id,
+            rule=rule,
+            event=event,
+            context=schedule_context(rule, due),
+            settings=settings,
+        )
+        rule.last_scheduled_at = due
+        if run is None:
+            continue
+        totals["runs"] += 1
+        if run.status == RUN_STATUS_FAILED:
+            totals["failed"] += 1
+    return totals
+
+
 # --- processing ---------------------------------------------------------------------------
 
 
 async def _run_rule(
-    session: AsyncSession, *, tenant_id: uuid.UUID, rule: AutomationRule, event: DomainEvent
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    event: DomainEvent,
+    context: dict[str, Any] | None = None,
+    settings: Settings | None = None,
 ) -> AutomationRun | None:
-    """Execute one rule for one event, idempotent. ``None`` when already run or no match."""
+    """Execute one rule for one event, idempotent. ``None`` when already run or no match.
+    ``event`` may be a transient schedule window (not persisted, see ``process_schedules``)."""
     existing = await session.scalar(
         select(AutomationRun.id).where(
             AutomationRun.rule_id == rule.id, AutomationRun.event_id == event.id
@@ -537,7 +1038,8 @@ async def _run_rule(
     )
     if existing is not None:
         return None
-    context = await context_for_event(session, event)
+    if context is None:
+        context = await context_for_event(session, event)
     try:
         if not evaluate(rule.conditions, context):
             return None
@@ -552,6 +1054,7 @@ async def _run_rule(
                 event_id=event.id,
                 context=context,
                 dry_run=False,
+                settings=settings,
             )
             run = await _record(session, tenant_id, rule, event, RUN_STATUS_EXECUTED, actions, None)
         return run
@@ -593,12 +1096,19 @@ async def _record(
 
 
 async def process_tenant(
-    session: AsyncSession, tenant_id: uuid.UUID, *, now: datetime | None = None
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    now: datetime | None = None,
+    settings: Settings | None = None,
 ) -> dict[str, int]:
     """Process new events of one tenant since its watermark (see module docstring)."""
     now = now or datetime.now(UTC)
     cutoff = now - PROCESS_LAG
     totals = {"events": 0, "runs": 0, "failed": 0}
+    scheduled = await process_schedules(session, tenant_id, now=now, settings=settings)
+    totals["runs"] += scheduled["runs"]
+    totals["failed"] += scheduled["failed"]
     watermark = await session.scalar(
         select(AutomationWatermark).where(AutomationWatermark.tenant_id == tenant_id)
     )
@@ -613,13 +1123,18 @@ async def process_tenant(
     rules = list(
         await session.scalars(
             select(AutomationRule)
-            .where(AutomationRule.tenant_id == tenant_id, AutomationRule.active.is_(True))
+            .where(
+                AutomationRule.tenant_id == tenant_id,
+                AutomationRule.active.is_(True),
+                AutomationRule.trigger_kind != TRIGGER_SCHEDULE,
+            )
             .order_by(AutomationRule.created_at, AutomationRule.id)
         )
     )
     by_type: dict[str, list[AutomationRule]] = {}
     for rule in rules:
-        by_type.setdefault(rule.trigger_event_type, []).append(rule)
+        if rule.trigger_event_type:
+            by_type.setdefault(rule.trigger_event_type, []).append(rule)
     query = (
         select(DomainEvent)
         .where(DomainEvent.tenant_id == tenant_id, DomainEvent.occurred_at <= cutoff)
@@ -641,7 +1156,9 @@ async def process_tenant(
         if is_automation_event(event.payload):
             continue
         for rule in by_type.get(event.type, []):
-            run = await _run_rule(session, tenant_id=tenant_id, rule=rule, event=event)
+            run = await _run_rule(
+                session, tenant_id=tenant_id, rule=rule, event=event, settings=settings
+            )
             if run is None:
                 continue
             totals["runs"] += 1

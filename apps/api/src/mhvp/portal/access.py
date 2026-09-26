@@ -17,7 +17,9 @@ if TYPE_CHECKING:
 # Grants that are not derived from contracts and therefore survive a resync: the handover
 # protocol access of a participant (M30 stage 3, docs/rules/M30-01.md) and the mandatory
 # tenant wide staff grant (M2-08 entschieden, docs/rules/M2-07.md).
-MANUAL_BASES = frozenset({"handover_participant", "staff_access"})
+# The board audit access (A52, docs/rules/M21-07.md) is granted per engagement in
+# mhvp.hoa.board and is not derived from contracts either.
+MANUAL_BASES = frozenset({"handover_participant", "staff_access", "board_audit"})
 STAFF_ACCESS_LEGAL_BASIS = "staff_access"
 
 

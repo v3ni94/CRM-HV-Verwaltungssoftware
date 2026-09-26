@@ -21,3 +21,11 @@ Cross-cutting infrastructure used by every domain package.
 Rules for new tenant tables: column `tenant_id UUID NOT NULL`, leading index column, and the
 statements of `db.rls.tenant_rls_statements()` in the same migration. The integration test
 `test_every_tenant_table_is_isolated` fails otherwise.
+
+## API versioning (ADR 0009, A50)
+
+`mhvp.core.versioning`: `API-Version` on every response, `@deprecated(...)` or
+`register_deprecation(...)` for endpoints (Deprecation, Sunset, Link headers; OpenAPI marks via
+`mark_deprecated_routes`, which flattens included routers). `mhvp.openapi.breaking_removals`
+and `make openapi-check` stop the removal of a path or field without a passed sunset.
+Outgoing webhook event catalogue: `mhvp.core.webhooks.EVENT_TYPES` (docs/integrations/webhooks.md).

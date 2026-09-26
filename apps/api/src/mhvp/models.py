@@ -8,11 +8,14 @@ from mhvp.banking import models as banking_models
 from mhvp.billing import models as billing_models
 from mhvp.billing import owner_statement as billing_owner_statement
 from mhvp.communication import models as communication_models
+from mhvp.communication import sync_retry as communication_sync_retry
+from mhvp.communication import telephony as communication_telephony
 from mhvp.contacts import models as contact_models
 from mhvp.contracts import models as contract_models
 from mhvp.core import events, numbering, webhooks
 from mhvp.documents import models as document_models
 from mhvp.handover import models as handover_models
+from mhvp.hoa import inspection as hoa_inspection_models
 from mhvp.hoa import models as hoa_models
 from mhvp.immoware import models as immoware_models
 from mhvp.imports import models as import_models
@@ -21,6 +24,8 @@ from mhvp.letting import rentlaw as rentlaw_models
 from mhvp.objektakte import models as objektakte_models
 from mhvp.platform import licensing as licensing_models
 from mhvp.platform import models as platform_models
+from mhvp.portal import board as portal_board_models
+from mhvp.portal import forms as portal_form_models
 from mhvp.portal import models as portal_models
 from mhvp.portal import notices as portal_notice_models
 from mhvp.properties import models as property_models
@@ -37,12 +42,15 @@ __all__ = [
     "billing_models",
     "billing_owner_statement",
     "communication_models",
+    "communication_sync_retry",
+    "communication_telephony",
     "contact_models",
     "contract_models",
     "direct_debit_models",
     "document_models",
     "events",
     "handover_models",
+    "hoa_inspection_models",
     "hoa_models",
     "immoware_models",
     "import_models",
@@ -51,6 +59,8 @@ __all__ = [
     "numbering",
     "objektakte_models",
     "platform_models",
+    "portal_board_models",
+    "portal_form_models",
     "portal_models",
     "portal_notice_models",
     "property_models",

@@ -11,12 +11,13 @@ import {
 
 // Node.js runtime: the API address (MHVP_API_INTERNAL_URL) is read at runtime.
 export const config = {
-  matcher: ["/((?!_next/|favicon.ico|manifest.webmanifest|api/health).*)"],
+  // PWA (A57): the static offline shell (sw.js, offline.html, icons) needs no session.
+  matcher: ["/((?!_next/|favicon.ico|manifest.webmanifest|sw.js|offline.html|icons/|api/health).*)"],
   runtime: "nodejs",
 };
 
 const PATH_HEADER = "x-mhvp-path";
-const PUBLIC = [/^\/$/, /^\/anmelden(\/|$)/, /^\/api\/session\//];
+const PUBLIC = [/^\/$/, /^\/anmelden(\/|$)/, /^\/einladung(\/|$)/, /^\/api\/session\//];
 
 function unauthenticated(request: NextRequest): NextResponse {
   if (request.nextUrl.pathname.startsWith("/api/")) {

@@ -97,7 +97,8 @@
     "openNav": "Navigation öffnen",
     "immoware": "Immoware24",
     "immowareLearning": "Lernphase",
-    "objektakte": "Objektakte"
+    "objektakte": "Objektakte",
+    "immoware24:reconciliation": "Immoware24: Abgleichbericht Parallelbetrieb"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -136,6 +137,9 @@
       "bank": "Bankverbindungen",
       "notes": "Notizen",
       "consents": "Einwilligungen"
+    },
+    "calls": {
+      "title": "Anrufe"
     },
     "created": "Angelegt am",
     "updated": "Geändert am",
@@ -500,9 +504,9 @@
     "source": {
       "ai:extract_contacts": "KI: Kontakte aus Liste",
       "ai:extract_property": "KI: Objekt aus Unterlagen",
-   "immoware24:objektdaten": "Immoware24-Liste: Objektdaten",
-   "immoware24:kontakte": "Immoware24-Liste: Kontakte",
-   "objektakte": "objektakte-Export (Übernahme)"
+      "immoware24:objektdaten": "Immoware24-Liste: Objektdaten",
+      "immoware24:kontakte": "Immoware24-Liste: Kontakte",
+      "objektakte": "objektakte-Export (Übernahme)"
     },
     "status": {
       "applied": "übernommen",
@@ -526,7 +530,8 @@
     "undo": "Rückgängig",
     "undoConfirm": "Import wirklich zurücknehmen? Datensätze, auf die spätere Daten aufbauen, bleiben erhalten.",
     "undoneAt": "Zurückgenommen am {at}",
-    "immoware24Link": "Importassistent öffnen"
+    "immoware24Link": "Importassistent öffnen",
+    "reconciliationLink": "Abgleichbericht Parallelbetrieb"
   },
   "AiSettings": {
     "title": "KI-Einstellungen",
@@ -1239,7 +1244,9 @@
         "moebliert": "Möbliert",
         "wg_geeignet": "WG-geeignet",
         "haustiere_erlaubt": "Haustiere erlaubt"
-      }
+      },
+      "energyIssuedOn": "Ausstellungsdatum Energieausweis",
+      "energyBuildingYear": "Baujahr laut Energieausweis"
     },
     "detail": {
       "back": "Zur Einheit",
@@ -1537,32 +1544,32 @@
     "advancesPaid": "Vorauszahlungen gezahlt",
     "balance": "Ergebnis",
     "vacancyShare": "Leerstandsanteil Eigentümer: {amount}",
-      "aiCheck": {
-        "title": "KI-Plausibilität",
-        "notice": "Hinweise der KI ohne Wirkung auf die Abrechnung. Die KI nennt keine Beträge und keine Korrekturen; Prüfung und Entscheidung bleiben bei einer Person.",
-        "start": "Prüfung starten",
-        "running": "Die Prüfung läuft, bitte warten.",
-        "none": "Noch keine Prüfung durchgeführt.",
-        "noFindings": "Keine Auffälligkeiten gemeldet.",
-        "findings": "Hinweise",
-        "summary": "Zusammenfassung",
-        "reference": "Bezug",
-        "position": "Position {ref}",
-        "unit": "Einheit {unit}",
-        "snapshot": "Snapshot {hash}",
-        "checkedAt": "geprüft am {date}",
-        "runFailed": "Prüfung nicht ausgeführt: {reason}",
-        "severity": {
-          "low": "niedrig",
-          "medium": "mittel",
-          "high": "hoch"
-        },
-        "overall": {
-          "unauffaellig": "unauffällig",
-          "pruefen": "zu prüfen",
-          "kritisch": "kritisch"
-        }
+    "aiCheck": {
+      "title": "KI-Plausibilität",
+      "notice": "Hinweise der KI ohne Wirkung auf die Abrechnung. Die KI nennt keine Beträge und keine Korrekturen; Prüfung und Entscheidung bleiben bei einer Person.",
+      "start": "Prüfung starten",
+      "running": "Die Prüfung läuft, bitte warten.",
+      "none": "Noch keine Prüfung durchgeführt.",
+      "noFindings": "Keine Auffälligkeiten gemeldet.",
+      "findings": "Hinweise",
+      "summary": "Zusammenfassung",
+      "reference": "Bezug",
+      "position": "Position {ref}",
+      "unit": "Einheit {unit}",
+      "snapshot": "Snapshot {hash}",
+      "checkedAt": "geprüft am {date}",
+      "runFailed": "Prüfung nicht ausgeführt: {reason}",
+      "severity": {
+        "low": "niedrig",
+        "medium": "mittel",
+        "high": "hoch"
       },
+      "overall": {
+        "unauffaellig": "unauffällig",
+        "pruefen": "zu prüfen",
+        "kritisch": "kritisch"
+      }
+    },
     "status": {
       "draft": "Entwurf",
       "calculated": "berechnet",
@@ -1576,7 +1583,63 @@
     }
   },
   "HoaWork": {
+    "audits": "Beiratsprüfungen",
+    "audit": {
+      "title": "Beiratsprüfung",
+      "notFound": "Prüfauftrag nicht gefunden.",
+      "none": "Keine Prüfaufträge angelegt.",
+      "status": {
+        "open": "offen",
+        "closed": "abgeschlossen"
+      },
+      "sampling": {
+        "sample": "Stichprobe",
+        "full": "Vollprüfung"
+      },
+      "overallStatus": "Gesamtstatus",
+      "items": "Prüfpositionen",
+      "noItems": "Keine Positionen ausgewählt.",
+      "item": "Position",
+      "itemNumber": "Position {n}",
+      "note": "Vermerk, Frage, Antwort",
+      "itemStatus": {
+        "open": "offen",
+        "checked": "geprüft",
+        "query": "Rückfrage",
+        "objection": "beanstandet",
+        "outdated": "veraltet"
+      },
+      "wholeEngagement": "Gesamter Prüfauftrag",
+      "board": "Beiratszugang und Rückfragen",
+      "boardHint": "Der Beirat sieht im Portal nur diesen Prüfauftrag, die ausgewählten Positionen und die dazu freigegebenen Belege. Er bucht nichts, gibt nichts frei und ändert keine Abrechnung.",
+      "accessRevoked": "beendet",
+      "accountStatus": {
+        "invited": "eingeladen",
+        "active": "aktiv",
+        "locked": "gesperrt",
+        "unknown": "unbekannt"
+      },
+      "revoke": "Zugang beenden",
+      "revokeConfirm": "Beiratszugang zu diesem Prüfauftrag beenden? Vermerke und Rückfragen bleiben erhalten.",
+      "auditor": "Prüfer",
+      "email": "E-Mail (nur für neuen Portalzugang)",
+      "displayName": "Anzeigename (nur für neuen Portalzugang)",
+      "grant": "Beiratszugang anlegen",
+      "grantHint": "Hat der Kontakt bereits einen Portalzugang (zum Beispiel als Eigentümer), wird dieser um die Beiratsrolle ergänzt. Sonst wird wie bei Eigentümern eingeladen.",
+      "invitationToken": "Einladungscode (wird nur einmal angezeigt, für das Einladungsschreiben)",
+      "notes": "Vermerke und Rückfragen des Beirats",
+      "noNotes": "Keine Vermerke oder Rückfragen.",
+      "noteKind": {
+        "note": "Vermerk",
+        "question": "Rückfrage",
+        "answered": "beantwortet"
+      },
+      "answer": "Antwort der Verwaltung",
+      "sendAnswer": "Antwort senden"
+    },
     "noLedger": "Für die Gemeinschaft ist noch kein Buchungskreis angelegt.",
+    "inspection": "Einsichtsanfragen",
+    "inspectionLink": "Einsichtsanfragen außerhalb des Portals protokollieren",
     "plans": "Wirtschaftspläne",
     "statements": "Hausgeldabrechnungen",
     "meetings": "Versammlungen",
@@ -1720,6 +1783,15 @@
       "moreThan": "mehr als {p} %",
       "atLeast": "mindestens {p} %",
       "meaMin": "mindestens {p} % aller MEA"
+    },
+    "protocol": {
+      "title": "Protokollentwurf",
+      "notice": "Der Entwurf wird aus Tagesordnung, Anwesenheit, Beschlusstexten und Abstimmungsergebnissen erzeugt. Er hat keine Rechtsfolge und ersetzt nicht das unterschriebene Protokoll.",
+      "create": "Protokollentwurf erzeugen",
+      "recreate": "Protokollentwurf neu erzeugen",
+      "download": "Entwurf herunterladen",
+      "signedLinked": "Das unterschriebene Protokoll bleibt verknüpft.",
+      "missing": "Nicht erfasst"
     }
   },
   "RentIncrease": {
@@ -1817,8 +1889,23 @@
       "floor": "Etage",
       "features": "Ausstattung",
       "last_modernization_year": "Letzte Modernisierung",
-      "energy_certificate": "Energieausweis",
-      "asking_rent": "Angebotsmiete"
+      "energy_certificate": {
+        "title": "Energieausweis",
+        "type": "Art des Ausweises",
+        "value": "Kennwert in kWh/(m²a)",
+        "source": "Energieträger",
+        "construction_year": "Baujahr",
+        "issued_on": "Ausstellungsdatum",
+        "valid_until": "Gültig bis",
+        "class": "Effizienzklasse"
+      },
+      "asking_rent": {
+        "title": "Angebotsmiete",
+        "net_rent": "Kaltmiete",
+        "additional_costs": "Nebenkosten",
+        "heating_costs": "Heizkosten",
+        "deposit": "Kaution"
+      }
     },
     "statuses": {
       "new": "neu",
@@ -1827,13 +1914,16 @@
       "accepted": "zugesagt",
       "rejected": "abgesagt",
       "withdrawn": "zurückgezogen"
-    }
+    },
+    "noListing": "Keine Vermietungsanzeige vorhanden, Angebotsmiete wird an der Anzeige erfasst.",
+    "toListing": "Zur Anzeige"
   },
   "Tickets": {
     "mailAttachments": {
       "title": "Anhänge aus E-Mails",
       "hint": "PDF- und Bildanhänge können als Beleg erfasst werden. Die KI schlägt die Werte vor, geprüft und bestätigt wird im Belegeingang. Es wird nichts gebucht.",
-      "unsupported": "kein Beleg (Dateityp)"
+      "unsupported": "kein Beleg (Dateityp)",
+      "receipt": "Als Beleg erfassen"
     },
     "proposals": {
       "title": "Vorschläge aus der E-Mail",
@@ -1975,7 +2065,7 @@
       "reset": "Zurücksetzen"
     },
     "reply": {
-      "title": "Antwortvorlage",
+      "title": "Antworten",
       "select": "Antwortvorlage wählen",
       "none": "Keine Vorlage gewählt",
       "emptyTemplates": "Keine aktiven Antwortvorlagen. Vorlagen werden unter Einstellungen, Antwortvorlagen gepflegt.",
@@ -1996,22 +2086,79 @@
       "send": "Antwort senden",
       "sendHint": "Der Versand erfolgt erst nach Klick auf Antwort senden über das Postfach des Tickets und den bestehenden Freigabeweg. Es wird nichts automatisch gesendet.",
       "sent": "Antwort eingereicht. Sie wird nach Freigabe über das Postfach des Tickets versendet.",
-      "openMail": "Im Postfach öffnen"
+      "openMail": "Im Postfach öffnen",
+      "cc": "Kopie",
+      "replyingTo": "Antwort auf die Mail vom {at}",
+      "replyingToLatest": "Antwort auf die letzte eingehende Mail",
+      "tnrHint": "Der Betreff erhält automatisch die Kennung {tnr}, damit Antworten dem Ticket zugeordnet werden.",
+      "unverifiedSender": "Der Absender {address} ist nicht am Ticket beteiligt und wurde nicht als Empfänger übernommen.",
+      "useSender": "Als Empfänger übernehmen",
+      "addAttachment": "Anhang hinzufügen",
+      "upload": "Datei hochladen",
+      "uploading": "Wird hochgeladen...",
+      "uploadFailed": "Die Datei konnte nicht hochgeladen werden.",
+      "searchDocuments": "Dokument suchen",
+      "searchPlaceholder": "Titel oder Dateiname",
+      "noDocumentsFound": "Keine Dokumente gefunden.",
+      "addDocument": "Hinzufügen",
+      "invalidAddress": "Ungültige E-Mail-Adresse: {address}",
+      "approvalHint": "Der Versand erfolgt nach der Vier-Augen-Freigabe im Postfach über das Postfach des Tickets.",
+      "reset": "Verwerfen"
     },
     "openTicket": "Ticket öffnen",
-    "messages": "Nachrichten"
+    "messages": "Nachrichten",
+    "pagination": {
+      "label": "Seitennavigation",
+      "range": "{from} bis {to} von {total}",
+      "page": "Seite {page} von {pages}",
+      "prev": "Zurück",
+      "next": "Weiter"
+    },
+    "mailThread": {
+      "title": "Mailverlauf",
+      "empty": "Zu diesem Ticket liegen keine E-Mails vor.",
+      "loadFailed": "Der Mailverlauf konnte nicht geladen werden.",
+      "directionIn": "Eingang",
+      "directionOut": "Ausgang",
+      "from": "Von",
+      "to": "An",
+      "cc": "Kopie",
+      "mailbox": "Postfach",
+      "noSubject": "ohne Betreff",
+      "status": {
+        "new": "neu",
+        "assigned": "zugeordnet",
+        "done": "erledigt",
+        "draft": "Entwurf",
+        "pending": "zur Freigabe",
+        "sent": "gesendet",
+        "failed": "fehlgeschlagen"
+      },
+      "sendError": "Letzter Versandfehler",
+      "rejected": "Zurückgewiesen",
+      "showQuote": "Zitierten Text anzeigen",
+      "hideQuote": "Zitierten Text ausblenden",
+      "showHtml": "Als HTML anzeigen",
+      "showText": "Als Text anzeigen",
+      "attachments": "Anhänge",
+      "attachmentMissing": "Dokument nicht mehr vorhanden",
+      "preview": "Vorschau",
+      "closePreview": "Vorschau schließen",
+      "download": "Herunterladen",
+      "replyTo": "Auf diese Mail antworten",
+      "openMail": "Im Postfach öffnen"
+    }
   },
   "Automation": {
     "title": "Automatisierung",
-    "pageDescription": "Regel-Engine Stufe 1: Auslöser, Bedingungen und Aktionen. Regeln lösen keine Buchungen, Zahlungen oder Freigaben aus.",
+    "pageDescription": "Regel-Engine: Auslöser (Ereignis oder Zeitplan), Bedingungen und Aktionen. Regeln lösen keine Buchungen, Zahlungen, Freigaben oder Versand aus.",
     "empty": "Noch keine Regeln angelegt.",
     "newRule": "Neue Regel",
     "name": "Name",
     "description": "Beschreibung",
-    "trigger": "Auslöser (Ereignistyp)",
+    "trigger": "Ereignistyp",
     "triggerHelp": "Zum Beispiel ticket.created. Die Liste zeigt bekannte Ereignistypen.",
     "conditions": "Bedingungen",
-    "conditionsJson": "Bedingungen (JSON, verschachtelt)",
     "combinator": "Verknüpfung",
     "and": "alle treffen zu (und)",
     "or": "eine trifft zu (oder)",
@@ -2034,7 +2181,11 @@
     "actions": {
       "set_ticket_field": "Ticketfeld setzen",
       "notify": "Interne Benachrichtigung",
-      "create_ticket": "Ticket aus Vorlage anlegen"
+      "create_ticket": "Ticket aus Vorlage anlegen",
+      "webhook": "Webhook senden",
+      "mail_draft": "E-Mail-Entwurf aus Antwortvorlage",
+      "letter_draft": "Brief-Entwurf aus Briefvorlage",
+      "ai_task": "KI-Aufgabe starten"
     },
     "actionValue": "Wert der Aktion",
     "ticketField": "Ticketfeld",
@@ -2044,7 +2195,6 @@
       "category": "Kategorie",
       "assignee_user_id": "Bearbeiter"
     },
-    "teamIdHelp": "Team-ID (UUID)",
     "priorities": {
       "low": "Niedrig",
       "normal": "Normal",
@@ -2066,7 +2216,7 @@
       "unit_id": "Einheit aus Ereignis übernehmen",
       "contact_id": "Kontakt aus Ereignis übernehmen"
     },
-    "noMoneyHint": "Stufe 1: Regeln legen Tickets an, benachrichtigen intern und setzen Ticketfelder. Keine Buchung, keine Zahlung, keine Freigabe.",
+    "noMoneyHint": "Regeln legen Tickets an, benachrichtigen intern, setzen Ticketfelder, senden Webhooks, erzeugen E-Mail- und Brief-Entwürfe und starten KI-Vorschläge. Keine Buchung, keine Zahlung, keine Freigabe, kein Versand.",
     "invalidJson": "Ungültiges JSON.",
     "save": "Speichern",
     "cancel": "Abbrechen",
@@ -2087,16 +2237,20 @@
     "notMatched": "Bedingungen treffen nicht zu.",
     "triggerMismatch": "Der Ereignistyp passt nicht zum Auslöser der Regel.",
     "summary": {
-      "setField": "Ticketfeld {field} auf {value} setzen",
+      "setField": "{field} {value}",
       "notify": "Benachrichtigung an {count} Empfänger oder Rollen",
-      "createTicket": "Ticket aus Vorlage anlegen {title}"
+      "createTicket": "Ticket aus Vorlage anlegen {title}",
+      "webhook": "Webhook an {url}",
+      "mailDraft": "E-Mail-Entwurf aus {template}",
+      "letterDraft": "Brief-Entwurf aus {template}",
+      "aiTask": "KI-Aufgabe {task}"
     },
     "log": "Protokoll",
     "filterRule": "Regel filtern",
     "allRules": "Alle Regeln",
     "refresh": "Aktualisieren",
     "noRuns": "Noch keine Ausführungen.",
-    "time": "Zeitpunkt",
+    "time": "Uhrzeit",
     "rule": "Regel",
     "event": "Ereignis",
     "status": "Ergebnis",
@@ -2104,7 +2258,108 @@
       "executed": "ausgeführt",
       "failed": "fehlgeschlagen",
       "dry_run": "Testlauf"
-    }
+    },
+    "triggerKind": "Auslöserart",
+    "triggerKinds": {
+      "event": "Ereignis",
+      "schedule": "Zeitplan"
+    },
+    "customEvent": "Anderer Ereignistyp",
+    "eventTypeCode": "Ereignistyp (Code)",
+    "events": {
+      "ticket_created": "Ticket angelegt",
+      "ticket_merged": "Ticket zusammengeführt",
+      "sla_escalated": "SLA eskaliert",
+      "contact_updated": "Kontakt geändert",
+      "document_created": "Dokument angelegt",
+      "property_created": "Objekt angelegt",
+      "unit_created": "Einheit angelegt",
+      "listing_created": "Inserat angelegt",
+      "import_run_applied": "Import übernommen",
+      "payment_order_returned": "Zahlungsauftrag zurückgegeben",
+      "portal_account_invited": "Portalzugang eingeladen"
+    },
+    "frequency": "Häufigkeit",
+    "frequencies": {
+      "daily": "täglich",
+      "weekly": "wöchentlich",
+      "monthly": "monatlich"
+    },
+    "weekday": "Wochentag",
+    "weekdays": {
+      "0": "Montag",
+      "1": "Dienstag",
+      "2": "Mittwoch",
+      "3": "Donnerstag",
+      "4": "Freitag",
+      "5": "Samstag",
+      "6": "Sonntag"
+    },
+    "dayOfMonth": "Tag im Monat",
+    "scheduleHelp": "Uhrzeit in Europe/Berlin. Die Regel läuft je Termin genau einmal; Termine vor der Aktivierung werden nicht nachgeholt.",
+    "chooseField": "Feld wählen",
+    "customField": "Anderes Feld",
+    "fieldPath": "Feldpfad",
+    "choose": "Bitte wählen",
+    "fields": {
+      "entity": {
+        "category": "Ticket Kategorie",
+        "priority": "Ticket Priorität",
+        "topic": "Ticket Thema",
+        "title": "Ticket Titel",
+        "team_id": "Ticket Team",
+        "source": "Ticket Quelle",
+        "status": "Ticket Status"
+      },
+      "payload": {
+        "source": "Ereignis Quelle",
+        "number": "Ereignis Nummer"
+      }
+    },
+    "webhookUrl": "Ziel-URL (https)",
+    "webhookSecret": "Geheimnis zur Signatur (mindestens 16 Zeichen)",
+    "webhookSecretKeep": "Neues Geheimnis (leer lassen, um das gespeicherte zu behalten)",
+    "webhookExtra": "Zusatzfelder im Aufruf",
+    "webhookHelp": "Signierter Aufruf (HMAC SHA-256) mit Regel, Ereignis und Ticketfeldern. Nur https-Ziele; private Netzwerke nur mit Betreiberfreigabe. Das Geheimnis wird verschlüsselt gespeichert und nie angezeigt.",
+    "placeholderName": "Feldname",
+    "placeholderValue": "Feldwert",
+    "addField": "Feld hinzufügen",
+    "replyTemplate": "Antwortvorlage",
+    "noReplyTemplates": "Keine Antwortvorlage vorhanden",
+    "mailDraftHelp": "Legt nur einen Entwurf im Postfach des Tickets an. Freigabe und Versand bleiben manuell (Vier-Augen-Prinzip).",
+    "letterTemplate": "Briefvorlage",
+    "noLetterTemplates": "Keine Briefvorlage vorhanden",
+    "letterContact": "Empfänger (Kontakt-ID, leer = Kontakt des Tickets)",
+    "letterContactRequired": "Empfänger (Kontakt-ID, auf einem Zeitplan Pflicht)",
+    "contactIdHelp": "Kontakt-ID",
+    "letterReference": "Unser Zeichen",
+    "letterFields": "Platzhalterfelder der Vorlage (felder.*)",
+    "letterDraftHelp": "Erzeugt den Brief auf dem Briefbogen und legt ihn als Dokument ab. Es wird nichts versendet.",
+    "aiTask": "KI-Aufgabe",
+    "aiTasks": {
+      "summarize": "Zusammenfassen",
+      "draft_reply": "Antwortentwurf",
+      "answer_question": "Frage beantworten",
+      "classify_email": "E-Mail einordnen"
+    },
+    "aiInstruction": "Anweisung (Platzhalter erlaubt)",
+    "aiTaskHelp": "Startet einen KI-Lauf über den Gateway. Ergebnis ist nur ein Vorschlag; keine Buchung, keine Freigabe.",
+    "expertView": "Expertenansicht (JSON)",
+    "formView": "Formularansicht",
+    "expertJson": "Regelkern als JSON (Auslöser, Zeitplan, Bedingungen, Aktionen)",
+    "expertHelp": "Verschachtelte Bedingungen sind nur hier möglich. Beim Wechsel zurück ins Formular müssen die Bedingungen eine flache Liste sein.",
+    "nestedConditions": "Verschachtelte Bedingungen lassen sich nicht im Formular abbilden. Bitte in der Expertenansicht bearbeiten.",
+    "sentence": {
+      "frame": "Wenn {when}, dann {then}.",
+      "with": "mit",
+      "and": "und",
+      "or": "oder",
+      "nothing": "keine Aktion",
+      "daily": "täglich um {time} Uhr",
+      "weekly": "wöchentlich am {weekday} um {time} Uhr",
+      "monthly": "monatlich am {day}. um {time} Uhr"
+    },
+    "testRunSchedule": "Zeitplanregel: der Testlauf prüft die Aktionen für den nächsten Termin, ohne etwas anzulegen."
   },
   "TicketTemplates": {
     "title": "Ticketvorlagen",
@@ -2288,7 +2543,8 @@
       "correctionNote": "Was war falsch, was ist richtig?",
       "correctionSave": "Korrektur speichern",
       "correctionRecorded": "Zuletzt korrigiert"
-    }
+    },
+    "tnrSuggestion": "Mögliche Zuordnung zu TNR#{number}: Der Absender ist nicht am Ticket beteiligt, die Mail wurde deshalb nicht automatisch zugeordnet."
   },
   "Platform": {
     "title": "Plattform",
@@ -2552,7 +2808,25 @@
       "hoa": "Keine WEG-Objekte.",
       "sev": "Keine WEG-Objekte mit aktivierter SEV und hinterlegten Mietverträgen."
     },
-    "sevHint": "Angezeigt werden WEG-Objekte mit Sondereigentumsverwaltung, für die mindestens ein Mietvertrag hinterlegt ist."
+    "sevHint": "Angezeigt werden WEG-Objekte mit Sondereigentumsverwaltung, für die mindestens ein Mietvertrag hinterlegt ist.",
+    "energyCertificate": {
+      "title": "Energieausweis",
+      "help": "Angaben laut Energieausweis des Gebäudes. Anzeigen übernehmen die Werte bei Anlage, das Exposé und der OpenImmo-Export prüfen sie.",
+      "type": "Art des Ausweises",
+      "none": "keine Angabe",
+      "types": {
+        "verbrauch": "Verbrauchsausweis",
+        "bedarf": "Bedarfsausweis"
+      },
+      "value": "Kennwert in kWh/(m²a)",
+      "source": "Energieträger",
+      "constructionYear": "Baujahr laut Ausweis",
+      "issuedOn": "Ausstellungsdatum",
+      "validUntil": "Gültig bis",
+      "class": "Effizienzklasse",
+      "save": "Energieausweis speichern",
+      "saved": "Gespeichert."
+    }
   },
   "AiChat": {
     "title": "KI-Assistent",
@@ -2684,6 +2958,10 @@
       "title": "DMS-Anbindung",
       "description": "Paperless-Zugangsdaten und Feld-IDs pflegen, Google Drive anzeigen."
     },
+    "telephony": {
+      "title": "Telefonie",
+      "description": "Webhook der Telefonanlage einrichten, Rufnummernerkennung und Anrufliste."
+    },
     "bank": {
       "title": "Bank",
       "description": "finAPI-Zugangsdaten für die Onlinebanking-Anbindung (nur lesend)."
@@ -2711,6 +2989,10 @@
     "datev": {
       "title": "Buchhaltung, DATEV",
       "description": "Kontenzuordnung CRM-Konto zu DATEV-Sachkonto, CSV-Import und Prüfbericht für den Buchungsstapel."
+    },
+    "portalForms": {
+      "title": "Portalformulare",
+      "description": "Formularvorlagen für Mieter und Eigentümer im Portal."
     }
   },
   "Members": {
@@ -3761,7 +4043,9 @@
       "tokenHelpManual": "Kein E-Mail-Entwurf angelegt. Der Code wird nur jetzt angezeigt; alternativ später ein Anschreiben herunterladen.",
       "invitationDraft": "E-Mail-Entwurf erstellen",
       "invitationLetter": "Anschreiben herunterladen",
-      "confirmNewCode": "Es wird ein neuer Einladungscode erzeugt, ein bisher übermittelter Code wird ungültig. Fortfahren?"
+      "confirmNewCode": "Es wird ein neuer Einladungscode erzeugt, ein bisher übermittelter Code wird ungültig. Fortfahren?",
+      "linkTitle": "Einladungslink (Text und QR-Code)",
+      "qrAlt": "QR-Code des Einladungslinks"
     },
     "dispatch": {
       "title": "Zustellung an die Beteiligten",
@@ -3803,7 +4087,9 @@
       },
       "tokenTitle": "Einladung (wird nur einmal angezeigt)",
       "tokenHelp": "Bitte den Einladungscode zusammen mit der Portaladresse an den Beteiligten weitergeben. Der Code gilt 14 Tage; im Portal setzt der Beteiligte sein Passwort und richtet den zweiten Faktor ein.",
-      "done": "Portalzugang eingerichtet."
+      "done": "Portalzugang eingerichtet.",
+      "linkTitle": "Einladungslink (Text und QR-Code)",
+      "qrAlt": "QR-Code des Einladungslinks"
     }
   },
   "ImmowareSettings": {
@@ -4435,5 +4721,394 @@
     "hint": "Beim Abruf der Gmail-Postfächer wird für jeden neuen PDF-Anhang, dessen Betreff, Absender oder Dateiname auf eine Rechnung hindeutet (Rechnung, Invoice, Beleg, RE-), genau eine KI-Extraktion gestartet. Das Ergebnis ist ein Vorschlag unter Rechnungseingang, gebucht wird nichts.",
     "costHint": "Jede automatische Extraktion verursacht KI-Kosten und belastet das Monatsbudget der KI-Anbieter. Budget- und Freigabeprüfungen gelten unverändert. Standard: aus.",
     "saved": "Einstellung gespeichert."
+  },
+  "HoaInspection": {
+    "title": "Einsichtsanfragen",
+    "hoa": "WEG",
+    "request": "Einsichtsanfrage",
+    "create": "Einsichtsanfrage erfassen",
+    "applicant": "Antragsteller",
+    "applicantSearch": "Kontakt suchen (mindestens 2 Zeichen)",
+    "requestedOn": "Datum Antrag",
+    "scope": "Umfang",
+    "scopeText": "Umfang als Freitext",
+    "scopeKinds": {
+      "statement": "Abrechnung",
+      "receipts": "Belege",
+      "contracts": "Verträge",
+      "resolutions": "Beschlüsse"
+    },
+    "statusHeading": "Status",
+    "status": {
+      "requested": "angefragt",
+      "released": "freigegeben",
+      "provided": "bereitgestellt",
+      "retrieved": "abgerufen",
+      "closed": "abgeschlossen",
+      "rejected": "abgelehnt"
+    },
+    "action": {
+      "released": "Freigeben",
+      "provided": "Bereitstellen",
+      "retrieved": "Als abgerufen vermerken",
+      "closed": "Abschließen",
+      "rejected": "Ablehnen"
+    },
+    "deliveryKind": "Bereitstellungsart",
+    "delivery": {
+      "portal": "Portal",
+      "data_medium": "Datenträger",
+      "on_site": "Einsicht vor Ort"
+    },
+    "note": "Rückfrage oder Vermerk",
+    "addNote": "Rückfrage vermerken",
+    "packageHeading": "Bereitstellungspaket",
+    "packageHelp": "Nur für Eigentümer freigegebene Dokumente des Objekts lassen sich auswählen. Das Paket enthält einen Index mit Dateiname, Kategorie, Datum und SHA-256 je Dokument; gleiche Auswahl ergibt dieselbe Prüfsumme.",
+    "buildPackage": "Paket erzeugen",
+    "download": "Paket herunterladen",
+    "packageOf": "Paket vom {date},",
+    "notReleased": "nicht freigegeben",
+    "noDocuments": "Keine Dokumente am Objekt.",
+    "trail": "Verlauf",
+    "kind": {
+      "status": "Statuswechsel",
+      "note": "Rückfrage",
+      "package": "Paket erzeugt",
+      "retrieval": "Paket abgerufen"
+    },
+    "empty": "Keine Einsichtsanfragen.",
+    "notFound": "Einsichtsanfrage nicht gefunden.",
+    "notice": "Protokoll der Einsicht außerhalb des Portals. Fristen und Umfang der Einsicht sind Entscheidung des Verwalters, die Software leitet daraus keinen Anspruch ab. Jeder Abruf des Pakets wird protokolliert."
+  },
+  "PortalForms": {
+    "title": "Portalformulare",
+    "description": "Formulare für Mieter und Eigentümer im Portal. Jede Einreichung wird zum Vorgang mit Ticket in der gewählten Kategorie.",
+    "intro": "Eine Vorlage legt Name, Felder und Zielgruppe fest. Reicht eine Mieterin oder ein Eigentümer das Formular im Portal ein, entsteht automatisch ein Ticket mit den Angaben als Text und den Dateien als Anhang. Es wird nichts entschieden oder gebucht.",
+    "newTemplate": "Neues Formular",
+    "empty": "Noch keine Formulare angelegt.",
+    "name": "Name",
+    "description2": "Hinweistext im Portal (optional)",
+    "category": "Ticketkategorie",
+    "categoryHelp": "Kategorie des Tickets, das aus der Einreichung entsteht.",
+    "audience": "Zielgruppe",
+    "audiences": {
+      "all": "Mieter und Eigentümer",
+      "tenant": "Nur Mieter",
+      "owner": "Nur Eigentümer"
+    },
+    "fields": "Felder",
+    "noFields": "Keine Felder, nur Absenden.",
+    "required": "Pflicht",
+    "remove": "Entfernen",
+    "add": "Hinzufügen",
+    "newFieldLabel": "Neues Feld",
+    "fieldType": "Feldtyp",
+    "options": "Optionen",
+    "optionsPlaceholder": "Optionen, durch Komma getrennt",
+    "fieldTypes": {
+      "text": "Text",
+      "number": "Zahl",
+      "date": "Datum",
+      "select": "Auswahl",
+      "file": "Datei"
+    },
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "activate": "Aktivieren",
+    "deactivate": "Deaktivieren",
+    "delete": "Löschen",
+    "confirmDelete": "Formular \"{name}\" löschen? Vorlagen mit Einreichungen können nur deaktiviert werden.",
+    "activeState": "aktiv",
+    "inactiveState": "inaktiv",
+    "errors": {
+      "name": "Bitte einen Namen eingeben.",
+      "category": "Bitte eine Ticketkategorie eingeben."
+    }
+  },
+  "ReconciliationReports": {
+    "title": "Abgleichbericht Parallelbetrieb",
+    "intro": "Vergleicht die eingelesenen Rohzeilen aus Immoware24 (Journal, Bankumsätze) je Objekt mit den Werten der Plattform: Kontensalden, offene Posten Debitoren und Kreditoren, Rücklage, Bankstand und Zahlungen.",
+    "backToImports": "Zurück zu den Importen",
+    "readOnlyNote": "Der Bericht liest und vergleicht nur. Es wird nichts gebucht, korrigiert oder übernommen. Der tägliche Lauf erfolgt automatisch (Standard 05:30 Uhr).",
+    "asOf": "Stichtag",
+    "asOfHelp": "Ohne Stichtag gilt das jüngste Buchungsdatum der Rohzeilen.",
+    "create": "Bericht jetzt erstellen",
+    "creating": "Bericht wird erstellt",
+    "loading": "Berichte werden geladen.",
+    "empty": "Noch kein Abgleichbericht. Voraussetzung sind eingelesene Rohzeilen der Reporttypen Journal oder Bankumsätze im Importassistenten.",
+    "colCreated": "Erstellt",
+    "colAsOf": "Stichtag",
+    "colTrigger": "Auslöser",
+    "colProperties": "Objekte",
+    "colDeviations": "Abweichungen",
+    "colActions": "Aktionen",
+    "downloadCsv": "CSV herunterladen",
+    "triggerBeat": "täglicher Lauf",
+    "triggerManual": "manuell",
+    "detailTitle": "Abgleich zum",
+    "totals": {
+      "properties": "Objekte",
+      "compared": "Kennzahlen",
+      "deviations": "Abweichungen",
+      "missing_on_platform": "Objekte nicht auf der Plattform"
+    },
+    "warnings": "{count, plural, one {# Rohzeile konnte nicht gelesen werden} other {# Rohzeilen konnten nicht gelesen werden}}",
+    "onlyDeviations": "Nur Abweichungen anzeigen",
+    "noLines": "Keine Zeilen.",
+    "colProperty": "Objekt",
+    "colMetric": "Kennzahl",
+    "colKey": "Konto / IBAN",
+    "colSource": "Quelle",
+    "colPlatform": "Plattform",
+    "colDifference": "Differenz",
+    "colHint": "Hinweis",
+    "missing": "nicht vorhanden",
+    "metric": {
+      "kontosaldo": "Kontosaldo",
+      "debitoren_op": "Offene Posten Debitoren",
+      "kreditoren_op": "Offene Posten Kreditoren",
+      "ruecklage": "Rücklage",
+      "bankstand": "Bankstand",
+      "zahlungen": "Zahlungseingänge"
+    }
+  },
+  "TelephonySettings": {
+    "title": "Telefonie-Webhook",
+    "pageIntro": "Anbieterneutraler Eingang für Anrufereignisse der Telefonanlage. Der Anbieter ist beim Betreiber noch offen, das Nachrichtenformat ist in docs/integrations/telefonie.md beschrieben.",
+    "intro": "Die Telefonanlage signiert jede Zustellung mit dem hier hinterlegten Geheimnis (HMAC-SHA256, Zeitfenster fünf Minuten). Ereignisse: Anruf begonnen, beendet, verpasst, jeweils mit Rufnummer, Richtung, Dauer und optionaler Anbieter-Referenz.",
+    "endpoint": "Endpunkt:",
+    "enabled": "Webhook aktiv",
+    "providerLabel": "Anbieter oder Anlage (Bezeichnung)",
+    "providerHint": "Freie Bezeichnung zur Orientierung, zum Beispiel Name der Telefonanlage.",
+    "secret": "Geheimnis (HMAC)",
+    "secretHint": "Mindestens 16 Zeichen. Wird einmal gespeichert und nie wieder angezeigt; leer lassen, um das vorhandene Geheimnis zu behalten.",
+    "secretStored": "Geheimnis ist hinterlegt und wird nicht angezeigt.",
+    "secretMissing": "Noch kein Geheimnis hinterlegt.",
+    "privacyHint": "Es werden keine Gesprächsinhalte angenommen oder gespeichert. Rufnummern erscheinen in Listen nur mit dem Recht Kontakte lesen unmaskiert.",
+    "save": "Speichern",
+    "saved": "Einstellungen gespeichert.",
+    "readOnly": "Nur Lesezugriff, Änderungen erfordern das Recht Mandanteneinstellungen bearbeiten."
+  },
+  "Calls": {
+    "none": "Keine Anrufe vorhanden.",
+    "masked": "Rufnummer maskiert",
+    "duration": "Dauer {value}",
+    "event": {
+      "started": "Begonnen",
+      "ended": "Beendet",
+      "missed": "Verpasst"
+    },
+    "direction": {
+      "inbound": "eingehend",
+      "outbound": "ausgehend"
+    },
+    "proposal": {
+      "callback": "Vorschlag Rückruf",
+      "accept": "Ticket Rückruf anlegen",
+      "dismiss": "Verwerfen",
+      "accepted": "Rückruf als Ticket angelegt.",
+      "created": "Ticket {number} angelegt.",
+      "dismissed": "Vorschlag verworfen."
+    }
+  },
+  "HoaFinance": {
+    "loans": "Darlehen",
+    "claims": "Versicherungsfälle",
+    "measures": "Größere Maßnahmen",
+    "notice": "Erfassung und Nachweis. Beträge gelten nur mit Bezug auf eine gebuchte Journalbuchung. Steuer- und Umlagebehandlung sowie Beschlussgrundlage werden je Fall freigegeben (W10).",
+    "create": {
+      "loan": "Darlehen anlegen",
+      "claim": "Versicherungsfall anlegen",
+      "measure": "Maßnahme anlegen"
+    },
+    "lender": "Darlehensgeber",
+    "principal": "Darlehensbetrag",
+    "rate": "Zinssatz in Prozent",
+    "termMonths": "Laufzeit in Monaten",
+    "instalment": "Rate",
+    "startDate": "Beginn",
+    "purpose": "Zweck",
+    "loanAccount": "Darlehenskonto",
+    "title": "Bezeichnung",
+    "damageDate": "Schadensdatum",
+    "insurer": "Versicherer",
+    "policy": "Versicherungsschein",
+    "claimNumber": "Schadensnummer",
+    "deductible": "Selbstbehalt",
+    "costFrame": "Kostenrahmen",
+    "kind": "Einordnung",
+    "kinds": {
+      "undecided": "offen",
+      "maintenance": "Erhaltung",
+      "structural_change": "bauliche Veränderung"
+    },
+    "kindBasis": "Sachverhalt und Rechtsgrund",
+    "items": "Positionen",
+    "itemKind": "Art",
+    "bookingDate": "Datum",
+    "amount": "Betrag",
+    "journalEntry": "Journalbuchung (ID)",
+    "note": "Hinweis",
+    "addItem": "Position erfassen",
+    "loanKinds": {
+      "disbursement": "Auszahlung",
+      "repayment": "Tilgung",
+      "interest": "Zins",
+      "fee": "Gebühr"
+    },
+    "claimKinds": {
+      "damage_cost": "Schadenskosten",
+      "benefit": "Versicherungsleistung",
+      "deductible": "Selbstbehalt",
+      "regress": "Regress",
+      "owner_payment": "Zahlung an Eigentümer"
+    },
+    "contract": "Eigentumsvertrag (ID)",
+    "booked": "gebucht",
+    "planned": "ohne Buchung",
+    "balanceBooked": "Stand laut gebuchten Positionen",
+    "accountBalance": "Saldo Darlehenskonto",
+    "accountDifference": "Differenz",
+    "netBurden": "Belastung der Gemeinschaft (gebucht)",
+    "financing": "Finanzierung",
+    "source": "Quelle",
+    "sources": {
+      "reserve": "Erhaltungsrücklage",
+      "special_levy": "Sonderumlage",
+      "loan": "Darlehen",
+      "other": "Sonstige"
+    },
+    "financedTotal": "finanziert",
+    "financingGap": "offen",
+    "addFinancing": "Finanzierungsanteil erfassen",
+    "reference": "Verweis (ID)",
+    "documents": "{n} verknüpfte Dokumente",
+    "status": "Status",
+    "loanStatus": {
+      "draft": "Entwurf",
+      "active": "laufend",
+      "repaid": "getilgt",
+      "closed": "abgeschlossen"
+    },
+    "claimStatus": {
+      "reported": "gemeldet",
+      "accepted": "anerkannt",
+      "rejected": "abgelehnt",
+      "settled": "reguliert",
+      "closed": "abgeschlossen"
+    },
+    "measureStatus": {
+      "planned": "geplant",
+      "resolved": "beschlossen",
+      "in_progress": "in Ausführung",
+      "completed": "abgeschlossen",
+      "cancelled": "aufgehoben"
+    },
+    "setStatus": "Status setzen",
+    "reconciliation": "Überleitungsrechnung Gesamtgeldfluss (W04)",
+    "cash": "Bank und Kasse",
+    "opening": "Anfangsbestand",
+    "inflows": "Zuflüsse",
+    "outflows": "Abflüsse",
+    "closing": "Endbestand",
+    "account": "Konto",
+    "bridge": {
+      "outflows": "Zahlungsausgänge",
+      "reserve": "davon Rücklage",
+      "loan": "davon Darlehensposten",
+      "owner_refund": "davon Erstattungen an Eigentümer",
+      "other_non_cost": "davon Durchlauf und Sonstiges",
+      "cost_refunds": "abzüglich Erstattungen auf Kosten",
+      "cost_paid": "Gezahlte Kosten",
+      "creditor_timing": "Zeitbezug Kreditorenbuchung gegen Zahlung",
+      "structure_residual": "Nicht zuordenbare Buchungsstruktur",
+      "cost_booked": "Gebuchte Kosten",
+      "heating_accrual": "Heizkostenabgrenzung",
+      "prior_year": "Vorjahr",
+      "other": "Sonstige erklärte Differenz",
+      "cost_distributed": "Verteilungsrelevante Kosten",
+      "unexplained": "Unerklärte Differenz"
+    },
+    "notes": "Erklärte Differenzen",
+    "noteCode": "Art",
+    "noteAmount": "Betrag mit Vorzeichen",
+    "noteText": "Begründung",
+    "saveNotes": "Erklärungen speichern",
+    "addNote": "Zeile hinzufügen",
+    "removeNote": "Entfernen"
+  },
+  "ReadReceipts": {
+    "title": "Abrufe über das Portal",
+    "legalNote": "Indiz, keine Zustellung, keine Rechtsfolge.",
+    "empty": "Keine Abrufe über das Portal.",
+    "columns": {
+      "at": "Zeitpunkt",
+      "kind": "Art",
+      "account": "Konto"
+    },
+    "kind": {
+      "opened": "angezeigt",
+      "downloaded": "heruntergeladen"
+    }
+  },
+  "DocumentDetail": {
+    "area": "Dokumente",
+    "created": "Bereitgestellt am",
+    "mimeType": "Dateityp",
+    "visibility": "Sichtbarkeit im Portal",
+    "visibilityNone": "nicht freigegeben",
+    "visibilityValues": {
+      "tenant": "Mieter",
+      "owner": "Eigentümer",
+      "provider": "Dienstleister",
+      "board": "Beirat",
+      "all": "alle"
+    },
+    "links": "Verknüpfungen",
+    "linksNone": "keine",
+    "receiptsUnavailable": "Lesebestätigungen konnten nicht geladen werden."
+  },
+  "Notices": {
+    "title": "Schwarzes Brett",
+    "intro": "Aushänge der Verwaltung mit Gültigkeit und Zielgruppe, sichtbar im Portal für Mieter und Eigentümer des Objekts.",
+    "create": "Aushang anlegen",
+    "edit": "Bearbeiten",
+    "end": "Beenden",
+    "save": "Anlegen",
+    "saveChanges": "Speichern",
+    "cancel": "Abbrechen",
+    "loading": "Aushänge werden geladen.",
+    "empty": "Keine Aushänge vorhanden.",
+    "openEnd": "auf Weiteres",
+    "withDocument": "mit Anlage",
+    "validity": "Gültig {from} bis {to}",
+    "fields": {
+      "title": "Titel",
+      "body": "Text",
+      "validFrom": "Gültig ab",
+      "validTo": "Gültig bis",
+      "audience": "Zielgruppe",
+      "document": "Dokument-ID (optional)",
+      "documentHint": "ID eines Dokuments des Objekts, das als Anlage angezeigt wird."
+    },
+    "audience": {
+      "all": "Mieter und Eigentümer",
+      "tenant": "Mieter",
+      "owner": "Eigentümer"
+    },
+    "status": {
+      "current": "sichtbar",
+      "ended": "beendet",
+      "inactive": "nicht gültig"
+    },
+    "errors": {
+      "title": "Bitte einen Titel eingeben.",
+      "body": "Bitte einen Text eingeben.",
+      "validFrom": "Bitte ein Gültigkeitsdatum eingeben.",
+      "validTo": "Das Enddatum liegt vor dem Beginn.",
+      "document": "Die Dokument-ID ist ungültig."
+    },
+    "endConfirm": "Aushang \"{title}\" beenden? Er ist danach im Portal nicht mehr sichtbar."
   }
 }

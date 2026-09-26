@@ -77,6 +77,22 @@ class PropertyIn(_In):
     managed_from: date | None = None
     managed_to: date | None = None
     custom_fields: dict[str, Any] = Field(default_factory=dict)
+    # Energieausweis (A63): entered from the certificate, no derivation. Values are used by
+    # listings (prefill), the exposé draft and the OpenImmo completeness check.
+    energy_certificate_type: str | None = Field(default=None, pattern=r"^(verbrauch|bedarf)$")
+    energy_certificate_value: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    energy_certificate_source: str | None = Field(default=None, max_length=32)
+    energy_certificate_construction_year: int | None = Field(default=None, ge=1500, le=2100)
+    energy_certificate_issued_on: date | None = None
+    energy_certificate_valid_until: date | None = None
+    energy_certificate_class: str | None = Field(default=None, max_length=4)
+
+    @model_validator(mode="after")
+    def _energy_certificate_dates(self) -> Self:
+        issued, valid = self.energy_certificate_issued_on, self.energy_certificate_valid_until
+        if issued is not None and valid is not None and valid < issued:
+            raise ValueError("Gültigkeit des Energieausweises liegt vor dem Ausstellungsdatum.")
+        return self
 
 
 class LegalEntityOut(_Out):

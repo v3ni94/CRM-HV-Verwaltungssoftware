@@ -83,6 +83,19 @@ class HoaCostIn(HoaBaseIn):
     account_id: uuid.UUID | None = None
 
 
+class ReconciliationNoteIn(HoaBaseIn):
+    """Explained difference of the cash flow reconciliation (W04): signed amount that bridges
+    the costs booked in the year to the distributed costs, with the reason."""
+
+    code: str = Field(pattern="^(heating_accrual|creditor_timing|prior_year|other)$")
+    amount: Decimal = Field(decimal_places=2)
+    note: str = Field(min_length=3, max_length=2000)
+
+
+class ReconciliationNotesIn(HoaBaseIn):
+    notes: list[ReconciliationNoteIn] = Field(default_factory=list, max_length=50)
+
+
 class HoaTransitionIn(HoaBaseIn):
     target: StatementStatus
     resolution_id: uuid.UUID | None = None
@@ -132,6 +145,7 @@ def _st_out(s: HoaStatement) -> dict[str, Any]:
         "resolution_id": s.resolution_id,
         "addressing_rule_version": s.addressing_rule_version,
         "posted_entry_ids": s.posted_entry_ids,
+        "reconciliation_notes": s.reconciliation_notes,
     }
 
 
@@ -472,8 +486,44 @@ async def calculate_statement(
         result["asset_report"] = await calc.asset_report(
             session, ledger, st.year, result["reserve"]["closing"]
         )
+        # W04 (A60): Gesamtgeldfluss and Überleitung are part of the statement snapshot.
+        result["reconciliation"] = await calc.cash_flow_reconciliation(
+            session,
+            ledger,
+            st.year,
+            sum((i.amount for i in items), Decimal("0.00")),
+            list(st.reconciliation_notes or []),
+        )
         st.snapshot, st.snapshot_hash = result, calc.digest(result)
         st.status = StatementStatus.CALCULATED
+        await session.flush()
+        return _st_out(st)
+
+
+@router.put(
+    "/statements/{statement_id}/reconciliation-notes",
+    summary="Erklärte Differenzen der Überleitungsrechnung (W04)",
+)
+async def put_reconciliation_notes(
+    statement_id: uuid.UUID,
+    body: ReconciliationNotesIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    """Only while the statement is a draft or calculated; the calculated snapshot keeps its
+    reconciliation, the package always shows the live one with these notes."""
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(HoaStatement, statement_id, with_for_update=True)
+        if st is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if st.status not in (StatementStatus.DRAFT, StatementStatus.CALCULATED):
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Erklärungen nur vor der internen Freigabe."
+            )
+        st.reconciliation_notes = [
+            {"code": n.code, "amount": str(n.amount), "note": n.note} for n in body.notes
+        ]
+        st.updated_by = principal.user_id
         await session.flush()
         return _st_out(st)
 

@@ -36,6 +36,8 @@ const LISTING: Listing = {
   energy_class: null,
   energy_year_of_installation: null,
   energy_valid_until: null,
+  energy_issued_on: null,
+  energy_building_year: null,
   energy_includes_hot_water: false,
   features: { balkon: true },
   commission_type: null,
@@ -93,16 +95,21 @@ describe("ListingDetail", () => {
 
   it("saves the form with features and energy fields", async () => {
     const fetchMock = mockFetch(LISTING);
-    renderIntl(<ListingDetail listing={LISTING} />);
+    renderIntl(<ListingDetail listing={{ ...LISTING, energy_status: "liegt_vor" }} />);
+    // A63: issue date and building year of the certificate are structured fields
+    await userEvent.type(screen.getByLabelText("Ausstellungsdatum Energieausweis"), "2024-03-01");
+    await userEvent.type(screen.getByLabelText("Baujahr laut Energieausweis"), "1978");
     await userEvent.click(screen.getByText("Speichern"));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
     const body = patchBody(fetchMock);
     expect(body).toMatchObject({
       object_type: "wohnung",
       address_release: "vollstaendig",
-      energy_status: "in_erstellung",
+      energy_status: "liegt_vor",
       heating_in_additional_costs: false,
       energy_includes_hot_water: false,
+      energy_issued_on: "2024-03-01",
+      energy_building_year: "1978",
       features: { balkon: true },
       title: "Schöne Wohnung",
       price: "850.00",

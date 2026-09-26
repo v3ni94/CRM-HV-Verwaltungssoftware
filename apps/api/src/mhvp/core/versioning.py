@@ -1,4 +1,4 @@
-"""API versioning rule as a middleware building block (MASTER-PROMPT 12, ADR 0008, A50).
+"""API versioning rule as a middleware building block (MASTER-PROMPT 12, ADR 0009, A50).
 
 Every response carries ``API-Version`` (the running application version). Endpoints that are
 marked deprecated additionally carry ``Deprecation`` (RFC 9745, the date the endpoint was
@@ -119,6 +119,11 @@ def clear_registry() -> None:
 
 
 def deprecation_for(route: Any, method: str) -> Deprecation | None:
+    """Mark of a route: set directly on the route (by ``mark_deprecated_routes`` from the
+    registry), on its endpoint function (decorator) or registered under the route's own path."""
+    mark = getattr(route, DEPRECATION_ATTR, None)
+    if isinstance(mark, Deprecation):
+        return mark
     endpoint = getattr(route, "endpoint", None)
     mark = getattr(endpoint, DEPRECATION_ATTR, None)
     if isinstance(mark, Deprecation):
@@ -126,22 +131,39 @@ def deprecation_for(route: Any, method: str) -> Deprecation | None:
     return _REGISTRY.get((method.upper(), str(getattr(route, "path", ""))))
 
 
+def _route_contexts(app: FastAPI) -> list[Any]:
+    """Routes with their full path (include prefixes applied). FastAPI 0.141 keeps included
+    routers as nested objects; ``iter_route_contexts`` flattens them. Older versions expose the
+    APIRoutes directly in ``app.routes``."""
+    try:
+        from fastapi.routing import iter_route_contexts
+    except ImportError:  # pragma: no cover - FastAPI < 0.141
+        return list(app.routes)
+    return list(iter_route_contexts(app.routes))
+
+
 def mark_deprecated_routes(app: FastAPI) -> dict[tuple[str, str], Deprecation]:
-    """Writes the deprecation marks of all registered routes into the OpenAPI document. Call
-    after every ``include_router``. Returns the marks found."""
+    """Writes the deprecation marks of all registered routes into the OpenAPI document and
+    stores the mark on the route for the middleware. Call after every ``include_router``.
+    Returns the marks found, keyed by (METHOD, full path)."""
     found: dict[tuple[str, str], Deprecation] = {}
-    for route in app.routes:
-        if not isinstance(route, APIRoute):
+    for context in _route_contexts(app):
+        original = getattr(context, "original_route", context)
+        if not isinstance(original, APIRoute):
             continue
-        for method in route.methods or ():
-            mark = deprecation_for(route, method)
+        full_path = str(getattr(context, "path", None) or original.path)
+        effective = getattr(context, "_effective_route", original)
+        for method in original.methods or ():
+            mark = deprecation_for(original, method) or _REGISTRY.get((method.upper(), full_path))
             if mark is None:
                 continue
-            route.deprecated = True
-            extra = dict(route.openapi_extra or {})
-            extra.update(mark.openapi_extra())
-            route.openapi_extra = extra
-            found[(method, route.path)] = mark
+            setattr(original, DEPRECATION_ATTR, mark)
+            for target in {id(original): original, id(effective): effective}.values():
+                target.deprecated = True
+                extra = dict(getattr(target, "openapi_extra", None) or {})
+                extra.update(mark.openapi_extra())
+                target.openapi_extra = extra
+            found[(method, full_path)] = mark
     return found
 
 

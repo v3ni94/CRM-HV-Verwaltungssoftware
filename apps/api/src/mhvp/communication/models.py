@@ -102,10 +102,20 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     to_addresses: Mapped[list[str]] = mapped_column(
         ARRAY(String(320)), nullable=False, default=list
     )
+    # Kopie-Empfänger (Cc) getrennt von ``to_addresses`` (Ticket-Mailverlauf, operator
+    # 26.09.2026); eingehend aus der Kopfzeile, ausgehend aus dem Antwortformular.
+    cc_addresses: Mapped[list[str]] = mapped_column(
+        ARRAY(String(320)), nullable=False, default=list, server_default=text("'{}'")
+    )
     subject: Mapped[str | None] = mapped_column(String(998))
     body: Mapped[str | None] = mapped_column(Text)
+    # Bereinigtes HTML der Mail (``mhvp.communication.html``), nur für die Anzeige; der
+    # Klartext in ``body`` bleibt die Grundlage für Regeln, Suche und KI-Vorschläge.
+    body_html: Mapped[str | None] = mapped_column(Text)
     header_message_id: Mapped[str | None] = mapped_column(String(998))
     in_reply_to: Mapped[str | None] = mapped_column(String(998))
+    # Kopfzeile ``References`` (RFC 5322), damit Antworten beim Empfänger im Thread bleiben.
+    references_header: Mapped[str | None] = mapped_column(Text)
     thread_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -128,6 +138,9 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     rejection_note: Mapped[str | None] = mapped_column(Text)
     gmail_message_id: Mapped[str | None] = mapped_column(String(64))
+    # Letzter Versandfehler bei der Freigabe (Status ``pending`` bleibt, Anzeige
+    # "fehlgeschlagen" im Ticket); wird beim erfolgreichen Versand geleert.
+    send_error: Mapped[str | None] = mapped_column(Text)
     # KI-Vorschlag je eingehender Mail (M20 Übernahme): Kategorie, Dringlichkeit, Zusammenfassung,
     # erkanntes Objekt/Kontakt, Antwortentwurf, passendes Playbook. Nur Vorschlag (mhvp.ai.gateway).
     suggestion: Mapped[dict[str, Any]] = mapped_column(

@@ -14,3 +14,13 @@ calendar, saved list filters, bulk actions, operations metrics.
   contracts, meters, bank consents and document retention with the tenant's lead time;
   one notification per row. Orientation only, no legal deadline calculation (rule M9-06).
 * `GET /workspace/digest`, `GET /workspace/deadlines`, `GET/PUT /workspace/job-settings`.
+
+## Job `ops.backup_verify` (A67)
+
+`mhvp.workspace.backup_verify`: täglich 02:00 (Beat `ops-backup-verify`, Queue `io`) läuft
+`scripts/backup-verify.sh`, wenn `MHVP_BACKUP_VERIFY_ENABLED=true` und das Skript vorhanden ist;
+sonst wird `not_configured` protokolliert. Das Ergebnis (Status, Beginn, Dauer, geprüfte Datei,
+Exit-Code, Fehler) liegt in Redis (`mhvp:ops:backup_verify:last`, sieben Tage) und erscheint in
+`GET /api/v1/platform/ops/metrics` unter `jobs.backup_verify` sowie als Gauges
+`mhvp_backup_verify_*`; Alarme `backup_verify_failed` und `backup_verify_stale` (älter als 36 h
+oder kein Lauf). Tests: `tests/integration/test_ops_jobs.py`.

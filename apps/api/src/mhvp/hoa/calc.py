@@ -5,7 +5,7 @@ stay separate. Reserve development uses actual contributions."""
 import hashlib
 import json
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
@@ -345,3 +345,199 @@ async def ownership_periods(
             }
         )
     return out
+
+
+# W04 (A60): cash flow reconciliation ---------------------------------------------------------
+
+# Codes the manager may use for an explained difference (statement.reconciliation_notes).
+RECONCILIATION_NOTE_CODES = ("heating_accrual", "creditor_timing", "prior_year", "other")
+_CASH = ("bank", "cash")
+
+
+def _category(account: Any) -> str:
+    """Flow category of a counter account: cost, creditor, debtor, loan, reserve, revenue,
+    other (transit, tax, technical, opening balance)."""
+    cat = str(account.category.value)
+    if cat in ("cost", "creditor", "debtor", "loan", "reserve", "revenue"):
+        return cat
+    if cat == "technical" and account.statement_kind.value == "reserve":
+        return "reserve"
+    return "other"
+
+
+async def cash_flow_reconciliation(
+    session: AsyncSession,
+    ledger: Any,
+    year: int,
+    cost_total: Decimal,
+    notes: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Gesamtgeldfluss and Überleitung (W04): opening and closing balances of the bank and cash
+    accounts, in and out flows by counter account category, and the bridge from the cash paid
+    for costs over the costs booked in the year to the distribution relevant costs of the
+    statement. Automatic explanations: creditor timing (invoice booked against payment), loan
+    positions (W10 items or loan accounts), reserve, owner refunds, transit. Manual explanations
+    come from `notes` (heating accrual and the like). The unexplained rest is returned as a
+    finding; the package blocks while it is not zero. Transfers between own bank and cash
+    accounts carry no counter line and are therefore neither inflow nor outflow."""
+    from mhvp.accounting.models import (
+        AccountCategory,
+        EntryStatus,
+        JournalEntry,
+        JournalLine,
+        LedgerAccount,
+    )
+    from mhvp.accounting.reports import _balance
+    from mhvp.hoa.models import HoaLoanItem
+
+    start, end = date(year, 1, 1), date(year, 12, 31)
+    accounts = {
+        a.id: a
+        for a in (
+            await session.scalars(select(LedgerAccount).where(LedgerAccount.ledger_id == ledger.id))
+        ).all()
+    }
+    cash_ids = {a.id for a in accounts.values() if a.category.value in _CASH}
+    cash_accounts = []
+    opening_total = closing_total = ZERO
+    for a in sorted((accounts[i] for i in cash_ids), key=lambda x: x.number):
+        opening = await _balance(session, a.id, start - timedelta(days=1)) + ZERO
+        closing = await _balance(session, a.id, end) + ZERO
+        opening_total += opening
+        closing_total += closing
+        cash_accounts.append(
+            {
+                "number": a.number,
+                "name": a.name,
+                "category": a.category.value,
+                "opening": str(opening),
+                "closing": str(closing),
+            }
+        )
+    # Entries linked to a loan item (W10): their counter lines are loan positions by kind.
+    loan_entries: dict[uuid.UUID, str] = {
+        r.journal_entry_id: r.kind
+        for r in (
+            await session.scalars(
+                select(HoaLoanItem).where(HoaLoanItem.journal_entry_id.is_not(None))
+            )
+        ).all()
+        if r.journal_entry_id is not None
+    }
+    rows = (
+        await session.execute(
+            select(JournalLine, JournalEntry.id)
+            .join(JournalEntry, JournalEntry.id == JournalLine.journal_entry_id)
+            .where(
+                JournalEntry.ledger_id == ledger.id,
+                JournalEntry.status == EntryStatus.POSTED,
+                JournalEntry.booking_date.between(start, end),
+            )
+        )
+    ).all()
+    by_entry: dict[uuid.UUID, list[Any]] = {}
+    for line, entry_id in rows:
+        by_entry.setdefault(entry_id, []).append(line)
+    inflows: dict[str, Decimal] = {}
+    outflows: dict[str, Decimal] = {}
+    cost_booked = ZERO  # net debit on cost accounts, all posted entries, without loan entries
+    cost_via_creditor = ZERO  # cost booked in entries with a creditor line and no cash line
+    for entry_id, lines in by_entry.items():
+        has_cash = any(ln.account_id in cash_ids for ln in lines)
+        has_creditor = any(
+            accounts[ln.account_id].category is AccountCategory.CREDITOR for ln in lines
+        )
+        loan_kind = loan_entries.get(entry_id)
+        for ln in lines:
+            if ln.account_id in cash_ids:
+                continue
+            account = accounts[ln.account_id]
+            value = ln.debit - ln.credit
+            if account.category is AccountCategory.COST and loan_kind is None:
+                cost_booked += value
+                if has_creditor and not has_cash:
+                    cost_via_creditor += value
+            if not has_cash:
+                continue
+            category = f"loan_{loan_kind}" if loan_kind else _category(account)
+            if value > 0:
+                outflows[category] = outflows.get(category, ZERO) + value
+            elif value < 0:
+                inflows[category] = inflows.get(category, ZERO) - value
+    inflows_total = sum(inflows.values(), ZERO)
+    outflows_total = sum(outflows.values(), ZERO)
+
+    def flow(bucket: dict[str, Decimal], *keys: str) -> Decimal:
+        return sum((v for k, v in bucket.items() if k in keys or k.startswith(keys)), ZERO)
+
+    loan_out = flow(outflows, "loan")
+    non_cost_out = (
+        flow(outflows, "reserve")
+        + loan_out
+        + flow(outflows, "debtor")
+        + flow(outflows, "other")
+        + flow(outflows, "revenue")
+    )
+    cost_refunds = flow(inflows, "cost") + flow(inflows, "creditor")
+    cost_paid = outflows_total - non_cost_out - cost_refunds
+    creditor_paid = flow(outflows, "creditor") - flow(inflows, "creditor")
+    creditor_timing = creditor_paid - cost_via_creditor
+    structure_residual = cost_paid - creditor_timing - cost_booked
+    manual = []
+    manual_total = ZERO
+    for n in notes:
+        amount = Decimal(str(n["amount"]))
+        manual_total += amount
+        manual.append({"code": n["code"], "amount": str(amount), "note": n["note"]})
+    unexplained = cost_total - cost_booked - manual_total + structure_residual
+    bridge = [
+        {"code": "outflows", "amount": str(outflows_total)},
+        {"code": "reserve", "amount": str(-flow(outflows, "reserve"))},
+        {"code": "loan", "amount": str(-loan_out)},
+        {"code": "owner_refund", "amount": str(-flow(outflows, "debtor"))},
+        {
+            "code": "other_non_cost",
+            "amount": str(-(flow(outflows, "other") + flow(outflows, "revenue"))),
+        },
+        {"code": "cost_refunds", "amount": str(-cost_refunds)},
+        {"code": "cost_paid", "amount": str(cost_paid), "subtotal": True},
+        {"code": "creditor_timing", "amount": str(-creditor_timing)},
+        {"code": "structure_residual", "amount": str(-structure_residual)},
+        {"code": "cost_booked", "amount": str(cost_booked), "subtotal": True},
+        *[
+            {"code": m["code"], "amount": m["amount"], "note": m["note"], "manual": True}
+            for m in manual
+        ],
+        {"code": "cost_distributed", "amount": str(cost_total), "subtotal": True},
+        {"code": "unexplained", "amount": str(unexplained)},
+    ]
+    return {
+        "year": year,
+        "cash": {
+            "accounts": cash_accounts,
+            "opening": str(opening_total),
+            "inflows": str(inflows_total),
+            "outflows": str(outflows_total),
+            "closing": str(closing_total),
+            # opening + inflows - outflows == closing by construction of the posted lines
+            "check_ok": opening_total + inflows_total - outflows_total == closing_total,
+        },
+        "inflows": {k: str(v) for k, v in sorted(inflows.items())},
+        "outflows": {k: str(v) for k, v in sorted(outflows.items())},
+        "loan_positions": {
+            k.removeprefix("loan_"): str(v)
+            for k, v in sorted({**inflows, **outflows}.items())
+            if k.startswith("loan_")
+        },
+        "bridge": bridge,
+        "cost_booked": str(cost_booked),
+        "cost_distributed": str(cost_total),
+        "explained_manual": manual,
+        "unexplained": str(unexplained),
+        "note": (
+            "Überleitung stimmt: Geldfluss, gebuchte und verteilte Kosten sind abgestimmt."
+            if unexplained == ZERO
+            else "Unerklärte Differenz zwischen gebuchten und verteilten Kosten; erklären "
+            "(Heizkostenabgrenzung, Zeitbezug, Vorjahr) oder Positionen korrigieren (W04)."
+        ),
+    }

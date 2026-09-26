@@ -1,7 +1,8 @@
-"""Photo sanitizing for handover protocol uploads (M30-04).
+"""Photo sanitizing for handover protocol uploads (M30-04) and portal uploads (A55, A58).
 
 U-Protokoll removed GPS and EXIF data and scaled photos on upload. The CRM does the same for
-handover uploads only: the image is decoded with Pillow (installed as a dependency of
+handover uploads and for photos uploaded through the portal (damage reports, execution
+documentation): the image is decoded with Pillow (installed as a dependency of
 reportlab), the EXIF orientation is applied to the pixels, the image is scaled so that its
 longest edge does not exceed ``max_edge`` and it is re-encoded without any metadata (EXIF,
 XMP, IPTC, ICC comments, PNG text chunks). The original is not kept.
@@ -16,7 +17,18 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 DEFAULT_MAX_EDGE = 2000
 
 # MIME type -> Pillow format. Other types (PDF, office files) pass through unchanged.
-_FORMATS = {"image/jpeg": "JPEG", "image/jpg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}
+_FORMATS = {
+    "image/jpeg": "JPEG",
+    "image/jpg": "JPEG",
+    "image/png": "PNG",
+    "image/webp": "WEBP",
+    "image/tiff": "TIFF",
+}
+
+
+def supports(content_type: str) -> bool:
+    """True when ``sanitize_image`` re-encodes this type (so metadata is really removed)."""
+    return content_type.split(";")[0].strip().lower() in _FORMATS
 
 
 class ImageSanitizeError(ValueError):
@@ -53,6 +65,8 @@ def sanitize_image(data: bytes, content_type: str, max_edge: int = DEFAULT_MAX_E
             clean.save(out, format="PNG", optimize=True, transparency=clean.info["transparency"])
         else:
             clean.save(out, format="PNG", optimize=True)
+    elif fmt == "TIFF":
+        clean.save(out, format="TIFF")
     else:
         clean.save(out, format="WEBP", quality=90)
     return out.getvalue()

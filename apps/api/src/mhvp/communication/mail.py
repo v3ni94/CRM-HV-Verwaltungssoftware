@@ -38,6 +38,8 @@ def parse(raw: bytes) -> dict[str, Any]:
     text = body.get_content() if body is not None else ""
     if body is not None and body.get_content_type() == "text/html":
         text = re.sub(r"<[^>]+>", " ", text)
+    html_part = msg.get_body(preferencelist=("html",))
+    html = html_part.get_content() if html_part is not None else None
     attachments = [
         {
             "filename": part.get_filename() or "anhang",
@@ -55,6 +57,7 @@ def parse(raw: bytes) -> dict[str, Any]:
     # PostgreSQL rejects NUL bytes in text columns; column limits mirror the model.
     clean = _clean
     sender = (getaddresses([str(msg["From"] or "")]) or [("", "")])[0][1].lower()
+    references = " ".join(str(msg["References"] or "").split())
     return {
         "from": clean(sender, 320) or None,
         "to": [
@@ -62,10 +65,13 @@ def parse(raw: bytes) -> dict[str, Any]:
             for _, a in getaddresses([str(msg["To"] or ""), str(msg["Cc"] or "")])
             if a
         ],
+        "cc": [clean(a.lower(), 320) for _, a in getaddresses([str(msg["Cc"] or "")]) if a],
         "subject": clean(str(msg["Subject"] or ""), 998) or None,
         "body": clean(text.strip(), 100000),
+        "body_html": clean(html, 400000) if html else None,
         "message_id": clean(str(msg["Message-ID"] or "").strip(), 998) or None,
         "in_reply_to": clean(str(msg["In-Reply-To"] or "").strip(), 998) or None,
+        "references": clean(references, 20000) or None,
         "received_at": received,
         "attachments": attachments,
     }

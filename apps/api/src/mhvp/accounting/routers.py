@@ -915,6 +915,32 @@ async def fee_issue(
         draft["invoice_date"] = issue_date
         draft["status"] = issued.status.value
         draft["xrechnung_url"] = f"/api/v1/accounting/invoices/{issued.id}/xrechnung.xml"
+        # A69: outgoing event for subscribers (section 12, docs/integrations/webhooks.md).
+        # Identifiers and amounts only; the debtor's name, address and IBAN stay out.
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="invoice.issued",
+            entity_type="admin_fee_invoice",
+            entity_id=issued.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "invoice_id": str(issued.id),
+                "number": number,
+                "invoice_date": issue_date.isoformat(),
+                "kind": "admin_fee",
+                "fee_setting_id": str(fee.id),
+                "property_id": str(fee.property_id),
+                "debtor_legal_entity_id": (
+                    str(issued.debtor_legal_entity_id) if issued.debtor_legal_entity_id else None
+                ),
+                "net": str(issued.net),
+                "vat": str(issued.vat),
+                "gross": str(issued.gross),
+                "currency": "EUR",
+                "xrechnung_url": draft["xrechnung_url"],
+            },
+        )
         return draft
 
 

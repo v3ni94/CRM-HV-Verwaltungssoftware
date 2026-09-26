@@ -1,10 +1,16 @@
 # Handbuch
 
-Stand: 25.09.2026, Version 1.17.1. Produktive Buchführung, Zahlungen und Abrechnungen sind gesperrt (Freigabestufen G1 bis G5, Abschnitt 18.0). Die Plattform zeigt keine Geldkennzahlen, solange G1 nicht freigegeben ist.
+Stand: 26.09.2026, Version 1.17.1, Kapitel Phase 1 und 2 ergänzt am 26.09.2026. Produktive Buchführung, Zahlungen und Abrechnungen sind gesperrt (Freigabestufen G1 bis G5, Abschnitt 18.0). Die Plattform zeigt keine Geldkennzahlen, solange G1 nicht freigegeben ist.
 
 Dieses Handbuch richtet sich an Mitarbeiterinnen und Mitarbeiter der Hausverwaltung Müller GmbH. Es beschreibt die Oberfläche mit den dort verwendeten Bezeichnungen, nicht den Programmcode. Weiterführende Kapitel je Bereich:
 
 - [Start und Auswertungen](start-auswertungen.md)
+- [Objekte und Einheiten](objekte-einheiten.md)
+- [Verträge (Miete, WEG, SEV)](vertraege.md)
+- [Dokumente und DMS (Paperless, Belegeingang)](dokumente-dms.md)
+- [Buchhaltung (Buchungskreis, Sollstellung, offene Posten, Bankabgleich, Mahnwesen, Zahlläufe)](buchhaltung.md)
+- [WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)](weg.md)
+- [Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)](abrechnung-miete.md)
 - [Tickets](tickets.md)
 - [Mail](mail.md)
 - [Kalender](kalender.md)
@@ -15,6 +21,7 @@ Dieses Handbuch richtet sich an Mitarbeiterinnen und Mitarbeiter der Hausverwalt
 - [Portal](portal.md)
 - [Einstellungen](einstellungen.md)
 - [Datenübernahmen](datenuebernahmen.md)
+- [Abgleichbericht im Parallelbetrieb](import-abgleichbericht.md)
 
 Die folgenden Abschnitte fassen die Grundfunktionen der Startseite zusammen; Einzelheiten zu Auswertungen stehen im verlinkten Kapitel.
 

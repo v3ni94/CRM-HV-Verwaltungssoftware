@@ -294,7 +294,8 @@ def test_preview_and_reply_requires_confirmation_and_uses_ticket_mailbox(
     )
 
     preview = _ok(client.get(f"{T}/{ticket_id}/reply-templates/{tpl['id']}/preview", headers=admin))
-    assert preview["subject"] == f"AW: Ticket {ticket_ref['number']}"
+    # Ticketnummer im Betreff (docs/rules/M19-02-tnr.md): genau einmal TNR#<nummer>.
+    assert preview["subject"] == f"AW: Ticket {ticket_ref['number']} TNR#{ticket_ref['number']}"
     assert preview["body"].startswith(f"Sehr geehrte Frau Muster{RUN},")
     assert f"Frage zur Abrechnung {RUN}" in preview["body"]
     assert f"Erika Muster{RUN}" in preview["body"]

@@ -1,13 +1,14 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { CallsPanel, type CallOut } from "@/components/contacts/CallsPanel";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
 import { RolePills } from "@/components/contacts/RolePills";
 import { SepaMandatesPanel } from "@/components/contacts/SepaMandatesPanel";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
-import { serverApi } from "@/lib/api-server";
+import { serverApi, serverFetch } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
 
 import { loadContact } from "./load";
@@ -70,6 +71,10 @@ export default async function ContactDetailPage({
     tab === "kommunikation"
       ? ((await api.GET("/api/v1/tickets", { params: { query: { contact_id: id, limit: 50 } } })).data ?? [])
       : [];
+  // Anrufliste (13.5, A70): typisierter BFF-Fetch, kein generierter Client nötig.
+  const callsRes = tab === "kommunikation" ? await serverFetch(`/api/v1/contacts/${id}/calls`) : null;
+  const calls: CallOut[] = callsRes?.ok ? ((await callsRes.json()) as CallOut[]) : [];
+  const canCreateTicket = me.data?.permissions.includes("tickets:create") ?? false;
   const person = contact.kind === "person";
 
   return (
@@ -242,6 +247,12 @@ export default async function ContactDetailPage({
       ) : null}
 
       {tab === "kommunikation" ? <TicketsSection tickets={tickets as TicketSummary[]} /> : null}
+      {tab === "kommunikation" ? (
+        <section>
+          <h2 className="mb-1 text-sm font-semibold">{t("calls.title")}</h2>
+          <CallsPanel calls={calls} canCreateTicket={canCreateTicket} />
+        </section>
+      ) : null}
       {tab === "notizen" ? <NotesPanel contactId={contact.id} notes={notes} /> : null}
       {tab === "einwilligungen" ? <ConsentsPanel contactId={contact.id} consents={consents} /> : null}
     </div>

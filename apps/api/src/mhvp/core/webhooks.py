@@ -38,6 +38,23 @@ from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 from mhvp.core.events import DomainEvent
 
 RETRY_SCHEDULE_SECONDS: tuple[int, ...] = (60, 300, 1800, 7200, 21600, 86400)
+
+# Event types offered to subscribers (section 12, ``<entity>.<action>``; A69). The catalogue
+# documents the contract of the payloads (docs/integrations/webhooks.md): identifiers, field
+# names and amounts only, never IBAN, names, addresses or document contents. A subscription
+# may name any ``domain_event.type``; the catalogue is the documented, stable subset.
+EVENT_TYPES: dict[str, str] = {
+    "contact.created": "Kontakt angelegt (Kontakt-ID)",
+    "contact.updated": "Kontaktstammdaten geändert (Kontakt-ID, Namen der geänderten Felder)",
+    "contact.deleted": "Kontakt gelöscht (Kontakt-ID)",
+    "contact.mandate_iban_changed": "IBAN einer Bankverbindung mit SEPA-Mandat geändert "
+    "(Kontakt-ID, Mandatsreferenz)",
+    "tenant_settings.updated": "Mandanteneinstellungen geändert",
+    "invoice.issued": "Verwalterhonorar-Rechnung ausgestellt (Rechnungs-ID, Nummer, Datum, "
+    "Objekt, Beträge, XRechnung-URL)",
+    "admin_fee_invoice.xrechnung_stored": "XRechnung-XML zur Honorarrechnung abgelegt",
+    "webhook_subscription.created": "Webhook-Abonnement angelegt",
+}
 SIGNATURE_HEADER = "X-MHVP-Signature"
 DELIVERY_TIMEOUT_SECONDS = 10.0
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { InvitationQr } from "@/components/portal/InvitationQr";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
@@ -10,6 +11,7 @@ import type { Item, PortalAccess } from "./types";
 type Granted = PortalAccess & {
   account_id: string;
   invitation_token: string | null;
+  invitation_url?: string | null;
   email: string | null;
 };
 
@@ -113,6 +115,7 @@ export function PortalAccessBox({
           <code className="mt-1 block select-all break-all rounded bg-bg px-2 py-1 font-mono text-xs">
             {granted.invitation_token}
           </code>
+          <InvitationQr url={granted.invitation_url} title={t("portalAccess.linkTitle")} alt={t("portalAccess.qrAlt")} />
           {granted.email ? <p className="text-xs text-subtle">{granted.email}</p> : null}
         </div>
       ) : granted ? (

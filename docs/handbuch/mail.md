@@ -47,6 +47,19 @@ senden oder Ablehnen mit Ablehnungsgrund. Nur nach Freigabe wird tatsächlich ve
 bis dahin bleibt die Nachricht Entwurf bzw. wartet auf Freigabe. Wer den Entwurf erstellt
 hat, darf ihn in der Regel nicht selbst freigeben (Vier-Augen-Prinzip).
 
+## Ticketbezug und Kennung TNR#
+
+Jede aus einem Ticket oder aus dem Postfach zu einem Ticket erstellte Antwort trägt im
+Betreff die Kennung TNR#<Ticketnummer> (zum Beispiel "AW: Heizung kalt TNR#412"). Antworten
+des Empfängers werden über die Thread-Kopfzeilen oder, bei bekanntem Absender, über die
+Kennung dem Ticket zugeordnet. Stammt eine Mail mit Kennung von einer nicht am Ticket
+beteiligten Adresse, zeigt die Nachricht den Hinweis "Mögliche Zuordnung zu TNR#..." mit
+Link zum Ticket; die Zuordnung bleibt eine Entscheidung des Bearbeiters. Kopie-Empfänger
+(Cc) werden getrennt gespeichert und in der Antwort vorbelegt. Einzelnachrichten, Threads
+und Anhänge sind nur für Benutzer lesbar, die für das jeweilige Postfach freigeschaltet
+sind (Standardpostfach, Freigabe unter Einstellungen, Postfächer, oder Administrator).
+Aus dem Ticket führt "Im Postfach öffnen" direkt zur Nachricht (/mail?message=...).
+
 ## Was ist Vorschlag, was verbindlich
 
 Vorbereitung, KI-Vorschlag (Kategorie, Dringlichkeit, Zusammenfassung, passendes

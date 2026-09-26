@@ -1,21 +1,24 @@
 # mhvp.automation
 
-Rule engine stage 1 (docs/MASTER-PROMPT.md section 15.2, milestone M9, task A38 of
+Rule engine (docs/MASTER-PROMPT.md section 15.2, milestone M9, tasks A38 and A39 of
 `docs/plans/LUECKENLISTE-2026-09-26.md`). Rule document: `docs/rules/M9-02-automation.md`.
 
-Rules never post, pay, approve or send anything (rules 0.1.6 and 0.1.7). Stage 1 offers
-exactly three actions: create a ticket from a template, internal notification to users or
-roles, set a ticket field (priority, team, category, assignee). Stage 2 (webhook, mail or
-letter drafts, AI tasks, schedules) is A39 and not part of this package yet.
+Rules never post, pay, approve or send mail (rules 0.1.6 and 0.1.7). Stage 1 offers three
+actions: create a ticket from a template, internal notification to users or roles, set a
+ticket field (priority, team, category, assignee). Stage 2 (A39) adds a signed outbound
+`webhook` per rule, `mail_draft` (draft in the ticket mailbox, four eyes untouched),
+`letter_draft` (letter on the letterhead stored as a document) and `ai_task` (queued gateway
+run, proposal only), plus the trigger kind `schedule` (daily, weekly, monthly).
 
 ## Layout
 
 | File | Content |
 | --- | --- |
-| `models.py` | `automation_rule` (tenant, name, active, trigger event type, condition tree, action list), `automation_run` (rule, event, time, status, error, executed actions; unique per rule and event), `automation_watermark` (position of the beat job per tenant). Migration 0100, tenant RLS on all tables. |
+| `models.py` | `automation_rule` (tenant, name, active, trigger kind, trigger event type, schedule, schedule watermark, condition tree, action list), `automation_run` (rule, event or schedule window, time, status, error, executed actions; unique per rule and event), `automation_watermark` (position of the beat job per tenant). Migrations 0100 and 0110, tenant RLS on all tables. |
 | `rules.py` | Pure logic: condition evaluation (`eq`, `ne`, `contains`, `gt`, `lt`, groups `and`/`or`, depth limit), field paths (`entity.category`, `payload.number`), `{placeholder}` rendering, loop guard marker. |
-| `schemas.py` | Pydantic validation of rules and actions; unknown action types and non-listed ticket fields are rejected with 422. |
-| `services.py` | Evaluation context per event (event fields plus the current ticket fields), action execution, dry run, `process_tenant` (beat loop). |
+| `schedule.py` | Pure logic of the schedule trigger: validation, `previous_due` (latest due moment in Europe/Berlin, returned in UTC), deterministic window id per rule and due moment. |
+| `schemas.py` | Pydantic validation of rules and actions; unknown action types, non-listed ticket fields, AI tasks outside the allow list, webhooks without secret and ticket actions on a schedule are rejected with 422. |
+| `services.py` | Evaluation context per event (event fields plus the current ticket fields), action execution (stage 1 and 2), webhook secret sealing (`seal_actions`, `carry_secrets`, `public_actions`), dry run, `process_schedules` and `process_tenant` (beat loop). |
 | `tasks.py` | Celery task `mhvp.automation.process_events` (beat every 60 seconds, queue `default`). |
 | `routers.py` | `/api/v1/automation/meta`, `/rules` (CRUD, `/activate`, `/test`), `/runs`. |
 
@@ -33,8 +36,16 @@ are history, not triggers.
 * Depth 1: events written by rule actions carry `payload.automation = {rule_id, event_id,
   depth: 1}` and are skipped by the job, so a rule can never trigger itself or another rule
   through its own effects.
-* A test run (`POST /rules/{id}/test`) evaluates the rule against a sample event and returns
-  the action previews; nothing is written and no run is recorded.
+* A test run (`POST /rules/{id}/test`) evaluates the rule against a sample event (or, for a
+  schedule rule, a due moment `due_at`) and returns the action previews; nothing is written,
+  sent or queued and no run is recorded.
+* Schedules: `process_schedules` runs before the event loop in the same beat task. A rule
+  fires once per due moment (`last_scheduled_at` watermark plus the unique run id derived
+  from rule and due moment); the first pass after activation only positions the watermark.
+* Webhook secrets are encrypted with the tenant scope (`mhvp.core.crypto`) in the stored
+  action JSON and are never returned by the API. Targets are checked with
+  `mhvp.core.webhooks.check_target` at delivery (https only, no private addresses unless
+  `webhook_allow_private_targets`). One attempt per run, no retry.
 
 ## Permissions
 
@@ -45,11 +56,18 @@ are history, not triggers.
 ## Tests
 
 * `tests/unit/test_automation_rules.py`: evaluation, validation, placeholders, loop marker, schema.
+* `tests/unit/test_automation_schedule.py`: schedule validation, due moments (daily, weekly,
+  monthly, DST), window ids, stage 2 action schemas and trigger rules.
 * `tests/integration/test_m9_automation.py`: rule creates a ticket, sets fields, notifies a
   role, idempotency and loop guard, inactive rule, failing rule, permissions, tenant separation.
+* `tests/integration/test_m9_automation_stage2.py`: signed webhook against a local receiver
+  (signature verified, private target refused without the setting), mail draft, letter
+  document with links, queued AI run, secret never exposed, patch keeps the secret, schedule
+  rule fires once per window, changed schedule resets the watermark, tenant separation.
 
 ## CRM
 
 `apps/web-crm/src/app/(app)/einstellungen/automatisierung` with
-`components/settings/AutomationAdmin.tsx`: list, form (trigger, condition rows, actions), test
-run, log.
+`components/settings/AutomationAdmin.tsx`: list, structured form (trigger kind, event type or
+schedule, condition rows with select fields, seven action editors, rule sentence preview,
+JSON expert view), test run, log.

@@ -39,6 +39,8 @@ export type Listing = {
   energy_class: string | null;
   energy_year_of_installation: number | null;
   energy_valid_until: string | null;
+  energy_issued_on: string | null;
+  energy_building_year: number | null;
   energy_includes_hot_water: boolean;
   features: Record<string, boolean> | null;
   commission_type: string | null;
@@ -84,6 +86,8 @@ type Form = {
   energy_class: string;
   energy_year_of_installation: string;
   energy_valid_until: string;
+  energy_issued_on: string;
+  energy_building_year: string;
   energy_includes_hot_water: boolean;
   features: Record<string, boolean>;
   commission_type: string;
@@ -110,6 +114,8 @@ const STRING_FIELDS = [
   "energy_class",
   "energy_year_of_installation",
   "energy_valid_until",
+  "energy_issued_on",
+  "energy_building_year",
   "commission_type",
   "commission_note",
   "energy_note",
@@ -139,6 +145,8 @@ function toForm(listing: Listing): Form {
     energy_class: listing.energy_class ?? "",
     energy_year_of_installation: listing.energy_year_of_installation != null ? String(listing.energy_year_of_installation) : "",
     energy_valid_until: listing.energy_valid_until ?? "",
+    energy_issued_on: listing.energy_issued_on ?? "",
+    energy_building_year: listing.energy_building_year != null ? String(listing.energy_building_year) : "",
     energy_includes_hot_water: listing.energy_includes_hot_water,
     features: { ...Object.fromEntries(FEATURE_KEYS.map((k) => [k, false])), ...(listing.features ?? {}) },
     commission_type: listing.commission_type ?? "",
@@ -473,6 +481,31 @@ export function ListingDetail({ listing }: { listing: Listing }) {
                 className={ui.input}
                 value={form.energy_valid_until}
                 onChange={(e) => set("energy_valid_until", e.target.value)}
+                disabled={energyDisabled}
+              />
+            </div>
+            <div>
+              <label htmlFor="energy_issued_on" className={ui.label}>
+                {tCreate("energyIssuedOn")}
+              </label>
+              <input
+                id="energy_issued_on"
+                type="date"
+                className={ui.input}
+                value={form.energy_issued_on}
+                onChange={(e) => set("energy_issued_on", e.target.value)}
+                disabled={energyDisabled}
+              />
+            </div>
+            <div>
+              <label htmlFor="energy_building_year" className={ui.label}>
+                {tCreate("energyBuildingYear")}
+              </label>
+              <input
+                id="energy_building_year"
+                className={ui.input}
+                value={form.energy_building_year}
+                onChange={(e) => set("energy_building_year", e.target.value)}
                 disabled={energyDisabled}
               />
             </div>

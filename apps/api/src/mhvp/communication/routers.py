@@ -2,6 +2,7 @@
 draft. Sending an outbound draft needs a configured and enabled mailbox (M20-01) and runs
 through a Vier-Augen-Freigabe: submit -> approve (by someone else) -> sent, or reject -> draft."""
 
+import logging
 import uuid
 from datetime import UTC, date, datetime
 from email.message import EmailMessage
@@ -21,7 +22,9 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessio
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.tickets import tnr
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/mail", tags=["Postfach"])
 READ = require_permission("communication:read")
 CREATE = require_permission("communication:create")
@@ -133,8 +136,14 @@ def _out(m: Message) -> dict[str, Any]:
             "status",
             "from_address",
             "to_addresses",
+            "cc_addresses",
             "subject",
             "body",
+            "body_html",
+            "header_message_id",
+            "in_reply_to",
+            "references_header",
+            "send_error",
             "received_at",
             "sent_at",
             "contact_id",
@@ -178,11 +187,28 @@ def _playbook_out(p: Playbook) -> dict[str, Any]:
     }
 
 
-async def _message(session: AsyncSession, message_id: uuid.UUID) -> Message:
+async def _message(
+    session: AsyncSession, message_id: uuid.UUID, principal: TenantPrincipal | None = None
+) -> Message:
     row = await session.get(Message, message_id, with_for_update=True)
     if row is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    if principal is not None:
+        await assert_message_accessible(session, principal, row)
     return row
+
+
+async def assert_message_accessible(
+    session: AsyncSession, principal: TenantPrincipal, row: Message
+) -> None:
+    """Postfachzugriff je Einzelnachricht wie in der Liste (Review 26.09.2026, H2): ohne
+    Postfach frei, sonst Standardpostfach, Freigabe per ``MailboxUser`` oder Administrator.
+    Nicht zugängliche Nachrichten gelten als nicht vorhanden (404, kein Rückschluss)."""
+    if row.mailbox_id is None or principal.has("tenant_settings:update"):
+        return
+    box = await session.get(Mailbox, row.mailbox_id)
+    if box is None or not await mailbox_accessible(session, principal, box):
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
 
 
 @router.post(
@@ -615,6 +641,7 @@ async def get_message(
         row = await session.get(Message, message_id)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await assert_message_accessible(session, principal, row)
         return _out(row)
 
 
@@ -628,12 +655,16 @@ async def message_thread(
         row = await session.get(Message, message_id)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await assert_message_accessible(session, principal, row)
         thread_id = row.thread_id or row.id
         query = (
             select(Message)
             .where(or_(Message.thread_id == thread_id, Message.id == thread_id))
             .order_by(func.coalesce(Message.received_at, Message.sent_at, Message.created_at))
         )
+        if not principal.has("tenant_settings:update"):
+            allowed = await _accessible_mailboxes(session, principal.user_id)
+            query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
         return [_out(m) for m in (await session.scalars(query)).all()]
 
 
@@ -645,7 +676,7 @@ async def assign(
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         for key, value in body.model_dump(exclude_none=True).items():
             setattr(row, key, value)
         if body.status is None and (body.contact_id or body.property_id) and row.status == "new":
@@ -663,7 +694,7 @@ async def to_ticket(
     if not principal.has("tickets:create"):
         raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Missing tickets:create.")
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         ticket = await create_ticket(session, row, principal.user_id)
         return {"ticket_id": ticket.id, "number": ticket.number, "priority": ticket.priority.value}
 
@@ -687,7 +718,7 @@ async def invoice_extraction_from_attachment(
     from mhvp.documents.models import Document
 
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         if attachment_id not in row.attachment_document_ids:
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail="Anhang gehört nicht zu dieser Nachricht."
@@ -786,7 +817,7 @@ async def forward_invoice(
     from mhvp.platform.models import TenantSettings
 
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         settings_row = await session.scalar(
             select(TenantSettings).where(TenantSettings.tenant_id == principal.tenant_id)
         )
@@ -826,7 +857,7 @@ async def reply_draft(
     from mhvp.tickets.models import Ticket
 
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         contact = await session.get(Contact, row.contact_id) if row.contact_id else None
         salutation = "Sehr geehrte Damen und Herren"
         if contact is not None and contact.salutation and contact.last_name:
@@ -840,11 +871,16 @@ async def reply_draft(
             status="draft",
             mailbox_id=row.mailbox_id,
             to_addresses=[row.from_address] if row.from_address else [],
-            subject=f"AW: {row.subject or ''}"[:998],
+            subject=(
+                tnr.reply_subject(row.subject, ticket.number)
+                if ticket is not None
+                else f"AW: {row.subject or ''}"[:998]
+            ),
             body=body.body
             if body is not None and body.body is not None
             else mail.draft_reply(salutation, row.subject, ticket.number if ticket else None),
             in_reply_to=row.header_message_id,
+            references_header=tnr_references(row),
             thread_id=row.thread_id or row.id,
             contact_id=row.contact_id,
             property_id=row.property_id,
@@ -863,7 +899,7 @@ async def patch_draft(
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         if row.direction != "out" or row.status != "draft":
             raise ProblemError(ErrorCodes.CONFLICT, detail="Nur Entwürfe können bearbeitet werden.")
         for key, value in body.model_dump(exclude_none=True).items():
@@ -877,7 +913,7 @@ async def submit(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         if row.direction != "out" or row.status != "draft":
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Nur Entwürfe können eingereicht werden."
@@ -889,14 +925,24 @@ async def submit(
         return _out(row)
 
 
+def tnr_references(parent: Message) -> str | None:
+    """Kopfzeile ``References`` der Antwort: die Referenzen der Ursprungsmail plus deren
+    Message-ID, damit der Thread beim Empfänger zusammenbleibt (RFC 5322)."""
+    ids = [i for i in (parent.references_header or "").split() if i]
+    if parent.header_message_id and parent.header_message_id not in ids:
+        ids.append(parent.header_message_id)
+    return " ".join(ids)[:20000] or None
+
+
 @router.post("/messages/{message_id}/approve", summary="Entwurf freigeben und senden")
 async def approve(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
     from mhvp.tickets.models import TicketEvent
 
+    send_failure: str | None = None
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         if row.direction != "out" or row.status != "pending":
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Nur eingereichte Entwürfe können freigegeben werden."
@@ -917,9 +963,11 @@ async def approve(
             ", ".join(row.to_addresses),
             row.subject or "",
         )
+        if row.cc_addresses:
+            msg["Cc"] = ", ".join(row.cc_addresses)
         if row.in_reply_to:
             msg["In-Reply-To"] = row.in_reply_to
-            msg["References"] = row.in_reply_to
+            msg["References"] = row.references_header or row.in_reply_to
         msg.set_content(row.body or "")
         # Standardanhänge aus Antwortvorlagen (operator 26.09.2026): Dokumentverweise der
         # ausgehenden Nachricht werden beim Versand beigefügt.
@@ -932,43 +980,56 @@ async def approve(
                 session, request.app.state.settings, box, msg
             )
         except transport.MailTransportError as exc:
-            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
-        if gmail_message_id is not None:
-            row.gmail_message_id = gmail_message_id
-
-        row.status, row.sent_at = "sent", datetime.now(UTC)
-        row.approved_by, row.approved_at = principal.user_id, datetime.now(UTC)
-        row.header_message_id = msg["Message-ID"]
-        await session.flush()
-        if row.ticket_id:
-            session.add(
-                TicketEvent(
-                    tenant_id=row.tenant_id,
-                    ticket_id=row.ticket_id,
-                    kind="mail_sent",
-                    data={"message_id": str(row.id), "to": row.to_addresses},
-                    user_id=principal.user_id,
-                )
-            )
-            from mhvp.sla.models import SlaClock
-            from mhvp.sla.service import mark_first_response
-
-            clock = await session.scalar(
-                select(SlaClock).where(SlaClock.ticket_id == row.ticket_id)
-            )
-            if clock is not None:
-                await mark_first_response(session, clock)
+            # Bis hierher wurde nur gelesen: der Fehler wird am Entwurf vermerkt und die
+            # Transaktion regulär beendet (Anzeige "fehlgeschlagen" im Ticket); der Entwurf
+            # bleibt eingereicht, der Freigeber erhält den Konflikt nach dem Commit.
+            row.send_error = str(exc)[:2000]
             await session.flush()
-        await emit(
-            session,
-            tenant_id=principal.tenant_id,
-            type="mail.sent",
-            entity_type="message",
-            entity_id=row.id,
-            actor_user_id=principal.user_id,
-            payload={"ticket_id": str(row.ticket_id) if row.ticket_id else None},
-        )
-        return _out(row)
+            send_failure = str(exc)
+            gmail_message_id = None
+        if send_failure is not None:
+            # Fehler ist vermerkt; die Transaktion wird regulär beendet, der Konflikt folgt.
+            await session.flush()
+        else:
+            if gmail_message_id is not None:
+                row.gmail_message_id = gmail_message_id
+            row.send_error = None
+            row.status, row.sent_at = "sent", datetime.now(UTC)
+            row.approved_by, row.approved_at = principal.user_id, datetime.now(UTC)
+            row.header_message_id = msg["Message-ID"]
+            await session.flush()
+            if row.ticket_id:
+                session.add(
+                    TicketEvent(
+                        tenant_id=row.tenant_id,
+                        ticket_id=row.ticket_id,
+                        kind="mail_sent",
+                        data={"message_id": str(row.id), "to": row.to_addresses},
+                        user_id=principal.user_id,
+                    )
+                )
+                from mhvp.sla.models import SlaClock
+                from mhvp.sla.service import mark_first_response
+
+                clock = await session.scalar(
+                    select(SlaClock).where(SlaClock.ticket_id == row.ticket_id)
+                )
+                if clock is not None:
+                    await mark_first_response(session, clock)
+                await session.flush()
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="mail.sent",
+                entity_type="message",
+                entity_id=row.id,
+                actor_user_id=principal.user_id,
+                payload={"ticket_id": str(row.ticket_id) if row.ticket_id else None},
+            )
+            result = _out(row)
+    if send_failure is not None:
+        raise ProblemError(ErrorCodes.CONFLICT, detail=send_failure)
+    return result
 
 
 @router.post("/messages/{message_id}/reject", summary="Entwurf zurückweisen")
@@ -979,7 +1040,7 @@ async def reject(
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         if row.direction != "out" or row.status != "pending":
             raise ProblemError(
                 ErrorCodes.CONFLICT,
@@ -1005,7 +1066,7 @@ async def take_appointment(
     from mhvp.workspace.models import CalendarEntry
 
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         if body.index >= len(row.appointment_suggestions):
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         suggestion = row.appointment_suggestions[body.index]
@@ -1034,7 +1095,7 @@ async def recompute_suggestion(
     from mhvp.communication import suggest
 
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         result = await suggest.suggest_for_message(session, request.app.state.settings, row)
         status = result.pop("status")
         row.suggestion, row.suggestion_status = result, status
@@ -1052,7 +1113,7 @@ async def compute_preparation(
     from mhvp.communication import preparation
 
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         result = await preparation.prepare_for_message(session, request.app.state.settings, row)
         suggestion = dict(row.suggestion or {})
         suggestion["preparation"] = result
@@ -1066,7 +1127,7 @@ async def get_preparation(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         preparation_result = (row.suggestion or {}).get("preparation")
         if preparation_result is None:
             return {"status": "none"}
@@ -1085,7 +1146,7 @@ async def correct_preparation(
     from mhvp.communication import preparation
 
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         entry = await preparation.record_correction(
             session,
             row,
@@ -1179,7 +1240,7 @@ async def apply_playbook(
     from mhvp.tickets.models import Ticket
 
     async with tenant_tx(request, principal) as session:
-        row = await _message(session, message_id)
+        row = await _message(session, message_id, principal)
         playbook = await session.get(Playbook, body.playbook_id, with_for_update=True)
         if playbook is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
@@ -1209,9 +1270,14 @@ async def apply_playbook(
             status="draft",
             mailbox_id=row.mailbox_id,
             to_addresses=[row.from_address] if row.from_address else [],
-            subject=f"AW: {row.subject or ''}"[:998],
+            subject=(
+                tnr.reply_subject(row.subject, ticket.number)
+                if ticket is not None
+                else f"AW: {row.subject or ''}"[:998]
+            ),
             body=body_text,
             in_reply_to=row.header_message_id,
+            references_header=tnr_references(row),
             thread_id=row.thread_id or row.id,
             contact_id=row.contact_id,
             property_id=row.property_id,

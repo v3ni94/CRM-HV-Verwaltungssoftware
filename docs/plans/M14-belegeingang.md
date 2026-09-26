@@ -115,7 +115,17 @@ das Feld nur zur Prüfung sichtbar, nicht editierbar.
 * Konfidenz je Feld ist abgeleitet (Gesamtkonfidenz des Modells plus deterministische
   Prüfungen), nicht vom Modell je Feld gemeldet; ein eigenes Schema mit Feldkonfidenzen wäre
   eine Prompt- und Schemaänderung von `extract_invoice` (siehe `docs/OPEN_QUESTIONS.md`).
-* Personennamen ohne Anrede (z. B. Einzelunternehmer als Aussteller) werden nicht maskiert.
+* Personennamen ohne Anrede (A65, 26.09.2026): vor dem Anbieteraufruf werden zusätzlich zu den
+  Anreden alle Personenkontakte des Mandanten (`Vorname Nachname`, `Nachname, Vorname`,
+  schreibweisenunabhängig, OCR-Leerräume toleriert) sowie ein Ausstellername aus der
+  E-Rechnung, der wie eine natürliche Person aussieht (`issuer_person_name`, Handwerkswort
+  wie "Malerbetrieb" wird abgestreift), deterministisch durch `[NAME]` ersetzt
+  (`mhvp.receipts.masking`, `extraction.known_person_names`, Tests
+  `tests/unit/test_receipts_masking.py`). Verbleibende Lücke: ein Einzelunternehmer, der
+  weder im Kontaktstamm steht noch als Aussteller in einer XML-Rechnung genannt ist und im
+  reinen PDF-Text ohne Anrede auftritt; ein Nachname allein wird bewusst nie maskiert, damit
+  Firmennamen wie "Elektro Müller GmbH" erhalten bleiben. Der Prüfer sieht den maskierten
+  Auszug (`masked_excerpt`).
 * Die Aktion "Als Rechnung erfassen" in der Mail- und Ticketansicht nutzt
   `POST /receipts/drafts` mit `source=mail_attachment` (`components/receipts/AttachmentReceiptAction.tsx`,
   `components/tickets/TicketMailAttachments.tsx`). Der API-Endpunkt

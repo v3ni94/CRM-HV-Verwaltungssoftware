@@ -273,7 +273,10 @@ def test_rent_increase_vacancy_prospects(
     exp = _ok(client.get(f"{L}/units/{units['02']}/expose", headers=h))
     assert exp["status"] == "draft"
     assert Decimal(exp["fields"]["living_area_sqm"]) == Decimal("60")
-    assert "energy_certificate" in exp["missing"]
+    # A63: energy certificate and asking rent are reported field by field, not as free text
+    assert "energy_certificate.type" in exp["missing"]
+    assert "asking_rent.net_rent" in exp["missing"]
+    assert exp["listing_id"] is None
 
     _, contact = _party(client, h, "Interessent26")
     pbody = {"unit_id": units["02"], "contact_id": contact["id"], "delete_after": "2020-01-01"}
@@ -1017,7 +1020,7 @@ def test_listing_openimmo_export(
     # M26: structured result with stable field keys (REQUIRED_FIELDS in mhvp.letting.openimmo)
     assert check["complete"] is False
     missing_fields = {m["field"] for m in check["missing"]}
-    assert {"price", "description", "energy.status"} <= missing_fields
+    assert {"price", "additional_costs", "description", "energy.status"} <= missing_fields
     # address, object type, area and contact (tenant name plus exporting user) are present
     assert not missing_fields & {
         "address.postal_code",
@@ -1069,8 +1072,11 @@ def test_listing_openimmo_export(
     assert check2["warnings"] == []
     assert check2["complete"] is True
     assert check2["missing"] == []
-    # energy source is a non blocking hint only
+    # energy source, issue date, building year and deposit are non blocking hints only
     assert any("Energieträger" in x for x in check2["hints"])
+    assert any("Ausstellungsdatum" in x for x in check2["hints"])
+    assert any("Baujahr" in x for x in check2["hints"])
+    assert any("Kaution" in x for x in check2["hints"])
 
     resp = client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=h)
     assert resp.status_code == 200
@@ -1097,6 +1103,8 @@ def test_listing_openimmo_export(
     assert preise.findtext("kaltmiete") == "900.00"
     assert preise.findtext("nebenkosten") == "150.00"
     assert preise.findtext("warmmiete") == "1090.00"
+    assert preise.findtext("heizkosten") == "40.00"
+    assert preise.findtext("heizkosten_enthalten") == "false"
     flaechen = immobilie.find("flaechen")
     assert flaechen is not None
     assert flaechen.findtext("wohnflaeche") == "70.00"
@@ -1397,3 +1405,161 @@ def test_listing_images_upload_link_export_and_tenant_separation(
         ).status_code
         == 404
     )
+
+
+ENERGY_CERTIFICATE = {
+    "energy_certificate_type": "bedarf",
+    "energy_certificate_value": "95.50",
+    "energy_certificate_source": "Gas",
+    "energy_certificate_construction_year": 1978,
+    "energy_certificate_issued_on": "2024-03-01",
+    "energy_certificate_valid_until": "2034-02-28",
+    "energy_certificate_class": "D",
+}
+
+
+def test_energy_certificate_and_asking_rent(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """A63: energy certificate on the property, copied to the listing, asking rent on the
+    listing; exposé and OpenImmo completeness check read these fields (no free text)."""
+    import xml.etree.ElementTree as ET
+
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    body = {
+        "number": "768",
+        "name": "Energiehaus",
+        "management_type": "rental",
+        "street": "Ausweisweg",
+        "house_number": "3",
+        "postal_code": "40003",
+        "city": f"Energiestadt {RUN}",
+    }
+    # validity before issue date is rejected
+    bad = body | ENERGY_CERTIFICATE | {"energy_certificate_valid_until": "2024-02-01"}
+    assert client.post("/api/v1/properties", json=bad, headers=h).status_code == 422
+    prop = _ok(client.post("/api/v1/properties", json=body, headers=h), 201)
+    assert prop["energy_certificate_type"] is None
+    without_energy = {k: v for k, v in prop.items() if k not in ("id", "status", "version")}
+    without_energy.pop("legal_entities", None)
+    prop = _ok(
+        client.put(
+            f"/api/v1/properties/{prop['id']}", json=without_energy | ENERGY_CERTIFICATE, headers=h
+        )
+    )
+    assert prop["energy_certificate_class"] == "D"
+    assert Decimal(prop["energy_certificate_value"]) == Decimal("95.50")
+    assert prop["energy_certificate_issued_on"] == "2024-03-01"
+    building = _ok(
+        client.post(f"/api/v1/properties/{prop['id']}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )["id"]
+    unit = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/units",
+            json={
+                "building_id": building,
+                "number": "01",
+                "unit_type": "apartment",
+                "living_area_sqm": "55",
+                "rooms": "2",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+
+    # exposé before any listing: certificate from the property, asking rent missing
+    exp = _ok(client.get(f"{L}/units/{unit}/expose", headers=h))
+    assert exp["energy_certificate"] == {
+        "type": "bedarf",
+        "value": "95.50",
+        "source": "Gas",
+        "construction_year": 1978,
+        "issued_on": "2024-03-01",
+        "valid_until": "2034-02-28",
+        "class": "D",
+    }
+    assert not [m for m in exp["missing"] if m.startswith("energy_certificate.")]
+    assert {"asking_rent.net_rent", "asking_rent.deposit"} <= set(exp["missing"])
+
+    # listing creation copies the certificate (status liegt_vor) unless a status is given
+    listing = _ok(
+        client.post(f"{L}/listings", json={"unit_id": unit, "kind": "rental"}, headers=h), 201
+    )
+    assert listing["energy_status"] == "liegt_vor"
+    assert listing["energy_type"] == "bedarf"
+    assert listing["energy_value"] == "95.50"
+    assert listing["energy_class"] == "D"
+    assert listing["energy_source"] == "Gas"
+    assert listing["energy_building_year"] == 1978
+    assert listing["energy_issued_on"] == "2024-03-01"
+    assert listing["energy_valid_until"] == "2034-02-28"
+    explicit = _ok(
+        client.post(
+            f"{L}/listings",
+            json={"unit_id": unit, "kind": "sale", "energy_status": "nicht_erforderlich"},
+            headers=h,
+        ),
+        201,
+    )
+    assert explicit["energy_status"] == "nicht_erforderlich"
+    assert explicit["energy_type"] is None
+
+    check = _ok(client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=h))
+    missing = {m["field"] for m in check["missing"]}
+    assert {"price", "additional_costs", "description"} <= missing
+    assert not missing & {"energy.type", "energy.value", "energy.class", "energy.valid_until"}
+    assert not any("Energieträger" in x or "Ausstellungsdatum" in x for x in check["hints"])
+    assert any("Kaution" in x for x in check["hints"])
+
+    filled = _ok(
+        client.patch(
+            f"{L}/listings/{listing['id']}",
+            json={
+                "price": "650.00",
+                "additional_costs": "120.00",
+                "heating_costs": "55.00",
+                "deposit": "1950.00",
+                "available_from": "2027-01-01",
+                "description": "Zwei Zimmer mit Einbauküche.",
+            },
+            headers=h,
+        )
+    )
+    assert filled["warm_rent"] == "825.00"  # 650,00 + 120,00 + 55,00
+    check2 = _ok(client.get(f"{L}/listings/{listing['id']}/openimmo-check", headers=h))
+    assert check2["complete"] is True, check2
+    assert check2["hints"] == []
+
+    resp = client.get(f"{L}/listings/{listing['id']}/openimmo.xml", headers=h)
+    assert resp.status_code == 200, resp.text
+    immobilie = ET.fromstring(resp.content).find("anbieter/immobilie")  # noqa: S314
+    assert immobilie is not None
+    preise = immobilie.find("preise")
+    assert preise is not None
+    assert preise.findtext("kaltmiete") == "650.00"
+    assert preise.findtext("nebenkosten") == "120.00"
+    assert preise.findtext("heizkosten") == "55.00"
+    assert preise.findtext("kaution") == "1950.00"
+    energiepass = immobilie.find("zustand_angaben/energiepass")
+    assert energiepass is not None
+    assert energiepass.get("epart") == "endenergiebedarf"
+    assert energiepass.get("wertklasse") == "D"
+    assert energiepass.get("gueltig_bis") == "2034-02-28"
+    assert energiepass.findtext("endenergiebedarf") == "95.50"
+    assert energiepass.findtext("primaerenergietraeger") == "Gas"
+    assert energiepass.findtext("baujahr") == "1978"
+    assert energiepass.findtext("ausstelldatum") == "2024-03-01"
+
+    # exposé now carries the asking rent of the newest rental listing
+    exp2 = _ok(client.get(f"{L}/units/{unit}/expose", headers=h))
+    assert exp2["listing_id"] == listing["id"]
+    assert exp2["asking_rent"] == {
+        "net_rent": "650.00",
+        "additional_costs": "120.00",
+        "heating_costs": "55.00",
+        "deposit": "1950.00",
+    }
+    assert not [m for m in exp2["missing"] if m.startswith("asking_rent.")]

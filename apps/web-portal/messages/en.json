@@ -46,7 +46,13 @@
       "account": "Account statement",
       "meter": "Meter reading",
       "data": "Data change",
-      "orders": "Orders"
+      "orders": "Orders",
+      "audit": "Audit room",
+      "resolutions": "Resolutions",
+      "contacts": "Contacts",
+      "hoaAccount": "HOA fee account",
+      "notices": "Notices",
+      "forms": "Forms"
     },
     "start": {
       "title": "Overview",
@@ -58,7 +64,15 @@
       "meter": "Report meter reading",
       "data": "Request master data change",
       "orders": "Process orders",
-      "handover": "Handover protocols"
+      "audit": "Open the board audit room",
+      "greetingBoard": "Your audit engagement as a member of the board.",
+      "handover": "Handover protocols",
+      "resolutions": "View resolutions of the community",
+      "contacts": "Contact persons of the property",
+      "hoaAccount": "View HOA fee account",
+      "notices": "Read notices",
+      "newNotices": "{count, plural, one {One new notice} other {# new notices}} on the notice board.",
+      "forms": "Fill in forms of the management"
     },
     "proposalNotice": "Proposal, will be reviewed by the management."
   },
@@ -77,7 +91,7 @@
     "new": "New damage report",
     "titleField": "Title",
     "description": "Description",
-    "photo": "Attach photo (optional)",
+    "photo": "Attach photos (optional, JPEG or PNG)",
     "submit": "Report",
     "submitted": "The report was submitted.",
     "back": "Back to overview",
@@ -95,7 +109,15 @@
       "done": "Done",
       "closed": "Closed",
       "rejected": "Rejected"
-    }
+    },
+    "photoHint": "Photos are stored without capture data (location, camera).",
+    "attachments": "Attachments",
+    "appointments": "Appointment proposals of the contractor",
+    "appointmentsHint": "Please choose an appointment. Your choice counts as confirmation towards contractor and management.",
+    "appointmentAccept": "Confirm this appointment",
+    "appointmentAccepted": "The appointment has been confirmed.",
+    "appointmentConfirmed": "Confirmed appointment",
+    "appointmentsOpen": "Appointment proposal available"
   },
   "Account": {
     "title": "Account statement",
@@ -152,7 +174,7 @@
     "appointmentSubmit": "Set appointment",
     "appointmentSubmitted": "The appointment was submitted.",
     "report": "Completion report",
-    "photos": "Photos of the work (optional)",
+    "photos": "Photos of the execution (optional, JPEG or PNG)",
     "completeSubmit": "Document completion",
     "completeSubmitted": "The completion was documented.",
     "invoiceNumber": "Invoice number",
@@ -174,6 +196,24 @@
       "accepted": "Accepted",
       "rejected": "Rejected",
       "cancelled": "Cancelled"
+    },
+    "proposalsTitle": "Appointment proposals to the resident",
+    "proposalsHint": "Up to three proposals. The resident picks one in the portal; the confirmation sets the appointment on the order.",
+    "proposal1": "Proposal 1",
+    "proposal2": "Proposal 2 (optional)",
+    "proposal3": "Proposal 3 (optional)",
+    "proposalNote": "Note (optional)",
+    "proposalsSubmit": "Send appointment proposals",
+    "proposalsSubmitted": "The appointment proposals were sent to the resident.",
+    "proposalRequired": "Please enter at least one appointment.",
+    "proposalsList": "Sent appointment proposals",
+    "appointmentDirect": "Set appointment directly (without proposal)",
+    "photosStored": "Photos of the execution",
+    "proposalStatus": {
+      "proposed": "Open",
+      "accepted": "Confirmed",
+      "declined": "Not chosen",
+      "superseded": "Replaced"
     }
   },
   "Handover": {
@@ -451,5 +491,147 @@
     },
     "pdfDraft": "Preview (draft)",
     "pdfFinal": "Protocol as PDF"
+  },
+  "Resolutions": {
+    "title": "Resolutions",
+    "intro": "Announced resolutions of your community. The resolution collection of the management remains authoritative.",
+    "empty": "No announced resolutions.",
+    "ownersOnly": "This page is available to owners only.",
+    "number": "Resolution",
+    "decidedOn": "Decided on",
+    "votes": "Yes {yes}, no {no}, abstained {abstain}",
+    "status": {
+      "positive": "adopted",
+      "negative": "rejected",
+      "final": "final",
+      "contested": "contested",
+      "annulled": "annulled",
+      "legally_binding": "legally binding",
+      "void": "void"
+    },
+    "kind": {
+      "meeting": "Meeting",
+      "circular": "Circular resolution",
+      "court": "Court",
+      "external": "Recorded"
+    }
+  },
+  "Contacts": {
+    "title": "Contacts",
+    "empty": "No property assigned.",
+    "ownersOnly": "This page is available to owners only.",
+    "manager": "Management",
+    "managerUnknown": "Central contact of the property management",
+    "noContacts": "No further contact persons are recorded for this property.",
+    "category": {
+      "caretaker": "Caretaker",
+      "emergency": "Emergency service"
+    }
+  },
+  "HoaAccount": {
+    "title": "HOA fee account",
+    "empty": "No ownership contract assigned.",
+    "ownersOnly": "This page is available to owners only.",
+    "contract": "Contract",
+    "bookingDate": "Booking date",
+    "text": "Text",
+    "charge": "Charge",
+    "credit": "Payment or credit",
+    "noEntries": "No posted entries yet.",
+    "sumCharges": "Total charges",
+    "sumCredits": "Total payments and credits",
+    "balance": "Balance",
+    "balanceOwed": "(amount due)",
+    "balanceCredit": "(credit)",
+    "balanceEven": "(settled)"
+  },
+  "Notices": {
+    "title": "Notices",
+    "intro": "Notices of the management for your properties. A notice is information of the management, not a delivery.",
+    "empty": "No notices at the moment.",
+    "new": "New",
+    "validUntil": "Valid until {date}",
+    "validFrom": "Since {date}",
+    "download": "Download attachment"
+  },
+  "Audit": {
+    "title": "Board audit room",
+    "roleNotice": "You see the audit engagement, the selected positions and the receipts released for them. The board does not post, release or change any statement. Opening a document is no acknowledgement of the statement.",
+    "empty": "No audit engagement assigned.",
+    "back": "Back to the list",
+    "period": "Period",
+    "openQuestions": "{count, plural, one {one open question} other {# open questions}}",
+    "sampling": {
+      "sample": "Sample",
+      "full": "Full audit"
+    },
+    "overallStatus": "Overall status",
+    "positions": "Audited positions",
+    "noPositions": "No positions selected yet.",
+    "positionNumber": "Position {n}",
+    "wholeEngagement": "Whole engagement",
+    "status": {
+      "open": "Open",
+      "checked": "Checked",
+      "query": "Query",
+      "objection": "Objected",
+      "outdated": "Outdated"
+    },
+    "managementNote": "Note of the management",
+    "managementQuestion": "Question",
+    "managementAnswer": "Answer of the management",
+    "costItems": "Statement positions",
+    "costLabel": "Label",
+    "costBasis": "Basis",
+    "costAmount": "Amount",
+    "documents": "Receipts",
+    "noDocuments": "No receipts released for the positions.",
+    "open": "Open receipt",
+    "notes": "Notes and questions",
+    "noNotes": "No notes or questions yet.",
+    "kind": {
+      "note": "Note",
+      "question": "Question",
+      "answered": "Answered"
+    },
+    "newNote": "Record a note or question",
+    "kindLabel": "Kind",
+    "positionLabel": "Position",
+    "textLabel": "Text",
+    "submit": "Send",
+    "questionSent": "The question was sent to the management.",
+    "noteSaved": "The note was saved."
+  },
+  "Forms": {
+    "title": "Forms",
+    "intro": "Forms of your management, for example applications and requests. Every submission becomes a case you can follow under Reports.",
+    "empty": "Your management currently provides no forms.",
+    "choose": "Please choose",
+    "submit": "Submit",
+    "submitting": "Sending",
+    "submitted": "{name} has been submitted. You can find the case under Reports.",
+    "requiredMissing": "Please fill in the field {label}.",
+    "proposalNote": "The entries are sent to the management and reviewed there."
+  },
+  "Invitation": {
+    "title": "Accept invitation",
+    "hint": "Please enter the invitation code from the letter or the link and choose a password of at least 12 characters.",
+    "code": "Invitation code",
+    "password": "New password",
+    "passwordRepeat": "Repeat password",
+    "submit": "Activate access",
+    "submitting": "Please wait",
+    "codeRequired": "Please enter the invitation code.",
+    "passwordTooShort": "The password needs at least 12 characters.",
+    "passwordMismatch": "The passwords do not match.",
+    "done": "Your access is active. Please sign in with e-mail and password now.",
+    "toLogin": "To sign in"
+  },
+  "Pwa": {
+    "title": "Install MH Portal",
+    "hint": "The portal can be placed on the home screen like an app. No data is stored on the device.",
+    "iosHint": "In Safari via Share and Add to Home Screen. No data is stored on the device.",
+    "install": "Install",
+    "dismiss": "Later"
   }
 }

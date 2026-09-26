@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     # Size limit of one export file the worker reads for the differential import (checked via
     # stat before reading). The upload path has its own 200 MB limit.
     objektakte_dump_max_bytes: int = Field(default=512 * 1024 * 1024, gt=0, le=4 * 1024**3)
+    # Time of day (HH:MM, Celery timezone Europe/Berlin) of the daily reconciliation report of
+    # the parallel operation (13.1, A68); read and compare only, no posting.
+    import_reconciliation_time: str = Field(default="05:30", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
 
     # Rate limits per minute (A49): operator configuration, not a legal rule. Authenticated
     # requests count per tenant and user or API key, unauthenticated ones per client address.
@@ -91,6 +94,13 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = Field(default=30, gt=0, le=90)
     # Webhook targets on private networks are only allowed for local development and tests.
     webhook_allow_private_targets: bool = False
+    # Restore test job ``ops.backup_verify`` (A67, M9, 15.1): daily 02:00 on the worker. Runs
+    # ``scripts/backup-verify.sh`` (needs PGDATABASE, BACKUP_DIR and PGHOST or BACKUP_COMPOSE
+    # in the worker environment). Default off: the job then records "not configured" in the
+    # operating metrics instead of failing. Storage location and keys remain M9-02.
+    backup_verify_enabled: bool = False
+    backup_verify_script: str = "scripts/backup-verify.sh"
+    backup_verify_timeout_seconds: int = Field(default=1800, ge=30, le=21600)
     # Google OAuth client of the platform for Gmail mailboxes (M20-01); the refresh token is
     # stored encrypted per mailbox.
     google_client_id: str | None = None

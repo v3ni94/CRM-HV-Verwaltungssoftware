@@ -88,9 +88,12 @@ class GmailClient:
             raise GmailError(f"Posteingang nicht lesbar (HTTP {r.status_code}).")
         return [m["id"] for m in r.json().get("messages", [])]
 
-    async def list_since(self, history_id: str, limit: int) -> list[str] | None:
-        """Message ids added since history_id; None when the history is expired."""
-        ids: list[str] = []
+    async def history_since(self, history_id: str) -> list[tuple[int, str]] | None:
+        """All ``(historyId, messageId)`` pairs of inbox messages added since ``history_id``,
+        every page, in history order; None when the history is expired (HTTP 404). The caller
+        decides how many to process and moves the cursor only past processed entries."""
+        seen: set[str] = set()
+        entries: list[tuple[int, str]] = []
         page: str | None = None
         while True:
             params: dict[str, Any] = {
@@ -107,13 +110,23 @@ class GmailClient:
                 raise GmailError(f"Verlauf nicht lesbar (HTTP {r.status_code}).")
             data = r.json()
             for h in data.get("history", []):
+                entry_id = int(h.get("id") or history_id)
                 for added in h.get("messagesAdded", []):
                     mid = added["message"]["id"]
-                    if mid not in ids:
-                        ids.append(mid)
+                    if mid not in seen:
+                        seen.add(mid)
+                        entries.append((entry_id, mid))
             page = data.get("nextPageToken")
-            if not page or len(ids) >= limit:
-                return ids[:limit]
+            if not page:
+                return entries
+
+    async def list_since(self, history_id: str, limit: int) -> list[str] | None:
+        """Message ids added since history_id (first ``limit``); None when the history is
+        expired. Kept for callers that only need ids; the sync uses ``history_since``."""
+        entries = await self.history_since(history_id)
+        if entries is None:
+            return None
+        return [mid for _, mid in entries][:limit]
 
     async def raw_message(self, message_id: str) -> bytes | None:
         r = await self._get(f"messages/{message_id}", format="raw")
@@ -265,6 +278,132 @@ def make_client(client_id: str, client_secret: str, mailbox: Mailbox) -> GmailCl
     return GmailClient(client_id, client_secret, mailbox.secret)
 
 
+async def _ingest_one(
+    session: AsyncSession,
+    blobs: BlobStore,
+    settings: Settings,
+    mailbox: Mailbox,
+    client: GmailClient,
+    mid: str,
+    counts: dict[str, Any],
+    created_ids: list[uuid.UUID] | None,
+) -> bool:
+    """Fetches and ingests one Gmail message inside its own savepoint. Returns False when the
+    ingest failed (recorded in ``counts["errors"]``); a message gone from Gmail counts as done."""
+    from mhvp.communication.services import ingest_raw
+
+    try:
+        raw = await client.raw_message(mid)
+    except (GmailError, httpx.HTTPError) as exc:
+        # Transient fetch error of one message (HTTP 5xx, network): remembered for the retry
+        # queue, the rest of the batch continues. Token errors surface before this point.
+        counts["failed"] += 1
+        log.warning("gmail message not fetched", extra={"gmail_id": mid, "reason": str(exc)})
+        counts["errors"].append({"gmail_id": mid, "error": str(exc)[:500]})
+        return False
+    if raw is None:
+        return True
+    counts["fetched"] += 1
+    # Savepoint per mail: one unreadable or unstorable mail must not roll back the
+    # whole batch or poison the session (seen 25.09.2026 as PendingRollbackError).
+    try:
+        async with session.begin_nested():
+            message, created = await ingest_raw(
+                session,
+                blobs,
+                settings,
+                tenant_id=mailbox.tenant_id,
+                actor_user_id=mailbox.created_by,
+                raw=raw,
+                mailbox_id=mailbox.id,
+                auto_ticket=True,
+            )
+    except Exception as exc:  # recorded for retry, batch continues
+        counts["failed"] += 1
+        log.exception("gmail message not ingested", extra={"gmail_id": mid})
+        counts["errors"].append({"gmail_id": mid, "error": f"{type(exc).__name__}: {exc}"[:500]})
+        return False
+    counts["created" if created else "duplicates"] += 1
+    if created:
+        if created_ids is not None:
+            created_ids.append(message.id)
+        if message.ticket_id is not None:
+            await _start_sla_clock(session, mailbox.tenant_id, message.ticket_id)
+    return True
+
+
+async def _start_sla_clock(
+    session: AsyncSession, tenant_id: uuid.UUID, ticket_id: uuid.UUID
+) -> None:
+    """Ticket aus Mail erhält die SLA-Uhr (review 26.09.2026, H6). ``start_clock`` ist
+    idempotent, eine Antwort im Thread startet keine zweite Uhr."""
+    from mhvp.sla.service import start_clock
+    from mhvp.tickets.models import Ticket
+
+    ticket = await session.get(Ticket, ticket_id)
+    if ticket is not None:
+        await start_clock(session, tenant_id, ticket.id, ticket.priority)
+
+
+async def _retry_failed(
+    session: AsyncSession,
+    blobs: BlobStore,
+    settings: Settings,
+    mailbox: Mailbox,
+    client: GmailClient,
+    counts: dict[str, Any],
+    created_ids: list[uuid.UUID] | None,
+) -> None:
+    """Second try for messages whose ingest failed in an earlier run (H1). Success removes
+    the row; a failure increments ``attempts`` until ``MAX_ATTEMPTS`` ends the retries."""
+    from mhvp.communication.sync_retry import MAX_ATTEMPTS, MailboxSyncRetry
+
+    rows = list(
+        await session.scalars(
+            select(MailboxSyncRetry)
+            .where(
+                MailboxSyncRetry.mailbox_id == mailbox.id,
+                MailboxSyncRetry.attempts < MAX_ATTEMPTS,
+            )
+            .order_by(MailboxSyncRetry.created_at)
+            .limit(settings.gmail_sync_batch)
+        )
+    )
+    for row in rows:
+        counts["retried"] += 1
+        if await _ingest_one(
+            session, blobs, settings, mailbox, client, row.gmail_message_id, counts, created_ids
+        ):
+            await session.delete(row)
+        else:
+            row.attempts += 1
+            row.last_error = counts["errors"][-1]["error"]
+    await session.flush()
+
+
+async def _remember_failure(session: AsyncSession, mailbox: Mailbox, mid: str, error: str) -> None:
+    from mhvp.communication.sync_retry import MailboxSyncRetry
+
+    existing = await session.scalar(
+        select(MailboxSyncRetry).where(
+            MailboxSyncRetry.mailbox_id == mailbox.id, MailboxSyncRetry.gmail_message_id == mid
+        )
+    )
+    if existing is not None:
+        existing.attempts += 1
+        existing.last_error = error
+        return
+    session.add(
+        MailboxSyncRetry(
+            tenant_id=mailbox.tenant_id,
+            mailbox_id=mailbox.id,
+            gmail_message_id=mid,
+            attempts=1,
+            last_error=error,
+        )
+    )
+
+
 async def sync_mailbox(
     session: AsyncSession,
     blobs: BlobStore,
@@ -272,50 +411,66 @@ async def sync_mailbox(
     mailbox: Mailbox,
     client: GmailClient,
     created_ids: list[uuid.UUID] | None = None,
-) -> dict[str, int]:
+) -> dict[str, Any]:
     """Fetch new inbox messages and ingest them; updates cursor and error state. Ids of newly
-    created messages are appended to ``created_ids`` when given (M14-05 automatic intake)."""
-    from mhvp.communication.services import ingest_raw
+    created messages are appended to ``created_ids`` when given (M14-05 automatic intake).
 
-    counts = {"fetched": 0, "created": 0, "duplicates": 0, "failed": 0}
-    first_failure: str | None = None
+    Cursor rule (review 26.09.2026, H1): at most ``gmail_sync_batch`` history entries are
+    processed per run and the cursor moves only to the history id of the last processed entry,
+    so a burst of mails beyond the batch is picked up by the next run instead of being skipped.
+    A message that fails to ingest is remembered in ``mailbox_sync_retry`` and tried again
+    first thing in the following runs; the cursor still advances past it.
+
+    Result: counters ``fetched``, ``created``, ``duplicates``, ``failed``, ``retried``,
+    ``remaining`` (history entries left for the next run) and ``errors`` (list of
+    ``{"gmail_id", "error"}`` of this run)."""
+    counts: dict[str, Any] = {
+        "fetched": 0,
+        "created": 0,
+        "duplicates": 0,
+        "failed": 0,
+        "retried": 0,
+        "remaining": 0,
+        "errors": [],
+    }
     try:
-        new_cursor = await client.profile_history_id()
-        ids = None
+        await _retry_failed(session, blobs, settings, mailbox, client, counts, created_ids)
+        profile_cursor = int(await client.profile_history_id())
+        entries: list[tuple[int, str]] | None = None
         if mailbox.gmail_history_id:
-            ids = await client.list_since(mailbox.gmail_history_id, settings.gmail_sync_batch)
-        if ids is None:
-            ids = await client.list_inbox(settings.gmail_sync_batch)
-        for mid in ids:
-            raw = await client.raw_message(mid)
-            if raw is None:
-                continue
-            counts["fetched"] += 1
-            # Savepoint per mail: one unreadable or unstorable mail must not roll back the
-            # whole batch or poison the session (seen 25.09.2026 as PendingRollbackError).
-            try:
-                async with session.begin_nested():
-                    message, created = await ingest_raw(
-                        session,
-                        blobs,
-                        settings,
-                        tenant_id=mailbox.tenant_id,
-                        actor_user_id=mailbox.created_by,
-                        raw=raw,
-                        mailbox_id=mailbox.id,
-                        auto_ticket=True,
-                    )
-            except Exception as exc:  # recorded on the mailbox, batch continues
-                counts["failed"] += 1
-                log.exception("gmail message not ingested", extra={"gmail_id": mid})
-                if first_failure is None:
-                    first_failure = f"Nachricht {mid}: {type(exc).__name__}: {exc}"[:1000]
-                continue
-            counts["created" if created else "duplicates"] += 1
-            if created and created_ids is not None:
-                created_ids.append(message.id)
-        mailbox.gmail_history_id = new_cursor
-        mailbox.last_error = first_failure
+            entries = await client.history_since(mailbox.gmail_history_id)
+        if entries is None:
+            # No cursor yet or history expired (404): restart from the inbox listing; the
+            # Message-ID deduplication keeps this free of duplicates.
+            entries = [
+                (profile_cursor, mid) for mid in await client.list_inbox(settings.gmail_sync_batch)
+            ]
+            complete = True
+        else:
+            complete = len(entries) <= settings.gmail_sync_batch
+        batch = entries[: settings.gmail_sync_batch]
+        # Finish the history entry at the cut so the cursor never splits one entry.
+        if not complete:
+            last_entry = batch[-1][0]
+            while len(batch) < len(entries) and entries[len(batch)][0] == last_entry:
+                batch.append(entries[len(batch)])
+        counts["remaining"] = len(entries) - len(batch)
+        last_done: int | None = None
+        for entry_id, mid in batch:
+            ok = await _ingest_one(
+                session, blobs, settings, mailbox, client, mid, counts, created_ids
+            )
+            if not ok:
+                await _remember_failure(session, mailbox, mid, counts["errors"][-1]["error"])
+            last_done = entry_id
+        if complete:
+            mailbox.gmail_history_id = str(max(profile_cursor, last_done or 0))
+        elif last_done is not None:
+            mailbox.gmail_history_id = str(last_done)
+        first = counts["errors"][0] if counts["errors"] else None
+        mailbox.last_error = (
+            f"Nachricht {first['gmail_id']}: {first['error']}"[:1000] if first else None
+        )
     except (GmailError, httpx.HTTPError) as exc:
         mailbox.last_error = str(exc)[:1000]
         raise
@@ -337,7 +492,7 @@ async def sync_one(
     settings: Settings,
     mailbox_id: uuid.UUID,
     created_ids: list[uuid.UUID] | None = None,
-) -> dict[str, int]:
+) -> dict[str, Any]:
     mailbox = await session.get(Mailbox, mailbox_id, with_for_update=True)
     if mailbox is None:
         raise GmailError("Postfach nicht gefunden.")

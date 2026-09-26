@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication import mail
+from mhvp.communication.html import sanitize_html
 from mhvp.communication.models import Message
 from mhvp.core.config import Settings
 from mhvp.core.events import emit
@@ -102,10 +103,13 @@ async def ingest_parsed(
         mailbox_id=mailbox_id,
         from_address=parsed["from"],
         to_addresses=parsed["to"],
+        cc_addresses=list(parsed.get("cc") or []),
         subject=parsed["subject"],
         body=parsed["body"],
+        body_html=sanitize_html(parsed.get("body_html")),
         header_message_id=parsed["message_id"],
         in_reply_to=parsed["in_reply_to"],
+        references_header=parsed.get("references"),
         thread_id=thread_id,
         received_at=parsed["received_at"] or datetime.now(UTC),
         contact_id=contact_id,
@@ -133,10 +137,32 @@ async def ingest_parsed(
         actor_user_id=actor_user_id,
         payload={"urgency": row.classification["urgency"]},
     )
+    tnr_ticket = await ticket_by_tnr(session, tenant_id, parsed["subject"])
     if parent is not None and parent.ticket_id:
         await attach_to_ticket(session, row, parent.ticket_id, actor_user_id)
-    elif auto_ticket:
-        await create_ticket(session, row, actor_user_id)
+    elif tnr_ticket is not None and await sender_belongs_to_ticket(session, row, tnr_ticket):
+        # Kennung TNR#<nummer> im Betreff (docs/rules/M19-02-tnr.md): Zuordnung zum Ticket des
+        # Mandanten auch ohne Thread-Kopfzeilen, aber nur bei bekanntem Absender (Ticketkontakt
+        # oder Beteiligter des bisherigen Mailverlaufs); der Vorgang übernimmt den Thread.
+        await attach_to_ticket(session, row, tnr_ticket.id, actor_user_id)
+        row.thread_id = row.thread_id or await _ticket_thread_id(session, tnr_ticket.id)
+        row.contact_id = row.contact_id or tnr_ticket.contact_id or tnr_ticket.initiator_contact_id
+        row.property_id = row.property_id or tnr_ticket.property_id
+        await session.flush()
+    else:
+        if tnr_ticket is not None:
+            # Fremder Absender mit geratener oder weitergeleiteter Kennung: nur Vorschlag,
+            # keine Zuordnung (Datenschutz, Fehlzustellung der nächsten Antwort).
+            row.classification = dict(row.classification) | {
+                "tnr_suggestion": {
+                    "ticket_id": str(tnr_ticket.id),
+                    "number": tnr_ticket.number,
+                    "reason": "Absender nicht am Ticket beteiligt",
+                }
+            }
+            await session.flush()
+        if auto_ticket:
+            await create_ticket(session, row, actor_user_id)
     if row.ticket_id is not None:
         await _queue_suggestion(session, settings, tenant_id, row)
         from mhvp.tickets.proposals import queue_for_message
@@ -303,10 +329,89 @@ async def enqueue_archive_for_ticket(
             log.warning("could not queue archive job", extra={"ticket_id": str(ticket_id)})
 
 
+async def ticket_by_tnr(session: AsyncSession, tenant_id: uuid.UUID, subject: str | None) -> Any:
+    """Ticket des Mandanten zur Kennung ``TNR#<nummer>`` im Betreff; ``None`` ohne Kennung,
+    ohne Treffer oder bei einem zusammengeführten Ticket (dann gilt das Zielticket). Der
+    Mandantenfilter steht zusätzlich zur RLS, damit nie ein fremdes Ticket getroffen wird."""
+    from mhvp.tickets.models import Ticket
+    from mhvp.tickets.tnr import extract_tnr
+
+    number = extract_tnr(subject)
+    if number is None:
+        return None
+    ticket = await session.scalar(
+        select(Ticket).where(Ticket.tenant_id == tenant_id, Ticket.number == number)
+    )
+    if ticket is not None and ticket.merged_into_ticket_id is not None:
+        ticket = await session.get(Ticket, ticket.merged_into_ticket_id)
+    return ticket
+
+
+async def ticket_participants(
+    session: AsyncSession, ticket: Any, *, include_thread_senders: bool = True
+) -> set[str]:
+    """E-Mail-Adressen, die zum Ticket gehören: Ticketkontakt und Ersteller (alle
+    hinterlegten Adressen), der ursprüngliche Absender des Tickets, Empfänger und Kopie
+    bereits gesendeter Antworten sowie (für die TNR-Zuordnung) Absender bereits zugeordneter
+    eingehender Mails. Für die Vorbelegung des Antwortempfängers gilt die engere Menge ohne
+    spätere Absender (Review 26.09.2026, H5)."""
+    from mhvp.contacts.models import ContactEmail
+
+    addresses: set[str] = set()
+    contact_ids = [c for c in (ticket.contact_id, ticket.initiator_contact_id) if c]
+    if contact_ids:
+        for email_address in await session.scalars(
+            select(ContactEmail.email).where(ContactEmail.contact_id.in_(contact_ids))
+        ):
+            addresses.add(email_address.lower())
+    rows = (
+        await session.scalars(
+            select(Message)
+            .where(Message.ticket_id == ticket.id)
+            .order_by(Message.received_at.asc().nulls_last(), Message.created_at.asc())
+        )
+    ).all()
+    first_sender = next(
+        (m.from_address for m in rows if m.direction == "in" and m.from_address), None
+    )
+    if first_sender:
+        addresses.add(first_sender.lower())
+    for m in rows:
+        if m.direction == "in" and m.from_address and include_thread_senders:
+            addresses.add(m.from_address.lower())
+        elif m.direction == "out" and m.status == "sent":
+            addresses.update(a.lower() for a in (m.to_addresses or []))
+            addresses.update(a.lower() for a in (m.cc_addresses or []))
+    return addresses
+
+
+async def sender_belongs_to_ticket(session: AsyncSession, row: Message, ticket: Any) -> bool:
+    if not row.from_address:
+        return False
+    return row.from_address.lower() in await ticket_participants(session, ticket)
+
+
+async def _ticket_thread_id(session: AsyncSession, ticket_id: uuid.UUID) -> uuid.UUID | None:
+    first = await session.scalar(
+        select(Message).where(Message.ticket_id == ticket_id).order_by(Message.created_at).limit(1)
+    )
+    return (first.thread_id or first.id) if first is not None else None
+
+
+_CLOSED_STATES = ("done", "closed", "rejected")
+
+
 async def attach_to_ticket(
     session: AsyncSession, row: Message, ticket_id: uuid.UUID, actor_user_id: uuid.UUID | None
 ) -> None:
-    from mhvp.tickets.models import TicketEvent
+    """Hängt die eingehende Mail an das Ticket. Ein erledigtes, geschlossenes oder abgelehntes
+    Ticket wird dabei wieder geöffnet (Status ``in_progress``, Ereignis ``reopened``, SLA-Uhr
+    läuft weiter); Bearbeiter und Zuweiser erhalten eine interne Benachrichtigung
+    (Review 26.09.2026, H4)."""
+    from mhvp.sla.models import SlaClock
+    from mhvp.sla.service import reopen_clock
+    from mhvp.tickets.models import Ticket, TicketAssignee, TicketEvent, TicketStatus
+    from mhvp.workspace.services import notify
 
     row.ticket_id = ticket_id
     if row.status == "new":
@@ -320,6 +425,58 @@ async def attach_to_ticket(
             user_id=actor_user_id,
         )
     )
+    ticket = await session.get(Ticket, ticket_id)
+    reopened = False
+    if ticket is not None and ticket.status.value in _CLOSED_STATES:
+        previous = ticket.status.value
+        ticket.status = TicketStatus.IN_PROGRESS
+        ticket.resolved_at = None
+        reopened = True
+        session.add(
+            TicketEvent(
+                tenant_id=row.tenant_id,
+                ticket_id=ticket_id,
+                kind="reopened",
+                data={"from": previous, "to": "in_progress", "message_id": str(row.id)},
+                user_id=actor_user_id,
+            )
+        )
+        clock = await session.scalar(select(SlaClock).where(SlaClock.ticket_id == ticket_id))
+        if clock is not None:
+            await reopen_clock(session, clock)
+    await session.flush()
+    if ticket is not None:
+        recipients = {ticket.assignee_user_id} if ticket.assignee_user_id else set()
+        recipients.update(
+            await session.scalars(
+                select(TicketAssignee.user_id).where(TicketAssignee.ticket_id == ticket_id)
+            )
+        )
+        title = (
+            f"Ticket {ticket.number} durch neue E-Mail wieder geöffnet"
+            if reopened
+            else f"Neue E-Mail zu Ticket {ticket.number}"
+        )
+        for user_id in recipients:
+            await notify(
+                session,
+                tenant_id=row.tenant_id,
+                user_id=user_id,
+                kind="ticket.mail_received",
+                title=title,
+                body=(row.subject or "")[:300],
+                entity_type="ticket",
+                entity_id=ticket_id,
+            )
+        await emit(
+            session,
+            tenant_id=row.tenant_id,
+            type="ticket.mail_received",
+            entity_type="ticket",
+            entity_id=ticket_id,
+            actor_user_id=actor_user_id,
+            payload={"message_id": str(row.id), "reopened": reopened},
+        )
     await session.flush()
 
 

@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -118,6 +119,15 @@ class TicketTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "ticket"
+    # Ticketnummer: mandantenweite fortlaufende Nummer (``mhvp.core.numbering``, Sequenz
+    # ``ticket``), eindeutig je Mandant; Grundlage der Kennung ``TNR#<nummer>`` im Betreff
+    # (``mhvp.tickets.tnr``, Migration 0119).
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "number", name="uq_ticket_tenant_number"),
+        # Listing by status (M4): ordered by number, and the assignee filter.
+        Index("ix_ticket_status_number", "tenant_id", "status", "number"),
+        Index("ix_ticket_assignee", "tenant_id", "assignee_user_id"),
+    )
 
     number: Mapped[int] = mapped_column(Integer, nullable=False)
     property_id: Mapped[uuid.UUID | None] = _fk("property.id")
@@ -182,6 +192,7 @@ class TicketAssignee(IdMixin, TenantMixin, Base):
 
 class TicketComment(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "ticket_comment"
+    __table_args__ = (Index("ix_ticket_comment_ticket", "tenant_id", "ticket_id"),)
 
     ticket_id: Mapped[uuid.UUID] = _fk("ticket.id", nullable=False, ondelete="CASCADE")
     internal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -195,6 +206,7 @@ class TicketComment(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class TicketEvent(IdMixin, TenantMixin, Base):
     __tablename__ = "ticket_event"
+    __table_args__ = (Index("ix_ticket_event_ticket", "tenant_id", "ticket_id"),)
 
     ticket_id: Mapped[uuid.UUID] = _fk("ticket.id", nullable=False, ondelete="CASCADE")
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -207,6 +219,7 @@ class TicketEvent(IdMixin, TenantMixin, Base):
 
 class WorkOrder(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "work_order"
+    __table_args__ = (Index("ix_work_order_ticket", "tenant_id", "ticket_id"),)
 
     ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id")
     property_id: Mapped[uuid.UUID] = _fk("property.id", nullable=False)
@@ -242,6 +255,42 @@ class WorkOrderEvent(IdMixin, TenantMixin, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
+
+
+class ProposalStatus(StrEnum):
+    """Status of an appointment proposal (A58): open until the resident accepts one; the
+    others of the same round are declined, a new round supersedes the old one."""
+
+    PROPOSED = "proposed"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+    SUPERSEDED = "superseded"
+
+
+class WorkOrderAppointmentProposal(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Terminvorschlag eines Dienstleisters zum Arbeitsauftrag (14, M22, A58): up to three
+    proposals per round, the affected resident (initiator of the ticket or occupant of the
+    ticket's unit) accepts one in the portal, which sets ``WorkOrder.scheduled_at``. Never a
+    contract or money relevant declaration; the management sees the confirmed appointment on
+    the order."""
+
+    __tablename__ = "work_order_appointment_proposal"
+    __table_args__ = (
+        Index("ix_work_order_appointment_proposal_order", "tenant_id", "work_order_id"),
+    )
+
+    work_order_id: Mapped[uuid.UUID] = _fk("work_order.id", nullable=False, ondelete="CASCADE")
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default=ProposalStatus.PROPOSED.value,
+        server_default=text("'proposed'"),
+    )
+    proposed_by_contact_id: Mapped[uuid.UUID | None] = _fk("contact.id")
+    decided_by_contact_id: Mapped[uuid.UUID | None] = _fk("contact.id")
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class TicketReplyTemplate(IdMixin, TimestampMixin, TenantMixin, Base):

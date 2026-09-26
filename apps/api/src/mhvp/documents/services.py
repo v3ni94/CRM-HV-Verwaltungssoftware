@@ -37,10 +37,11 @@ from mhvp.handover.models import (
     HandoverProtocol,
     HandoverRoom,
 )
+from mhvp.hoa.models import HoaInsuranceClaim, HoaLoan, HoaMeasure
 from mhvp.letting.models import Listing
 from mhvp.platform.models import TenantSettings
 from mhvp.properties.models import Building, LegalEntity, Property, Unit
-from mhvp.tickets.models import Ticket
+from mhvp.tickets.models import Ticket, WorkOrder
 
 # Entities a document may be linked to, with the model used to verify existence (RLS applies).
 LINKABLE: dict[str, Any] = {
@@ -62,6 +63,12 @@ LINKABLE: dict[str, Any] = {
     "listing": Listing,
     # Tickets (A55): photos of a damage report from the portal and other attachments.
     "ticket": Ticket,
+    # Work orders (A58): photos of the execution documented by the provider in the portal.
+    "work_order": WorkOrder,
+    # WEG loans, insurance claims and measures (W10, A59): contracts, claim files, offers.
+    "hoa_loan": HoaLoan,
+    "hoa_insurance_claim": HoaInsuranceClaim,
+    "hoa_measure": HoaMeasure,
     # Released version of another document (E06, D31): a redacted copy links to its original
     # with role "generated"; the portal shows the copy with a redaction note, never the original.
     "document": Document,

@@ -8,7 +8,8 @@ import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-/** Meldungen (M21): eigene Schadensmeldungen mit Verlauf, neue Meldung mit Fotoanhang. */
+/** Meldungen (M21): eigene Schadensmeldungen mit Verlauf, neue Meldung mit Fotoanhang (A55),
+ *  Hinweis auf offene Terminvorschläge des Handwerkers (A58). */
 export default async function TicketsPage() {
   const t = await getTranslations("Tickets");
   const { data, error, response } = await serverApi().GET("/api/v1/portal/tickets");
@@ -30,6 +31,9 @@ export default async function TicketsPage() {
                 </span>
                 <span className={ui.badge}>{t(`status.${row.status}`)}</span>
               </span>
+              {(row.appointment_proposals ?? []).some((p) => p.status === "proposed") ? (
+                <span className={`${ui.badge} w-fit`}>{t("appointmentsOpen")}</span>
+              ) : null}
               {row.comments.length > 0 ? (
                 <span className="text-xs text-subtle">
                   {row.comments.length} {t("history")}
