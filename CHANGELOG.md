@@ -5,7 +5,7 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
-## 1.27.0 (26.09.2026) Betreiberentscheidungen vom 26.09.2026 umgesetzt: Gmail-Push und Vollabruf, Ticketampel und Auswertung, Kaution, Bank finAPI, Messdienstleister Stufe 1, Betrieb
+## 1.28.0 (26.09.2026) Betreiberentscheidungen vom 26.09.2026 umgesetzt: Gmail-Push und Vollabruf, Ticketampel und Auswertung, Kaution, Bank finAPI, Messdienstleister Stufe 1, Betrieb
 
 - Messdienstleister (neues Modul `mhvp.metering`, Stufe 1 Backend, Regel M40-01, Migration 0145): Anbieterkatalog ista, Techem, KALO, Brunata Minol, BRUNATA-METRONA und Sonstige mit ehrlicher Funktionsanzeige in vier Dimensionen (dokumentiert, Adapter, Kontofreigabe, Verbindungstest) und Recherchestand 26.09.2026 (Quellen Q1 bis Q11, vor Implementierung erneut prüfen); zentrale Verbindungen je Mandant mit verschlüsselten Geheimnissen (nur setzen, nie auslesen), Test und Produktion getrennt, Verbindungstest nur lesend; Objektzuordnung zu externen Abrechnungseinheiten mit Leistungsbereich, Gültigkeit, Prüfstatus, Gruppierung, Konfliktprüfung, Versionsprüfung (409) und Anbieterwechsel mit Historie; Einheitenzuordnung mit getrennten Empfängern und Belegungsstatus; manueller Abruf als persistenter Auftrag, Klärungsbereich, Verbrauchswerte und Abrechnungsergebnisse versioniert ohne Buchung; CSV-Vorlage, Vorschau, Übernahme und Export; Rechte metering_connections:manage, metering_assignments:update, metering_sync:run, metering_data:read, metering_users:submit, metering_billing:order; Mandantenschalter metering_module_enabled (Standard aus); Endpunkte unter /metering; keine Anbieteradapter (Stufe 2, OPEN_QUESTIONS M40-01 bis M40-03); Oberfläche folgt
 - Tickets: Ampel je Ticketzeile nach Zeit ohne Reaktion unsererseits (gelb neu, orange ab 24 Stunden, rot ab 96 Stunden, grün erledigt), serverseitig berechnet in derselben Abfrage (Felder last_staff_activity_at, last_inbound_at, last_activity_at, attention in GET /tickets und auf der Startseite), nur Handlungen von Mitarbeitern zählen (Statuswechsel, Zuweisung, Kommentar, gesendete Mail, Arbeitsauftrag), eingehende Mails und Portalkommentare setzen die Uhr nicht zurück; Standardsortierung Dringlichkeit (sort=urgency, Erledigte zuletzt), Filterhaken Nach Eingang (sort=created_desc); Legende, Textmarke mit Dauer und farbiger Rand in Übersicht, Meine Tickets, Startseite und Reiter Tickets; Reiter Tickets der Kontakt-, Objekt- und Einheitenseite blendet Erledigte standardmäßig aus (Umschalter Erledigte anzeigen); Regel M19-09, Handbuch Tickets
@@ -30,6 +30,21 @@ unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge ob
 - Portal: HEIC-Fotos vom iPhone werden angenommen und in JPEG gewandelt (A72); QR-Code im Einladungs-PDF (A86); Kontaktereignisse auch aus Staging- und Objektakte-Import (A87)
 - Betrieb: IONOS S3 Object Storage als Produktionsspeicher (make check-s3), Images aus der GitHub Container Registry, Uptime Kuma im Produktions-Compose, Off-site-Backup nach Hetzner Object Storage mit age-Verschlüsselung und Aufbewahrung 14/8/12 (scripts/backup-offsite.sh)
 - Oberfläche: Immoware24 nur noch unter Einstellungen erreichbar, nicht mehr im Hauptmenü
+## 1.27.1 (26.09.2026) Erledigungsnotiz für Administratoren optional
+
+- Tickets: Mandantenadministratoren schließen Tickets ohne Erledigungsnotiz (einzeln, Sammelaktion), der Abschlussdialog erscheint bei ihnen nicht. Für alle anderen bleibt die Notiz Pflicht.
+
+## 1.27.0 (26.09.2026) Zuordnung im Bericht, Objekteigentümer, Freigabe der Importverträge
+
+- Import: Offene Zuordnungen (nicht gefunden, mehrdeutig, Vermieter fehlt) stehen im Bericht als Tabelle und werden per Kontaktauswahl direkt zugeordnet (POST /imports/immoware24/lists/zuordnung/manuell), bei fehlendem Vermieter mit Auswahl des Objekteigentümers. Der letzte Bericht bleibt im Browser erhalten.
+- Objekte: "Eigentümer festlegen" auf der Objektseite für Mietverwaltungsobjekte (Kontakt, seit, Anteil, Ersetzen mit Datum), Reiter "Ohne Eigentümer" und Kennzeichen "Eigentümer fehlt" in der Objektliste (POST /properties/{id}/owner, GET /properties?without_owner=true). WEG-Objekte führen Eigentum je Einheit.
+- Verträge: Importverträge tragen Herkunft und Freigabestatus (Migration 0133). Die Sollstellung überspringt nicht freigegebene Verträge und weist das aus. Neue Seite Verträge, Freigabe mit Filter, Summen, Mehrfachauswahl, "Alle freigeben" mit Bestätigung und "Ablehnen" je Vertrag (beendet ihn zum Beginn). Berechtigung contracts:approve (Administratoren). Kennzeichen "Freigabe ausstehend" in Liste und Detail.
+
+## 1.26.1 (26.09.2026) Mail: Aktionen oben, Mehrfachauswahl, Erledigt archiviert
+
+- Mail: Die Aktionen Antworten, Ticket anlegen und Erledigt stehen zusätzlich als feste Leiste oberhalb der Nachricht.
+- Mail: Mehrfachauswahl in der Liste (Kontrollkästchen, Strg bzw. Cmd plus Klick, Shift für Bereiche, Alle auswählen, Escape hebt auf) mit Sammelaktion "Als erledigt markieren" (POST /mail/messages/bulk, bis 200 Nachrichten, Postfachzugriff je Nachricht geprüft).
+- Mail: "Erledigt" in der Mailansicht archiviert die Gmail-Nachricht wie der Ticketabschluss (Postfacheinstellung "Erledigt archiviert Mail"), einzeln und als Sammelaktion.
 
 ## 1.26.0 (26.09.2026) Portalzugang am Kontakt, IBAN-Ablehnungsgrund, Importereignisse, Dokumentliste, Telefonassistenz-Korrekturen
 

@@ -37,6 +37,7 @@ async def _world(settings: Any) -> World:
         for name, role, tenant in [
             ("m20admin", "tenant_admin", a),
             ("m20read", "read_only_master_data", a),
+            ("m20std", "standard", a),
             ("m20adminb", "tenant_admin", b),
         ]:
             uid = await services.create_user(
@@ -383,3 +384,77 @@ def test_ticket_from_mail_links_contact_and_trims_quotes(client: TestClient, wor
     assert ticket["initiator_contact_id"] == contact["id"]
     assert ticket["public_description"] == "Guten Tag,\n\nder Aufzug steht seit gestern."
     assert "> Ihre Anfrage" in _ok(client.get(f"{M}/messages/{msg['id']}", headers=h))["body"]
+
+
+def test_bulk_done_respects_mailbox_access_and_limit(client: TestClient, world: World) -> None:
+    """Betreiberauftrag 26.09.2026: Sammelaktion Erledigt. Fremdes Postfach (ohne Freigabe,
+    nicht Standard) landet in ``failed``, genauso eine unbekannte Id; höchstens 200 Ids."""
+    admin = bearer(login(client, world, "m20admin"))
+    std = bearer(login(client, world, "m20std"))
+    box = _ok(
+        client.post(
+            f"{M}/mailboxes",
+            json={"address": f"bulk-{RUN}@example.com", "secret": "geheim"},
+            headers=admin,
+        ),
+        201,
+    )
+    _ok(client.patch(f"{M}/mailboxes/{box['id']}", json={"is_default": False}, headers=admin))
+    free = []
+    for i in range(2):
+        doc = _upload(
+            client,
+            admin,
+            f"bulk{i}.eml",
+            _eml(f"bulk{i}{RUN}@example.com", f"Sammel {i}", "Text", f"<bulk{i}-{RUN}@x>"),
+        )
+        free.append(_ok(client.post(f"{M}/ingest", json={"document_id": doc}, headers=admin), 201))
+    doc = _upload(
+        client, admin, "bulkx.eml", _eml(f"bx{RUN}@example.com", "Fremd", "T", f"<bx-{RUN}@x>")
+    )
+    foreign = _ok(
+        client.post(
+            f"{M}/ingest", json={"document_id": doc, "mailbox_id": box["id"]}, headers=admin
+        ),
+        201,
+    )
+    unknown = "00000000-0000-4000-8000-000000000001"
+    ids = [free[0]["id"], free[1]["id"], foreign["id"], unknown]
+    out = _ok(client.post(f"{M}/messages/bulk", json={"ids": ids, "action": "done"}, headers=std))
+    assert out["changed"] == [free[0]["id"], free[1]["id"]]
+    assert out["failed"] == [
+        {"id": foreign["id"], "reason": "not_found"},
+        {"id": unknown, "reason": "not_found"},
+    ]
+    for m in free:
+        assert _ok(client.get(f"{M}/messages/{m['id']}", headers=admin))["status"] == "done"
+    assert _ok(client.get(f"{M}/messages/{foreign['id']}", headers=admin))["status"] != "done"
+
+    # Administrator erreicht jedes Postfach.
+    out = _ok(
+        client.post(
+            f"{M}/messages/bulk", json={"ids": [foreign["id"]], "action": "done"}, headers=admin
+        )
+    )
+    assert out == {"changed": [foreign["id"]], "failed": []}
+
+    too_many = [unknown] * 201
+    assert (
+        client.post(
+            f"{M}/messages/bulk", json={"ids": too_many, "action": "done"}, headers=std
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            f"{M}/messages/bulk", json={"ids": [unknown], "action": "delete"}, headers=std
+        ).status_code
+        == 422
+    )
+    reader = bearer(login(client, world, "m20read"))
+    assert (
+        client.post(
+            f"{M}/messages/bulk", json={"ids": [unknown], "action": "done"}, headers=reader
+        ).status_code
+        == 403
+    )

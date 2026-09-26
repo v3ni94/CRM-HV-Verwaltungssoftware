@@ -47,6 +47,49 @@ function rejectedAttachments(message: Message): RejectedAttachment[] {
   return Array.isArray(value) ? (value as RejectedAttachment[]) : [];
 }
 
+function MailActionBar({
+  position,
+  busy,
+  canCreateTicket,
+  canMarkDone,
+  onReply,
+  onCreateTicket,
+  onMarkDone,
+}: {
+  position: "top" | "bottom";
+  busy: boolean;
+  canCreateTicket: boolean;
+  canMarkDone: boolean;
+  onReply: () => void;
+  onCreateTicket: () => void;
+  onMarkDone: () => void;
+}) {
+  const t = useTranslations("Mail");
+  const sticky = position === "top" ? "sticky top-0 z-10 -mx-1 border-b border-border-soft bg-bg/95 px-1 py-2 backdrop-blur" : "";
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-2 ${sticky}`}
+      data-testid={`mail-actions-${position}`}
+      role="toolbar"
+      aria-label={t("actionsLabel")}
+    >
+      <button type="button" className={ui.button} disabled={busy} onClick={onReply}>
+        {t("reply")}
+      </button>
+      {canCreateTicket ? (
+        <button type="button" className={ui.button} disabled={busy} onClick={onCreateTicket}>
+          {t("createTicket")}
+        </button>
+      ) : null}
+      {canMarkDone ? (
+        <button type="button" className={ui.button} disabled={busy} onClick={onMarkDone}>
+          {t("markDone")}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function MailDetail({
   message,
   canApprove,
@@ -157,6 +200,20 @@ export function MailDetail({
     }
   };
 
+  // Gemeinsame Aktionsleiste oben (sticky) und unten (Betreiberauftrag 26.09.2026).
+  const showActions = bodyLoaded && !["draft", "sending", "pending", "sent"].includes(message.status);
+  const actionBar = (position: "top" | "bottom") => (
+    <MailActionBar
+      position={position}
+      busy={busy}
+      canCreateTicket={!message.ticket_id}
+      canMarkDone={message.status !== "done"}
+      onReply={() => void reply()}
+      onCreateTicket={() => void createTicket()}
+      onMarkDone={() => void markDone()}
+    />
+  );
+
   return (
     <div className={`${ui.card} flex min-w-0 flex-col gap-4`}>
       <div className="flex min-w-0 flex-col gap-1 border-b border-border-soft pb-3">
@@ -200,6 +257,8 @@ export function MailDetail({
           </ul>
         ) : null}
       </div>
+
+      {showActions ? actionBar("top") : null}
 
       {message.direction === "in" && tnrSuggestion ? (
         <p className={ui.notice} data-testid="mail-tnr-suggestion">
@@ -290,21 +349,7 @@ export function MailDetail({
       ) : (
         <div className="flex flex-col gap-3">
           <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className={ui.button} disabled={busy} onClick={() => void reply()}>
-              {t("reply")}
-            </button>
-            {!message.ticket_id ? (
-              <button type="button" className={ui.button} disabled={busy} onClick={() => void createTicket()}>
-                {t("createTicket")}
-              </button>
-            ) : null}
-            {message.status !== "done" ? (
-              <button type="button" className={ui.button} disabled={busy} onClick={() => void markDone()}>
-                {t("markDone")}
-              </button>
-            ) : null}
-          </div>
+          {actionBar("bottom")}
         </div>
       )}
 

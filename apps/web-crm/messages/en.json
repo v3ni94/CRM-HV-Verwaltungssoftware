@@ -867,8 +867,29 @@
         "einheit_fehlt": "Units not imported",
         "uebersprungen_abgegeben": "Handed over, skipped",
         "zahlungen_cent_hoa_fee": "Monthly HOA fees total",
-        "zahlungen_cent_rent": "Monthly rent total"
-      }
+        "zahlungen_cent_rent": "Monthly rent total",
+        "vermieter_angelegt": "Landlords recorded",
+        "kontakte_aktualisiert": "Contacts updated",
+        "manuell_zugeordnet": "Assigned manually in the report"
+      },
+      "openTitle": "Open assignments",
+      "openHelp": "Units with an ambiguous or unknown name or without a clear landlord. Choose a contact and assign it, the contract is created as in the import.",
+      "openNone": "No open assignments.",
+      "openAssigned": "assigned: {count}",
+      "colAmount": "Amount",
+      "colReason": "Reason",
+      "colContact": "Contact",
+      "reason": {
+        "nicht_gefunden": "not found",
+        "mehrdeutig": "ambiguous",
+        "vermieter_fehlt": "landlord not clear"
+      },
+      "chooseCandidate": "Choose candidate",
+      "searchContact": "Search contact",
+      "searchLandlord": "Search property owner (landlord)",
+      "chosen": "Chosen: {name}",
+      "assign": "Assign",
+      "restored": "Last report restored."
     },
     "backToImports": "Back to imports",
     "noPermission": "Missing permission for the list import (create imports and create properties, contacts and contracts)."
@@ -1547,7 +1568,8 @@
       "preview": "Preview",
       "posted": "Posted",
       "reversed": "Reversed"
-    }
+    },
+    "skippedPending": "{count} contracts skipped, approval pending"
   },
   "Bank": {
     "title": "Bank",
@@ -3032,7 +3054,15 @@
     "sendingHint": "Approved, dispatch not yet confirmed. Approving again verifies the dispatch by Message-ID and only sends when the message did not go out.",
     "attachmentsRejected": "Attachments not stored: {list}",
     "loadingDetail": "Loading message...",
-    "showClosed": "Show completed"
+    "showClosed": "Show completed",
+    "actionsLabel": "Message actions",
+    "selectAll": "Select all",
+    "bulkToolbar": "Bulk actions",
+    "selectedCount": "{count} selected",
+    "bulkMarkDone": "Mark as done",
+    "clearSelection": "Clear selection",
+    "bulkFailed": "{count, plural, one {# message could not be changed.} other {# messages could not be changed.}}",
+    "selectMessageRow": "Select message: {subject}"
   },
   "Platform": {
     "title": "Platform",
@@ -3293,19 +3323,22 @@
       "all": "All",
       "rental": "Rental",
       "hoa": "HOA",
-      "sev": "SEV"
+      "sev": "SEV",
+      "noOwner": "Without owner"
     },
     "scopeTitle": {
       "all": "Properties",
       "rental": "Rental management",
       "hoa": "HOA properties",
-      "sev": "Separate ownership management"
+      "sev": "Separate ownership management",
+      "noOwner": "Rental management without owner"
     },
     "emptyScope": {
       "all": "No properties yet.",
       "rental": "No rental properties.",
       "hoa": "No HOA properties.",
-      "sev": "No HOA properties with SEV and tenancy contracts."
+      "sev": "No HOA properties with SEV and tenancy contracts.",
+      "noOwner": "All rental management properties have an owner."
     },
     "sevHint": "HOA properties with SEV that have at least one tenancy contract.",
     "energyCertificate": {
@@ -3330,6 +3363,35 @@
       },
       "save": "Save energy certificate",
       "saved": "Saved."
+    },
+    "noOwnerHint": "Without a property owner the assignment finds no landlord and tenancies stay open. Set the owner on the property page.",
+    "ownerColumn": "Owner",
+    "ownerMissing": "Owner missing",
+    "owner": {
+      "title": "Owner",
+      "set": "Set owner",
+      "replace": "Replace owner",
+      "perUnit": "Ownership is recorded per unit.",
+      "missing": "Owner missing",
+      "missingHint": "Without an owner tenancies are not assigned.",
+      "since": "since {date}",
+      "share": "share {share}",
+      "contact": "Contact",
+      "searchPlaceholder": "Search name, at least 2 characters",
+      "validFrom": "Owner since",
+      "validFromHelp": "Without a date the management start applies, otherwise 1 January of the current year.",
+      "validFromReplaceHelp": "The previous owner ends the day before.",
+      "sharePercent": "Share in percent (optional)",
+      "chooseContact": "Please choose a contact from the search.",
+      "shareInvalid": "Share must be above 0 and at most 100.",
+      "dateRequired": "Please enter the date to replace the owner.",
+      "confirmSet": "Set {name} as owner from {date}?",
+      "confirmReplace": "Set {name} as owner from {date} and end the previous owner the day before?",
+      "defaultStart": "management start or 1 January",
+      "next": "Next",
+      "confirm": "Confirm",
+      "back": "Back",
+      "cancel": "Cancel"
     }
   },
   "AiChat": {
@@ -6512,5 +6574,47 @@
     "minutes": "{value} min",
     "hours": "{value} h",
     "days": "{value} days"
+  },
+  "ContractApproval": {
+    "title": "Imported contract approval",
+    "description": "Contracts from the Immoware24 import await approval by management. Until then their payment schedules create no receivables.",
+    "assumption": "Start date and amounts of these contracts are assumptions of the import. Please check before approving, the first receivable run uses these values.",
+    "loadError": "The list could not be loaded.",
+    "empty": "No contracts awaiting approval.",
+    "noSource": "no source",
+    "noPermission": "Approving and rejecting requires the permission contracts:approve.",
+    "filters": {
+      "source": "Source",
+      "property": "Property",
+      "kind": "Kind",
+      "all": "All"
+    },
+    "kinds": {
+      "ownership": "Ownership",
+      "tenancy": "Tenancy"
+    },
+    "columns": {
+      "property": "Property",
+      "unit": "Unit",
+      "party": "Party",
+      "kind": "Kind",
+      "start": "Start",
+      "monthly": "Monthly amount",
+      "source": "Source"
+    },
+    "sumCount": "{count} contracts",
+    "perMonth": "per month",
+    "selectAll": "Select all",
+    "select": "Select contract {number}",
+    "approveSelected": "Approve selected ({count})",
+    "approveAll": "Approve all",
+    "confirmApprove": "Approve {count} contracts? Start date and amounts are assumptions of the import; after approval the payment schedules create receivables.",
+    "approved": "{count} contracts approved.",
+    "reject": "Reject",
+    "confirmReject": "Reject contract {number} as a wrong assignment? The contract ends at its start on {date} and creates no receivables.",
+    "rejected": "Contract {number} rejected.",
+    "pendingBadge": "Approval pending",
+    "rejectedBadge": "Import rejected",
+    "link": "Imported contract approval"
   }
 }

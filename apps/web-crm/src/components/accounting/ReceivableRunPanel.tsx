@@ -93,6 +93,11 @@ export function ReceivableRunPanel({ initialMonth }: { initialMonth: string }) {
               .map(([k, v]) => `${t(`itemStatus.${k}`)}: ${v.count} (${formatEur(v.amount)})`)
               .join(" · ")}
           </p>
+          {typeof run.totals.skipped_pending_approval === "number" && run.totals.skipped_pending_approval > 0 ? (
+            <p className={ui.notice} data-testid="run-skipped">
+              {t("skippedPending", { count: run.totals.skipped_pending_approval })}
+            </p>
+          ) : null}
           <div className="overflow-x-auto">
 <table className="mhvp-table">
             <thead>

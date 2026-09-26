@@ -171,7 +171,7 @@ export function TicketEdit({
           <span className={ui.label}>{t("status")}</span>
           <select className={ui.input} value={status} disabled={busy} onChange={(e) => {
               const next = e.target.value;
-              if (isClosingStatus(next)) setClosing(next);
+              if (isClosingStatus(next) && !canChangeAnyStatus) setClosing(next);
               else void send("", "PATCH", { status: next });
             }}
           >

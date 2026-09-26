@@ -24,6 +24,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/thread$`) },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}$`) },
+  { method: "POST", pattern: /^mail\/messages\/bulk$/ },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}/draft$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/(reply-draft|submit|approve|reject|ticket|forward-invoice)$`) },
   // Rechnung aus E-Mail-Anhang erfassen (M14 KI-Extraktion).
@@ -53,6 +54,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^service-contracts/${ID}$`) },
   // Vertragsformular (A88): Anlage, neue Version, Beendigung, Zahlungsplan, Kaution, Mandatsverweis.
   { method: "POST", pattern: /^contracts$/ },
+  // Freigabe der Importverträge vor der Sollstellung (Betreiberauftrag 26.09.2026).
+  { method: "GET", pattern: /^contracts\/pending-approval$/ },
+  { method: "POST", pattern: /^contracts\/approve$/ },
+  { method: "POST", pattern: new RegExp(`^contracts/${ID}/reject-import$`) },
   { method: "GET", pattern: new RegExp(`^contracts/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/(versions|termination|schedules|deposits)$`) },
   // Kautionen und Kautionsabrechnung (M5-02): Liste, Entwurf berechnen und speichern,
@@ -186,6 +191,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^imports/immoware24/files/${ID}/(validate|test-run|apply)$`) },
   // Immoware24-Listen (Objektdaten, Kontakte) als CSV-Upload, Testlauf oder Übernahme.
   { method: "POST", pattern: /^imports\/immoware24\/lists\/(objektdaten|kontakte|zuordnung|adressen|adressen-ableiten)$/ },
+  { method: "POST", pattern: /^imports\/immoware24\/lists\/zuordnung\/manuell$/ },
   // Abgleichberichte des Parallelbetriebs (A68): Liste, Erstellen, JSON, CSV, Spaltenzuordnung.
   { method: "GET", pattern: /^imports\/reconciliation-reports(\/columns)?$/ },
   { method: "POST", pattern: /^imports\/reconciliation-reports$/ },
@@ -238,6 +244,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: new RegExp(`^banking/accounts/${ID}/legal-entity-default$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/bank-account-options$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/legal-entities$`) },
+  // Eigentümer festlegen (operator 26.09.2026): Objekteigentümer der Mietverwaltung.
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/owners$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/owner$`) },
   // Rechnung zu Bankumsatz abgleichen und Zahlungsvorschlag (M11-finapi Stage 3, G2 gesperrt).
   { method: "GET", pattern: new RegExp(`^banking/invoice-matching/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^banking/invoice-matching/${ID}/match$`) },

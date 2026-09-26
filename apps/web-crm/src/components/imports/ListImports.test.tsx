@@ -1,9 +1,10 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { AdressenCard, KontakteCard, ListImports, ObjektdatenCard, roleFromFileName, ZuordnungCard } from "./ListImports";
+import { AdressenCard, KontakteCard, ListImports, ObjektdatenCard, OpenAssignments, roleFromFileName, ZUORDNUNG_STORAGE_KEY, ZuordnungCard, type OpenAssignment } from "./ListImports";
 
 const fetchMock = vi.fn();
 beforeEach(() => {
@@ -265,5 +266,110 @@ describe("AdressenCard", () => {
       "Andere Straße",
     );
     expect(screen.getByTestId("adressen-list-apply")).toBeEnabled();
+  });
+});
+
+const OPEN: OpenAssignment[] = [
+  {
+    objekt: "83",
+    ve: "1",
+    zeile: 2,
+    rolle: "Eigentümer",
+    name: "Doppel, Dora",
+    unit_id: "01920000-0000-7000-8000-000000000001",
+    role: "eigentuemer",
+    grund: "mehrdeutig",
+    zahlbetrag: "275,50",
+    amount_cents: 27550,
+    kandidaten: [
+      { contact_id: "01920000-0000-7000-8000-0000000000c1", display_name: "Doppel, Dora", address: "Ahornweg 1, 52062 Aachen" },
+      { contact_id: "01920000-0000-7000-8000-0000000000c2", display_name: "Doppel, Dora", address: "Birkenweg 2, 53111 Bonn" },
+    ],
+  },
+  {
+    objekt: "84",
+    ve: "1",
+    zeile: 3,
+    rolle: "Mieter",
+    name: "Tom Offen",
+    unit_id: "01920000-0000-7000-8000-000000000002",
+    role: "mieter",
+    grund: "vermieter_fehlt",
+    zahlbetrag: "710,00",
+    amount_cents: 71000,
+    kandidaten: [],
+    contact_id: "01920000-0000-7000-8000-0000000000c3",
+  },
+];
+
+describe("OpenAssignments", () => {
+  it("assigns a candidate and a tenant with landlord, rows disappear and the counter rises", async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.startsWith("/api/bff/contacts")
+          ? jsonResponse({ items: [{ id: "01920000-0000-7000-8000-0000000000d1", display_name: "Vermieter, Lena" }], total: 1, page: 1, page_size: 10 })
+          : jsonResponse({ mode: "apply", apply: true, counts: { vertraege_angelegt: 1 } }),
+      ),
+    );
+    function Host() {
+      const [state, setState] = useState({ items: OPEN, assigned: 0 });
+      return <OpenAssignments items={state.items} assigned={state.assigned} startDate="2026-01-01" onChange={(items, assigned) => setState({ items, assigned })} />;
+    }
+    renderIntl(<Host />);
+    expect(screen.getAllByTestId("zuordnung-open-row")).toHaveLength(2);
+    expect(screen.getByTestId("zuordnung-open-table")).toHaveTextContent("275,50 EUR");
+    expect(screen.getByTestId("zuordnung-open-table")).toHaveTextContent("Vermieter nicht eindeutig");
+
+    const [first] = screen.getAllByTestId("zuordnung-open-row");
+    const buttons = () => screen.getAllByRole("button", { name: "Zuordnen" });
+    expect(buttons()[0]).toBeDisabled();
+    await userEvent.selectOptions(screen.getByLabelText("Kandidat wählen"), "01920000-0000-7000-8000-0000000000c2");
+    expect(first).toHaveTextContent("Birkenweg 2, 53111 Bonn");
+    await userEvent.click(buttons()[0]!);
+    await waitFor(() => expect(screen.getAllByTestId("zuordnung-open-row")).toHaveLength(1));
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/bff/imports/immoware24/lists/zuordnung/manuell");
+    expect(JSON.parse(init.body as string)).toEqual({
+      unit_id: "01920000-0000-7000-8000-000000000001",
+      role: "eigentuemer",
+      contact_id: "01920000-0000-7000-8000-0000000000c2",
+      amount_cents: 27550,
+      start_date: "2026-01-01",
+    });
+    expect(screen.getByTestId("zuordnung-open-assigned")).toHaveTextContent("zugeordnet: 1");
+
+    expect(buttons()[0]).toBeDisabled();
+    await userEvent.type(screen.getByLabelText(/Vermieter\) suchen/), "Vermieter");
+    await userEvent.click(screen.getByRole("button", { name: /Suchen/i }));
+    await userEvent.click(await screen.findByRole("button", { name: "Vermieter, Lena" }));
+    await userEvent.click(buttons()[0]!);
+    await waitFor(() => expect(screen.queryByTestId("zuordnung-open-row")).toBeNull());
+    const tenantBody = JSON.parse(fetchMock.mock.calls.at(-1)![1].body as string);
+    expect(tenantBody.contact_id).toBe("01920000-0000-7000-8000-0000000000c3");
+    expect(tenantBody.landlord_contact_id).toBe("01920000-0000-7000-8000-0000000000d1");
+    expect(screen.getByTestId("zuordnung-open-assigned")).toHaveTextContent("zugeordnet: 2");
+    expect(screen.getByText("Keine offenen Zuordnungen.")).toBeInTheDocument();
+  });
+
+  it("shows an API error in the row and keeps it", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ type: "about:blank", title: "Fehler", status: 422, detail: "Der Vermieter ist nicht eindeutig." }, 422));
+    const onChange = vi.fn();
+    renderIntl(<OpenAssignments items={[OPEN[0]!]} assigned={0} onChange={onChange} />);
+    await userEvent.selectOptions(screen.getByLabelText("Kandidat wählen"), "01920000-0000-7000-8000-0000000000c1");
+    await userEvent.click(screen.getByRole("button", { name: "Zuordnen" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Der Vermieter ist nicht eindeutig.");
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("restores the last applied report after a reload", async () => {
+    window.localStorage.setItem(
+      ZUORDNUNG_STORAGE_KEY,
+      JSON.stringify({ mode: "apply", apply: true, counts: { manuell_zugeordnet: 3 }, offen: [OPEN[0]], start_date: "2026-01-01" }),
+    );
+    renderIntl(<ZuordnungCard />);
+    expect(await screen.findByTestId("zuordnung-open-table")).toHaveTextContent("Doppel, Dora");
+    expect(screen.getByTestId("zuordnung-open-assigned")).toHaveTextContent("zugeordnet: 3");
+    expect(screen.getByText("Letzter Bericht wiederhergestellt.")).toBeInTheDocument();
+    window.localStorage.removeItem(ZUORDNUNG_STORAGE_KEY);
   });
 });

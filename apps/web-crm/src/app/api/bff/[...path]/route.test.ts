@@ -114,6 +114,8 @@ describe("BFF proxy", () => {
     ["GET", `tickets/${ID}`],
     ["POST", "tickets/merge"],
     ["GET", `properties/${ID}`],
+    ["GET", `properties/${ID}/owners`],
+    ["POST", `properties/${ID}/owner`],
     // Dunning fees/interest (M16, 25.09.2026): read/write settings, presets, marking a case
     // sent (M16-09) and preparing a Mahnbescheid are all allowlisted, fee amounts and the
     // Basiszinssatz stay inactive until the operator enters them (V7).

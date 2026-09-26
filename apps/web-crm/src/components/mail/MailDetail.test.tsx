@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
@@ -87,5 +87,18 @@ describe("MailDetail", () => {
     expect(screen.getByRole("button", { name: "Freigeben und senden" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ablehnen" })).toBeInTheDocument();
     expect(screen.getByText("wird gesendet")).toBeInTheDocument();
+  });
+
+  it("shows the action bar above and below the message body", () => {
+    renderIntl(<MailDetail message={makeMessage({})} canApprove={false} canReadMembers={false} onUpdated={() => {}} onCreated={() => {}} />);
+    const top = screen.getByTestId("mail-actions-top");
+    const bottom = screen.getByTestId("mail-actions-bottom");
+    expect(top).toHaveClass("sticky");
+    for (const bar of [top, bottom]) {
+      expect(within(bar).getByRole("button", { name: "Antworten" })).toBeInTheDocument();
+      expect(within(bar).getByRole("button", { name: "Erledigt" })).toBeInTheDocument();
+    }
+    const body = screen.getByTestId("mail-body");
+    expect(top.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

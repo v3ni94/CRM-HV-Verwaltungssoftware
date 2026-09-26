@@ -17,7 +17,7 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.27.0",
+    version: "1.28.0",
     date: "26.09.2026",
     title:
       "Betreiberentscheidungen vom 26.09.2026 umgesetzt: Gmail-Push und Vollabruf, Ticketampel und Auswertung, Kaution, Bank finAPI, Messdienstleister Stufe 1, Betrieb",
@@ -45,6 +45,32 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Portal: HEIC-Fotos vom iPhone werden angenommen und in JPEG gewandelt (A72); QR-Code im Einladungs-PDF (A86); Kontaktereignisse auch aus Staging- und Objektakte-Import (A87)",
       "Betrieb: IONOS S3 Object Storage als Produktionsspeicher (make check-s3), Images aus der GitHub Container Registry, Uptime Kuma im Produktions-Compose, Off-site-Backup nach Hetzner Object Storage mit age-Verschlüsselung und Aufbewahrung 14/8/12 (scripts/backup-offsite.sh)",
       "Oberfläche: Immoware24 nur noch unter Einstellungen erreichbar, nicht mehr im Hauptmenü",
+    ],
+  },
+  {
+    version: "1.27.1",
+    date: "26.09.2026",
+    title: "Erledigungsnotiz für Administratoren optional",
+    changes: ["Tickets: Administratoren schließen ohne Erledigungsnotiz, für alle anderen bleibt sie Pflicht"],
+  },
+  {
+    version: "1.27.0",
+    date: "26.09.2026",
+    title: "Zuordnung im Bericht, Objekteigentümer, Freigabe der Importverträge",
+    changes: [
+      "Import: offene Zuordnungen direkt im Bericht per Kontaktauswahl abschließen, Vermieter dabei festlegen",
+      "Objekte: Eigentümer festlegen auf der Objektseite, Reiter Ohne Eigentümer",
+      "Verträge: Freigabe der Importverträge vor der Sollstellung, Seite Verträge, Freigabe mit Sammelfreigabe und Ablehnen",
+    ],
+  },
+  {
+    version: "1.26.1",
+    date: "26.09.2026",
+    title: "Mail: Aktionen oben, Mehrfachauswahl, Erledigt archiviert",
+    changes: [
+      "Mail: Antworten, Ticket anlegen und Erledigt auch oberhalb der Nachricht",
+      "Mail: Mehrfachauswahl mit Strg, Shift und Alle auswählen, Sammelaktion Als erledigt markieren",
+      "Mail: Erledigt archiviert die Nachricht in Gmail, einzeln und als Sammelaktion",
     ],
   },
   {

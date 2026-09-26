@@ -120,12 +120,11 @@ def test_patch_done_stops_clock_and_emits_status_event(client: TestClient, world
     assert (clock["state"], clock["resolved_at"]) == ("running", None)
     assert _ok(client.get(f"{T}/{ticket['id']}", headers=h))["resolved_at"] is None
 
-    # Closing without an Erledigungsnotiz changes nothing and emits nothing (also for the
-    # admin bypass, which would allow in_progress to closed).
-    assert (
-        client.patch(f"{T}/{ticket['id']}", json={"status": "closed"}, headers=h).status_code == 422
-    )
-    assert len(_events(client, h, ticket["id"])) == 3
+    # Administrators may close without an Erledigungsnotiz (Betreiber 26.09.2026); the admin
+    # bypass allows in_progress to closed directly and records the event.
+    _ok(client.patch(f"{T}/{ticket['id']}", json={"status": "closed"}, headers=h))
+    assert len(_events(client, h, ticket["id"])) == 4
+    _ok(client.patch(f"{T}/{ticket['id']}", json={"status": "in_progress"}, headers=h))
 
 
 def test_bulk_status_stops_clocks_and_reports_failures(client: TestClient, world: World) -> None:

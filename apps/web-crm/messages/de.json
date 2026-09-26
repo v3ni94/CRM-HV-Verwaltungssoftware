@@ -867,8 +867,29 @@
         "einheit_fehlt": "Einheiten nicht importiert",
         "uebersprungen_abgegeben": "Abgegeben übersprungen",
         "zahlungen_cent_hoa_fee": "Summe Hausgeld monatlich",
-        "zahlungen_cent_rent": "Summe Miete monatlich"
-      }
+        "zahlungen_cent_rent": "Summe Miete monatlich",
+        "vermieter_angelegt": "Vermieter angelegt",
+        "kontakte_aktualisiert": "Kontakte aktualisiert",
+        "manuell_zugeordnet": "Im Bericht manuell zugeordnet"
+      },
+      "openTitle": "Offene Zuordnungen",
+      "openHelp": "Einheiten mit mehrdeutigem oder unbekanntem Namen oder ohne eindeutigen Vermieter. Kontakt wählen und zuordnen, der Vertrag wird wie beim Import angelegt.",
+      "openNone": "Keine offenen Zuordnungen.",
+      "openAssigned": "zugeordnet: {count}",
+      "colAmount": "Zahlbetrag",
+      "colReason": "Grund",
+      "colContact": "Kontakt",
+      "reason": {
+        "nicht_gefunden": "nicht gefunden",
+        "mehrdeutig": "mehrdeutig",
+        "vermieter_fehlt": "Vermieter nicht eindeutig"
+      },
+      "chooseCandidate": "Kandidat wählen",
+      "searchContact": "Kontakt suchen",
+      "searchLandlord": "Objekteigentümer (Vermieter) suchen",
+      "chosen": "Gewählt: {name}",
+      "assign": "Zuordnen",
+      "restored": "Letzter Bericht wiederhergestellt."
     },
     "backToImports": "Zurück zu Importe",
     "noPermission": "Für den Listenimport fehlt die Berechtigung (Importe anlegen sowie Objekte, Kontakte und Verträge anlegen)."
@@ -1547,7 +1568,8 @@
       "preview": "Vorschau",
       "posted": "gebucht",
       "reversed": "storniert"
-    }
+    },
+    "skippedPending": "{count} Verträge übersprungen, Freigabe ausstehend"
   },
   "Bank": {
     "title": "Bank",
@@ -3032,7 +3054,15 @@
     "sendingHint": "Freigegeben, Versand noch ohne Nachweis. Eine erneute Freigabe prüft den Versand anhand der Message-ID und sendet nur, wenn die Nachricht nicht angekommen ist.",
     "attachmentsRejected": "Nicht übernommene Anhänge: {list}",
     "loadingDetail": "Nachricht wird geladen...",
-    "showClosed": "Erledigte anzeigen"
+    "showClosed": "Erledigte anzeigen",
+    "actionsLabel": "Aktionen zur Nachricht",
+    "selectAll": "Alle auswählen",
+    "bulkToolbar": "Sammelaktionen",
+    "selectedCount": "{count} ausgewählt",
+    "bulkMarkDone": "Als erledigt markieren",
+    "clearSelection": "Auswahl aufheben",
+    "bulkFailed": "{count, plural, one {# Nachricht konnte nicht geändert werden.} other {# Nachrichten konnten nicht geändert werden.}}",
+    "selectMessageRow": "Nachricht auswählen: {subject}"
   },
   "Platform": {
     "title": "Plattform",
@@ -3293,19 +3323,22 @@
       "all": "Alle",
       "rental": "Mietverwaltung",
       "hoa": "WEG",
-      "sev": "SEV"
+      "sev": "SEV",
+      "noOwner": "Ohne Eigentümer"
     },
     "scopeTitle": {
       "all": "Objekte",
       "rental": "Mietverwaltung",
       "hoa": "WEG-Objekte",
-      "sev": "Sondereigentumsverwaltung"
+      "sev": "Sondereigentumsverwaltung",
+      "noOwner": "Mietverwaltung ohne Eigentümer"
     },
     "emptyScope": {
       "all": "Keine Objekte vorhanden.",
       "rental": "Keine Objekte in Mietverwaltung.",
       "hoa": "Keine WEG-Objekte.",
-      "sev": "Keine WEG-Objekte mit aktivierter SEV und hinterlegten Mietverträgen."
+      "sev": "Keine WEG-Objekte mit aktivierter SEV und hinterlegten Mietverträgen.",
+      "noOwner": "Alle Objekte in Mietverwaltung haben einen Eigentümer."
     },
     "sevHint": "Angezeigt werden WEG-Objekte mit Sondereigentumsverwaltung, für die mindestens ein Mietvertrag hinterlegt ist.",
     "energyCertificate": {
@@ -3330,6 +3363,35 @@
       },
       "save": "Energieausweis speichern",
       "saved": "Gespeichert."
+    },
+    "noOwnerHint": "Ohne Objekteigentümer findet die Zuordnung keinen Vermieter, die Mietverträge bleiben offen. Eigentümer auf der Objektseite festlegen.",
+    "ownerColumn": "Eigentümer",
+    "ownerMissing": "Eigentümer fehlt",
+    "owner": {
+      "title": "Eigentümer",
+      "set": "Eigentümer festlegen",
+      "replace": "Eigentümer ersetzen",
+      "perUnit": "Eigentum wird je Einheit geführt.",
+      "missing": "Eigentümer fehlt",
+      "missingHint": "Ohne Eigentümer werden Mietverträge nicht zugeordnet.",
+      "since": "seit {date}",
+      "share": "Anteil {share}",
+      "contact": "Kontakt",
+      "searchPlaceholder": "Name suchen, mindestens 2 Zeichen",
+      "validFrom": "Eigentümer seit",
+      "validFromHelp": "Ohne Angabe gilt der Verwaltungsbeginn, sonst der 1. Januar des laufenden Jahres.",
+      "validFromReplaceHelp": "Der bisherige Eigentümer endet am Vortag.",
+      "sharePercent": "Anteil in Prozent (optional)",
+      "chooseContact": "Bitte einen Kontakt aus der Suche wählen.",
+      "shareInvalid": "Anteil muss größer 0 und höchstens 100 sein.",
+      "dateRequired": "Zum Ersetzen bitte das Datum angeben.",
+      "confirmSet": "{name} ab {date} als Eigentümer festlegen?",
+      "confirmReplace": "{name} ab {date} als Eigentümer festlegen und den bisherigen Eigentümer zum Vortag beenden?",
+      "defaultStart": "Verwaltungsbeginn bzw. 1. Januar",
+      "next": "Weiter",
+      "confirm": "Bestätigen",
+      "back": "Zurück",
+      "cancel": "Abbrechen"
     }
   },
   "AiChat": {
@@ -6512,5 +6574,47 @@
     "minutes": "{value} Min.",
     "hours": "{value} Std.",
     "days": "{value} Tage"
+  },
+  "ContractApproval": {
+    "title": "Freigabe Importverträge",
+    "description": "Verträge aus dem Immoware24 Import warten auf die Freigabe durch die Geschäftsführung. Bis dahin erzeugen ihre Zahlungspläne keine Sollstellung.",
+    "assumption": "Vertragsbeginn und Beträge dieser Verträge sind Annahmen des Imports. Bitte vor der Freigabe prüfen, die erste Sollstellung folgt aus diesen Angaben.",
+    "loadError": "Die Liste konnte nicht geladen werden.",
+    "empty": "Keine Verträge mit ausstehender Freigabe.",
+    "noSource": "ohne Quelle",
+    "noPermission": "Freigeben und Ablehnen erfordert die Berechtigung contracts:approve.",
+    "filters": {
+      "source": "Quelle",
+      "property": "Objekt",
+      "kind": "Art",
+      "all": "Alle"
+    },
+    "kinds": {
+      "ownership": "Eigentum",
+      "tenancy": "Mietverhältnis"
+    },
+    "columns": {
+      "property": "Objekt",
+      "unit": "Einheit",
+      "party": "Partei",
+      "kind": "Art",
+      "start": "Beginn",
+      "monthly": "Monatsbetrag",
+      "source": "Quelle"
+    },
+    "sumCount": "{count} Verträge",
+    "perMonth": "je Monat",
+    "selectAll": "Alle auswählen",
+    "select": "Vertrag {number} auswählen",
+    "approveSelected": "Ausgewählte freigeben ({count})",
+    "approveAll": "Alle freigeben",
+    "confirmApprove": "{count} Verträge freigeben? Vertragsbeginn und Beträge sind Annahmen des Imports; nach der Freigabe erzeugen die Zahlungspläne Sollstellungen.",
+    "approved": "{count} Verträge freigegeben.",
+    "reject": "Ablehnen",
+    "confirmReject": "Vertrag {number} als Fehlzuordnung ablehnen? Der Vertrag endet zum Beginn am {date} und erzeugt keine Sollstellung.",
+    "rejected": "Vertrag {number} abgelehnt.",
+    "pendingBadge": "Freigabe ausstehend",
+    "rejectedBadge": "Import abgelehnt",
+    "link": "Freigabe Importverträge"
   }
 }

@@ -5,12 +5,14 @@ import { PropertyBankAccounts } from "@/components/banking/PropertyBankAccounts"
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { CompletenessPanel } from "@/components/objektakte/CompletenessPanel";
 import { EnergyCertificateForm } from "@/components/properties/EnergyCertificateForm";
+import { PropertyOwnerPanel, type CurrentOwner } from "@/components/properties/PropertyOwnerPanel";
 import { PropertyNotices } from "@/components/properties/PropertyNotices";
 import { UnitsTable } from "@/components/properties/UnitsTable";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
@@ -27,14 +29,20 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
   const t = await getTranslations("Properties");
   const api = serverApi();
   const path = { params: { path: { property_id: propertyId } } };
-  const [{ data, error, response }, units, contacts, maintenance, tickets] = await Promise.all([
+  const [{ data, error, response }, units, contacts, maintenance] = await Promise.all([
     api.GET("/api/v1/properties/{property_id}", path),
     api.GET("/api/v1/properties/{property_id}/units", { params: { path: { property_id: propertyId }, query: { with_occupants: true } } }),
     api.GET("/api/v1/properties/{property_id}/contacts", path),
     api.GET("/api/v1/properties/{property_id}/maintenance", path),
-    api.GET("/api/v1/tickets", { params: { query: { property_id: propertyId, limit: 50, include_closed: true } } }),
   ]);
   redirectIfUnauthenticated(response);
+  const [tickets, me] = await Promise.all([
+    api.GET("/api/v1/tickets", { params: { query: { property_id: propertyId, limit: 50, include_closed: true } } }),
+    getMe(),
+  ]);
+  // Plain fetch: another typed api.GET call in this page exceeds the TypeScript instantiation depth.
+  const ownersResponse = await serverFetch(`/api/v1/properties/${propertyId}/owners`);
+  const owners: CurrentOwner[] = ownersResponse.ok ? ((await ownersResponse.json()) as CurrentOwner[]) : [];
   if (!data) {
     return (
       <p role="alert" className={ui.alert}>
@@ -100,6 +108,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
           </ul>
         </section>
       ) : null}
+
+      <PropertyOwnerPanel
+        propertyId={propertyId}
+        managementType={data.management_type}
+        owners={owners}
+        canEdit={me.data?.permissions.includes("properties:update") ?? false}
+      />
 
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("units")}</h2>

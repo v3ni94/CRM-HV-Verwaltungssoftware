@@ -136,3 +136,109 @@ def test_zuordnung_preview_then_apply(client: TestClient, world: World) -> None:
     reader = bearer(login(client, world, "lzreader"))
     assert _zuordnung(client, reader, "preview").status_code == 403
     assert _zuordnung(client, h, "preview", start_date="kein Datum").status_code == 422
+
+
+OBJEKTDATEN_OFFEN = (
+    "Objekt-Nummer;Objekt;Verwaltungsart;Gebäude;VE-Nummer;VE-Beschreibung;VE-Lage;"
+    "aktueller Eigentümer;vereinbarter Zahlbetrag;aktueller Mieter;vereinbarter Zahlbetrag\n"
+    "83;Doppelweg 3;WEG-Verwaltung;;1;WE 1;EG;Doppel, Dora;275,50;;\n"
+    "84;Mietgasse 4;Mietverwaltung;;1;WE 1;;;;Tom Offen;710,00\n"
+)
+EIGENTUEMER_OFFEN = (
+    "id;Name;Briefanrede;Benutzername;Adresse;Stadt;PLZ;Staat;Land\n"
+    "4801;Doppel, Dora;;;Ahornweg 1;Aachen;52062;;Deutschland\n"
+    "4802;Doppel, Dora;;;Birkenweg 2;Bonn;53111;;Deutschland\n"
+    "4804;Vermieter, Lena;;;;;;;\n"
+)
+MIETER_OFFEN = "id;Name;Briefanrede\n4803;Tom Offen;\n"
+
+
+def _manual(c: TestClient, h: dict[str, str], **body: Any) -> Any:
+    return c.post(f"{BASE}/zuordnung/manuell", json=body, headers=h)
+
+
+def test_zuordnung_open_items_assigned_manually(client: TestClient, world: World) -> None:
+    h = bearer(login(client, world, "lzadmin"))
+    csv = _csv("objektdaten.csv", OBJEKTDATEN_OFFEN)
+    _ok(
+        client.post(f"{BASE}/objektdaten", params={"mode": "apply"}, files={"file": csv}, headers=h)
+    )
+    _ok(
+        client.post(
+            f"{BASE}/kontakte",
+            params={"mode": "apply"},
+            files=[
+                ("files", _csv("eigentuemer.csv", EIGENTUEMER_OFFEN)),
+                ("files", _csv("mieter.csv", MIETER_OFFEN)),
+            ],
+            data={"roles": ["eigentuemer", "mieter"]},
+            headers=h,
+        )
+    )
+    report = _ok(
+        client.post(
+            f"{BASE}/zuordnung",
+            params={"mode": "apply"},
+            files={"file": _csv("objektdaten.csv", OBJEKTDATEN_OFFEN)},
+            data={"start_date": "2026-01-01"},
+            headers=h,
+        )
+    )
+    offen = {(e["objekt"], e["role"]): e for e in report["offen"]}
+    owner = offen[("83", "eigentuemer")]
+    assert owner["grund"] == "mehrdeutig"
+    assert owner["amount_cents"] == 27550
+    assert owner["zahlbetrag"] == "275,50"
+    assert sorted(c["address"] for c in owner["kandidaten"]) == [
+        "Ahornweg 1, 52062 Aachen",
+        "Birkenweg 2, 53111 Bonn",
+    ]
+    tenant = offen[("84", "mieter")]
+    assert tenant["grund"] == "vermieter_fehlt"
+    assert tenant["contact_id"]
+    # The CLI keys stay as they were.
+    assert all(isinstance(k, str) for e in report["mehrdeutig"] for k in e["kandidaten"])
+
+    chosen = owner["kandidaten"][0]["contact_id"]
+    body = {
+        "unit_id": owner["unit_id"],
+        "role": "eigentuemer",
+        "contact_id": chosen,
+        "amount_cents": owner["amount_cents"],
+        "start_date": "2026-01-01",
+    }
+    first = _ok(_manual(client, h, **body))
+    assert first["import_run_id"]
+    assert first["counts"]["vertraege_angelegt"] == 1
+    assert first["counts"]["zahlungen_cent_hoa_fee"] == 27550
+    assert first["eigentuemer_zugeordnet"] == 1
+    run = _ok(client.get(f"/api/v1/imports/{first['import_run_id']}", headers=h))
+    assert run["source"] == "immoware24:zuordnung-manuell"
+    again = _ok(_manual(client, h, **body))
+    assert again["counts"].get("vertraege_angelegt", 0) == 0
+    assert again["counts"]["vertraege_vorhanden"] == 1
+
+    landlord = next(
+        c["id"]
+        for c in _ok(client.get("/api/v1/contacts", params={"q": "Vermieter"}, headers=h))["items"]
+        if c["display_name"].startswith("Vermieter")
+    )
+    tenant_body = {
+        "unit_id": tenant["unit_id"],
+        "role": "mieter",
+        "contact_id": tenant["contact_id"],
+        "amount_cents": tenant["amount_cents"],
+        "start_date": "2026-01-01",
+    }
+    assert _manual(client, h, **tenant_body).status_code == 422
+    done = _ok(_manual(client, h, **tenant_body, landlord_contact_id=landlord))
+    assert done["counts"]["vermieter_angelegt"] == 1
+    assert done["counts"]["vertraege_angelegt"] == 1
+    assert done["mieter_zugeordnet"] == 1
+    repeat = _ok(_manual(client, h, **tenant_body, landlord_contact_id=landlord))
+    assert repeat["counts"].get("vermieter_angelegt", 0) == 0
+    assert repeat["counts"]["vertraege_vorhanden"] == 1
+
+    assert _manual(client, h, **{**body, "role": "verwalter"}).status_code == 422
+    reader = bearer(login(client, world, "lzreader"))
+    assert _manual(client, reader, **body).status_code == 403

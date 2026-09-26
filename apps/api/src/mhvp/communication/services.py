@@ -613,6 +613,33 @@ async def complete_message(
     return result
 
 
+async def enqueue_archive_for_messages(
+    session: AsyncSession, settings: Settings, tenant_id: uuid.UUID, message_ids: list[uuid.UUID]
+) -> None:
+    """Erledigt in der Mailansicht (einzeln oder Sammelaktion, Betreiber 26.09.2026) archiviert
+    die Gmail-Nachricht wie der Ticketabschluss. Fehler stoeren das Erledigen nie."""
+    if not message_ids:
+        return
+    if settings.ai_inline:
+        from mhvp.communication.tasks import archive_messages_once
+
+        try:
+            await archive_messages_once(settings, tenant_id, list(message_ids))
+        except Exception:
+            log.warning("archive job failed inline", extra={"messages": len(message_ids)})
+    else:
+        try:
+            from mhvp.worker import get_celery
+
+            get_celery().send_task(
+                "mhvp.communication.archive_messages",
+                args=[str(tenant_id), [str(m) for m in message_ids]],
+                queue="mail",
+            )
+        except Exception:
+            log.warning("could not queue archive job", extra={"messages": len(message_ids)})
+
+
 async def ticket_by_tnr(session: AsyncSession, tenant_id: uuid.UUID, subject: str | None) -> Any:
     """Ticket des Mandanten zur Kennung ``TNR#<nummer>`` im Betreff; ``None`` ohne Kennung,
     ohne Treffer oder bei einem zusammengeführten Ticket (dann gilt das Zielticket). Der

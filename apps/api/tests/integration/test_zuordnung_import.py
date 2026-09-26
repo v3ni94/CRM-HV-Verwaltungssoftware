@@ -134,6 +134,10 @@ async def _scenario(settings: Any) -> None:
             assert koch.kind is ContractKind.OWNERSHIP
             assert koch.start_date == START
             assert koch.title_transfer_date == START
+            # Imported contracts wait for management approval (migration 0133).
+            assert koch.source == "immoware24:zuordnung"
+            assert koch.approval_status == "pending"
+            assert koch.approved_by is None
             payment = await session.scalar(
                 select(ContractPayment).where(ContractPayment.contract_id == koch.id)
             )
