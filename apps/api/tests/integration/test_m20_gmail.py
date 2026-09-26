@@ -203,7 +203,8 @@ def test_gmail_sync_creates_tickets_and_threads(
 
     # Expired history: fallback to the inbox listing, deduplicated by Message-ID.
     fake.expire_history = True
-    assert _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h)) == {
+    expired = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert {k: expired[k] for k in ("fetched", "created", "duplicates", "failed")} == {
         "fetched": 3,
         "created": 0,
         "duplicates": 3,

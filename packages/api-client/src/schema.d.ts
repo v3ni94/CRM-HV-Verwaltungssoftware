@@ -33632,6 +33632,8 @@ export interface operations {
                 ticket_id?: string | null;
                 mailbox_id?: string | null;
                 q?: string | null;
+                /** @description Erledigte Nachrichten zeigen (Status done oder verknüpftes Ticket done, closed, rejected); gilt nur ohne status-Filter */
+                include_closed?: boolean;
                 limit?: number;
             };
             header?: never;
@@ -41502,10 +41504,12 @@ export interface operations {
                 /** @description Erstellt bis (inklusive) */
                 created_to?: string | null;
                 mine?: boolean;
-                /** @description Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse */
+                /** @description Nummer, Titel, Beschreibung, Kontaktname oder E-Mail, Objektadresse, Betreff oder Absender verknüpfter Mails (beinhaltet) */
                 q?: string | null;
                 /** @description Zusammengeführte Tickets zeigen */
                 include_merged?: boolean;
+                /** @description Erledigte Tickets (done, closed, rejected) zeigen; gilt nur ohne status-Filter */
+                include_closed?: boolean;
                 /** @description Quelltickets eines Ziels */
                 merged_into?: string | null;
                 limit?: number;

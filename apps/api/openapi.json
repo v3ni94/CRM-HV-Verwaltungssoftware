@@ -49787,6 +49787,18 @@
             }
           },
           {
+            "description": "Erledigte Nachrichten zeigen (Status done oder verknüpftes Ticket done, closed, rejected); gilt nur ohne status-Filter",
+            "in": "query",
+            "name": "include_closed",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Erledigte Nachrichten zeigen (Status done oder verknüpftes Ticket done, closed, rejected); gilt nur ohne status-Filter",
+              "title": "Include Closed",
+              "type": "boolean"
+            }
+          },
+          {
             "in": "query",
             "name": "limit",
             "required": false,
@@ -61469,7 +61481,7 @@
             }
           },
           {
-            "description": "Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse",
+            "description": "Nummer, Titel, Beschreibung, Kontaktname oder E-Mail, Objektadresse, Betreff oder Absender verknüpfter Mails (beinhaltet)",
             "in": "query",
             "name": "q",
             "required": false,
@@ -61483,7 +61495,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse",
+              "description": "Nummer, Titel, Beschreibung, Kontaktname oder E-Mail, Objektadresse, Betreff oder Absender verknüpfter Mails (beinhaltet)",
               "title": "Q"
             }
           },
@@ -61496,6 +61508,18 @@
               "default": true,
               "description": "Zusammengeführte Tickets zeigen",
               "title": "Include Merged",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Erledigte Tickets (done, closed, rejected) zeigen; gilt nur ohne status-Filter",
+            "in": "query",
+            "name": "include_closed",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Erledigte Tickets (done, closed, rejected) zeigen; gilt nur ohne status-Filter",
+              "title": "Include Closed",
               "type": "boolean"
             }
           },

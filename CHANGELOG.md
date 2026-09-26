@@ -5,6 +5,15 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.23.0 (26.09.2026) Objektbezüge im Kontakt, CSV-Zuordnung, Gmail-Archivierung, Ticketfilter
+
+- Kontakte: Abschnitt "Beziehungen zu Objekten und Einheiten" (Mieter, Eigentümer, Kategorie, Zeitraum, Status) unten auf der Kontaktseite, neuer Reiter "Tickets" mit allen personenbezogenen Tickets. Rollen Mieter und Eigentümer werden aus Verträgen, Eigentümerzuordnungen und Objektakte-Zuordnungen automatisch abgeleitet, Backfill über POST /contacts/roles/recompute.
+- Import: neues CLI `python -m mhvp.imports.zuordnung` verknüpft Eigentümer und Mieter aus den Objektdaten mit den importierten Kontakten und legt Verträge mit vereinbartem Zahlbetrag an (idempotent, Testlauf als Standard, Bericht zu Leerstand, mehrdeutigen Namen und Konflikten). Kontaktimport speichert Briefanrede, Bundesland und Exportnamen; Rolle Dienstleister auch über die API. Handbuch `docs/handbuch/import-zuordnung.md`.
+- Immoware24: "Alle unverknüpften Kontakte übernehmen" scheiterte mit internem Fehler (Telefon ohne Pflichtfeld Label), behoben.
+- Gmail: Beim Abruf wird die Gmail-Kennung jeder Nachricht gespeichert, fehlende Kennungen der letzten 90 Tage werden beim nächsten Abruf nachgetragen. Damit greift "Erledigt archiviert Mail" bei done, closed und rejected.
+- Tickets: Übersichten blenden done, closed und rejected standardmäßig aus (`include_closed=true` zeigt sie), Mailübersicht analog. Mandantenadministratoren dürfen jeden Status in jeden anderen setzen, ohne Zwischenschritte (Ereignis mit Kennzeichen admin_override). Suche "beinhaltet" jetzt auch über Betreff und Absender verknüpfter Mails sowie Kontakt-E-Mail.
+- Server: Runbook um vertrauenswürdige Betreiber-IP (fail2ban ignoreip, sshd Match Address) und den zweiten Teil des Vorfalls vom 26.09.2026 ergänzt.
+
 ## 1.22.1 (26.09.2026) SSH-Härtung: Passwortanmeldung bleibt aktiv
 
 - Server: `scripts/server/harden-ssh.sh` lässt die Passwortanmeldung standardmäßig aktiv und schaltet sie nur mit `--nur-schluessel` ab. Drop-in heißt jetzt `00-mhvp-ssh.conf` und hat Vorrang vor fremden Drop-ins.

@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.23.0",
+    date: "26.09.2026",
+    title: "Objektbezüge im Kontakt, CSV-Zuordnung, Gmail-Archivierung, Ticketfilter",
+    changes: [
+      "Kontakte: Beziehungen zu Objekten und Einheiten auf der Kontaktseite, Reiter Tickets, Rollen Mieter und Eigentümer werden automatisch abgeleitet",
+      "Import: Zuordnung von Eigentümern und Mietern aus den Objektdaten zu Einheiten mit Verträgen und vereinbartem Zahlbetrag",
+      "Immoware24: Fehler bei Alle unverknüpften Kontakte übernehmen behoben",
+      "Gmail: Kennung der Nachrichten wird gespeichert, Archivierung bei Abschluss eines Tickets greift",
+      "Tickets: erledigte Vorgänge in Übersichten ausgeblendet, Administratoren wechseln Status ohne Zwischenschritte, Suche über Betreff und Absender der Mails",
+    ],
+  },
+  {
     version: "1.22.1",
     date: "26.09.2026",
     title: "SSH-Härtung: Passwortanmeldung bleibt aktiv",
