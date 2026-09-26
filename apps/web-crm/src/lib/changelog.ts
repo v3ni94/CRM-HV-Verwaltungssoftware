@@ -17,6 +17,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.20.0",
+    date: "26.09.2026",
+    title: "Übergabeprotokoll, Portal, Belegeingang, Betrieb",
+    changes: [
+      "Übergabeprotokoll: Fotos verlieren beim Hochladen EXIF- und GPS-Daten und werden auf höchstens 2000 px verkleinert",
+      "Übergabeprotokoll: Einladungscode für Gehilfen als E-Mail-Entwurf oder PDF-Anschreiben, jede Zustellung erzeugt einen neuen Code",
+      "Übergabeprotokoll: Termin anlegen mit Vorbelegung von Titel, Ort und Beteiligten, danach Link in den Kalender",
+      "Portal: Mitarbeiter sehen Übergabeprotokolle ihrer Objekte, Rollenwechsel in eine ausgenommene Rolle entzieht den Zugang sofort",
+      "Belegeingang: Schalter für den automatischen Eingang aus neuen Mail-Anhängen (Einstellungen, DMS), standardmäßig aus, Ergebnis nur als Vorschlag",
+      "Tickets: Integrationstest für die Zusammenführung, Sperre zusammengeführter Tickets greift jetzt auch bei Zuweisern und Sammelstatus",
+      "Betrieb: Runbook und Skript für Serverzugang, SSH-Härtung und Stilllegung von cloud-init",
+    ],
+  },
+  {
     version: "1.19.0",
     date: "26.09.2026",
     title:
