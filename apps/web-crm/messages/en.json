@@ -985,7 +985,8 @@
       "contract_termination": "Termination",
       "meter_calibration": "Meter calibration",
       "bank_consent": "Bank consent expiry",
-      "document_retention_end": "Retention end"
+      "document_retention_end": "Retention end",
+      "meeting_resolution_deadline": "Resolution deadline virtual meeting"
     },
     "status": {
       "open": "open",
@@ -1576,6 +1577,15 @@
     }
   },
   "HoaWork": {
+    "resolutionDeadline": {
+      "title": "Resolution deadline of the virtual meeting",
+      "date": "Resolution deadline",
+      "source": "Source (resolution or community rules with reference)",
+      "hint": "The deadline is entered, not computed. It appears in the deadline list with a 7 day lead time and is orientation only, to be verified.",
+      "sourceRequired": "Please state the source of the deadline.",
+      "save": "Save deadline",
+      "saved": "Deadline saved."
+    },
     "noLedger": "No ledger exists for this community yet.",
     "plans": "Economic plans",
     "statements": "HOA statements",

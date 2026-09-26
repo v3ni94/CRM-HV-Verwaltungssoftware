@@ -218,6 +218,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/(items|calculate|transition|apply)$`) },
   { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(costs|calculate|transition|post|new-version)$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
+  // Beschlussfrist der virtuellen Versammlung (M9-07).
+  { method: "PATCH", pattern: new RegExp(`^hoa/meetings/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/votes$`) },
   { method: "GET", pattern: new RegExp(`^hoa/agenda/${ID}/tally$`) },
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/announce$`) },

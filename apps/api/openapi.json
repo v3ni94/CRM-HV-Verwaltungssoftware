@@ -16430,6 +16430,30 @@
             "title": "Mode",
             "type": "string"
           },
+          "resolution_deadline_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Deadline At"
+          },
+          "resolution_deadline_source": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Deadline Source"
+          },
           "scheduled_at": {
             "format": "date-time",
             "title": "Scheduled At",
@@ -16471,6 +16495,38 @@
           "scheduled_at"
         ],
         "title": "MeetingIn",
+        "type": "object"
+      },
+      "MeetingPatch": {
+        "additionalProperties": false,
+        "description": "Resolution deadline of a virtual meeting (M9-07). ``null`` clears both fields.",
+        "properties": {
+          "resolution_deadline_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Deadline At"
+          },
+          "resolution_deadline_source": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Deadline Source"
+          }
+        },
+        "title": "MeetingPatch",
         "type": "object"
       },
       "MemberCompetences": {
@@ -42902,6 +42958,59 @@
         "tags": [
           "hoa"
         ]
+      },
+      "patch": {
+        "operationId": "patch_meeting_api_v1_hoa_meetings__meeting_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Meeting Api V1 Hoa Meetings  Meeting Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Beschlussfrist der Versammlung (M9-07)",
+        "tags": [
+          "hoa"
+        ]
       }
     },
     "/api/v1/hoa/meetings/{meeting_id}/agenda": {
@@ -62217,7 +62326,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end)$",
+                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end|meeting_resolution_deadline)$",
                   "type": "string"
                 },
                 {

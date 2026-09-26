@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { MajorityRules, MeetingPanel, type MajorityRule } from "@/components/hoa/HoaForms";
+import { MeetingDeadlineForm } from "@/components/hoa/MeetingDeadlineForm";
 import { MemberVoting } from "@/components/hoa/MemberVoting";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -34,6 +35,13 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
         {t("represented", { n: Number(data.represented ?? 0), proxies: Number(data.proxies ?? 0) })}
       </p>
       <p className={ui.notice}>{t("meetingNotice")}</p>
+      {data.mode === "virtual" ? (
+        <MeetingDeadlineForm
+          meetingId={meetingId}
+          deadline={data.resolution_deadline_at ? String(data.resolution_deadline_at) : null}
+          source={data.resolution_deadline_source ? String(data.resolution_deadline_source) : null}
+        />
+      ) : null}
       <MemberVoting
         meetingId={meetingId}
         status={String(data.status)}

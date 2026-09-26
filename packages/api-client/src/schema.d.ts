@@ -4342,7 +4342,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Beschlussfrist der Versammlung (M9-07) */
+        patch: operations["patch_meeting_api_v1_hoa_meetings__meeting_id__patch"];
         trace?: never;
     };
     "/api/v1/hoa/meetings/{meeting_id}/agenda": {
@@ -15648,6 +15649,10 @@ export interface components {
              * @default presence
              */
             mode: string;
+            /** Resolution Deadline At */
+            resolution_deadline_at?: string | null;
+            /** Resolution Deadline Source */
+            resolution_deadline_source?: string | null;
             /**
              * Scheduled At
              * Format: date-time
@@ -15662,6 +15667,16 @@ export interface components {
             voting_principle: string;
             /** Voting Principle Basis */
             voting_principle_basis?: string | null;
+        };
+        /**
+         * MeetingPatch
+         * @description Resolution deadline of a virtual meeting (M9-07). ``null`` clears both fields.
+         */
+        MeetingPatch: {
+            /** Resolution Deadline At */
+            resolution_deadline_at?: string | null;
+            /** Resolution Deadline Source */
+            resolution_deadline_source?: string | null;
         };
         /**
          * MemberCompetences
@@ -29020,6 +29035,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_meeting_api_v1_hoa_meetings__meeting_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingPatch"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
