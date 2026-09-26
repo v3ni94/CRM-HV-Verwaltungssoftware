@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { problemMessage, readProblem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 type HelperAccess = {
@@ -16,6 +17,7 @@ type HelperAccess = {
   valid_to: string | null;
   account_status: string;
   activated: boolean;
+  has_email?: boolean;
 };
 
 type Created = {
@@ -26,7 +28,7 @@ type Created = {
 
 /** Gehilfenzugänge (M30, ported from U-Protokoll "Gehilfenzugänge"): staff creates a portal
  *  access scoped to exactly this protocol for a helper, tenant or owner, optionally also
- *  registered as a participant moving in/out. Revoke and resend the invitation here. */
+ *  registered as a participant moving in/out. Revoke here; the invitation goes out as mail draft or letter (M30-01). */
 export function HelperAccessSection({
   base,
   disabled,
@@ -45,6 +47,8 @@ export function HelperAccessSection({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<Created | null>(null);
+  const [asMailDraft, setAsMailDraft] = useState(true);
+  const [drafted, setDrafted] = useState(false);
   const url = `${base}/helper-access`;
 
   async function load() {
@@ -67,6 +71,7 @@ export function HelperAccessSection({
       email: email.trim(),
       kind,
       register_as_participant: registerParticipant,
+      invitation_as_mail_draft: asMailDraft,
     };
     if (registerParticipant) body.participant_role = participantRole;
     const res = await bff<Created>(url, { method: "POST", body: JSON.stringify(body) });
@@ -88,13 +93,49 @@ export function HelperAccessSection({
     else setError(res.message);
   }
 
-  async function resend(grantId: string) {
+  /** M30-01: the code is stored as a hash only, so each delivery issues a fresh code. */
+  async function invitationDraft(grantId: string) {
+    if (!window.confirm(t("helperAccess.confirmNewCode"))) return;
     setBusy(true);
     setError(null);
-    const res = await bff<Created>(`${url}/${grantId}/resend`, { method: "POST" });
+    setCreated(null);
+    setDrafted(false);
+    const res = await bff<{ mail_draft_id: string }>(`${url}/${grantId}/invitation-draft`, {
+      method: "POST",
+    });
     setBusy(false);
-    if (res.ok) setCreated(res.data);
+    if (res.ok) setDrafted(true);
     else setError(res.message);
+  }
+
+  async function invitationLetter(grantId: string) {
+    if (!window.confirm(t("helperAccess.confirmNewCode"))) return;
+    setBusy(true);
+    setError(null);
+    setCreated(null);
+    setDrafted(false);
+    try {
+      const response = await fetch(`${url}/${grantId}/invitation-letter`, {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        setError(problemMessage(await readProblem(response), response.status));
+        return;
+      }
+      const blob = await response.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = `einladung-${grantId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(href);
+    } catch {
+      setError(problemMessage(null, 0));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -127,14 +168,35 @@ export function HelperAccessSection({
                   {!disabled ? (
                     <div className="flex justify-end gap-2">
                       {!r.activated ? (
-                        <button
-                          type="button"
-                          className={ui.buttonSm}
-                          disabled={busy}
-                          onClick={() => resend(r.grant_id)}
-                        >
-                          {t("helperAccess.resend")}
-                        </button>
+                        r.has_email === false ? (
+                          <button
+                            type="button"
+                            className={ui.buttonSm}
+                            disabled={busy}
+                            onClick={() => invitationLetter(r.grant_id)}
+                          >
+                            {t("helperAccess.invitationLetter")}
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className={ui.buttonSm}
+                              disabled={busy}
+                              onClick={() => invitationDraft(r.grant_id)}
+                            >
+                              {t("helperAccess.invitationDraft")}
+                            </button>
+                            <button
+                              type="button"
+                              className={ui.buttonSm}
+                              disabled={busy}
+                              onClick={() => invitationLetter(r.grant_id)}
+                            >
+                              {t("helperAccess.invitationLetter")}
+                            </button>
+                          </>
+                        )
                       ) : null}
                       <button
                         type="button"
@@ -206,6 +268,14 @@ export function HelperAccessSection({
             />
             {t("helperAccess.registerParticipant")}
           </label>
+          <label className="flex items-center gap-1.5 text-sm">
+            <input
+              type="checkbox"
+              checked={asMailDraft}
+              onChange={(e) => setAsMailDraft(e.target.checked)}
+            />
+            {t("helperAccess.mailDraftOption")}
+          </label>
           {registerParticipant ? (
             <fieldset className="flex gap-4">
               <label className="flex items-center gap-1.5 text-sm">
@@ -244,7 +314,7 @@ export function HelperAccessSection({
         created.invitation_token ? (
           <div className={ui.notice} data-testid="helper-invitation-token">
             <p className="font-medium">{t("helperAccess.tokenTitle")}</p>
-            <p>{t("helperAccess.tokenHelp")}</p>
+            <p>{asMailDraft ? t("helperAccess.tokenHelp") : t("helperAccess.tokenHelpManual")}</p>
             <code className="mt-1 block select-all break-all rounded bg-bg px-2 py-1 font-mono text-xs">
               {created.invitation_token}
             </code>
@@ -253,6 +323,7 @@ export function HelperAccessSection({
           <p className="text-sm text-muted">{t("helperAccess.mailDrafted")}</p>
         )
       ) : null}
+      {drafted ? <p className="text-sm text-muted">{t("helperAccess.mailDrafted")}</p> : null}
     </div>
   );
 }

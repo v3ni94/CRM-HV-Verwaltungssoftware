@@ -162,6 +162,38 @@ Postausgang mit Vier-Augen-Freigabe (M20).
 - `docs/rules/M30-06.md`, `docs/rules/README.md`
 - `apps/api/tests/integration/test_m30_handover.py::test_helper_access_flow`
 
+## Zustellung des Einladungscodes für Gehilfen (M30-01, 26.09.2026)
+
+Befund: Der Einladungscode wird nur als SHA-256-Hash gespeichert (`portal_account.invitation_hash`).
+Ein bereits erzeugter Code lässt sich daher nicht erneut anzeigen oder nachträglich in einen
+Entwurf übernehmen. Umsetzung ohne Migration:
+
+- Beim Anlegen (`POST /handover/protocols/{id}/helper-access`) steuert die Option
+  `invitation_as_mail_draft` (Standard `true`, im CRM "Einladung als E-Mail-Entwurf anlegen"),
+  ob der Entwurf sofort mit dem Code angelegt wird. Ist sie aus oder fehlt ein Postfach, wird
+  der Code einmalig in der Antwort angezeigt.
+- `POST /handover/protocols/{id}/helper-access/{grant_id}/invitation-draft` erzeugt einen neuen
+  Code und legt einen E-Mail-Entwurf im Postausgang an (`direction=out`, `status=draft`). Der
+  Versand verlangt weiterhin die Vier-Augen-Freigabe, es wird nichts versendet. Ohne Postfach
+  oder ohne E-Mail-Adresse antwortet der Endpunkt mit 409. Der Code erscheint nicht in der Antwort.
+- `POST /handover/protocols/{id}/helper-access/{grant_id}/invitation-letter` erzeugt einen neuen
+  Code und liefert ein Anschreiben als PDF auf dem Briefbogen des Mandanten (Renderer aus
+  `mhvp.documents.letters`). Abweichung vom Auftrag (GET): der Endpunkt ist POST, weil er den
+  Code rotiert; ein Vorabruf per GET dürfte keinen bereits übermittelten Code entwerten.
+  Ohne erfasste Anschrift trägt das Anschreiben nur den Namen.
+- Jede neue Zustellung macht einen früher übermittelten Code ungültig; das CRM fragt vorher nach.
+  Für aktivierte Zugänge antworten beide Endpunkte mit 409.
+- Text (`invitation_text`): Protokollnummer, Portal-URL (Einstellung `web_portal_url`, ohne
+  Einstellung ein allgemeiner Hinweis auf das Kundenportal), Code, Gültigkeit
+  (`INVITE_DAYS`, 14 Tage, einmalig verwendbar) und Hinweis auf Passwort und zweiten Faktor.
+- CRM: im Gehilfeneintrag die Schaltflächen "E-Mail-Entwurf erstellen" und "Anschreiben
+  herunterladen" (ohne E-Mail nur das Anschreiben); sie ersetzen dort "Erneut zustellen"
+  (der Endpunkt `resend` bleibt bestehen und nutzt denselben Text).
+- Dateien: `apps/api/src/mhvp/handover/routers.py`, `apps/api/src/mhvp/core/config.py`,
+  `apps/api/tests/unit/test_m30_helper_invitation.py`,
+  `apps/web-crm/src/components/handover/HelperAccessSection.tsx` und `.test.tsx`,
+  `apps/web-crm/src/app/api/bff/[...path]/route.ts`, `apps/web-crm/messages/de.json`.
+
 ## Dateien (Stufe 4: Datenübernahme U-Protokoll, 25.09.2026)
 
 - `apps/api/src/mhvp/handover/uprotokoll_import.py` (Parser, Vorschau, Übernahme)
