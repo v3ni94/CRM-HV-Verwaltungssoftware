@@ -176,4 +176,8 @@ Einheiten und Personen des Objekts bekannt sind. Die Einheit aus dem Upload (`un
 wirkt, wenn objektakte die Einheit unter demselben Bezeichner führt und der Text selbst keine
 Einheit nennt. Kontakt-IDs werden gespeichert, wirken aber noch nicht, weil objektakte die
 Personen nicht mit ihrer CRM-Kennung führt; die Eigentümer und Mieter kommen dort bisher über
-den Listenimport (Immoware24-Export) hinein.
+den Listenimport (Immoware24-Export) hinein. Löschung: Wird ein über objektakte abgelegtes
+Dokument im CRM gelöscht (Aufbewahrung abgelaufen oder von Hand), bleiben die Ablagen in
+objektakte, Drive und Paperless bestehen; die Löschspiegelung des CRM (`mirror_deletion`) gilt
+nur für die eigenen Spiegel. Die Löschung dort erfolgt nach den Aufbewahrungsregeln von
+objektakte.
