@@ -380,6 +380,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^properties/${ID}/dms-documents$`) },
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/dms-documents$`) },
   { method: "GET", pattern: /^dms-documents\/[0-9]+\/file$/ },
+  // Paperless-Suche und Gesellschaftsfilter (Übernahme aus dem Immoware Hub, 7.2), nur lesend.
+  { method: "GET", pattern: /^dms-documents$/ },
+  { method: "GET", pattern: /^dms-documents\/companies$/ },
   // DMS-Anbindung (Einstellungen): Paperless und Google Drive.
   { method: "GET", pattern: /^dms-connections$/ },
   { method: "PUT", pattern: /^dms-connections\/(paperless|google_drive)$/ },
