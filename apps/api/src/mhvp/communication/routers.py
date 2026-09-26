@@ -577,9 +577,19 @@ async def messages(
     ticket_id: uuid.UUID | None = None,
     mailbox_id: uuid.UUID | None = None,
     q: str | None = None,
+    include_closed: bool = Query(
+        default=False,
+        description=(
+            "Erledigte Nachrichten zeigen (Status done oder verknüpftes Ticket done, closed,"
+            " rejected); gilt nur ohne status-Filter"
+        ),
+    ),
     limit: int = Query(default=100, ge=1, le=500),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
+    from mhvp.tickets.models import Ticket
+    from mhvp.tickets.routers import CLOSING_STATUSES
+
     async with tenant_tx(request, principal) as session:
         query = select(Message).order_by(Message.created_at.desc())
         if not principal.has("tenant_settings:update"):  # admins see every mailbox
@@ -587,6 +597,12 @@ async def messages(
             query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
         if status:
             query = query.where(Message.status == status)
+        elif not include_closed and ticket_id is None:
+            closed_ticket = select(Ticket.id).where(Ticket.status.in_(CLOSING_STATUSES))
+            query = query.where(
+                Message.status != "done",
+                or_(Message.ticket_id.is_(None), Message.ticket_id.not_in(closed_ticket)),
+            )
         if contact_id:
             query = query.where(Message.contact_id == contact_id)
         if direction:

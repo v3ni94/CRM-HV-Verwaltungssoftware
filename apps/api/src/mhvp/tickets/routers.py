@@ -82,6 +82,15 @@ TICKET_FLOW = {
 
 # Statuses that end a ticket; they set resolved_at and trigger mail archiving.
 CLOSING_STATUSES = frozenset({TicketStatus.DONE, TicketStatus.CLOSED, TicketStatus.REJECTED})
+
+
+def _may_skip_flow(principal: TenantPrincipal) -> bool:
+    """Betreiber 26.09.2026: Mandantenadministratoren setzen jeden Status in jeden anderen,
+    ohne Zwischenschritte. Kennzeichen ist ``tickets:delete`` (nur tenant_admin und
+    Plattform-Admin, Regel M2-07). Alle anderen bleiben an TICKET_FLOW gebunden."""
+    return principal.has("tickets:delete")
+
+
 ORDER_FLOW = {
     OrderStatus.DRAFT: {OrderStatus.REQUESTED, OrderStatus.CANCELLED},
     OrderStatus.REQUESTED: {
@@ -1208,14 +1217,24 @@ async def list_tickets(
     q: str | None = Query(
         default=None,
         max_length=300,
-        description="Nummer, Titel, Beschreibung, Kontaktname oder Objektadresse",
+        description=(
+            "Nummer, Titel, Beschreibung, Kontaktname oder E-Mail, Objektadresse,"
+            " Betreff oder Absender verknüpfter Mails (beinhaltet)"
+        ),
     ),
     include_merged: bool = Query(default=True, description="Zusammengeführte Tickets zeigen"),
+    include_closed: bool = Query(
+        default=False,
+        description=(
+            "Erledigte Tickets (done, closed, rejected) zeigen; gilt nur ohne status-Filter"
+        ),
+    ),
     merged_into: uuid.UUID | None = Query(default=None, description="Quelltickets eines Ziels"),
     limit: int = Query(default=100, ge=1, le=500),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
-    from mhvp.contacts.models import Contact, PartyMember
+    from mhvp.communication.models import Message
+    from mhvp.contacts.models import Contact, ContactEmail, PartyMember
     from mhvp.contracts.models import Contract, ContractKind
     from mhvp.properties.models import Property, PropertyOwner, Unit
 
@@ -1236,7 +1255,28 @@ async def list_tickets(
                     | (Property.house_number.ilike(escaped, escape="\\"))
                 )
             )
-            text_match = title_match | description_match | contact_name_match | property_match
+            # Betreiber 26.09.2026: "beinhaltet"-Suche auch ueber Betreff und Absender der
+            # verknuepften Mails sowie die E-Mail-Adressen des Kontakts.
+            message_match = Ticket.id.in_(
+                select(Message.ticket_id).where(
+                    Message.ticket_id.is_not(None),
+                    (Message.subject.ilike(escaped, escape="\\"))
+                    | (Message.from_address.ilike(escaped, escape="\\")),
+                )
+            )
+            contact_email_match = Ticket.contact_id.in_(
+                select(ContactEmail.contact_id).where(
+                    ContactEmail.email.ilike(escaped, escape="\\")
+                )
+            )
+            text_match = (
+                title_match
+                | description_match
+                | contact_name_match
+                | contact_email_match
+                | property_match
+                | message_match
+            )
             query = query.where(
                 (Ticket.number == int(term)) | text_match
                 if term.isdigit() and len(term) <= 9
@@ -1249,6 +1289,8 @@ async def list_tickets(
         statuses = _parse_status_filter(status)
         if statuses:
             query = query.where(Ticket.status.in_(statuses))
+        elif not include_closed and merged_into is None:
+            query = query.where(Ticket.status.not_in(CLOSING_STATUSES))
         if property_id:
             query = query.where(Ticket.property_id == property_id)
         if unit_id:
@@ -1458,7 +1500,8 @@ async def patch_ticket(
                 values[key] = _validate_extra_field_value(field, raw)
             ticket.extra_fields = values
         if body.status and body.status is not ticket.status:
-            if body.status not in TICKET_FLOW[ticket.status]:
+            admin_override = body.status not in TICKET_FLOW[ticket.status]
+            if admin_override and not _may_skip_flow(principal):
                 raise ProblemError(
                     ErrorCodes.CONFLICT,
                     detail=f"Wechsel {ticket.status.value} nach {body.status.value} unzulässig.",
@@ -1472,7 +1515,11 @@ async def patch_ticket(
                 ticket,
                 "status",
                 principal.user_id,
-                {"from": ticket.status.value, "to": body.status.value},
+                {
+                    "from": ticket.status.value,
+                    "to": body.status.value,
+                    **({"admin_override": True} if admin_override else {}),
+                },
             )
             ticket.status = body.status
             ticket.resolved_at = datetime.now(UTC) if body.status in CLOSING_STATUSES else None
@@ -1680,7 +1727,7 @@ async def bulk_status(
             if body.status is ticket.status:
                 changed.append({"id": str(ticket.id), "status": ticket.status.value})
                 continue
-            if body.status not in TICKET_FLOW[ticket.status]:
+            if body.status not in TICKET_FLOW[ticket.status] and not _may_skip_flow(principal):
                 failed.append(
                     {
                         "id": str(ticket.id),
