@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { DmsDocuments } from "@/components/dms/DmsDocuments";
+import { DmsPersonExport } from "@/components/dms/DmsPersonExport";
 import { DmsPersonProposal } from "@/components/dms/DmsPersonProposal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -110,6 +111,7 @@ export default async function DmsObjectPage({ params }: { params: Promise<{ numb
         )}
       </section>
       <DmsDocuments number={detail.number} />
+      {detail.property_id ? <DmsPersonExport number={detail.number} /> : null}
       {detail.property_id ? <DmsPersonProposal number={detail.number} /> : null}
     </div>
   );

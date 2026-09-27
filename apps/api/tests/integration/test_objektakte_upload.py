@@ -35,7 +35,7 @@ from mhvp.platform import services
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m2_platform import _settings as base_settings
-from tests.integration.test_m5_contracts import _unit
+from tests.integration.test_m5_contracts import _party, _unit
 
 pytestmark = pytest.mark.integration
 BASE = "/api/v1/integrations/objektakte"
@@ -93,6 +93,7 @@ class FakeObjektakte:
     def __init__(self) -> None:
         self.posts: list[dict[str, Any]] = []
         self.gets: list[str] = []
+        self.imports: list[str] = []
         self.post_status = 202
         self.post_body: dict[str, Any] = _state(501, "registered")
         self.get_body: dict[str, Any] = _state(501, "filed")
@@ -108,6 +109,17 @@ class FakeObjektakte:
             crm_id = body.split('name="crm_document_id"')[1].split("\r\n\r\n")[1].split("\r\n")[0]
             return httpx.Response(
                 self.post_status, json={**self.post_body, "crm_document_id": crm_id}
+            )
+        if request.method == "POST" and path.endswith("/imports/"):
+            self.imports.append(request.read().decode("utf-8"))
+            return httpx.Response(
+                202,
+                json={
+                    "batch_id": 77,
+                    "created": True,
+                    "status": "uploaded",
+                    "review_path": "/importe/77/",
+                },
             )
         if request.method == "GET" and path.startswith("documents/"):
             self.gets.append(path)
@@ -414,3 +426,32 @@ def test_webhook_with_crm_document_id_links_existing_document(
     assert rows["upload"]["status"] == "done"
     assert rows["source_meta"]["objektakte"]["objektakte_document_id"] == 777
     assert rows["source_meta"]["objektakte"]["paperless_id"] == 9001
+
+
+def test_persons_export_sends_names_only(
+    make_client: Callable[..., TestClient], world: World, fake: FakeObjektakte
+) -> None:
+    client = make_client()
+    client.app.state.objektakte_transport = httpx.MockTransport(fake.handler)  # type: ignore[attr-defined]
+    h = bearer(login(client, world, "upadmin"))
+    prop = _property(client, h, "319")
+    unit = _unit(client, h, prop, "4")
+    party, contact = _party(client, h, "Erika")
+    ownership = {
+        "kind": "ownership",
+        "start_date": "2020-01-01",
+        "title_transfer_date": "2020-01-01",
+        "acquisition_kind": "first_acquisition",
+        "unit_id": unit,
+        "party_id": party,
+    }
+    _ok(client.post("/api/v1/contracts", json=ownership, headers=h), 201)
+    body = _ok(client.post(f"{BASE}/objects/319/persons-export", headers=h))
+    assert body["batch_id"] == 77
+    assert body["units"] == 1
+    assert body["units_with_owner"] == 1
+    assert body["review_url"] == "https://uebernahme.example.test/importe/77/"
+    sent = fake.imports[0]
+    assert "Objekt-Nr;Status;Objekt;Verwaltungsart;Gebaeude;VE-Nr;VE-Beschreibung" in sent
+    assert f";4;WE 4;;{contact['display_name']};;;" in sent
+    assert "@" not in sent

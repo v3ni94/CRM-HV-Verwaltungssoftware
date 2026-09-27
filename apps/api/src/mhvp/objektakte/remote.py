@@ -242,6 +242,46 @@ class ObjektakteClient:
             raise ObjektakteUnavailableError("objektakte liefert keine gültige Antwort.")
         return body
 
+    async def upload_unit_list(self, number: str, *, filename: str, data: bytes) -> dict[str, Any]:
+        """Unit list with owners and tenants as import proposal (persons:write, 27.09.2026)."""
+        url = self._base + f"objects/{self._number(number)}/imports/"
+        try:
+            response = await self._client.post(
+                url,
+                files={"file": (filename, data, "text/csv")},
+                timeout=UPLOAD_TIMEOUT_SECONDS,
+            )
+        except httpx.TimeoutException:
+            raise ObjektakteUnavailableError(
+                "objektakte antwortet nicht (Zeitüberschreitung)."
+            ) from None
+        except httpx.HTTPError:
+            raise ObjektakteUnavailableError("objektakte ist nicht erreichbar.") from None
+        if response.status_code == 503:
+            raise ObjektakteDeferredError(
+                "objektakte nimmt Personenlisten derzeit nicht an "
+                "(Schalter sync.crm_persons_enabled)."
+            )
+        if response.status_code in (400, 404, 409):
+            raise ObjektakteRejectedError(
+                f"objektakte lehnt die Liste ab (HTTP {response.status_code}): "
+                f"{_error_text(response)}"
+            )
+        if response.status_code in (401, 403):
+            raise ObjektakteUnavailableError(
+                f"objektakte verweigert die Liste (HTTP {response.status_code}); "
+                "Token oder Scope persons:write prüfen."
+            )
+        if response.status_code >= 400:
+            raise ObjektakteUnavailableError(f"objektakte meldet HTTP {response.status_code}.")
+        try:
+            body = response.json()
+        except ValueError:
+            raise ObjektakteUnavailableError("objektakte liefert keine gültige Antwort.") from None
+        if not isinstance(body, dict):
+            raise ObjektakteUnavailableError("objektakte liefert keine gültige Antwort.")
+        return body
+
     async def document_status(self, document_id: int) -> dict[str, Any]:
         """Status endpoint 7."""
         data = await self._get(f"documents/{int(document_id)}/")

@@ -191,6 +191,7 @@ Independent of the dump based takeover above; both meet on `Document.source_syst
 | `webhook.py` | `POST /api/v1/integrations/objektakte/webhook`, HMAC (`OBJEKTAKTE_WEBHOOK_SECRET`), idempotent via `objektakte_webhook_receipt` |
 | `dms_models.py` | `ObjektakteWebhookReceipt`, `ObjektaktePersonProposal` (migration `0154_objektakte_dms`), `ObjektakteUpload` (migration `0155_objektakte_upload`) |
 | `upload.py` | Upload of CRM documents to objektakte (26.09.2026): routing in `store_document` (upload or scan, one property, switch `OBJEKTAKTE_UPLOAD_ENABLED`), job `mhvp.objektakte.upload` (pending, submitted, done, failed), CRM mirrors skipped for routed documents |
+| `person_export.py` | Units with current owner and tenant names as an Immoware24 unit list for objektakte (27.09.2026), endpoint `persons-export`; names only, no contact data or amounts |
 
 Tests: `tests/unit/test_m29_objektakte_remote.py`, `tests/integration/test_m29_dms_objektakte.py`.
 

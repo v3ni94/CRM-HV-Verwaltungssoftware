@@ -39,6 +39,7 @@ from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import DocumentLink
 from mhvp.objektakte import dms_service as svc
+from mhvp.objektakte import person_export
 from mhvp.objektakte.dms_models import ObjektaktePersonProposal, ObjektakteUpload
 from mhvp.objektakte.remote import (
     ObjektakteClient,
@@ -522,3 +523,50 @@ async def reject_proposal(
 ) -> dict[str, Any]:
     _need(principal, "contacts:read")
     return await _decide(request, principal, proposal_id, "rejected", body.note if body else None)
+
+
+@router.post(
+    "/objects/{number}/persons-export",
+    summary="Einheiten, Eigentümer und Mieter als Importvorschlag an objektakte übergeben",
+)
+async def export_persons(
+    number: str, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    """Sends the unit list of the property (names only, mhvp.objektakte.person_export) to
+    objektakte, where it becomes an import proposal; objektakte takes nothing over before its
+    import assistant releases the rows."""
+    _need(principal, "contacts:read")
+    async with tenant_tx(request, principal) as session:
+        prop = await svc.property_by_number(session, principal.tenant_id, number)
+        if prop is None:
+            raise ProblemError(ErrorCodes.NOT_FOUND, detail="Objekt im CRM nicht gefunden.")
+        data, counts = await person_export.unit_list_csv(session, principal.tenant_id, prop)
+        prop_number, prop_id = prop.number, prop.id
+    client = await _client(request, principal)
+    try:
+        async with client:
+            result = await client.upload_unit_list(
+                prop_number, filename=f"crm_einheitenliste_{prop_number}.csv", data=data
+            )
+    except ObjektakteError as exc:
+        raise _upstream(exc) from None
+    async with tenant_tx(request, principal) as session:
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="objektakte.persons_exported",
+            entity_type="property",
+            entity_id=prop_id,
+            actor_user_id=principal.user_id,
+            payload={"object_number": prop_number, "batch_id": result.get("batch_id"), **counts},
+        )
+    settings: Settings = request.app.state.settings
+    base = (settings.objektakte_api_url or "").split("/api/crm/")[0].rstrip("/")
+    review = result.get("review_path")
+    return {
+        **counts,
+        "batch_id": result.get("batch_id"),
+        "created": result.get("created"),
+        "status": result.get("status"),
+        "review_url": f"{base}{review}" if base and isinstance(review, str) else None,
+    }

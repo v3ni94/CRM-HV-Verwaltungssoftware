@@ -17,12 +17,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.32.1",
+    version: "1.33.1",
     date: "27.09.2026",
     title: "Bildpipeline für alle Uploads, Entscheidungen zu den Übergabeprotokollen",
     changes: [
       "Dokumente: Jeder Upload läuft durch die Bildpipeline (Metadaten wie EXIF und GPS entfernt, höchstens 2.000 Pixel Kantenlänge), bisher nur Übergabe- und Portal-Uploads",
       "Übergabeprotokolle: offene Fragen M30-02 bis M30-05 entschieden, zweiter Faktor freiwillig nach M2-01",
+    version: "1.33.0",
+    date: "27.09.2026",
+    title: "Eigentümer und Mieter an die Objektübernahme übergeben",
+    changes: [
+      "DMS: Einheiten mit Eigentümern und Mietern (nur Namen) als Importvorschlag an die Objektübernahme übergeben, Übernahme erst nach Prüfung dort",
     ],
   },
   {

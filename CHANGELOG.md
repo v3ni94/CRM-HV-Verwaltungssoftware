@@ -5,10 +5,13 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
-## 1.32.1 (27.09.2026) Bildpipeline für alle Uploads, Entscheidungen zu den Übergabeprotokollen
+## 1.33.1 (27.09.2026) Bildpipeline für alle Uploads, Entscheidungen zu den Übergabeprotokollen
 
 - Dokumente: Jeder Upload über POST /documents läuft durch die Bildpipeline der Übergabeprotokolle (Metadaten wie EXIF und GPS entfernt, Ausrichtung angewendet, höchstens 2.000 Pixel Kantenlänge); bisher galt sie nur für Übergabe- und Portal-Uploads. Nicht dekodierbare Bilder werden unverändert gespeichert
 - Übergabeprotokolle: offene Fragen M30-02 bis M30-05 entschieden (Rechtsprüfung der Unterschriften angestoßen, keine Übernahme der U-Protokoll-Altdaten, Altanwendung bis 31.12.2026 lesend, zweiter Faktor freiwillig nach M2-01)
+## 1.33.0 (27.09.2026) Eigentümer und Mieter an die Objektübernahme übergeben
+
+- DMS und Objektübernahme: Knopf "Liste übergeben" auf der DMS-Seite eines Objekts überträgt die Einheiten mit den Namen der laufenden Eigentums- und Mietverträge als Importvorschlag an objektakte (Format Immoware24-Einheitenliste, keine Kontaktdaten, keine Beträge). Übernommen wird erst nach Prüfung im Importassistenten von objektakte; danach tragen die Eigentümer- und Mieterakten dort die Namen und Uploads aus dem CRM landen in der richtigen Akte. Neuer Endpunkt POST /integrations/objektakte/objects/{nummer}/persons-export.
 
 ## 1.32.0 (27.09.2026) Upload im CRM mit Ablage über objektakte in Drive und Paperless
 
