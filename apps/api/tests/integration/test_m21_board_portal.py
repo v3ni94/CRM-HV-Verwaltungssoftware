@@ -387,6 +387,8 @@ def test_board_sees_only_own_community_and_tenant(client: TestClient, world: Wor
     hoa_a, _, board_a = _hoa(client, h, "903")
     hoa_b, _, board_b = _hoa(client, h, "904")
     doc_b = _doc(client, h, "rechnung-904.pdf", b"%PDF-1.4 904")
+    # Only a receipt of the community can become a position (hotfix 1.35.2).
+    _ledger_with_invoice(client, h, hoa_b, "904", doc_b)
     eng_a = _engagement(client, h, hoa_a, board_a["id"])
     eng_b = _engagement(client, h, hoa_b, board_b["id"])
     _ok(client.post(f"{H}/audits/{eng_b}/items", json={"document_id": doc_b}, headers=h), 201)

@@ -65,6 +65,12 @@ async def _register_failure(session: AsyncSession, user: User, now: datetime) ->
     await session.flush()
 
 
+async def register_failed_attempt(session: AsyncSession, user: User, now: datetime) -> None:
+    """Counts a failed identity check (login or re-authentication, M20-04) towards the
+    account lockout, exactly like a failed login."""
+    await _register_failure(session, user, now)
+
+
 async def check_password(
     factory: async_sessionmaker[AsyncSession], email: str, password: str
 ) -> tuple[uuid.UUID, bool]:

@@ -742,6 +742,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^accounting/datev/exports/${ID}/check$`) },
   { method: "GET", pattern: new RegExp(`^accounting/datev/exports/${ID}/check$`) },
   { method: "POST", pattern: /^accounting\/datev\/check-file$/ },
+  // DATEV file download (accounting:read, legal entity scope checked per run) and the
+  // synthetic sample batch for the import test at the tax advisor (M18-06).
+  { method: "GET", pattern: new RegExp(`^accounting/datev/exports/${ID}/download$`) },
+  { method: "GET", pattern: /^accounting\/datev\/sample-batch$/ },
   { method: "PUT", pattern: /^accounting\/tax\/settings$/ },
   { method: "GET", pattern: new RegExp(`^accounting/tax/(properties|suppliers)/${ID}/profile$`) },
   { method: "PUT", pattern: new RegExp(`^accounting/tax/(properties|suppliers)/${ID}/profile$`) },

@@ -45,6 +45,7 @@ async def _world(settings: Any) -> World:
             # Eigene, nicht-administrative Freigaberolle (nur communication:approve, kein
             # tenant_settings:update), damit die Postfachbeschränkung wirklich greift.
             ("mrdeputy", "standard", False),
+            ("mrlockout", "tenant_admin", False),  # only used by the lockout test
         ]:
             uid = await services.create_user(
                 factory,
@@ -331,3 +332,41 @@ def test_superadmin_bypass_only_behind_platform_flag(
         client.delete(
             f"/api/v1/platform/users/{world.users['mrsuper']}/superadmin", headers=super_h
         )
+
+
+def test_reauth_failures_count_towards_the_account_lockout(
+    client: TestClient, world: World
+) -> None:
+    """M20-04 (docs/rules/M20-04.md): a wrong password at the re-authentication counts like a
+    failed login; after MAX_FAILED_LOGINS the account is locked for re-auth and login alike.
+    Before the hotfix 1.35.2 the endpoint had no lockout (review 27.09.2026)."""
+    from mhvp.core.auth import passwords
+
+    h = bearer(login(client, world, "mrlockout"))
+    # A success resets the counter, like a successful login.
+    for _ in range(passwords.MAX_FAILED_LOGINS - 1):
+        assert (
+            client.post(
+                f"{M}/mail-approval/reauth", json={"password": "falsch"}, headers=h
+            ).status_code
+            == 401
+        )
+    _reauth(client, h)
+    for _ in range(passwords.MAX_FAILED_LOGINS - 1):
+        assert (
+            client.post(
+                f"{M}/mail-approval/reauth", json={"password": "falsch"}, headers=h
+            ).status_code
+            == 401
+        )
+    _reauth(client, h)
+
+    for _ in range(passwords.MAX_FAILED_LOGINS):
+        client.post(f"{M}/mail-approval/reauth", json={"password": "falsch"}, headers=h)
+    locked = client.post(f"{M}/mail-approval/reauth", json={"password": PASSWORD}, headers=h)
+    assert locked.status_code == 423, locked.text
+    assert locked.json()["code"] == "MHVP-AUTH-0004"
+    relogin = client.post(
+        "/api/v1/auth/login", json={"email": world.email("mrlockout"), "password": PASSWORD}
+    )
+    assert relogin.status_code == 423, relogin.text

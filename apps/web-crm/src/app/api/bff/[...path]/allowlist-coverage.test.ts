@@ -106,11 +106,27 @@ function methodAfter(tail: string): keyof typeof HANDLERS | null {
   return /method:/.test(args) ? null : "GET";
 }
 
+/** Resolves module constants such as `const BASE = "/api/bff/accounting/datev"` where they
+ *  start a template literal (`${BASE}/exports`) or are passed to `bff(...)` directly, so those
+ *  calls are checked too (review 27.09.2026: the DATEV download links were missed). Line
+ *  numbers stay the same because the values contain no line breaks. */
+function inlineBaseConstants(content: string): string {
+  let out = content;
+  for (const match of content.matchAll(/\bconst ([A-Za-z_][A-Za-z0-9_]*) = "(\/api\/bff\/[^"]*)";/g)) {
+    const [, name, value] = match;
+    out = out
+      .replace(new RegExp("`\\$\\{" + name + "\\}", "g"), "`" + value)
+      .replace(new RegExp("(\\bbff\\s*(?:<[^()]*>)?\\s*\\()\\s*" + name + "\\b", "g"), `$1"${value}"`)
+      .replace(new RegExp("(\\bhref=\\{)" + name + "\\}", "g"), `$1"${value}"}`);
+  }
+  return out;
+}
+
 function collectCalls(): Call[] {
   const calls: Call[] = [];
   for (const file of listFiles(SRC)) {
     if (file.includes(`${path.sep}api${path.sep}bff${path.sep}`)) continue;
-    const content = readFileSync(file, "utf8");
+    const content = inlineBaseConstants(readFileSync(file, "utf8"));
     for (const match of content.matchAll(LITERAL)) {
       const kind = isDirectCall(content.slice(Math.max(0, match.index - 400), match.index));
       if (kind === null) continue;
@@ -136,6 +152,7 @@ describe("BFF allowlist coverage", () => {
     expect(calls.length).toBeGreaterThan(150);
     expect(calls).toContainEqual(expect.objectContaining({ method: "GET", path: "tickets/resolution-kinds" }));
     expect(calls).toContainEqual(expect.objectContaining({ method: "POST", path: "mail/mail-approval/deputies" }));
+    expect(calls).toContainEqual(expect.objectContaining({ method: "GET", path: "accounting/datev/sample-batch" }));
   });
 
   it("forwards every resolvable CRM call instead of answering 404", async () => {

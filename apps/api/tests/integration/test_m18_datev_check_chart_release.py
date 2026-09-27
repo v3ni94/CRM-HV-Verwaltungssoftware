@@ -32,7 +32,7 @@ async def _world(settings: Any) -> World:
     factory = create_session_factory(engine)
     try:
         a, _ = await services.provision_tenant(factory, slug=f"dc-{RUN}", name=f"Check {RUN}")
-        b, _ = await services.provision_tenant(factory, slug=f"dd-{RUN}", name=f"Fremd2 {RUN}")
+        b, _ = await services.provision_tenant(factory, slug=f"dcf-{RUN}", name=f"Fremd2 {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, tenant, role in [
             ("dcadmin", a, "tenant_admin"),

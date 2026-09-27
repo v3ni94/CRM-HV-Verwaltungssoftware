@@ -300,7 +300,44 @@ def test_meeting_votes_circular_audit(client: TestClient, world: World) -> None:
         201,
     )
     assert audit["population"]["entries"] == 0
-    doc = _doc(client, h, "rechnung.pdf")
+    # Only a receipt of the community can become a position (hotfix 1.35.2): two unposted
+    # incoming invoices, so the population of posted entries stays empty.
+    template = _ok(client.post(f"{ACC}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{ACC}/ledgers",
+            json={"legal_entity_id": hoa, "template_id": template["id"]},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    acc = {
+        a["number"]: a["id"] for a in _ok(client.get(f"{ACC}/ledgers/{ledger}/accounts", headers=h))
+    }
+    provider = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={"kind": "company", "company_name": f"Hausmeister {RUN} GmbH"},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    docs = []
+    for number, amount in (("M25-1", "120.00"), ("M25-2", "80.00")):
+        doc = _doc(client, h, f"rechnung-{number}.pdf")
+        invoice_body = {
+            "ledger_id": ledger,
+            "provider_contact_id": provider,
+            "number": number,
+            "invoice_date": "2025-06-01",
+            "net": amount,
+            "vat": "0.00",
+            "gross": amount,
+            "document_id": doc,
+            "lines": [{"account_id": acc["040300"], "net": amount}],
+        }
+        _ok(client.post(f"{ACC}/invoices", json=invoice_body, headers=h), 201)
+        docs.append((doc, amount))
     items = [
         _ok(
             client.post(
@@ -310,7 +347,7 @@ def test_meeting_votes_circular_audit(client: TestClient, world: World) -> None:
             ),
             201,
         )
-        for amount in ("120.00", "80.00")
+        for doc, amount in docs
     ]
     _ok(
         client.patch(
@@ -510,6 +547,15 @@ def test_d32_d33_audit_sample_report_and_invoice_change_after_check(
         "lines": [{"account_id": acc["040300"], "net": "120.00"}],
     }
     invoice = _ok(client.post(f"{ACC}/invoices", json=invoice_body, headers=h), 201)["id"]
+    # Only a receipt of the community can become a position (hotfix 1.35.2).
+    open_body = invoice_body | {
+        "number": "D33-2",
+        "net": "80.00",
+        "gross": "80.00",
+        "document_id": doc_open,
+        "lines": [{"account_id": acc["040300"], "net": "80.00"}],
+    }
+    _ok(client.post(f"{ACC}/invoices", json=open_body, headers=h), 201)
 
     audit = _ok(
         client.post(

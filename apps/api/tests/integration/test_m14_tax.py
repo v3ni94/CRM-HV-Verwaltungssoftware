@@ -413,6 +413,30 @@ def test_construction_withholding_proposal_blocks_posting_until_decided(
     assert approved["withholding_approved_by"] == str(world.users["txacc"])
     posted = _ok(client.post(f"{A}/invoices/{inv['id']}/post", headers=h))
     assert posted["posting_status"] == "posted"
+    # Review 27.09.2026 (M14-04): a document id of another tenant passes the foreign key but
+    # must not count as a filed exemption; only a document of this tenant lifts the block.
+    other = bearer(login(client, world, "tyadmin"))
+    foreign_doc = _ok(
+        client.post(
+            "/api/v1/documents",
+            files={"file": ("fremd.pdf", b"%PDF-1.4 x", "application/pdf")},
+            headers=other,
+        ),
+        201,
+    )
+    rejected = client.put(
+        f"{T}/suppliers/{setup.provider}/profile",
+        json={
+            "construction_services": True,
+            "exemption_number": "FA-999",
+            "exemption_valid_from": "2026-01-01",
+            "exemption_valid_to": "2026-12-31",
+            "exemption_document_id": foreign_doc["id"],
+        },
+        headers=h,
+    )
+    assert rejected.status_code == 422, rejected.text
+    assert rejected.json()["detail"] == "Freistellungsbescheinigung nicht gefunden."
     # A valid exemption with a filed document removes the proposal.
     links = json.dumps(
         [{"entity_type": "contact", "entity_id": setup.provider, "role": "attachment"}]

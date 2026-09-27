@@ -400,3 +400,50 @@ def test_scope_maintenance_rights_and_tenant_separation(client: TestClient, worl
     events = _ok(client.get(f"{T}/events", params={"limit": 50}, headers=h))
     rows = events if isinstance(events, list) else events.get("items", [])
     assert any(e["type"] == "membership.legal_entities_changed" for e in rows)
+
+
+def _datev_run(world: World, ledger_id: str) -> str:
+    """Test helper: a stored DATEV run of the ledger (RLS bound insert; creating one through the
+    API needs the full DATEV configuration, which is not what this test is about)."""
+    run_id = str(uuid.uuid4())
+    engine = create_engine(world.app_url)
+    with engine.begin() as conn:
+        conn.execute(
+            text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
+        )
+        conn.execute(
+            text(
+                "INSERT INTO export_run (id, tenant_id, ledger_id, format, period_from, "
+                "period_to, rows, sha256) VALUES (:id, :t, :l, 'datev_buchungsstapel', "
+                "'2026-01-01', '2026-12-31', 0, :sha)"
+            ),
+            {"id": run_id, "t": str(world.tenant_a), "l": ledger_id, "sha": "0" * 64},
+        )
+    engine.dispose()
+    return run_id
+
+
+def test_datev_run_list_is_filtered_by_legal_entity(client: TestClient, world: World) -> None:
+    """M18-05 (review 27.09.2026): GET /accounting/datev/exports listed the runs of every legal
+    entity, so a tax advisor limited to community A saw the booking runs of community B."""
+    h = bearer(login(client, world, "tsadmin"))
+    hoa_a, ledger_a = _hoa_with_ledger(client, h, "951")
+    _hoa_b, ledger_b = _hoa_with_ledger(client, h, "952")
+    own = _datev_run(world, ledger_a)
+    foreign = _datev_run(world, ledger_b)
+    tax_member = _membership_id(client, h, world.users["tstax"])
+    _ok(
+        client.put(
+            f"{T}/members/{tax_member}/legal-entities",
+            json={"legal_entity_ids": [hoa_a]},
+            headers=h,
+        ),
+        204,
+    )
+    tax = bearer(login(client, world, "tstax"))
+    listed = {r["id"] for r in _ok(client.get(f"{A}/datev/exports", headers=tax))}
+    assert own in listed
+    assert foreign not in listed
+    assert client.get(f"{A}/datev/exports/{foreign}/check", headers=tax).status_code == 404
+    # An unscoped administrator still sees both runs.
+    assert {own, foreign} <= {r["id"] for r in _ok(client.get(f"{A}/datev/exports", headers=h))}

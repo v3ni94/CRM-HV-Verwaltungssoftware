@@ -20,6 +20,7 @@ from mhvp.accounting import datev_check
 from mhvp.accounting.models import ExportRun, Ledger
 from mhvp.accounting.reports import ensure_ledger_in_scope
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import session_allowed_legal_entity_ids
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
@@ -91,12 +92,15 @@ async def list_exports(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[ExportRunOut]:
     async with tenant_tx(request, principal) as session:
-        rows = await session.scalars(
-            select(ExportRun)
-            .where(ExportRun.format == DATEV_FORMAT)
-            .order_by(ExportRun.created_at.desc())
-            .limit(100)
-        )
+        query = select(ExportRun).where(ExportRun.format == DATEV_FORMAT)
+        # M18-05, A37: a scoped membership (tax advisor) only lists the runs of its assigned
+        # legal entities, like the ledger list (review 27.09.2026).
+        allowed = session_allowed_legal_entity_ids(session)
+        if allowed is not None:
+            query = query.join(Ledger, Ledger.id == ExportRun.ledger_id).where(
+                Ledger.legal_entity_id.in_(list(allowed))
+            )
+        rows = await session.scalars(query.order_by(ExportRun.created_at.desc()).limit(100))
         return [_run_out(r) for r in rows.all()]
 
 
