@@ -3,6 +3,7 @@
 resolution history of similar tickets."""
 
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from pydantic import ValidationError
@@ -56,10 +57,11 @@ def test_resolution_hint_uses_similar_examples_only() -> None:
             "result": {"kind": "stammdaten_ergaenzt", "note": None},
         },
     ]
-    hint = resolution_hint("Unsere Heizung ist ausgefallen", examples)
+    hint = resolution_hint("Unsere Heizung ist ausgefallen", cast(list[dict[str, Any]], examples))
     assert hint == "Bei ähnlichen Vorgängen wurde: Handwerker beauftragt: Heizungsbauer"
-    assert resolution_hint("Rechnung Hausmeister", examples) is None
-    assert resolution_hint("", examples) is None
+    typed = cast(list[dict[str, Any]], examples)
+    assert resolution_hint("Rechnung Hausmeister", typed) is None
+    assert resolution_hint("", typed) is None
 
 
 def test_resolution_features_contain_detected_entities() -> None:

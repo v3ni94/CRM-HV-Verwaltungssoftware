@@ -267,6 +267,7 @@ jobs:
           MHVP_IMAGE_REGISTRY: ghcr.io/example
           MHVP_IMAGE_TAG: ci
           MHVP_HOST_MONITORING: status.example.invalid
+          MHVP_HOST_METRICS: metrik.example.invalid
           TRAEFIK_NETWORK: proxy
           TRAEFIK_CERTRESOLVER: letsencrypt
           MHVP_JWT_PRIVATE_KEY: dummy

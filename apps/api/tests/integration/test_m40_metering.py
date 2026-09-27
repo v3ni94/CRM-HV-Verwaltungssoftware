@@ -7,7 +7,7 @@ import asyncio
 import io
 import json
 import uuid
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -52,7 +52,7 @@ def _property(client: TestClient, h: dict[str, str], number: str) -> dict[str, A
             if "building_id" not in row:
                 buildings = _ok(client.get(f"/api/v1/properties/{row['id']}/buildings", headers=h))
                 row["building_id"] = buildings[0]["id"]
-            return row
+            return cast(dict[str, Any], row)
     prop = _ok(
         client.post(
             "/api/v1/properties",
@@ -74,23 +74,26 @@ def _property(client: TestClient, h: dict[str, str], number: str) -> dict[str, A
         201,
     )
     prop["building_id"] = building["id"]
-    return prop
+    return cast(dict[str, Any], prop)
 
 
 def _unit(client: TestClient, h: dict[str, str], prop: dict[str, Any], number: str) -> str:
-    return _ok(
-        client.post(
-            f"/api/v1/properties/{prop['id']}/units",
-            json={
-                "building_id": prop["building_id"],
-                "number": number,
-                "unit_type": "apartment",
-                "floor": "1",
-            },
-            headers=h,
-        ),
-        201,
-    )["id"]
+    return cast(
+        str,
+        _ok(
+            client.post(
+                f"/api/v1/properties/{prop['id']}/units",
+                json={
+                    "building_id": prop["building_id"],
+                    "number": number,
+                    "unit_type": "apartment",
+                    "floor": "1",
+                },
+                headers=h,
+            ),
+            201,
+        )["id"],
+    )
 
 
 def _connection(
@@ -107,7 +110,9 @@ def _connection(
     if secrets:
         body["secrets"] = {"api_key": SECRET}
     body.update(extra)
-    return _ok(client.post("/api/v1/metering/connections", json=body, headers=h), 201)
+    return cast(
+        dict[str, Any], _ok(client.post("/api/v1/metering/connections", json=body, headers=h), 201)
+    )
 
 
 def _assign(

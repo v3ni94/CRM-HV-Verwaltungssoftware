@@ -6,7 +6,7 @@ a second apply fills nothing, differences are conflicts and never overwrite, rea
 import asyncio
 import io
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -72,12 +72,13 @@ def _ok(response: Any) -> Any:
 def _property(c: TestClient, h: dict[str, str], number: str) -> dict[str, Any]:
     body = _ok(c.get("/api/v1/properties", params={"q": number, "page_size": 100}, headers=h))
     pid = next(p["id"] for p in body["items"] if p["number"] == number)
-    return _ok(c.get(f"/api/v1/properties/{pid}", headers=h))
+    return cast(dict[str, Any], _ok(c.get(f"/api/v1/properties/{pid}", headers=h)))
 
 
 def _xlsx(rows: list[list[Any]]) -> bytes:
     book = Workbook()
     sheet = book.active
+    assert sheet is not None
     for row in rows:
         sheet.append(row)
     out = io.BytesIO()

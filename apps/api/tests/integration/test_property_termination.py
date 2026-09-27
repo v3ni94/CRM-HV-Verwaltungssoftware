@@ -5,7 +5,7 @@ the superadmin; tenant separation and audit rows. Rows are invented."""
 
 import asyncio
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import boto3
 import pytest
@@ -107,7 +107,7 @@ def _prop(client: TestClient, h: dict[str, str], number: str) -> dict[str, Any]:
         "postal_code": "40789",
         "city": "Monheim am Rhein",
     }
-    return _ok(client.post("/api/v1/properties", json=body, headers=h), 201)
+    return cast(dict[str, Any], _ok(client.post("/api/v1/properties", json=body, headers=h), 201))
 
 
 def _contact(client: TestClient, h: dict[str, str], last_name: str) -> str:
