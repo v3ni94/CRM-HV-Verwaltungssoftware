@@ -103,3 +103,19 @@ Consequences:
   Prüfung), `docs/runbooks/objektspeicher-ionos-s3.md` section 6.
 - Data processing agreement with Hetzner for the encrypted copy: to be confirmed by the
   operator (OPEN_QUESTIONS M9-02, Folgepunkt).
+
+## Nachtrag 27.09.2026: Objektspeicher dauerhaft lokal (Betreiberentscheidung)
+
+The operator decided on 27.09.2026 that the object store runs permanently as the local
+SeaweedFS container `objectstore` of the compose stack (bucket `mhvp`, endpoint
+`http://objectstore:8333`, region `us-east-1`). IONOS S3 is not set up; the addendum of
+26.09.2026 remains as the optional external path.
+
+- `infra/compose.prod.yaml` no longer parks the service behind the profile
+  `local-objectstore`; it is always started, and the migrate job depends on it again. The
+  `MHVP_S3_*` defaults point at the local container; an external endpoint overrides them.
+- Documents live in the volume `objectstore-data` (`mhvp_objectstore-data` on the server).
+  `scripts/backup.sh` archives it daily via `BACKUP_OBJECTSTORE_VOLUME`, encrypted with age,
+  and `backup-offsite.sh` copies the archive with the dump. `BACKUP_SOURCE_S3_*` stays empty.
+- Runbook: `docs/runbooks/objektspeicher-ionos-s3.md` section 0 (variables, backup, restore,
+  volume location, note on `--profile local-objectstore` in `mhvp.sh`).
