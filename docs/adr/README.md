@@ -17,5 +17,6 @@ flag until decided. Copy `0000-template.md` for a new record.
 | [0008](0008-idempotency-and-rate-limiting.md) | Idempotency-Key middleware and rate limiting (A48, A49) | Accepted |
 | [0009](0009-api-versioning.md) | API versioning, deprecation headers and OpenAPI drift check (A50) | Accepted |
 | [0010](0010-learning-examples-from-ticket-resolutions.md) | Learning examples from ticket resolutions (`ai_example` per tenant, local matching, M7-04) | Proposed, operator decision required |
+| [0011](0011-gate-approval-by-superadmin.md) | Gate approval by superadmin without four eyes (platform flag `gate_superadmin_bypass`, default off, M2-02) | Accepted as operator decision, flag off |
 
-Index checked against the files in this folder on 26.09.2026: ADR 0001 to 0010 each have one row; `0000-template.md` is the template.
+Index checked against the files in this folder on 26.09.2026: ADR 0001 to 0011 each have one row; `0000-template.md` is the template.

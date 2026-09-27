@@ -12,6 +12,14 @@ const ID = "[0-9a-fA-F-]{36}";
 const SECTION = "(participants|meters|rooms|defects|keys|items|notes)";
 const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/me$/ },
+  // Sicherheit (operator 26.09.2026, M2-01): optional second factor and remembered devices of
+  // the own account; the TOTP setup with its QR code runs through /api/session/totp/setup.
+  { method: "POST", pattern: /^auth\/totp\/(confirm|disable)$/ },
+  { method: "GET", pattern: /^auth\/trusted-devices$/ },
+  { method: "DELETE", pattern: new RegExp(`^auth/trusted-devices/${ID}$`) },
+  // Benachrichtigungen mit Sprung zum Betreff (operator 26.09.2026).
+  { method: "GET", pattern: /^portal\/notifications$/ },
+  { method: "POST", pattern: /^portal\/notifications\/read$/ },
   // M21/M22 Portal Mieter, Eigentümer und Dienstleister.
   { method: "GET", pattern: /^portal\/documents$/ },
   { method: "POST", pattern: /^portal\/uploads$/ },

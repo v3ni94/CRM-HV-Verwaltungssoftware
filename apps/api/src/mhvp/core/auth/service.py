@@ -23,10 +23,10 @@ from mhvp.platform.models import (
     User,
 )
 
-# Roles for which TOTP stays mandatory (operator 25.09.2026, ADR 0006 addendum). Other users
-# log in with password only unless they enable TOTP themselves under "Meine Daten".
-ADMIN_ROLE_CODES: frozenset[str] = frozenset({"tenant_admin", "administrator"})
-TRUSTED_DEVICE_TTL_DAYS = 180
+# TOTP is optional for every user (operator 26.09.2026, M2-01, ADR 0006 second addendum):
+# it applies only after the user enabled it under Einstellungen, Sicherheit
+# (``User.totp_enabled``). A trusted device then skips the second factor for 90 days.
+TRUSTED_DEVICE_TTL_DAYS = 90
 
 
 @dataclass(frozen=True)
@@ -133,6 +133,17 @@ async def verify_totp(
         raise failure
 
 
+async def record_login(
+    factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID, now: datetime | None = None
+) -> None:
+    """Marks a successful login that did not go through ``verify_totp`` (password only login
+    of non-administrators, trusted device). ``verify_totp`` writes the timestamp itself."""
+    async with platform_transaction(factory) as session:
+        await session.execute(
+            update(User).where(User.id == user_id).values(last_login_at=now or datetime.now(UTC))
+        )
+
+
 async def memberships(session: AsyncSession, user_id: uuid.UUID) -> list[TenantRef]:
     rows = await session.execute(
         select(Tenant.id, Tenant.name)
@@ -143,29 +154,57 @@ async def memberships(session: AsyncSession, user_id: uuid.UUID) -> list[TenantR
     return [TenantRef(id=row.id, name=row.name) for row in rows]
 
 
-async def totp_mandatory(factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID) -> bool:
-    """TOTP is mandatory for platform administrators and for a tenant_admin/administrator
-    membership in any tenant (operator 25.09.2026). Everyone else may log in with password
-    only, unless they already enabled TOTP themselves."""
+async def enable_totp(
+    factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID, code: str
+) -> None:
+    """Confirms a TOTP setup started with ``start_totp_setup`` (Einstellungen, Sicherheit).
+    The code must match the pending secret; only then is the second factor enabled. Wrong
+    codes count towards the lockout like a wrong password."""
+    now = datetime.now(UTC)
     async with platform_transaction(factory) as session:
         user = await session.get(User, user_id)
-        if user is None:
-            return True
-        if user.is_platform_admin:
-            return True
-        rows = (
-            await session.execute(
-                select(Membership.tenant_id, Membership.id).where(
-                    Membership.user_id == user_id, Membership.status == MembershipStatus.ACTIVE
-                )
+        if user is None or not user.active:
+            raise ProblemError(ErrorCodes.INVALID_CREDENTIALS)
+        if user.totp_enabled:
+            raise ProblemError(ErrorCodes.CONFLICT, developer_message="TOTP already enabled.")
+        if user.locked_until is not None and user.locked_until > now:
+            raise ProblemError(ErrorCodes.ACCOUNT_LOCKED)
+        if not user.totp_secret:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Bitte zuerst die Einrichtung starten."
             )
-        ).all()
-    for row in rows:
-        async with tenant_transaction(factory, row.tenant_id) as session:
-            _, codes = await effective_permissions(session, row.tenant_id, row.id)
-        if ADMIN_ROLE_CODES.intersection(codes):
-            return True
-    return False
+        step = totp.matching_step(user.totp_secret, code, last_step=user.totp_last_step)
+        if step is None:
+            await _register_failure(session, user, now)
+            failure: ProblemError | None = ProblemError(
+                ErrorCodes.INVALID_CREDENTIALS, detail="Der Code ist ungültig."
+            )
+        else:
+            failure = None
+            user.totp_last_step = step
+            user.totp_enabled = True
+            user.failed_logins = 0
+    if failure is not None:
+        raise failure
+
+
+async def disable_totp(
+    factory: async_sessionmaker[AsyncSession], user_id: uuid.UUID, password: str
+) -> None:
+    """Switches the second factor off again (requires the current password) and revokes every
+    trusted device: without TOTP there is nothing left for a device to skip."""
+    async with platform_transaction(factory) as session:
+        user = await session.get(User, user_id)
+        if user is None or not user.active:
+            raise ProblemError(ErrorCodes.INVALID_CREDENTIALS)
+        if not passwords.verify_password(user.password_hash, password):
+            raise ProblemError(
+                ErrorCodes.INVALID_CREDENTIALS, detail="Aktuelles Passwort ist falsch."
+            )
+        user.totp_enabled = False
+        user.totp_secret = None
+        user.totp_last_step = None
+    await revoke_all_trusted_devices(factory, user_id)
 
 
 async def store_trusted_device(

@@ -26,6 +26,6 @@ Bildmetadaten (M30-04), zweiter Faktor für Gehilfen (M30-05).
 
 Im Abgleich mit dem Ordnerinhalt am 26.09.2026 fehlten oben:
 
-* `images.py`: Bildbereinigung für Übergabefotos und Portal-Uploads (M30-04, A55, A58): EXIF, GPS, XMP, ICC entfernen, Ausrichtung übernehmen, skalieren
+* `images.py`: Bildbereinigung für Übergabefotos und Portal-Uploads (M30-04, A55, A58): EXIF, GPS, XMP, ICC entfernen, Ausrichtung übernehmen, skalieren; HEIC/HEIF vom iPhone über `pillow-heif` dekodieren und als JPEG speichern (A72, `output_mime_type` liefert den gespeicherten Typ)
 * `imports.py`: Router `/api/v1/handover/imports/uprotokoll` für die Datenübernahme aus U-Protokoll (M30 Stufe 4)
 * `uprotokoll_import.py`: Parser und Übernahmelogik für den U-Protokoll-Datenbankexport (M30 Stufe 4)

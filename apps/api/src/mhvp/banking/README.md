@@ -11,6 +11,20 @@ Bank connectors (EBICS, aggregator, FinTS fallback, file import), transactions, 
   subfield convention (`?20` to `?29`, `?30`/`?31`, `?32`/`?33`, SEPA prefixes) is marked as
   such in `raw.info`. Bank specific CSV is open (M11-02).
 
+* finAPI (M11-01, operator decision 26.09.2026: aggregator finAPI first, file import stays,
+  EBICS later): `finapi.py` holds `FinApiClient` (httpx, fake transport in tests) and
+  `FinApiConnector` behind the `BankConnector` seam, read only (accounts, balances,
+  transactions; no payment initiation, G2 closed). Token flow: client credentials for
+  `POST /users` (one technical finAPI user per bank connection, auto update off, id and
+  password stored encrypted on `FinApiConnection`), password grant user token for every data
+  call. WebForm import stores only form id, URL and status. Incremental sync per account from
+  `FinApiAccountLink.last_synced_booking_date` minus `tasks.SYNC_OVERLAP_DAYS`, idempotent by
+  `bank_reference = "finapi:<id>"` (D05), amounts as `Decimal`. Errors: `MHVP-BANK-0001` to
+  `0006` (0005 credentials rejected, 0006 rate limit with `Retry-After`, no retry loop). Default
+  base URL by data center from `Settings.finapi_base_url_sandbox`/`_live`. Migration 0141.
+  Spec and open points: `docs/integrations/finapi.md`; tests `tests/unit/test_finapi_client.py`,
+  `tests/integration/test_m11_finapi.py`.
+
 * Consent reminder (A29, 8.2): `tasks.consent_reminders` (beat, daily) and the 06:00 `sync_all`
   both call `tasks.remind_consent_expiry`: ten days before the effective consent expiry
   (`FinApiConnection.consent_valid_until`, else `BankConnection.consent_valid_until`) every

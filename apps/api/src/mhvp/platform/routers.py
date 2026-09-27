@@ -27,6 +27,7 @@ from mhvp.core.auth.principal import (
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.events import AuditLog, DomainEvent, diff, emit
+from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import GATE_LABELS, ReleaseGate
 from mhvp.core.webhooks import (
@@ -78,9 +79,12 @@ from mhvp.platform.schemas import (
     MemberRoles,
     MemberStatusIn,
     PasswordResetIn,
+    PlatformSettingsOut,
+    PlatformSettingsPatch,
     RoleCreate,
     RoleOut,
     RolePermissions,
+    SuperadminOut,
     TenantBillingSettingsOut,
     TenantBillingSettingsPatch,
     TenantCreate,
@@ -95,9 +99,19 @@ from mhvp.platform.schemas import (
     WebhookOut,
     WebhookPatch,
 )
-from mhvp.platform.services import add_member, create_user, provision_tenant, set_member_roles
+from mhvp.platform.services import (
+    add_member,
+    create_user,
+    gate_superadmin_bypass_enabled,
+    platform_settings,
+    provision_tenant,
+    set_member_roles,
+    set_superadmin,
+)
+from mhvp.tickets.resolution_kinds import ResolutionKindsConfig
 
 platform_router = APIRouter(prefix="/platform", tags=["Plattform"])
+_log = get_logger("mhvp.platform")
 tenant_router = APIRouter(prefix="/tenant", tags=["Mandant"])
 
 Page = Annotated[int, Query(ge=1)]
@@ -148,8 +162,93 @@ async def create_platform_user(
         email=body.email.lower(),
         display_name=body.display_name,
         is_platform_admin=body.is_platform_admin,
+        is_superadmin=False,
         totp_enabled=False,
     )
+
+
+# Platform settings and superadmin (ADR 0011) -------------------------------------------
+
+
+def _platform_settings_out(row: Any) -> PlatformSettingsOut:
+    return PlatformSettingsOut(
+        gate_superadmin_bypass=row.gate_superadmin_bypass,
+        version=row.version,
+        updated_by=row.updated_by,
+        updated_at=row.updated_at,
+    )
+
+
+@platform_router.get("/settings", summary="Plattformeinstellungen")
+async def get_platform_settings(
+    request: Request, _: Principal = Depends(require_platform_admin)
+) -> PlatformSettingsOut:
+    async with platform_transaction(sessions(request)) as session:
+        return _platform_settings_out(await platform_settings(session))
+
+
+@platform_router.patch(
+    "/settings",
+    summary="Plattformeinstellungen ändern (Superadmin-Umgehung schwächt das Vier-Augen-Prinzip)",
+)
+async def patch_platform_settings(
+    body: PlatformSettingsPatch,
+    request: Request,
+    principal: Principal = Depends(require_platform_admin),
+) -> PlatformSettingsOut:
+    async with platform_transaction(sessions(request)) as session:
+        row = await platform_settings(session)
+        before = {"gate_superadmin_bypass": row.gate_superadmin_bypass}
+        if body.gate_superadmin_bypass is not None:
+            row.gate_superadmin_bypass = body.gate_superadmin_bypass
+        after = {"gate_superadmin_bypass": row.gate_superadmin_bypass}
+        if before != after:
+            row.version += 1
+            row.updated_by = principal.user_id
+            await session.flush()
+            await session.refresh(row)
+            _log.warning(
+                "platform_settings_changed",
+                actor_user_id=str(principal.user_id),
+                changes=diff(before, after),
+                version=row.version,
+            )
+        return _platform_settings_out(row)
+
+
+@platform_router.get("/superadmin", summary="Superadmin anzeigen")
+async def get_superadmin(
+    request: Request, _: Principal = Depends(require_platform_admin)
+) -> SuperadminOut:
+    async with platform_transaction(sessions(request)) as session:
+        user = await session.scalar(select(User).where(User.is_superadmin.is_(True)))
+        if user is None:
+            return SuperadminOut(user_id=None, email=None)
+        return SuperadminOut(user_id=user.id, email=user.email)
+
+
+@platform_router.put(
+    "/users/{user_id}/superadmin", summary="Superadmin-Kennzeichen vergeben (genau ein Benutzer)"
+)
+async def grant_superadmin(
+    user_id: uuid.UUID, request: Request, principal: Principal = Depends(require_platform_admin)
+) -> SuperadminOut:
+    await set_superadmin(
+        sessions(request), user_id=user_id, granted=True, actor_user_id=principal.user_id
+    )
+    return await get_superadmin(request, principal)
+
+
+@platform_router.delete(
+    "/users/{user_id}/superadmin", status_code=204, summary="Superadmin-Kennzeichen entziehen"
+)
+async def revoke_superadmin(
+    user_id: uuid.UUID, request: Request, principal: Principal = Depends(require_platform_admin)
+) -> Response:
+    await set_superadmin(
+        sessions(request), user_id=user_id, granted=False, actor_user_id=principal.user_id
+    )
+    return Response(status_code=204)
 
 
 @platform_router.post(
@@ -185,12 +284,25 @@ async def _decide(
             raise _not_found()
         if item.status is not GateRequestStatus.REQUESTED:
             raise ProblemError(ErrorCodes.GATE_STATE)
+        bypass = False
         if item.requested_by == principal.user_id:
-            raise ProblemError(ErrorCodes.GATE_FOUR_EYES)
+            # ADR 0011: only the single superadmin, only for an approval and only while the
+            # platform flag is on; every other self decision keeps the four eyes rule.
+            bypass = (
+                approve
+                and principal.is_superadmin
+                and await gate_superadmin_bypass_enabled(session)
+            )
+            if not bypass:
+                raise ProblemError(ErrorCodes.GATE_FOUR_EYES)
         item.status = GateRequestStatus.APPROVED if approve else GateRequestStatus.REJECTED
         item.decided_by = principal.user_id
         item.decided_at = gates.now()
         item.decision_comment = comment
+        item.four_eyes = not bypass
+        changes: dict[str, Any] = {"status": {"old": "requested", "new": item.status.value}}
+        if bypass:
+            changes["four_eyes"] = {"old": True, "new": False}
         await emit(
             session,
             tenant_id=tenant_id,
@@ -198,9 +310,22 @@ async def _decide(
             entity_type="release_gate_request",
             entity_id=item.id,
             actor_user_id=principal.user_id,
-            payload={"gate": item.gate, "scope": item.scope},
-            changes={"status": {"old": "requested", "new": item.status.value}},
+            payload={
+                "gate": item.gate,
+                "scope": item.scope,
+                "four_eyes": not bypass,
+                "superadmin_bypass": bypass,
+            },
+            changes=changes,
         )
+        if bypass:
+            _log.warning(
+                "release_gate_superadmin_bypass",
+                tenant_id=str(tenant_id),
+                request_id=str(item.id),
+                gate=item.gate,
+                actor_user_id=str(principal.user_id),
+            )
         return _gate_out(item)
 
 
@@ -243,6 +368,9 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         sources=row.sources,
         auto_posting_enabled=row.auto_posting_enabled,
         ticket_reply_approval_all=row.ticket_reply_approval_all,
+        ai_learning_examples_enabled=row.ai_learning_examples_enabled,
+        metering_module_enabled=row.metering_module_enabled,
+        resolution_kinds=ResolutionKindsConfig.model_validate(row.resolution_kinds or {}),
         version=row.version,
     )
 
@@ -279,6 +407,9 @@ async def patch_settings(
             "company": row.company,
             "branding": row.branding,
             "ticket_reply_approval_all": row.ticket_reply_approval_all,
+            "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
+            "metering_module_enabled": row.metering_module_enabled,
+            "resolution_kinds": row.resolution_kinds,
         }
         if body.company is not None:
             row.company = body.company.model_dump(mode="json")
@@ -287,10 +418,22 @@ async def patch_settings(
         if body.ticket_reply_approval_all is not None:
             # M20-03 Notbremse: Änderung wird mit Nutzer im Ereignis protokolliert.
             row.ticket_reply_approval_all = body.ticket_reply_approval_all
+        if body.ai_learning_examples_enabled is not None:
+            # ADR 0010, M7-04: Speicherung der Lernbeispiele je Mandant, Änderung protokolliert.
+            row.ai_learning_examples_enabled = body.ai_learning_examples_enabled
+        if body.metering_module_enabled is not None:
+            # Messdienstleister module switch per tenant, change recorded in the event.
+            row.metering_module_enabled = body.metering_module_enabled
+        if body.resolution_kinds is not None:
+            # Regel M19-07, M19-04: Erledigungsarten je Mandant, Änderung protokolliert.
+            row.resolution_kinds = body.resolution_kinds.model_dump(mode="json")
         after = {
             "company": row.company,
             "branding": row.branding,
             "ticket_reply_approval_all": row.ticket_reply_approval_all,
+            "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
+            "metering_module_enabled": row.metering_module_enabled,
+            "resolution_kinds": row.resolution_kinds,
         }
         changes = diff(before, after)
         if changes:
@@ -1724,6 +1867,7 @@ def _gate_out(item: ReleaseGateRequest) -> GateRequestOut:
         decided_by=item.decided_by,
         decided_at=item.decided_at,
         decision_comment=item.decision_comment,
+        four_eyes=item.four_eyes,
     )
 
 

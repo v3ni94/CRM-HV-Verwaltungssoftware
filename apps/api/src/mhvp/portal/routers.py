@@ -4,6 +4,7 @@ every portal read goes through the access matrix (6.9.6)."""
 
 import hashlib
 import json
+import re
 import secrets
 import uuid
 from datetime import UTC, date, datetime, timedelta
@@ -15,7 +16,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import (
@@ -31,6 +32,8 @@ from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import access, read_receipts
 from mhvp.portal.models import ChangeRequest, PortalAccount
+from mhvp.workspace.models import Notification
+from mhvp.workspace.routers import NotificationOut, notification_out
 from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/portal", tags=["Portal"])
@@ -519,6 +522,34 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
         }
 
 
+@router.get("/notifications", summary="Eigene Benachrichtigungen (Portal)")
+async def notifications(
+    request: Request, unread: bool = False, ctx: Portal = Depends(portal_user)
+) -> list[NotificationOut]:
+    """Notifications of the portal user with portal routes as ``href`` (workspace.links)."""
+    principal, _account = ctx
+    async with tenant_tx(request, principal) as session:
+        query = select(Notification).where(Notification.user_id == principal.user_id)
+        if unread:
+            query = query.where(Notification.read_at.is_(None))
+        rows = await session.scalars(query.order_by(Notification.created_at.desc()).limit(50))
+        return await notification_out(session, list(rows.all()), portal=True)
+
+
+@router.post("/notifications/read", status_code=204, summary="Als gelesen markieren (Portal)")
+async def notifications_read(
+    request: Request, ids: list[uuid.UUID] | None = None, ctx: Portal = Depends(portal_user)
+) -> None:
+    principal, _account = ctx
+    async with tenant_tx(request, principal) as session:
+        query = update(Notification).where(
+            Notification.user_id == principal.user_id, Notification.read_at.is_(None)
+        )
+        if ids:
+            query = query.where(Notification.id.in_(ids))
+        await session.execute(query.values(read_at=datetime.now(UTC)))
+
+
 @router.get("/documents", summary="Freigegebene Dokumente")
 async def documents(request: Request, ctx: Portal = Depends(portal_user)) -> list[dict[str, Any]]:
     principal, account = ctx
@@ -608,7 +639,12 @@ async def upload(
     from mhvp.documents.blobs import BlobStore
     from mhvp.documents.models import DocumentSource, LinkRole
     from mhvp.documents.services import check_upload, store_document
-    from mhvp.handover.images import ImageSanitizeError, sanitize_image, supports
+    from mhvp.handover.images import (
+        ImageSanitizeError,
+        output_mime_type,
+        sanitize_image,
+        supports,
+    )
 
     principal, account = ctx
     data = await file.read()
@@ -620,8 +656,9 @@ async def upload(
         )
     check_upload(mime, data, request.app.state.settings.document_max_bytes)
     # A55/A58: photos lose EXIF, GPS and other metadata and are scaled like handover photos
-    # (M30-04). A photo type the sanitizer cannot re-encode (HEIC) is refused rather than
-    # stored with its metadata; the original is never kept.
+    # (M30-04). HEIC/HEIF from iPhones is decoded with pillow-heif and stored as JPEG (A72);
+    # a photo type the sanitizer cannot re-encode is refused rather than stored with its
+    # metadata; the original is never kept.
     if mime.startswith("image/"):
         if not supports(mime):
             raise ProblemError(
@@ -634,9 +671,19 @@ async def upload(
                 data, mime, max_edge=request.app.state.settings.handover_image_max_edge
             )
         except ImageSanitizeError as exc:
-            raise ProblemError(
-                ErrorCodes.UPLOAD_REJECTED, detail="Das Bild konnte nicht gelesen werden."
-            ) from exc
+            detail = "Das Bild konnte nicht gelesen werden."
+            if output_mime_type(mime) != mime:
+                detail = (
+                    "Das HEIC-Foto konnte nicht gelesen werden. Bitte das Foto als JPEG "
+                    "speichern (iPhone: Einstellungen, Kamera, Formate, Maximale "
+                    "Kompatibilität) und erneut hochladen."
+                )
+            raise ProblemError(ErrorCodes.UPLOAD_REJECTED, detail=detail) from exc
+        if output_mime_type(mime) != mime:
+            # The stored bytes are JPEG now; the name follows so downloads open correctly.
+            mime = output_mime_type(mime)
+            stem = re.sub(r"\.(heic|heif)$", "", file.filename or "upload", flags=re.IGNORECASE)
+            file.filename = f"{stem}.jpg"
     async with tenant_tx(request, principal) as session:
         doc = await store_document(
             session,

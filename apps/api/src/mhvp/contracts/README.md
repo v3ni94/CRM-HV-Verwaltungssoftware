@@ -27,13 +27,22 @@ pattern of `GET /tickets` (`page`, `page_size`, headers `X-Total-Count`, `X-Page
 termination_date | kind)` and `sepa_mandate(tenant_id, status)` (migration 0127). See
 `docs/reviews/2026-09-26-performance.md`.
 
+## Kautionsabrechnung (M5-02, operator decision 26.09.2026)
+
+`deposit_settlement.py` (models `DepositInterestReferenceRate`, `DepositSettlement`, pure
+`Decimal` computation: day exact interest per calendar year on the balance basis, rounded once
+per year), `deposit_settlement_routers.py` (`/deposit-interest-rates`, `/deposits/{id}/settlements`,
+`/deposit-settlements/{id}/release` behind G3). Migration 0138. Rule and hand computed example:
+`docs/rules/M5-02-kautionsabrechnung.md`. Tests: `tests/unit/test_m5_deposit_settlement.py`,
+`tests/integration/test_m5_deposit_settlement.py`. The settlement is a record only; no
+posting, no payment, no receivable.
 ## Freigabe der Importverträge (Betreiberauftrag 26.09.2026)
 
 Verträge aus der Immoware24 Zuordnung (`mhvp.imports.zuordnung`) haben einen angenommenen
 Vertragsbeginn und übernommene Beträge. Sie müssen vor der ersten Sollstellung durch die
 Geschäftsführung freigegeben werden.
 
-* Felder am Vertrag (Migration 0133): `source` (z. B. `immoware24:zuordnung`, leer bei manueller
+* Felder am Vertrag (Migration 0146): `source` (z. B. `immoware24:zuordnung`, leer bei manueller
   Anlage), `approval_status` (`pending`, `approved`, `rejected`; Standard `approved` für Bestand
   und manuell angelegte Verträge), `approved_by`, `approved_at` (Entscheidung, auch bei
   Ablehnung). Die Zuordnung setzt `source = immoware24:zuordnung` und `pending`. Bereits vor der

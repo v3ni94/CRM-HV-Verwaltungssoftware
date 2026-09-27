@@ -66,6 +66,9 @@ describe("width safety of ticket and mail views", () => {
             status: "new",
             sla_due_at: null,
             sla_breached: false,
+            attention: "none",
+            last_activity_at: null,
+            last_inbound_at: null,
           },
         ]}
       />,

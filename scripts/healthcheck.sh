@@ -12,6 +12,15 @@ curl -fsS --max-time 10 -o /dev/null "$HEALTH_URL" || problems+=("API nicht bere
 if [[ -n "${BACKUP_DIR:-}" ]]; then
   newest="$(find "$BACKUP_DIR" -maxdepth 1 -name 'mhvp-2*.dump*' ! -name '*.sha256' -mmin "-$((MAX_AGE_HOURS * 60))" | head -1)"
   [[ -n "$newest" ]] || problems+=("kein Backup in den letzten $MAX_AGE_HOURS Stunden")
+  # Off-site copy (scripts/backup-offsite.sh, M9-02): status line must be fresh and "ok".
+  if [[ -n "${BACKUP_S3_BUCKET:-}" ]]; then
+    status="$BACKUP_DIR/offsite-status"
+    if [[ ! -f "$status" ]] || ! find "$status" -mmin "-$((MAX_AGE_HOURS * 60))" | grep -q .; then
+      problems+=("keine Off-site-Kopie in den letzten $MAX_AGE_HOURS Stunden")
+    elif ! grep -q 'status=ok' "$status"; then
+      problems+=("Off-site-Kopie fehlgeschlagen ($(cut -d' ' -f2-3 "$status"))")
+    fi
+  fi
 fi
 
 if (( ${#problems[@]} )); then

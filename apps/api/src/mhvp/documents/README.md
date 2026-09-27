@@ -11,6 +11,10 @@ letter templates, PDF letters and serial letters.
   PDF), `defaults.py` (categories, free letter).
 * Tests: `apps/api/tests/integration/test_m6_documents.py`, `apps/api/tests/unit/test_m6_documents.py`.
 * Locks: deletion only with a released retention profile; nothing is sent from here.
+* Retention: standard profiles per tenant are seeded as drafts by `defaults.py` (operator
+  decision M6-04, 26.09.2026, rule `docs/rules/M6-04-aufbewahrungsprofile.md`); a draft never
+  unlocks deletion, release needs `tenant_settings:update`, four eyes and is audited;
+  `permanent` profiles (WEG minutes, resolutions) never unlock deletion.
 * Storage errors: `blobs.BlobStore` answers a missing configuration (`MHVP_S3_*`) or an
   unreachable store with `MHVP-DOC-0007` (503, `application/problem+json`, ADR 0004); the
   underlying boto error is logged, the upload aborts before an index row exists
@@ -69,6 +73,34 @@ with `DmsConnection.auto_receipt_intake` (default off, M14-05), queues a receipt
 existing receipts functions (`mhvp.documents.paperless_receipt_intake`). Migration 0098.
 Tests: `tests/integration/test_m14_paperless_webhook.py`.
 
+## A43: Spiegelkopien nach der Löschung (6.9.5, M6-03, Betreiberentscheidung 26.09.2026)
+
+`mirror_deletion.py`. After the platform deletion (`DELETE /documents/{id}`, only with a
+released, expired retention profile and no hold; the block of mirrored documents is lifted) one
+step row `document_mirror_deletion` and one event `document.mirror_delete_requested` per mirror
+are written in the deleting transaction; the Celery task `mhvp.documents.delete_mirror` (queue
+`io`, retry ladder 1 min to 24 h, six attempts) performs the steps afterwards:
+
+* Google Drive (`action=delete`): permanent delete through `GoogleDriveStore.delete`; when
+  Drive refuses it (for example a shared drive without delete right) the copy is moved to
+  the trash (`GoogleDriveStore.trash`) and the journal says so (`result` `deleted`,
+  `trashed` or `already_gone`, `note` with the reason for the fallback). Event
+  `document.mirror_deleted`.
+* Paperless-ngx (`action=tag`): the document is kept and receives the tag `gelöscht`
+  (`PaperlessStore.add_tag`, tag created with the tenant token when missing, assigned once);
+  `result` `tagged` or `already_gone`. Event `document.mirror_marked_deleted`.
+* Failure: `document.mirror_delete_failed` with attempt and error, the step stays `open`
+  with `attempts` and `last_error`; nothing is dropped silently (D46).
+
+The deletion of a document is `open` ("offen") until every step is `done`:
+`GET /documents/deletions[?status=open|done]` lists deletions with their steps,
+`POST /documents/deletions/{document_id}/retry` re-queues the open steps (permission
+`documents:delete`). The step table has no foreign key to `document` (the row is gone) and
+RLS like every tenant table (migration 0143). The restore replay (A44) deletes mirrored
+documents the same way and queues their steps after each commit. Rule
+`docs/rules/M6-03-loeschung-spiegel.md`, tests `tests/integration/test_m6_mirror_deletion.py`
+and `tests/unit/test_documents_mirror_deletion_clients.py` (MockTransport, no network).
+
 ## A44: Löschjournal und Wiederanwendung nach Restore (D47, M9-03)
 
 `deletion_journal.py` derives the journal from the append only domain events
@@ -77,8 +109,9 @@ without touching the store. CLIs: `python -m mhvp.documents.export_deletions --s
 <file>` before a restore, `python -m mhvp.documents.replay_deletions --journal <file> [--apply]
 [--report <file>]` afterwards (dry run by default). The replay deletes a document only when it
 exists, its hash equals the hash recorded at the original deletion, no deletion hold and no
-other blocker (`services.deletion_blocker`) applies and no non pending DMS mirror exists; every
-deletion and refusal is emitted again with `replay: true`. Procedure: `docs/runbooks/backup.md`;
+other blocker (`services.deletion_blocker`) applies; mirrored documents are deleted as well and
+their mirror steps (A43) are queued after the commit; every deletion and refusal is emitted
+again with `replay: true`. Procedure: `docs/runbooks/backup.md`;
 test: `tests/integration/test_m9_restore_replay.py`.
 
 ## Further files (addendum 26.09.2026)
@@ -86,7 +119,7 @@ test: `tests/integration/test_m9_restore_replay.py`.
 Checked against the folder contents on 26.09.2026, the following files were not listed above:
 
 * `intake_routers.py`: document inbox proposals (A42): list, accept, reject
-* `mirror_deletion.py`: logged deletion of mirrored copies in Paperless-ngx and Google Drive (A43, 6.9.5, M6-03)
+* `mirror_deletion.py`: logged mirror steps after a deletion, Drive delete and Paperless tag "gelöscht" (A43, 6.9.5, M6-03, section above)
 * `property_filing.py`: direct filing of one document into a property's Drive year folder (M11-finapi stage 3)
 
 ## Performance (Review 26.09.2026)

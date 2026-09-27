@@ -27,7 +27,12 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 
 | ID | Title | Master prompt section | Status |
 | --- | --- | --- | --- |
+| [M2-02](M2-02.md) | Freigabestufen: Vier-Augen-Prinzip und Superadmin-Umgehung nur hinter Plattformschalter (ADR 0011) | M2, 18.0 | implemented, not accepted |
+| [M2-01](M2-01.md) | Passwortregel und Kontosperre, zweiter Faktor freiwillig, gemerkte Geräte 90 Tage | M2, 3.4 | implemented, not accepted |
 | [M2-07](M2-07.md) | Löschen nur Administrator | M2 | implemented, not accepted |
+| [M10-01](M10-01-kontenrahmen-vorlage.md) | Kontenrahmen-Vorlage nach Anhang A.1 mit vorgeschlagenen Erlöskonten der Mietverwaltung (`review_status = "entwurf"`, Freigabe durch Steuerberatung offen) | M10, 7.2, A.1 | implemented, not accepted (Offene Entscheidung V8, M10-02) |
+| [M10-02](M10-02-kostenkonten-vorbelegung.md) | Kostenkonten der Vorlage als Entwurf nach BetrKV vorbelegt (umlagefähig mit üblichem Schlüssel, sonst nicht umlagefähig, Umsatzsteueroption offen), Seed füllt nur unbesetzte Felder | M10, 7.2, A.1, A.2 | implemented, not accepted (Offene Entscheidung mit Steuerberatung) |
+| [M8-04](M8-04-mehrpersonen-bevollmaechtigte.md) | Mehrpersonen-Parteien aus dem Adressbuch als eine Partei mit Mitgliedern, unklare Fälle zur Prüfung; Bevollmächtigte mit Zustellregel für Versand, Serienbriefe und WEG-Einladungen | M8, M3, M23, 6.1 | implemented, not accepted |
 | [M13-04](M13-04.md) | XRechnung für Verwalterhonorar-Rechnungen nur aus eingetragenen Mandantendaten | M13, 13.5 | implemented, not accepted |
 | [M16-01](M16-01.md) | Mahngebühr nur mit hinterlegtem Betrag, Rechnung an Gemeinschaft nur mit vertraglicher Grundlage | M16 | implemented, not accepted |
 | [M16-02](M16-02.md) | Mahnstufen je Objekt erben vom Mandanten, Mahnschreiben nur als Entwurf | M16 | implemented, not accepted |
@@ -44,6 +49,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M11-finapi-dedup](M11-finapi-dedup.md) | finAPI Umsatzabgleich (Bankreferenz vorrangig, D05) | M11 | implemented, not accepted |
 | [M11-finapi-authorization](M11-finapi-authorization.md) | finAPI: Recht `banking:approve`, unzugeordnete Konten verborgen | M11 | implemented, not accepted |
 | [M11-05](M11-05-credentials-never-in-crm.md) | Zugangsdaten nie im CRM (Bank-WebForm) | M11 | implemented, not accepted |
+| [M10-03](M10-03-tilgungsfolge-vorschlag.md) | Ausgleich offener Posten nach gesetzlicher Reihenfolge, nur Vorschlag mit Bestätigung (Tilgungsfolge, D39) | M10, 7.4 Nr. 5 | implemented, not accepted |
 | [M11-06](M11-06-payment-proposal-only-until-g2.md) | Zahlung nur Vorschlag bis G2 (Rechnungsabgleich) | M11, 18.0 | implemented, not accepted |
 | [M3-02](M3-02-sepa-mandate.md) | SEPA-Mandat auf der Bankverbindung des Kontakts | M3, 6.1 | implemented, not accepted |
 | [M20-05](M20-05.md) | Mail-Vorbereitung: Dokumentsuche strikt je Objekt, keine Kontoauflistung | M20, M34, 11.2 | implemented, not accepted |
@@ -117,9 +123,14 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M9-06](M9-06-tagesjobs.md) | Tagesjobs Tagesübersicht und Fristenliste: Orientierung, Vorfrist aus Einstellungen, keine Rechtsfristen | M9, 15.1 | implemented, not accepted |
 | [A61](A61-einsicht.md) | Einsichtsanfragen außerhalb des Portals protokollieren | 14, M25 (PÜ12, PÜ13) | implemented, not accepted |
 | [M19-06](M19-06-tnr.md) | Ticketnummer im Betreff (TNR#<nummer>), Zuordnung eingehender Mails nur bei bekanntem Absender, Wiedereröffnung, Postfachzugriff je Mail | M19, M20, 6.6 | implemented, not accepted |
-| [M19-07](M19-07-erledigungsnotiz.md) | Erledigungsnotiz beim Abschluss (feste Artenliste plus Freitext, auch Bulk und Zusammenführen), Lernbeispiel je Abschluss ohne KI-Lauf, Hinweis "Bei ähnlichen Vorgängen wurde" | M19, M20, 6.6, 9.1 | implemented, not accepted (1.24.0, Migration 0130; Datenschutz M7-04 offen) |
+| [M19-07](M19-07-erledigungsnotiz.md) | Erledigungsnotiz beim Abschluss (Artenliste je Mandant: eingebaute Arten abschaltbar, eigene Arten, plus Freitext, auch Bulk und Zusammenführen), Lernbeispiel je Abschluss ohne KI-Lauf, Hinweis "Bei ähnlichen Vorgängen wurde" | M19, M20, 6.6, 9.1 | implemented, not accepted (1.24.0, Migrationen 0130 und 0136; M19-04 entschieden 26.09.2026; Datenschutz M7-04 offen) |
 | [M19-08](M19-08-anrufassistenz.md) | Anruf-Mails der Telefonassistenz (Hallo Heidi): deterministische Erkennung und Zuordnung, KI füllt nur Lücken, neue Rufnummer nur als Vorschlag mit Antwortentwurf, kein Versand | M19, M20, 9.1, 13.5 | implemented, not accepted (1.24.0, Migration 0131; M19-03 offen) |
 | [M19-09](M19-09-erledigte-ausgeblendet.md) | Erledigte Vorgänge in Ticket- und Mailübersicht standardmäßig ausgeblendet (`include_closed`), Administratoren setzen jeden Status (`admin_override`), Abschlussprüfungen bleiben | M19, M20, 6.6 | implemented, not accepted (1.23.0 und 1.24.0) |
+| [M6-03](M6-03-loeschung-spiegel.md) | Löschung gespiegelter Dokumente: Drive-Kopie löschen (endgültig, ersatzweise Papierkorb, vermerkt), Paperless-Dokument behalten und mit "gelöscht" kennzeichnen, beide Schritte protokolliert, Löschung "offen" bis beide Schritte gelungen sind, Wiederholung per Task, erneutes Anstoßen per API | 6.9.5, D46, D47, V17 | implemented, not accepted (Migration 0143; Betreiberentscheidung 26.09.2026) |
+| [M6-04](M6-04-aufbewahrungsprofile.md) | Standard-Aufbewahrungsprofile je Mandant als Entwurf ("Entwurf, Prüfung Steuerberatung offen"), Seed idempotent ohne Überschreiben, Löschung bleibt bis zur Freigabe gesperrt, Freigabe je Mandant mit `tenant_settings:update`, Vier-Augen und Protokoll | 6.9.5, S04, S05, V17 | implemented, not accepted (Migration 0139; Entscheidung Steuerberatung offen) |
+| [M5-02](M5-02-kautionsabrechnung.md) | Kaution: getrennte Verwahrung, Verzinsung je Jahr als Bewegung, Kautionsabrechnung bei Vertragsende als Entwurf mit Zinsart (individuell je Jahr, Referenzzinssatz je Jahr, keine), Freigabe hinter G3 | M5, 6.9.1, D56, 7.1 B01 | implemented, not accepted (Migration 0138; Zinssatz rechtlich zu bestätigen, Betreiberentscheidung 26.09.2026) |
 | [M20-06](M20-06-mail-versand-nachweis.md) | Mailversand nur mit Nachweis: Idempotenzschlüssel je Versand, kein zweiter Versand, Weiterleitung erst nach Commit, Postfach-Soft-Delete | M20, 6.6 | implemented, not accepted |
+| [M20-07](M20-07-gmail-push-vollabruf-erledigt.md) | Gmail-Push über Pub/Sub mit Sicherheitsnetz alle fünf Minuten, Vollabruf des Posteingangs beim Verbinden und auf Anforderung, Erledigt archiviert je Mail, Ticketabschluss per letzter erledigter Mail | M20, 6.6 | implemented, not accepted (Migration 0144; Pub/Sub-Thema M20-05 offen) |
+| [M40-01](M40-01.md) | Messdienstleister: zentrale Verbindungen, Objekt- und Einheitenzuordnung, ehrliche Funktionsanzeige, lesender Abruf mit Klärungsbereich | Masterprompt Messdienstleister 2 bis 10 | implemented, not accepted (Migration 0145; Adapter Stufe 2 offen) |
 
 Index checked against the files in this folder on 26.09.2026: every rule file has one row above (`M19-02` and `M25-01` were added, `M9-02` and `W13` updated).

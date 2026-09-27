@@ -15,6 +15,13 @@ aktiviert (Kalenderfreigabe); bei erstmaliger Freigabe ist das Postfach erneut m
 zu verbinden, damit die Kalenderberechtigung erteilt wird. Die Anzeige im Kalender nutzt
 einen Zwischenspeicher von fünf Minuten mit Aktualisieren-Schaltfläche.
 
+## Sprung aus einer Benachrichtigung
+
+Eine Benachrichtigung zu einem Termin öffnet den Kalender im Monat des Termins und zeigt die
+Termindetails sofort an (Adresse /kalender?termin=<Kennung>&datum=JJJJ-MM-TT). Liegt der Termin
+in einem anderen Zeitraum als dem angezeigten, bleibt die Anzeige beim Blättern auf dem Termin,
+sobald er geladen ist.
+
 ## Termine anlegen und Quelle
 
 Ein Termin lässt sich direkt im Kalender oder aus einem Ticket heraus (Termin anlegen)

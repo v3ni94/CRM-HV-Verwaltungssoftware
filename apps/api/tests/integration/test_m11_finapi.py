@@ -11,7 +11,7 @@ import asyncio
 import concurrent.futures
 import uuid
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 import pytest
@@ -50,10 +50,57 @@ def _webform_body(status: str) -> dict[str, Any]:
     }
 
 
+class _FakeState:
+    """Per test record of what the fake provider saw (grants, requests) and a rate limit switch."""
+
+    requests: ClassVar[list[httpx.Request]] = []
+    token_grants: ClassVar[list[str]] = []
+    rate_limit_transactions: ClassVar[bool] = False
+
+    @classmethod
+    def reset(cls) -> None:
+        cls.requests, cls.token_grants, cls.rate_limit_transactions = [], [], False
+
+
+FINAPI_USER_ID = "u-1"
+FINAPI_USER_PASSWORD = "pw-1"
+
+
 def _handler(request: httpx.Request) -> httpx.Response:
     path = request.url.path
+    _FakeState.requests.append(request)
     if path == "/oauth/token":
+        form = dict(httpx.QueryParams(request.content.decode()))
+        _FakeState.token_grants.append(form["grant_type"])
+        if form["grant_type"] == "password":
+            if (form.get("username"), form.get("password")) != (
+                FINAPI_USER_ID,
+                FINAPI_USER_PASSWORD,
+            ):
+                return httpx.Response(401, json={"errors": [{"message": "bad user"}]})
+            return httpx.Response(200, json={"access_token": "user-1", "expires_in": 3599})
         return httpx.Response(200, json={"access_token": "t-1", "expires_in": 3599})
+    if path == "/users":
+        if request.headers.get("Authorization") != "Bearer t-1":
+            return httpx.Response(401, json={"errors": [{"message": "client token required"}]})
+        return httpx.Response(
+            201,
+            json={
+                "id": FINAPI_USER_ID,
+                "password": FINAPI_USER_PASSWORD,
+                "isAutoUpdateEnabled": False,
+            },
+        )
+    data_call = (
+        path.startswith("/api/")
+        or path in ("/accounts", "/transactions")
+        or path.startswith("/bankConnections/")
+    )
+    # Every data call of a connection runs under its own user token, never the client token.
+    if data_call and request.headers.get("Authorization") != "Bearer user-1":
+        return httpx.Response(401, json={"errors": [{"message": "user token required"}]})
+    if path == "/transactions" and _FakeState.rate_limit_transactions:
+        return httpx.Response(429, json={"errors": []}, headers={"Retry-After": "5"})
     if path == "/api/webForms/bankConnectionImport":
         return httpx.Response(200, json=_webform_body("AWAITING_AUTHORIZATION"))
     if path == "/api/webForms/wf-1":
@@ -118,6 +165,7 @@ def _handler(request: httpx.Request) -> httpx.Response:
 
 @pytest.fixture(autouse=True)
 def _fake_finapi(monkeypatch: pytest.MonkeyPatch, database: Database, redis_url: str) -> None:
+    _FakeState.reset()
     transport = httpx.MockTransport(_handler)
 
     def fake_client(self: finapi_client.FinApiClient) -> httpx.Client:
@@ -151,18 +199,22 @@ async def _world(settings: Any) -> World:
     factory = create_session_factory(engine)
     try:
         a, _ = await services.provision_tenant(factory, slug=f"finapi-{RUN}", name=f"FinApi {RUN}")
-        world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        for name, role in [
-            ("fa-admin", "tenant_admin"),
-            ("fa-banking", "accountant_banking"),
-            ("fa-noaccounting", "accountant_no_banking"),
+        b, _ = await services.provision_tenant(
+            factory, slug=f"finapi-sep-{RUN}", name=f"FinApi Sep {RUN}"
+        )
+        world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
+        for name, role, tenant_id in [
+            ("fa-admin", "tenant_admin", a),
+            ("fa-banking", "accountant_banking", a),
+            ("fa-noaccounting", "accountant_no_banking", a),
+            ("fb-admin", "tenant_admin", b),
         ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
             world.users[name] = uid
             await services.add_member(
-                factory, tenant_id=a, user_id=uid, role_codes=[role], actor_user_id=None
+                factory, tenant_id=tenant_id, user_id=uid, role_codes=[role], actor_user_id=None
             )
         return world
     finally:
@@ -367,6 +419,173 @@ def test_fetch_with_date_range_keeps_only_rows_in_range(client: TestClient, worl
         client.get("/api/v1/banking/transactions", params={"bank_account_id": account}, headers=h)
     )
     assert len(kept) == 2
+
+
+def _assigned_account(
+    client: TestClient, h: dict[str, str], number: str, iban: str
+) -> tuple[str, str]:
+    """Connects the fake bank and assigns ACCOUNT_OK to a fresh HOA account; returns
+    (finapi_account_link_id, property_bank_account_id)."""
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": number, "name": f"Objekt {number}", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    account = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": iban,
+                "holder": f"GdWE {number}",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    checked = _connect_and_check(client, h)
+    ok_link = next(a for a in checked["accounts"] if a["finapi_account_id"] == ACCOUNT_OK)
+    _ok(
+        client.post(
+            f"{B}/accounts/{ok_link['id']}/assign",
+            json={"property_bank_account_id": account},
+            headers=h,
+        )
+    )
+    return ok_link["id"], account
+
+
+def test_config_without_base_url_uses_data_center_default(client: TestClient, world: World) -> None:
+    """M11-01: an empty base URL falls back to the configured sandbox or live host; a
+    non-https value is refused. Client id and secret are never returned."""
+    h = bearer(login(client, world, "fa-admin"))
+    body = _ok(
+        client.put(
+            f"{B}/config",
+            json={"client_id": "cid", "client_secret": "csecret", "sandbox": True},
+            headers=h,
+        )
+    )
+    assert body["base_url"] == "https://sandbox.finapi.io"
+    assert body["sandbox"] is True
+    assert "client_secret" not in body
+    live = _ok(
+        client.put(
+            f"{B}/config",
+            json={"client_id": "cid", "client_secret": "csecret", "sandbox": False},
+            headers=h,
+        )
+    )
+    assert live["base_url"] == "https://live.finapi.io"
+    refused = client.put(
+        f"{B}/config",
+        json={
+            "client_id": "cid",
+            "client_secret": "csecret",
+            "sandbox": True,
+            "base_url": "http://evil.example",
+        },
+        headers=h,
+    )
+    assert refused.status_code == 422
+
+
+def test_connection_gets_own_finapi_user_and_user_token(client: TestClient, world: World) -> None:
+    """Token flow: the technical finAPI user is created once with the client token (auto
+    update off), the WebForm and every later data call run under the connection's user token
+    (password grant), never under the client token alone."""
+    h = bearer(login(client, world, "fa-admin"))
+    _configure(client, h)
+    _connect_and_check(client, h)
+    user_calls = [r for r in _FakeState.requests if r.url.path == "/users"]
+    assert len(user_calls) == 1
+    assert b'"isAutoUpdateEnabled":false' in user_calls[0].content.replace(b" ", b"")
+    assert "client_credentials" in _FakeState.token_grants
+    assert "password" in _FakeState.token_grants
+    data_calls = [r for r in _FakeState.requests if r.url.path in ("/accounts",)]
+    assert data_calls
+    assert all(r.headers["Authorization"] == "Bearer user-1" for r in data_calls)
+
+
+def test_incremental_sync_uses_cursor_and_stays_idempotent(
+    client: TestClient, world: World
+) -> None:
+    """Second fetch without a range starts at the stored cursor (newest booking date minus the
+    overlap) and imports nothing twice; amounts arrive as NUMERIC strings, not floats."""
+    h = bearer(login(client, world, "fa-admin"))
+    _configure(client, h)
+    link_id, account = _assigned_account(client, h, "811", "DE45120300000000202053")
+
+    _ok(client.post(f"{B}/accounts/{link_id}/fetch", headers=h))
+    first = [r for r in _FakeState.requests if r.url.path == "/transactions"]
+    assert first
+    assert "minBankBookingDate" not in first[-1].url.params  # no cursor yet
+    txs = _ok(
+        client.get("/api/v1/banking/transactions", params={"bank_account_id": account}, headers=h)
+    )
+    assert len(txs) == 2
+    assert {t["amount"] for t in txs} == {"700.00"}
+
+    _ok(client.post(f"{B}/accounts/{link_id}/fetch", headers=h))
+    second = [r for r in _FakeState.requests if r.url.path == "/transactions"]
+    assert len(second) > len(first)
+    # Cursor 2026-02-01 minus SYNC_OVERLAP_DAYS (3): the provider is asked from 2026-01-29 on.
+    assert second[-1].url.params["minBankBookingDate"] == "2026-01-29"
+    assert second[-1].url.params["accountIds"] == ACCOUNT_OK
+    again = _ok(
+        client.get("/api/v1/banking/transactions", params={"bank_account_id": account}, headers=h)
+    )
+    assert {t["id"] for t in again} == {t["id"] for t in txs}
+
+
+def test_rate_limit_is_recorded_as_problem_code_not_retried(
+    client: TestClient, world: World
+) -> None:
+    """Error mapping: HTTP 429 from the provider ends the run as failed with MHVP-BANK-0006 on
+    the connection; nothing is imported and no retry loop hammers the provider."""
+    h = bearer(login(client, world, "fa-admin"))
+    _configure(client, h)
+    link_id, account = _assigned_account(client, h, "812", "DE18120300000000202054")
+    _FakeState.rate_limit_transactions = True
+    _ok(client.post(f"{B}/accounts/{link_id}/fetch", headers=h))
+    calls = [r for r in _FakeState.requests if r.url.path == "/transactions"]
+    assert len(calls) == 1
+    listed = _ok(client.get(f"{B}/connections", headers=h))
+    conn = next(c for c in listed if any(a["id"] == link_id for a in c["accounts"]))
+    assert conn["last_error"] is not None
+    assert conn["last_error"].startswith("MHVP-BANK-0006")
+    assert (
+        _ok(
+            client.get(
+                "/api/v1/banking/transactions", params={"bank_account_id": account}, headers=h
+            )
+        )
+        == []
+    )
+
+
+def test_tenant_separation_of_connections_and_config(client: TestClient, world: World) -> None:
+    """Tenant B never sees tenant A's finAPI configuration, connections or accounts, and
+    cannot check, fetch or assign them (RLS on every finAPI table, ADR 0002)."""
+    ha = bearer(login(client, world, "fa-admin"))
+    _configure(client, ha)
+    link_id, _ = _assigned_account(client, ha, "813", "DE88120300000000202055")
+    checked = next(
+        c
+        for c in _ok(client.get(f"{B}/connections", headers=ha))
+        if any(a["id"] == link_id for a in c["accounts"])
+    )
+    hb = bearer(login(client, world, "fb-admin"))
+    assert _ok(client.get(f"{B}/config", headers=hb))["configured"] is False
+    assert _ok(client.get(f"{B}/connections", headers=hb)) == []
+    assert client.post(f"{B}/connections/{checked['id']}/check", headers=hb).status_code == 404
+    assert client.post(f"{B}/accounts/{link_id}/fetch", headers=hb).status_code in (404, 409)
 
 
 def test_fetch_per_bank_queues_every_assigned_account(client: TestClient, world: World) -> None:

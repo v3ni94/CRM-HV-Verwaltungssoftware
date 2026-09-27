@@ -37,14 +37,13 @@ export function LoginForm({ next }: { next?: string }) {
       return;
     }
     if (result.data.status === "ok") {
-      // Password alone was enough (non-administrator without TOTP, or a trusted device).
+      // Password alone was enough (no second factor enabled, or a trusted device).
       const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/kontakte";
       router.push(target);
       router.refresh();
       return;
     }
     const params = new URLSearchParams();
-    if (result.data.status === "mfa_setup_required") params.set("einrichten", "1");
     if (next) params.set("next", next);
     const query = params.toString();
     router.push(`/anmelden/zweiter-faktor${query ? `?${query}` : ""}`);

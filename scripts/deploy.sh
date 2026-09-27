@@ -3,10 +3,12 @@
 # server, runs the migrate container and restarts the stack behind Traefik.
 #
 # Image source:
-#   registry (default): pulls MHVP_IMAGE_REGISTRY/mhvp-*:MHVP_IMAGE_TAG
-#   DEPLOY_BUILD=1:     builds the images on the server from the git tag; no registry needed
-#                       (single own server, OPEN_QUESTIONS M1-03). MHVP_IMAGE_REGISTRY defaults
-#                       to "local".
+#   registry (default): pulls MHVP_IMAGE_REGISTRY/mhvp-*:MHVP_IMAGE_TAG; the registry is
+#                       ghcr.io/v3ni94 (M1-03, decided 26.09.2026), images are pushed by
+#                       .github/workflows/images.yml; the server must be logged in (read:packages
+#                       PAT, docs/runbooks/server-setup.md section 4).
+#   DEPLOY_BUILD=1:     fallback without registry: builds the images on the server from the git
+#                       tag. MHVP_IMAGE_REGISTRY defaults to "local".
 # Server data are operator inputs (OPEN_QUESTIONS M9-01); without them the script stops before
 # touching anything.
 set -euo pipefail
@@ -20,6 +22,7 @@ esac
 BUILD="${DEPLOY_BUILD:-0}"
 [[ "$BUILD" == 1 ]] && MHVP_IMAGE_REGISTRY="${MHVP_IMAGE_REGISTRY:-local}"
 missing=()
+MHVP_IMAGE_REGISTRY="${MHVP_IMAGE_REGISTRY:-ghcr.io/v3ni94}"
 for var in DEPLOY_HOST DEPLOY_PATH MHVP_IMAGE_REGISTRY MHVP_IMAGE_TAG; do
   [[ -n "${!var:-}" ]] || missing+=("$var")
 done

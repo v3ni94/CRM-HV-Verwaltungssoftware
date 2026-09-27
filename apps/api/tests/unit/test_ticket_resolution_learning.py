@@ -21,8 +21,11 @@ def test_note_is_required_for_other_only() -> None:
         ResolutionIn(kind=ResolutionKind.SONSTIGES, note="   ")
     assert ResolutionIn(kind=ResolutionKind.SONSTIGES, note=" Rückruf ").note == "Rückruf"
     assert ResolutionIn(kind=ResolutionKind.AUSKUNFT_ERTEILT).note is None
+    # Der Code ist ein Slug; ob er für den Mandanten wirksam ist, prüft der Service (M19-04).
+    assert ResolutionIn.model_validate({"kind": "zahlung_geklaert"}).kind == "zahlung_geklaert"
+    assert ResolutionIn.model_validate({"kind": "eigene_art"}).kind == "eigene_art"
     with pytest.raises(ValidationError):
-        ResolutionIn.model_validate({"kind": "erfunden"})
+        ResolutionIn.model_validate({"kind": "Keine Art!"})
 
 
 def test_resolution_text_and_step() -> None:

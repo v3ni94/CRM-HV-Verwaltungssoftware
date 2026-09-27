@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
 
+import segno
 from jinja2 import StrictUndefined, TemplateError
 from jinja2.sandbox import SandboxedEnvironment
 from reportlab.lib.colors import HexColor
@@ -22,6 +23,7 @@ from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
+    Image,
     PageTemplate,
     Paragraph,
     Spacer,
@@ -73,6 +75,26 @@ TABLE_MARKER = "[[table:{name}]]"
 
 
 @dataclass
+class LetterQr:
+    """QR code printed below the body next to its payload as text (A86, M21-08).
+
+    ``payload`` is encoded verbatim (for example the invitation link); it is also printed as
+    text beside the code so a reader without camera can type it. ``caption`` is a short plain
+    text above the printed payload. The code is generated with ``segno`` (pure Python, BSD),
+    error correction level M, as PNG, so the PDF carries an image object."""
+
+    payload: str
+    caption: str = ""
+
+
+def qr_png(payload: str, scale: int = 6) -> bytes:
+    """PNG bytes of a QR code holding ``payload`` verbatim (error correction M)."""
+    buffer = io.BytesIO()
+    segno.make(payload, error="m").save(buffer, kind="png", scale=scale, border=2)
+    return buffer.getvalue()
+
+
+@dataclass
 class Letter:
     recipient_lines: list[str]
     subject: str
@@ -89,6 +111,8 @@ class Letter:
     # Optional draft marking (A83): printed as a red header line on every page and as a light
     # diagonal watermark "ENTWURF"; off for every caller unless set explicitly.
     draft_notice: str | None = None
+    # Optional QR code with its payload as text, printed after the body (A86).
+    qr: LetterQr | None = None
 
 
 def render_text(source: str, context: dict[str, Any]) -> str:
@@ -278,6 +302,31 @@ def _paragraphs(
     return out
 
 
+def _qr_block(qr: LetterQr, width: float, style: ParagraphStyle) -> Table:
+    size = 32 * mm
+    image = Image(io.BytesIO(qr_png(qr.payload)), width=size, height=size)
+    caption = ParagraphStyle("qr_caption", parent=style, fontSize=9.5, leading=12, spaceAfter=2)
+    link = ParagraphStyle("qr_link", parent=caption, fontName="Courier", fontSize=9, leading=11)
+    cell: list[Any] = []
+    if qr.caption:
+        cell.append(Paragraph(html.escape(qr.caption), caption))
+    # ``splitLongWords`` (style default) wraps a long link inside the column.
+    cell.append(Paragraph(html.escape(qr.payload), link))
+    flow = Table([[image, cell]], colWidths=[size + 6 * mm, width - size - 6 * mm])
+    flow.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    return flow
+
+
 def render_pdf(head: Letterhead, letter: Letter) -> bytes:
     """Render an escaped letter. ``subject`` and ``body`` must come from :func:`render_text`."""
     buffer = io.BytesIO()
@@ -312,6 +361,8 @@ def render_pdf(head: Letterhead, letter: Letter) -> bytes:
         story += [Paragraph(html.escape(letter.notice), notice), Spacer(1, 3 * mm)]
     story += [Paragraph(letter.subject, subject), Spacer(1, 8 * mm)]
     story += _paragraphs(letter.body, body, letter.tables, width)
+    if letter.qr is not None:
+        story += [Spacer(1, 2 * mm), _qr_block(letter.qr, width, body), Spacer(1, 4 * mm)]
     story += [Spacer(1, 4 * mm), Paragraph(html.escape(letter.closing), body), Spacer(1, 14 * mm)]
     story += [Paragraph(html.escape(line), body) for line in letter.signatory]
     doc.build(story)

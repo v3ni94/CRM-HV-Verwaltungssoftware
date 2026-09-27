@@ -10,7 +10,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,7 @@ from mhvp.automation.models import (
     TRIGGER_SCHEDULE,
     AutomationRule,
     AutomationRun,
+    AutomationWebhookDelivery,
 )
 from mhvp.automation.rules import RELATED_FIELDS, normalise, related_groups
 from mhvp.automation.schedule import FREQUENCIES
@@ -36,8 +37,10 @@ from mhvp.automation.schemas import (
 from mhvp.automation.services import (
     build_context,
     carry_secrets,
+    delivery_out,
     dry_run,
     public_actions,
+    redeliver_webhook,
     schedule_context,
     seal_actions,
 )
@@ -102,7 +105,13 @@ def _rule_out(rule: AutomationRule) -> dict[str, Any]:
     }
 
 
-def _run_out(run: AutomationRun, rule_name: str | None = None) -> dict[str, Any]:
+def _run_out(
+    run: AutomationRun,
+    rule_name: str | None = None,
+    deliveries: list[AutomationWebhookDelivery] | None = None,
+) -> dict[str, Any]:
+    """Run with its webhook delivery log (A82): one entry per ``webhook`` action, with the
+    attempt count, the next attempt and the last result."""
     return {
         "id": run.id,
         "rule_id": run.rule_id,
@@ -114,6 +123,7 @@ def _run_out(run: AutomationRun, rule_name: str | None = None) -> dict[str, Any]
         "status": run.status,
         "error": run.error,
         "actions": run.actions,
+        "webhook_deliveries": [delivery_out(d) for d in deliveries or []],
     }
 
 
@@ -368,7 +378,37 @@ async def list_runs(
             .offset(offset)
         )
         total = await session.scalar(count_query)
+        runs = list(rows)
+        deliveries: dict[uuid.UUID, list[AutomationWebhookDelivery]] = {}
+        if runs:
+            for delivery in await session.scalars(
+                select(AutomationWebhookDelivery)
+                .where(AutomationWebhookDelivery.run_id.in_([run.id for run, _ in runs]))
+                .order_by(AutomationWebhookDelivery.action_index)
+            ):
+                deliveries.setdefault(delivery.run_id, []).append(delivery)
         return {
-            "items": [_run_out(run, name) for run, name in rows],
+            "items": [_run_out(run, name, deliveries.get(run.id)) for run, name in runs],
             "total": int(total or 0),
         }
+
+
+@router.post(
+    "/webhook-deliveries/{delivery_id}/redeliver",
+    status_code=202,
+    summary="Regel-Webhook erneut zustellen",
+)
+async def redeliver_endpoint(
+    delivery_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(MANAGE),
+) -> Response:
+    """Manual redelivery (A82, as ``/webhook-deliveries/{id}/redeliver`` of the platform):
+    the delivery goes back to pending and is sent by the next beat pass; the attempt count
+    stays. RLS limits the lookup to the caller's tenant."""
+    async with tenant_tx(request, principal) as session:
+        delivery = await session.get(AutomationWebhookDelivery, delivery_id)
+        if delivery is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Zustellung nicht gefunden.")
+        redeliver_webhook(delivery)
+    return Response(status_code=202)

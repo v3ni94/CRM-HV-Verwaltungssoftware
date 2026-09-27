@@ -36,6 +36,36 @@ freigegeben). Debitorenkonten lassen sich aus den Verträgen übernehmen; das Er
 Zahlungsart (zum Beispiel Miete, Hausgeld) wird je Buchungskreis zugeordnet und ist
 Voraussetzung für die Sollstellung.
 
+Die Vorlage enthält seit dem 26.09.2026 zusätzlich die Erlöskonten der Mietverwaltung als
+Vorschlag: 060300 Miete, 060400 Betriebskostenvorauszahlung, 060500
+Heizkostenvorauszahlung, 060600 Garagenmiete, 060700 Stellplatzmiete und 060800 Sonstige
+Erlöse. Sie gelten für Buchungskreise von Eigentümern und SEV-Eigentümern, nicht für
+Gemeinschaften. Jedes dieser Konten trägt das Prüfkennzeichen Entwurf mit dem Vermerk
+"Freigabe durch Steuerberatung offen"; das Kennzeichen erscheint in der Kontenliste des
+Buchungskreises. Es ist ein Hinweis auf die ausstehende Prüfung, keine Sperre. Umlagefähigkeit,
+Abrechnungsart und Umsatzsteueroption sind bei diesen Konten nicht gesetzt und werden mit
+der Steuerberatung festgelegt. Das erneute Anlegen der Vorlage ergänzt nur fehlende Konten
+und verändert vorhandene Zeilen nicht. Ein Konto für Kautionen als Verbindlichkeit ist nicht
+vorbelegt, weil der Kontenrahmen der Spezifikation dafür keinen Nummernbereich vorsieht;
+Mietforderungen laufen über die Debitorenkonten je Vertrag.
+
+Die Kostenkonten der Vorlage sind seit dem 26.09.2026 als Entwurf nach der
+Betriebskostenverordnung vorbelegt: Konten, die einer Betriebskostenart des Katalogs
+entsprechen (zum Beispiel Hausmeister, Reinigung, Gartenpflege, Winterdienst, Allgemeinstrom,
+Brennstoff, Wartung Heizung, Zählermiete, Wasser, Abwasser), sind als umlagefähig mit der
+Abrechnungsart Betriebskosten eingeordnet. Der übliche Schlüssel steht als Vorschlag an der
+Vorlagenzeile: Wohnfläche für die meisten Kostenarten, Verbrauch für Heizung, Warmwasser und
+Wasser, sofern Zähler vorhanden sind; ohne Zähler ist der Schlüssel je Objekt festzulegen.
+Heizungsreparaturen sind als nicht umlagefähig eingeordnet. Das Konto Rauchwarnmelder bleibt
+ohne Einordnung, weil es Miete und Wartung mischt. Die Umsatzsteueroption ist bei keinem
+Kostenkonto gesetzt. Jede vorbelegte Zeile trägt das Prüfkennzeichen Entwurf mit dem Vermerk
+"Freigabe durch Steuerberatung offen". Das erneute Anlegen der Vorlage füllt nur Felder, die
+noch nicht gesetzt sind, und verändert eigene Einträge nicht; bestehende Buchungskreise
+bleiben unverändert. Die Vorbelegung ersetzt nicht die Einordnung je Objekt: die
+Betriebskostenabrechnung prüft weiterhin je Position, ob das Konto im Buchungskreis als
+umlagefähig eingeordnet ist, und der Verteilungsschlüssel wird je Objekt erfasst. Die
+Zuordnungstabelle steht in Regel M10-02.
+
 Die Detailseite eines Buchungskreises zeigt:
 
 - Saldenliste zum Tagesdatum mit Konto, Soll, Haben und Saldo.
@@ -73,6 +103,27 @@ Bestätigung; ohne passenden Posten wird ein Umsatz mit Begründung ignoriert. B
 für die Automatik werden vorgeschlagen, von einer zweiten Person fachlich freigegeben und
 mit Betragsgrenze aktiviert; die Automatik ist je Mandant abgeschaltet, bis der Betreiber
 sie einschaltet. Einzelheiten im Kapitel Banking.
+
+### Ausgleich nach gesetzlicher Reihenfolge (Vorschlag)
+
+Zahlt ein Schuldner ohne Tilgungsbestimmung und hat mehrere offene Posten, kann die Plattform
+auf der Seite des Buchungskreises (Abschnitt Offene Posten, Karte „Ausgleich nach gesetzlicher
+Reihenfolge“) einen Vorschlag berechnen. Eingaben: Personenkonto, Bankkonto, Zahlbetrag und
+der Verwendungszweck. Nennt der Verwendungszweck einen Posten (Sollstellungs- oder
+Rechnungsnummer, Monat, Quartal), gilt diese Bestimmung des Zahlers zuerst. Ohne Bestimmung
+ordnet der Vorschlag in der gesetzlichen Reihenfolge: fällige vor nicht fälligen Posten, unter
+den fälligen die mit geringerer Sicherheit, dann die lästigeren (in einem versandten
+Mahnvorgang), dann die älteren; Kosten vor Zinsen vor Hauptforderung. Ein Rest, der keinen
+Posten mehr findet, bleibt Guthaben auf dem Personenkonto und wird nie Ertrag.
+
+Der Vorschlag ist mit „Vorschlag nach gesetzlicher Reihenfolge, Rechtsprüfung vor G1 offen“
+gekennzeichnet und ändert nichts. Erst „Vorschlag bestätigen“ legt einen Buchungsentwurf
+(Bank an Personenkonto) mit dem Ausgleichsplan an; die Bestätigung wird mit Regel und
+Regelversion im Ereignisprotokoll festgehalten. Haben sich die offenen Posten zwischen
+Berechnung und Bestätigung geändert, lehnt die Plattform die Bestätigung ab und der Vorschlag
+ist neu zu berechnen. Gebucht wird der Entwurf wie jeder andere im Journal; für die
+produktive Buchführung gilt die Freigabestufe G1. Weder Importe noch Automatiken wenden den
+Vorschlag ohne Bestätigung an (Regel M10-03).
 
 ## Mahnwesen
 

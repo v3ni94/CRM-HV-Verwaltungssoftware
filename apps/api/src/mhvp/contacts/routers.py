@@ -6,8 +6,9 @@ from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
-from sqlalchemy import func, select
+from sqlalchemy import case, func, or_, select
 
+from mhvp.ai.examples import delete_examples_for_contact
 from mhvp.contacts import schemas, services
 from mhvp.contacts.models import (
     Consent,
@@ -18,8 +19,10 @@ from mhvp.contacts.models import (
     ContactRelation,
     ContactTag,
     ContactTagLink,
+    DeliveryMode,
     Party,
     PartyMember,
+    RelationKind,
 )
 from mhvp.contacts.validation import mask_iban
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
@@ -289,6 +292,8 @@ async def delete_contact(
         contact = await _active(session, contact_id)
         contact.deleted_at = datetime.now(UTC)
         contact.updated_by = principal.user_id
+        # ADR 0010, M7-04: learning examples built from the contact's tickets go with it.
+        await delete_examples_for_contact(session, contact.id)
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -552,9 +557,183 @@ async def add_relation(
             entity_type="contact",
             entity_id=contact_id,
             actor_user_id=principal.user_id,
-            payload={"kind": body.kind.value},
+            payload={
+                "kind": body.kind.value,
+                "relation_id": str(relation.id),
+                "related_contact_id": str(body.related_contact_id),
+                "delivery_mode": body.delivery_mode.value,
+            },
+            changes={
+                "representative" if body.kind is RelationKind.REPRESENTATIVE else "relation": {
+                    "old": None,
+                    "new": str(body.related_contact_id),
+                }
+            },
         )
-        return schemas.RelationOut(id=relation.id, **body.model_dump())
+        related = await session.get(Contact, body.related_contact_id)
+        return schemas.RelationOut(
+            id=relation.id,
+            related_display_name=related.display_name if related else None,
+            **body.model_dump(),
+        )
+
+
+def _relation_out(row: ContactRelation, contact_id: uuid.UUID, name: str) -> schemas.RelationOut:
+    outgoing = row.contact_id == contact_id
+    return schemas.RelationOut(
+        id=row.id,
+        related_contact_id=row.related_contact_id if outgoing else row.contact_id,
+        related_display_name=name,
+        kind=row.kind,
+        valid_from=row.valid_from,
+        valid_to=row.valid_to,
+        delivery_mode=DeliveryMode(row.delivery_mode),
+        direction="outgoing" if outgoing else "incoming",
+    )
+
+
+@router.get(
+    "/contacts/{contact_id}/contact-relations",
+    summary="Beziehungen zu anderen Kontakten (Bevollmächtigte, Ehepartner, Erben)",
+)
+async def list_contact_relations(
+    contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[schemas.RelationOut]:
+    """Outgoing relations (this contact names the other) and incoming ones (this contact is
+    named, for example as authorised representative of the other)."""
+    async with tenant_tx(request, principal) as session:
+        await _active(session, contact_id)
+        rows = (
+            await session.execute(
+                select(ContactRelation, Contact.display_name)
+                .join(
+                    Contact,
+                    Contact.id
+                    == case(
+                        (
+                            ContactRelation.contact_id == contact_id,
+                            ContactRelation.related_contact_id,
+                        ),
+                        else_=ContactRelation.contact_id,
+                    ),
+                )
+                .where(
+                    or_(
+                        ContactRelation.contact_id == contact_id,
+                        ContactRelation.related_contact_id == contact_id,
+                    ),
+                    Contact.deleted_at.is_(None),
+                )
+                .order_by(ContactRelation.created_at, ContactRelation.id)
+            )
+        ).all()
+        return [_relation_out(row, contact_id, name) for row, name in rows]
+
+
+def _relation_state(row: ContactRelation) -> dict[str, Any]:
+    return {
+        "delivery_mode": str(row.delivery_mode),
+        "valid_from": row.valid_from.isoformat() if row.valid_from else None,
+        "valid_to": row.valid_to.isoformat() if row.valid_to else None,
+    }
+
+
+async def _own_relation(
+    session: Any, contact_id: uuid.UUID, relation_id: uuid.UUID
+) -> ContactRelation:
+    row: ContactRelation | None = await session.get(ContactRelation, relation_id)
+    if row is None or row.contact_id != contact_id:
+        raise _not_found()
+    return row
+
+
+@router.patch(
+    "/contacts/{contact_id}/contact-relations/{relation_id}",
+    summary="Zustellregel oder Gültigkeit einer Beziehung ändern",
+)
+async def patch_contact_relation(
+    contact_id: uuid.UUID,
+    relation_id: uuid.UUID,
+    body: schemas.RelationPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> schemas.RelationOut:
+    async with tenant_tx(request, principal) as session:
+        await _active(session, contact_id)
+        row = await _own_relation(session, contact_id, relation_id)
+        if "delivery_mode" in body.fields:
+            if body.delivery_mode is None:
+                raise ProblemError(ErrorCodes.VALIDATION, detail="Zustellregel fehlt.")
+            if (
+                row.kind is not RelationKind.REPRESENTATIVE
+                and body.delivery_mode is not DeliveryMode.BOTH
+            ):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Eine Zustellregel gibt es nur für Bevollmächtigte.",
+                )
+        before = _relation_state(row)
+        for name in body.fields:
+            setattr(row, name, getattr(body, name))
+        if row.valid_from and row.valid_to and row.valid_to < row.valid_from:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Das Ende der Gültigkeit liegt vor dem Beginn."
+            )
+        row.updated_by = principal.user_id
+        after = _relation_state(row)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="contact.relation_updated",
+            entity_type="contact",
+            entity_id=contact_id,
+            actor_user_id=principal.user_id,
+            payload={"relation_id": str(row.id), "kind": row.kind.value, "fields": body.fields},
+            changes=diff(before, after),
+        )
+        related = await session.get(Contact, row.related_contact_id)
+        return _relation_out(row, contact_id, related.display_name if related else "")
+
+
+@router.delete(
+    "/contacts/{contact_id}/contact-relations/{relation_id}",
+    status_code=204,
+    summary="Beziehung beenden (löschen)",
+)
+async def delete_contact_relation(
+    contact_id: uuid.UUID,
+    relation_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        await _active(session, contact_id)
+        row = await _own_relation(session, contact_id, relation_id)
+        payload = {
+            "relation_id": str(row.id),
+            "kind": row.kind.value,
+            "related_contact_id": str(row.related_contact_id),
+            "delivery_mode": str(row.delivery_mode),
+        }
+        await session.delete(row)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="contact.relation_removed",
+            entity_type="contact",
+            entity_id=contact_id,
+            actor_user_id=principal.user_id,
+            payload=payload,
+            changes={
+                "representative" if row.kind is RelationKind.REPRESENTATIVE else "relation": {
+                    "old": str(row.related_contact_id),
+                    "new": None,
+                }
+            },
+        )
+    return Response(status_code=204)
 
 
 @router.get("/contacts/{contact_id}/relations", summary="Objektbezüge eines Kontakts")

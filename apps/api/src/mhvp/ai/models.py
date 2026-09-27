@@ -23,6 +23,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from mhvp.ai.vector import Vector
 from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
@@ -67,6 +68,9 @@ class AiTask(StrEnum):
     # Gesprächsprotokoll der KI-Telefonassistenz (Hallo Heidi, 26.09.2026): Anrufer, Objekt,
     # Einheit, Anliegen; nur Vorschlag, Entscheidung in mhvp.tickets.call_assistant.
     CALL_SUMMARY = "call_summary"
+    # Einbettungen für die Ähnlichkeitssuche (M7-03, Betreiberentscheidung 26.09.2026): kein
+    # Vorschlag, nur Vektoren je Mandant; Budgetzählung wie jeder andere Lauf.
+    EMBED = "embed"
 
 
 class RunStatus(StrEnum):
@@ -261,3 +265,35 @@ class AiKnowledgeEntry(IdMixin, TimestampMixin, TenantMixin, Base):
         server_default=AiKnowledgeSource.MANUAL.value,
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EmbeddingSourceKind(StrEnum):
+    DOCUMENT = "document"
+    KNOWLEDGE_ENTRY = "knowledge_entry"
+
+
+EMBEDDING_DIMENSIONS = 1536  # OpenAI text-embedding-3-small (M7-03)
+
+
+class AiEmbedding(IdMixin, TimestampMixin, TenantMixin, Base):
+    """One embedded chunk of a document text or knowledge entry (9.1 RAG, M7-03). Holds no
+    text: the masked chunk is sent to the provider and discarded; the source row keeps the
+    content. ``content_hash`` is the hash of the whole masked source text, so a changed source
+    is detected by comparing ``updated_at`` and re-embedded as a whole. No FK on ``source_id``
+    (two source tables); orphans are removed by the index job."""
+
+    __tablename__ = "ai_embedding"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "source_kind", "source_id", "chunk_index"),
+        Index("ix_ai_embedding_tenant_source", "tenant_id", "source_kind", "source_id"),
+    )
+
+    source_kind: Mapped[EmbeddingSourceKind] = mapped_column(
+        _enum(EmbeddingSourceKind, "ai_embedding_source_kind"), nullable=False
+    )
+    source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    chunk_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str] = mapped_column(String(100), nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIMENSIONS), nullable=False)

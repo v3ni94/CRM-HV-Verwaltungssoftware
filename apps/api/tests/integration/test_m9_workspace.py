@@ -140,6 +140,10 @@ def test_workspace_flow(
     mine = [n for n in notes if n["entity_id"] == item["id"]]
     assert len(mine) == 1
     assert mine[0]["kind"] in {"maintenance_due", "maintenance_overdue"}
+    # Deep link (operator 26.09.2026): target and derived route to the subject.
+    assert mine[0]["target_type"] == "maintenance_item"
+    assert mine[0]["target_id"] == item["id"]
+    assert mine[0]["href"] == f"/objekte/{prop['id']}#wartung"
     assert _ok(client.get(f"{W}/notifications", headers=colleague)) == []
     _ok(client.post(f"{W}/notifications/read", headers=h), 204)
     assert _ok(client.get(f"{W}/notifications", params={"unread": True}, headers=h)) == []
@@ -236,3 +240,73 @@ def test_ops_metrics_platform_admin_only(client: TestClient, world: World) -> No
     assert "mhvp_webhook_deliveries_failed " in text.text
     tenant_admin = bearer(login(client, world, "m9admin"))
     assert client.get("/api/v1/platform/ops/metrics", headers=tenant_admin).status_code == 403
+
+
+def test_notification_links(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """Notifications carry a route to their subject: ticket detail, calendar with the
+    appointment focused (month from the entry), mail message; unknown targets no link.
+    Reading marks a single entry; foreign tenants and other users never see the entries."""
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.workspace.models import CalendarEntry
+    from mhvp.workspace.services import notify
+
+    h = bearer(login(client, world, "m9admin"))
+    colleague = bearer(login(client, world, "m9colleague"))
+    other = bearer(login(client, world, "m9other"))
+    _ok(client.post(f"{W}/notifications/read", headers=h), 204)
+    ticket_id, message_id, unknown_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    user_id = world.users["m9admin"]
+
+    async def seed() -> uuid.UUID:
+        engine = create_app_engine(_settings(database, redis_url))
+        try:
+            async with tenant_transaction(create_session_factory(engine), world.tenant_a) as s:
+                entry = CalendarEntry(
+                    tenant_id=world.tenant_a,
+                    owner_user_id=user_id,
+                    title="Ortstermin",
+                    starts_on=date(2026, 10, 5),
+                )
+                s.add(entry)
+                await s.flush()
+                for kind, ttype, tid in [
+                    ("ticket_assigned", "ticket", ticket_id),
+                    ("appointment_reminder", "appointment", entry.id),
+                    ("mail.approval_requested", "message", message_id),
+                    ("custom", "unknown_thing", unknown_id),
+                    ("automation.notify", None, None),
+                ]:
+                    await notify(
+                        s,
+                        tenant_id=world.tenant_a,
+                        user_id=user_id,
+                        kind=kind,
+                        title=f"Link {kind}",
+                        target_type=ttype,
+                        target_id=tid,
+                    )
+                return entry.id
+        finally:
+            await engine.dispose()
+
+    entry_id = asyncio.run(seed())
+    notes = _ok(client.get(f"{W}/notifications", params={"unread": True}, headers=h))
+    by_target = {n["target_id"]: n for n in notes}
+    assert by_target[str(ticket_id)]["href"] == f"/tickets/{ticket_id}"
+    assert by_target[str(ticket_id)]["entity_type"] == "ticket"
+    assert by_target[str(entry_id)]["href"] == f"/kalender?termin={entry_id}&datum=2026-10-05"
+    assert by_target[str(message_id)]["href"] == f"/mail?message={message_id}"
+    assert by_target[str(unknown_id)]["href"] is None
+    assert by_target[None]["href"] is None
+    # Tenant and user separation.
+    assert _ok(client.get(f"{W}/notifications", params={"unread": True}, headers=other)) == []
+    assert _ok(client.get(f"{W}/notifications", params={"unread": True}, headers=colleague)) == []
+    # Click: only the clicked entry is marked as read.
+    clicked = by_target[str(ticket_id)]["id"]
+    _ok(client.post(f"{W}/notifications/read", json=[clicked], headers=h), 204)
+    left = _ok(client.get(f"{W}/notifications", params={"unread": True}, headers=h))
+    assert clicked not in {n["id"] for n in left}
+    assert len(left) == 4

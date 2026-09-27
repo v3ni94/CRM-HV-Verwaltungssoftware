@@ -55,14 +55,20 @@ def _price(entry: dict[str, Any], key: str) -> Decimal:
 
 
 async def check_tier(
-    provider: AiProvider, api_key: str, tier: str, entry: dict[str, Any]
+    provider: AiProvider,
+    api_key: str,
+    tier: str,
+    entry: dict[str, Any],
+    endpoint_region: str | None = None,
 ) -> TierTestResult:
-    """One call, no retries and no fallback: the operator wants to see this provider's answer."""
+    """One call, no retries and no fallback: the operator wants to see this provider's answer.
+    ``endpoint_region`` is passed through like in a real run (M7-07), so a wrong region shows
+    up here with the provider's own error text."""
     model = str(entry["model"])
     prompt = tasks.prompt(TEST_TASK)
     schema = tasks.json_schema(TEST_TASK)
     messages = [{"role": "user", "content": f"<daten>\n{TEST_INSTRUCTION}\n</daten>"}]
-    client = providers.client_for(provider, api_key)
+    client = providers.client_for(provider, api_key, endpoint_region)
     started = time.monotonic()
     error: str | None = None
     tokens_in = tokens_out = 0
@@ -103,9 +109,13 @@ async def check_tier(
 
 
 async def check_provider(
-    provider: AiProvider, api_key: str, models: dict[str, Any]
+    provider: AiProvider,
+    api_key: str,
+    models: dict[str, Any],
+    endpoint_region: str | None = None,
 ) -> list[TierTestResult]:
     """Every configured tier in order; a failing tier does not stop the others."""
     return [
-        await check_tier(provider, api_key, tier, entry) for tier, entry in configured_tiers(models)
+        await check_tier(provider, api_key, tier, entry, endpoint_region)
+        for tier, entry in configured_tiers(models)
     ]

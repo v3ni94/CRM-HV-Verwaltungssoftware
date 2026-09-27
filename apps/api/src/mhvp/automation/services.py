@@ -27,6 +27,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.automation.models import (
+    DELIVERY_FAILED,
+    DELIVERY_PENDING,
+    DELIVERY_SUCCEEDED,
     RUN_STATUS_DRY_RUN,
     RUN_STATUS_EXECUTED,
     RUN_STATUS_FAILED,
@@ -35,6 +38,7 @@ from mhvp.automation.models import (
     AutomationRule,
     AutomationRun,
     AutomationWatermark,
+    AutomationWebhookDelivery,
 )
 from mhvp.automation.rules import (
     RELATED_FIELDS,
@@ -84,6 +88,8 @@ DRAFT_CATEGORY_CODE = "entwurf"
 DRAFT_CATEGORY_NAME = "Entwurf"
 DRAFT_NOTICE = "ENTWURF, automatisch erzeugt am {date} durch Regel {rule}, nicht versendet"
 WEBHOOK_TIMEOUT_SECONDS = 10.0
+# Private key of a webhook action result between ``_webhook`` and ``_record`` (never stored).
+PENDING_DELIVERY_KEY = "_pending_delivery"
 TICKET_CONTEXT_FIELDS: tuple[str, ...] = (
     "id",
     "number",
@@ -685,17 +691,16 @@ async def _webhook(
     *,
     rule: AutomationRule,
     action: WebhookAction,
+    action_index: int,
     context: dict[str, Any],
     dry_run: bool,
     settings: Settings,
 ) -> dict[str, Any]:
-    from mhvp.core.webhooks import (
-        SIGNATURE_HEADER,
-        UnsafeWebhookTargetError,
-        check_target,
-        pin_target,
-        sign,
-    )
+    """Check the target and the secret, then hand the payload to the outbox (A82): the run
+    does not call the target itself; ``deliver_due_webhooks`` sends it after the run has been
+    recorded and retries after the schedule of ``mhvp.core.webhooks``. Target and secret
+    errors are configuration errors of the rule and fail the run without retry."""
+    from mhvp.core.webhooks import UnsafeWebhookTargetError, check_target, pin_target
 
     preview = {"type": "webhook", "url": action.url}
     allow_private = settings.webhook_allow_private_targets
@@ -705,40 +710,167 @@ async def _webhook(
             # freely chosen host name; the resolution happens on the real call.
             check_target(action.url, allow_private=allow_private, resolve=False)
             return preview | {"ok": True, "detail": "Testlauf: Webhook würde gesendet."}
-        # Review 1.22 Nr. 12: the call uses the checked address (no second resolution).
-        target = pin_target(action.url, allow_private=allow_private)
+        # The target is resolved once here so that a rule with an unsafe target fails its
+        # run; the delivery pins the checked address again on every attempt (Review 1.22 Nr. 12).
+        pin_target(action.url, allow_private=allow_private)
     except UnsafeWebhookTargetError as exc:
         raise ActionError(f"Webhook-Ziel nicht zulässig: {exc}.") from exc
     if not action.secret_enc:
         raise ActionError("Webhook ohne gespeichertes Geheimnis.")
     try:
-        secret = crypto.decrypt(base64.b64decode(action.secret_enc))
+        crypto.decrypt(base64.b64decode(action.secret_enc))
     except (crypto.CryptoError, ValueError) as exc:
         raise ActionError("Webhook-Geheimnis kann nicht gelesen werden.") from exc
     body = webhook_body(rule, context, action.extra)
-    headers = {
-        "Content-Type": "application/json",
-        "X-MHVP-Event": str(context.get("type") or ""),
-        "X-MHVP-Rule": str(rule.id),
-        SIGNATURE_HEADER: sign(secret, body, int(time.time())),
-    }
-    try:
-        async with httpx.AsyncClient(timeout=WEBHOOK_TIMEOUT_SECONDS) as client:
-            response = await client.post(
-                target.url,
-                content=body,
-                headers=headers | target.headers,
-                extensions=target.extensions,
-                follow_redirects=False,
-            )
-    except httpx.HTTPError as exc:
-        raise ActionError(f"Webhook fehlgeschlagen: {type(exc).__name__}.") from exc
-    if not 200 <= response.status_code < 300:
-        raise ActionError(f"Webhook fehlgeschlagen: HTTP {response.status_code}.")
     return preview | {
         "ok": True,
-        "status_code": response.status_code,
-        "detail": "Webhook gesendet.",
+        "detail": "Webhook eingereiht.",
+        PENDING_DELIVERY_KEY: {
+            "action_index": action_index,
+            "url": action.url,
+            "event_type": str(context.get("type") or ""),
+            "body": body.decode(),
+        },
+    }
+
+
+# --- webhook outbox (A82) -----------------------------------------------------------------
+
+
+def schedule_after_attempt(delivery: AutomationWebhookDelivery, *, ok: bool, now: datetime) -> None:
+    """State transition after one attempt (``attempts`` already incremented): succeeded, or
+    the next slot of ``RETRY_SCHEDULE_SECONDS`` counted from ``now``, or failed once the
+    schedule is exhausted. Identical to ``mhvp.core.webhooks.attempt_delivery``."""
+    from mhvp.core.webhooks import RETRY_SCHEDULE_SECONDS
+
+    if ok:
+        delivery.status = DELIVERY_SUCCEEDED
+        delivery.delivered_at = now
+        delivery.next_attempt_at = None
+    elif delivery.attempts > len(RETRY_SCHEDULE_SECONDS):
+        delivery.status = DELIVERY_FAILED
+        delivery.next_attempt_at = None
+    else:
+        delivery.status = DELIVERY_PENDING
+        delivery.next_attempt_at = now + timedelta(
+            seconds=RETRY_SCHEDULE_SECONDS[delivery.attempts - 1]
+        )
+
+
+def _stored_webhook_secret(rule: AutomationRule | None, action_index: int, url: str) -> str:
+    """Secret of the webhook action at ``action_index`` of the rule as stored now; the rule
+    may have changed since the run, so the URL must still match."""
+    if rule is None or action_index >= len(rule.actions):
+        raise ActionError("Regel oder Aktion nicht mehr vorhanden.")
+    stored = rule.actions[action_index]
+    if stored.get("type") != "webhook" or stored.get("url") != url:
+        raise ActionError("Webhook-Aktion der Regel wurde geändert.")
+    if not stored.get("secret_enc"):
+        raise ActionError("Webhook ohne gespeichertes Geheimnis.")
+    try:
+        return crypto.decrypt(base64.b64decode(stored["secret_enc"]))
+    except (crypto.CryptoError, ValueError) as exc:
+        raise ActionError("Webhook-Geheimnis kann nicht gelesen werden.") from exc
+
+
+async def attempt_webhook_delivery(
+    session: AsyncSession,
+    delivery: AutomationWebhookDelivery,
+    *,
+    client: httpx.AsyncClient,
+    settings: Settings,
+    now: datetime,
+) -> bool:
+    """One signed attempt of a pending delivery; updates the row like the core webhooks do."""
+    from mhvp.core.webhooks import SIGNATURE_HEADER, UnsafeWebhookTargetError, pin_target, sign
+
+    delivery.attempts += 1
+    ok = False
+    try:
+        rule = await session.get(AutomationRule, delivery.rule_id)
+        secret = _stored_webhook_secret(rule, delivery.action_index, delivery.url)
+        target = pin_target(delivery.url, allow_private=settings.webhook_allow_private_targets)
+        body = delivery.body.encode()
+        headers = {
+            "Content-Type": "application/json",
+            "X-MHVP-Event": delivery.event_type,
+            "X-MHVP-Rule": str(delivery.rule_id),
+            "X-MHVP-Delivery": str(delivery.id),
+            SIGNATURE_HEADER: sign(secret, body, int(time.time())),
+        }
+        response = await client.post(
+            target.url,
+            content=body,
+            headers=headers | target.headers,
+            extensions=target.extensions,
+            follow_redirects=False,
+        )
+        delivery.last_status_code = response.status_code
+        ok = 200 <= response.status_code < 300
+        delivery.last_error = None if ok else f"HTTP {response.status_code}"
+    except (ActionError, UnsafeWebhookTargetError) as exc:
+        delivery.last_error = str(exc)[:200]
+    except httpx.HTTPError as exc:
+        delivery.last_error = type(exc).__name__[:200]
+    schedule_after_attempt(delivery, ok=ok, now=now)
+    return ok
+
+
+async def deliver_due_webhooks(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    now: datetime,
+    settings: Settings,
+    limit: int = 100,
+) -> dict[str, int]:
+    """Send every pending delivery of the tenant that is due; rows are locked with
+    ``SKIP LOCKED`` so that two workers never send the same delivery twice."""
+    due = list(
+        await session.scalars(
+            select(AutomationWebhookDelivery)
+            .where(
+                AutomationWebhookDelivery.tenant_id == tenant_id,
+                AutomationWebhookDelivery.status == DELIVERY_PENDING,
+                AutomationWebhookDelivery.next_attempt_at <= now,
+            )
+            .order_by(AutomationWebhookDelivery.next_attempt_at, AutomationWebhookDelivery.id)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+    )
+    totals = {"webhooks": 0, "webhooks_failed": 0}
+    if not due:
+        return totals
+    async with httpx.AsyncClient(timeout=WEBHOOK_TIMEOUT_SECONDS) as client:
+        for delivery in due:
+            totals["webhooks"] += 1
+            if not await attempt_webhook_delivery(
+                session, delivery, client=client, settings=settings, now=now
+            ):
+                totals["webhooks_failed"] += 1
+    await session.flush()
+    return totals
+
+
+def redeliver_webhook(delivery: AutomationWebhookDelivery, *, now: datetime | None = None) -> None:
+    """Manual redelivery from the API: back to pending, due now, attempt history kept."""
+    delivery.status = DELIVERY_PENDING
+    delivery.next_attempt_at = now or datetime.now(UTC)
+
+
+def delivery_out(delivery: AutomationWebhookDelivery) -> dict[str, Any]:
+    return {
+        "id": delivery.id,
+        "run_id": delivery.run_id,
+        "action_index": delivery.action_index,
+        "url": delivery.url,
+        "status": delivery.status,
+        "attempts": delivery.attempts,
+        "next_attempt_at": delivery.next_attempt_at,
+        "last_status_code": delivery.last_status_code,
+        "last_error": delivery.last_error,
+        "delivered_at": delivery.delivered_at,
     }
 
 
@@ -1041,7 +1173,7 @@ async def execute_actions(
     (the caller rolls back the savepoint and records the failure)."""
     settings = settings or get_settings()
     results: list[dict[str, Any]] = []
-    for action in parse_actions(rule.actions, stored=True):
+    for index, action in enumerate(parse_actions(rule.actions, stored=True)):
         results.append(
             await _execute_one(
                 session,
@@ -1049,6 +1181,7 @@ async def execute_actions(
                 rule=rule,
                 event_id=event_id,
                 action=action,
+                action_index=index,
                 context=context,
                 dry_run=dry_run,
                 settings=settings,
@@ -1064,6 +1197,7 @@ async def _execute_one(
     rule: AutomationRule,
     event_id: uuid.UUID,
     action: Action,
+    action_index: int,
     context: dict[str, Any],
     dry_run: bool,
     settings: Settings,
@@ -1084,7 +1218,12 @@ async def _execute_one(
         )
     if isinstance(action, WebhookAction):
         return await _webhook(
-            rule=rule, action=action, context=context, dry_run=dry_run, settings=settings
+            rule=rule,
+            action=action,
+            action_index=action_index,
+            context=context,
+            dry_run=dry_run,
+            settings=settings,
         )
     if isinstance(action, MailDraftAction):
         return await _mail_draft(
@@ -1232,6 +1371,7 @@ async def process_schedules(
             event=event,
             context=schedule_context(rule, due),
             settings=settings,
+            now=now,
         )
         rule.last_scheduled_at = due
         if run is None:
@@ -1253,6 +1393,7 @@ async def _run_rule(
     event: DomainEvent,
     context: dict[str, Any] | None = None,
     settings: Settings | None = None,
+    now: datetime | None = None,
 ) -> AutomationRun | None:
     """Execute one rule for one event, idempotent. ``None`` when already run or no match.
     ``event`` may be a transient schedule window (not persisted, see ``process_schedules``)."""
@@ -1281,7 +1422,9 @@ async def _run_rule(
                 dry_run=False,
                 settings=settings,
             )
-            run = await _record(session, tenant_id, rule, event, RUN_STATUS_EXECUTED, actions, None)
+            run = await _record(
+                session, tenant_id, rule, event, RUN_STATUS_EXECUTED, actions, None, now=now
+            )
         return run
     except IntegrityError:
         # Concurrent worker already recorded this rule and event (unique constraint).
@@ -1304,7 +1447,12 @@ async def _record(
     status: str,
     actions: list[dict[str, Any]],
     error: str | None,
+    now: datetime | None = None,
 ) -> AutomationRun:
+    """Write the run; webhook actions hand their payload to the outbox (A82), due at ``now``
+    (the beat moment, so that the delivery step of the same pass sends it)."""
+    now = now or datetime.now(UTC)
+    pending = [(a.pop(PENDING_DELIVERY_KEY), a) for a in actions if PENDING_DELIVERY_KEY in a]
     run = AutomationRun(
         tenant_id=tenant_id,
         rule_id=rule.id,
@@ -1312,11 +1460,23 @@ async def _record(
         event_type=event.type,
         status=status,
         error=error,
-        actions=actions,
-        finished_at=datetime.now(UTC),
+        # Copy: the delivery ids are added below, and the JSONB column only writes a changed
+        # value when the new list differs from the one inserted here.
+        actions=[dict(a) for a in actions],
+        finished_at=now,
     )
     session.add(run)
     await session.flush()
+    for spec, result in pending:
+        delivery = AutomationWebhookDelivery(
+            tenant_id=tenant_id, run_id=run.id, rule_id=rule.id, next_attempt_at=now, **spec
+        )
+        session.add(delivery)
+        await session.flush()
+        result["delivery_id"] = str(delivery.id)
+    if pending:
+        run.actions = [dict(a) for a in actions]
+        await session.flush()
     return run
 
 
@@ -1327,13 +1487,30 @@ async def process_tenant(
     now: datetime | None = None,
     settings: Settings | None = None,
 ) -> dict[str, int]:
-    """Process new events of one tenant since its watermark (see module docstring)."""
+    """Process new events of one tenant since its watermark (see module docstring), then
+    send the due webhook deliveries of the tenant (A82)."""
     now = now or datetime.now(UTC)
-    cutoff = now - PROCESS_LAG
-    totals = {"events": 0, "runs": 0, "failed": 0}
+    settings = settings or get_settings()
+    totals = {"events": 0, "runs": 0, "failed": 0, "webhooks": 0, "webhooks_failed": 0}
     scheduled = await process_schedules(session, tenant_id, now=now, settings=settings)
     totals["runs"] += scheduled["runs"]
     totals["failed"] += scheduled["failed"]
+    await _process_events(session, tenant_id, now=now, settings=settings, totals=totals)
+    delivered = await deliver_due_webhooks(session, tenant_id, now=now, settings=settings)
+    totals["webhooks"] += delivered["webhooks"]
+    totals["webhooks_failed"] += delivered["webhooks_failed"]
+    return totals
+
+
+async def _process_events(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    now: datetime,
+    settings: Settings,
+    totals: dict[str, int],
+) -> None:
+    cutoff = now - PROCESS_LAG
     watermark = await session.scalar(
         select(AutomationWatermark).where(AutomationWatermark.tenant_id == tenant_id)
     )
@@ -1344,7 +1521,7 @@ async def process_tenant(
         )
         session.add(watermark)
         await session.flush()
-        return totals
+        return
     rules = list(
         await session.scalars(
             select(AutomationRule)
@@ -1393,6 +1570,7 @@ async def process_tenant(
                 event=event,
                 context=context,
                 settings=settings,
+                now=now,
             )
             if run is None:
                 continue
@@ -1403,4 +1581,3 @@ async def process_tenant(
         watermark.last_occurred_at = events[-1].occurred_at
         watermark.last_event_id = events[-1].id
     watermark.updated_at = now
-    return totals

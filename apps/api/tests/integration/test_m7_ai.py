@@ -803,6 +803,7 @@ def test_routing_strategy_and_fallback(
         )
         run = _chat(client, admin, "summarize", f"Strategie D {RUN} {spent}", [])
         assert (run["status"], run["provider"]) == ("succeeded", "openai")
+        assert run["provider_used"] == "openai"
         assert any("anthropic: Monatsbudget" in x for x in run["fallback"])
         # ... anthropic_only does not.
         _ok(
@@ -820,7 +821,17 @@ def test_routing_strategy_and_fallback(
         factory.failing.add("openai")
         run = _chat(client, admin, "summarize", f"Strategie F {RUN}", [])
         assert (run["status"], run["provider"]) == ("succeeded", "anthropic")
+        assert run["provider_used"] == "anthropic"
         assert any("openai: Anbieterfehler" in x for x in run["fallback"])
+        # An unsupported OpenAI region is rejected at configuration time (M7-07).
+        _ok(
+            client.put(
+                "/api/v1/ai/providers/openai",
+                json={**openai_body, "endpoint_region": "apac"},
+                headers=admin,
+            ),
+            422,
+        )
         _ok(client.put("/api/v1/ai/routing", json={"strategy": "openai_only"}, headers=admin), 200)
         run = _chat(client, admin, "summarize", f"Strategie G {RUN}", [])
         assert (run["status"], run["provider"]) == ("failed", "openai")

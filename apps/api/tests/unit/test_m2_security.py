@@ -49,9 +49,17 @@ def test_master_key_validation() -> None:
 
 
 def test_password_policy_and_hashing() -> None:
-    assert passwords.policy_violation("short") is not None
+    # Operator decision 26.09.2026 (M2-01): minimum length 6, maximum 128 unchanged.
+    assert passwords.MIN_LENGTH == 6
+    assert passwords.policy_violation("short") is not None  # 5 characters
+    assert passwords.policy_violation("sixchr") is None  # 6 characters
+    assert passwords.policy_violation("x" * 128) is None
+    assert passwords.policy_violation("x" * 129) is not None
     assert passwords.policy_violation(" leading space ok?") is not None
+    assert passwords.policy_violation("      ") is not None  # whitespace only
     assert passwords.policy_violation("a sufficiently long passphrase") is None
+    assert passwords.MAX_FAILED_LOGINS == 10
+    assert passwords.LOCKOUT_MINUTES == 15
     hashed = passwords.hash_password("a sufficiently long passphrase")
     assert hashed.startswith("$argon2id$")
     assert passwords.verify_password(hashed, "a sufficiently long passphrase")

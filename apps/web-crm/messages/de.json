@@ -22,20 +22,15 @@
     "emailInvalid": "Bitte eine gültige E-Mail-Adresse eingeben.",
     "passwordRequired": "Bitte das Passwort eingeben.",
     "mfaTitle": "Zweiter Faktor",
-    "mfaSetupTitle": "Zweiten Faktor einrichten",
-    "mfaSetupHint": "Den QR-Code mit einer Authenticator-App scannen oder den Schlüssel manuell eingeben. Danach den angezeigten sechsstelligen Code eingeben.",
     "mfaHint": "Bitte den sechsstelligen Code aus der Authenticator-App eingeben.",
-    "secretLabel": "Schlüssel für die manuelle Eingabe",
-    "qrAlt": "QR-Code für die Authenticator-App",
     "code": "Code",
     "codeInvalid": "Der Code besteht aus 6 bis 8 Ziffern.",
     "verify": "Bestätigen",
-    "setupLoading": "Einrichtung wird vorbereitet",
     "backToLogin": "Zurück zur Anmeldung",
     "tenantTitle": "Mandant auswählen",
     "tenantHint": "Ihr Zugang ist für mehrere Mandanten freigeschaltet. Bitte den Mandanten für diese Sitzung wählen.",
     "noTenants": "Für Ihren Zugang ist kein Mandant freigeschaltet.",
-    "rememberDevice": "Auf diesem Gerät 180 Tage merken"
+    "rememberDevice": "Dieses Gerät 90 Tage merken"
   },
   "Shell": {
     "skip": "Zum Inhalt springen",
@@ -102,7 +97,8 @@
     "immoware24:reconciliation": "Immoware24: Abgleichbericht Parallelbetrieb",
     "serviceContracts": "Dienstleisterverträge",
     "loading": "Seite wird geladen.",
-    "contracts": "Verträge"
+    "contracts": "Verträge",
+    "ticketAnalytics": "Auswertung Tickets"
   },
   "Contacts": {
     "title": "Kontakte",
@@ -247,6 +243,29 @@
       "invitedAt": "Eingeladen am {date}, Code gültig bis {until}",
       "activatedAt": "Aktiviert am {date}",
       "lastLogin": "Letzte Anmeldung {date}"
+    },
+    "representatives": {
+      "title": "Bevollmächtigte und Zustellregel",
+      "hint": "Ein Bevollmächtigter erhält nach der Zustellregel E-Mails, Briefe und WEG-Einladungen, die an diesen Kontakt gerichtet sind. Jede Änderung wird protokolliert.",
+      "empty": "Keine Bevollmächtigten hinterlegt.",
+      "mode": "Zustellregel",
+      "modeFor": "Zustellregel für {name}",
+      "modes": {
+        "both": "beide (Vollmachtgeber und Bevollmächtigter)",
+        "representative_only": "nur Bevollmächtigter",
+        "owner_only": "nur Vollmachtgeber"
+      },
+      "since": "seit {date}",
+      "until": "bis {date}",
+      "unlimited": "unbefristet",
+      "end": "Vollmacht beenden",
+      "endConfirm": "Vollmacht von {name} wirklich beenden? Die Zustellung geht danach nur noch an den Kontakt selbst.",
+      "represents": "Bevollmächtigt für:",
+      "add": "Bevollmächtigten hinterlegen",
+      "pick": "Bevollmächtigten suchen (Name)",
+      "picked": "Ausgewählt",
+      "save": "Bevollmächtigten speichern",
+      "error": "Die Änderung konnte nicht gespeichert werden."
     }
   },
   "ContactForm": {
@@ -1008,6 +1027,7 @@
     "notifications": "Benachrichtigungen",
     "noNotifications": "Keine neuen Benachrichtigungen.",
     "markAllRead": "Alle als gelesen markieren",
+    "markRead": "Als gelesen markieren",
     "themeLabel": "Darstellung: {theme}",
     "theme": {
       "system": "System",
@@ -1488,7 +1508,6 @@
     "handover": "Übergabeprotokolle"
   },
   "Receivables": {
-    "skippedPending": "{count} Verträge übersprungen, Freigabe ausstehend",
     "title": "Sollstellungen",
     "notice": "Erst Vorschau, dann Buchen. Zeitanteilige Beträge und abweichende Intervalle bleiben manuell. Buchungen sind bis zur Freigabestufe G1 nicht die führende Buchhaltung.",
     "month": "Monat",
@@ -1505,6 +1524,39 @@
     "total": "Summe offen",
     "noOpenItems": "Keine offenen Posten.",
     "openItems": "Offene Posten zum {date}",
+    "settlement": {
+      "title": "Ausgleich nach gesetzlicher Reihenfolge",
+      "intro": "Ohne Tilgungsbestimmung des Zahlers schlägt die Plattform den Ausgleich in der gesetzlichen Reihenfolge nur vor: fällige vor nicht fälligen Posten, dann geringere Sicherheit, größere Last, ältere zuerst, Kosten vor Zinsen vor Hauptforderung. Eine Bestimmung des Zahlers im Verwendungszweck geht vor. Die Bestätigung erzeugt einen Buchungsentwurf, gebucht wird nur über das Journal.",
+      "debtor": "Personenkonto",
+      "bank": "Bankkonto",
+      "amount": "Zahlbetrag",
+      "purpose": "Verwendungszweck (Bestimmung des Zahlers)",
+      "propose": "Vorschlag berechnen",
+      "confirm": "Vorschlag bestätigen (Entwurf anlegen)",
+      "confirmQuestion": "Vorschlag über {amount} bestätigen? Es entsteht ein Buchungsentwurf mit Ausgleichsplan; die Bestätigung wird mit Regelversion protokolliert.",
+      "created": "Entwurf angelegt. Buchen im Journal, Buchungen unterliegen der Freigabestufe G1.",
+      "empty": "Keine offenen Posten für diesen Betrag.",
+      "basis": "Grundlage: {basis}",
+      "rule": "Regel {rule}, Version {version}",
+      "bases": {
+        "statutory_order": "gesetzliche Reihenfolge",
+        "determination": "Bestimmung des Zahlers",
+        "mixed": "Bestimmung des Zahlers, Rest gesetzliche Reihenfolge",
+        "none": "kein Ausgleich"
+      },
+      "classes": {
+        "costs": "Kosten",
+        "interest": "Zinsen",
+        "principal": "Hauptforderung"
+      },
+      "rank": "Rang",
+      "due": "Fällig",
+      "claimClass": "Art",
+      "open": "Offen",
+      "allocated": "Ausgleich",
+      "reason": "Grund",
+      "unallocated": "Nicht zugeordnet: {amount} bleibt Guthaben auf dem Personenkonto, kein Ertrag."
+    },
     "itemStatus": {
       "ready": "bereit",
       "manual": "manuell",
@@ -1516,7 +1568,8 @@
       "preview": "Vorschau",
       "posted": "gebucht",
       "reversed": "storniert"
-    }
+    },
+    "skippedPending": "{count} Verträge übersprungen, Freigabe ausstehend"
   },
   "Bank": {
     "title": "Bank",
@@ -2356,7 +2409,9 @@
       "createdFrom": "Erstellt ab",
       "createdTo": "Erstellt bis",
       "reset": "Zurücksetzen",
-      "showClosed": "Erledigte anzeigen"
+      "showClosed": "Erledigte anzeigen",
+      "sortCreated": "Nach Eingang",
+      "sortHint": "Standard: am längsten ohne Reaktion zuerst, Erledigte zuletzt"
     },
     "reply": {
       "title": "Antworten",
@@ -2506,10 +2561,30 @@
         "kein_handlungsbedarf": "Kein Handlungsbedarf",
         "abgelehnt": "Abgelehnt",
         "zusammengefuehrt": "Zusammengeführt",
-        "sonstiges": "Sonstiges"
-      }
+        "sonstiges": "Sonstiges",
+        "zahlung_geklaert": "Zahlung geklärt",
+        "termin_vereinbart": "Termin vereinbart",
+        "mangel_behoben": "Mangel behoben",
+        "vertrag_geaendert": "Vertrag geändert"
+      },
+      "loading": "Erledigungsarten werden geladen",
+      "loadError": "Erledigungsarten konnten nicht geladen werden."
     },
-    "resolutionLabel": "Erledigung"
+    "resolutionLabel": "Erledigung",
+    "attention": {
+      "legend": "Farblegende",
+      "legend_stale_96h": "Rot: seit 96 Stunden ohne Reaktion unsererseits",
+      "legend_stale_24h": "Orange: seit 24 Stunden ohne Reaktion unsererseits",
+      "legend_new": "Gelb: neu",
+      "legend_closed": "Grün: erledigt",
+      "closed": "Erledigt",
+      "new": "Neu, noch ohne Reaktion",
+      "staleHours": "Seit {hours} Stunden ohne Reaktion",
+      "staleDays": "Seit {days} Tagen ohne Reaktion",
+      "lastInbound": "Letzte Nachricht des Kunden: {at}",
+      "column": "Reaktion"
+    },
+    "linkedAllClosed": "Alle verknüpften Tickets sind erledigt."
   },
   "Automation": {
     "title": "Automatisierung",
@@ -3492,6 +3567,10 @@
     "knowledge": {
       "title": "Wissensdatenbank",
       "description": "Gelernte Playbooks und Lernbeispiele aus Erledigungen ansehen."
+    },
+    "depositRates": {
+      "title": "Kautionszinsen",
+      "description": "Referenzzinssatz je Jahr für die Kautionsabrechnung."
     }
   },
   "Members": {
@@ -3521,7 +3600,7 @@
     "addTitle": "Benutzer hinzufügen",
     "addContactHint": "Der Benutzer wird zusätzlich als Kontakt des Mandanten angelegt.",
     "displayName": "Anzeigename",
-    "passwordHint": "Mindestens 12 Zeichen.",
+    "passwordHint": "Mindestens 6 Zeichen.",
     "addSubmit": "Benutzer anlegen",
     "editCompetences": "Kompetenzen bearbeiten",
     "mobilePhone": "Mobilnummer",
@@ -3607,6 +3686,18 @@
     "members": "Das Kennzeichen je Mitglied wird unter Einstellungen, Benutzer gepflegt (Recht Mandanteneinstellungen ändern). Alle anderen Mailentwürfe (Postfach ohne Ticket, Playbook, Weiterleitung) bleiben beim Vier-Augen-Prinzip.",
     "risk": "Notbremse: Ist der Schalter an, brauchen alle Ticketantworten des Mandanten die Freigabe einer zweiten Person, unabhängig vom Kennzeichen. Standard aus. Jede Änderung wird protokolliert (Ereignis Mandanteneinstellungen geändert mit Nutzer).",
     "label": "Alle Ticketantworten nur mit Freigabe durch eine zweite Person versenden",
+    "saved": "Gespeichert.",
+    "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern."
+  },
+  "AiLearningExamples": {
+    "title": "Lernbeispiele aus Ticketabschlüssen",
+    "status": {
+      "on": "an",
+      "off": "aus"
+    },
+    "description": "Ist der Schalter an, speichert die Plattform je Ticketabschluss ein Lernbeispiel (Betreff, Anliegen, Kategorie, Thema, Erledigungsart, Notiz und ein Auszug der letzten Antwort). Daraus entsteht der Hinweis Bei ähnlichen Vorgängen wurde für neue Anliegen. Die Beispiele bleiben in der Plattform und gehen nicht an den KI-Anbieter. Wird ein Kontakt gelöscht, werden die Beispiele seiner Tickets mit gelöscht.",
+    "risk": "Standard aus: Die Beispiele enthalten in der Regel personenbezogene Daten. Aufbewahrungsfrist und Löschlauf sind noch nicht festgelegt (ADR 0010, offene Frage M7-04). Das Ausschalten stoppt neue Beispiele, vorhandene bleiben erhalten. Jede Änderung wird protokolliert.",
+    "label": "Lernbeispiele aus Ticketabschlüssen speichern",
     "saved": "Gespeichert.",
     "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern."
   },
@@ -3730,7 +3821,23 @@
     "revoke": "Abmelden",
     "devicesTitle": "Gemerkte Geräte",
     "noDevices": "Keine gemerkten Geräte.",
-    "deviceExpires": "Läuft ab am"
+    "deviceExpires": "Läuft ab am",
+    "totpTitle": "Sicherheit: Zweiter Faktor (Authenticator-App)",
+    "totpStatusOn": "Der zweite Faktor ist eingeschaltet. Bei der Anmeldung wird ein Code aus der Authenticator-App abgefragt, sofern das Gerät nicht gemerkt wurde.",
+    "totpStatusOff": "Der zweite Faktor ist ausgeschaltet. Die Anmeldung erfolgt mit E-Mail und Passwort.",
+    "totpEnableHint": "Mit einer Authenticator-App (zum Beispiel auf dem Smartphone) wird bei der Anmeldung zusätzlich ein sechsstelliger Code abgefragt.",
+    "totpEnable": "Zweiten Faktor einrichten",
+    "totpSetupHint": "Den QR-Code mit der Authenticator-App scannen oder den Schlüssel manuell eingeben. Danach den angezeigten sechsstelligen Code eingeben, erst dann ist der zweite Faktor aktiv.",
+    "totpQrAlt": "QR-Code für die Authenticator-App",
+    "totpSecretLabel": "Schlüssel für die manuelle Eingabe",
+    "totpCode": "Code aus der App",
+    "totpCodeInvalid": "Der Code besteht aus 6 bis 8 Ziffern.",
+    "totpConfirm": "Bestätigen und einschalten",
+    "totpEnabled": "Der zweite Faktor ist jetzt eingeschaltet.",
+    "totpDisableHint": "Zum Ausschalten das aktuelle Passwort eingeben. Gemerkte Geräte werden dabei entfernt.",
+    "totpDisable": "Zweiten Faktor ausschalten",
+    "totpDisabled": "Der zweite Faktor ist ausgeschaltet.",
+    "devicesHint": "Auf gemerkten Geräten wird 90 Tage lang kein zweiter Faktor abgefragt. Abmelden entfernt das Gerät sofort."
   },
   "TenantAdmin": {
     "createTenantTitle": "Mandant anlegen",
@@ -3768,7 +3875,7 @@
       "environment": "eingerichtet (Server)"
     },
     "mailboxesTitle": "Verbundene Postfächer",
-    "mailboxesHint": "Mit Google verbinden öffnet die Google-Anmeldung. Nach der Zustimmung erscheint das Postfach hier und wird alle zwei Minuten abgerufen.",
+    "mailboxesHint": "Mit Google verbinden öffnet die Google-Anmeldung. Nach der Zustimmung erscheint das Postfach hier, der Posteingang wird vollständig abgerufen und neue Mails kommen sofort per Push an (Sicherheitsnetz: Abruf alle fünf Minuten).",
     "connectGoogle": "Mit Google verbinden",
     "empty": "Noch kein Postfach verbunden.",
     "defaultBadge": "Standard",
@@ -3801,7 +3908,17 @@
     "callAssistantEnabled": "Protokoll-Mails auswerten",
     "callAssistantSenders": "Absendermuster (Teil der Absenderadresse, durch Komma getrennt)",
     "callAssistantKeywords": "Kennwörter im Betreff (durch Komma getrennt)",
-    "callAssistantDefaultsHint": "Leere Felder nutzen die eingebauten Muster."
+    "callAssistantDefaultsHint": "Leere Felder nutzen die eingebauten Muster.",
+    "pushActiveUntil": "Push aktiv bis {at}",
+    "pushInactive": "Push nicht aktiv (Abruf alle fünf Minuten)",
+    "lastPush": "letzter Push {at}",
+    "backfillNow": "Posteingang vollständig abrufen",
+    "backfill": {
+      "queued": "Vollabruf wartet auf den Start",
+      "running": "Vollabruf läuft: {done} von {total} Nachrichten geprüft",
+      "done": "Vollabruf abgeschlossen am {at}: {done} Nachrichten geprüft",
+      "failed": "Vollabruf abgebrochen bei {done} von {total} Nachrichten, erneut starten setzt fort"
+    }
   },
   "Dms": {
     "area": "Verwaltung",
@@ -4147,7 +4264,8 @@
     "description": "Client-ID, Client-Secret und optionale Mandator-ID des finAPI-Zugangs dieses Mandanten.",
     "statusConfigured": "Eingerichtet ({url}).",
     "statusMissing": "Bankanbindung noch nicht eingerichtet.",
-    "baseUrl": "Basis-URL",
+    "baseUrl": "Basis-URL (leer: Standard je Rechenzentrum)",
+    "baseUrlHint": "Leer lassen: dann gilt die Standardadresse des gewählten Rechenzentrums (Sandbox oder Live, laut finAPI-Doku). Nur https.",
     "mandatorId": "Mandator-ID (optional)",
     "clientId": "Client-ID",
     "clientSecret": "Client-Secret",
@@ -4770,7 +4888,9 @@
         "webdav": "WebDAV-Wurzel gefunden: {url}",
         "apply": "Uebernehmen"
       }
-    }
+    },
+    "openWorkspace": "Immoware24 Übernahme öffnen",
+    "openLearning": "Lernphase öffnen"
   },
   "Immoware": {
     "title": "Immoware24",
@@ -6356,6 +6476,199 @@
       "tenancy": "Mietvertrag"
     },
     "toProperty": "Objekte"
+  },
+  "ResolutionKindsSettings": {
+    "title": "Erledigungsarten beim Ticketabschluss",
+    "description": "Betreiberentscheidung vom 26.09.2026: Beim Abschluss eines Tickets wählt der Mitarbeiter, was gemacht wurde. Eingebaute Arten lassen sich hier abschalten, eigene Arten kommen hinzu. Sonstiges und Zusammengeführt bleiben immer verfügbar. Jede Änderung wird protokolliert.",
+    "builtinTitle": "Eingebaute Arten",
+    "loading": "Arten werden geladen",
+    "protected": "(immer aktiv)",
+    "customTitle": "Eigene Arten ({count} von {max})",
+    "customEmpty": "Noch keine eigenen Arten.",
+    "code": "Code",
+    "label": "Bezeichnung",
+    "add": "Hinzufügen",
+    "remove": "Entfernen",
+    "codeHint": "Der Code ist die technische Kennung in Verlauf, Lernbeispielen und API: Kleinbuchstaben, Ziffern und Unterstrich, 2 bis 32 Zeichen, zum Beispiel schluessel_uebergeben. Er lässt sich nachträglich nicht ändern; abgeschlossene Tickets behalten ihre Art auch nach dem Entfernen.",
+    "codeInvalid": "Der Code darf nur Kleinbuchstaben, Ziffern und Unterstrich enthalten (2 bis 32 Zeichen).",
+    "codeTaken": "Dieser Code ist bereits vergeben.",
+    "labelRequired": "Bitte eine Bezeichnung angeben.",
+    "limit": "Höchstens {max} eigene Arten.",
+    "saved": "Gespeichert.",
+    "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern."
+  },
+  "Deposits": {
+    "title": "Kautionen",
+    "none": "Keine Kaution erfasst.",
+    "amountDue": "Soll",
+    "received": "Eingezahlt",
+    "balance": "Guthaben",
+    "reviewRequired": "prüfpflichtig",
+    "kinds": {
+      "cash": "Barkaution",
+      "savings_book": "Sparbuch",
+      "insurance": "Kautionsversicherung",
+      "guarantee": "Bürgschaft",
+      "fixed_deposit": "Festgeld",
+      "letter_of_comfort": "Patronatserklärung",
+      "other": "Sonstiges"
+    },
+    "movementKinds": {
+      "payment": "Einzahlung",
+      "interest": "Verzinsung",
+      "payout": "Auszahlung",
+      "offset": "Verrechnung"
+    },
+    "modes": {
+      "individual": "Zinsen je Jahr einzeln erfassen",
+      "reference_rate": "Referenzzinssatz je Jahr (Einstellungen)",
+      "none": "keine Verzinsung"
+    },
+    "errors": {
+      "deductionInvalid": "Jeder Einbehalt braucht eine Bezeichnung und einen Betrag im Format 1.234,56."
+    },
+    "settlement": {
+      "title": "Kautionsabrechnung (Entwurf)",
+      "start": "Kautionsabrechnung erstellen",
+      "notice": "Der Entwurf berechnet Kaution, Zinsen je Jahr, Einbehalte und Auszahlungsbetrag. Er bucht nichts und zahlt nichts aus. Die Freigabe zur Auszahlung bleibt bis zur Freigabestufe G3 gesperrt. Welcher Zinssatz rechtlich gilt, ist mit der Rechtsberatung zu klären.",
+      "date": "Abrechnungsdatum",
+      "mode": "Zinsart",
+      "interestFor": "Zinsen {year}",
+      "individualHelp": "Beträge je Jahr, zum Beispiel aus dem Kontoauszug des Kautionskontos. Vorbelegt sind bereits erfasste Zinsbewegungen.",
+      "referenceHelp": "Tagesgenau je Kalenderjahr auf das Kautionsguthaben mit dem Referenzzinssatz aus den Einstellungen, kaufmännisch gerundet je Jahr.",
+      "rateMissing": "kein Satz hinterlegt",
+      "rateMissingHint": "Für {years} ist kein Referenzzinssatz hinterlegt. Bitte in den Einstellungen unter Kautionszinsen pflegen.",
+      "deductions": "Einbehalte",
+      "deductionLabel": "Bezeichnung des Einbehalts",
+      "deductionAmount": "Betrag des Einbehalts",
+      "addDeduction": "Einbehalt hinzufügen",
+      "removeDeduction": "Entfernen",
+      "note": "Hinweis",
+      "compute": "Berechnen",
+      "save": "Als Entwurf speichern",
+      "cancel": "Abbrechen",
+      "saved": "Der Entwurf wurde gespeichert.",
+      "savedDraft": "Abrechnungsentwurf vom",
+      "draft": "Entwurf",
+      "preview": "Berechnung",
+      "principalPaid": "Eingezahlte Kaution",
+      "offsetsRecorded": "Erfasste Verrechnungen",
+      "payoutsRecorded": "Erfasste Auszahlungen",
+      "balanceBeforeInterest": "Guthaben vor Zinsen",
+      "interestRecorded": "Bereits erfasste Zinsbewegungen (nur Abgleich)",
+      "year": "Jahr",
+      "rate": "Zinssatz",
+      "days": "Tage",
+      "interest": "Zinsen",
+      "entered": "erfasst",
+      "interestTotal": "Zinsen gesamt",
+      "deductionsTotal": "Einbehalte gesamt",
+      "payoutAmount": "Auszahlungsbetrag"
+    }
+  },
+  "DepositInterestRates": {
+    "title": "Kautionszinsen: Referenzzinssatz je Jahr",
+    "settings": "Einstellungen",
+    "intro": "Zinssatz je Kalenderjahr in Prozent, vom Betreiber gepflegt. Die Kautionsabrechnung mit Zinsart Referenzzinssatz rechnet ausschließlich mit diesen Werten.",
+    "notice": "Es wird kein Zinssatz automatisch bezogen oder vorbelegt. Welcher Satz rechtlich für Mietkautionen gilt, ist mit der Rechtsberatung zu klären; die Fundstelle gehört in den Vermerk.",
+    "empty": "Noch kein Referenzzinssatz hinterlegt.",
+    "year": "Jahr",
+    "rate": "Zinssatz",
+    "note": "Vermerk",
+    "remove": "Entfernen",
+    "saved": "Der Zinssatz wurde gespeichert.",
+    "form": {
+      "title": "Zinssatz setzen",
+      "ratePercent": "Zinssatz in Prozent",
+      "notePlaceholder": "Quelle und Datum, zu prüfen",
+      "help": "Bis zu fünf Nachkommastellen, Komma oder Punkt. Ein bestehendes Jahr wird überschrieben.",
+      "save": "Speichern"
+    }
+  },
+  "TicketThroughput": {
+    "eyebrow": "Auswertung",
+    "title": "Auswertung Tickets",
+    "description": "Durchsatz und Wirksamkeit von Tickets und Mails je Zeitraum, Bearbeiter und Postfach. Orientierungswerte, Zeitscheiben nach Europe/Berlin.",
+    "filters": "Filter",
+    "range": {
+      "label": "Zeitraum",
+      "day": "Tag",
+      "week": "Woche",
+      "month": "Monat",
+      "quarter": "Quartal",
+      "year": "Jahr",
+      "custom": "Frei"
+    },
+    "from": "Von",
+    "to": "Bis",
+    "user": {
+      "label": "Bearbeiter",
+      "all": "Alle Bearbeiter"
+    },
+    "mailboxKind": {
+      "label": "Postfachart",
+      "all": "Alle Postfächer",
+      "personal": "Persönliche Postfächer",
+      "default": "Standardpostfach",
+      "other": "Sonstige"
+    },
+    "mailbox": {
+      "label": "Postfach",
+      "all": "Jedes Postfach",
+      "address": "Postfach",
+      "kind": "Art",
+      "tickets_created": "Tickets daraus",
+      "share": "Anteil Eingang"
+    },
+    "exportCsv": "CSV exportieren",
+    "loadError": "Die Auswertung ist derzeit nicht verfügbar.",
+    "window": "Zeitraum {start} bis {end}, Zeitscheibe: {bucket}",
+    "bucket": {
+      "hour": "Stunde",
+      "day": "Tag",
+      "week": "Woche",
+      "month": "Monat"
+    },
+    "bucketColumn": "Zeitscheibe",
+    "kpi": {
+      "tickets_created": "Tickets angelegt",
+      "tickets_closed": "Tickets erledigt",
+      "tickets_reopened": "Wiedereröffnet",
+      "backlog_end": "Offen am Ende",
+      "inbound": "Mails eingegangen",
+      "outbound": "Mails gesendet",
+      "replies_per_ticket": "Antworten je Ticket",
+      "first_response_median_minutes": "Erstreaktion Median",
+      "first_response_p90_minutes": "Erstreaktion 90. Perzentil",
+      "time_to_close_median_minutes": "Erledigung Median",
+      "throughput_per_hour": "Erledigt je Stunde",
+      "throughput_per_minute": "Erledigt je Minute"
+    },
+    "throughputHint": "Durchsatz: erledigte Tickets geteilt durch die Minuten der Zeitscheibe (zwei Nachkommastellen). Erstreaktion: erste gesendete Mail oder erster Kommentar eines Mitarbeiters nach Anlage.",
+    "chartThroughput": "Angelegt und erledigt je Zeitscheibe",
+    "chartBacklog": "Offene Tickets am Ende der Zeitscheibe",
+    "created": "Angelegt",
+    "closed": "Erledigt",
+    "tableView": "Als Tabelle anzeigen",
+    "chartView": "Als Diagramm anzeigen",
+    "empty": "Keine Daten im gewählten Zeitraum.",
+    "emptyMailboxes": "Keine Postfächer eingerichtet.",
+    "staffTitle": "Je Bearbeiter",
+    "staff": {
+      "name": "Bearbeiter",
+      "closed": "Erledigt",
+      "created": "Angelegt",
+      "replies_sent": "Antworten gesendet",
+      "first_response": "Erstreaktion Median",
+      "open_assigned": "Aktuell offen"
+    },
+    "mailboxTitle": "Je Postfach",
+    "kindShare": "Anteil am Eingang: persönliche Postfächer {personal} %, Standardpostfach {default} %.",
+    "unknownUser": "Unbekannt",
+    "none": "keine Angabe",
+    "minutes": "{value} Min.",
+    "hours": "{value} Std.",
+    "days": "{value} Tage"
   },
   "ContractApproval": {
     "title": "Freigabe Importverträge",

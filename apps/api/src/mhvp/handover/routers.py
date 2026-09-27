@@ -22,12 +22,13 @@ from sqlalchemy import func, or_, select
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
+from mhvp.documents import letters
 from mhvp.documents import services as documents
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRole
 from mhvp.handover import pdf as pdf_renderer
 from mhvp.handover import services as svc
-from mhvp.handover.images import ImageSanitizeError, sanitize_image
+from mhvp.handover.images import ImageSanitizeError, output_mime_type, sanitize_image
 from mhvp.handover.models import STATUSES, STEPS, HandoverProtocol, HandoverSignature
 from mhvp.workspace.services import local_today
 
@@ -496,6 +497,7 @@ async def upload_document(
         raise ProblemError(
             ErrorCodes.VALIDATION, detail="Bild konnte nicht gelesen werden."
         ) from exc
+    mime = output_mime_type(mime)  # A72: HEIC is stored as JPEG
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
         svc.require_unlocked(p)
@@ -1066,6 +1068,16 @@ def _portal_url(request: Request) -> str | None:
     return str(url).rstrip("/") if url else None
 
 
+def invitation_qr(url: str | None) -> letters.LetterQr | None:
+    """QR block of the invitation letter (A86): the payload is exactly the invitation link
+    (portal page with the one time code); None without a public portal URL."""
+    if not url:
+        return None
+    return letters.LetterQr(
+        payload=url, caption="Einladungslink zum Scannen mit dem Smartphone oder zum Eingeben:"
+    )
+
+
 def invitation_text(
     *,
     number: str,
@@ -1498,7 +1510,7 @@ async def helper_invitation_letter(
 ) -> Response:
     """Letter on the tenant letterhead (M6 renderer). POST, not GET: issuing the letter
     rotates the invitation code, a prefetch must not invalidate a code already handed out."""
-    from mhvp.documents import letters
+    from mhvp.portal.routers import invitation_url
 
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
@@ -1523,6 +1535,7 @@ async def helper_invitation_letter(
                 body=letters.render_text("{{ b }}", {"b": text}),
                 letter_date=local_today(),
                 info=[("Protokoll", p.number)],
+                qr=invitation_qr(invitation_url(request, token)),
             ),
         )
         await session.flush()

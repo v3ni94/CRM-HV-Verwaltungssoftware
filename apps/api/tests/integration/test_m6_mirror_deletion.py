@@ -1,11 +1,15 @@
-"""A43 (6.9.5, M6-03): logged deletion of the copies in Paperless and Google Drive after the
-platform deletion of a document with a released, expired retention profile. The lock without
-such a profile is unchanged (test_m6_documents); here the journal per mirror is checked with
-fake clients: request events in the deleting transaction, the Celery hand-over, deletion,
-failure with retry and the "already gone" case."""
+"""A43 (6.9.5, M6-03, operator decision 26.09.2026): after the platform deletion of a document
+with a released, expired retention profile the Drive copy is deleted (permanent, fallback
+trash) and the Paperless document is kept and tagged "gelöscht". The lock without such a
+profile is unchanged (test_m6_documents); here the journal per mirror step is checked with
+fake clients: step rows and request events in the deleting transaction, the Celery hand-over,
+Drive delete success, failure with retry, trash fallback and "already gone", Paperless tag
+creation and assignment, the deletion state "offen" until both steps are done, the retry
+endpoint and tenant separation."""
 
 import asyncio
 import json
+import uuid
 from collections.abc import Iterator
 from typing import Any
 
@@ -55,7 +59,7 @@ async def _world(settings: Any) -> World:
         a, _ = await services.provision_tenant(factory, slug=f"md-{RUN}", name=f"Spiegel {RUN}")
         b, _ = await services.provision_tenant(factory, slug=f"me-{RUN}", name=f"Fremd {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
-        for name, tenant in [("mdadmin", a), ("mdsecond", a)]:
+        for name, tenant in [("mdadmin", a), ("mdsecond", a), ("mdother", b)]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -96,27 +100,52 @@ def _ok(response: Any, status: int = 201) -> Any:
 
 
 class FakeMirrors:
-    """Paperless and Drive: upload for the mirror job, DELETE for the deletion job."""
+    """Paperless and Drive: upload for the mirror job, tag (Paperless) and DELETE or trash
+    (Drive) for the deletion job."""
 
     def __init__(self) -> None:
-        self.fail_delete = False
-        self.deleted: list[str] = []
+        self.fail_tag = False
+        self.drive_refuse_delete = False
         self.drive_gone = False
+        self.deleted: list[str] = []
+        self.trashed: list[str] = []
+        self.tags: dict[int, str] = {3: "mhvp:tenant:x"}
+        self.document_tags: dict[str, list[int]] = {"77": [3]}
+        self.tag_created: list[str] = []
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         url = str(request.url)
         path = request.url.path
         if url.startswith(f"{PAPERLESS_URL}/api/"):
             assert request.headers["authorization"] == "Token paperless-token"
-            if request.method == "DELETE":
-                if self.fail_delete:
-                    return httpx.Response(503)
-                self.deleted.append(f"paperless:{path}")
-                return httpx.Response(204)
+            assert request.method != "DELETE", "Paperless documents are kept (M6-03)"
             if path.endswith("/post_document/"):
                 return httpx.Response(200, json="task-9")
             if path.endswith("/tasks/"):
                 return httpx.Response(200, json=[{"status": "SUCCESS", "related_document": 77}])
+            if path == "/api/tags/":
+                if request.method == "GET":
+                    name = request.url.params["name__iexact"]
+                    hits = [{"id": i, "name": n} for i, n in self.tags.items() if n == name]
+                    return httpx.Response(200, json={"results": hits})
+                if self.fail_tag:
+                    return httpx.Response(503)
+                name = json.loads(request.content)["name"]
+                new_id = max(self.tags) + 1
+                self.tags[new_id] = name
+                self.tag_created.append(name)
+                return httpx.Response(201, json={"id": new_id})
+            if path.startswith("/api/documents/"):
+                doc_id = path.split("/")[3]
+                if doc_id not in self.document_tags:
+                    return httpx.Response(404)
+                if request.method == "GET":
+                    return httpx.Response(200, json={"id": 77, "tags": self.document_tags[doc_id]})
+                if request.method == "PATCH":
+                    if self.fail_tag:
+                        return httpx.Response(503)
+                    self.document_tags[doc_id] = json.loads(request.content)["tags"]
+                    return httpx.Response(200, json={"id": 77})
             if request.method == "GET":
                 return httpx.Response(200, json={"results": [{"id": 3}]})
             return httpx.Response(201, json={"id": 3})
@@ -127,8 +156,16 @@ class FakeMirrors:
             if request.method == "DELETE":
                 if self.drive_gone:
                     return httpx.Response(404)
+                if self.drive_refuse_delete:
+                    return httpx.Response(403)
                 self.deleted.append(f"drive:{path}")
                 return httpx.Response(204)
+            if request.method == "PATCH":
+                if self.drive_gone:
+                    return httpx.Response(404)
+                assert json.loads(request.content) == {"trashed": True}
+                self.trashed.append(f"drive:{path}")
+                return httpx.Response(200, json={"id": path.rsplit("/", 1)[1]})
             if request.method == "GET":
                 return httpx.Response(200, json={"files": []})
             meta = json.loads(request.content)
@@ -233,38 +270,157 @@ def test_mirror_copies_are_deleted_with_journal(
     paperless_job = next(j for j in queued if j.kind == "paperless")
     drive_job = next(j for j in queued if j.kind == "google_drive")
 
+    # The deletion is "offen" with two open steps (Drive delete, Paperless tag).
+    deletions = _ok(client.get("/api/v1/documents/deletions", headers=h), 200)
+    mine = next(d for d in deletions if d["document_id"] == doc["id"])
+    assert mine["status"] == "open"
+    assert mine["requested_by"] == str(world.users["mdadmin"])
+    assert {(x["kind"], x["action"], x["status"]) for x in mine["steps"]} == {
+        ("google_drive", "delete", "open"),
+        ("paperless", "tag", "open"),
+    }
+    other = bearer(login(client, world, "mdother"))
+    assert _ok(client.get("/api/v1/documents/deletions", headers=other), 200) == []
+    assert (
+        client.post(f"/api/v1/documents/deletions/{doc['id']}/retry", headers=other).status_code
+        == 404
+    )
+
     async def run_delete(job: MirrorDeletionJob, attempt: int) -> str:
         async with httpx.AsyncClient(transport=httpx.MockTransport(fake.handler)) as http:
             return await mirror_deletion.delete_mirror_once(
                 settings, job, client=http, attempt=attempt
             )
 
-    # First attempt fails: logged with attempt and error, raised for the Celery retry.
-    fake.fail_delete = True
+    # Paperless, first attempt fails: logged with attempt and error, raised for the retry.
+    fake.fail_tag = True
     with pytest.raises(MirrorDeletionError):
         asyncio.run(run_delete(paperless_job, 1))
     failed = _events(client, h, "document.mirror_delete_failed", doc["id"])
     assert len(failed) == 1
     assert failed[0]["payload"]["attempt"] == 1
     assert failed[0]["payload"]["mirror"] == "paperless"
-    assert failed[0]["payload"]["error"] == "delete: HTTP 503"
-    assert fake.deleted == []
+    assert failed[0]["payload"]["error"] == "create tags: HTTP 503"
+    assert fake.document_tags["77"] == [3]
+    step = next(
+        x
+        for x in _ok(client.get("/api/v1/documents/deletions", headers=h), 200)
+        if x["document_id"] == doc["id"]
+    )
+    paperless_step = next(x for x in step["steps"] if x["kind"] == "paperless")
+    assert paperless_step["status"] == "open"
+    assert paperless_step["attempts"] == 1
+    assert paperless_step["last_error"] == "create tags: HTTP 503"
 
-    fake.fail_delete = False
-    assert asyncio.run(run_delete(paperless_job, 2)) == "deleted"
-    fake.drive_gone = True
-    assert asyncio.run(run_delete(drive_job, 1)) == "already_gone"
-    assert fake.deleted == ["paperless:/api/documents/77/"]
-    done = {
-        e["payload"]["mirror"]: e["payload"]
-        for e in _events(client, h, "document.mirror_deleted", doc["id"])
+    # Second attempt: tag "gelöscht" is created in Paperless and assigned, document kept.
+    fake.fail_tag = False
+    assert asyncio.run(run_delete(paperless_job, 2)) == "tagged"
+    assert fake.tag_created.count("gelöscht") == 1
+    deleted_tag = next(i for i, n in fake.tags.items() if n == "gelöscht")
+    assert fake.document_tags["77"] == [3, deleted_tag]
+    marked = _events(client, h, "document.mirror_marked_deleted", doc["id"])
+    assert len(marked) == 1
+    assert marked[0]["payload"]["result"] == "tagged"
+    assert marked[0]["payload"]["tag"] == "gelöscht"
+    assert marked[0]["payload"]["attempt"] == 2
+    # Idempotent: a repeated run assigns nothing twice and creates no second tag.
+    assert asyncio.run(run_delete(paperless_job, 3)) == "tagged"
+    assert fake.tag_created.count("gelöscht") == 1
+    assert fake.document_tags["77"] == [3, deleted_tag]
+
+    # Still "offen": the Drive step is open. Retry endpoint re-queues only that step.
+    queued.clear()
+    retried = _ok(client.post(f"/api/v1/documents/deletions/{doc['id']}/retry", headers=h), 200)
+    assert retried["status"] == "open"
+    assert [(j.kind, j.external_ref) for j in queued] == [("google_drive", "drive-file-9")]
+
+    # Drive: permanent delete refused (403), fallback to the trash, journal says which.
+    fake.drive_refuse_delete = True
+    assert asyncio.run(run_delete(drive_job, 1)) == "trashed"
+    assert fake.deleted == []
+    assert fake.trashed == ["drive:/drive/v3/files/drive-file-9"]
+    done = _events(client, h, "document.mirror_deleted", doc["id"])
+    assert len(done) == 1
+    assert done[0]["payload"]["result"] == "trashed"
+    assert "Papierkorb" in done[0]["payload"]["note"]
+    assert done[0]["payload"]["external_ref"] == "drive-file-9"
+    assert done[0]["payload"]["completed_at"]
+
+    # Both steps done: the deletion is closed.
+    closed = next(
+        x
+        for x in _ok(client.get("/api/v1/documents/deletions", headers=h), 200)
+        if x["document_id"] == doc["id"]
+    )
+    assert closed["status"] == "done"
+    assert {x["kind"]: x["result"] for x in closed["steps"]} == {
+        "google_drive": "trashed",
+        "paperless": "tagged",
     }
-    assert done["paperless"]["result"] == "deleted"
-    assert done["paperless"]["attempt"] == 2
-    assert done["paperless"]["external_ref"] == "77"
-    assert done["paperless"]["deleted_at"]
-    assert done["google_drive"]["result"] == "already_gone"
-    assert done["google_drive"]["external_ref"] == "drive-file-9"
+    assert [
+        d["document_id"]
+        for d in _ok(
+            client.get("/api/v1/documents/deletions", params={"status": "open"}, headers=h), 200
+        )
+    ].count(doc["id"]) == 0
+    # A finished deletion has no open step to retry.
+    queued.clear()
+    _ok(client.post(f"/api/v1/documents/deletions/{doc['id']}/retry", headers=h), 200)
+    assert queued == []
+
+
+def test_drive_permanent_delete_and_already_gone(
+    client: TestClient,
+    world: World,
+    database: Database,
+    redis_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Drive: permanent delete is preferred; a copy that is gone already is journaled as
+    such; a disabled connection is a journaled failure, never a silent drop."""
+    h = bearer(login(client, world, "mdadmin"))
+    settings = _settings(database, redis_url)
+    fake = FakeMirrors()
+
+    async def run_delete(job: MirrorDeletionJob, attempt: int) -> str:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(fake.handler)) as http:
+            return await mirror_deletion.delete_mirror_once(
+                settings, job, client=http, attempt=attempt
+            )
+
+    _ok(
+        client.put(
+            "/api/v1/dms-connections/google_drive",
+            json={
+                "enabled": True,
+                "secret": json.dumps({"client_secret": "s", "refresh_token": "r"}),
+                "options": {"root_folder_id": "root", "client_id": "c"},
+            },
+            headers=h,
+        ),
+        200,
+    )
+    job = MirrorDeletionJob(
+        tenant_id=world.tenant_a,
+        document_id=uuid.uuid4(),
+        kind="google_drive",
+        external_ref="drive-file-1",
+    )
+    assert asyncio.run(run_delete(job, 1)) == "deleted"
+    assert fake.deleted == ["drive:/drive/v3/files/drive-file-1"]
+    assert fake.trashed == []
+    done = _events(client, h, "document.mirror_deleted", str(job.document_id))
+    assert done[0]["payload"]["result"] == "deleted"
+    assert "note" not in done[0]["payload"]
+
+    fake.drive_gone = True
+    gone = MirrorDeletionJob(
+        tenant_id=world.tenant_a,
+        document_id=uuid.uuid4(),
+        kind="google_drive",
+        external_ref="drive-file-2",
+    )
+    assert asyncio.run(run_delete(gone, 1)) == "already_gone"
 
     # A disabled connection cannot delete: journaled as failure, nothing silently dropped.
     _ok(
@@ -276,9 +432,7 @@ def test_mirror_copies_are_deleted_with_journal(
         200,
     )
     with pytest.raises(MirrorDeletionError):
-        asyncio.run(run_delete(drive_job, 2))
-    failed = _events(client, h, "document.mirror_delete_failed", doc["id"])
-    assert any(
-        e["payload"]["mirror"] == "google_drive" and "nicht aktiv" in e["payload"]["error"]
-        for e in failed
-    )
+        asyncio.run(run_delete(job, 2))
+    failed = _events(client, h, "document.mirror_delete_failed", str(job.document_id))
+    assert failed[0]["payload"]["mirror"] == "google_drive"
+    assert "nicht aktiv" in failed[0]["payload"]["error"]

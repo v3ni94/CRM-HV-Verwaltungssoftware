@@ -6,9 +6,10 @@ import { COOKIE, MFA_MAX_AGE, cookieOptions, writeTokens } from "@/lib/session";
 import { guardedJson, publicApi, relayProblem, secureOf, str, unreachable } from "../_shared";
 
 /**
- * Login step 1: e-mail and password. Non-administrators without TOTP already get a full
- * session here ("ok"); a remembered device (operator 25.09.2026) does the same for an
- * administrator. Otherwise it keeps the MFA token in an httpOnly cookie for step 2.
+ * Login step 1: e-mail and password. Users without a self enabled second factor already get a
+ * full session here ("ok"); a remembered device ("Dieses Gerät 90 Tage merken", operator
+ * 26.09.2026) does the same for users with TOTP. Otherwise the MFA token is kept in an
+ * httpOnly cookie for step 2.
  */
 export async function POST(request: Request): Promise<Response> {
   const parsed = await guardedJson(request);

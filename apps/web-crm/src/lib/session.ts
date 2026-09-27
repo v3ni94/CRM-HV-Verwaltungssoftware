@@ -21,8 +21,8 @@ export const COOKIE = {
 export const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
 /** The MFA token of login step 1 is short lived. */
 export const MFA_MAX_AGE = 10 * 60;
-/** Trusted device cookie ("Auf diesem Gerät 180 Tage merken", operator 25.09.2026). */
-export const DEVICE_MAX_AGE = 180 * 24 * 60 * 60;
+/** Trusted device cookie ("Dieses Gerät 90 Tage merken", operator 26.09.2026, M2-01). */
+export const DEVICE_MAX_AGE = 90 * 24 * 60 * 60;
 /** Renew the access token a little before the API rejects it. */
 const ACCESS_SKEW_SECONDS = 30;
 

@@ -8,6 +8,7 @@ import { ContactActions } from "@/components/contacts/ContactActions";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
 import { PortalAccessSection } from "@/components/contacts/PortalAccessSection";
 import { RelationsPanel } from "@/components/contacts/RelationsPanel";
+import { RepresentativesPanel } from "@/components/contacts/RepresentativesPanel";
 import { RolePills } from "@/components/contacts/RolePills";
 import { SepaMandatesPanel } from "@/components/contacts/SepaMandatesPanel";
 import {
@@ -117,6 +118,11 @@ export default async function ContactDetailPage({
       : [];
   const relations =
     (await api.GET("/api/v1/contacts/{contact_id}/relations", { params: { path: { contact_id: id } } })).data ?? [];
+  // Authorised representatives with delivery rule (operator decision 26.09.2026).
+  const contactRelations =
+    (await api.GET("/api/v1/contacts/{contact_id}/contact-relations", { params: { path: { contact_id: id } } })).data ?? [];
+  const canEditRelations =
+    me.data?.permissions.includes("contacts:update") ?? false;
   // Anrufliste (13.5, A70): typisierter BFF-Fetch, kein generierter Client nötig.
   const callsRes =
     tab === "kommunikation"
@@ -412,6 +418,11 @@ export default async function ContactDetailPage({
       {tab === "einwilligungen" ? <ConsentsPanel contactId={contact.id} consents={consents} /> : null}
 
       <RelationsPanel relations={relations} />
+      <RepresentativesPanel
+        contactId={contact.id}
+        relations={contactRelations}
+        canEdit={canEditRelations}
+      />
     </div>
   );
 }

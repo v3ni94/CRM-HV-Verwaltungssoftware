@@ -48,6 +48,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.objektakte.tasks",
             "mhvp.automation.tasks",
             "mhvp.imports.tasks",
+            "mhvp.metering.tasks",
         ],
     )
     app.conf.update(
@@ -138,9 +139,17 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "schedule": crontab(day_of_month=5, hour=6, minute=0),
             },
             # Gmail inbox sync for enabled mailboxes (M20-01); read only, Message-ID dedup.
+            # Since the Pub/Sub push (operator 26.09.2026) this is the safety net: 5 minutes.
             "communication-gmail-sync": {
                 "task": "mhvp.communication.gmail_sync_all",
-                "schedule": 120.0,
+                "schedule": 300.0,
+                "options": {"queue": "mail"},
+            },
+            # Renewal of the Gmail push watches (Google ends them after seven days): daily
+            # 04:10, renews every watch that expires within a day; no-op without a topic.
+            "communication-gmail-watch-renew": {
+                "task": "mhvp.communication.gmail_watch_renew_all",
+                "schedule": crontab(hour=4, minute=10),
                 "options": {"queue": "mail"},
             },
             "workspace-reminders": {

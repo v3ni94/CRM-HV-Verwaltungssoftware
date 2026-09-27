@@ -10,6 +10,10 @@ Je Bestandstool und Fremdsystem entsteht hier ein Dossier nach Anhang B des Mast
 | Übergabeprotokoll | `docs/integrations/uebergabeprotokoll.md` | offen |
 | Objektakte | `docs/integrations/objektakte.md` | Schnittstellenvertrag M29 Stufe 3/4 erstellt 26.09.2026 (lesende API, Webhooks); Dossier nach Anhang B offen |
 | smart-einzug | `docs/integrations/smart-einzug.md` | offen |
+| Paperless-ngx (Spiegel-DMS, Schlagwort "gelöscht" bei Löschung) | `docs/integrations/paperless.md` | erstellt 26.09.2026 (M6-01, M6-03) |
+| Google Drive (Spiegelablage, Löschung mit Papierkorb-Ersatz) | `docs/integrations/google-drive.md` | erstellt 26.09.2026 (M6-02, M6-03) |
 | Ausgehende Webhooks (Vertrag für alle Fremdsysteme) | `docs/integrations/webhooks.md` | erstellt 26.09.2026 (A69, `contact.updated`, `invoice.issued`) |
+| Gmail (Pub/Sub-Push, Vollabruf, Sicherheitsnetz) | `docs/integrations/gmail.md` | erstellt 26.09.2026 (Betreiberentscheidung Sofortabruf, M20-07) |
+| Messdienstleister (ista, Techem, KALO, Brunata Minol, BRUNATA-METRONA) | `docs/integrations/messdienstleister.md` | erstellt 26.09.2026 (M40-01, Stufe 1 ohne Anbieteradapter) |
 
 Die Dateinamen sind ein Vorschlag nach dem Muster `docs/integrations/<tool>.md`. Mit Vorliegen aller Dossiers entsteht Version 2.1 des Master-Prompts (Abschnitt 19.3).

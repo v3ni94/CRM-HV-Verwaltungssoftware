@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
@@ -12,6 +13,11 @@ export type Notice = {
   kind: string;
   title: string;
   body: string | null;
+  /** Subject of the notification (ticket, work_order, appointment, message, ...). */
+  target_type?: string | null;
+  target_id?: string | null;
+  /** CRM route to the subject, derived by the API; null when the subject has no page. */
+  href?: string | null;
   read_at: string | null;
   created_at: string;
 };
@@ -39,6 +45,22 @@ export function NotificationBell() {
     const result = await bff<null>("/api/bff/workspace/notifications/read", { method: "POST" });
     if (result.ok) setItems([]);
   }
+
+  /** Operator 26.09.2026: a click opens the subject and marks only this entry as read. */
+  function readOne(id: string) {
+    setItems((prev) => prev.filter((n) => n.id !== id));
+    setOpen(false);
+    void bff<null>("/api/bff/workspace/notifications/read", { method: "POST", body: JSON.stringify([id]) });
+  }
+
+  const entryClass = "block rounded-lg px-2 py-1.5 text-sm transition duration-150 hover:bg-surface";
+  const content = (n: Notice) => (
+    <>
+      <p className="font-medium">{n.title}</p>
+      {n.body ? <p className="text-muted">{n.body}</p> : null}
+      <p className="text-xs text-subtle">{formatDateTime(n.created_at)}</p>
+    </>
+  );
 
   return (
     <div className="relative">
@@ -71,10 +93,16 @@ export function NotificationBell() {
             <>
               <ul className="flex max-h-80 flex-col gap-1 overflow-auto">
                 {items.map((n) => (
-                  <li key={n.id} className="rounded-lg px-2 py-1.5 text-sm transition duration-150 hover:bg-surface">
-                    <p className="font-medium">{n.title}</p>
-                    {n.body ? <p className="text-muted">{n.body}</p> : null}
-                    <p className="text-xs text-subtle">{formatDateTime(n.created_at)}</p>
+                  <li key={n.id}>
+                    {n.href ? (
+                      <Link href={n.href} className={`${entryClass} focus:outline-none focus:ring-2 focus:ring-gold/40`} onClick={() => readOne(n.id)} data-testid="notification-link">
+                        {content(n)}
+                      </Link>
+                    ) : (
+                      <button type="button" className={`${entryClass} w-full text-left`} title={t("markRead")} onClick={() => readOne(n.id)}>
+                        {content(n)}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -38,9 +38,9 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 * `auth/passwords.py`: Argon2id hashing and password policy (A-012)
 * `auth/permissions.py`: permission matrix resource x action, system roles with inheritance (3.4, M2-07)
 * `auth/principal.py`: request principal from bearer token or API key, tenant and host check, permission guard
-* `auth/service.py`: login, MFA, token sessions, tenant switch (3.4)
+* `auth/service.py`: login, MFA, token sessions, tenant switch (3.4); password policy in `auth/passwords.py` (minimum 6 characters by operator decision M2-01, below the BSI recommendation, see `docs/OPEN_QUESTIONS.md`)
 * `auth/tokens.py`: access tokens (JWT ES256), MFA step tokens, opaque secrets
-* `auth/totp.py`: TOTP second factor (RFC 6238)
+* `auth/totp.py`: TOTP second factor (RFC 6238), optional per user (operator 26.09.2026, M2-01; self service under `/auth/totp/*`, trusted devices 90 days)
 * `crypto.py`: field encryption AES-256-GCM with HKDF scoped keys (3.5, ADR 0006)
 * `db/columns.py`: shared column definitions (id, tenant_id, created and updated metadata)
 * `db/engine.py`: engine factories, psycopg 3 for async API and sync callers (ADR 0001)

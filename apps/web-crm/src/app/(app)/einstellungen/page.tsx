@@ -29,6 +29,7 @@ export default async function SettingsPage() {
     { href: "/einstellungen/telefonie", title: t("telephony.title"), description: t("telephony.description"), show: can("tenant_settings:read") },
     { href: "/einstellungen/webhooks", title: tw("card.title"), description: tw("card.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/weg", title: t("weg.title"), description: t("weg.description"), show: can("accounting:read") },
+    { href: "/einstellungen/kautionszinsen", title: t("depositRates.title"), description: t("depositRates.description"), show: can("contracts:read") },
     { href: "/einstellungen/sla", title: t("sla.title"), description: t("sla.description"), show: can("sla:read") },
     {
       href: "/einstellungen/ticketvorlagen",

@@ -35,8 +35,17 @@ async def notify(
     body: str | None = None,
     entity_type: str | None = None,
     entity_id: uuid.UUID | None = None,
+    target_type: str | None = None,
+    target_id: uuid.UUID | None = None,
 ) -> Notification | None:
-    """Create a notification unless the same unread one exists (idempotent for jobs)."""
+    """Create a notification unless the same unread one exists (idempotent for jobs).
+
+    ``target_type``/``target_id`` name the subject the user jumps to from the notification
+    (ticket, work_order, appointment, message, document, ...; routes in ``workspace.links``).
+    ``entity_type``/``entity_id`` are the same fields under their older name; pass one pair.
+    """
+    if target_type is not None or target_id is not None:
+        entity_type, entity_id = target_type, target_id
     if entity_id is not None:
         existing = await session.scalar(
             select(Notification.id).where(

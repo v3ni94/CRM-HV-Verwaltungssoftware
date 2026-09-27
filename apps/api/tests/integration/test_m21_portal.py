@@ -17,6 +17,7 @@ import boto3
 import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
+from sqlalchemy import select
 
 from mhvp.main import create_app
 from mhvp.platform import services
@@ -30,6 +31,7 @@ from tests.integration.test_m8_import import BUCKET, _settings
 pytestmark = pytest.mark.integration
 P = "/api/v1/portal"
 PA = "/api/v1/portal-admin"
+W = "/api/v1/workspace"
 
 
 async def _world(settings: Any) -> World:
@@ -521,7 +523,9 @@ def test_staff_portal_sees_tenant_wide_data_per_matrix(client: TestClient, world
     assert me["permissions"] == sorted(DEFAULT_STAFF_PORTAL_PERMISSIONS["standard"])
 
 
-def test_me_never_500_for_bare_contact_without_grants(client: TestClient, world: World) -> None:
+def test_me_never_500_for_bare_contact_without_grants(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
     """A portal account with a contact but no contract and no access grant (a bare contact
     invited by mistake, or one whose contract ended and whose grants expired) must still get
     a plain empty answer from /me, never a 500 (Playwright finding, 2026-09-25)."""
@@ -539,6 +543,51 @@ def test_me_never_500_for_bare_contact_without_grants(client: TestClient, world:
     assert me["roles"] == []
     assert me["contracts"] == []
     assert me["permissions"] == []
+
+    # Notifications of a portal user link to portal routes only (operator 26.09.2026);
+    # a CRM user of the tenant never sees them and the CRM notification list stays foreign.
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.portal.models import PortalAccount
+    from mhvp.workspace.services import notify
+
+    ticket_id, message_id = uuid.uuid4(), uuid.uuid4()
+    contact_id = uuid.UUID(contact["id"])
+
+    async def seed() -> None:
+        engine = create_app_engine(_settings(database, redis_url))
+        try:
+            async with tenant_transaction(create_session_factory(engine), world.tenant_a) as s:
+                portal_user_id = await s.scalar(
+                    select(PortalAccount.user_id).where(PortalAccount.contact_id == contact_id)
+                )
+                assert portal_user_id is not None
+                for ttype, tid in [("ticket", ticket_id), ("message", message_id)]:
+                    await notify(
+                        s,
+                        tenant_id=world.tenant_a,
+                        user_id=portal_user_id,
+                        kind="portal_test",
+                        title=f"Portal {ttype}",
+                        target_type=ttype,
+                        target_id=tid,
+                    )
+        finally:
+            await engine.dispose()
+
+    asyncio.run(seed())
+    notes = _ok(client.get(f"{P}/notifications", params={"unread": True}, headers=bare))
+    hrefs = {n["target_id"]: n["href"] for n in notes}
+    assert hrefs[str(ticket_id)] == f"/meldungen/{ticket_id}"
+    assert hrefs[str(message_id)] is None
+    assert all(
+        n["target_id"] not in hrefs for n in _ok(client.get(f"{W}/notifications", headers=h))
+    )
+    ticket_note = next(n["id"] for n in notes if n["target_id"] == str(ticket_id))
+    read = client.post(f"{P}/notifications/read", json=[ticket_note], headers=bare)
+    assert read.status_code == 204, read.text
+    left = _ok(client.get(f"{P}/notifications", params={"unread": True}, headers=bare))
+    assert [n["target_id"] for n in left] == [str(message_id)]
 
 
 # A22: acceptance cases D29 to D31 (6.9.6, 14, E06) per access path -----------------------------

@@ -96,6 +96,8 @@ class AccountOut(BaseModel):
     allocation_category: AllocationCategory
     statement_kind: StatementKind
     section_35a_eligible: bool
+    review_status: str
+    review_note: str | None
     party_id: uuid.UUID | None
     unit_id: uuid.UUID | None
     property_bank_account_id: uuid.UUID | None
@@ -186,3 +188,32 @@ class LockIn(_In):
 
 class LeadingIn(_In):
     leading_system: LeadingSystem
+
+
+# Open item settlement proposal in the statutory order (M10-03, 7.4 Nr. 5, D39) ----------
+
+
+class DeterminationIn(_In):
+    """Explicit Tilgungsbestimmung of the payer; without amount the whole rest of the item."""
+
+    open_item_id: uuid.UUID
+    amount: Money | None = None
+
+
+class SettlementProposalIn(_In):
+    account_id: uuid.UUID
+    amount: Money
+    as_of: date
+    purpose: str | None = Field(default=None, max_length=500)
+    determination: list[DeterminationIn] = Field(default_factory=list, max_length=100)
+
+
+class SettlementConfirmIn(SettlementProposalIn):
+    """Confirmation of a proposal: the fingerprint must equal the recomputed proposal."""
+
+    fingerprint: str = Field(min_length=64, max_length=64)
+    bank_account_id: uuid.UUID
+    booking_date: date
+    text: str | None = Field(default=None, max_length=500)
+    reference: str | None = Field(default=None, max_length=100)
+    post_immediately: bool = False

@@ -1,6 +1,6 @@
 # ADR 0010: Learning examples from ticket resolutions (ai_example per tenant, local matching)
 
-- Status: Proposed, operator decision required (data protection, M7-04)
+- Status: Proposed, operator decision required (data protection, M7-04); technical part (switch, deletion) implemented 26.09.2026
 - Date: 2026-09-26
 
 ## Context
@@ -36,9 +36,18 @@ presented to the operator (section 0.3).
 5. **Visibility.** Page `/einstellungen/wissen` lists playbooks (with hit count, last use,
    deactivate) and examples (filter by task) for `tenant_settings:read`; there is no delete or
    edit of examples in the UI and no retention job.
-6. **Feature flag.** There is no per tenant switch for storing examples; the storage is
-   coupled to the closing status. This deviates from section 0.3 (function behind a flag until
-   the conflict is decided) and is listed as a gap requiring a code change.
+6. **Feature flag (addendum 26.09.2026).** `tenant_settings.ai_learning_examples_enabled`
+   (migration 0134, default false, `PATCH /tenant/settings`, CRM page Einstellungen,
+   Mandant) gates the storage per tenant; `record_resolution_example` stores nothing while it
+   is off (rule 0.1.3, section 0.3). Switching it off stops new examples and leaves existing
+   rows. Every change is logged as `tenant_settings.updated`. Until the addendum the storage
+   was coupled to the closing status without a switch.
+7. **Deletion with the source (addendum 26.09.2026).** `mhvp.ai.examples` removes the
+   `ticket_resolution` examples of a deleted contact (`DELETE /contacts/{id}`, match on
+   `features.entitaeten.contact_id`) in the same transaction; `delete_examples_for_ticket`
+   is available for a ticket deletion path (none exists today, tickets are merged, not
+   deleted). Hard delete: the rows are derived data, the ticket event log keeps the
+   resolution.
 
 ## Consequences
 
@@ -46,8 +55,9 @@ presented to the operator (section 0.3).
   retention and deletion rule and, before any provider transfer, minimisation or
   pseudonymisation are needed. Owner: operator with data protection; gate: none, but M7-01 and
   M12-01 remain closed for provider use.
-- Required code changes before productive use (not done here): per tenant switch for example
-  storage, masking of the note before it enters a prompt, deletion of examples when a ticket or
-  contact is deleted (DSGVO, S06), and a retention rule in `docs/rules/`.
+- Required code changes before productive use: per tenant switch for example storage (done
+  26.09.2026, default off) and deletion of examples when a contact is deleted (done
+  26.09.2026); still open: masking of the note before it enters a prompt and a retention rule
+  in `docs/rules/` (M7-04, operator with data protection).
 - Rule M19-07 documents the behaviour; the plan note is in `docs/plans/M20.md` (Nachtrag
   26.09.2026, 1.25.0).

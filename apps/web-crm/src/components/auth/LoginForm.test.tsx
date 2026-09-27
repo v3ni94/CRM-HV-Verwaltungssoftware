@@ -26,8 +26,8 @@ describe("LoginForm", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("posts to the BFF and continues to the TOTP setup", async () => {
-    fetchMock.mockImplementation(async () => jsonResponse({ status: "mfa_setup_required" }));
+  it("posts to the BFF and continues to the second factor when it is enabled", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse({ status: "mfa_required" }));
     renderIntl(<LoginForm next="/kontakte/neu" />);
     await userEvent.type(screen.getByLabelText("E-Mail"), "admin@example.org");
     await userEvent.type(screen.getByLabelText("Passwort"), "geheim");
@@ -36,7 +36,16 @@ describe("LoginForm", () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe("/api/session/login");
     expect(JSON.parse(String(init?.body))).toEqual({ email: "admin@example.org", password: "geheim" });
-    expect(push).toHaveBeenCalledWith("/anmelden/zweiter-faktor?einrichten=1&next=%2Fkontakte%2Fneu");
+    expect(push).toHaveBeenCalledWith("/anmelden/zweiter-faktor?next=%2Fkontakte%2Fneu");
+  });
+
+  it("goes straight to the target when the password alone was enough", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse({ status: "ok", tenant_id: "t-1", tenants: [] }));
+    renderIntl(<LoginForm next="/kontakte/neu" />);
+    await userEvent.type(screen.getByLabelText("E-Mail"), "user@example.org");
+    await userEvent.type(screen.getByLabelText("Passwort"), "geheim");
+    await userEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/kontakte/neu"));
   });
 
   it("shows the German problem title of the API", async () => {

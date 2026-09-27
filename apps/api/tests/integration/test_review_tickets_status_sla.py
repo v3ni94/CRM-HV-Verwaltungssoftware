@@ -180,9 +180,15 @@ def test_list_tickets_paginates_and_stays_a_list(client: TestClient, world: Worl
     assert int(legacy.headers["x-total-count"]) >= 5
     assert (legacy.headers["x-page"], legacy.headers["x-page-size"]) == ("1", "2")
 
-    page1 = client.get(T, params={"q": "Seite", "page": 1, "page_size": 2}, headers=h)
-    page2 = client.get(T, params={"q": "Seite", "page": 2, "page_size": 2}, headers=h)
-    page3 = client.get(T, params={"q": "Seite", "page": 3, "page_size": 2}, headers=h)
+    page1 = client.get(
+        T, params={"q": "Seite", "page": 1, "page_size": 2, "sort": "created_desc"}, headers=h
+    )
+    page2 = client.get(
+        T, params={"q": "Seite", "page": 2, "page_size": 2, "sort": "created_desc"}, headers=h
+    )
+    page3 = client.get(
+        T, params={"q": "Seite", "page": 3, "page_size": 2, "sort": "created_desc"}, headers=h
+    )
     total = int(page1.headers["x-total-count"])
     seen = [t["number"] for p in (page1, page2, page3) for t in _ok(p)]
     assert len(seen) == min(total, 6)

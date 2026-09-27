@@ -51,6 +51,10 @@ def mass_endpoints() -> list[tuple[str, str]]:
     for path, operations in sorted(spec["paths"].items()):
         if not MASS_PATTERN.search(path):
             continue
+        if path.startswith("/api/v1/auth/"):
+            # Self service of the own account (TOTP setup and confirm, M2-01): every signed in
+            # user may call these; they are no tenant data mass actions.
+            continue
         for method in sorted(operations):
             if method.lower() in READ_METHODS:
                 continue

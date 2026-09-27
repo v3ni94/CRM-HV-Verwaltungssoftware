@@ -61,9 +61,20 @@ derived roles. The helpers live in `kontakte.py` (`emit_contact_created`, `emit_
 The events are outbox rows in the same transaction as the import; a test run (CLI without
 `--apply`, API `mode=preview`) is rolled back and leaves no event, so no after-commit hook is
 needed. The webhook dispatcher (`mhvp.core.webhooks.enqueue_deliveries`) and the rule engine
-read them like the events of the manual API. Not covered: the staging import
-(`services._apply_contact`) and the objektakte difference import. Test:
+read them like the events of the manual API. Test:
 `tests/integration/test_a87_import_contact_events.py`.
+
+The staging import (`services._apply_contact`, report type `contacts`) emits `contact.created`
+(`source = "import.staging"`) for every created contact through `mhvp.core.events.emit` with
+the same payload (`kontakte` imports this module, so its helper is not imported back). An
+existing contact is never changed by this path (`unchanged` or `conflict`), so it emits no
+`contact.updated`. The test run (`POST /files/{id}/test-run`) runs inside a savepoint the
+router rolls back, so it leaves no event. The objektakte import (`mhvp.objektakte.
+objektakte_import.apply_tables`, manual upload and differential run of `tasks.py`) emits
+`contact.created` and, when mapped fields of an existing contact differ from the export,
+`contact.updated` with the changed field names, audit diff and version bump
+(`source = "import.objektakte"`); preview mode and a failed (rolled back) run leave no event.
+Test: `tests/integration/test_a87_import_contact_events_apply.py`.
 ## Abgleichbericht Parallelbetrieb (26.09.2026, A68)
 
 `reconciliation.py` compares the staged rows of the report types `journal` and
@@ -82,3 +93,12 @@ default 05:30). Read and compare only, nothing is posted. Column defaults are an
 Checked against the folder contents on 26.09.2026, the following files were not listed above:
 
 * `list_import_routers.py`: Immoware24 list imports over the API (`/api/v1/imports/immoware24/lists`); router registered in `main.py`
+
+## Multi person names (addendum 26.09.2026, M8-04)
+
+`kontakte.detect_multi_person` splits "Nachname, V1 & V2", "V1 und V2 Nachname", "Eheleute
+...", "Herr und Frau ..." into persons; `apply_prepared` creates one contact per person and one
+party named as exported (members carry `external_ids["immoware24_member"]`). Unclear names
+(Erbengemeinschaft, missing first names, two family names) stay one contact and are reported
+under `pruefung`. `zuordnung.import_party` finds the joint party of such members. Rule entry
+`docs/rules/M8-04-mehrpersonen-bevollmaechtigte.md`.

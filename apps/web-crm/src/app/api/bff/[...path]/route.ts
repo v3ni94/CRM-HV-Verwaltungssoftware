@@ -60,6 +60,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/reject-import$`) },
   { method: "GET", pattern: new RegExp(`^contracts/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/(versions|termination|schedules|deposits)$`) },
+  // Kautionen und Kautionsabrechnung (M5-02): Liste, Entwurf berechnen und speichern,
+  // Referenzzinssatz je Jahr (Einstellungen). Freigabe bleibt hinter G3 und ist hier nicht erreichbar.
+  { method: "GET", pattern: new RegExp(`^contracts/${ID}/deposits$`) },
+  { method: "GET", pattern: new RegExp(`^deposits/${ID}/settlements$`) },
+  { method: "POST", pattern: new RegExp(`^deposits/${ID}/settlements(/preview)?$`) },
+  { method: "GET", pattern: /^deposit-interest-rates$/ },
+  { method: "PUT", pattern: /^deposit-interest-rates\/[0-9]{4}$/ },
+  { method: "DELETE", pattern: /^deposit-interest-rates\/[0-9]{4}$/ },
   { method: "GET", pattern: /^sepa-mandates$/ },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
   // Google-Kalender-Termine (M23-02 bidirektional): ändern/löschen des verknüpften Google-Events
@@ -141,6 +149,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^auth/sessions/${ID}$`) },
   { method: "GET", pattern: /^auth\/trusted-devices$/ },
   { method: "DELETE", pattern: new RegExp(`^auth/trusted-devices/${ID}$`) },
+  // Optional second factor (operator 26.09.2026, M2-01): confirm and disable; the setup with
+  // its QR code runs through /api/session/totp/setup.
+  { method: "POST", pattern: /^auth\/totp\/(confirm|disable)$/ },
   // Platform: tenant and tenant administrator creation (platform admins only, checked by the API).
   { method: "POST", pattern: /^platform\/tenants$/ },
   { method: "POST", pattern: /^platform\/users$/ },

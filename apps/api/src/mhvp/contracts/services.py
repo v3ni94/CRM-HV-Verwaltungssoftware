@@ -107,6 +107,8 @@ async def creditor_entity(
             raise invalid("Die Gemeinschaft der Wohnungseigentümer fehlt.")
         return hoa
     if prop.management_type is ManagementType.HOA:
+        # M5-03 (operator decision 26.09.2026, docs/OPEN_QUESTIONS.md, A-015): tenancies in pure
+        # HOA properties stay rejected; rental management only via HOA_WITH_SEV.
         raise invalid(
             "In reinen WEG-Objekten verwaltet die Plattform keine Mietverhältnisse. "
             "Dafür ist die Verwaltungsart WEG mit SEV vorgesehen."

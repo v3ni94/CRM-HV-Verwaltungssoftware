@@ -1,10 +1,12 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ImmowareSettings, type ImmowareConnection, type ImmowareSyncRun } from "@/components/immoware/ImmowareSettings";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,14 @@ export default async function ImmowareSettingsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} description={t("intro")} />
+      <div className="flex flex-wrap gap-2">
+        <Link href="/immoware" className={ui.button}>
+          {t("openWorkspace")}
+        </Link>
+        <Link href="/immoware/lernphase" className={ui.button}>
+          {t("openLearning")}
+        </Link>
+      </div>
       <ImmowareSettings
         connection={connection.data as ImmowareConnection}
         runs={(runs.data ?? []) as ImmowareSyncRun[]}

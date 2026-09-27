@@ -107,7 +107,25 @@ def test_parse_and_prepare() -> None:
     rows = parse_kontakte(SAMPLE, ContactRoleCode.MIETER, "mieter.csv").rows
     assert len(rows) == 7
     prepared = {p.row.external_id: p for p in prepare(rows)}
-    assert all(p.data is not None for p in prepared.values())
+    # Multi person names (M8-04): "Nachname, V1 & V2" becomes one party with two members;
+    # two full names with different family names stay one contact flagged for review.
+    pawlinski = prepared["8"]
+    assert pawlinski.data is None
+    assert [(m.first_name, m.last_name) for m in pawlinski.members] == [
+        ("Andreas", "Pawlinski"),
+        ("Radoslaw", "Pawlinski"),
+    ]
+    assert pawlinski.party_name == "Pawlinski, Andreas & Radoslaw"
+    assert pawlinski.members[0].emails[0].email == "andipwlnsk@googlemail.com"
+    assert pawlinski.members[1].emails == []
+    assert [m.external_ids["immoware24_member"] for m in pawlinski.members] == ["1", "2"]
+    assert all(m.addresses[0].street == "Wehrstraße" for m in pawlinski.members)
+    klauenberg = prepared["803"]
+    assert klauenberg.data is not None
+    assert klauenberg.members == []
+    assert klauenberg.review is not None
+    assert "unklar" in klauenberg.review
+    assert all(p.data is not None for k, p in prepared.items() if k != "8")
     hamacher = prepared["111"].data
     assert hamacher is not None
     assert hamacher.kind is ContactKind.PERSON

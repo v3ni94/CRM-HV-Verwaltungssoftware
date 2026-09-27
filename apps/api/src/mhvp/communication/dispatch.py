@@ -139,6 +139,30 @@ async def _create(
     return row
 
 
+async def expand_items(session: Any, items: list[DispatchIn]) -> list[DispatchIn]:
+    """One item per resolved recipient (delivery rule of representatives), without repeats
+    of the same document and contact. An explicit channel of the item also applies to the
+    representative; without one each recipient's preferred channel counts."""
+    from mhvp.contacts.recipients import resolve_recipients
+
+    out: list[DispatchIn] = []
+    seen: set[tuple[uuid.UUID, uuid.UUID]] = set()
+    for item in items:
+        for recipient in await resolve_recipients(session, [item.contact_id]):
+            key = (item.document_id, recipient.contact_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(
+                DispatchIn(
+                    document_id=item.document_id,
+                    contact_id=recipient.contact_id,
+                    channel=item.channel,
+                )
+            )
+    return out
+
+
 @router.post("/dispatches", status_code=201, summary="Zustellung vorbereiten")
 async def create(
     body: DispatchIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -151,9 +175,15 @@ async def create(
 async def serial(
     body: SerialDispatchIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
+    """Recipients follow the delivery rule of authorised representatives
+    (``mhvp.contacts.recipients``): depending on the rule the represented contact, the
+    representative or both receive the document; a contact reached twice gets it once."""
     batch = uuid.uuid4().hex[:16]
     async with tenant_tx(request, principal) as session:
-        rows = [await _create(session, principal, item, batch) for item in body.items]
+        rows = [
+            await _create(session, principal, item, batch)
+            for item in await expand_items(session, body.items)
+        ]
         groups: dict[str, list[dict[str, Any]]] = {c: [] for c in CHANNELS}
         for r in rows:
             groups[r.channel].append(_out(r))

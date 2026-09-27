@@ -76,9 +76,11 @@ Neue Typen werden nur ergänzt, nie umbenannt (ADR 0009).
 * Ereignisse `invoice.received|approved|paid`, `journal_entry.posted|reversed`,
   `bank_transaction.*` aus Abschnitt 12 sind noch nicht im Katalog; sie folgen mit den
   Freigabestufen G1 und G2 (Zahlungsereignisse bleiben bis dahin intern).
-* Die Immoware24-Listenimporte (Kontaktlisten, Zuordnung) erzeugen seit A87 `contact.created`
-  und `contact.updated` wie der API-Pfad (Test `tests/integration/test_a87_import_contact_events.py`).
-  Der Staging-Import (`mhvp/imports/services.py`, `_apply_contact`) und der
-  objektakte-Differenzimport erzeugen weiterhin kein Kontaktereignis (offen, siehe Lückenliste A87).
+* Die Importe erzeugen seit A87 `contact.created` und `contact.updated` wie der API-Pfad
+  (Feldnamen ohne Werte, `source` im Payload: `import.kontakte`, `import.zuordnung`,
+  `import.staging`, `import.objektakte`). Testläufe und Vorschauen erzeugen kein Ereignis, ein
+  wiederholter Lauf über dieselben Daten ebenfalls nicht. Tests
+  `tests/integration/test_a87_import_contact_events.py` und
+  `tests/integration/test_a87_import_contact_events_apply.py`.
 * Das smart-einzug-Dossier (V1) bleibt offen; die Felder des Ereignisses sind allgemein und
   nicht auf smart-einzug zugeschnitten.

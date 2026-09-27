@@ -1,9 +1,16 @@
-"""Password hashing (Argon2id) and policy (ASSUMPTIONS A-012)."""
+"""Password hashing (Argon2id) and policy (ASSUMPTIONS A-012, operator decision M2-01).
+
+Operator decision of 26.09.2026 (M2-01): minimum length 6 characters. This is below common
+recommendations (the BSI recommends longer passwords); the decision is documented in
+``docs/OPEN_QUESTIONS.md`` (M2-01) and ``docs/ASSUMPTIONS.md`` (A-012) and is not reflected in
+the user interface. Maximum length, whitespace rule and the lockout after 10 failed attempts
+for 15 minutes are unchanged.
+"""
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 
-MIN_LENGTH = 12
+MIN_LENGTH = 6
 MAX_LENGTH = 128
 MAX_FAILED_LOGINS = 10
 LOCKOUT_MINUTES = 15

@@ -80,6 +80,14 @@ class TenantDomain(IdMixin, TimestampMixin, Base):
 
 class User(IdMixin, TimestampMixin, Base):
     __tablename__ = "app_user"
+    __table_args__ = (
+        Index(
+            "uq_app_user_superadmin",
+            "is_superadmin",
+            unique=True,
+            postgresql_where=text("is_superadmin"),
+        ),
+    )
 
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -91,8 +99,34 @@ class User(IdMixin, TimestampMixin, Base):
     failed_logins: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_platform_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Superadmin (ADR 0011, operator decision 26.09.2026): exactly one platform administrator
+    # (partial unique index ``uq_app_user_superadmin``) may approve release gate requests alone
+    # when the platform flag ``PlatformSettings.gate_superadmin_bypass`` is on. Granted only via
+    # ``mhvp.platform.services.set_superadmin`` (seed or platform API), never by e-mail address.
+    is_superadmin: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PlatformSettings(IdMixin, TimestampMixin, Base):
+    """Platform wide switches (no tenant, no RLS; section 5.3). Exactly one row, created on
+    first read. Every flag is a product safeguard decided by the operator, never a legal rule.
+
+    ``gate_superadmin_bypass`` (ADR 0011, default false): with the flag on, the single
+    superadmin (``User.is_superadmin``) may approve a release gate request he filed himself;
+    the approval is recorded with ``four_eyes = false`` and the audit event carries
+    ``superadmin_bypass = true``. With the flag off the four eyes rule of ADR 0003 applies
+    unchanged. Changes are recorded in ``updated_by`` / ``version`` and in the application log.
+    """
+
+    __tablename__ = "platform_settings"
+
+    gate_superadmin_bypass: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
 
 class Membership(IdMixin, TimestampMixin, Base):
@@ -335,6 +369,22 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     ticket_reply_approval_all: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # Lernbeispiele aus Ticketabschlüssen (ADR 0010, M7-04, Regel M19-07, Migration 0134):
+    # bei false wird beim Abschluss kein ``AiExample`` (Aufgabe ``ticket_resolution``)
+    # gespeichert. Standard aus (Regel 0.1.3: Datenschutzregel offen); der Betreiber schaltet
+    # je Mandant ein. Vorhandene Beispiele werden mit dem Schalter nicht gelöscht.
+    ai_learning_examples_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    # Erledigungsarten der Erledigungsnotiz je Mandant (Regel M19-07, Entscheidung M19-04 vom
+    # 26.09.2026, ``mhvp.tickets.resolution_kinds``). Shape:
+    # {"disabled": ["<code eingebauter Art>", ...], "custom": [{"code": str, "label": str}, ...]}.
+    # ``disabled`` darf ``sonstiges`` und ``zusammengefuehrt`` nicht enthalten, ``custom``
+    # höchstens 30 Einträge mit Slug-Code (``^[a-z0-9][a-z0-9_]{1,31}$``), der keiner
+    # eingebauten Art entspricht. Leeres Objekt bedeutet: alle eingebauten Arten aktiv.
+    resolution_kinds: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     # Hallo-Heidi-Anrufe (Betreiberauftrag 26.09.2026, ``mhvp.tickets.call_assistant``):
     # Erkennung der Gesprächsprotokoll-Mails. Shape: {"enabled": bool, "sender_patterns": [str],
     # "keywords": [str]}; fehlende Schlüssel nutzen die eingebauten Muster.
@@ -342,6 +392,11 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Messdienstleister module (stage 1): all write endpoints of /metering stay locked until the
+    # tenant switches the module on (default off, master prompt Messdienstleister section 14).
+    metering_module_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
 
 class VatStatus(StrEnum):
@@ -447,3 +502,8 @@ class ReleaseGateRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decision_comment: Mapped[str | None] = mapped_column(Text)
+    # False only for an approval by the superadmin without a second person (ADR 0011,
+    # platform flag ``gate_superadmin_bypass``); true for every regular decision.
+    four_eyes: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )

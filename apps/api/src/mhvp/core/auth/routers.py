@@ -21,13 +21,13 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=256)
     tenant_id: uuid.UUID | None = None
-    # Trusted device cookie of the web BFF (operator 25.09.2026): skips TOTP for this user
-    # when it is valid, even though TOTP would otherwise be required.
+    # Trusted device cookie of the web BFF ("Dieses Gerät 90 Tage merken", operator
+    # 26.09.2026): skips TOTP for this user while it is valid.
     device_token: str | None = Field(default=None, max_length=200)
 
 
 class LoginStep(BaseModel):
-    status: str = Field(description="ok, mfa_required oder mfa_setup_required")
+    status: str = Field(description="ok oder mfa_required")
     mfa_token: str | None = None
     # Present only when status == "ok" (password alone was enough, or a trusted device stood
     # in for TOTP): the session is already issued, exactly like TokenResponse below.
@@ -39,10 +39,6 @@ class LoginStep(BaseModel):
     tenants: list["TenantOut"] = Field(default_factory=list)
 
 
-class MfaTokenRequest(BaseModel):
-    mfa_token: str
-
-
 class MfaSetup(BaseModel):
     secret: str
     otpauth_uri: str
@@ -52,8 +48,16 @@ class MfaVerifyRequest(BaseModel):
     mfa_token: str
     code: str = Field(min_length=6, max_length=8)
     tenant_id: uuid.UUID | None = None
-    # "Auf diesem Gerät 180 Tage merken" (operator 25.09.2026).
+    # "Dieses Gerät 90 Tage merken" (operator 26.09.2026, M2-01).
     remember_device: bool = False
+
+
+class TotpConfirmRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=8)
+
+
+class TotpDisableRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=256)
 
 
 class TenantOut(BaseModel):
@@ -113,6 +117,8 @@ class MeOut(BaseModel):
     permissions: list[str]
     is_platform_admin: bool
     platform_access_reason: str | None
+    # Second factor switched on by the user (Einstellungen, Sicherheit); never mandatory.
+    totp_enabled: bool = False
 
 
 def _settings(request: Request) -> Settings:
@@ -153,15 +159,21 @@ def _mfa_user(settings: Settings, token: str) -> uuid.UUID:
 
 @router.post("/login", summary="Anmeldung Schritt 1: E-Mail und Passwort")
 async def login(body: LoginRequest, request: Request) -> LoginStep:
-    """TOTP is mandatory only for administrators (operator 25.09.2026); other users continue
-    straight to a session unless they enabled TOTP themselves, or a trusted device stands in
-    for it."""
+    """TOTP is never mandatory (operator 26.09.2026, M2-01): the session is issued right here
+    unless the user enabled the second factor under Einstellungen, Sicherheit. A trusted
+    device ("Dieses Gerät 90 Tage merken") stands in for the second factor."""
     settings = _settings(request)
     user_id, totp_enabled = await service.check_password(
         sessions(request), body.email, body.password
     )
-    mandatory = totp_enabled or await service.totp_mandatory(sessions(request), user_id)
-    if not mandatory:
+    trusted = (
+        totp_enabled
+        and body.device_token is not None
+        and await service.check_trusted_device(
+            sessions(request), user_id=user_id, raw_token=body.device_token
+        )
+    )
+    if not totp_enabled or trusted:
         issued = await service.issue_session(
             sessions(request),
             settings,
@@ -169,31 +181,42 @@ async def login(body: LoginRequest, request: Request) -> LoginStep:
             tenant_id=body.tenant_id,
             user_agent=request.headers.get("user-agent"),
         )
+        # Password only and trusted device logins skip verify_totp, which otherwise records
+        # the login (last_login_at feeds the portal account list, A86).
+        await service.record_login(sessions(request), user_id)
         return _ok_step(issued)
-    if body.device_token and await service.check_trusted_device(
-        sessions(request), user_id=user_id, raw_token=body.device_token
-    ):
-        issued = await service.issue_session(
-            sessions(request),
-            settings,
-            user_id=user_id,
-            tenant_id=body.tenant_id,
-            user_agent=request.headers.get("user-agent"),
-        )
-        return _ok_step(issued)
-    return LoginStep(
-        status="mfa_required" if totp_enabled else "mfa_setup_required",
-        mfa_token=tokens.issue_mfa_token(settings, user_id),
-    )
+    return LoginStep(status="mfa_required", mfa_token=tokens.issue_mfa_token(settings, user_id))
 
 
-@router.post("/mfa/setup", summary="Zweiten Faktor (TOTP) einrichten")
-async def mfa_setup(body: MfaTokenRequest, request: Request) -> MfaSetup:
-    settings = _settings(request)
-    secret, uri = await service.start_totp_setup(
-        sessions(request), _mfa_user(settings, body.mfa_token)
-    )
+@router.post("/totp/setup", summary="Zweiten Faktor (TOTP) einrichten: Schlüssel erzeugen")
+async def totp_setup(request: Request, principal: Principal = Depends(get_principal)) -> MfaSetup:
+    """Einstellungen, Sicherheit: creates a pending secret for the signed in user. It becomes
+    effective only after ``/totp/confirm`` with a matching code."""
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN)
+    secret, uri = await service.start_totp_setup(sessions(request), principal.user_id)
     return MfaSetup(secret=secret, otpauth_uri=uri)
+
+
+@router.post("/totp/confirm", status_code=204, summary="Zweiten Faktor (TOTP) bestätigen")
+async def totp_confirm(
+    body: TotpConfirmRequest, request: Request, principal: Principal = Depends(get_principal)
+) -> Response:
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN)
+    await service.enable_totp(sessions(request), principal.user_id, body.code)
+    return Response(status_code=204)
+
+
+@router.post("/totp/disable", status_code=204, summary="Zweiten Faktor (TOTP) abschalten")
+async def totp_disable(
+    body: TotpDisableRequest, request: Request, principal: Principal = Depends(get_principal)
+) -> Response:
+    """Requires the current password; every remembered device is revoked as well."""
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN)
+    await service.disable_totp(sessions(request), principal.user_id, body.current_password)
+    return Response(status_code=204)
 
 
 @router.post("/mfa/verify", summary="Anmeldung Schritt 2: TOTP-Code, Token ausstellen")
@@ -391,11 +414,13 @@ async def revoke_trusted_device(
 @router.get("/me", summary="Aktueller Benutzer und Berechtigungen")
 async def me(request: Request, principal: Principal = Depends(get_principal)) -> MeOut:
     email = name = None
+    totp_enabled = False
     if principal.user_id is not None:
         async with platform_transaction(sessions(request)) as session:
             user = await session.get(User, principal.user_id)
             if user is not None:
                 email, name = user.email, user.display_name
+                totp_enabled = user.totp_enabled
     return MeOut(
         user_id=principal.user_id,
         email=email,
@@ -405,4 +430,5 @@ async def me(request: Request, principal: Principal = Depends(get_principal)) ->
         permissions=sorted(principal.permissions),
         is_platform_admin=principal.is_platform_admin,
         platform_access_reason=principal.platform_access_reason,
+        totp_enabled=totp_enabled,
     )

@@ -190,7 +190,9 @@ def test_gmail_sync_creates_tickets_and_threads(
         ),
         201,
     )
-    assert "rt" not in json.dumps(box).replace("has_secret", "")  # token never returned
+    # Token never returned (checked on the values: keys such as backfill_started_at contain
+    # the letters of the test token).
+    assert "rt" not in json.dumps(list(box.values()))
     assert box["has_secret"] is True
     box = _ok(client.patch(f"{M}/mailboxes/{box['id']}", json={"enabled": True}, headers=h))
     assert box["enabled"] is True

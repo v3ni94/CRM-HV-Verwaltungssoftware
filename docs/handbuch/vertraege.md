@@ -94,6 +94,39 @@ Auszahlung verlangen eine Begründung und können als prüfpflichtig gekennzeich
 Kautionen sind Fremdgeld: sie erscheinen in der Eigentümerabrechnung und in der
 Liquiditätsvorschau getrennt vom freien Vermögen des Eigentümers.
 
+### Kautionsabrechnung bei Vertragsende (Entwurf)
+
+Standardregel (Betreiberentscheidung vom 26.09.2026, Regel M5-02): die Kaution wird getrennt
+verwahrt, die Verzinsung wird je Jahr als Bewegung erfasst, die Abrechnung bei Vertragsende
+ist ein Entwurf. Auf der Vertragsseite steht im Abschnitt Kautionen die Schaltfläche
+Kautionsabrechnung erstellen (Recht Verträge ändern).
+
+1. Abrechnungsdatum wählen, vorbelegt mit dem Vertragsende. Bewegungen nach diesem Datum
+   sind nicht erlaubt; das Datum darf nicht vor dem Vertragsende liegen.
+2. Zinsart wählen:
+   - Zinsen je Jahr einzeln erfassen: Beträge je Kalenderjahr eingeben, zum Beispiel aus dem
+     Kontoauszug des Kautionskontos. Bereits erfasste Zinsbewegungen sind vorbelegt.
+   - Referenzzinssatz je Jahr: die Plattform rechnet tagesgenau je Kalenderjahr auf das
+     Kautionsguthaben (Einzahlungen abzüglich Verrechnungen und Auszahlungen) mit dem Satz aus
+     Einstellungen, Kautionszinsen, kaufmännisch gerundet je Jahr. Fehlt der Satz für ein Jahr,
+     ist die Berechnung gesperrt, bis er gepflegt ist.
+   - Keine Verzinsung.
+3. Einbehalte mit Bezeichnung und Betrag erfassen (zum Beispiel Schaden, Endreinigung, offene
+   Betriebskosten laut Abrechnung). Einbehalte über dem Guthaben lehnt die Plattform ab; eine
+   Nachforderung gegen den Mieter ist ein eigener Vorgang.
+4. Berechnen zeigt eingezahlte Kaution, erfasste Verrechnungen und Auszahlungen, Guthaben vor
+   Zinsen, Zinsen je Jahr mit Satz und Tagen, Einbehalte und Auszahlungsbetrag. Bereits
+   erfasste Zinsbewegungen werden nur zum Abgleich ausgewiesen und nicht erneut addiert.
+5. Als Entwurf speichern legt den Datensatz am Vertrag ab. Mehrere Entwürfe je Kaution sind
+   möglich; sie bleiben nachvollziehbar erhalten.
+
+Der Entwurf bucht nichts und zahlt nichts aus. Die Freigabe zur Auszahlung liegt hinter der
+Freigabestufe G3 und ist je Mandant standardmäßig gesperrt. Die Auszahlung selbst wird nach
+Freigabe als Bewegung Auszahlung erfasst; die Überweisung läuft über das Zahlungsmodul (G2).
+Ein PDF der Kautionsabrechnung gibt es noch nicht; der Entwurf ist als Datensatz und über die
+API abrufbar. Welcher Zinssatz für Mietkautionen rechtlich gilt und ob Zinseszins anzusetzen
+ist, muss die Rechtsberatung bestätigen; die Plattform stellt keine Rechtslage fest.
+
 ## Belegungsliste
 
 Je Objekt liefert die Belegungsliste die Einheiten mit ihren Verträgen zum Stichtag

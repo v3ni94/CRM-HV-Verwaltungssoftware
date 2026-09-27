@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from sqlalchemy import func, select
 
-from mhvp.contacts.models import Contact, ContactRoleCode, Party
+from mhvp.contacts.models import Contact, ContactRoleCode, Party, PartyMember
 from mhvp.core import crypto
 from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.core.db.tenancy import tenant_transaction
@@ -75,7 +75,8 @@ async def _scenario(settings: Any) -> None:
 
         applied = await import_prepared(factory, tenant_a, None, prepared, apply=True)
         assert applied["counts"] == {"created": 3, "role_added": 1}
-        assert await _counts(factory, tenant_a) == (3, 3)
+        # Goritzka (Eheleute, M8-04): two member contacts, one party; four contacts in all.
+        assert await _counts(factory, tenant_a) == (4, 3)
         async with tenant_transaction(factory, tenant_a) as session:
             hvm = await session.scalar(
                 select(Contact).where(Contact.external_ids["immoware24"].astext == "1")
@@ -84,12 +85,37 @@ async def _scenario(settings: Any) -> None:
             assert hvm.kind.value == "company"
             assert sorted(hvm.roles) == ["eigentuemer", "sonstiges"]
             assert hvm.external_ids["immoware24_user"] == "admin"
-            goritzka = await session.scalar(
-                select(Contact).where(Contact.external_ids["immoware24"].astext == "9")
+            goritzka = list(
+                (
+                    await session.scalars(
+                        select(Contact)
+                        .where(Contact.external_ids["immoware24"].astext == "9")
+                        .order_by(Contact.external_ids["immoware24_member"].astext)
+                    )
+                ).all()
             )
-            assert goritzka is not None
-            assert (goritzka.first_name, goritzka.last_name) == ("Janina & Jacek", "Goritzka")
-            assert goritzka.display_name == "Goritzka, Janina & Jacek"
+            assert [(g.first_name, g.last_name) for g in goritzka] == [
+                ("Janina", "Goritzka"),
+                ("Jacek", "Goritzka"),
+            ]
+            assert [g.external_ids["immoware24_member"] for g in goritzka] == ["1", "2"]
+            assert all(g.roles == ["eigentuemer"] for g in goritzka)
+            party = await session.scalar(
+                select(Party)
+                .join(PartyMember, PartyMember.party_id == Party.id)
+                .where(PartyMember.contact_id == goritzka[0].id)
+            )
+            assert party is not None
+            assert party.name == "Goritzka, Janina & Jacek"
+            members = (
+                await session.scalars(
+                    select(PartyMember.contact_id).where(PartyMember.party_id == party.id)
+                )
+            ).all()
+            assert set(members) == {g.id for g in goritzka}
+            goritzka_entry = next(k for k in applied["kontakte"] if k["id"] == "9")
+            assert goritzka_entry["partei"] == "Goritzka, Janina & Jacek"
+            assert len(goritzka_entry["mitglieder"]) == 2
             ecker = await session.scalar(
                 select(Contact).where(Contact.external_ids["immoware24"].astext == "1376")
             )
@@ -99,7 +125,7 @@ async def _scenario(settings: Any) -> None:
 
         again = await import_prepared(factory, tenant_a, None, prepared, apply=True)
         assert again["counts"] == {"unchanged": 4}
-        assert await _counts(factory, tenant_a) == (3, 3)
+        assert await _counts(factory, tenant_a) == (4, 3)
         assert await _counts(factory, tenant_b) == (0, 0)
     finally:
         await engine.dispose()

@@ -20,8 +20,9 @@ Grenzen (Entwurf, keine Rechtsfolge, Freigabestufe gesperrt).
 Grundlagen
 
 - [Start und Auswertungen](start-auswertungen.md)
+- [Auswertung Tickets (Durchsatz, Rückstand, Reaktionszeiten, je Bearbeiter und Postfach)](auswertung-tickets.md)
 - [Objekte und Einheiten](objekte-einheiten.md) (mit Energieausweis und Schwarzem Brett)
-- [Verträge (Miete, WEG, SEV, Dienstleisterverträge mit Kündigungsfristen)](vertraege.md)
+- [Verträge (Miete, WEG, SEV, Kautionen mit Kautionsabrechnung, Dienstleisterverträge mit Kündigungsfristen)](vertraege.md)
 - [Kontakte (mit IBAN-Freigabe im Vier-Augen-Prinzip, Beziehungen zu Objekten und Einheiten)](kontakte.md)
 - [Kalender](kalender.md)
 
@@ -59,14 +60,14 @@ Datenübernahme und Importe
 
 System
 
-- [Einstellungen (Benutzer, Rollen, Postfächer mit Telefonassistenz, DMS, SLA, KI, Wissen, Telefonie, Portalformulare, Automatisierung, WEG, DATEV)](einstellungen.md)
+- [Einstellungen (Benutzer, Rollen, Postfächer mit Telefonassistenz, DMS, SLA, KI, Wissen, Telefonie, Portalformulare, Automatisierung, WEG, Kautionszinsen, DATEV)](einstellungen.md)
 
 Die folgenden Abschnitte fassen die Grundfunktionen der Startseite zusammen; Einzelheiten zu
 Auswertungen stehen im verlinkten Kapitel.
 
 ## Anmelden und Mandant wählen
 
-Anmeldung mit E-Mail, Passwort und Einmalcode (Zwei-Faktor). Wer mehreren Mandanten angehört, wählt den Mandanten oben rechts. Alle Daten, Suchen und Benachrichtigungen gelten nur für den gewählten Mandanten.
+Anmeldung mit E-Mail und Passwort. Das Passwort ist 6 bis 128 Zeichen lang und beginnt oder endet nicht mit einem Leerzeichen (Betreiberentscheidung vom 26.09.2026); nach 10 Fehlversuchen ist das Konto 15 Minuten gesperrt. Der zweite Faktor (Einmalcode aus einer Authenticator-App) ist freiwillig: Wer ihn unter Einstellungen, Meine Daten eingeschaltet hat, gibt nach dem Passwort den sechsstelligen Code ein und kann dabei Dieses Gerät 90 Tage merken wählen; auf diesem Gerät wird dann 90 Tage lang kein Code mehr abgefragt. Gemerkte Geräte lassen sich unter Meine Daten einzeln abmelden. Wer mehreren Mandanten angehört, wählt den Mandanten oben rechts. Alle Daten, Suchen und Benachrichtigungen gelten nur für den gewählten Mandanten.
 
 ## Start
 
@@ -91,6 +92,8 @@ Monatsansicht mit eigenen Terminen, Terminen, die Kollegen für alle freigegeben
 ## Benachrichtigungen
 
 Das Menü Benachrichtigungen zeigt ungelesene Hinweise, zum Beispiel fällige oder überfällige Wartungen des Objekts, das man betreut, Fristen mit Vorfrist, neue Mails an eigenen Tickets und interne Benachrichtigungen aus Automatisierungsregeln. Die Erinnerung an Wartungen kommt entsprechend der Vorlaufzeit der Wartung, sonst 14 Tage vorher.
+
+Ein Klick auf eine Benachrichtigung öffnet den Betreff direkt: das Ticket, den Auftrag, die Mail im Postfach, das Dokument, den Vertrag, bei Wartungen die Objektakte, bei Fristen die Fristenliste und bei Terminen den Kalender mit geöffnetem Termin. Die angeklickte Benachrichtigung gilt danach als gelesen; alle anderen bleiben ungelesen. Benachrichtigungen ohne zugehörige Seite lassen sich mit einem Klick nur als gelesen markieren.
 
 ## Darstellung
 

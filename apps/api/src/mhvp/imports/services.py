@@ -24,6 +24,7 @@ from mhvp.contacts.models import Contact, Party, PartyMember
 from mhvp.contracts import schemas as contract_schemas
 from mhvp.contracts import services as contract_services
 from mhvp.contracts.models import Contract, ContractKind, ContractPayment, PaymentReason
+from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports.fields import FIELDS, convert
 from mhvp.imports.models import ImportSourceFile, ReportType, RowStatus, StagingRow
@@ -41,6 +42,8 @@ from mhvp.properties.models import (
 )
 
 MAX_ROWS = 20_000
+# A87: ``source`` of the contact events this import emits (same event as ``POST /contacts``).
+EVENT_SOURCE = "import.staging"
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 CENT = Decimal("0.01")
 
@@ -291,6 +294,20 @@ async def _apply_contact(
         return RowStatus.INVALID, None, None, [f"Kontakt ungültig: {exc}"]
     contact = await create_contact(session, principal.tenant_id, principal.user_id, contact_in)
     party = await create_party(session, principal.tenant_id, principal.user_id, [contact])
+    # A87: same event and payload as ``POST /contacts`` and ``kontakte.emit_contact_created``
+    # (not imported: ``kontakte`` imports this module). The event is an outbox row of the same
+    # transaction; the test run (``import_run`` is None, the router rolls the savepoint back)
+    # therefore leaves no event behind. An existing contact is never changed here (unchanged
+    # or conflict), so no ``contact.updated``.
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type="contact.created",
+        entity_type="contact",
+        entity_id=contact.id,
+        actor_user_id=principal.user_id,
+        payload={"kind": contact.kind.value, "source": EVENT_SOURCE},
+    )
     if rec:
         rec.add("contact", contact.id)
         rec.add("party", party.id)

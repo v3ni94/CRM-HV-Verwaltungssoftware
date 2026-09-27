@@ -72,6 +72,7 @@ class RetentionStart(StrEnum):
     END_OF_YEAR_LAST_ENTRY = "end_of_year_last_entry"
     CONTRACT_END = "contract_end"
     STATEMENT_ISSUED = "statement_issued"
+    PURPOSE_END = "purpose_end"  # portal and applicant data: after the purpose ended (M6-04)
 
 
 class MirrorStatus(StrEnum):
@@ -115,13 +116,23 @@ class DocumentCategory(IdMixin, TimestampMixin, TenantMixin, Base):
 class RetentionProfile(IdMixin, TimestampMixin, TenantMixin, Base):
     """Retention per document class and legal entity kind (6.9.5, E05, S04, S05).
 
-    No profile ships with values: the matrix is open (V17). Deletion needs a released profile.
+    A profile is a draft until ``released_at`` is set; deletion needs a released profile. The
+    standard profiles of the operator decision M6-04 (26.09.2026) are seeded per tenant as
+    drafts with ``review_note`` "Entwurf, Prüfung Steuerberatung offen" (V17 stays open).
+    ``permanent`` marks classes that are never deleted (WEG minutes and resolutions); the
+    period is ``retention_years`` plus ``retention_months``.
     """
 
     __tablename__ = "retention_profile"
     __table_args__ = (
         UniqueConstraint("tenant_id", "document_class", "legal_entity_kind"),
-        CheckConstraint("retention_years > 0", name="years_positive"),
+        CheckConstraint(
+            "retention_years >= 0 AND retention_months >= 0 AND retention_months < 12",
+            name="period_non_negative",
+        ),
+        CheckConstraint(
+            "permanent OR retention_years > 0 OR retention_months > 0", name="period_defined"
+        ),
         CheckConstraint("(released_at IS NULL) = (released_by IS NULL)", name="release_complete"),
     )
 
@@ -129,9 +140,16 @@ class RetentionProfile(IdMixin, TimestampMixin, TenantMixin, Base):
     legal_entity_kind: Mapped[str | None] = mapped_column(String(32))
     legal_basis: Mapped[str] = mapped_column(Text, nullable=False)
     retention_years: Mapped[int] = mapped_column(Integer, nullable=False)
+    retention_months: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    permanent: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_text("false")
+    )
     start_rule: Mapped[RetentionStart] = mapped_column(
         _enum(RetentionStart, "retention_start"), nullable=False
     )
+    review_note: Mapped[str | None] = mapped_column(String(200))
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
@@ -256,6 +274,47 @@ class DocumentMirror(IdMixin, TimestampMixin, TenantMixin, Base):
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(Text)
+
+
+class MirrorDeletionAction(StrEnum):
+    DELETE = "delete"  # Google Drive: permanent delete, fallback trash
+    TAG = "tag"  # Paperless: document kept, tag "gelöscht" assigned
+
+
+class MirrorDeletionStatus(StrEnum):
+    OPEN = "open"  # "offen": the mirror step has not succeeded yet
+    DONE = "done"
+
+
+class DocumentMirrorDeletion(IdMixin, TimestampMixin, TenantMixin, Base):
+    """One mirror step of a platform deletion (A43, 6.9.5, operator decision 26.09.2026,
+    M6-03). The document row is gone when the step runs, so ``document_id`` has no foreign
+    key. The deletion of a document counts as "offen" until every step is ``done``."""
+
+    __tablename__ = "document_mirror_deletion"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "document_id", "kind"),
+        Index("ix_document_mirror_deletion_status", "tenant_id", "status"),
+    )
+
+    document_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    kind: Mapped[StorageKind] = mapped_column(_enum(StorageKind, "storage_kind"), nullable=False)
+    action: Mapped[MirrorDeletionAction] = mapped_column(
+        _enum(MirrorDeletionAction, "mirror_deletion_action"), nullable=False
+    )
+    external_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[MirrorDeletionStatus] = mapped_column(
+        _enum(MirrorDeletionStatus, "mirror_deletion_status"),
+        nullable=False,
+        default=MirrorDeletionStatus.OPEN,
+    )
+    # deleted, trashed, already_gone (Drive); tagged, already_gone (Paperless)
+    result: Mapped[str | None] = mapped_column(String(32))
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class DocumentTemplate(IdMixin, TimestampMixin, TenantMixin, Base):

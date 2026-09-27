@@ -5,8 +5,9 @@ nothing. Reading a notice writes no read receipt and is no delivery."""
 
 import asyncio
 from collections.abc import Iterator
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import boto3
 import pytest
@@ -15,7 +16,6 @@ from moto import mock_aws
 
 from mhvp.main import create_app
 from mhvp.platform import services
-from mhvp.workspace.services import local_today
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m5_contracts import _party, _unit
@@ -24,8 +24,7 @@ from tests.integration.test_m21_portal import _contact_of, _doc, _ok, _portal_us
 
 pytestmark = pytest.mark.integration
 P = "/api/v1/portal"
-# Same calendar day as the API (Europe/Berlin), else the test fails between 0 and 2 o'clock
-TODAY: date = local_today()
+TODAY: date = datetime.now(tz=ZoneInfo("Europe/Berlin")).date()  # local_today() of the API
 
 
 def _d(days: int) -> str:

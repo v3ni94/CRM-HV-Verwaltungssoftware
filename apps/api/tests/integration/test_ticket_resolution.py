@@ -69,6 +69,79 @@ def _ticket(c: TestClient, h: dict[str, str], title: str) -> dict[str, Any]:
     return cast(dict[str, Any], _ok(c.post(T, json={"title": title}, headers=h), 201))
 
 
+S = "/api/v1/tenant/settings"
+RESOLUTION = {"kind": "auskunft_erteilt", "note": "Rückruf erledigt"}
+
+
+def _examples_for(client: TestClient, h: dict[str, str], ticket_id: str) -> list[dict[str, Any]]:
+    examples = _ok(
+        client.get("/api/v1/ai/examples", params={"task": "ticket_resolution"}, headers=h)
+    )
+    return [e for e in examples["data"] if e["features"].get("ticket_id") == ticket_id]
+
+
+def test_examples_are_stored_only_with_the_tenant_switch(client: TestClient, world: World) -> None:
+    """ADR 0010, M7-04: ``ai_learning_examples_enabled`` is off by default; closing stores the
+    resolution on the ticket but no learning example until the operator enables the switch."""
+    h = bearer(login(client, world, "rsadmin"))
+    assert _ok(client.get(S, headers=h))["ai_learning_examples_enabled"] is False
+    ticket = _ticket(client, h, f"Ohne Schalter {RUN}")
+    done = _ok(
+        client.patch(
+            f"{T}/{ticket['id']}", json={"status": "done", "resolution": RESOLUTION}, headers=h
+        )
+    )
+    assert done["resolution_kind"] == "auskunft_erteilt"
+    assert _examples_for(client, h, ticket["id"]) == []
+
+    enabled = _ok(client.patch(S, json={"ai_learning_examples_enabled": True}, headers=h))
+    assert enabled["ai_learning_examples_enabled"] is True
+    assert client.patch(S, json={"ai_learning_examples_enabled": "x"}, headers=h).status_code == 422
+    ticket = _ticket(client, h, f"Mit Schalter {RUN}")
+    _ok(
+        client.patch(
+            f"{T}/{ticket['id']}", json={"status": "done", "resolution": RESOLUTION}, headers=h
+        )
+    )
+    assert len(_examples_for(client, h, ticket["id"])) == 1
+
+
+def test_deleting_the_contact_removes_its_examples(client: TestClient, world: World) -> None:
+    """DSGVO (ADR 0010): the examples built from the contact's tickets go with the contact in
+    the same transaction; examples of other tickets stay."""
+    h = bearer(login(client, world, "rsadmin"))
+    contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={"kind": "company", "company_name": f"Lernbeispiel {RUN}"},
+            headers=h,
+        ),
+        201,
+    )
+    linked = _ok(
+        client.post(
+            T, json={"title": f"Mit Kontakt {RUN}", "contact_id": contact["id"]}, headers=h
+        ),
+        201,
+    )
+    other = _ticket(client, h, f"Ohne Kontakt {RUN}")
+    for t in (linked, other):
+        _ok(
+            client.patch(
+                f"{T}/{t['id']}", json={"status": "done", "resolution": RESOLUTION}, headers=h
+            )
+        )
+    assert (
+        _examples_for(client, h, linked["id"])[0]["features"]["entitaeten"]["contact_id"]
+        == contact["id"]
+    )
+    assert len(_examples_for(client, h, other["id"])) == 1
+
+    assert client.delete(f"/api/v1/contacts/{contact['id']}", headers=h).status_code == 204
+    assert _examples_for(client, h, linked["id"]) == []
+    assert len(_examples_for(client, h, other["id"])) == 1
+
+
 def test_close_requires_resolution_and_stores_it(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "rsadmin"))
     title = f"Telefonnummer fehlt Mieter {RUN}"

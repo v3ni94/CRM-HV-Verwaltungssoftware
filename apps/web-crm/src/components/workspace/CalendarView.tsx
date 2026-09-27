@@ -47,7 +47,16 @@ export function monthRange(year: number, month: number): { start: string; end: s
 /** Month or week agenda: internal appointments, derived dates, and, per operator decision
  *  (25.09.2026, M23-02), the tenant's default Google calendar and the user's own assigned
  *  mailbox calendar, colour coded and filterable. */
-export function CalendarView({ initialYear, initialMonth }: { initialYear: number; initialMonth: number }) {
+export function CalendarView({
+  initialYear,
+  initialMonth,
+  focusId = null,
+}: {
+  initialYear: number;
+  initialMonth: number;
+  /** Entry (calendar entry or CRM event link id) to open on load, from ?termin= of a notification. */
+  focusId?: string | null;
+}) {
   const t = useTranslations("Workspace");
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
@@ -60,6 +69,7 @@ export function CalendarView({ initialYear, initialMonth }: { initialYear: numbe
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [detailItem, setDetailItem] = useState<CalendarItem | null>(null);
+  const [focused, setFocused] = useState<string | null>(focusId);
 
   const monthPart = monthRange(year, month);
   const weekPart = weekRange(anchor);
@@ -72,10 +82,17 @@ export function CalendarView({ initialYear, initialMonth }: { initialYear: numbe
       setItems(result.data.items);
       setNotices(result.data.notices);
       setError(null);
+      if (focused) {
+        const hit = result.data.items.find((i) => i.entity_id === focused || i.calendar_event_id === focused);
+        if (hit) {
+          setDetailItem(hit);
+          setFocused(null);
+        }
+      }
     } else setError(result.message);
     // range is derived from year/month/anchor/view, listed explicitly below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month, anchor, view]);
+  }, [year, month, anchor, view, focused]);
 
   useEffect(() => {
     void load();

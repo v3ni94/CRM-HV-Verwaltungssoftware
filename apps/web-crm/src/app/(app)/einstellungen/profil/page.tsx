@@ -28,6 +28,7 @@ export default async function ProfilePage() {
         tenantName={tenantName}
         initialSessions={sessions.data ?? []}
         initialDevices={devices.data ?? []}
+        totpEnabled={me.data?.totp_enabled ?? false}
       />
     </div>
   );

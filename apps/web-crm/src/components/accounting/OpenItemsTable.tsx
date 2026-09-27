@@ -4,6 +4,7 @@ import { formatDate, formatEur } from "@/lib/format";
 
 export type OpenItem = {
   id: string;
+  account_id?: string;
   account_number: string;
   kind: string;
   due_date: string | null;

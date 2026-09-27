@@ -24,10 +24,12 @@ from mhvp.accounting import (
     numbering,
     receivables,
     reports,
+    settlement,
     xrechnung,
 )
 from mhvp.accounting import services as svc
 from mhvp.accounting.models import (
+    AccountCategory,
     AdminFeeSetting,
     ChartTemplate,
     DunningCase,
@@ -67,6 +69,8 @@ from mhvp.accounting.schemas import (
     LineOut,
     LockIn,
     ReverseIn,
+    SettlementConfirmIn,
+    SettlementProposalIn,
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import (
@@ -687,6 +691,130 @@ async def open_items(
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         return await svc.open_items(session, await _ledger(session, ledger_id), as_of, account_id)
+
+
+# Settlement proposal in the statutory order (M10-03, 7.4 Nr. 5, D39) -------------------
+
+
+async def _proposal(
+    session: AsyncSession, ledger: Ledger, body: SettlementProposalIn
+) -> settlement.Proposal:
+    items = await settlement.items_for(session, ledger, body.account_id, body.as_of)
+    determination = [
+        settlement.Determination(d.open_item_id, d.amount) for d in body.determination
+    ] or settlement.determination_from_purpose(items, body.purpose)
+    return settlement.propose(items, body.amount, body.as_of, determination)
+
+
+@router.post(
+    "/ledgers/{ledger_id}/open-items/settlement-proposal",
+    summary="Ausgleichsvorschlag nach gesetzlicher Reihenfolge (nur Vorschlag, M10-03)",
+)
+async def settlement_proposal(
+    ledger_id: uuid.UUID,
+    body: SettlementProposalIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """Deterministic proposal, nothing is written. An explicit determination of the payer
+    (``determination`` or a purpose naming the items) wins over the statutory order (D39)."""
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        return (await _proposal(session, ledger, body)).to_dict()
+
+
+@router.post(
+    "/ledgers/{ledger_id}/open-items/settlement-proposal/confirm",
+    status_code=201,
+    summary="Ausgleichsvorschlag bestätigen (Entwurf, Buchung nur mit G1)",
+)
+async def settlement_confirm(
+    ledger_id: uuid.UUID,
+    body: SettlementConfirmIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> EntryOut:
+    """A staff member confirms the recomputed proposal (fingerprint), which becomes a draft
+    debtor payment with an explicit settlement plan; the confirmation is audited with the rule
+    version. ``post_immediately`` posts the draft and requires release gate G1."""
+    if body.post_immediately:
+        resolver: ReleaseGateResolver = request.app.state.release_gate_resolver
+        await ensure_release_gate_open(ReleaseGate.G1, principal.tenant_id, resolver)
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        proposal = await _proposal(session, ledger, body)
+        settlement.verify_fingerprint(proposal, body.fingerprint)
+        if not proposal.allocations:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Der Vorschlag enthält keinen Ausgleich."
+            )
+        bank = await _get(session, LedgerAccount, body.bank_account_id)
+        if bank.ledger_id != ledger.id or bank.category not in (
+            AccountCategory.BANK,
+            AccountCategory.CASH,
+        ):
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Gegenkonto muss ein Bank- oder Kassenkonto sein."
+            )
+        entry = JournalEntry(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            ledger_id=ledger.id,
+            booking_date=body.booking_date,
+            text=(body.text or f"Zahlungseingang, Ausgleich nach Vorschlag {settlement.RULE_ID}")[
+                :500
+            ],
+            kind=EntryKind.DEBTOR_PAYMENT,
+            reference=body.reference,
+            source=EntrySource.MANUAL,
+        )
+        # Overpayment stays as credit on the debtor account, never income (D07, 7.4 Nr. 5).
+        lines = [
+            svc.LineIn(bank.id, body.amount, Decimal("0")),
+            svc.LineIn(body.account_id, Decimal("0"), body.amount),
+        ]
+        plan = [{"open_item_id": a.open_item_id, "amount": a.amount} for a in proposal.allocations]
+        await svc.write_draft(session, ledger, entry, lines, plan)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="open_item_settlement.proposal_confirmed",
+            entity_type="journal_entry",
+            entity_id=entry.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "rule": settlement.RULE_ID,
+                "rule_version": settlement.RULE_VERSION,
+                "fingerprint": proposal.fingerprint,
+                "basis": proposal.basis,
+                "note": settlement.PROPOSAL_NOTE,
+                "account_id": str(body.account_id),
+                "amount": str(body.amount),
+                "unallocated": str(proposal.unallocated),
+                "allocations": [
+                    {
+                        "open_item_id": str(a.open_item_id),
+                        "amount": str(a.amount),
+                        "reason": a.reason,
+                        "rank": a.rank,
+                    }
+                    for a in proposal.allocations
+                ],
+                "post_immediately": body.post_immediately,
+            },
+        )
+        if body.post_immediately:
+            await svc.post(session, ledger, entry, principal.user_id)
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="journal_entry.posted",
+                entity_type="journal_entry",
+                entity_id=entry.id,
+                actor_user_id=principal.user_id,
+                payload={"number": f"{entry.fiscal_year}-{entry.number}", "kind": entry.kind.value},
+            )
+        return await _out(session, entry)
 
 
 @router.get("/ledgers/{ledger_id}/checks", summary="Konsistenzprüfung B02, B07, B09")

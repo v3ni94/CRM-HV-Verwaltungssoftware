@@ -4,6 +4,7 @@ playbook learning (M20 Übernahme aus dem Immoware Hub, queue ``ai``)."""
 import asyncio
 import logging
 import uuid
+from datetime import datetime
 from typing import Any
 
 from celery import shared_task
@@ -20,55 +21,204 @@ from mhvp.platform.models import Tenant, TenantStatus
 log = logging.getLogger(__name__)
 
 
-async def gmail_sync_all_once(settings: Settings) -> dict[str, int]:
-    engine = create_async_engine(
+def _engine(settings: Settings) -> Any:
+    return create_async_engine(
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
     )
+
+
+def _ensure_crypto(settings: Settings) -> None:
+    """Mailbox secrets are encrypted; a worker process sets the master key once."""
+    from mhvp.core import crypto
+
+    if settings.master_key is not None and not crypto.is_configured():
+        crypto.set_master_key(crypto.decode_master_key(settings.master_key.get_secret_value()))
+
+
+async def _active_tenant_ids(factory: Any) -> list[uuid.UUID]:
+    async with platform_transaction(factory) as session:
+        return list(
+            await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+        )
+
+
+async def sync_mailbox_run(
+    settings: Settings,
+    factory: Any,
+    tenant_id: uuid.UUID,
+    mailbox_id: uuid.UUID,
+    totals: dict[str, int],
+    *,
+    renew_watch: bool = True,
+) -> None:
+    """One complete fetch of a mailbox: incremental sync, invoice intake, forwarding, each in
+    its own transaction so a failing mailbox never rolls back another. Shared by the beat job
+    and the push job. ``renew_watch`` registers or renews the push watch when it is due
+    (``gmail.ensure_watch``, no-op without ``MHVP_GMAIL_PUBSUB_TOPIC``)."""
+    from mhvp.communication.gmail import ensure_watch, make_client, oauth_client
+    from mhvp.communication.models import Mailbox
+
+    totals["mailboxes"] += 1
+    run_ids: list[uuid.UUID] = []
+    actor: uuid.UUID | None = None
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            created_ids: list[uuid.UUID] = []
+            counts = await sync_one(session, settings, mailbox_id, created_ids)
+            run_ids, actor = await _auto_intake(session, tenant_id, mailbox_id, created_ids)
+        totals["created"] += counts["created"]
+        totals["intake_runs"] = totals.get("intake_runs", 0) + len(run_ids)
+        _dispatch_runs(settings, tenant_id, run_ids, actor)
+        # Rechnungs-Weiterleitung erst nach dem Commit des Abrufs (M13).
+        if counts["created"]:
+            await _forward_after_commit(settings, factory, tenant_id, totals)
+    except GmailError as exc:
+        totals["failed"] += 1
+        log.warning("gmail sync failed", extra={"mailbox_id": str(mailbox_id), "reason": str(exc)})
+        # The error is stored on the mailbox inside sync_mailbox before re-raising,
+        # but that transaction rolled back; record it separately.
+        async with tenant_transaction(factory, tenant_id) as session:
+            box = await session.get(Mailbox, mailbox_id)
+            if box is not None:
+                box.last_error = str(exc)[:1000]
+        return
+    if not renew_watch:
+        return
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            box = await session.get(Mailbox, mailbox_id, with_for_update=True)
+            if box is None or box.deleted_at is not None:
+                return
+            client_id, client_secret = await oauth_client(session, settings)
+            client = make_client(client_id, client_secret, box)
+            try:
+                if await ensure_watch(settings, box, client):
+                    totals["watched"] = totals.get("watched", 0) + 1
+            finally:
+                await client.aclose()
+    except GmailError as exc:
+        log.warning("gmail watch failed", extra={"mailbox_id": str(mailbox_id), "reason": str(exc)})
+
+
+async def gmail_sync_all_once(settings: Settings) -> dict[str, int]:
+    _ensure_crypto(settings)
+    engine = _engine(settings)
     factory = create_session_factory(engine)
     totals = {"mailboxes": 0, "created": 0, "failed": 0}
     try:
-        async with platform_transaction(factory) as session:
-            tenant_ids: list[uuid.UUID] = list(
-                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+        for tenant_id in await _active_tenant_ids(factory):
+            async with tenant_transaction(factory, tenant_id) as session:
+                boxes = [m.id for m in await enabled_gmail_mailboxes(session)]
+            for mailbox_id in boxes:
+                await sync_mailbox_run(settings, factory, tenant_id, mailbox_id, totals)
+    finally:
+        await engine.dispose()
+    return totals
+
+
+async def gmail_push_sync_once(settings: Settings, address: str, history_id: str) -> dict[str, int]:
+    """Push job (operator 26.09.2026): clears the "sync requested" flag of the address, maps
+    it to mailboxes across tenants and runs the incremental sync per mailbox. ``history_id``
+    is the id Google announced; the sync reads from the mailbox's own cursor, so a burst of
+    notifications collapses into one history walk."""
+    from redis.asyncio import Redis
+
+    from mhvp.communication.gmail_push import (
+        mailboxes_for_address,
+        mark_push_received,
+        pending_key,
+    )
+
+    _ensure_crypto(settings)
+    redis = Redis.from_url(settings.redis_url.get_secret_value())
+    try:
+        await redis.delete(pending_key(address))
+    except Exception:
+        log.warning("gmail push: pending flag not cleared", extra={"address": address})
+    finally:
+        await redis.aclose()
+    engine = _engine(settings)
+    factory = create_session_factory(engine)
+    totals = {"mailboxes": 0, "created": 0, "failed": 0}
+    try:
+        targets = await mailboxes_for_address(factory, address)
+        if not targets:
+            log.info("gmail push: no mailbox for address", extra={"history_id": history_id})
+            return totals
+        for tenant_id, mailbox_id in targets:
+            await mark_push_received(factory, tenant_id, mailbox_id)
+            await sync_mailbox_run(
+                settings, factory, tenant_id, mailbox_id, totals, renew_watch=False
             )
-        for tenant_id in tenant_ids:
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.communication.gmail_push_sync")
+def gmail_push_sync(address: str, history_id: str) -> dict[str, int]:
+    return asyncio.run(gmail_push_sync_once(get_settings(), address, history_id))
+
+
+async def gmail_watch_renew_once(settings: Settings, now: datetime | None = None) -> dict[str, int]:
+    """Daily renewal of the push watches (Google ends them after seven days): every enabled
+    Gmail mailbox whose watch is missing or expires within ``WATCH_RENEW_MARGIN`` is
+    registered again. Without a configured topic nothing happens."""
+    from mhvp.communication.gmail import ensure_watch, make_client, oauth_client, push_configured
+    from mhvp.communication.models import Mailbox
+
+    totals = {"mailboxes": 0, "renewed": 0, "failed": 0}
+    if not push_configured(settings):
+        return totals
+    _ensure_crypto(settings)
+    engine = _engine(settings)
+    factory = create_session_factory(engine)
+    try:
+        for tenant_id in await _active_tenant_ids(factory):
             async with tenant_transaction(factory, tenant_id) as session:
                 boxes = [m.id for m in await enabled_gmail_mailboxes(session)]
             for mailbox_id in boxes:
                 totals["mailboxes"] += 1
-                # One transaction per mailbox: a failing mailbox never rolls back another.
-                run_ids: list[uuid.UUID] = []
-                actor: uuid.UUID | None = None
                 try:
                     async with tenant_transaction(factory, tenant_id) as session:
-                        created_ids: list[uuid.UUID] = []
-                        counts = await sync_one(session, settings, mailbox_id, created_ids)
-                        run_ids, actor = await _auto_intake(
-                            session, tenant_id, mailbox_id, created_ids
-                        )
-                    totals["created"] += counts["created"]
-                    totals["intake_runs"] = totals.get("intake_runs", 0) + len(run_ids)
-                    _dispatch_runs(settings, tenant_id, run_ids, actor)
-                    # Rechnungs-Weiterleitung erst nach dem Commit des Abrufs (M13).
-                    if counts["created"]:
-                        await _forward_after_commit(settings, factory, tenant_id, totals)
+                        box = await session.get(Mailbox, mailbox_id, with_for_update=True)
+                        if box is None:
+                            continue
+                        client_id, client_secret = await oauth_client(session, settings)
+                        client = make_client(client_id, client_secret, box)
+                        try:
+                            if await ensure_watch(settings, box, client, now):
+                                totals["renewed"] += 1
+                        finally:
+                            await client.aclose()
                 except GmailError as exc:
                     totals["failed"] += 1
                     log.warning(
-                        "gmail sync failed",
+                        "gmail watch renewal failed",
                         extra={"mailbox_id": str(mailbox_id), "reason": str(exc)},
                     )
-                    # The error is stored on the mailbox inside sync_mailbox before re-raising,
-                    # but that transaction rolled back; record it separately.
                     async with tenant_transaction(factory, tenant_id) as session:
-                        from mhvp.communication.models import Mailbox
-
                         box = await session.get(Mailbox, mailbox_id)
                         if box is not None:
-                            box.last_error = str(exc)[:1000]
+                            box.last_error = f"Push-Registrierung: {exc}"[:1000]
     finally:
         await engine.dispose()
     return totals
+
+
+@shared_task(name="mhvp.communication.gmail_watch_renew_all")
+def gmail_watch_renew_all() -> dict[str, int]:
+    return asyncio.run(gmail_watch_renew_once(get_settings()))
+
+
+@shared_task(name="mhvp.communication.gmail_backfill")
+def gmail_backfill(tenant_id: str, mailbox_id: str) -> dict[str, int]:
+    """Full inbox backfill of one mailbox (``mhvp.communication.backfill``), queue ``mail``."""
+    from mhvp.communication.backfill import backfill_mailbox_once
+
+    return asyncio.run(
+        backfill_mailbox_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(mailbox_id))
+    )
 
 
 async def _forward_after_commit(
@@ -392,4 +542,58 @@ def archive_messages(tenant_id: str, message_ids: list[str]) -> dict[str, int]:
 def archive_ticket_messages(tenant_id: str, ticket_id: str) -> dict[str, int]:
     return asyncio.run(
         archive_ticket_messages_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(ticket_id))
+    )
+
+
+async def archive_message_once(
+    settings: Settings, tenant_id: uuid.UUID, message_id: uuid.UUID
+) -> str:
+    """Erledigt archiviert Mail for a single inbound mail set to ``done`` (operator
+    26.09.2026): removes the label INBOX at Gmail when the mailbox wants it
+    (``archive_on_ticket_done``). Returns archived, skipped or failed; a missing scope is
+    recorded on the mailbox like in ``archive_ticket_messages_once``."""
+    from mhvp.communication.gmail import GmailScopeMissingError, make_client, oauth_client
+    from mhvp.communication.models import Mailbox, Message
+
+    _ensure_crypto(settings)
+    engine = _engine(settings)
+    try:
+        factory = create_session_factory(engine)
+        async with tenant_transaction(factory, tenant_id) as session:
+            message = await session.get(Message, message_id)
+            if (
+                message is None
+                or message.direction != "in"
+                or message.gmail_message_id is None
+                or message.mailbox_id is None
+            ):
+                return "skipped"
+            mailbox = await session.get(Mailbox, message.mailbox_id)
+            if mailbox is None or not mailbox.archive_on_ticket_done or not mailbox.secret:
+                return "skipped"
+            client_id, client_secret = await oauth_client(session, settings)
+            client = make_client(client_id, client_secret, mailbox)
+            try:
+                await client.archive(message.gmail_message_id)
+                return "archived"
+            except GmailScopeMissingError as exc:
+                mailbox.archive_scope_missing = True
+                mailbox.last_error = str(exc)[:1000]
+                return "failed"
+            except GmailError as exc:
+                log.warning(
+                    "gmail archive failed",
+                    extra={"message_id": str(message_id), "reason": str(exc)},
+                )
+                return "failed"
+            finally:
+                await client.aclose()
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.communication.archive_message")
+def archive_message(tenant_id: str, message_id: str) -> str:
+    return asyncio.run(
+        archive_message_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(message_id))
     )

@@ -70,3 +70,21 @@ with updates only after a compatibility test.
 ## Nachtrag 26.09.2026: Pillow als direkte Abhängigkeit
 
 Pillow (12.x) war bisher nur transitiv über reportlab installiert, wird aber direkt in `mhvp.handover.images` (Metadaten entfernen, Skalieren von Fotos aus Übergabeprotokoll und Portal) verwendet. Es steht jetzt als direkte Abhängigkeit in `apps/api/pyproject.toml`, damit ein Wegfall bei reportlab die Bildpipeline nicht unbemerkt bricht (Lückenliste A85).
+
+## Nachtrag 26.09.2026: pillow-heif für HEIC-Fotos (A72)
+
+iPhones liefern Fotos standardmäßig als HEIC. Pillow kann HEIF nicht lesen, deshalb wies der Sanitizer den in der Positivliste des Portal-Uploads erlaubten Typ `image/heic` ab. `pillow-heif` (1.x, Wheel mit gebündeltem libheif, LGPL-Anteil nur dynamisch gebunden) ist jetzt direkte Abhängigkeit in `apps/api/pyproject.toml`; `mhvp.handover.images` registriert den Opener beim Import. HEIC und HEIF werden nach dem Dekodieren immer als JPEG ohne Metadaten gespeichert (Dateiname `.jpg`, MIME `image/jpeg`), weil kein nachgelagerter Verbraucher (PDF-Export, CRM, Browser) HEIC anzeigen kann. Fehlt die Bibliothek zur Laufzeit, meldet `supports("image/heic")` False und der Upload wird mit deutschem Hinweis abgelehnt; ein stiller Durchlauf mit Metadaten ist ausgeschlossen. Der Encoder wird nur in Tests genutzt (synthetische Fixtures), nicht im Produktcode.
+
+## Nachtrag 26.09.2026: segno für QR-Codes im Einladungs-PDF (A86, M21-08)
+
+Für den QR-Code mit dem Einladungslink im Anschreiben zum Portalzugang wird `segno` (1.6.x,
+BSD-3-Clause, reines Python ohne native Abhängigkeiten, mit Typhinweisen) als direkte
+Abhängigkeit in `apps/api/pyproject.toml` aufgenommen. Gegen `qrcode` sprach die zusätzliche
+Bildabhängigkeit und der fehlende `py.typed`; `segno` schreibt PNG selbst, reportlab bettet
+das Bild ein (`mhvp.documents.letters.LetterQr`). Der QR-Code trägt ausschließlich den
+Einladungslink, der daneben auch als Text gedruckt wird. Die exakte Version steht in
+`uv.lock`.
+
+## Nachtrag 26.09.2026: OpenAI-SDK für den zweiten KI-Anbieter (M7-02)
+
+Der OpenAI-Adapter (`mhvp.ai.providers.OpenAIClient`) nutzt das offizielle Paket `openai` (2.x, `apps/api/pyproject.toml`: `openai>=1,<3`, exakte Version in `uv.lock`) statt eines eigenen httpx-Clients. Begründung: gleiche Fehlerklassen und Retry-Semantik wie beim Anthropic-SDK (`RateLimitError`, `APIStatusError`, `APIConnectionError`), `base_url` je Endpunktregion (M7-07) ohne eigene Transportlogik, Structured Outputs über `response_format`. Beide SDKs sind ohne Netz testbar, weil die Adapter einen fertigen Client injizieren können.

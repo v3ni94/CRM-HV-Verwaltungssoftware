@@ -33,7 +33,7 @@ marks a released (redacted) version of a receipt, linked to its original with
 Attachments and appointments (A55, A58, docs/plans/M21.md and M22.md, Nachtrag 26.09.2026):
 `_own_uploads` is the single ownership check for portal documents attached to a ticket or a
 work order (own portal uploads only, everything else 404); photos are sanitized on upload with
-`mhvp.handover.images.sanitize_image`. Appointment proposals of a provider live in
+`mhvp.handover.images.sanitize_image`; HEIC/HEIF photos are decoded with pillow-heif and stored as JPEG (`.jpg`, `image/jpeg`), an unreadable HEIC is refused with a hint (A72). Appointment proposals of a provider live in
 `mhvp.tickets.models.WorkOrderAppointmentProposal`; only the affected resident accepts one.
 
 Read receipts and notices (A53, A54, docs/rules/M21-06.md rules 5 and 6): `read_receipts.py`
@@ -59,7 +59,9 @@ the future), `invited_at` (creation), `invitation_expires_at`, `activated_at`, `
 The invitation hash, the token and password data are never returned; the token appears once in
 the answer of `POST /portal-admin/accounts` only. The CRM contact page (section Portalzugang)
 reads this on mount. Note: `last_login_at` is written by `mhvp.core.auth.service.verify_totp`
-only, a password only login leaves it empty (open point, outside this module).
+and, for password only and trusted device logins, by `record_login` (26.09.2026). Portal
+users may enable the optional second factor and remember devices under Sicherheit
+(operator 26.09.2026, M2-01).
 
 ## Further files (addendum 26.09.2026)
 

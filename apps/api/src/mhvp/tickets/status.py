@@ -27,6 +27,11 @@ from mhvp.core.db.tenancy import after_commit
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.tickets.models import Ticket, TicketAssignee, TicketEvent, TicketStatus, TicketTemplate
+from mhvp.tickets.resolution_kinds import (
+    BUILTIN_LABELS,
+    KIND_CODE_PATTERN,
+    assert_resolution_kind_allowed,
+)
 from mhvp.workspace.services import notify
 
 log = logging.getLogger(__name__)
@@ -50,9 +55,11 @@ CLOSING_STATUSES = frozenset({TicketStatus.DONE, TicketStatus.CLOSED, TicketStat
 
 
 class ResolutionKind(StrEnum):
-    """Feste Liste der Erledigungsarten (Betreiberauftrag 26.09.2026). ``zusammengefuehrt``
-    setzt die Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt; das
-    Statusereignis und das Lernbeispiel entstehen dabei wie bei jedem anderen Abschluss."""
+    """Eingebaute Erledigungsarten (Betreiberauftrag 26.09.2026, erweitert mit Entscheidung
+    M19-04 vom 26.09.2026). Die je Mandant wirksame Liste (deaktivierte eingebaute und eigene
+    Arten) liefert ``mhvp.tickets.resolution_kinds``. ``zusammengefuehrt`` setzt die
+    Zusammenführung für ihre Quelltickets, wenn keine Erledigung mitkommt; das Statusereignis
+    und das Lernbeispiel entstehen dabei wie bei jedem anderen Abschluss."""
 
     STAMMDATEN_ERGAENZT = "stammdaten_ergaenzt"
     HANDWERKER_BEAUFTRAGT = "handwerker_beauftragt"
@@ -60,35 +67,32 @@ class ResolutionKind(StrEnum):
     WEITERGELEITET = "weitergeleitet"
     KEIN_HANDLUNGSBEDARF = "kein_handlungsbedarf"
     ABGELEHNT = "abgelehnt"
+    ZAHLUNG_GEKLAERT = "zahlung_geklaert"
+    TERMIN_VEREINBART = "termin_vereinbart"
+    MANGEL_BEHOBEN = "mangel_behoben"
+    VERTRAG_GEAENDERT = "vertrag_geaendert"
     ZUSAMMENGEFUEHRT = "zusammengefuehrt"
     SONSTIGES = "sonstiges"
 
 
-RESOLUTION_LABELS: dict[str, str] = {
-    ResolutionKind.STAMMDATEN_ERGAENZT: "Stammdaten ergänzt",
-    ResolutionKind.HANDWERKER_BEAUFTRAGT: "Handwerker beauftragt",
-    ResolutionKind.AUSKUNFT_ERTEILT: "Auskunft erteilt",
-    ResolutionKind.WEITERGELEITET: "Weitergeleitet",
-    ResolutionKind.KEIN_HANDLUNGSBEDARF: "Kein Handlungsbedarf",
-    ResolutionKind.ABGELEHNT: "Abgelehnt",
-    ResolutionKind.ZUSAMMENGEFUEHRT: "Zusammengeführt",
-    ResolutionKind.SONSTIGES: "Sonstiges",
-}
+RESOLUTION_LABELS: dict[str, str] = dict(BUILTIN_LABELS)
 
 
 class ResolutionIn(BaseModel):
     """Erledigungsnotiz beim Setzen auf done, closed oder rejected: Art plus Freitext, der
-    Freitext ist bei ``sonstiges`` Pflicht."""
+    Freitext ist bei ``sonstiges`` Pflicht. ``kind`` ist ein Code (Slug); ob er für den
+    Mandanten wirksam ist (aktive eingebaute oder eigene Art), prüft ``transition_status``
+    über ``assert_resolution_kind_allowed``."""
 
     model_config = ConfigDict(extra="forbid")
 
-    kind: ResolutionKind
+    kind: str = Field(min_length=2, max_length=32, pattern=KIND_CODE_PATTERN)
     note: str | None = Field(default=None, max_length=4000)
 
     @model_validator(mode="after")
     def _note_for_other(self) -> "ResolutionIn":
         self.note = (self.note or "").strip() or None
-        if self.kind is ResolutionKind.SONSTIGES and not self.note:
+        if self.kind == ResolutionKind.SONSTIGES.value and not self.note:
             raise ValueError("Bei Sonstiges ist eine Beschreibung erforderlich.")
         return self
 
@@ -143,11 +147,15 @@ async def queue_learn_playbook(session: AsyncSession, settings: Any, ticket: Tic
 
 
 async def record_resolution_example(session: AsyncSession, ticket: Ticket) -> None:
-    """Speichert je Abschluss ein Lernbeispiel (``AiExample``, Aufgabe ``ticket_resolution``);
-    ein Fehler darf den Statuswechsel nie stören (eigener Savepoint)."""
+    """Speichert je Abschluss ein Lernbeispiel (``AiExample``, Aufgabe ``ticket_resolution``),
+    sofern der Mandantenschalter ``ai_learning_examples_enabled`` gesetzt ist (ADR 0010,
+    M7-04, Standard aus); ein Fehler darf den Statuswechsel nie stören (eigener Savepoint)."""
+    from mhvp.ai.examples import learning_examples_enabled
     from mhvp.communication.suggest import resolution_example
 
     try:
+        if not await learning_examples_enabled(session, ticket.tenant_id):
+            return
         async with session.begin_nested():
             session.add(await resolution_example(session, ticket))
     except Exception:
@@ -219,6 +227,8 @@ async def transition_status(
             ErrorCodes.VALIDATION,
             detail="Beim Abschluss ist eine Erledigungsnotiz (resolution) erforderlich.",
         )
+    if closing and resolution is not None:
+        await assert_resolution_kind_allowed(session, ticket.tenant_id, resolution.kind)
     previous = ticket.status
     data: dict[str, Any] = {"from": previous.value, "to": new_status.value}
     if bulk:
@@ -226,7 +236,7 @@ async def transition_status(
     if admin_override:
         data["admin_override"] = True
     if closing and resolution is not None:
-        data["resolution"] = {"kind": resolution.kind.value, "note": resolution.note}
+        data["resolution"] = {"kind": resolution.kind, "note": resolution.note}
     session.add(
         TicketEvent(
             tenant_id=ticket.tenant_id,
@@ -239,7 +249,7 @@ async def transition_status(
     ticket.status = new_status
     ticket.resolved_at = datetime.now(UTC) if closing else None
     if closing and resolution is not None:
-        ticket.resolution_kind = resolution.kind.value
+        ticket.resolution_kind = resolution.kind
         ticket.resolution_note = resolution.note
         ticket.resolved_by = actor_user_id
     elif not closing:

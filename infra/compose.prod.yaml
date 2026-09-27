@@ -16,8 +16,22 @@ x-prod: &prod
       max-size: "20m"
       max-file: "5"
 
+# Images come from the GitHub Container Registry (M1-03, decided 26.09.2026): private packages
+# under ghcr.io/v3ni94, built and pushed by .github/workflows/images.yml with the VERSION file
+# content as tag. The server logs in once with a fine grained PAT (read:packages), then
+# `docker compose pull` (docs/runbooks/server-setup.md section 4). Fallback without registry:
+# DEPLOY_BUILD=1 or the manual block in server-setup.md builds the images on the server under
+# MHVP_IMAGE_REGISTRY=local with the same tag.
 x-api-image: &api-image
-  image: ${MHVP_IMAGE_REGISTRY:?MHVP_IMAGE_REGISTRY must be set}/mhvp-api:${MHVP_IMAGE_TAG:?MHVP_IMAGE_TAG must be set}
+  image: ${MHVP_IMAGE_REGISTRY:-ghcr.io/v3ni94}/mhvp-api:${MHVP_IMAGE_TAG:-latest}
+
+# External S3 endpoint (IONOS S3 Object Storage). The base file defaults to the dev container
+# http://objectstore:8333, which does not exist in prod/staging, so all four values are
+# required here. Names as read by mhvp.core.config.Settings (prefix MHVP_).
+x-s3-env: &s3-env
+  MHVP_S3_ENDPOINT_URL: ${MHVP_S3_ENDPOINT_URL:?MHVP_S3_ENDPOINT_URL must be set (IONOS S3 endpoint, see docs/runbooks/objektspeicher-ionos-s3.md)}
+  MHVP_S3_REGION: ${MHVP_S3_REGION:?MHVP_S3_REGION must be set (IONOS region, see docs/runbooks/objektspeicher-ionos-s3.md)}
+  MHVP_S3_BUCKET: ${MHVP_S3_BUCKET:?MHVP_S3_BUCKET must be set}
 
 services:
   postgres:
@@ -62,14 +76,25 @@ services:
     <<: *prod
 
   objectstore:
-    # Production object storage is an open operator decision (ADR 0005). This SeaweedFS
-    # service is the default; point MHVP_S3_ENDPOINT_URL elsewhere to use an external store.
+    # Production and staging use IONOS S3 Object Storage (EU region) via MHVP_S3_* (ADR 0005,
+    # Nachtrag 26.09.2026, docs/runbooks/objektspeicher-ionos-s3.md). The SeaweedFS service of
+    # the base file is therefore parked behind a profile and never started by this overlay;
+    # it stays available for dev, CI and e2e only. The profile is deliberately not documented
+    # for the operator.
     <<: *prod
+    profiles:
+      - local-objectstore
 
   migrate:
     <<: *api-image
     environment:
+      <<: *s3-env
       MHVP_ENV: ${MHVP_ENV:-prod}
+    # Replaces the base dependency list: no objectstore container in prod/staging. The bucket
+    # bootstrap (mhvp.core.storage_bootstrap) runs against the external endpoint.
+    depends_on: !override
+      postgres:
+        condition: service_healthy
 
   api:
     <<: [*prod, *api-image]
@@ -85,6 +110,7 @@ services:
       - --workers
       - ${MHVP_API_WORKERS:-8}
     environment:
+      <<: *s3-env
       MHVP_ENV: ${MHVP_ENV:-prod}
     networks:
       - default
@@ -127,16 +153,18 @@ services:
       - --max-tasks-per-child
       - "200"
     environment:
+      <<: *s3-env
       MHVP_ENV: ${MHVP_ENV:-prod}
 
   beat:
     <<: [*prod, *api-image]
     environment:
+      <<: *s3-env
       MHVP_ENV: ${MHVP_ENV:-prod}
 
   web-crm:
     <<: *prod
-    image: ${MHVP_IMAGE_REGISTRY:?MHVP_IMAGE_REGISTRY must be set}/mhvp-web-crm:${MHVP_IMAGE_TAG:?MHVP_IMAGE_TAG must be set}
+    image: ${MHVP_IMAGE_REGISTRY:-ghcr.io/v3ni94}/mhvp-web-crm:${MHVP_IMAGE_TAG:-latest}
     networks:
       - default
       - traefik
@@ -157,7 +185,7 @@ services:
 
   web-portal:
     <<: *prod
-    image: ${MHVP_IMAGE_REGISTRY:?MHVP_IMAGE_REGISTRY must be set}/mhvp-web-portal:${MHVP_IMAGE_TAG:?MHVP_IMAGE_TAG must be set}
+    image: ${MHVP_IMAGE_REGISTRY:-ghcr.io/v3ni94}/mhvp-web-portal:${MHVP_IMAGE_TAG:-latest}
     networks:
       - default
       - traefik
@@ -175,6 +203,34 @@ services:
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers,${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit"
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal-api.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-portal"
       - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-portal.loadbalancer.server.port=3001"
+
+  uptime-kuma:
+    # Monitoring and alerting on the server (M9-04, decided 26.09.2026): Uptime Kuma checks the
+    # health endpoints and the ops metrics and notifies the operator by e-mail. Which monitors
+    # to create: docs/runbooks/monitoring.md. No password in files: the administrator account
+    # is created in the browser at the first call, so open the host right after the first
+    # start. Data (monitors, notifications, history) live in the named volume.
+    <<: *prod
+    image: louislam/uptime-kuma:2
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - default
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:?TRAEFIK_NETWORK must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-monitoring.rule=Host(`${MHVP_HOST_MONITORING:?MHVP_HOST_MONITORING must be set (subdomain of Uptime Kuma, see docs/runbooks/monitoring.md)}`)"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-monitoring.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-monitoring.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-monitoring.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-monitoring.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-monitoring"
+      - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-monitoring.loadbalancer.server.port=3001"
+
+volumes:
+  uptime-kuma-data:
 
 networks:
   traefik:

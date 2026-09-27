@@ -33,6 +33,31 @@ sich die abgeleiteten Rollen einmalig über die API neu berechnen (POST
 Im Reiter Kommunikation steht zusätzlich der Abschnitt Portalzugang mit der Einladung in das
 Portal (Einladungscode, Link und QR-Code, nur einmal sichtbar, Einzelheiten im Kapitel Portal).
 
+## Bevollmächtigte und Zustellregel
+
+Unter den Objektbezügen steht der Abschnitt Bevollmächtigte und Zustellregel. Ein Kontakt kann
+einen oder mehrere Bevollmächtigte haben, zum Beispiel wenn ein Eigentümer die
+Sondereigentumsverwaltung durch eine andere Person abwickeln lässt. Je Bevollmächtigtem gilt
+eine Zustellregel:
+
+* beide (Vorgabe): Vollmachtgeber und Bevollmächtigter erhalten E-Mails, Briefe und
+  WEG-Einladungen,
+* nur Bevollmächtigter: Schreiben gehen ausschließlich an den Bevollmächtigten,
+* nur Vollmachtgeber: der Bevollmächtigte ist hinterlegt, erhält aber keine Schreiben.
+
+Die Regel wirkt im Serienversand (Kommunikation, Zustellung je Zustellweg), bei
+Serienbriefen aus Vorlagen und in der Empfängerliste einer Eigentümerversammlung. Ein
+Serienbrief an den Bevollmächtigten nennt unter dem Namen "für <Vollmachtgeber>" und ist mit
+beiden Kontakten verknüpft. Einzelbriefe und Einzelzustellungen an einen ausdrücklich gewählten
+Kontakt bleiben unverändert. Eine abgelaufene Vollmacht (Gültigkeit bis) wird nicht mehr
+beachtet; dann erhält der Kontakt selbst wieder alles.
+
+Hinterlegen, Regel ändern und Vollmacht beenden setzen das Recht Kontakte ändern voraus;
+jede Änderung steht mit altem und neuem Wert im Audit-Log des Vollmachtgebers. Auf der Seite
+des Bevollmächtigten steht, für wen er bevollmächtigt ist. Ob eine Zustellung an den
+Bevollmächtigten rechtlich als Zugang beim Eigentümer gilt, entscheidet die Plattform nicht;
+im Zweifel Rechtsanwalt fragen.
+
 ## Bankverbindungen und SEPA-Mandat
 
 Je Bankverbindung lässt sich IBAN, BIC, Bank und Kontoinhaber erfassen. Eine

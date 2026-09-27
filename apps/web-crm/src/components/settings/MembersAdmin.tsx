@@ -402,14 +402,14 @@ function ResetPassword({ membershipId }: { membershipId: string }) {
         type="password"
         className={ui.input}
         value={password}
-        minLength={12}
+        minLength={6}
         onChange={(e) => setPassword(e.target.value)}
         placeholder={t("startPassword")}
       />
       {error ? <p className={ui.error}>{error}</p> : null}
       {message ? <p className="text-xs text-success-fg">{message}</p> : null}
       <div className="flex gap-2">
-        <button type="button" className={ui.button} disabled={busy || password.length < 12} onClick={() => void submit()}>
+        <button type="button" className={ui.button} disabled={busy || password.length < 6} onClick={() => void submit()}>
           {t("save")}
         </button>
         <button type="button" className={ui.button} disabled={busy} onClick={() => setOpen(false)}>
@@ -478,7 +478,7 @@ function AddMemberForm({
         <input
           type="password"
           required
-          minLength={12}
+          minLength={6}
           className={ui.input}
           value={password}
           onChange={(e) => setPassword(e.target.value)}

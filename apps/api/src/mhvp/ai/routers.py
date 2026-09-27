@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.ai import connection_test, gateway, imports, jobs, tasks
+from mhvp.ai import connection_test, embeddings, gateway, imports, jobs, providers, tasks
 from mhvp.ai import schemas as s
 from mhvp.ai.models import (
     AiConversation,
@@ -89,6 +89,10 @@ async def put_provider(
     principal: TenantPrincipal = Depends(SETTINGS),
 ) -> s.ProviderOut:
     """Every change withdraws the release: the second person must confirm again."""
+    try:
+        region = providers.validate_region(provider, body.endpoint_region)
+    except ValueError as exc:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from exc
     async with tenant_tx(request, principal) as session:
         if body.dpa_document_id is not None:
             await _get(session, Document, body.dpa_document_id)
@@ -101,6 +105,7 @@ async def put_provider(
         data = body.model_dump(mode="json", exclude={"api_key"})
         data["monthly_budget_eur"] = body.monthly_budget_eur
         data["dpa_document_id"] = body.dpa_document_id
+        data["endpoint_region"] = region
         for key, value in data.items():
             setattr(row, key, value)
         if body.api_key is not None:
@@ -178,9 +183,10 @@ async def provider_connection_test(
                 detail="Keine Stufe mit Modellname eingerichtet, Test nicht möglich.",
             )
         api_key, models = row.api_key, dict(row.models or {})
+        region = row.endpoint_region
         config_id = row.id
     # The provider calls run outside the transaction, like every gateway run.
-    results = await connection_test.check_provider(provider, api_key, models)
+    results = await connection_test.check_provider(provider, api_key, models, region)
     async with tenant_tx(request, principal) as session:
         for result in results:
             run = AiTaskRun(
@@ -399,6 +405,55 @@ async def usage(request: Request, principal: TenantPrincipal = Depends(READ)) ->
             warning=budget > 0 and spent >= Decimal(budget) * gateway.WARN_SHARE,
             blocked=budget <= 0 or spent >= Decimal(budget),
             by_task={t.value: Decimal(v or 0).quantize(Decimal("0.0001")) for t, v in rows},
+        )
+
+
+# Embeddings (M7-03) ----------------------------------------------------------------------
+
+
+@router.get("/ai/embeddings/status", summary="Einbettungen: Stand des Index")
+async def embeddings_status(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
+) -> s.EmbeddingStatusOut:
+    async with tenant_tx(request, principal) as session:
+        return s.EmbeddingStatusOut(**await embeddings.status(session))
+
+
+@router.post("/ai/embeddings/reindex", status_code=202, summary="Einbettungen neu aufbauen")
+async def embeddings_reindex(
+    body: s.EmbeddingReindexIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.EmbeddingStatusOut:
+    """Starts the index job of the tenant (missing and changed sources; ``full`` drops all
+    stored vectors first, e.g. after a model change). The job runs in batches as a Celery task
+    with the same budget accounting as every other AI call; without a released OpenAI
+    configuration with an ``embedding`` tier the job stops at once and the status names why."""
+    async with tenant_tx(request, principal) as session:
+        route, reason = await embeddings.embedding_route(session)
+        if route is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=reason)
+        dropped = await embeddings.delete_all(session) if body.full else 0
+        await _event(
+            session,
+            principal,
+            "ai_embeddings.reindex",
+            principal.tenant_id,
+            full=body.full,
+            dropped=dropped,
+        )
+    settings = request.app.state.settings
+    if settings.ai_inline:
+        await embeddings.index_tenant(sessions(request), principal.tenant_id, principal.user_id)
+    else:
+        from mhvp.worker import get_celery
+
+        get_celery().send_task(
+            "mhvp.ai.embed_index",
+            args=[str(principal.tenant_id), str(principal.user_id) if principal.user_id else None],
+            queue="io",
+        )
+    async with tenant_tx(request, principal) as session:
+        return s.EmbeddingStatusOut(
+            **await embeddings.status(session), queued=not settings.ai_inline
         )
 
 
@@ -723,6 +778,7 @@ async def get_run(
         out = s.RunOut.model_validate(run)
         ref = run.input_ref or {}
         out.fallback = list(ref.get("fallback") or [])
+        out.provider_used = ref.get("provider_used")
         out.input_stats = dict(ref.get("input_stats") or {})
         out.progress = ref.get("progress")
         out.model_tier_reason = ref.get("model_tier_reason")

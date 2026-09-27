@@ -56,11 +56,33 @@ Erstellt ab/bis. Zurücksetzen löscht alle gesetzten Filter. Die freie Suche du
 Nummer, Titel, Beschreibung, Kontakt und Adresse sowie Betreff und Absender der
 verknüpften Mails und die E-Mail-Adresse des Kontakts.
 
-Erledigte Vorgänge (Status erledigt, abgeschlossen, abgelehnt) sind in der Ticketübersicht
-und in der Mailübersicht standardmäßig ausgeblendet (seit 1.23.0). Der Umschalter Erledigte
-anzeigen blendet sie ein; ein ausdrücklich gesetzter Statusfilter zeigt immer genau die
-gewählten Status. Die Kontakt-, Objekt- und Einheitenseite zeigen dagegen die vollständige
-Historie einschließlich erledigter Tickets.
+Erledigte Vorgänge (Status erledigt, abgeschlossen, abgelehnt) sind in der Ticketübersicht,
+in Meine Tickets, in der Mailübersicht und im Reiter Tickets der Kontakt-, Objekt- und
+Einheitenseite standardmäßig ausgeblendet (seit 1.23.0, Reiter seit 1.28.0). Der Umschalter
+Erledigte anzeigen blendet sie ein; ein ausdrücklich gesetzter Statusfilter zeigt immer genau
+die gewählten Status. Eingeblendete erledigte Tickets erscheinen grün und stehen am Ende.
+
+## Ampel und Sortierung
+
+Jede Ticketzeile trägt seit 1.28.0 eine Farbmarke am linken Rand mit Text (Legende über der
+Liste):
+
+- Gelb: neues Ticket, noch ohne Reaktion.
+- Orange: seit 24 Stunden keine Reaktion unsererseits.
+- Rot: seit 96 Stunden keine Reaktion unsererseits.
+- Grün: erledigt, abgeschlossen oder abgelehnt (nie orange oder rot).
+
+Als Reaktion zählen nur Handlungen von Mitarbeitern: Statuswechsel, Zuweisung, interner oder
+öffentlicher Kommentar, gesendete Mail, angelegter oder geänderter Arbeitsauftrag. Eingehende
+Mails, Portalkommentare von Mietern oder Eigentümern und Erinnerungen von außen setzen die Uhr
+nicht zurück; die letzte Nachricht des Kunden wird getrennt ausgewiesen. Bei einem neuen
+Ticket ohne Reaktion zählt die Zeit seit Eingang. Der Text nennt die Dauer, zum Beispiel Seit
+4 Tagen ohne Reaktion.
+
+Die Übersicht ist standardmäßig nach Dringlichkeit sortiert, auch über Seiten hinweg: rot
+oben (am längsten ohne Rückmeldung zuerst), dann orange, dann gelb und die übrigen offenen,
+Erledigte zuletzt. Der Filterhaken Nach Eingang sortiert stattdessen das neueste Ticket nach
+oben. Die offenen Tickets auf der Startseite tragen dieselbe Ampel.
 
 ## Status und Rollen
 
@@ -76,14 +98,20 @@ Pflichtfelder der Vorlage, Erledigungsnotiz) gelten auch für Administratoren.
 ## Erledigungsnotiz beim Abschluss
 
 Jeder Wechsel auf erledigt, abgeschlossen oder abgelehnt verlangt eine Erledigungsnotiz
-(seit 1.24.0): eine Art aus fester Liste und ein Freitext. Die Arten sind Stammdaten ergänzt,
-Handwerker beauftragt, Auskunft erteilt, Weitergeleitet, Kein Handlungsbedarf, Abgelehnt,
-Sonstiges; bei Sonstiges ist der Freitext Pflicht, sonst freiwillig. Der Abschlussdialog
-erscheint im Ticketdetail, in der Sammelaktion Status anwenden (eine gemeinsame Notiz für alle
-gewählten Tickets) und beim Zusammenführen (gemeinsame Notiz für die Quelltickets; ohne
+(seit 1.24.0): eine Art aus der Liste des Mandanten und ein Freitext. Eingebaut sind
+Stammdaten ergänzt, Handwerker beauftragt, Auskunft erteilt, Weitergeleitet, Kein
+Handlungsbedarf, Abgelehnt, Zahlung geklärt, Termin vereinbart, Mangel behoben, Vertrag
+geändert, Sonstiges (Betreiberentscheidung vom 26.09.2026); bei Sonstiges ist der Freitext
+Pflicht, sonst freiwillig. Welche Arten der Dialog anbietet, legt der Mandant unter
+Einstellungen, Mandant und Briefbogen, Erledigungsarten fest: eingebaute Arten lassen sich
+abschalten (Sonstiges und Zusammengeführt bleiben immer), eigene Arten kommen mit Code und
+Bezeichnung hinzu (Kapitel Einstellungen). Der Abschlussdialog lädt diese Liste beim Öffnen.
+Er erscheint im Ticketdetail, in der Sammelaktion Status anwenden (eine gemeinsame Notiz für
+alle gewählten Tickets) und beim Zusammenführen (gemeinsame Notiz für die Quelltickets; ohne
 Eingabe erhalten sie die Art Zusammengeführt mit Verweis auf das Zielticket). Ohne
 Erledigungsnotiz lehnt die Plattform den Abschluss ab (Meldung Beim Abschluss ist eine
-Erledigungsnotiz erforderlich).
+Erledigungsnotiz erforderlich); eine abgeschaltete oder unbekannte Art wird mit der Meldung
+Erledigungsart ist für diesen Mandanten nicht verfügbar abgewiesen.
 
 Die Notiz steht am Ticket (Art, Text, wer abgeschlossen hat) und im Verlauf beim
 Statuswechsel. Wird ein Ticket wiedereröffnet, werden Art und Text geleert; beim nächsten
@@ -247,8 +275,20 @@ Antwort am Ticket an und reicht sie zur Freigabe ein.
 ## Abschluss archiviert Mails
 
 Jeder Abschlussstatus (erledigt, abgeschlossen, abgelehnt) archiviert automatisch die zum
-Ticket gehörenden Mails im Postfach. Maßgeblich bleibt die Postfach-Einstellung zur
-Archivierung (Einstellungen, Postfächer).
+Ticket gehörenden Mails im Postfach. Maßgeblich bleibt die Postfach-Einstellung Erledigt
+archiviert (Einstellungen, Postfächer). Dieselbe Einstellung archiviert seit dem 26.09.2026
+auch eine einzelne Mail, die im Posteingang auf erledigt gesetzt wird.
+
+## Abschluss per Mail
+
+Wird die letzte offene eingegangene Mail eines Tickets im Posteingang auf erledigt gesetzt und
+hat das Ticket keinen offenen Arbeitsauftrag, schließt die Plattform das Ticket automatisch
+mit der Erledigungsart Auskunft erteilt und der Notiz Per E-Mail erledigt; Verfasser ist der
+Bearbeiter der Mail, der Verlauf zeigt den Statuswechsel als automatisch. Solange noch eine
+eingegangene Mail des Tickets offen ist oder ein Arbeitsauftrag läuft, bleibt das Ticket
+offen. Ist die Erledigungsart Auskunft erteilt für den Mandanten deaktiviert oder scheitert
+eine Abschlussprüfung, bleibt das Ticket offen und der Verlauf zeigt ein Hinweis-Ereignis mit
+Grund. Erledigt meint in allen Fällen erledigt, abgeschlossen oder abgelehnt.
 
 ## Was ist Vorschlag, was verbindlich
 
