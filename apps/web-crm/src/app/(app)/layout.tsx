@@ -10,9 +10,10 @@ import { SideNav, type NavGroup } from "@/components/shell/SideNav";
 import { TenantSwitcher } from "@/components/shell/TenantSwitcher";
 import { UserMenu } from "@/components/shell/UserMenu";
 import { NotificationBell } from "@/components/workspace/NotificationBell";
-import { ThemeToggle } from "@/components/workspace/ThemeToggle";
+import { ThemeController } from "@/components/workspace/ThemeToggle";
 import { redirectIfUnauthenticated, sessionContext } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
+import { serverThemeScript } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
@@ -94,8 +95,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ],
     },
   ].filter((g) => g.items.length > 0);
+  // Stored appearance (day, evening, auto); undefined when the user never picked one.
+  const themePreference = (me as { ui_preferences?: { theme?: unknown } } | null | undefined)?.ui_preferences
+    ?.theme;
   return (
     <div className="flex min-h-screen flex-col bg-surface md:flex-row">
+      {themePreference !== undefined ? (
+        <script dangerouslySetInnerHTML={{ __html: serverThemeScript(themePreference) }} />
+      ) : null}
+      <ThemeController serverPreference={themePreference} />
       <a href="#inhalt" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50">
         {t("skip")}
       </a>
@@ -131,9 +139,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             userKey={me?.user_id ?? me?.email ?? ""}
           />
           <div className="ml-auto flex min-w-0 items-center gap-2">
-            <div className="hidden sm:block">
-              <ThemeToggle />
-            </div>
             <div className="hidden sm:block">
               <TenantSwitcher tenants={ctx.tenants} current={ctx.tenantId} />
             </div>

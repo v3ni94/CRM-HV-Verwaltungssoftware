@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { ThemeSwitch } from "@/components/workspace/ThemeToggle";
 import { bff } from "@/lib/bff";
 
 function initials(name: string): string {
@@ -59,11 +60,14 @@ export function UserMenu({ name, email }: { name: string; email?: string }) {
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 z-40 mt-2 w-56 rounded-xl border border-border bg-bg p-1.5 shadow-lg"
+          className="absolute right-0 z-40 mt-2 w-64 rounded-xl border border-border bg-bg p-1.5 shadow-lg"
         >
           <div className="border-b border-border-soft px-3 py-2">
             <p className="truncate text-sm font-medium text-fg">{name}</p>
             {email ? <p className="truncate text-xs text-muted">{email}</p> : null}
+          </div>
+          <div className="border-b border-border-soft px-2 py-2">
+            <ThemeSwitch className="w-full justify-between" />
           </div>
           <Link
             href="/einstellungen/profil"

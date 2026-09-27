@@ -135,3 +135,34 @@ def test_a_user_can_never_change_another_users_preferences(
         "/api/v1/auth/me/preferences", json={"nav_expanded_groups": ["Makler"]}
     )
     assert unauthenticated.status_code in (401, 403)
+
+
+def test_theme_preference_is_stored_validated_and_reset(
+    client_and_users: tuple[TestClient, dict[str, str]],
+) -> None:
+    client, emails = client_and_users
+    headers = _login(client, emails["alice"])
+    for value in ("day", "evening", "auto"):
+        response = client.patch(
+            "/api/v1/auth/me/preferences", json={"theme": value}, headers=headers
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["ui_preferences"]["theme"] == value
+
+    # The theme key does not touch other keys.
+    client.patch(
+        "/api/v1/auth/me/preferences", json={"nav_expanded_groups": ["System"]}, headers=headers
+    )
+    me = client.get("/api/v1/auth/me", headers=headers).json()
+    assert me["ui_preferences"] == {"theme": "auto", "nav_expanded_groups": ["System"]}
+
+    for bad in ("dark", "", 1, ["day"]):
+        rejected = client.patch(
+            "/api/v1/auth/me/preferences", json={"theme": bad}, headers=headers
+        )
+        assert rejected.status_code == 422, rejected.text
+    assert client.get("/api/v1/auth/me", headers=headers).json()["ui_preferences"]["theme"] == "auto"
+
+    reset = client.patch("/api/v1/auth/me/preferences", json={"theme": None}, headers=headers)
+    assert reset.status_code == 200, reset.text
+    assert "theme" not in reset.json()["ui_preferences"]

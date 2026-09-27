@@ -1224,11 +1224,11 @@
     "noNotifications": "Keine neuen Benachrichtigungen.",
     "markAllRead": "Alle als gelesen markieren",
     "markRead": "Als gelesen markieren",
-    "themeLabel": "Darstellung: {theme}",
+    "themeGroup": "Darstellung",
     "theme": {
-      "system": "System",
-      "light": "Hell",
-      "dark": "Dunkel"
+      "day": "Tag",
+      "evening": "Abend",
+      "auto": "Automatisch"
     },
     "savedFilters": "Gespeicherte Filter",
     "filterName": "Name des Filters",
@@ -2895,6 +2895,7 @@
       "to": "An",
       "cc": "Kopie",
       "mailbox": "Postfach",
+      "ownMailbox": "eigenes Postfach",
       "noSubject": "ohne Betreff",
       "status": {
         "new": "neu",
@@ -3387,6 +3388,11 @@
     "from": "Von {address}",
     "toField": "An {address}",
     "to": "An (kommagetrennt)",
+    "fromLabel": "Von",
+    "toLabel": "An",
+    "ccLabel": "Kopie",
+    "ownMailbox": "eigenes Postfach",
+    "ownMailboxHint": "Diese Adresse ist eines unserer eigenen Postfächer.",
     "subject": "Betreff",
     "body": "Text",
     "save": "Speichern",
@@ -4658,6 +4664,8 @@
     }
   },
   "Profile": {
+    "appearanceTitle": "Darstellung",
+    "appearanceHelp": "Tag ist die helle, ruhige Ansicht, Abend die dunkle, präzise Ansicht. Automatisch wechselt von 19 bis 7 Uhr in die Abendansicht. Die Auswahl gilt für Ihr Benutzerkonto.",
     "title": "Meine Daten",
     "name": "Name",
     "email": "E-Mail",

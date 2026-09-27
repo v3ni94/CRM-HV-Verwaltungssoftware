@@ -1224,11 +1224,11 @@
     "noNotifications": "No new notifications.",
     "markAllRead": "Mark all as read",
     "markRead": "Mark as read",
-    "themeLabel": "Appearance: {theme}",
+    "themeGroup": "Appearance",
     "theme": {
-      "system": "System",
-      "light": "Light",
-      "dark": "Dark"
+      "day": "Day",
+      "evening": "Evening",
+      "auto": "Automatic"
     },
     "savedFilters": "Saved filters",
     "filterName": "Filter name",
@@ -2895,6 +2895,7 @@
       "to": "To",
       "cc": "Cc",
       "mailbox": "Mailbox",
+      "ownMailbox": "own mailbox",
       "noSubject": "no subject",
       "status": {
         "new": "new",
@@ -3387,6 +3388,11 @@
     "from": "From {address}",
     "toField": "To {address}",
     "to": "To (comma separated)",
+    "fromLabel": "From",
+    "toLabel": "To",
+    "ccLabel": "Cc",
+    "ownMailbox": "own mailbox",
+    "ownMailboxHint": "This address is one of our own mailboxes.",
     "subject": "Subject",
     "body": "Body",
     "save": "Save",
@@ -4658,6 +4664,8 @@
     }
   },
   "Profile": {
+    "appearanceTitle": "Appearance",
+    "appearanceHelp": "Day is the calm light view, evening the precise dark view. Automatic switches to the evening view from 7 pm to 7 am. The choice applies to your user account.",
     "title": "My data",
     "name": "Name",
     "email": "E-mail",

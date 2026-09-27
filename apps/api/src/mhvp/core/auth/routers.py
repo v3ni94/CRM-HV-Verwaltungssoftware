@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, EmailStr, Field
@@ -129,7 +129,7 @@ class MeOut(BaseModel):
 
 # Accepted keys of ``User.ui_preferences`` (rule: only these are ever written, unknown keys are
 # rejected so the bag stays a small, reviewable set rather than an arbitrary blob).
-_UI_PREFERENCE_KEYS = {"nav_expanded_groups"}
+_UI_PREFERENCE_KEYS = {"nav_expanded_groups", "theme"}
 
 
 class UiPreferencesUpdate(BaseModel):
@@ -139,6 +139,9 @@ class UiPreferencesUpdate(BaseModel):
     model_config = {"extra": "forbid"}
 
     nav_expanded_groups: list[str] | None = None
+    # Appearance of the web CRM (operator 27.09.2026): day (design A), evening (design B) or
+    # auto (evening from 19 to 7 o'clock local time, evaluated in the browser).
+    theme: Literal["day", "evening", "auto"] | None = None
 
     def as_patch(self) -> dict[str, Any]:
         data = self.model_dump(exclude_unset=True)

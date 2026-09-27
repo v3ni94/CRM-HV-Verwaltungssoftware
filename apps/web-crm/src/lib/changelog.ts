@@ -17,6 +17,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.37.0",
+    date: "27.09.2026",
+    title: "Darstellung Tag und Abend",
+    changes: [
+      "Darstellung (Betreiberentscheidung 27.09.2026): Tagmodus \"Klar und ruhig\" (helles, ruhiges Layout, Orange nur für Handlungsbedarf und aktive Navigation) und Abendmodus \"Dunkel und präzise\" (dunkle Oberfläche, feine Linien statt Schatten, Gold als Akzent); Umschalter \"Tag\", \"Abend\" und \"Automatisch\" im Benutzermenü und unter Einstellungen, Profil; automatisch wechselt von 19 bis 7 Uhr in den Abendmodus und wird jede Minute neu geprüft.",
+      "Die Wahl wird je Benutzerkonto gespeichert (PATCH /api/v1/auth/me/preferences, Feld theme: day, evening oder auto, serverseitig geprüft) und zusätzlich lokal im Browser gehalten, damit die Seite ohne Aufblitzen der falschen Darstellung startet; ein unerwarteter oder veralteter gespeicherter Wert wird verworfen statt die Seite abstürzen zu lassen (Lehre aus 1.35.1).",
+      "Farb- und Gestaltungswerte beider Modi zentral in den Darstellungsbausteinen hinterlegt (weiche Karten mit 10 bis 14 px Radius und sehr weichem Schatten am Tag, 6 px Radius ohne Schatten am Abend); die Bearbeitungsmarkierung im Postfach nutzt jetzt eine eigene Farbe je Modus statt der Mittel-Priorität-Farbe.",
+      "Kontrast in beiden Modi nach WCAG AA geprüft, Fokusringe in beiden Modi sichtbar.",
+    ],
+  },
+  {
     version: "1.36.0",
     date: "27.09.2026",
     title: "Postfach: Antworten mit Anhängen, Bearbeitungsmarkierung, Duplikate, Signatur je Nutzer, Zuordnungsrückfrage",

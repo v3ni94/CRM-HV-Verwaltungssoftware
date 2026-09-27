@@ -150,11 +150,11 @@ export function MailList({
           // Gelbe Kennzeichnung "in Bearbeitung" (Betreiber 27.09.2026): dezenter
           // Warnhintergrund, Auswahl und Markierung behalten den goldenen Rahmen.
           const rowClass = isChecked
-            ? `border-gold ${inProgress ? "bg-warning-bg" : "bg-gold/10"}`
+            ? `border-gold ${inProgress ? "bg-progress-bg" : "bg-gold/10"}`
             : message.id === selectedId
-              ? `border-gold ${inProgress ? "bg-warning-bg" : "bg-surface"}`
+              ? `border-gold ${inProgress ? "bg-progress-bg" : "bg-surface"}`
               : inProgress
-                ? "border-warning-line bg-warning-bg hover:border-gold/60"
+                ? "border-gold/60 bg-progress-bg hover:border-gold"
                 : "border-border bg-bg hover:border-gold/60";
           return (
             <li key={message.id} className="flex min-w-0 items-start gap-2" data-in-progress={inProgress || undefined}>
@@ -177,7 +177,7 @@ export function MailList({
                     <span>{formatDateTime(message.direction === "in" ? message.received_at : message.sent_at)}</span>
                     {inProgress ? (
                       <span
-                        className={ui.badgeWarning}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-progress-label-bg px-2.5 py-0.5 text-xs font-medium text-progress-label-fg"
                         title={handler ? t("inProgressBy", { name: handler }) : t("inProgress")}
                         data-testid="mail-handler"
                       >

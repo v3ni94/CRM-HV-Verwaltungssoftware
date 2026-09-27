@@ -36,6 +36,9 @@
   --color-info-line: var(--mhvp-color-info-line);
   --color-muted-bg: var(--mhvp-color-muted-bg);
   --color-muted-fg: var(--mhvp-color-muted-fg);
+  --color-progress-bg: var(--mhvp-color-progress-bg);
+  --color-progress-label-bg: var(--mhvp-color-progress-label-bg);
+  --color-progress-label-fg: var(--mhvp-color-progress-label-fg);
   --color-rail-bg: var(--mhvp-color-rail-bg);
   --color-rail-fg: var(--mhvp-color-rail-fg);
   --color-rail-muted: var(--mhvp-color-rail-muted);

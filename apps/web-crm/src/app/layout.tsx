@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { THEME_SCRIPT } from "@/components/workspace/ThemeToggle";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 import "./globals.css";
 

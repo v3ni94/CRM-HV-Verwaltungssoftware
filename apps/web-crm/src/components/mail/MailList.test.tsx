@@ -80,8 +80,8 @@ describe("MailList", () => {
     const label = screen.getByText("Ina Brink");
     expect(label).toHaveAttribute("title", "In Bearbeitung von Ina Brink");
     const row = screen.getByText("In Arbeit").closest("button");
-    expect(row?.className).toContain("bg-warning-bg");
-    expect(screen.getByText("Offen").closest("button")?.className).not.toContain("bg-warning-bg");
+    expect(row?.className).toContain("bg-progress-bg");
+    expect(screen.getByText("Offen").closest("button")?.className).not.toContain("bg-progress-bg");
     expect(screen.getByText("Offen").closest("li")).not.toHaveAttribute("data-in-progress");
     expect(screen.getByText("In Arbeit").closest("li")).toHaveAttribute("data-in-progress", "true");
     // Ohne Bearbeiternamen bleibt die Kennzeichnung mit neutralem Text.

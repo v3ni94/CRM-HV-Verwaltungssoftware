@@ -7,6 +7,7 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
+import { ThemeSwitch } from "@/components/workspace/ThemeToggle";
 
 import { SignatureProfile, type SignaturePreviewData, type SignatureProfileData } from "./SignatureProfile";
 
@@ -312,6 +313,13 @@ export function ProfileSettings({
             <dd>{tenantName}</dd>
           </div>
         </dl>
+      </section>
+      <section className={`${ui.card} flex flex-col gap-3`} aria-labelledby="appearance-title">
+        <h2 id="appearance-title" className={ui.h3}>
+          {t("appearanceTitle")}
+        </h2>
+        <p className={ui.help}>{t("appearanceHelp")}</p>
+        <ThemeSwitch className="self-start" />
       </section>
       <SignatureProfile initialProfile={signatureProfile} initialPreview={signaturePreview} />
       <PasswordForm />

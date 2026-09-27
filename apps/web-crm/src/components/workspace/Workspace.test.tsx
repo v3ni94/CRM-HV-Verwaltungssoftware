@@ -6,7 +6,6 @@ import { jsonResponse, renderIntl } from "@/test/intl";
 import { CalendarView, monthRange } from "./CalendarView";
 import { NotificationBell } from "./NotificationBell";
 import { SavedFilters } from "./SavedFilters";
-import { ThemeToggle } from "./ThemeToggle";
 
 const ID = "01920000-0000-7000-8000-0000000000bb";
 const fetchMock = vi.fn();
@@ -142,20 +141,6 @@ describe("SavedFilters", () => {
       const put = fetchMock.mock.calls.find(([, i]) => i?.method === "PUT");
       expect(JSON.parse(put![1].body as string)).toEqual({ resource: "contacts", name: "Monheim", params: { q: "Monheim" } });
     });
-  });
-});
-
-describe("ThemeToggle", () => {
-  it("cycles system, light, dark and stores the choice", async () => {
-    renderIntl(<ThemeToggle />);
-    const button = screen.getByRole("button", { name: "Darstellung: System" });
-    await userEvent.click(button);
-    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
-    await userEvent.click(button);
-    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
-    expect(localStorage.getItem("mhvp-theme")).toBe("dark");
-    await userEvent.click(button);
-    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 });
 
