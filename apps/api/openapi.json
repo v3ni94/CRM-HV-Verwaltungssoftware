@@ -45874,6 +45874,22 @@
               }
             ],
             "title": "Nav Expanded Groups"
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "enum": [
+                  "day",
+                  "evening",
+                  "auto"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theme"
           }
         },
         "title": "UiPreferencesUpdate",

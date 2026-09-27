@@ -165,6 +165,7 @@ _LIST_FIELDS = (
     "direction",
     "status",
     "from_address",
+    "reply_to",
     "to_addresses",
     "cc_addresses",
     "subject",
@@ -1466,13 +1467,31 @@ async def reply_draft(
             greeting = "Sehr geehrter Herr" if contact.salutation == "Herr" else "Sehr geehrte Frau"
             salutation = f"{greeting} {contact.last_name}"
         ticket = await session.get(Ticket, row.ticket_id) if row.ticket_id else None
+        # Antworten an alle (operator 27.09.2026): To ist Reply-To (sonst Absender) der
+        # Ursprungsmail, Cc alle ursprünglichen To-/Cc-Empfänger ohne die eigenen
+        # Postfachadressen des Mandanten und ohne Duplikate von To.
+        own_addresses = set(
+            await session.scalars(
+                select(Mailbox.address).where(
+                    Mailbox.tenant_id == principal.tenant_id, Mailbox.deleted_at.is_(None)
+                )
+            )
+        )
+        to_addresses, cc_addresses = mail.build_reply_all(
+            from_address=row.from_address,
+            reply_to=row.reply_to,
+            to_addresses=row.to_addresses,
+            cc_addresses=row.cc_addresses,
+            own_addresses=own_addresses,
+        )
         draft = Message(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
             direction="out",
             status="draft",
             mailbox_id=row.mailbox_id,
-            to_addresses=[row.from_address] if row.from_address else [],
+            to_addresses=to_addresses,
+            cc_addresses=cc_addresses,
             subject=(
                 tnr.reply_subject(row.subject, ticket.number)
                 if ticket is not None

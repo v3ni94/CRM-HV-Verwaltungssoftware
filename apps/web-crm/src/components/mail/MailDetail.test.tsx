@@ -56,6 +56,44 @@ describe("MailDetail", () => {
     expect(screen.queryByTestId("mail-body")).not.toBeInTheDocument();
   });
 
+  it("shows Von/An/Cc each on its own line and marks our own mailbox address (operator 27.09.2026)", () => {
+    const row = makeMessage({
+      from_address: "mieter@example.com",
+      to_addresses: ["info@example.com", "kollege@example.com"],
+      cc_addresses: ["post@example.com"],
+    });
+    renderIntl(
+      <MailDetail
+        message={row}
+        canApprove={false}
+        canReadMembers={false}
+        mailboxAddresses={["info@example.com", "post@example.com"]}
+        onUpdated={() => {}}
+        onCreated={() => {}}
+      />,
+    );
+    expect(screen.getByText("Von")).toBeInTheDocument();
+    expect(screen.getByText("An")).toBeInTheDocument();
+    expect(screen.getByText("Kopie")).toBeInTheDocument();
+    expect(screen.getByText("mieter@example.com")).toBeInTheDocument();
+    expect(screen.getByText("kollege@example.com")).toBeInTheDocument();
+    // Die eigenen Postfächer (info@, post@) sind dezent markiert, die übrigen Adressen nicht.
+    expect(screen.getAllByText("eigenes Postfach")).toHaveLength(2);
+  });
+
+  it("does not show a Cc line when the mail has no copy recipients", () => {
+    renderIntl(
+      <MailDetail
+        message={makeMessage({ to_addresses: ["mieter@example.com"] })}
+        canApprove={false}
+        canReadMembers={false}
+        onUpdated={() => {}}
+        onCreated={() => {}}
+      />,
+    );
+    expect(screen.queryByText("Kopie")).not.toBeInTheDocument();
+  });
+
   it("shows the Gmail archive outcome and offers a manual retry after a failure", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       if (String(input).endsWith("/api/bff/mail/messages/m1/archive") && init?.method === "POST") {

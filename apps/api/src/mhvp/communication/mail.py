@@ -69,9 +69,13 @@ def parse(raw: bytes) -> dict[str, Any]:
     # PostgreSQL rejects NUL bytes in text columns; column limits mirror the model.
     clean = _clean
     sender = (getaddresses([str(msg["From"] or "")]) or [("", "")])[0][1].lower()
+    reply_to_addrs = getaddresses([str(msg["Reply-To"] or "")])
+    reply_to_raw = reply_to_addrs[0][1] if reply_to_addrs else ""
+    reply_to = clean(reply_to_raw.lower(), 320) or None
     references = " ".join(str(msg["References"] or "").split())
     return {
         "from": clean(sender, 320) or None,
+        "reply_to": reply_to,
         "to": [
             clean(a.lower(), 320)
             for _, a in getaddresses([str(msg["To"] or ""), str(msg["Cc"] or "")])
@@ -99,6 +103,35 @@ def is_inline_part(part: Any) -> bool:
 def reference_ids(header: str | None) -> list[str]:
     """Message ids of a ``References`` (or ``In-Reply-To``) header, last (closest) first."""
     return [i for i in reversed((header or "").split()) if i]
+
+
+def build_reply_all(
+    *,
+    from_address: str | None,
+    reply_to: str | None,
+    to_addresses: list[str] | None,
+    cc_addresses: list[str] | None,
+    own_addresses: set[str],
+) -> tuple[list[str], list[str]]:
+    """Empfänger für "Antworten an alle" (operator 27.09.2026): ``To`` ist die
+    ``Reply-To``-Adresse der Ursprungsmail, sonst der Absender. ``Cc`` sind alle
+    ursprünglichen To- und Cc-Empfänger ohne die eigenen Postfachadressen des Mandanten
+    (``own_addresses``, alle Adressen, Groß-/Kleinschreibung ignoriert) und ohne Duplikate von
+    ``To`` oder untereinander. Reihenfolge bleibt stabil, die erste Nennung einer Adresse
+    gewinnt."""
+    own_lower = {a.lower() for a in own_addresses}
+    to = reply_to or from_address
+    to_list = [to] if to else []
+    to_lower = {to.lower()} if to else set()
+    seen = set(to_lower)
+    cc: list[str] = []
+    for addr in [*(to_addresses or []), *(cc_addresses or [])]:
+        low = addr.lower()
+        if low in own_lower or low in seen:
+            continue
+        seen.add(low)
+        cc.append(addr)
+    return to_list, cc
 
 
 _QUOTE_RE = re.compile(

@@ -156,6 +156,9 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     # M20). ``sending`` ist der eigene Schritt zwischen Freigabe und Versandnachweis (Review
     # 26.09.2026, M1): die Message-ID ist bereits gespeichert und dient als Idempotenzschlüssel.
     from_address: Mapped[str | None] = mapped_column(String(320))
+    # Kopfzeile ``Reply-To`` der eingehenden Mail (operator 27.09.2026, Antworten mit An/Cc),
+    # abweichend vom Absender; der Antwortentwurf adressiert dorthin, wenn gesetzt.
+    reply_to: Mapped[str | None] = mapped_column(String(320))
     to_addresses: Mapped[list[str]] = mapped_column(
         ARRAY(String(320)), nullable=False, default=list
     )

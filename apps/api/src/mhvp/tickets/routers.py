@@ -793,6 +793,7 @@ async def _reply_context(
     auf die gewählte oder die letzte eingehende Nachricht des Tickets (Absender, Kopie,
     Postfach, Thread); ohne Mail gilt die Haupt-E-Mail des Kontakts und das Standardpostfach
     des Mandanten."""
+    from mhvp.communication import mail
     from mhvp.communication.models import Mailbox, Message
     from mhvp.communication.services import ticket_participants
     from mhvp.communication.transport import is_sendable
@@ -833,10 +834,6 @@ async def _reply_context(
     to_addresses: list[str] = []
     cc_addresses: list[str] = []
     unverified_sender: str | None = None
-    mailbox_address = None
-    if inbound is not None and inbound.mailbox_id:
-        box = await session.get(Mailbox, inbound.mailbox_id)
-        mailbox_address = box.address.lower() if box else None
     if inbound is not None and inbound.direction == "out":
         # Antwort auf eine eigene ausgehende Mail: dieselben Empfänger erneut anschreiben.
         to_addresses = list(inbound.to_addresses)
@@ -846,15 +843,23 @@ async def _reply_context(
         # Vorbelegung nur mit einem am Ticket beteiligten Absender (Review 26.09.2026, H5):
         # ein fremder Absender wird nie automatisch Empfänger, sondern nur nach Auswahl.
         if sender_verified:
-            to_addresses = [sender]
-            own = {a.lower() for a in (inbound.to_addresses or [])} - {
-                a.lower() for a in (inbound.cc_addresses or [])
-            }
-            cc_addresses = [
-                a
-                for a in (inbound.cc_addresses or [])
-                if a.lower() != mailbox_address and a.lower() not in own
-            ]
+            # Antworten an alle (operator 27.09.2026): To ist Reply-To (sonst Absender), Cc
+            # alle ursprünglichen To-/Cc-Empfänger ohne eigene Postfachadressen des Mandanten
+            # und ohne Duplikate von To.
+            own_addresses = set(
+                await session.scalars(
+                    select(Mailbox.address).where(
+                        Mailbox.tenant_id == ticket.tenant_id, Mailbox.deleted_at.is_(None)
+                    )
+                )
+            )
+            to_addresses, cc_addresses = mail.build_reply_all(
+                from_address=sender,
+                reply_to=inbound.reply_to,
+                to_addresses=inbound.to_addresses,
+                cc_addresses=inbound.cc_addresses,
+                own_addresses=own_addresses,
+            )
         else:
             unverified_sender = sender
     if not to_addresses and contact is not None:

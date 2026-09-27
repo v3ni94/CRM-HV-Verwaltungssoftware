@@ -238,8 +238,9 @@ def test_ticket_thread_reply_with_tnr_and_inbound_assignment(
     assert _ok(client.get(f"{M}/messages/{msg['id']}", headers=reader))["id"] == msg["id"]
     assert len(_ok(client.get(f"{M}/messages/{msg['id']}/thread", headers=reader))) == 1
 
-    # Vorschau der Antwortvorlage liefert An und Kopie aus der Ursprungsmail (ohne eigenes
-    # Postfach in der Kopie).
+    # Vorschau der Antwortvorlage liefert An und Kopie aus der Ursprungsmail: Kopie ist "an
+    # alle" (operator 27.09.2026, Antworten mit An/Cc), also alle ursprünglichen To-/Cc-
+    # Empfänger außer dem eigenen Postfach (info-tm{RUN}@...), das mit Cc einging.
     tpl = _ok(
         client.post(
             f"{T}/reply-templates",
@@ -250,12 +251,12 @@ def test_ticket_thread_reply_with_tnr_and_inbound_assignment(
     )
     pv = _ok(client.get(f"{T}/{ticket_id}/reply-templates/{tpl['id']}/preview", headers=admin))
     assert pv["to_addresses"] == [sender]
-    assert pv["cc_addresses"] == [f"hans-tm{RUN}@example.com"]
+    assert pv["cc_addresses"] == ["info@example.com", f"hans-tm{RUN}@example.com"]
 
     # Vorbelegung ohne Vorlage: An, Kopie, Betreff mit Kennung, Postfach.
     ctx = _ok(client.get(f"{T}/{ticket_id}/reply-context", headers=reader))
     assert ctx["to_addresses"] == [sender]
-    assert ctx["cc_addresses"] == [f"hans-tm{RUN}@example.com"]
+    assert ctx["cc_addresses"] == ["info@example.com", f"hans-tm{RUN}@example.com"]
     assert ctx["subject"] == f"AW: Wasserschaden Küche {RUN} TNR#{number}"
     assert ctx["reply_to_message_id"] == msg["id"]
     assert ctx["mailbox_address"] == f"info-tm{RUN}@example.com"

@@ -11,6 +11,8 @@ unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge ob
 - Die Wahl wird je Benutzerkonto gespeichert (PATCH /api/v1/auth/me/preferences, Feld theme: day, evening oder auto, serverseitig geprüft) und zusätzlich lokal im Browser gehalten, damit die Seite ohne Aufblitzen der falschen Darstellung startet; ein unerwarteter oder veralteter gespeicherter Wert wird verworfen statt die Seite abstürzen zu lassen (Lehre aus 1.35.1).
 - Farb- und Gestaltungswerte beider Modi zentral in den Darstellungsbausteinen hinterlegt (weiche Karten mit 10 bis 14 px Radius und sehr weichem Schatten am Tag, 6 px Radius ohne Schatten am Abend); die Bearbeitungsmarkierung im Postfach nutzt jetzt eine eigene Farbe je Modus statt der Mittel-Priorität-Farbe.
 - Kontrast in beiden Modi nach WCAG AA geprüft, Fokusringe in beiden Modi sichtbar.
+- Mailansicht und Ticket-Mailverlauf zeigen Von, An und Kopie je auf einer eigenen Zeile und kennzeichnen das eigene Postfach dezent.
+- Antworten aus Mail und Ticket geht jetzt standardmäßig an alle: an den Absender oder die Reply-To-Adresse, alle übrigen ursprünglichen Empfänger in Kopie, ohne eigene Postfachadressen und ohne Dubletten (Migration 0217).
 
 ## 1.36.0 (27.09.2026) Postfach: Antworten mit Anhängen, Bearbeitungsmarkierung, Duplikate, Signatur je Nutzer, Zuordnungsrückfrage
 

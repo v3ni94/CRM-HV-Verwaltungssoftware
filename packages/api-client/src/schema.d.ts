@@ -32127,6 +32127,8 @@ export interface components {
         UiPreferencesUpdate: {
             /** Nav Expanded Groups */
             nav_expanded_groups?: string[] | null;
+            /** Theme */
+            theme?: ("day" | "evening" | "auto") | null;
         };
         /** UnitAssignmentIn */
         UnitAssignmentIn: {

@@ -55,6 +55,13 @@ export function messageTime(message: ThreadMessage): string | null {
   return message.direction === "in" ? message.received_at : (message.sent_at ?? message.created_at ?? null);
 }
 
+/** An/Cc-Zeile mit dezenter Markierung des eigenen Postfachs (operator 27.09.2026); das
+ * eigene Postfach der Mail selbst reicht hier, ein eingehendes Ticket hat immer nur eines. */
+function addressListLabel(addresses: string[], mailboxAddress: string | null, t: ReturnType<typeof useTranslations>): string {
+  const own = (mailboxAddress ?? "").toLowerCase();
+  return addresses.map((a) => (own && a.toLowerCase() === own ? `${a} (${t("ownMailbox")})` : a)).join(", ");
+}
+
 function statusClass(status: string): string {
   if (status === "sent" || status === "done") return ui.badgeSuccess;
   if (status === "pending") return ui.badgeWarning;
@@ -170,16 +177,18 @@ export function TicketMailThread({
               <span>{formatDateTime(messageTime(m))}</span>
             </div>
             <SafeLine className="text-sm font-medium">{m.subject || t("noSubject")}</SafeLine>
-            <div className="flex flex-col gap-0.5 text-xs text-muted">
-              <SafeLine>
+            <div className="flex min-w-0 flex-col gap-0.5 text-xs text-muted">
+              <SafeLine className="min-w-0 break-words [overflow-wrap:anywhere]">
                 {t("from")}: {inbound ? (m.from_address ?? "") : (m.mailbox_address ?? "")}
               </SafeLine>
-              <SafeLine>
-                {t("to")}: {inbound ? (m.mailbox_address ?? m.to_addresses.join(", ")) : m.to_addresses.join(", ")}
-              </SafeLine>
+              {m.to_addresses.length > 0 ? (
+                <SafeLine className="min-w-0 break-words [overflow-wrap:anywhere]">
+                  {t("to")}: {addressListLabel(m.to_addresses, m.mailbox_address, t)}
+                </SafeLine>
+              ) : null}
               {m.cc_addresses.length > 0 ? (
-                <SafeLine>
-                  {t("cc")}: {m.cc_addresses.join(", ")}
+                <SafeLine className="min-w-0 break-words [overflow-wrap:anywhere]">
+                  {t("cc")}: {addressListLabel(m.cc_addresses, m.mailbox_address, t)}
                 </SafeLine>
               ) : null}
             </div>

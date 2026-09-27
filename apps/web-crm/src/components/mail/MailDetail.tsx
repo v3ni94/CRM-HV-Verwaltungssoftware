@@ -27,7 +27,52 @@ function submitterLabel(message: Message, members: Member[] | null, t: ReturnTyp
   return message.submitted_at ? t("submittedBy", { who, at: formatDateTime(message.submitted_at) }) : who;
 }
 
-function ThreadEntry({ message }: { message: Message }) {
+/** Von/An/Cc-Block (operator 27.09.2026): jede Zeile für sich, lange Empfängerlisten brechen
+ * um; eigene Postfachadressen des Mandanten sind dezent gekennzeichnet. Gilt für ein- und
+ * ausgehende Mails gleichermaßen. */
+export function MailRecipients({ message, mailboxAddresses, className }: { message: Message; mailboxAddresses?: string[]; className?: string }) {
+  const t = useTranslations("Mail");
+  const own = new Set((mailboxAddresses ?? []).map((a) => a.toLowerCase()));
+  const isOwn = (address: string) => own.has(address.toLowerCase());
+  const addressList = (addresses: string[]) =>
+    addresses.map((address, i) => (
+      <span key={`${address}-${i}`} className="inline-flex items-center gap-1">
+        <span>
+          {address}
+          {i < addresses.length - 1 ? "," : ""}
+        </span>
+        {isOwn(address) ? (
+          <span className="rounded bg-subtle-bg px-1 text-[10px] text-subtle" title={t("ownMailboxHint")}>
+            {t("ownMailbox")}
+          </span>
+        ) : null}
+      </span>
+    ));
+  return (
+    <div className={`flex min-w-0 flex-col gap-0.5 text-sm text-muted ${className ?? ""}`}>
+      {message.from_address ? (
+        <p className="min-w-0 break-words [overflow-wrap:anywhere]">
+          <span className="text-subtle">{t("fromLabel")} </span>
+          {addressList([message.from_address])}
+        </p>
+      ) : null}
+      {message.to_addresses.length > 0 ? (
+        <p className="min-w-0 flex-wrap break-words [overflow-wrap:anywhere]">
+          <span className="text-subtle">{t("toLabel")} </span>
+          {addressList(message.to_addresses)}
+        </p>
+      ) : null}
+      {message.cc_addresses && message.cc_addresses.length > 0 ? (
+        <p className="min-w-0 flex-wrap break-words [overflow-wrap:anywhere]">
+          <span className="text-subtle">{t("ccLabel")} </span>
+          {addressList(message.cc_addresses)}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ThreadEntry({ message, mailboxAddresses }: { message: Message; mailboxAddresses?: string[] }) {
   const t = useTranslations("Mail");
   return (
     <li className={`${ui.card} flex min-w-0 flex-col gap-1.5`}>
@@ -36,6 +81,7 @@ function ThreadEntry({ message }: { message: Message }) {
         <span>{formatDateTime(message.direction === "in" ? message.received_at : message.sent_at)}</span>
       </div>
       <p className="min-w-0 break-words text-sm font-medium [overflow-wrap:anywhere]">{message.subject || t("noSubject")}</p>
+      <MailRecipients message={message} mailboxAddresses={mailboxAddresses} className="text-xs" />
       <SafeText className="text-sm">{message.body ?? message.body_preview}</SafeText>
     </li>
   );
@@ -95,12 +141,16 @@ export function MailDetail({
   message,
   canApprove,
   canReadMembers,
+  mailboxAddresses,
   onUpdated,
   onCreated,
 }: {
   message: Message | null;
   canApprove: boolean;
   canReadMembers: boolean;
+  // Eigene Postfachadressen des Mandanten (operator 27.09.2026, Antworten mit An/Cc), um im
+  // Von/An/Cc-Block zu kennzeichnen, welcher Empfänger ein eigenes Postfach ist.
+  mailboxAddresses?: string[];
   onUpdated: (next: Message) => void;
   onCreated: (next: Message) => void;
 }) {
@@ -297,9 +347,7 @@ export function MailDetail({
           <h2 className="min-w-0 break-words text-lg font-semibold [overflow-wrap:anywhere]">{message.subject || t("noSubject")}</h2>
           <span className={`${ui.badge} shrink-0`}>{t(`status.${message.status}`)}</span>
         </div>
-        <p className="min-w-0 break-words text-sm text-muted [overflow-wrap:anywhere]">
-          {message.direction === "in" ? t("from", { address: message.from_address ?? "" }) : t("toField", { address: message.to_addresses.join(", ") })}
-        </p>
+        <MailRecipients message={message} mailboxAddresses={mailboxAddresses} />
         <div className="flex flex-wrap gap-3 text-xs text-subtle">
           {message.ticket_id ? (
             <Link href={`/tickets/${message.ticket_id}`} className="hover:underline">
@@ -542,7 +590,7 @@ export function MailDetail({
           <h3 className="text-sm font-semibold">{t("thread")}</h3>
           <ul className="flex flex-col gap-2">
             {thread.map((entry) => (
-              <ThreadEntry key={entry.id} message={entry} />
+              <ThreadEntry key={entry.id} message={entry} mailboxAddresses={mailboxAddresses} />
             ))}
           </ul>
         </section>

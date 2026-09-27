@@ -145,6 +145,7 @@ async def ingest_parsed(
         direction="in",
         mailbox_id=mailbox_id,
         from_address=parsed["from"],
+        reply_to=parsed.get("reply_to"),
         to_addresses=parsed["to"],
         cc_addresses=list(parsed.get("cc") or []),
         subject=parsed["subject"],

@@ -23,7 +23,11 @@ export type Message = {
   direction: "in" | "out";
   status: string;
   from_address: string | null;
+  // Kopfzeile Reply-To der eingehenden Mail (operator 27.09.2026), abweichend vom Absender.
+  reply_to?: string | null;
   to_addresses: string[];
+  // Kopie-Empfänger (operator 27.09.2026, Antworten mit An/Cc).
+  cc_addresses?: string[];
   subject: string | null;
   // The list delivers only `body_preview` (200 characters, review 26.09.2026, M3); the
   // detail endpoint fills `body` and `body_html`.
@@ -465,6 +469,7 @@ export function MailWorkspace({
             message={selected}
             canApprove={canApprove}
             canReadMembers={canReadMembers}
+            mailboxAddresses={mailboxes.map((m) => m.address)}
             onUpdated={onUpdated}
             onCreated={onUpdated}
           />

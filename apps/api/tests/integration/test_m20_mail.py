@@ -532,3 +532,49 @@ def test_messages_pagination(client: TestClient, world: World) -> None:
     # Mandantentrennung: Tenant B sieht keine dieser Nachrichten.
     other = _ok(client.get(f"{M}/messages", params={"q": f"Paging {RUN}"}, headers=hb))
     assert other == []
+
+
+def test_reply_draft_replies_to_all_minus_own_mailboxes(client: TestClient, world: World) -> None:
+    """"Antworten" (operator 27.09.2026, Antworten mit An/Cc): To ist die Reply-To-Adresse
+    der Ursprungsmail, Cc alle ursprünglichen To-/Cc-Empfänger ohne die eigenen
+    Postfachadressen des Mandanten und ohne Duplikate von To. ``cc_addresses`` erscheint in
+    der API-Ausgabe."""
+    h = bearer(login(client, world, "m20admin"))
+    box_a = _ok(
+        client.post(
+            f"{M}/mailboxes", json={"address": f"info-ra{RUN}@example.com", "secret": "geheim"}, headers=h
+        ),
+        201,
+    )
+    box_b = _ok(
+        client.post(
+            f"{M}/mailboxes", json={"address": f"post-ra{RUN}@example.com", "secret": "geheim"}, headers=h
+        ),
+        201,
+    )
+
+    sender = f"anfrager-ra{RUN}@example.com"
+    reply_to = f"anwalt-ra{RUN}@example.com"
+    colleague = f"kollege-ra{RUN}@example.com"
+    raw = EmailMessage()
+    raw["From"] = f"Anfragerin <{sender}>"
+    raw["To"] = f"{box_a['address']}, {colleague}"
+    raw["Cc"] = f"{box_b['address']}, {sender}"
+    raw["Reply-To"] = reply_to
+    raw["Subject"] = "Anfrage An/Cc"
+    raw["Message-ID"] = f"<ra-{RUN}@example.test>"
+    raw["Date"] = "Wed, 23 Sep 2026 09:00:00 +0200"
+    raw.set_content("Text der Anfrage")
+    doc = _upload(client, h, "ra.eml", bytes(raw))
+    msg = _ok(
+        client.post(f"{M}/ingest", json={"document_id": doc, "mailbox_id": box_a["id"]}, headers=h),
+        201,
+    )
+    assert msg["cc_addresses"] == [box_b["address"], sender]
+    assert msg["reply_to"] == reply_to
+
+    draft = _ok(client.post(f"{M}/messages/{msg['id']}/reply-draft", headers=h), 201)
+    assert draft["to_addresses"] == [reply_to]
+    # Eigene Postfächer (box_a, box_b) fallen weg; der Absender bleibt in Cc, da To die
+    # abweichende Reply-To-Adresse ist (kein Duplikat).
+    assert draft["cc_addresses"] == [colleague, sender]
