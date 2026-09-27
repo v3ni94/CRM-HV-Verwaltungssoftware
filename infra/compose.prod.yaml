@@ -342,8 +342,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       HUB_URL: http://localhost:8090
-      KEY: ${BESZEL_AGENT_KEY:?BESZEL_AGENT_KEY must be set (public key from the Beszel hub, see docs/runbooks/monitoring.md)}
-      TOKEN: ${BESZEL_AGENT_TOKEN:?BESZEL_AGENT_TOKEN must be set (registration token from the Beszel hub, see docs/runbooks/monitoring.md)}
+      # Empty until the hub issued key and token (docs/runbooks/monitoring.md); the agent then
+      # starts but cannot register, the rest of the stack is not blocked.
+      KEY: ${BESZEL_AGENT_KEY:-}
+      TOKEN: ${BESZEL_AGENT_TOKEN:-}
     deploy:
       resources:
         limits:

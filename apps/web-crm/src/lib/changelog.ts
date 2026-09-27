@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.34.2",
+    date: "27.09.2026",
+    title: "Betrieb: Beszel-Variablen optional",
+    changes: [
+      "Betrieb: Beszel-Agent-Variablen (BESZEL_AGENT_KEY, BESZEL_AGENT_TOKEN) sind optional, ein leerer Wert blockiert den Stack nicht mehr (Deploy 1.34.1 scheiterte daran).",
+    ],
+  },
+  {
     version: "1.34.1",
     date: "27.09.2026",
     title: "Auswertung Tickets nur für Administratoren, Ladefehler behoben",

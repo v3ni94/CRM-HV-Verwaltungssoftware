@@ -5,6 +5,10 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.34.2 (27.09.2026) Betrieb: Beszel-Variablen optional
+
+- Betrieb: Beszel-Agent-Variablen (BESZEL_AGENT_KEY, BESZEL_AGENT_TOKEN) sind optional, ein leerer Wert blockiert den Stack nicht mehr (Deploy 1.34.1 scheiterte daran).
+
 ## 1.34.1 (27.09.2026) Auswertung Tickets nur für Administratoren, Ladefehler behoben
 
 - Auswertung Tickets (Betreibermeldung 27.09.2026): Seite zeigte "Die Auswertung ist derzeit nicht verfügbar.", weil der Pfad workspace/ticket-analytics in der BFF-Allowlist fehlte; behoben. Menüpunkt, Startseitenlink, Befehlspalette, Seite und API nur noch für Mandantenadministratoren und Plattformadministratoren; Fehlerhinweise der Auswertung zeigen Titel, Detail, Fehlercode und HTTP-Status; Mails gelöschter Postfächer zählen in der Postfachart Sonstige.
